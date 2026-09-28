@@ -628,3 +628,31 @@ async function removeDemoRows(supabase: Client, hostId: string) {
   if (ids.length === 0) return;
   await supabase.from("properties").delete().in("id", ids);
 }
+
+/* -------------------------------- host ---------------------------------- */
+
+export const saveHost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: uuid,
+        business_name: z.string().min(1),
+        contact_email: z.string().email().nullable(),
+        contact_phone: z.string().nullable(),
+        currency: z.string().min(3).max(3),
+        timezone: z.string().min(3),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { id, ...fields } = data;
+    const { data: row, error } = await context.supabase
+      .from("hosts")
+      .update(fields)
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
