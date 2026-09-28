@@ -17,7 +17,7 @@ export function PropertyPicker({
 }) {
   if (properties.length < 2) return null;
   return (
-    <Select value={value ?? undefined} onValueChange={onChange}>
+    <Select value={value ?? ""} onValueChange={onChange}>
       <SelectTrigger className="h-11 w-full sm:w-56">
         <SelectValue />
       </SelectTrigger>

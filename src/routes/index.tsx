@@ -59,7 +59,7 @@ function Landing() {
           <div className="mt-8 flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">Works alongside</span>
             <ChannelBadge channel="airbnb" />
-            <ChannelBadge channel="booking" />
+            <ChannelBadge channel="booking_com" />
             <ChannelBadge channel="homestay" />
             <ChannelBadge channel="direct" />
           </div>
