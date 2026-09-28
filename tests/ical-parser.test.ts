@@ -212,3 +212,30 @@ describe("dates", () => {
     expect(stayState({ ...b, status: "cancelled" }, "2026-06-02")).toBe("cancelled");
   });
 });
+
+describe("blocked closures", () => {
+  const feed = `BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:long@booking.com
+DTSTART;VALUE=DATE:20271201
+DTEND;VALUE=DATE:20280328
+SUMMARY:CLOSED - Not available
+END:VEVENT
+BEGIN:VEVENT
+UID:short@booking.com
+DTSTART;VALUE=DATE:20261029
+DTEND;VALUE=DATE:20261030
+SUMMARY:CLOSED - Not available
+END:VEVENT
+END:VCALENDAR`;
+  it("marks long or far-future closures as blocked, leaves short ones to confirm", () => {
+    const { bookings } = mapEventsToBookings(parseIcs(feed), {
+      channel: "booking_com",
+      defaultCheckInTime: "15:00",
+      defaultCheckOutTime: "11:00",
+      today: "2026-09-28",
+    });
+    expect(bookings[0]!.status).toBe("blocked");
+    expect(bookings[1]!.status).toBe("needs_details");
+  });
+});

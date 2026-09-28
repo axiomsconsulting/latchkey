@@ -58,8 +58,13 @@ export function buildPatch(existing: ExistingBooking, incoming: ParsedBooking): 
   // host-managed lifecycle status (checked_in, checked_out, flagged).
   if (existing.status === "cancelled") {
     candidate.status = incoming.status;
-  } else if (existing.status === "needs_details" && incoming.status === "upcoming") {
+  } else if (
+    (existing.status === "needs_details" || existing.status === "blocked") &&
+    incoming.status === "upcoming"
+  ) {
     candidate.status = "upcoming";
+  } else if (existing.status === "needs_details" && incoming.status === "blocked") {
+    candidate.status = "blocked";
   }
 
   const patch: BookingPatch = {};

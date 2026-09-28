@@ -10,6 +10,7 @@ const variantFor: Record<string, "default" | "secondary" | "accent" | "success" 
   upcoming: "outline",
   past: "outline",
   cancelled: "outline",
+  blocked: "outline",
   checked_out: "outline",
   flagged: "accent",
 };

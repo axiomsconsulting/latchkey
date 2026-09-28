@@ -59,7 +59,8 @@ export function formatUkDate(isoDate: string, opts: { withYear?: boolean } = {})
   if (!y || !m || !d) return isoDate;
   const dt = new Date(Date.UTC(y, m - 1, d));
   const base = `${DAYS_SHORT[dt.getUTCDay()]} ${d} ${MONTHS_SHORT[m - 1]}`;
-  return opts.withYear ? `${base} ${y}` : base;
+  const showYear = opts.withYear ?? y !== new Date().getUTCFullYear();
+  return showYear ? `${base} ${y}` : base;
 }
 
 /** "15:00" from a Postgres time value such as "15:00:00". */
@@ -101,6 +102,7 @@ export type StayState =
   | "upcoming"
   | "past"
   | "cancelled"
+  | "blocked"
   | "needs_details";
 
 /**
@@ -116,6 +118,7 @@ export function stayState(
   today: string,
 ): StayState {
   if (booking.status === "cancelled") return "cancelled";
+  if (booking.status === "blocked") return "blocked";
   if (booking.status === "needs_details") return "needs_details";
   if (booking.check_out_date === today) return "departing_today";
   if (booking.check_in_date === today) return "arriving_today";

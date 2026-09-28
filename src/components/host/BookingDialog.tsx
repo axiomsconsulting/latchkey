@@ -62,6 +62,7 @@ const STATUS_KEYS = [
   "checked_out",
   "cancelled",
   "flagged",
+  "blocked",
 ] as const;
 
 function blank(propertyId: string, roomId: string | null, defaults?: Props["defaults"]) {

@@ -76,6 +76,7 @@ export const statuses = {
   checked_in: "In stay",
   checked_out: "Checked out",
   cancelled: "Cancelled",
+  blocked: "Blocked, not a booking",
   flagged: "Needs a look",
   arriving_today: "Arriving today",
   in_stay: "In stay",
@@ -104,6 +105,8 @@ export const today = {
   noStays: "No guests in the house right now.",
   allClear: "Nothing is waiting on you. Everything is up to date.",
   saveDetails: "Save details",
+  maybeBlock: "Dates you closed yourself?",
+  markBlocked: "Not a booking, mark as blocked",
   cleaningToday: "Cleaning window today",
 };
 

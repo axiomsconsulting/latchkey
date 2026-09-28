@@ -241,7 +241,7 @@ const bookingInput = z.object({
   check_out_date: z.string(),
   check_in_time: z.string().nullable(),
   check_out_time: z.string().nullable(),
-  status: z.enum(["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged"]),
+  status: z.enum(["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged", "blocked"]),
   notes: z.string().nullable(),
 });
 
