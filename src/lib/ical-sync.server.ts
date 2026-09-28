@@ -146,7 +146,7 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
         const patch = buildPatch(prior, b);
         const payload = { ...patch, last_synced_at: new Date().toISOString() };
         if (!prior.connection_id) Object.assign(payload, { connection_id: conn.id });
-        await supabaseAdmin.from("bookings").update(payload).eq("id", prior.id);
+        await supabaseAdmin.from("bookings").update(payload as never).eq("id", prior.id);
         if (Object.keys(patch).length > 0) updated += 1;
       } else {
         const { error } = await supabaseAdmin.from("bookings").insert({

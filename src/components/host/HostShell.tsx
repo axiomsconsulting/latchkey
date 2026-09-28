@@ -19,7 +19,8 @@ const navItems: NavItem[] = [
 export function HostShell() {
   const navigate = useNavigate();
   const { data } = useWorkspace();
-  const businessName = data?.host && "business_name" in data.host ? data.host.business_name : "";
+  const host = data?.host as { business_name?: string } | null | undefined;
+  const businessName = host?.business_name ?? "";
 
   async function signOut() {
     await supabase.auth.signOut();

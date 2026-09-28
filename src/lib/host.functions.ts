@@ -107,20 +107,20 @@ const propertyInput = z.object({
   id: uuid.optional(),
   hostId: uuid,
   name: z.string().min(1),
-  address: z.string().optional().nullable(),
-  postcode: z.string().optional().nullable(),
+  address: z.string().nullable().default(null),
+  postcode: z.string().nullable().default(null),
   short_code: z.string().min(2).regex(/^[a-z0-9-]+$/),
-  check_in_pin: z.string().regex(/^\d{6}$/).optional().nullable(),
-  timezone: z.string().optional().nullable(),
+  check_in_pin: z.string().regex(/^\d{6}$/).nullable().default(null),
+  timezone: z.string().nullable().default(null),
   default_check_in_time: z.string(),
   default_check_out_time: z.string(),
   quiet_hours_start: z.string(),
   quiet_hours_end: z.string(),
-  parking_notes: z.string().optional().nullable(),
-  wifi_name: z.string().optional().nullable(),
-  wifi_password: z.string().optional().nullable(),
-  host_contact_name: z.string().optional().nullable(),
-  host_contact_phone: z.string().optional().nullable(),
+  parking_notes: z.string().nullable().default(null),
+  wifi_name: z.string().nullable().default(null),
+  wifi_password: z.string().nullable().default(null),
+  host_contact_name: z.string().nullable().default(null),
+  host_contact_phone: z.string().nullable().default(null),
 });
 
 export const saveProperty = createServerFn({ method: "POST" })
@@ -146,10 +146,10 @@ export const saveProperty = createServerFn({ method: "POST" })
 const roomInput = z.object({
   id: uuid.optional(),
   property_id: uuid,
-  room_number: z.string().optional().nullable(),
+  room_number: z.string().nullable().default(null),
   display_name: z.string().min(1),
-  public_title: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
+  public_title: z.string().nullable().default(null),
+  description: z.string().nullable().default(null),
   max_guests: z.number().int().min(1).max(12),
   has_ensuite: z.boolean(),
   sort_order: z.number().int(),
@@ -182,7 +182,7 @@ const windowInput = z.object({
   id: uuid.optional(),
   property_id: uuid,
   room_id: uuid.nullable(),
-  reason: z.string().optional().nullable(),
+  reason: z.string().nullable().default(null),
   day_of_week: z.number().int().min(0).max(6).nullable(),
   start_time: z.string().nullable(),
   end_time: z.string().nullable(),
@@ -418,8 +418,8 @@ export const saveConnection = createServerFn({ method: "POST" })
         channel: z.enum(["airbnb", "booking_com", "homestay", "direct", "other"]),
         listing_name: z.string().nullable(),
         ical_url: z.string().min(8).optional(),
-        external_listing_id: z.string().nullable().optional(),
-        external_listing_title: z.string().nullable().optional(),
+        external_listing_id: z.string().nullable().default(null),
+        external_listing_title: z.string().nullable().default(null),
       })
       .parse(input),
   )
@@ -628,3 +628,31 @@ async function removeDemoRows(supabase: Client, hostId: string) {
   if (ids.length === 0) return;
   await supabase.from("properties").delete().in("id", ids);
 }
+
+/* -------------------------------- host ---------------------------------- */
+
+export const saveHost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: uuid,
+        business_name: z.string().min(1),
+        contact_email: z.string().email().nullable(),
+        contact_phone: z.string().nullable(),
+        currency: z.string().min(3).max(3),
+        timezone: z.string().min(3),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { id, ...fields } = data;
+    const { data: row, error } = await context.supabase
+      .from("hosts")
+      .update(fields)
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
