@@ -17,6 +17,7 @@ export type Database = {
       bookings: {
         Row: {
           anonymised_at: string | null
+          booking_url: string | null
           channel: Database["public"]["Enums"]["booking_channel"]
           check_in_date: string
           check_in_time: string | null
@@ -25,6 +26,7 @@ export type Database = {
           connection_id: string | null
           created_at: string
           external_uid: string | null
+          feed_status: string | null
           guest_count: number
           guest_full_name: string | null
           guest_surname_initial: string | null
@@ -32,7 +34,9 @@ export type Database = {
           is_demo: boolean
           last_synced_at: string | null
           listing_id: string | null
+          listing_title: string | null
           manual_fields: string[]
+          mirror_of: string | null
           notes: string | null
           phone_last4: string | null
           property_id: string
@@ -44,6 +48,7 @@ export type Database = {
         }
         Insert: {
           anonymised_at?: string | null
+          booking_url?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
           check_in_date: string
           check_in_time?: string | null
@@ -52,6 +57,7 @@ export type Database = {
           connection_id?: string | null
           created_at?: string
           external_uid?: string | null
+          feed_status?: string | null
           guest_count?: number
           guest_full_name?: string | null
           guest_surname_initial?: string | null
@@ -59,7 +65,9 @@ export type Database = {
           is_demo?: boolean
           last_synced_at?: string | null
           listing_id?: string | null
+          listing_title?: string | null
           manual_fields?: string[]
+          mirror_of?: string | null
           notes?: string | null
           phone_last4?: string | null
           property_id: string
@@ -71,6 +79,7 @@ export type Database = {
         }
         Update: {
           anonymised_at?: string | null
+          booking_url?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
           check_in_date?: string
           check_in_time?: string | null
@@ -79,6 +88,7 @@ export type Database = {
           connection_id?: string | null
           created_at?: string
           external_uid?: string | null
+          feed_status?: string | null
           guest_count?: number
           guest_full_name?: string | null
           guest_surname_initial?: string | null
@@ -86,7 +96,9 @@ export type Database = {
           is_demo?: boolean
           last_synced_at?: string | null
           listing_id?: string | null
+          listing_title?: string | null
           manual_fields?: string[]
+          mirror_of?: string | null
           notes?: string | null
           phone_last4?: string | null
           property_id?: string
@@ -110,6 +122,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "room_listings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_mirror_of_fkey"
+            columns: ["mirror_of"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_mirror_of_fkey"
+            columns: ["mirror_of"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "bookings_property_id_fkey"
