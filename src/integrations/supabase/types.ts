@@ -1030,6 +1030,10 @@ export type Database = {
       }
     }
     Functions: {
+      create_host_workspace: {
+        Args: { _business_name: string; _contact_email: string }
+        Returns: string
+      }
       has_host_role: {
         Args: {
           _host_id: string
