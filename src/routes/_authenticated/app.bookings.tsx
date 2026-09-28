@@ -289,14 +289,17 @@ function BookingsPage() {
               >
                 <div className="truncate px-3 py-3 text-sm font-medium">{r.display_name}</div>
                 {days.map((d) => {
+                  const onNight = (b: BookingRow) =>
+                    b.room_id === r.id && b.check_in_date <= d && b.check_out_date > d;
                   const stay = filtered.find(
-                    (b) =>
-                      b.room_id === r.id &&
-                      b.status !== "cancelled" &&
-                      b.status !== "blocked" &&
-                      b.check_in_date <= d &&
-                      b.check_out_date > d,
+                    (b) => onNight(b) && b.status !== "cancelled" && b.status !== "blocked",
                   );
+                  const closed = stay
+                    ? undefined
+                    : filtered.find((b) => onNight(b) && b.status === "blocked");
+                  const echoes = stay
+                    ? all.filter((b) => b.mirror_of === stay.id && b.status !== "cancelled")
+                    : [];
                   const cleaning = windows.find(
                     (w) =>
                       (w.room_id === null || w.room_id === r.id) &&
@@ -313,11 +316,35 @@ function BookingsPage() {
                             channelBar[stay.channel] ?? channelBar["other"],
                             stay.status === "needs_details" &&
                               "outline-2 outline-dashed outline-offset-[-2px] outline-accent",
+                            stay.status === "flagged" &&
+                              "outline-2 outline-offset-[-2px] outline-destructive",
                           )}
-                          title={stay.guest_full_name ?? copy.guestUnknown}
+                          title={
+                            echoes.length > 0
+                              ? `${stay.guest_full_name ?? copy.guestUnknown} · ${copy.alsoClosedOn} ${echoes
+                                  .map((e) => channels[e.channel as Channel])
+                                  .join(", ")}`
+                              : (stay.guest_full_name ?? copy.guestUnknown)
+                          }
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            {stay.guest_full_name ?? copy.guestUnknown}
+                          </span>
+                          {echoes.length > 0 ? (
+                            <span className="ml-1 shrink-0 rounded bg-background/70 px-1 text-[10px] text-foreground">
+                              +{echoes.length}
+                            </span>
+                          ) : null}
+                        </button>
+                      ) : closed ? (
+                        <button
+                          type="button"
+                          onClick={() => openEdit(closed)}
+                          className="hatched flex h-12 w-full items-center truncate rounded-lg border border-border px-2 text-left text-xs text-muted-foreground"
+                          title={`${copy.blockedCell} · ${channels[closed.channel as Channel]}`}
                         >
                           <span className="truncate">
-                            {stay.guest_full_name ?? copy.guestUnknown}
+                            {copy.blockedCell} · {channels[closed.channel as Channel]}
                           </span>
                         </button>
                       ) : (

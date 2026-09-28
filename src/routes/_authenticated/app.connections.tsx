@@ -382,6 +382,48 @@ function ConnectionsPage() {
         </div>
       ) : null}
 
+      {rooms.length > 0 && items.length > 0 ? (
+        <section className="card-soft p-4">
+          <h2 className="text-lg">{copy.byRoomTitle}</h2>
+          <p className="text-sm text-muted-foreground">{copy.byRoomBody}</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {rooms.map((r) => {
+              const linked = items.filter((c) => c.room_id === r.id);
+              return (
+                <div key={r.id} className="rounded-xl border border-border p-3">
+                  <p className="font-medium">{r.display_name}</p>
+                  {linked.length === 0 ? (
+                    <p className="mt-1 text-sm text-muted-foreground">{copy.noLinks}</p>
+                  ) : (
+                    <ul className="mt-2 space-y-2">
+                      {linked.map((c) => (
+                        <li key={c.id} className="flex flex-wrap items-center gap-2 text-sm">
+                          <ChannelBadge channel={c.channel as Channel} />
+                          <span className="text-muted-foreground">
+                            {c.last_synced_at
+                              ? `${formatUkDate(c.last_synced_at.slice(0, 10))}, ${formatUkTime(
+                                  new Date(c.last_synced_at).toLocaleTimeString("en-GB", {
+                                    timeZone: "Europe/London",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }),
+                                )}`
+                              : copy.never}
+                          </span>
+                          {c.sync_status === "warning" || c.sync_status === "error" ? (
+                            <AlertTriangle className="size-4 text-accent" aria-label="Needs a look" />
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
       {items.length === 0 ? (
         <EmptyState
           icon={Plug}

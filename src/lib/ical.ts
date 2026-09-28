@@ -16,6 +16,9 @@ export type IcsEvent = {
   startTime: string | null; // HH:MM when the feed gives a real time
   endTime: string | null;
   allDay: boolean;
+  url: string | null;
+  /** RFC 5545 STATUS: CONFIRMED, TENTATIVE or CANCELLED. */
+  status: string | null;
 };
 
 export type ParsedBooking = {
@@ -30,6 +33,8 @@ export type ParsedBooking = {
   checkOutTime: string;
   status: "upcoming" | "needs_details" | "blocked";
   externalListingTitle: string | null;
+  bookingUrl?: string | null;
+  feedStatus?: string | null;
 };
 
 /** Unfolds RFC 5545 line folding (continuation lines start with space or tab). */
@@ -121,6 +126,8 @@ export function parseIcs(text: string, timeZone = "Europe/London"): IcsEvent[] {
           startTime: current.startTime ?? null,
           endTime: current.endTime ?? null,
           allDay: current.allDay ?? true,
+          url: current.url ?? null,
+          status: current.status ?? null,
         });
       }
       current = null;
@@ -137,6 +144,12 @@ export function parseIcs(text: string, timeZone = "Europe/London"): IcsEvent[] {
         break;
       case "SUMMARY":
         current.summary = unescapeText(prop.value).trim();
+        break;
+      case "URL":
+        current.url = prop.value.trim() || null;
+        break;
+      case "STATUS":
+        current.status = prop.value.trim().toUpperCase() || null;
         break;
       case "DESCRIPTION":
         current.description = unescapeText(prop.value);
@@ -177,6 +190,12 @@ export function extractReservationCode(text: string): string | null {
     text,
   );
   return code?.[1] ? code[1].toUpperCase() : null;
+}
+
+/** First https link in an entry, e.g. Airbnb's reservation page. */
+export function extractBookingUrl(text: string): string | null {
+  const m = /https:\/\/[^\s"<>]+/i.exec(text);
+  return m ? m[0].replace(/[.,)]+$/, "") : null;
 }
 
 export function extractPhoneLast4(text: string): string | null {
@@ -252,6 +271,15 @@ export function mapEventsToBookings(events: IcsEvent[], opts: MapOptions): MapRe
   let skipped = 0;
 
   for (const ev of events) {
+    if (ev.status === "CANCELLED") {
+      // Left out so the sync treats it as gone and cancels any stored copy.
+      skipped += 1;
+      continue;
+    }
+    const extra = {
+      bookingUrl: ev.url ?? extractBookingUrl(ev.description),
+      feedStatus: ev.status,
+    };
     const blob = `${ev.summary}\n${ev.description}`;
     const isBlock = NOT_AVAILABLE.test(ev.summary);
 
@@ -279,6 +307,7 @@ export function mapEventsToBookings(events: IcsEvent[], opts: MapOptions): MapRe
         checkOutTime: ev.endTime ?? opts.defaultCheckOutTime,
         status: looksLikeBlock(ev.startDate, ev.endDate, opts.today) ? "blocked" : "needs_details",
         externalListingTitle: opts.listingTitle ?? null,
+        ...extra,
       });
       continue;
     }
@@ -295,6 +324,7 @@ export function mapEventsToBookings(events: IcsEvent[], opts: MapOptions): MapRe
       checkOutTime: ev.endTime ?? opts.defaultCheckOutTime,
       status: guestFullName ? "upcoming" : "needs_details",
       externalListingTitle: opts.listingTitle ?? null,
+      ...extra,
     });
   }
 
