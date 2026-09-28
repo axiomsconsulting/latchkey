@@ -201,3 +201,25 @@
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-soft);
 }
+
+/* Extra channel + timeline tokens */
+:root {
+  --channel-other: oklch(0.6 0.03 84.6);
+  --channel-other-foreground: oklch(0.99 0.01 84.6);
+}
+
+@theme inline {
+  --color-channel-other: var(--channel-other);
+  --color-channel-other-foreground: var(--channel-other-foreground);
+}
+
+/* Diagonal hatching used for cleaning / unavailable windows on the timeline */
+@utility hatched {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-muted) 0,
+    var(--color-muted) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
