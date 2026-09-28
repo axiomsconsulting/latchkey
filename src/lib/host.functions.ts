@@ -39,16 +39,19 @@ export const getWorkspace = createServerFn({ method: "GET" })
     let host = (membership as { hosts?: unknown } | null)?.hosts ?? null;
 
     if (!hostId) {
-      const { data: created, error } = await supabase
-        .from("hosts")
-        .insert({ business_name: "My rooms", contact_email: context.claims?.email ?? null })
-        .select("id, business_name, contact_email, contact_phone, currency, timezone")
-        .single();
+      // Atomic, server-side: creates the host and owner membership together
+      // (a plain insert+select fails RLS because the user isn't a member yet).
+      const { data: newId, error } = await supabase.rpc("create_host_workspace", {
+        _business_name: "My rooms",
+        _contact_email: (context.claims?.email as string | undefined) ?? "",
+      });
       if (error) throw new Error(error.message);
-      const { error: memberErr } = await supabase
-        .from("host_members")
-        .insert({ host_id: created.id, user_id: userId, role: "owner" });
-      if (memberErr) throw new Error(memberErr.message);
+      const { data: created, error: readErr } = await supabase
+        .from("hosts")
+        .select("id, business_name, contact_email, contact_phone, currency, timezone")
+        .eq("id", newId as string)
+        .single();
+      if (readErr) throw new Error(readErr.message);
       hostId = created.id;
       host = created;
     }
