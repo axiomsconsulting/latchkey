@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as PDemoRouteImport } from './routes/p.demo'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
@@ -18,16 +20,26 @@ import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authenticated/app.properties'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
+import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
-  id: '/_authenticated/app',
-  path: '/app',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const PDemoRoute = PDemoRouteImport.update({
   id: '/p/demo',
@@ -68,9 +80,15 @@ const AuthenticatedAppTodayRoute = AuthenticatedAppTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
+  id: '/api/public/cron/latchkey',
+  path: '/api/public/cron/latchkey',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/p/demo': typeof PDemoRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
@@ -79,9 +97,11 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/p/demo': typeof PDemoRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
@@ -89,10 +109,13 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/p/demo': typeof PDemoRoute
   '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
@@ -101,11 +124,13 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/app'
     | '/p/demo'
     | '/app/bookings'
@@ -114,9 +139,11 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/today'
     | '/app/'
+    | '/api/public/cron/latchkey'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/p/demo'
     | '/app/bookings'
     | '/app/connections'
@@ -124,9 +151,12 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/today'
     | '/app'
+    | '/api/public/cron/latchkey'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
+    | '/auth'
     | '/_authenticated/app'
     | '/p/demo'
     | '/_authenticated/app/bookings'
@@ -135,12 +165,15 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/today'
     | '/_authenticated/app/'
+    | '/api/public/cron/latchkey'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   PDemoRoute: typeof PDemoRoute
+  ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,12 +185,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app': {
       id: '/_authenticated/app'
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/p/demo': {
       id: '/p/demo'
@@ -208,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppTodayRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/cron/latchkey': {
+      id: '/api/public/cron/latchkey'
+      path: '/api/public/cron/latchkey'
+      fullPath: '/api/public/cron/latchkey'
+      preLoaderRoute: typeof ApiPublicCronLatchkeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -232,10 +286,23 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
 const AuthenticatedAppRouteWithChildren =
   AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   PDemoRoute: PDemoRoute,
+  ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
