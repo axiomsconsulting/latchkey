@@ -4,7 +4,7 @@ import { Home } from "lucide-react";
 import { PlaceholderPage } from "@/components/host/PlaceholderPage";
 import { hostPlaceholders } from "@/content/copy";
 
-export const Route = createFileRoute("/app/properties")({
+export const Route = createFileRoute("/_authenticated/app/properties")({
   head: () => ({
     meta: [
       { title: "Properties — Latchkey" },

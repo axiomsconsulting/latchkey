@@ -46,6 +46,22 @@ export const marketing = {
   },
 };
 
+export const auth = {
+  signInTitle: "Welcome back",
+  signInBody: "Sign in to see today's arrivals and keep your calendars in step.",
+  signUpTitle: "Set up your rooms",
+  signUpBody: "Create a host account. It takes a minute and you can explore with demo rooms first.",
+  emailLabel: "Email address",
+  passwordLabel: "Password",
+  signInCta: "Sign in",
+  signUpCta: "Create account",
+  switchToSignUp: "New here? Create a host account",
+  switchToSignIn: "Already have an account? Sign in",
+  checkInbox: "Check your inbox to confirm your email address, then sign in.",
+  genericError: "Something went wrong. Please try again.",
+  signOut: "Sign out",
+};
+
 export const hostNav = {
   today: "Today",
   bookings: "Bookings",
@@ -54,28 +70,160 @@ export const hostNav = {
   settings: "Settings",
 };
 
-export const hostPlaceholders = {
-  today: {
-    title: "Today",
-    body: "Arrivals, departures and guest requests for the day will appear here.",
-  },
-  bookings: {
-    title: "Bookings",
-    body: "Every booking across Airbnb, Booking.com, Homestay.com and direct, in one list.",
-  },
-  properties: {
-    title: "Properties",
-    body: "Rooms, access instructions, house rules and the extras you offer.",
-  },
-  connections: {
-    title: "Connections",
-    body: "Link your booking channels and calendars so arrivals stay in step.",
-  },
-  settings: {
-    title: "Settings",
-    body: "Your details, quiet hours, cleaning windows and approval preferences.",
-  },
-  comingSoon: "Coming in a later stage",
+export const statuses = {
+  needs_details: "Needs details",
+  upcoming: "Upcoming",
+  checked_in: "In stay",
+  checked_out: "Checked out",
+  cancelled: "Cancelled",
+  flagged: "Needs a look",
+  arriving_today: "Arriving today",
+  in_stay: "In stay",
+  departing_today: "Departing today",
+  past: "Past",
+};
+
+export const channels = {
+  airbnb: "Airbnb",
+  booking_com: "Booking.com",
+  homestay: "Homestay.com",
+  direct: "Direct",
+  other: "Other",
+};
+
+export const today = {
+  title: "Today",
+  subtitle: "Arrivals, departures and anything waiting on you.",
+  arriving: "Arriving today",
+  inStay: "In stay",
+  departing: "Departing today",
+  actionRequired: "Needs your details",
+  actionBody: "These bookings arrived from a channel without a guest name. Add what you know.",
+  noArrivals: "Nobody is arriving today. Enjoy the quiet.",
+  noDepartures: "No departures today.",
+  noStays: "No guests in the house right now.",
+  allClear: "Nothing is waiting on you. Everything is up to date.",
+  saveDetails: "Save details",
+  cleaningToday: "Cleaning window today",
+};
+
+export const bookings = {
+  title: "Bookings",
+  subtitle: "Every stay across your channels, in one place.",
+  listView: "List",
+  timelineView: "Timeline",
+  addBooking: "Add booking",
+  importCsv: "Import bookings",
+  empty: "No bookings yet. Add one by hand, import a file, or connect a calendar.",
+  filtersRoom: "Room",
+  filtersChannel: "Channel",
+  filtersStatus: "Status",
+  allRooms: "All rooms",
+  allChannels: "All channels",
+  allStatuses: "All statuses",
+  guestUnknown: "Guest name to confirm",
+  nights: "nights",
+  night: "night",
+  editBooking: "Edit booking",
+  manualNote: "Fields you change here are kept, even when the channel calendar updates.",
+  importTitle: "Import bookings from a file",
+  importBody: "Upload a CSV export from a channel or spreadsheet, then match the columns.",
+  importChoose: "Choose CSV file",
+  importConfirm: "Import bookings",
+  importedToast: "bookings imported",
+};
+
+export const properties = {
+  title: "Properties",
+  subtitle: "Your rooms, door details and cleaning windows.",
+  addProperty: "Add property",
+  addRoom: "Add room",
+  noProperties: "No properties yet. Add one, or load the demo rooms to have a look around.",
+  noRooms: "No rooms in this property yet.",
+  guestLink: "Guest link",
+  doorPin: "Door PIN",
+  quietHours: "Quiet hours",
+  checkInWindow: "Check-in and check-out",
+  wifi: "Wi-Fi",
+  cleaning: "Cleaning and unavailable times",
+  addWindow: "Add cleaning window",
+  wholeHouse: "Whole house",
+  weekly: "Every",
+  noWindows: "No cleaning windows set.",
+};
+
+export const connections = {
+  title: "Connections",
+  subtitle: "Calendar links that keep your bookings in step.",
+  add: "Add calendar link",
+  test: "Test link",
+  syncNow: "Sync now",
+  syncAll: "Sync all",
+  lastSynced: "Last checked",
+  never: "Not checked yet",
+  empty: "No calendars connected. Paste an iCal link from a channel to start.",
+  linkLabel: "Calendar link (iCal)",
+  linkHelp: "Your link is stored privately on the server. Only a shortened version is shown here.",
+  roomLabel: "Room this calendar belongs to",
+  listingLabel: "What the channel calls this listing",
+  history: "Recent checks",
+  noHistory: "No sync history yet.",
+  testOk: "That link works.",
+  managerTitle: "Channel manager (Beds24, Smoobu, Hostaway)",
+  managerBody: "Direct two-way sync with channel managers is planned for a later stage.",
+  comingSoon: "Coming soon",
+  conflictTitle: "Something needs your eye",
+  syncedToast: "Calendar checked",
+  removeConfirm: "Remove this calendar link? Bookings already imported are kept.",
+};
+
+export const settings = {
+  title: "Settings",
+  subtitle: "Your business details and demo content.",
+  business: "Your business",
+  businessName: "Business name",
+  contactEmail: "Contact email",
+  contactPhone: "Contact phone",
+  currency: "Currency",
+  timezone: "Timezone",
+  save: "Save changes",
+  saved: "Saved",
+  demoTitle: "Demo content",
+  demoBody:
+    "Load The Trinity Rooms in High Wycombe: three rooms, bookings across four channels, and Tuesday and Thursday cleaning windows.",
+  loadDemo: "Load demo rooms",
+  resetDemo: "Reset demo dates",
+  removeDemo: "Remove demo data",
+  demoBanner: "You are looking at demo content.",
+  removing: "Removing…",
+  privacyTitle: "Privacy and retention",
+  privacyBody:
+    "Guest names, phone digits and notes are cleared 90 days after check-out. Anonymous stay records are kept for your statistics.",
+};
+
+export const onboarding = {
+  title: "Let's set up your rooms",
+  subtitle: "Three short steps. You can change anything later.",
+  step1: "Property",
+  step2: "Rooms",
+  step3: "Arrivals",
+  next: "Continue",
+  back: "Back",
+  finish: "Finish setup",
+  orDemo: "Or explore with demo rooms first",
+};
+
+export const common = {
+  save: "Save",
+  cancel: "Cancel",
+  remove: "Remove",
+  edit: "Edit",
+  add: "Add",
+  loading: "Loading…",
+  errorTitle: "Something went wrong",
+  errorBody: "We could not load this just now. Try again in a moment.",
+  notFound: "We could not find that page.",
+  retry: "Try again",
 };
 
 export const guest = {
@@ -87,4 +235,8 @@ export const guest = {
   startCta: "Start check-in",
   helpCta: "I need help",
   reassurance: "Arriving late? That is absolutely fine — the door code works at any hour.",
+};
+
+export const hostPlaceholders = {
+  comingSoon: "Coming in a later stage",
 };

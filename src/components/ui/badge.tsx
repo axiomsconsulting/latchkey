@@ -18,6 +18,7 @@ const badgeVariants = cva(
         booking: "border-transparent bg-channel-booking text-channel-booking-foreground",
         homestay: "border-transparent bg-channel-homestay text-channel-homestay-foreground",
         direct: "border-transparent bg-channel-direct text-channel-direct-foreground",
+        other: "border-transparent bg-channel-other text-channel-other-foreground",
       },
     },
     defaultVariants: {

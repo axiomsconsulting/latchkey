@@ -4,7 +4,7 @@ import { Plug } from "lucide-react";
 import { PlaceholderPage } from "@/components/host/PlaceholderPage";
 import { hostPlaceholders } from "@/content/copy";
 
-export const Route = createFileRoute("/app/connections")({
+export const Route = createFileRoute("/_authenticated/app/connections")({
   head: () => ({
     meta: [
       { title: "Connections — Latchkey" },
