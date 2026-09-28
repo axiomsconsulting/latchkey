@@ -116,6 +116,12 @@ export const today = {
 export const bookings = {
   title: "Bookings",
   subtitle: "Every stay across your channels, in one place.",
+  mirrorNote: "Another platform is showing this stay as closed. It is linked to the real booking, so it is not counted twice.",
+  listing: "Listing",
+  tentative: "The platform marks this stay as not yet confirmed.",
+  openOnPlatform: "Open on the platform",
+  alsoClosedOn: "Also closed on",
+  blockedCell: "Closed",
   listView: "List",
   timelineView: "Timeline",
   addBooking: "Add booking",
@@ -161,6 +167,10 @@ export const properties = {
 export const connections = {
   title: "Connections",
   subtitle: "Calendar links that keep your bookings in step.",
+  byRoomTitle: "Each room across platforms",
+  byRoomBody: "Link every platform that lets the same room. Latchkey matches the entries so one stay is never counted twice.",
+  noLinks: "No calendars linked to this room yet.",
+  lastSynced: "Last synced",
   add: "Add calendar link",
   test: "Test link",
   syncNow: "Sync now",
