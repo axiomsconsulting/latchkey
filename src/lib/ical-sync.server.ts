@@ -122,6 +122,7 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       defaultCheckInTime: (property?.default_check_in_time ?? "15:00").slice(0, 5),
       defaultCheckOutTime: (property?.default_check_out_time ?? "11:00").slice(0, 5),
       listingTitle: conn.listing_name,
+      today,
     });
 
     const { data: existingRows } = await supabaseAdmin

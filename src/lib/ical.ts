@@ -28,7 +28,7 @@ export type ParsedBooking = {
   checkOutDate: string;
   checkInTime: string;
   checkOutTime: string;
-  status: "upcoming" | "needs_details";
+  status: "upcoming" | "needs_details" | "blocked";
   externalListingTitle: string | null;
 };
 
@@ -213,7 +213,29 @@ export type MapOptions = {
   defaultCheckInTime: string; // "15:00"
   defaultCheckOutTime: string; // "11:00"
   listingTitle?: string | null;
+  /** Today in the property timezone, used to spot far-future closures. */
+  today?: string | null;
 };
+
+/** Nameless closures longer than this are availability blocks, not stays. */
+export const MAX_PLAUSIBLE_NIGHTS = 28;
+/** Nameless closures starting further ahead than this are booking-window blocks. */
+export const MAX_LEAD_DAYS = 330;
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+}
+
+/**
+ * Booking.com and similar feeds label real stays and host closures the same
+ * way ("CLOSED - Not available"). Obvious closures are marked blocked; the
+ * rest need the host to confirm.
+ */
+export function looksLikeBlock(checkIn: string, checkOut: string, today?: string | null): boolean {
+  if (daysBetween(checkIn, checkOut) > MAX_PLAUSIBLE_NIGHTS) return true;
+  if (today && daysBetween(today, checkIn) > MAX_LEAD_DAYS) return true;
+  return false;
+}
 
 export type MapResult = {
   bookings: ParsedBooking[];
@@ -255,7 +277,7 @@ export function mapEventsToBookings(events: IcsEvent[], opts: MapOptions): MapRe
         checkOutDate: ev.endDate,
         checkInTime: ev.startTime ?? opts.defaultCheckInTime,
         checkOutTime: ev.endTime ?? opts.defaultCheckOutTime,
-        status: "needs_details",
+        status: looksLikeBlock(ev.startDate, ev.endDate, opts.today) ? "blocked" : "needs_details",
         externalListingTitle: opts.listingTitle ?? null,
       });
       continue;

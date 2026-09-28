@@ -76,6 +76,7 @@ export const statuses = {
   checked_in: "In stay",
   checked_out: "Checked out",
   cancelled: "Cancelled",
+  blocked: "Blocked, not a booking",
   flagged: "Needs a look",
   arriving_today: "Arriving today",
   in_stay: "In stay",

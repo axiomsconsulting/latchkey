@@ -111,7 +111,7 @@ function NeedsDetailsCard({ booking, roomName }: { booking: Booking; roomName: s
   const [guests, setGuests] = useState(booking.guest_count ?? 1);
   const [busy, setBusy] = useState(false);
 
-  async function onSave() {
+  async function onSave(markBlocked = false) {
     setBusy(true);
     try {
       await save({
@@ -128,7 +128,7 @@ function NeedsDetailsCard({ booking, roomName }: { booking: Booking; roomName: s
           check_out_date: booking.check_out_date,
           check_in_time: time || null,
           check_out_time: booking.check_out_time,
-          status: name.trim() ? "upcoming" : "needs_details",
+          status: markBlocked ? "blocked" : name.trim() ? "upcoming" : "needs_details",
           notes: booking.notes,
         },
       });
@@ -235,7 +235,7 @@ function TodayPage() {
     rooms.find((r) => r.id === id)?.display_name ?? "No room allocated";
   const todayIso = data?.today ?? new Date().toISOString().slice(0, 10);
   const all = (data?.bookings ?? []) as Booking[];
-  const live = all.filter((b) => b.status !== "cancelled");
+  const live = all.filter((b) => b.status !== "cancelled" && b.status !== "blocked");
 
   const withState = live.map((b) => ({ b, state: stayState(b, todayIso) }));
   const arriving = withState.filter((x) => x.state === "arriving_today");

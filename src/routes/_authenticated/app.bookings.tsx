@@ -45,6 +45,7 @@ const STATUS_KEYS = [
   "checked_out",
   "cancelled",
   "flagged",
+  "blocked",
 ] as const;
 
 const channelBar: Record<string, string> = {
@@ -292,6 +293,7 @@ function BookingsPage() {
                     (b) =>
                       b.room_id === r.id &&
                       b.status !== "cancelled" &&
+                      b.status !== "blocked" &&
                       b.check_in_date <= d &&
                       b.check_out_date > d,
                   );
