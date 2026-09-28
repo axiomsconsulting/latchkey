@@ -5,7 +5,7 @@ import { PlaceholderPage } from "@/components/host/PlaceholderPage";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { hostPlaceholders } from "@/content/copy";
 
-export const Route = createFileRoute("/app/today")({
+export const Route = createFileRoute("/_authenticated/app/today")({
   head: () => ({
     meta: [
       { title: "Today — Latchkey host dashboard" },

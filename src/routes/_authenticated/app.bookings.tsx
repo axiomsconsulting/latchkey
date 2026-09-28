@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { PlaceholderPage } from "@/components/host/PlaceholderPage";
 import { hostPlaceholders } from "@/content/copy";
 
-export const Route = createFileRoute("/app/bookings")({
+export const Route = createFileRoute("/_authenticated/app/bookings")({
   head: () => ({
     meta: [
       { title: "Bookings — Latchkey" },

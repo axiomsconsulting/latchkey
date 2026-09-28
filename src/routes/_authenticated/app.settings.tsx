@@ -4,7 +4,7 @@ import { Settings } from "lucide-react";
 import { PlaceholderPage } from "@/components/host/PlaceholderPage";
 import { hostPlaceholders } from "@/content/copy";
 
-export const Route = createFileRoute("/app/settings")({
+export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Latchkey" },
