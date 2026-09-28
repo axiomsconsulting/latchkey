@@ -185,9 +185,15 @@ function NeedsDetailsCard({ booking, roomName }: { booking: Booking; roomName: s
             onChange={(e) => setGuests(Number(e.target.value))}
           />
         </div>
-        <Button className="h-12" onClick={onSave} disabled={busy}>
+        <Button className="h-12" onClick={() => onSave()} disabled={busy}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : null}
           {copy.saveDetails}
+        </Button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <span>{copy.maybeBlock}</span>
+        <Button variant="ghost" size="sm" onClick={() => onSave(true)} disabled={busy}>
+          {copy.markBlocked}
         </Button>
       </div>
     </div>

@@ -105,6 +105,8 @@ export const today = {
   noStays: "No guests in the house right now.",
   allClear: "Nothing is waiting on you. Everything is up to date.",
   saveDetails: "Save details",
+  maybeBlock: "Dates you closed yourself?",
+  markBlocked: "Not a booking, mark as blocked",
   cleaningToday: "Cleaning window today",
 };
 
