@@ -6,6 +6,7 @@
 import { mapEventsToBookings, parseIcs, type Channel } from "./ical";
 import { bookingsToCancel, buildPatch, detectRoomClashes, type ExistingBooking } from "./sync-logic";
 import { todayInZone } from "./dates";
+import { reconcileRoom, type RoomBooking } from "./room-reconcile";
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -145,7 +146,13 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       if (prior) {
         if (prior.room_id && conn.room_id && prior.room_id !== conn.room_id) continue;
         const patch = buildPatch(prior, b);
-        const payload = { ...patch, last_synced_at: new Date().toISOString() };
+        const payload: Record<string, unknown> = {
+          ...patch,
+          last_synced_at: new Date().toISOString(),
+          booking_url: b.bookingUrl ?? null,
+          feed_status: b.feedStatus ?? null,
+          listing_title: b.externalListingTitle,
+        };
         if (!prior.connection_id) Object.assign(payload, { connection_id: conn.id });
         await supabaseAdmin.from("bookings").update(payload as never).eq("id", prior.id);
         if (Object.keys(patch).length > 0) updated += 1;
@@ -166,6 +173,9 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
           check_in_time: b.checkInTime,
           check_out_time: b.checkOutTime,
           status: b.status,
+          booking_url: b.bookingUrl ?? null,
+          feed_status: b.feedStatus ?? null,
+          listing_title: b.externalListingTitle,
           last_synced_at: new Date().toISOString(),
         });
         if (error) warnings.push(error.message);
@@ -178,6 +188,8 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       await supabaseAdmin.from("bookings").update({ status: "cancelled" }).in("id", toCancel);
       cancelled = toCancel.length;
     }
+
+    if (conn.room_id) warnings.push(...(await reconcileRoomById(conn.room_id)));
 
     const status = warnings.length > 0 ? "warning" : "ok";
     await supabaseAdmin.from("sync_runs").insert({
@@ -212,6 +224,28 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       .eq("id", conn.id);
     throw err instanceof FeedError ? err : new FeedError(message);
   }
+}
+
+/**
+ * Cross-checks every platform's entries for one room: links echoes to the real
+ * booking and flags double-bookings. Returns warnings for the sync log.
+ */
+export async function reconcileRoomById(roomId: string): Promise<string[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("bookings")
+    .select(
+      "id, channel, status, check_in_date, check_out_date, guest_full_name, reservation_code, mirror_of, manual_fields",
+    )
+    .eq("room_id", roomId)
+    .neq("status", "cancelled");
+  const rows = (data ?? []) as RoomBooking[];
+  const changes = reconcileRoom(rows);
+  for (const { id, ...patch } of changes) {
+    await supabaseAdmin.from("bookings").update(patch as never).eq("id", id);
+  }
+  const flagged = changes.filter((c) => c.status === "flagged").length;
+  return flagged > 0 ? [`Possible double-booking: ${flagged} stays overlap on this room.`] : [];
 }
 
 /** Runs every active connection. Used by the scheduled job. */
