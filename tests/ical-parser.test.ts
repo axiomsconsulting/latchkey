@@ -239,3 +239,48 @@ END:VCALENDAR`;
     expect(bookings[1]!.status).toBe("needs_details");
   });
 });
+
+import { reconcileRoom, type RoomBooking } from "../src/lib/room-reconcile";
+
+const rb = (o: Partial<RoomBooking>): RoomBooking => ({
+  id: "x",
+  channel: "airbnb",
+  status: "upcoming",
+  check_in_date: "2026-10-01",
+  check_out_date: "2026-10-04",
+  guest_full_name: "Jane Brown",
+  reservation_code: null,
+  mirror_of: null,
+  manual_fields: [],
+  ...o,
+});
+
+describe("room reconciliation across platforms", () => {
+  it("links a nameless Booking.com closure to the Airbnb stay it echoes", () => {
+    const changes = reconcileRoom([
+      rb({ id: "real" }),
+      rb({ id: "echo", channel: "booking_com", status: "needs_details", guest_full_name: null }),
+    ]);
+    expect(changes).toEqual([{ id: "echo", mirror_of: "real", status: "blocked" }]);
+  });
+
+  it("flags two named guests from different platforms on the same nights", () => {
+    const changes = reconcileRoom([
+      rb({ id: "a" }),
+      rb({ id: "b", channel: "homestay", guest_full_name: "Ade Okafor", check_in_date: "2026-10-03" }),
+    ]);
+    expect(changes.map((c) => c.status)).toEqual(["flagged", "flagged"]);
+  });
+
+  it("releases a mirror when the real stay is gone, unless the host decided", () => {
+    const orphan = rb({ id: "e", channel: "booking_com", status: "blocked", guest_full_name: null, mirror_of: "gone" });
+    expect(reconcileRoom([orphan])).toEqual([{ id: "e", mirror_of: null, status: "needs_details" }]);
+    expect(reconcileRoom([{ ...orphan, manual_fields: ["status"] }])).toEqual([{ id: "e", mirror_of: null }]);
+  });
+
+  it("ignores same-platform overlaps and non-overlapping stays", () => {
+    expect(
+      reconcileRoom([rb({ id: "a" }), rb({ id: "b", check_in_date: "2026-10-04", check_out_date: "2026-10-06", channel: "homestay" })]),
+    ).toEqual([]);
+  });
+});

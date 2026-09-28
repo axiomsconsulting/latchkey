@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BedDouble, CalendarClock, DoorOpen, Loader2, Sparkles, Sun } from "lucide-react";
+import { AlertTriangle, BedDouble, CalendarClock, DoorOpen, Loader2, Sparkles, Sun } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
@@ -248,6 +248,7 @@ function TodayPage() {
   const inStay = withState.filter((x) => x.state === "in_stay");
   const departing = withState.filter((x) => x.state === "departing_today");
   const needsDetails = withState.filter((x) => x.state === "needs_details");
+  const doubleBooked = live.filter((b) => b.status === "flagged" && b.check_out_date >= todayIso);
 
   const windowsToday = ((data?.windows ?? []) as Array<{
     id: string;
@@ -274,6 +275,27 @@ function TodayPage() {
         <StatCard icon={CalendarClock} label={copy.departing} value={departing.length} />
         <StatCard icon={Sparkles} label={copy.actionRequired} value={needsDetails.length} />
       </div>
+
+      {doubleBooked.length > 0 ? (
+        <div role="alert" className="flex gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+          <AlertTriangle className="size-5 shrink-0 text-destructive" />
+          <div className="text-sm">
+            <p className="font-medium">{copy.doubleBookedTitle}</p>
+            <p className="text-muted-foreground">{copy.doubleBookedBody}</p>
+            <ul className="mt-2 space-y-1">
+              {doubleBooked.map((b) => (
+                <li key={b.id} className="flex flex-wrap items-center gap-2">
+                  <ChannelBadge channel={b.channel as Channel} />
+                  <span>
+                    {b.guest_full_name ?? b.reservation_code} · {roomName(b.room_id)} ·{" "}
+                    {formatUkDate(b.check_in_date)} → {formatUkDate(b.check_out_date)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
 
       {windowsToday.length > 0 ? (
         <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm">
