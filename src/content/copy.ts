@@ -170,7 +170,6 @@ export const connections = {
   byRoomTitle: "Each room across platforms",
   byRoomBody: "Link every platform that lets the same room. Latchkey matches the entries so one stay is never counted twice.",
   noLinks: "No calendars linked to this room yet.",
-  lastSynced: "Last synced",
   add: "Add calendar link",
   test: "Test link",
   syncNow: "Sync now",
