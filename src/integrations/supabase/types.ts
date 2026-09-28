@@ -1060,6 +1060,7 @@ export type Database = {
         | "checked_out"
         | "cancelled"
         | "flagged"
+        | "blocked"
       host_role: "owner" | "co_host" | "cleaner"
       presence_event: "arrived" | "left" | "returned" | "checked_out"
       sync_status: "never" | "ok" | "warning" | "error"
@@ -1199,6 +1200,7 @@ export const Constants = {
         "checked_out",
         "cancelled",
         "flagged",
+        "blocked",
       ],
       host_role: ["owner", "co_host", "cleaner"],
       presence_event: ["arrived", "left", "returned", "checked_out"],
