@@ -43,6 +43,10 @@ export type BookingRow = {
   notes: string | null;
   source?: string;
   manual_fields?: string[];
+  mirror_of?: string | null;
+  booking_url?: string | null;
+  listing_title?: string | null;
+  feed_status?: string | null;
 };
 
 type Props = {
@@ -171,6 +175,27 @@ export function BookingDialog({
             {booking ? copy.editBooking : copy.addBooking}
           </DialogTitle>
           <DialogDescription>{copy.manualNote}</DialogDescription>
+          {booking && (booking.listing_title || booking.booking_url || booking.mirror_of) ? (
+            <div className="mt-2 space-y-1 rounded-xl bg-muted px-3 py-2 text-sm">
+              {booking.mirror_of ? <p>{copy.mirrorNote}</p> : null}
+              {booking.listing_title ? (
+                <p className="text-muted-foreground">{copy.listing}: {booking.listing_title}</p>
+              ) : null}
+              {booking.feed_status === "TENTATIVE" ? (
+                <p className="text-muted-foreground">{copy.tentative}</p>
+              ) : null}
+              {booking.booking_url ? (
+                <a
+                  href={booking.booking_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline underline-offset-4"
+                >
+                  {copy.openOnPlatform}
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
