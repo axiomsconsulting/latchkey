@@ -337,10 +337,12 @@ function BookingsPage() {
         rooms={rooms}
         booking={editing}
         defaults={{
-          check_in_time: (data?.property as { default_check_in_time?: string } | null)
-            ?.default_check_in_time,
-          check_out_time: (data?.property as { default_check_out_time?: string } | null)
-            ?.default_check_out_time,
+          check_in_time:
+            (data?.property as { default_check_in_time?: string } | null)
+              ?.default_check_in_time ?? "15:00",
+          check_out_time:
+            (data?.property as { default_check_out_time?: string } | null)
+              ?.default_check_out_time ?? "11:00",
         }}
       />
       <ImportDialog
