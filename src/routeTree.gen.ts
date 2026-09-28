@@ -19,6 +19,7 @@ import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
 import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authenticated/app.properties'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 
@@ -75,6 +76,11 @@ const AuthenticatedAppSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppSetupRoute = AuthenticatedAppSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppTodayRoute = AuthenticatedAppTodayRouteImport.update({
   id: '/today',
   path: '/today',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/_authenticated/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/app/connections'
     | '/app/properties'
     | '/app/settings'
+    | '/app/setup'
     | '/app/today'
     | '/app/'
     | '/api/public/cron/latchkey'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/app/connections'
     | '/app/properties'
     | '/app/settings'
+    | '/app/setup'
     | '/app/today'
     | '/app'
     | '/api/public/cron/latchkey'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/connections'
     | '/_authenticated/app/properties'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/setup'
     | '/_authenticated/app/today'
     | '/_authenticated/app/'
     | '/api/public/cron/latchkey'
@@ -248,6 +260,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/setup': {
+      id: '/_authenticated/app/setup'
+      path: '/setup'
+      fullPath: '/app/setup'
+      preLoaderRoute: typeof AuthenticatedAppSetupRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/today': {
       id: '/_authenticated/app/today'
       path: '/today'
@@ -270,6 +289,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppConnectionsRoute: typeof AuthenticatedAppConnectionsRoute
   AuthenticatedAppPropertiesRoute: typeof AuthenticatedAppPropertiesRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppSetupRoute: typeof AuthenticatedAppSetupRoute
   AuthenticatedAppTodayRoute: typeof AuthenticatedAppTodayRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
@@ -279,6 +299,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppConnectionsRoute: AuthenticatedAppConnectionsRoute,
   AuthenticatedAppPropertiesRoute: AuthenticatedAppPropertiesRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppSetupRoute: AuthenticatedAppSetupRoute,
   AuthenticatedAppTodayRoute: AuthenticatedAppTodayRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
