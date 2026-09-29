@@ -2,12 +2,13 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, CalendarPlus, ExternalLink, Loader2, Star, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarPlus, ExternalLink, Loader2, Mail, MessageCircle, Phone, Star, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
+import { TradeContacts } from "@/components/host/TradeContacts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,6 +24,8 @@ import { TradeDirectory } from "@/components/host/TradeDirectory";
 import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { SERVICE_CATEGORIES, categoryById, formatPence, rateLabel } from "@/lib/services";
+import { contactLinks, tradeCategoryLabel } from "@/lib/trade-contacts";
+import { listTrades, assignTradeToJob } from "@/lib/trades.functions";
 import {
   acknowledgeJob,
   appointProvider,
@@ -150,7 +153,15 @@ function ServicesPage() {
         </TabsContent>
       </Tabs>
 
-      {recFor ? <RecommendDialog job={recFor} onClose={() => setRecFor(null)} /> : null}
+      {recFor ? (
+        <RecommendDialog
+          job={recFor}
+          hostId={ws.data!.hostId}
+          propertyId={selectedId}
+          countryCode={selectedProperty?.country_code ?? "GB"}
+          onClose={() => setRecFor(null)}
+        />
+      ) : null}
       <NewJobDialog open={newOpen} onOpenChange={setNewOpen} hostId={ws.data!.hostId} propertyId={selectedId} />
     </div>
   );
