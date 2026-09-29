@@ -12,7 +12,7 @@ export function GuestFrame({
 }: {
   children: ReactNode;
   theme?: ThemeConfig | null;
-  name?: string;
+  name?: string | undefined;
 }) {
   return (
     <ThemeScope theme={theme} global className="min-h-screen px-4 sm:px-8">
