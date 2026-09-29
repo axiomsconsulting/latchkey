@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { common, settings as copy } from "@/content/copy";
-import { useWorkspace } from "@/hooks/use-host-data";
+import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
+import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
@@ -52,6 +54,8 @@ function SettingsPage() {
     timezone: "Europe/London",
   });
   const [busy, setBusy] = useState(false);
+  const propsList = (workspace.data?.properties ?? []) as Array<{ id: string; name: string; short_code: string; theme_config: unknown }>;
+  const { selectedId } = useSelectedProperty(propsList);
   const [demoBusy, setDemoBusy] = useState<"load" | "remove" | null>(null);
 
   useEffect(() => {
@@ -114,10 +118,11 @@ function SettingsPage() {
   }
 
   const hasDemo = workspace.data?.hasDemo ?? false;
+  const themedProperty = propsList.find((p) => p.id === selectedId) ?? null;
   const propertyCount = (workspace.data?.properties ?? []).length;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <PageHeader
         title={copy.title}
         subtitle={copy.subtitle}
@@ -190,6 +195,9 @@ function SettingsPage() {
           </Button>
         </div>
       </form>
+
+      {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
+      {workspace.data ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
 
       <section className="card-soft p-5">
         <div className="flex items-start gap-3">

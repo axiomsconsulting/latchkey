@@ -35,10 +35,13 @@ export function ThemeScope({
   theme,
   children,
   className,
+  global = false,
 }: {
   theme: ThemeConfig | null | undefined;
   children: ReactNode;
   className?: string;
+  /** Also theme the page root so dialogs and menus (rendered outside) match. */
+  global?: boolean;
 }) {
   useThemeFonts(theme);
   const vars = theme ? themeVars(theme) : {};
@@ -47,13 +50,14 @@ export function ThemeScope({
 
   // Also theme the page root so dialogs and menus (rendered outside) match.
   useEffect(() => {
+    if (!global) return;
     const root = document.documentElement;
     const entries = Object.entries(JSON.parse(key) as Record<string, string>);
     for (const [k, v] of entries) root.style.setProperty(k, v);
     return () => {
       for (const [k] of entries) root.style.removeProperty(k);
     };
-  }, [key]);
+  }, [key, global]);
   return (
     <div
       style={style}

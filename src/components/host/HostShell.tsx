@@ -40,7 +40,7 @@ export function HostShell() {
   }
 
   return (
-    <ThemeScope theme={theme} className="min-h-screen">
+    <ThemeScope theme={theme} global className="min-h-screen">
       {/* Desktop: floating frosted sidebar */}
       <aside className="glass fixed inset-y-4 left-4 z-20 hidden w-64 flex-col rounded-[2rem] p-4 md:flex print:hidden">
         <Link to="/" className="flex items-center gap-3 rounded-2xl px-2 py-2">
