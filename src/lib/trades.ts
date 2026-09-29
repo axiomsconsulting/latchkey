@@ -11,6 +11,9 @@
  * extraction of member listings, so Latchkey links out rather than copying.
  */
 
+import { region as regionFor } from "./regions";
+
+
 export type Directory = {
   id: string;
   name: string;
