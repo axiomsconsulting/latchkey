@@ -29,6 +29,7 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
+import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 
 const IndexRoute = IndexRouteImport.update({
@@ -136,6 +137,11 @@ const AuthenticatedAppPrintPropertyIdRoute =
     path: '/print/$propertyId',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
+  id: '/api/public/calendar/$token',
+  path: '/api/public/calendar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
   id: '/api/public/cron/latchkey',
   path: '/api/public/cron/latchkey',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRoutesByTo {
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRoutesById {
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRouteTypes {
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/app/today'
     | '/app/'
     | '/app/print/$propertyId'
+    | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/app/today'
     | '/app'
     | '/app/print/$propertyId'
+    | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
   id:
     | '__root__'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/today'
     | '/_authenticated/app/'
     | '/_authenticated/app/print/$propertyId'
+    | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
   fileRoutesById: FileRoutesById
 }
@@ -288,6 +300,7 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   PDemoRoute: typeof PDemoRoute
   StayTokenRoute: typeof StayTokenRoute
+  ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
 }
 
@@ -433,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppPrintPropertyIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/calendar/$token': {
+      id: '/api/public/calendar/$token'
+      path: '/api/public/calendar/$token'
+      fullPath: '/api/public/calendar/$token'
+      preLoaderRoute: typeof ApiPublicCalendarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/latchkey': {
       id: '/api/public/cron/latchkey'
       path: '/api/public/cron/latchkey'
@@ -493,6 +513,7 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   PDemoRoute: PDemoRoute,
   StayTokenRoute: StayTokenRoute,
+  ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
 }
 export const routeTree = rootRouteImport

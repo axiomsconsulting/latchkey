@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
+import { todayRequests as todayRequestsCopy } from "@/content/copy";
+import { TodayRequests } from "@/components/host/TodayRequests";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { StatusBadge } from "@/components/host/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -252,6 +254,21 @@ function TodayPage() {
   const needsDetails = withState.filter((x) => x.state === "needs_details");
   const doubleBooked = live.filter((b) => b.status === "flagged" && b.check_out_date >= todayIso);
 
+  // Same room emptying and filling on the same day: warn when there is little
+  // time for cleaning between the two.
+  const mins = (t: string | null | undefined, fallback: string) => {
+    const [h = "0", m = "0"] = (t ?? fallback).slice(0, 5).split(":");
+    return Number(h) * 60 + Number(m);
+  };
+  const turnarounds = departing
+    .map(({ b }) => {
+      const next = arriving.find((a) => a.b.room_id && a.b.room_id === b.room_id);
+      if (!next) return null;
+      const gap = mins(next.b.check_in_time, "15:00") - mins(b.check_out_time, "11:00");
+      return gap < 120 ? { id: b.id, room: roomName(b.room_id), gap } : null;
+    })
+    .filter((x): x is { id: string; room: string; gap: number } => x !== null);
+
   const windowsToday = ((data?.windows ?? []) as Array<{
     id: string;
     day_of_week: number | null;
@@ -279,6 +296,20 @@ function TodayPage() {
       </div>
 
       <AlertsPanel />
+
+      {selectedId ? <TodayRequests propertyId={selectedId} /> : null}
+
+      {turnarounds.length > 0 ? (
+        <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
+          <ul className="space-y-1 text-sm">
+            {turnarounds.map((t) => (
+              <li key={t.id}>
+                <span className="font-medium">{t.room}</span> · {todayRequestsCopy.tightTurnaround(t.gap)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {doubleBooked.length > 0 ? (
         <div role="alert" className="flex gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">

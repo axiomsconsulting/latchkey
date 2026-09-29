@@ -229,7 +229,7 @@ const bookingInput = z.object({
   id: uuid.optional(),
   property_id: uuid,
   room_id: uuid.nullable(),
-  channel: z.enum(["airbnb", "booking_com", "homestay", "direct", "other"]),
+  channel: z.enum(["airbnb", "booking_com", "homestay", "vrbo", "agoda", "direct", "other"]),
   guest_full_name: z.string().nullable(),
   reservation_code: z.string().nullable(),
   guest_count: z.number().int().min(1).max(12),
@@ -314,7 +314,7 @@ export const importBookings = createServerFn({ method: "POST" })
           .array(
             z.object({
               room_id: uuid.nullable(),
-              channel: z.enum(["airbnb", "booking_com", "homestay", "direct", "other"]),
+              channel: z.enum(["airbnb", "booking_com", "homestay", "vrbo", "agoda", "direct", "other"]),
               guest_full_name: z.string().nullable(),
               reservation_code: z.string().nullable(),
               guest_count: z.number().int().min(1).max(12),
@@ -382,7 +382,7 @@ export const testFeed = createServerFn({ method: "POST" })
     z
       .object({
         url: z.string().min(8),
-        channel: z.enum(["airbnb", "booking_com", "homestay", "direct", "other"]),
+        channel: z.enum(["airbnb", "booking_com", "homestay", "vrbo", "agoda", "direct", "other"]),
       })
       .parse(input),
   )
@@ -419,7 +419,7 @@ export const saveConnection = createServerFn({ method: "POST" })
         id: uuid.optional(),
         property_id: uuid,
         room_id: uuid.nullable(),
-        channel: z.enum(["airbnb", "booking_com", "homestay", "direct", "other"]),
+        channel: z.enum(["airbnb", "booking_com", "homestay", "vrbo", "agoda", "direct", "other"]),
         listing_name: z.string().nullable(),
         ical_url: z.string().min(8).optional(),
         external_listing_id: z.string().nullable().default(null),

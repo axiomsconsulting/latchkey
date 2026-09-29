@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { CheckinSettings } from "@/components/host/CheckinSettings";
+import { RoomFeedPanel } from "@/components/host/RoomFeedPanel";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -749,6 +750,7 @@ function PropertiesPage() {
                 >
                   <Trash2 className="size-4" />
                 </Button>
+                <RoomFeedPanel roomId={r.id} roomName={r.display_name} />
               </li>
             ))}
           </ul>

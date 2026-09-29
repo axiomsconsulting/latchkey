@@ -379,6 +379,7 @@ export type Database = {
           auto_approve: boolean
           created_at: string
           currency: string
+          deleted_at: string | null
           description: string | null
           id: string
           is_demo: boolean
@@ -399,6 +400,7 @@ export type Database = {
           auto_approve?: boolean
           created_at?: string
           currency?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_demo?: boolean
@@ -419,6 +421,7 @@ export type Database = {
           auto_approve?: boolean
           created_at?: string
           currency?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_demo?: boolean
@@ -931,6 +934,7 @@ export type Database = {
           created_at: string
           early_from: string | null
           extra_id: string | null
+          host_note: string | null
           id: string
           items: Json
           kind: string
@@ -949,6 +953,7 @@ export type Database = {
           created_at?: string
           early_from?: string | null
           extra_id?: string | null
+          host_note?: string | null
           id?: string
           items?: Json
           kind?: string
@@ -967,6 +972,7 @@ export type Database = {
           created_at?: string
           early_from?: string | null
           extra_id?: string | null
+          host_note?: string | null
           id?: string
           items?: Json
           kind?: string
@@ -1055,6 +1061,8 @@ export type Database = {
           created_at: string
           description: string | null
           display_name: string
+          export_feed_enabled: boolean
+          feed_token: string | null
           guide_mode: string
           has_ensuite: boolean
           id: string
@@ -1071,6 +1079,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_name: string
+          export_feed_enabled?: boolean
+          feed_token?: string | null
           guide_mode?: string
           has_ensuite?: boolean
           id?: string
@@ -1087,6 +1097,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_name?: string
+          export_feed_enabled?: boolean
+          feed_token?: string | null
           guide_mode?: string
           has_ensuite?: boolean
           id?: string
@@ -1472,6 +1484,8 @@ export type Database = {
         | "homestay"
         | "direct"
         | "other"
+        | "vrbo"
+        | "agoda"
       booking_source: "ical" | "manual" | "csv" | "api"
       booking_status:
         | "needs_details"
@@ -1611,7 +1625,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      booking_channel: ["airbnb", "booking_com", "homestay", "direct", "other"],
+      booking_channel: [
+        "airbnb",
+        "booking_com",
+        "homestay",
+        "direct",
+        "other",
+        "vrbo",
+        "agoda",
+      ],
       booking_source: ["ical", "manual", "csv", "api"],
       booking_status: [
         "needs_details",

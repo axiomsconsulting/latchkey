@@ -7,7 +7,7 @@ import { addDays, dayOfWeek, zonedParts } from "./dates";
 
 export type SectionKey =
   | "getting_in" | "shoes" | "room" | "kitchenette" | "bathroom" | "parking"
-  | "rules" | "quiet" | "unavailable" | "checkout" | "contact";
+  | "taxis" | "rules" | "quiet" | "unavailable" | "checkout" | "contact";
 
 export const SECTIONS: { key: SectionKey; title: string; hint: string }[] = [
   { key: "getting_in", title: "Getting in", hint: "How to open the front door and use the lock. Add photos of the keypad." },
@@ -16,6 +16,7 @@ export const SECTIONS: { key: SectionKey; title: string; hint: string }[] = [
   { key: "kitchenette", title: "Kitchenette", hint: "What guests can use, labelling food, washing up." },
   { key: "bathroom", title: "Bathroom and hot water", hint: "Shower controls, how long hot water takes, towels." },
   { key: "parking", title: "Parking", hint: "Where to park, permits, where not to park." },
+  { key: "taxis", title: "Local taxis", hint: "Two or three local firms with phone numbers, and the usual fare to the station." },
   { key: "rules", title: "House rules", hint: "Smoking, guests, pets, the shared spaces." },
   { key: "quiet", title: "Quiet hours", hint: "Anything to add to your quiet hours." },
   { key: "unavailable", title: "Times the house is unavailable", hint: "Cleaning windows when rooms or shared spaces are closed." },
@@ -172,6 +173,14 @@ export const STARTER: Record<SectionKey, { summary: string; steps: { heading: st
   kitchenette: { summary: "Shared kitchenette on the ground floor: kettle, microwave and fridge.", steps: [{ heading: "Fridge", body: "Label your food with your room number. The top shelf is yours." }, { heading: "Washing up", body: "Please wash, dry and put away anything you use." }] },
   bathroom: { summary: "Hot water takes about a minute to come through.", steps: [{ heading: "Shower", body: "Turn the left dial for power and the right dial for temperature." }] },
   parking: { summary: "Free on-street parking on Amersham Hill.", steps: [] },
+  taxis: {
+    summary: "Local firms are quicker than an app here, especially late at night.",
+    steps: [
+      { heading: "Booking ahead", body: "For an early train, book the night before. Cars are scarce before 6am." },
+      { heading: "To the station", body: "High Wycombe station is about five minutes by car." },
+      { heading: "Replace these details", body: "Add two or three local firms with their phone numbers and the usual fare." },
+    ],
+  },
   rules: { summary: "No smoking anywhere indoors. No visitors after 10pm.", steps: [] },
   quiet: { summary: "", steps: [] },
   unavailable: { summary: "", steps: [] },

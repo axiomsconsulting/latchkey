@@ -57,6 +57,13 @@
       "when": 1790673172848,
       "tag": "0007_extras_price_list_and_tax",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790676242546,
+      "tag": "0008_channels_notes_feed_and_soft_delete",
+      "breakpoints": true
     }
   ]
 }

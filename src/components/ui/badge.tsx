@@ -17,6 +17,8 @@ const badgeVariants = cva(
         airbnb: "border-transparent bg-channel-airbnb text-channel-airbnb-foreground",
         booking: "border-transparent bg-channel-booking text-channel-booking-foreground",
         homestay: "border-transparent bg-channel-homestay text-channel-homestay-foreground",
+        vrbo: "border-transparent bg-channel-vrbo text-channel-vrbo-foreground",
+        agoda: "border-transparent bg-channel-agoda text-channel-agoda-foreground",
         direct: "border-transparent bg-channel-direct text-channel-direct-foreground",
         other: "border-transparent bg-channel-other text-channel-other-foreground",
       },
