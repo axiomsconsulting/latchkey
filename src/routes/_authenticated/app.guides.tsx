@@ -19,6 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { common, guideCopy as copy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { GuideOrderPanel } from "@/components/host/GuideOrderPanel";
+import { RoomAmenities } from "@/components/host/RoomAmenities";
 import { SECTIONS, type SectionKey } from "@/lib/guide";
 import {
   addStarterGuide,
@@ -76,11 +78,14 @@ function GuidesPage() {
   if (ws.isLoading) return <Skeleton className="mx-auto h-64 max-w-4xl rounded-2xl" />;
   if (!selectedId) return <EmptyState icon={BookOpen} title={copy.title} body="Add a property first." />;
 
-  const rooms = q.data?.rooms ?? [];
+  const rooms = (q.data?.rooms ?? []) as Array<{ id: string; display_name: string; guide_mode: string; amenities?: unknown }>;
   const sections = (q.data?.sections ?? []) as Section[];
   const roomId = scope === "house" ? null : scope;
   const room = rooms.find((r) => r.id === roomId);
   const houseCount = sections.filter((s) => s.roomId === null).length;
+  const order = orderedKeys(sections);
+  const pinned = new Set(sections.filter((s) => s.roomId === null && s.pinned).map((s) => s.sectionKey));
+  const roomAmenities = Array.isArray(room?.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [];
 
   async function runStarter() {
     setBusy(true);
