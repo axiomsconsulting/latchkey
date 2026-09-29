@@ -284,5 +284,12 @@ export async function runRetentionSweep(): Promise<number> {
     .lt("check_out_date", cutoff)
     .is("anonymised_at", null)
     .select("id");
+  // Check-in privacy: results and attempts go 30 days after check-out.
+  const today = new Date().toISOString().slice(0, 10);
+  const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  await supabaseAdmin.from("verification_results").delete().lt("delete_after", today);
+  await supabaseAdmin.from("check_in_attempts").delete().lt("created_at", monthAgo);
+  await supabaseAdmin.from("checkin_sessions").delete().lt("expires_at", new Date().toISOString());
+  await supabaseAdmin.from("stay_tokens").delete().lt("expires_at", new Date().toISOString());
   return data?.length ?? 0;
 }
