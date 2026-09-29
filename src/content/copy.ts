@@ -470,7 +470,28 @@ export const guest = {
   stayRules: "House rules",
   stayRulesList: ["Shoes off indoors, please.", "Please keep the shared kitchenette tidy."],
   stayGone: "This stay link has expired. We hope you enjoyed your stay.",
+  // Carrying on somewhere else
+  qrHeading: "Carry on with your phone",
+  qrBlurb: "Point your camera at this square. You will pick up exactly where you are now.",
+  qrDoneHeading: "Your room details",
+  qrDoneBlurb: "Scan this to keep your door code, Wi-Fi and house notes on your phone.",
+  qrSwitch: "Use another phone",
+  qrOpen: "Show a square to scan with another phone",
+  qrAlt: "Square code to scan with a phone camera",
+  qrResuming: "Picking up where you left off…",
+  // Messages and past requests
+  inboxTitle: "Messages",
+  inboxOpen: "Messages and requests",
+  inboxEmpty: "No messages yet. Write below and your host will see it.",
+  inboxSend: "Send",
+  inboxPlaceholder: "Type your message to your host",
+  inboxSent: "Sent. Your host has been told.",
+  inboxHistory: "What you have asked for",
+  inboxHistoryEmpty: "Nothing yet.",
+  inboxYou: "You",
+  inboxHost: "Your host",
 };
+
 
 export const hostPlaceholders = {
   comingSoon: "Coming in a later stage",
