@@ -243,7 +243,7 @@ export const createExtrasRequest = createServerFn({ method: "POST" })
 
     const { raiseAlert } = await import("./checkin.server");
     await raiseAlert({
-      hostId: p.host_id, propertyId: b.property_id, bookingId: b.id, kind: "extras_request",
+      hostId: p.host_id, propertyId: b.property_id, bookingId: b.id, kind: "service_request",
       message: `${auto ? "Auto-approved" : "Needs approval"}: ${priced.map((l) => `${l.qty}× ${l.name}`).join(", ")}`,
     });
     return { id: row.id, status };
