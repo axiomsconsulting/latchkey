@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Minus, Plus } from "lucide-react";
+import { Loader2, Minus, Plus, Receipt, ShoppingBasket, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { ReceiptCard } from "@/components/guest/ReceiptCard";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { extrasCopy as copy, payments as paymentsCopy, responseNotes } from "@/content/copy";
 import { formatPence } from "@/lib/services";
-import { acceptSuggestion, cancelExtrasRequest, createExtrasRequest, getStayExtras } from "@/lib/extras.functions";
+import { acceptSuggestion, cancelExtrasRequest, chooseOfflinePayment, createExtrasRequest, getStayExtras } from "@/lib/extras.functions";
 import { startExtrasCheckout } from "@/lib/payments.functions";
 import { cn } from "@/lib/utils";
 
@@ -19,26 +21,30 @@ export function StayExtras({ token }: { token: string }) {
   const create = useServerFn(createExtrasRequest);
   const cancel = useServerFn(cancelExtrasRequest);
   const accept = useServerFn(acceptSuggestion);
+  const offline = useServerFn(chooseOfflinePayment);
   const checkout = useServerFn(startExtrasCheckout);
   const [payingId, setPayingId] = useState<string | null>(null);
   const q = useQuery({ queryKey: ["stay-extras", token], queryFn: () => fetchFn({ data: { token } }), refetchInterval: 20_000 });
   const [lines, setLines] = useState<Line[]>([]);
   const [win, setWin] = useState<string>("asap");
   const [busy, setBusy] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [troubleId, setTroubleId] = useState<string | null>(null);
+  const [receiptId, setReceiptId] = useState<string | null>(null);
 
   const d = q.data;
   const cur = d?.currency ?? "GBP";
   const fmtT = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: d?.timezone ?? "Europe/London", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
-  const total = useMemo(() => {
-    if (!d) return 0;
-    return lines.reduce((s, l) => {
-      const it = d.items.find((i) => i.key === l.key);
-      if (!it || it.isFree) return s;
-      const size = it.sizes?.find((x) => x.key === l.size);
-      return s + (size?.pricePence ?? it.pricePence) * l.qty;
-    }, 0);
-  }, [d, lines]);
+  const priceOf = (l: Line) => {
+    const it = d?.items.find((i) => i.key === l.key);
+    if (!it || it.isFree) return 0;
+    const size = it.sizes?.find((x) => x.key === l.size);
+    return (size?.pricePence ?? it.pricePence) * l.qty;
+  };
+
+  const total = useMemo(() => lines.reduce((s, l) => s + priceOf(l), 0), [d, lines]);
+  const count = lines.reduce((s, l) => s + l.qty, 0);
 
   function setQty(key: string, qty: number, size: string | null = null) {
     setLines((ls) => {
@@ -48,12 +54,16 @@ export function StayExtras({ token }: { token: string }) {
   }
 
   async function send() {
+    if (lines.length === 0) return;
     setBusy(true);
     try {
-      await create({ data: { token, lines, window: win as "asap", note: null } });
-      toast.success(copy.sent);
+      const res = await create({ data: { token, lines, window: win as "asap", note: null } });
       setLines([]);
+      setCartOpen(false);
       await qc.invalidateQueries({ queryKey: ["stay-extras", token] });
+      // Nothing to pay means nothing to do — free items just go to the host.
+      if (res.status === "awaiting_payment") await pay(res.id);
+      else toast.success(copy.sent);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Please try again.");
     } finally {
@@ -69,6 +79,7 @@ export function StayExtras({ token }: { token: string }) {
       else throw new Error(paymentsCopy.payFailed);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : paymentsCopy.payFailed);
+      setTroubleId(id);
       setPayingId(null);
     }
   }
@@ -83,6 +94,8 @@ export function StayExtras({ token }: { token: string }) {
 
   const regular = d.items.filter((i) => i.key !== "late_checkout" && i.key !== "early_checkin");
   const lineOf = (k: string) => lines.find((l) => l.key === k);
+  const nameOf = (k: string) => d.items.find((i) => i.key === k)?.name ?? k;
+  const receiptReq = d.requests.find((r) => r.id === receiptId) ?? null;
 
   const hourPicker = (key: string, title: string, opts: { hours: number; label: string }[], none: string) => {
     const it = d.items.find((i) => i.key === key);
@@ -127,13 +140,51 @@ export function StayExtras({ token }: { token: string }) {
                 {r.lateUntil ? <span className="text-sm text-muted-foreground">{copy.until(r.lateUntil.slice(0, 5))}</span> : null}
                 {r.earlyFrom ? <span className="text-sm text-muted-foreground">{copy.from(r.earlyFrom.slice(0, 5))}</span> : null}
                 {r.status === "awaiting_payment" && left !== null ? <span className="text-sm text-accent">{copy.payLeft(left)}</span> : null}
-                {r.status === "awaiting_payment" ? (
+                {r.status === "awaiting_payment" && !r.paymentMethod ? (
                   <Button size="touch" onClick={() => pay(r.id)} disabled={payingId === r.id}>
                     {payingId === r.id ? <Loader2 className="size-4 animate-spin" /> : null}
                     {paymentsCopy.payNow}
                   </Button>
                 ) : null}
+                {r.status === "awaiting_payment" ? (
+                  <Button size="touch" variant="ghost" onClick={() => setTroubleId(troubleId === r.id ? null : r.id)}>
+                    {copy.payTrouble}
+                  </Button>
+                ) : null}
+                {r.status === "confirmed" ? (
+                  <Button size="touch" variant="outline" onClick={() => setReceiptId(r.id)}>
+                    <Receipt className="size-4" />{copy.receipt}
+                  </Button>
+                ) : null}
                 {r.hostNote ? <p className="w-full text-sm text-primary">{responseNotes.fromHost(r.hostNote)}</p> : null}
+                {r.paymentMethod === "bank" ? <p className="w-full text-sm text-muted-foreground">{copy.payChosenBank} {copy.payNotGuaranteed}</p> : null}
+                {r.paymentMethod === "cash" ? <p className="w-full text-sm text-muted-foreground">{copy.payChosenCash} {copy.payNotGuaranteed}</p> : null}
+
+                {troubleId === r.id && r.status === "awaiting_payment" ? (
+                  <div className="w-full space-y-3 rounded-2xl bg-secondary/60 p-4">
+                    <p className="text-sm">{copy.payTroubleBody}</p>
+                    <div>
+                      <p className="font-medium">{copy.payBankTitle}</p>
+                      {d.bankDetails ? (
+                        <>
+                          <p className="whitespace-pre-line text-sm">{d.bankDetails}</p>
+                          <p className="text-sm text-muted-foreground">{copy.payRefNote(r.receiptNumber ?? r.id.slice(0, 8).toUpperCase())}</p>
+                          <Button className="mt-2" size="touch" variant="outline" onClick={() => act(() => offline({ data: { token, id: r.id, method: "bank" } }))}>
+                            {copy.payBank}
+                          </Button>
+                        </>
+                      ) : <p className="text-sm text-muted-foreground">{copy.noBankDetails}</p>}
+                    </div>
+                    <div>
+                      <p className="font-medium">{copy.payCashTitle}</p>
+                      <p className="text-sm">{copy.payCashBody}</p>
+                      <Button className="mt-2" size="touch" variant="outline" onClick={() => act(() => offline({ data: { token, id: r.id, method: "cash" } }))}>
+                        {copy.payCash}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
                 {r.status === "suggested" && r.suggested ? (
                   <>
                     <span className="w-full text-sm">{copy.suggested(copy.windows[r.suggested] ?? r.suggested)}</span>
@@ -152,7 +203,7 @@ export function StayExtras({ token }: { token: string }) {
       {hourPicker("late_checkout", copy.lateTitle, d.lateOptions.map((o) => ({ hours: o.hours, label: copy.until(o.until) })), copy.lateNone)}
       {hourPicker("early_checkin", copy.earlyTitle, d.earlyOptions.map((o) => ({ hours: o.hours, label: copy.from(o.from) })), copy.earlyNone)}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 pb-24 sm:grid-cols-2">
         {regular.map((it) => {
           const l = lineOf(it.key);
           const qty = l?.qty ?? 0;
@@ -185,23 +236,79 @@ export function StayExtras({ token }: { token: string }) {
         })}
       </div>
 
-      {lines.length > 0 ? (
-        <div className="card-soft sticky bottom-24 space-y-3 p-4">
-          <p className="font-medium">{copy.when}</p>
-          <div className="flex flex-wrap gap-2">
-            {d.windows.map((w) => (
-              <button key={w} type="button" onClick={() => setWin(w)}
-                className={cn("spring min-h-14 rounded-2xl border-2 px-4 text-left", win === w ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface")}>
-                {copy.windows[w]}
-                {w === "asap" && d.outUntil ? <span className="block text-sm opacity-80">{copy.hostOut(fmtT(d.outUntil))}</span> : null}
-              </button>
-            ))}
-          </div>
-          <Button size="touch-xl" className="w-full" onClick={send} disabled={busy}>
-            {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-            {copy.send}{total > 0 ? ` · ${formatPence(total, cur)}` : ""}
+      {/* Basket bar: never blocks the page, so guests can keep adding items. */}
+      {count > 0 ? (
+        <div className="fixed inset-x-0 bottom-20 z-40 px-4 sm:bottom-6">
+          <Button size="touch-xl" className="mx-auto flex w-full max-w-xl shadow-lg" onClick={() => setCartOpen(true)}>
+            <ShoppingBasket className="size-6" />
+            {copy.cartButton(count, total > 0 ? formatPence(total, cur) : "")}
           </Button>
         </div>
+      ) : null}
+
+      <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle>{copy.cartTitle}</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 p-4 pt-0">
+            {lines.length === 0 ? <p className="text-muted-foreground">{copy.cartEmpty}</p> : (
+              <ul className="divide-y divide-border rounded-2xl border border-border">
+                {lines.map((l) => (
+                  <li key={l.key} className="flex items-center gap-3 p-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium">{nameOf(l.key)}</span>
+                      <span className="text-sm text-muted-foreground">{priceOf(l) > 0 ? formatPence(priceOf(l), cur) : copy.free}</span>
+                    </span>
+                    <Button size="icon" variant="outline" className="size-11 rounded-full" aria-label={`${copy.cartRemove} ${nameOf(l.key)}`} onClick={() => setQty(l.key, l.qty - 1, l.size)}><Minus /></Button>
+                    <span className="w-6 text-center text-lg font-semibold">{l.qty}</span>
+                    <Button size="icon" className="size-11 rounded-full" aria-label={nameOf(l.key)} onClick={() => setQty(l.key, l.qty + 1, l.size)}><Plus /></Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <p className="font-medium">{copy.when}</p>
+            <div className="flex flex-wrap gap-2">
+              {d.windows.map((w) => (
+                <button key={w} type="button" onClick={() => setWin(w)}
+                  className={cn("spring min-h-14 rounded-2xl border-2 px-4 text-left", win === w ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface")}>
+                  {copy.windows[w]}
+                  {w === "asap" && d.outUntil ? <span className="block text-sm opacity-80">{copy.hostOut(fmtT(d.outUntil))}</span> : null}
+                </button>
+              ))}
+            </div>
+
+            <p className="flex justify-between text-lg font-medium">
+              <span>{copy.total}</span>
+              <span>{total > 0 ? formatPence(total, cur) : copy.free}</span>
+            </p>
+            {total === 0 && lines.length > 0 ? <p className="text-sm text-muted-foreground">{copy.cartFreeNote}</p> : null}
+
+            <Button size="touch-xl" className="w-full" onClick={send} disabled={busy || lines.length === 0}>
+              {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+              {total > 0 ? `${copy.payAndSend} · ${formatPence(total, cur)}` : copy.sendFree}
+            </Button>
+            <Button size="touch" variant="ghost" className="w-full" onClick={() => setCartOpen(false)}>
+              <X className="size-4" />{copy.cartClose}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {receiptReq ? (
+        <ReceiptCard
+          open
+          onClose={() => setReceiptId(null)}
+          token={token}
+          request={receiptReq}
+          propertyName={d.propertyName}
+          hostName={d.hostName}
+          guestName={d.guestName}
+          currency={cur}
+          timezone={d.timezone}
+          tax={d.tax}
+        />
       ) : null}
     </section>
   );
