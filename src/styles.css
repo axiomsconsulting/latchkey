@@ -223,3 +223,18 @@
     transparent 12px
   );
 }
+
+/* iOS-style frosted glass surfaces for floating navigation */
+@utility glass {
+  background-color: color-mix(in oklab, var(--color-surface) 72%, transparent);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
+  box-shadow: var(--shadow-lifted);
+}
+
+@utility spring {
+  transition-property: transform, background-color, color, box-shadow, opacity;
+  transition-duration: 420ms;
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

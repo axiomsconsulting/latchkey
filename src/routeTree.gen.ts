@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckinRouteImport } from './routes/checkin'
@@ -22,6 +23,7 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenticated/app.bookings'
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
 import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authenticated/app.properties'
+import { Route as AuthenticatedAppServicesRouteImport } from './routes/_authenticated/app.services'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
@@ -31,6 +33,11 @@ import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/c
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlugRoute = SlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -95,6 +102,12 @@ const AuthenticatedAppPropertiesRoute =
     path: '/properties',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppServicesRoute =
+  AuthenticatedAppServicesRouteImport.update({
+    id: '/services',
+    path: '/services',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
     id: '/settings',
@@ -125,6 +138,7 @@ const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
@@ -135,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
+  '/app/services': typeof AuthenticatedAppServicesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
@@ -144,6 +159,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -153,6 +169,7 @@ export interface FileRoutesByTo {
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
+  '/app/services': typeof AuthenticatedAppServicesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
@@ -164,6 +181,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
@@ -174,6 +192,7 @@ export interface FileRoutesById {
   '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/_authenticated/app/properties': typeof AuthenticatedAppPropertiesRoute
+  '/_authenticated/app/services': typeof AuthenticatedAppServicesRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
@@ -185,6 +204,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/checkin'
     | '/app'
@@ -195,6 +215,7 @@ export interface FileRouteTypes {
     | '/app/bookings'
     | '/app/connections'
     | '/app/properties'
+    | '/app/services'
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
@@ -204,6 +225,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/checkin'
     | '/kiosk/$code'
@@ -213,6 +235,7 @@ export interface FileRouteTypes {
     | '/app/bookings'
     | '/app/connections'
     | '/app/properties'
+    | '/app/services'
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
@@ -223,6 +246,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/$slug'
     | '/auth'
     | '/checkin'
     | '/_authenticated/app'
@@ -233,6 +257,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/bookings'
     | '/_authenticated/app/connections'
     | '/_authenticated/app/properties'
+    | '/_authenticated/app/services'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup'
     | '/_authenticated/app/today'
@@ -244,6 +269,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  SlugRoute: typeof SlugRoute
   AuthRoute: typeof AuthRoute
   CheckinRoute: typeof CheckinRoute
   KioskCodeRoute: typeof KioskCodeRoute
@@ -260,6 +286,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$slug': {
+      id: '/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof SlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -346,6 +379,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppPropertiesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/services': {
+      id: '/_authenticated/app/services'
+      path: '/services'
+      fullPath: '/app/services'
+      preLoaderRoute: typeof AuthenticatedAppServicesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
       path: '/settings'
@@ -388,6 +428,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBookingsRoute: typeof AuthenticatedAppBookingsRoute
   AuthenticatedAppConnectionsRoute: typeof AuthenticatedAppConnectionsRoute
   AuthenticatedAppPropertiesRoute: typeof AuthenticatedAppPropertiesRoute
+  AuthenticatedAppServicesRoute: typeof AuthenticatedAppServicesRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetupRoute: typeof AuthenticatedAppSetupRoute
   AuthenticatedAppTodayRoute: typeof AuthenticatedAppTodayRoute
@@ -399,6 +440,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBookingsRoute: AuthenticatedAppBookingsRoute,
   AuthenticatedAppConnectionsRoute: AuthenticatedAppConnectionsRoute,
   AuthenticatedAppPropertiesRoute: AuthenticatedAppPropertiesRoute,
+  AuthenticatedAppServicesRoute: AuthenticatedAppServicesRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetupRoute: AuthenticatedAppSetupRoute,
   AuthenticatedAppTodayRoute: AuthenticatedAppTodayRoute,
@@ -423,6 +465,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  SlugRoute: SlugRoute,
   AuthRoute: AuthRoute,
   CheckinRoute: CheckinRoute,
   KioskCodeRoute: KioskCodeRoute,

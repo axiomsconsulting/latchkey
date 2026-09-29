@@ -1,10 +1,16 @@
 # Roadmap
 
-## Guest self check-in (in progress)
-- [ ] Schema: check-in methods, sessions, stay tokens, host alerts
-- [ ] Pure logic + tests: booking match, name match, lockout, method fallback
-- [ ] Public server functions (match, confirm, photo ID via AI, last 4 / email, self-declare, complete, stay)
-- [ ] Guest screens: /p/$code, /checkin (PIN), /kiosk/$code, /stay/$token
-- [ ] Host: check-in settings, printable QR card, guest email on booking, alerts on Today + menu count
+## Guest self check-in (done)
+- [x] Schema, logic + tests, server functions, guest screens, host settings, QR card
 - [ ] Email alerts (needs sender email domain)
-- [ ] Retention: verification results and attempts 30 days
+
+## Contra services, theming, iOS menu (in progress)
+- [x] Schema: theme_config, integration modes per host, service_jobs, branding storage
+- [x] Demo / live switch per integration (Contra, ID reading, host email, guest ETA messages)
+- [x] Provider recommendation logic + tests (rating, price, availability)
+- [x] Guest stay page: report issue / order extras, see ETA + messages
+- [x] Host Services hub: inbox, approve, recommend, appoint, scheduled maintenance, provider directory
+- [x] Theme studio: presets, colours, fonts (preset + upload), logo presets + upload, live preview
+- [x] Themed guest pages + host dashboard; vanity link /trinity with Host portal link
+- [x] iOS-style floating glass navigation
+- [ ] Live Contra mode: needs Contra API key/endpoint from the user

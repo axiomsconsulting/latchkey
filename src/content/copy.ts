@@ -67,6 +67,7 @@ export const hostNav = {
   bookings: "Bookings",
   properties: "Properties",
   connections: "Connections",
+  services: "Services",
   settings: "Settings",
 };
 
@@ -367,4 +368,88 @@ export const guest = {
 
 export const hostPlaceholders = {
   comingSoon: "Coming in a later stage",
+};
+
+export const services = {
+  title: "Services",
+  subtitle: "Guest requests, issues and maintenance, booked through Contra.",
+  tabInbox: "Requests",
+  tabScheduled: "Maintenance",
+  tabProviders: "Contra providers",
+  emptyInbox: "No requests yet. When a guest asks for something on their stay page, it lands here.",
+  emptyScheduled: "No maintenance booked. Plan a boiler service, deep clean or handyman visit.",
+  acknowledge: "Acknowledge",
+  recommend: "Find a provider",
+  appoint: "Appoint",
+  decline: "Decline",
+  markDone: "Mark done",
+  inProgress: "Start",
+  recommendedTitle: "Recommended on Contra",
+  noProviders: "No Contra providers can cover this right now.",
+  bookMaintenance: "Book maintenance",
+  demoBadge: "Demo",
+  liveBadge: "Live",
+  viewOnContra: "View on Contra",
+  guestTold: "Guest has been told the arrival time.",
+  statuses: {
+    new: "New", acknowledged: "Acknowledged", booked: "Booked", in_progress: "In progress",
+    done: "Done", declined: "Declined", cancelled: "Cancelled",
+  } as Record<string, string>,
+};
+
+export const stayServices = {
+  title: "Need something?",
+  subtitle: "Tap what you need. Your host will confirm and tell you when it's coming.",
+  issues: "Report a problem",
+  extras: "Extras",
+  notePlaceholder: "Anything we should know? (optional)",
+  urgent: "It's urgent",
+  send: "Send to host",
+  sent: "Sent. Your host will be in touch here.",
+  yourRequests: "Your requests",
+  updates: "Updates from your host",
+  expected: (t: string) => `Expected ${t}`,
+  price: (p: string) => `${p}, paid to your host`,
+  priceOnRequest: "Price confirmed by your host",
+};
+
+export const themeStudio = {
+  title: "Look and feel",
+  subtitle: "Brand your guest pages, kiosk and dashboard. Changes preview instantly.",
+  presets: "Ready-made styles",
+  colours: "Colours",
+  primary: "Main colour",
+  accent: "Highlight",
+  background: "Background",
+  surface: "Cards",
+  foreground: "Text",
+  fonts: "Fonts",
+  heading: "Headings",
+  body: "Body text",
+  uploadFont: "Upload your own font (.ttf, .otf, .woff, .woff2)",
+  logo: "Logo",
+  uploadLogo: "Upload a logo",
+  removeUpload: "Use a built-in logo",
+  corners: "Corner roundness",
+  link: "Your guest link",
+  linkHelp: "Guests and you can bookmark this. It opens your fully branded page.",
+  preview: "Preview",
+  save: "Save look",
+  saved: "Look saved",
+};
+
+export const integrations = {
+  title: "Integrations: demo or live",
+  subtitle: "Test each connection safely in demo mode, then switch it live when you're ready.",
+  demo: "Demo",
+  live: "Live",
+  ready: "Ready",
+  needsSetup: "Needs setup",
+  items: {
+    contra: { name: "Contra marketplace", demo: "Sample local freelancers, bookings confirm instantly.", live: "Searches and books real providers on Contra." },
+    id_check: { name: "Photo ID reading", demo: "Any photo passes as a match, no AI call.", live: "AI reads the name on the ID and compares it." },
+    host_email: { name: "Email alerts to you", demo: "Alerts show on Today only.", live: "Also emails you. Needs a sender email address." },
+    guest_messages: { name: "Guest updates", demo: "Updates show on the guest's stay page.", live: "Stay page plus email to the guest when a sender address is set up." },
+  },
+  saved: "Switches saved",
 };
