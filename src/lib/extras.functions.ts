@@ -241,6 +241,14 @@ export const getStayExtras = createServerFn({ method: "GET" })
     const { data: reqs } = await db
       .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at, host_note, late_until, early_from, payment_method, receipt_number, paid_at")
       .eq("booking_id", b.id).eq("kind", "extras").order("created_at", { ascending: false }).limit(20);
+    // A confirmed request has been settled one way or another, so it earns a
+    // receipt number the guest can quote. Numbered once, then kept.
+    for (const r of (reqs ?? []) as any[]) {
+      if (r.status === "confirmed" && !r.receipt_number) {
+        r.receipt_number = receiptNumber(r.id, r.created_at);
+        await db.from("requests").update({ receipt_number: r.receipt_number }).eq("id", r.id);
+      }
+    }
     const outUntil = p.hosts?.out_until && Date.parse(p.hosts.out_until) > Date.now() ? p.hosts.out_until : null;
     return {
       currency,
