@@ -102,8 +102,27 @@ export function BookingDialog({
   defaults,
 }: Props) {
   const save = useServerFn(saveBooking);
+  const undo = useServerFn(undoCheckIn);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+
+  async function onUndo() {
+    if (!booking) return;
+    if (!window.confirm(copy.undoCheckInConfirm)) return;
+    setUndoing(true);
+    try {
+      await undo({ data: { bookingId: booking.id } });
+      await qc.invalidateQueries({ queryKey: ["board"] });
+      toast.success(copy.undoCheckInDone);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    } finally {
+      setUndoing(false);
+    }
+  }
+
   const [form, setForm] = useState(() =>
     blank(propertyId, rooms[0]?.id ?? null, defaults),
   );
