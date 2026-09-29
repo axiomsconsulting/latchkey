@@ -29,7 +29,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
 
     const { data: membership } = await supabase
       .from("host_members")
-      .select("host_id, role, hosts(id, business_name, contact_email, contact_phone, currency, timezone)")
+      .select("host_id, role, hosts(id, business_name, contact_email, contact_phone, currency, timezone, channel_labels)")
       .eq("user_id", userId)
       .order("created_at", { ascending: true })
       .limit(1)
@@ -48,7 +48,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
       if (error) throw new Error(error.message);
       const { data: created, error: readErr } = await supabase
         .from("hosts")
-        .select("id, business_name, contact_email, contact_phone, currency, timezone")
+        .select("id, business_name, contact_email, contact_phone, currency, timezone, channel_labels")
         .eq("id", newId as string)
         .single();
       if (readErr) throw new Error(readErr.message);

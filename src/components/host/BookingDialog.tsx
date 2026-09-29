@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { bookings as copy, channels, common, statuses } from "@/content/copy";
-import { saveBooking } from "@/lib/host.functions";
+import { saveBooking, undoCheckIn } from "@/lib/host.functions";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 
 export type BookingRow = {

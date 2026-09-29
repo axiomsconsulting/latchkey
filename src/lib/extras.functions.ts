@@ -156,7 +156,7 @@ export const listExtrasRequests = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("requests")
-      .select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, late_until, early_from, message, host_note, created_at, bookings!inner(id, property_id, guest_full_name, rooms(display_name))")
+      .select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, late_until, early_from, message, host_note, created_at, payment_method, bookings!inner(id, property_id, guest_full_name, rooms(display_name))")
       .eq("kind", "extras")
       .eq("bookings.property_id", data.propertyId)
       .order("created_at", { ascending: false })
@@ -166,6 +166,7 @@ export const listExtrasRequests = createServerFn({ method: "GET" })
       window: r.time_window as string | null, totalPence: r.total_pence as number, payBy: r.pay_by as string | null,
       suggested: r.suggested_window as string | null, lateUntil: r.late_until as string | null, earlyFrom: r.early_from as string | null,
       note: r.message as string | null, hostNote: (r.host_note as string | null) ?? null, createdAt: r.created_at as string,
+      paymentMethod: (r.payment_method as string | null) ?? null,
       guest: (r.bookings?.guest_full_name as string | null) ?? "Guest", room: (r.bookings?.rooms?.display_name as string | null) ?? null,
     }));
   });
@@ -185,7 +186,7 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
       data.action === "approve" ? { status: r.total_pence > 0 ? "awaiting_payment" : "approved", pay_by: r.total_pence > 0 ? new Date(now.getTime() + HOLD_MS).toISOString() : null }
       : data.action === "decline" ? { status: "declined", resolved_at: now.toISOString() }
       : data.action === "suggest" ? { status: "suggested", suggested_window: data.window, suggestion_expires_at: new Date(now.getTime() + HOLD_MS).toISOString() }
-      : data.action === "mark_paid" ? { status: "confirmed" }
+      : data.action === "mark_paid" ? { status: "confirmed", paid_at: now.toISOString() }
       : { status: "delivered", resolved_at: now.toISOString() };
     if (data.note) patch["host_note"] = data.note;
     const { error } = await context.supabase.from("requests").update(patch as never).eq("id", data.id);
@@ -212,11 +213,18 @@ async function stayContext(t: string) {
   if (!st || Date.parse(st.expires_at) < Date.now()) throw new Error("This stay link has expired.");
   const { data: b } = await db
     .from("bookings")
-    .select("id, property_id, room_id, status, check_in_date, check_out_date, check_in_time, check_out_time, properties(host_id, timezone, quiet_hours_start, quiet_hours_end, default_check_in_time, default_check_out_time, hosts(currency, out_until))")
+    .select("id, property_id, room_id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, guest_email, properties(name, host_id, timezone, quiet_hours_start, quiet_hours_end, default_check_in_time, default_check_out_time, hosts(business_name, currency, out_until, bank_details, contact_phone, contact_email, tax_registered, tax_label, tax_rate_bp, prices_include_tax))")
     .eq("id", st.booking_id)
     .single();
   if (!b || b.status === "cancelled") throw new Error("This stay link has expired.");
   return { db, b: b as any };
+}
+
+/** Short human receipt number, e.g. LK-260430-8F2C. Stable for one request. */
+function receiptNumber(id: string, createdAt: string) {
+  const d = new Date(createdAt);
+  const ymd = `${String(d.getUTCFullYear()).slice(2)}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+  return `LK-${ymd}-${id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
 }
 
 async function roomDayFlags(db: any, b: any) {
@@ -239,8 +247,16 @@ export const getStayExtras = createServerFn({ method: "GET" })
     const late = items.find((i) => i.key === "late_checkout");
     const early = items.find((i) => i.key === "early_checkin");
     const { data: reqs } = await db
-      .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at, host_note, late_until, early_from")
+      .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at, host_note, late_until, early_from, payment_method, receipt_number, paid_at")
       .eq("booking_id", b.id).eq("kind", "extras").order("created_at", { ascending: false }).limit(20);
+    // A confirmed request has been settled one way or another, so it earns a
+    // receipt number the guest can quote. Numbered once, then kept.
+    for (const r of (reqs ?? []) as any[]) {
+      if (r.status === "confirmed" && !r.receipt_number) {
+        r.receipt_number = receiptNumber(r.id, r.created_at);
+        await db.from("requests").update({ receipt_number: r.receipt_number }).eq("id", r.id);
+      }
+    }
     const outUntil = p.hosts?.out_until && Date.parse(p.hosts.out_until) > Date.now() ? p.hosts.out_until : null;
     return {
       currency,
@@ -248,13 +264,30 @@ export const getStayExtras = createServerFn({ method: "GET" })
       items,
       windows: availableWindows((p.quiet_hours_start ?? "22:00").slice(0, 5), (p.quiet_hours_end ?? "07:00").slice(0, 5), []),
       outUntil,
+      // Everything the receipt and the "card didn't work" fallback need.
+      propertyName: (p.name as string | null) ?? "Your stay",
+      hostName: (p.hosts?.business_name as string | null) ?? "your host",
+      hostPhone: (p.hosts?.contact_phone as string | null) ?? null,
+      bankDetails: (p.hosts?.bank_details as string | null) ?? "",
+      guestName: (b.guest_full_name as string | null) ?? null,
+      guestEmail: (b.guest_email as string | null) ?? null,
+      tax: {
+        registered: !!p.hosts?.tax_registered,
+        label: (p.hosts?.tax_label as string | null) ?? "VAT",
+        rateBp: (p.hosts?.tax_rate_bp as number | null) ?? 2000,
+        pricesInclude: p.hosts?.prices_include_tax ?? true,
+      },
       lateOptions: late ? lateCheckoutOptions({ checkOutTime: (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5), maxHours: late.maxQty, sameDayArrival: flags.sameDayArrival, blocked: [] }) : [],
       earlyOptions: early ? earlyCheckinOptions({ checkInTime: (b.check_in_time ?? p.default_check_in_time ?? "15:00").slice(0, 5), maxHours: early.maxQty, sameDayDeparture: flags.sameDayDeparture, blocked: [] }) : [],
       requests: (reqs ?? []).map((r: any) => ({
-        id: r.id, status: r.status as string, items: r.items as { name: string; qty: number }[], totalPence: r.total_pence as number,
+        id: r.id, status: r.status as string, items: r.items as { name: string; qty: number; totalPence?: number }[], totalPence: r.total_pence as number,
         payBy: r.pay_by as string | null, suggested: r.suggested_window as string | null, window: r.time_window as string | null,
         hostNote: (r.host_note as string | null) ?? null,
         lateUntil: (r.late_until as string | null) ?? null, earlyFrom: (r.early_from as string | null) ?? null,
+        paymentMethod: (r.payment_method as string | null) ?? null,
+        receiptNumber: (r.receipt_number as string | null) ?? null,
+        paidAt: (r.paid_at as string | null) ?? null,
+        createdAt: r.created_at as string,
       })),
     };
   });
@@ -334,4 +367,55 @@ export const acceptSuggestion = createServerFn({ method: "POST" })
       pay_by: paid ? new Date(Date.now() + HOLD_MS).toISOString() : null,
     }).eq("id", data.id);
     return { ok: true };
+  });
+
+/**
+ * Card payment didn't work (or the guest would rather not use one). They tell
+ * us how they'll settle up instead: bank transfer or cash to the host. The
+ * request stays unpaid until the host confirms the money arrived, and the
+ * guest is told as much.
+ */
+export const chooseOfflinePayment = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token, id: uuid, method: z.enum(["bank", "cash"]) }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, b } = await stayContext(data.token);
+    const { data: r } = await db.from("requests").select("id, status, items, total_pence").eq("id", data.id).eq("booking_id", b.id).maybeSingle();
+    if (!r) throw new Error("We couldn't find that request.");
+    if (r.status !== "awaiting_payment") throw new Error("That request isn't waiting for payment.");
+    // No countdown once they've chosen to pay the host directly.
+    await db.from("requests").update({ payment_method: data.method, pay_by: null }).eq("id", r.id);
+    const { raiseAlert } = await import("./checkin.server");
+    const names = Array.isArray(r.items) ? (r.items as any[]).map((i) => `${i.qty ?? 1}× ${i.name}`).join(", ") : "Extras";
+    await raiseAlert({
+      hostId: b.properties.host_id, propertyId: b.property_id, bookingId: b.id, kind: "service_request",
+      message: `Guest will pay ${data.method === "bank" ? "by bank transfer" : "in cash"} for: ${names}. Confirm once the money arrives.`,
+    });
+    return { ok: true };
+  });
+
+/**
+ * Emails the itemised receipt to the guest. Sending only happens when a real
+ * email sender is configured; otherwise we say so honestly and the guest can
+ * still print or save the receipt.
+ */
+export const emailReceipt = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token, id: uuid, to: z.string().email().nullable().default(null) }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, b } = await stayContext(data.token);
+    const { data: r } = await db.from("requests").select("id, status, items, total_pence, receipt_number, payment_method, created_at").eq("id", data.id).eq("booking_id", b.id).maybeSingle();
+    if (!r) throw new Error("We couldn't find that request.");
+    if (r.status !== "confirmed") throw new Error("The receipt is ready once payment is confirmed.");
+    const to = data.to ?? (b.guest_email as string | null);
+    if (!to) return { sent: false, reason: "no_address" as const };
+
+    const number = r.receipt_number ?? receiptNumber(r.id, r.created_at);
+    const lines = (Array.isArray(r.items) ? (r.items as any[]) : []).map((i) => `${i.qty ?? 1} × ${i.name}`).join("\n");
+    const { sendGuestEmail } = await import("./alert-email.server");
+    const sent = await sendGuestEmail({
+      to,
+      subject: `Receipt ${number} · ${b.properties.name ?? "your stay"}`,
+      body: `Receipt ${number}\n\n${lines}\n\nTotal: ${(r.total_pence / 100).toFixed(2)} ${b.properties.hosts?.currency ?? "GBP"}\nPaid by: ${r.payment_method ?? "card"}`,
+    });
+    if (sent) await db.from("requests").update({ receipt_number: number, receipt_emailed_at: new Date().toISOString() }).eq("id", r.id);
+    return { sent, reason: sent ? null : ("not_configured" as const) };
   });

@@ -133,9 +133,16 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
                     </>
                   ) : null}
                   {r.status === "awaiting_payment" ? (
-                    <Button size="sm" variant="outline" onClick={() => start(r.id, "mark_paid")}>
-                      {copy.markPaid}
-                    </Button>
+                    <>
+                      {r.paymentMethod === "bank" || r.paymentMethod === "cash" ? (
+                        <span className="rounded-full bg-secondary px-3 py-1 text-sm">
+                          {r.paymentMethod === "bank" ? copy.payingBank : copy.payingCash}
+                        </span>
+                      ) : null}
+                      <Button size="sm" variant="outline" onClick={() => start(r.id, "mark_paid")}>
+                        {copy.markPaid}
+                      </Button>
+                    </>
                   ) : null}
                   {r.status === "approved" || r.status === "confirmed" ? (
                     <Button size="sm" onClick={() => start(r.id, "delivered")}>
