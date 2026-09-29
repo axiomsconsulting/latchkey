@@ -393,6 +393,9 @@ export type Database = {
           property_id: string
           requires_approval: boolean
           sort_order: number
+          stripe_price_id: string | null
+          stripe_product_id: string | null
+          stripe_synced_at: string | null
           unit: string
         }
         Insert: {
@@ -414,6 +417,9 @@ export type Database = {
           property_id: string
           requires_approval?: boolean
           sort_order?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          stripe_synced_at?: string | null
           unit?: string
         }
         Update: {
@@ -435,6 +441,9 @@ export type Database = {
           property_id?: string
           requires_approval?: boolean
           sort_order?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          stripe_synced_at?: string | null
           unit?: string
         }
         Relationships: [
@@ -654,6 +663,9 @@ export type Database = {
           integration_modes: Json
           out_until: string | null
           prices_include_tax: boolean
+          stripe_account_label: string | null
+          stripe_checked_at: string | null
+          stripe_mode: string
           tax_label: string
           tax_rate_bp: number
           tax_registered: boolean
@@ -670,6 +682,9 @@ export type Database = {
           integration_modes?: Json
           out_until?: string | null
           prices_include_tax?: boolean
+          stripe_account_label?: string | null
+          stripe_checked_at?: string | null
+          stripe_mode?: string
           tax_label?: string
           tax_rate_bp?: number
           tax_registered?: boolean
@@ -686,6 +701,9 @@ export type Database = {
           integration_modes?: Json
           out_until?: string | null
           prices_include_tax?: boolean
+          stripe_account_label?: string | null
+          stripe_checked_at?: string | null
+          stripe_mode?: string
           tax_label?: string
           tax_rate_bp?: number
           tax_registered?: boolean
@@ -940,9 +958,12 @@ export type Database = {
           kind: string
           late_until: string | null
           message: string | null
+          paid_at: string | null
           pay_by: string | null
           resolved_at: string | null
           status: string
+          stripe_payment_intent: string | null
+          stripe_session_id: string | null
           suggested_window: string | null
           suggestion_expires_at: string | null
           time_window: string | null
@@ -959,9 +980,12 @@ export type Database = {
           kind?: string
           late_until?: string | null
           message?: string | null
+          paid_at?: string | null
           pay_by?: string | null
           resolved_at?: string | null
           status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
           suggested_window?: string | null
           suggestion_expires_at?: string | null
           time_window?: string | null
@@ -978,9 +1002,12 @@ export type Database = {
           kind?: string
           late_until?: string | null
           message?: string | null
+          paid_at?: string | null
           pay_by?: string | null
           resolved_at?: string | null
           status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
           suggested_window?: string | null
           suggestion_expires_at?: string | null
           time_window?: string | null

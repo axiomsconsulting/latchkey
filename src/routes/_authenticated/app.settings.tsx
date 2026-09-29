@@ -14,6 +14,7 @@ import { common, settings as copy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
+import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 
@@ -198,6 +199,7 @@ function SettingsPage() {
       </form>
 
       {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
+      {themedProperty ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
       {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
       {workspace.data ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
 

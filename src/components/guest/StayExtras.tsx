@@ -5,9 +5,10 @@ import { Loader2, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { extrasCopy as copy, responseNotes } from "@/content/copy";
+import { extrasCopy as copy, payments as paymentsCopy, responseNotes } from "@/content/copy";
 import { formatPence } from "@/lib/services";
 import { acceptSuggestion, cancelExtrasRequest, createExtrasRequest, getStayExtras } from "@/lib/extras.functions";
+import { startExtrasCheckout } from "@/lib/payments.functions";
 import { cn } from "@/lib/utils";
 
 type Line = { key: string; qty: number; size: string | null };
@@ -18,6 +19,8 @@ export function StayExtras({ token }: { token: string }) {
   const create = useServerFn(createExtrasRequest);
   const cancel = useServerFn(cancelExtrasRequest);
   const accept = useServerFn(acceptSuggestion);
+  const checkout = useServerFn(startExtrasCheckout);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const q = useQuery({ queryKey: ["stay-extras", token], queryFn: () => fetchFn({ data: { token } }), refetchInterval: 20_000 });
   const [lines, setLines] = useState<Line[]>([]);
   const [win, setWin] = useState<string>("asap");
@@ -55,6 +58,18 @@ export function StayExtras({ token }: { token: string }) {
       toast.error(e instanceof Error ? e.message : "Please try again.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function pay(id: string) {
+    setPayingId(id);
+    try {
+      const r = await checkout({ data: { token, requestId: id, origin: window.location.origin } });
+      if (r.url) window.location.href = r.url;
+      else throw new Error(paymentsCopy.payFailed);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : paymentsCopy.payFailed);
+      setPayingId(null);
     }
   }
 
@@ -112,6 +127,12 @@ export function StayExtras({ token }: { token: string }) {
                 {r.lateUntil ? <span className="text-sm text-muted-foreground">{copy.until(r.lateUntil.slice(0, 5))}</span> : null}
                 {r.earlyFrom ? <span className="text-sm text-muted-foreground">{copy.from(r.earlyFrom.slice(0, 5))}</span> : null}
                 {r.status === "awaiting_payment" && left !== null ? <span className="text-sm text-accent">{copy.payLeft(left)}</span> : null}
+                {r.status === "awaiting_payment" ? (
+                  <Button size="touch" onClick={() => pay(r.id)} disabled={payingId === r.id}>
+                    {payingId === r.id ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {paymentsCopy.payNow}
+                  </Button>
+                ) : null}
                 {r.hostNote ? <p className="w-full text-sm text-primary">{responseNotes.fromHost(r.hostNote)}</p> : null}
                 {r.status === "suggested" && r.suggested ? (
                   <>
