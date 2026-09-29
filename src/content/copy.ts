@@ -243,6 +243,38 @@ export const common = {
   retry: "Try again",
 };
 
+export const checkinSettings = {
+  title: "Guest check-in",
+  body: "Choose how guests confirm who they are when they check themselves in.",
+  printQr: "Print QR card",
+  openKiosk: "Open front-door kiosk",
+  methods: {
+    photo_id: "Photo ID check",
+    last4: "Booking details check",
+    self_declare: "Guest self-declaration",
+  } as Record<string, string>,
+  methodHelp: {
+    photo_id: "Guest photographs their ID. We read the name, keep only the result and never store the photo.",
+    last4: "Guest enters the last 4 of their booking reference or phone, or their email, whichever the booking has.",
+    self_declare: "Always offered as the last resort so no one is stuck at the door. You'll get an alert to check ID in person.",
+  } as Record<string, string>,
+  primary: "Ask first",
+  fallbackNote: "If the camera won't start or a guest needs more than 2 photo tries, Latchkey moves to the next option automatically.",
+  listFlowNote: "ID checks are off: guests choose their platform, then pick their booking from a list showing first name and initial only.",
+  saved: "Check-in settings saved",
+  back: "Back to properties",
+  print: "Print",
+  cardHeadline: "Scan to check yourself in",
+  cardOrVisit: "Or visit",
+  cardPin: "Property PIN",
+  qrAlt: "QR code for guest check-in",
+};
+
+export const alerts = {
+  title: "Needs your attention",
+  dismiss: "Mark as seen",
+};
+
 export const guest = {
   propertyName: "The Trinity Rooms",
   location: "High Wycombe",
