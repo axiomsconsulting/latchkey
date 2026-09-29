@@ -12,8 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CheckinRouteImport } from './routes/checkin'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
+import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as PDemoRouteImport } from './routes/p.demo'
+import { Route as StayTokenRouteImport } from './routes/stay.$token'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenticated/app.bookings'
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
@@ -37,14 +41,34 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckinRoute = CheckinRouteImport.update({
+  id: '/checkin',
+  path: '/checkin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const KioskCodeRoute = KioskCodeRouteImport.update({
+  id: '/kiosk/$code',
+  path: '/kiosk/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PCodeRoute = PCodeRouteImport.update({
+  id: '/p/$code',
+  path: '/p/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PDemoRoute = PDemoRouteImport.update({
   id: '/p/demo',
   path: '/p/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StayTokenRoute = StayTokenRouteImport.update({
+  id: '/stay/$token',
+  path: '/stay/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
@@ -95,8 +119,12 @@ const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/checkin': typeof CheckinRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/kiosk/$code': typeof KioskCodeRoute
+  '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
+  '/stay/$token': typeof StayTokenRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
@@ -109,7 +137,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/checkin': typeof CheckinRoute
+  '/kiosk/$code': typeof KioskCodeRoute
+  '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
+  '/stay/$token': typeof StayTokenRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
@@ -124,8 +156,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/checkin': typeof CheckinRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/kiosk/$code': typeof KioskCodeRoute
+  '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
+  '/stay/$token': typeof StayTokenRoute
   '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/_authenticated/app/properties': typeof AuthenticatedAppPropertiesRoute
@@ -140,8 +176,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/checkin'
     | '/app'
+    | '/kiosk/$code'
+    | '/p/$code'
     | '/p/demo'
+    | '/stay/$token'
     | '/app/bookings'
     | '/app/connections'
     | '/app/properties'
@@ -154,7 +194,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/checkin'
+    | '/kiosk/$code'
+    | '/p/$code'
     | '/p/demo'
+    | '/stay/$token'
     | '/app/bookings'
     | '/app/connections'
     | '/app/properties'
@@ -168,8 +212,12 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/checkin'
     | '/_authenticated/app'
+    | '/kiosk/$code'
+    | '/p/$code'
     | '/p/demo'
+    | '/stay/$token'
     | '/_authenticated/app/bookings'
     | '/_authenticated/app/connections'
     | '/_authenticated/app/properties'
@@ -184,7 +232,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CheckinRoute: typeof CheckinRoute
+  KioskCodeRoute: typeof KioskCodeRoute
+  PCodeRoute: typeof PCodeRoute
   PDemoRoute: typeof PDemoRoute
+  StayTokenRoute: typeof StayTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
 }
 
@@ -211,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkin': {
+      id: '/checkin'
+      path: '/checkin'
+      fullPath: '/checkin'
+      preLoaderRoute: typeof CheckinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app': {
       id: '/_authenticated/app'
       path: '/app'
@@ -218,11 +277,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/kiosk/$code': {
+      id: '/kiosk/$code'
+      path: '/kiosk/$code'
+      fullPath: '/kiosk/$code'
+      preLoaderRoute: typeof KioskCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$code': {
+      id: '/p/$code'
+      path: '/p/$code'
+      fullPath: '/p/$code'
+      preLoaderRoute: typeof PCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/p/demo': {
       id: '/p/demo'
       path: '/p/demo'
       fullPath: '/p/demo'
       preLoaderRoute: typeof PDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stay/$token': {
+      id: '/stay/$token'
+      path: '/stay/$token'
+      fullPath: '/stay/$token'
+      preLoaderRoute: typeof StayTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/': {
@@ -322,7 +402,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CheckinRoute: CheckinRoute,
+  KioskCodeRoute: KioskCodeRoute,
+  PCodeRoute: PCodeRoute,
   PDemoRoute: PDemoRoute,
+  StayTokenRoute: StayTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
 }
 export const routeTree = rootRouteImport
