@@ -31,6 +31,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { common, properties as copy } from "@/content/copy";
+import { COUNTRY_CHOICES, region } from "@/lib/regions";
 import { usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { formatUkTime } from "@/lib/dates";
 import {
@@ -73,6 +74,7 @@ type Property = {
   name: string;
   address: string | null;
   postcode: string | null;
+  country_code: string | null;
   short_code: string;
   check_in_pin: string | null;
   timezone: string | null;
@@ -240,6 +242,7 @@ function PropertyDialog({
     name: property.name,
     address: property.address ?? "",
     postcode: property.postcode ?? "",
+    country_code: (property.country_code ?? "GB").toUpperCase(),
     short_code: property.short_code,
     check_in_pin: property.check_in_pin ?? "",
     default_check_in_time: property.default_check_in_time.slice(0, 5),
@@ -266,6 +269,7 @@ function PropertyDialog({
           name: form.name.trim(),
           address: form.address.trim() || null,
           postcode: form.postcode.trim() || null,
+          country_code: form.country_code,
           short_code: form.short_code.trim().toLowerCase(),
           check_in_pin: /^\d{6}$/.test(form.check_in_pin) ? form.check_in_pin : null,
           timezone: property.timezone,
@@ -310,8 +314,26 @@ function PropertyDialog({
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
           </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="cn">Country</Label>
+            <Select
+              value={form.country_code}
+              onValueChange={(v) => setForm((f) => ({ ...f, country_code: v }))}
+            >
+              <SelectTrigger id="cn" className="h-12">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_CHOICES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
-            <Label htmlFor="ad">Address</Label>
+            <Label htmlFor="ad">{region(form.country_code).addressLabel}</Label>
             <Input
               id="ad"
               className="h-12"
@@ -320,7 +342,7 @@ function PropertyDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pc">Postcode</Label>
+            <Label htmlFor="pc">{region(form.country_code).postcodeLabel}</Label>
             <Input
               id="pc"
               className="h-12"
