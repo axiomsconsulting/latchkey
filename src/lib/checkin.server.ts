@@ -205,3 +205,19 @@ export async function readNameFromId(imageDataUrl: string): Promise<{ name: stri
     return { name: null, isId: false };
   }
 }
+
+/**
+ * Host-chosen wording for each booking platform. The internal channel id never
+ * changes, so a host renaming "Direct" to "Our website" can't break matching.
+ */
+export async function channelLabels(hostId: string): Promise<Record<string, string>> {
+  const db = await admin();
+  const { data } = await db.from("hosts").select("channel_labels").eq("id", hostId).maybeSingle();
+  const raw = data?.channel_labels;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 40);
+  }
+  return out;
+}
