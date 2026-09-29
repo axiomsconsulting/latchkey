@@ -2,25 +2,34 @@
  * Minimal Stripe REST client. Server only.
  *
  * Keys are project secrets, never stored in the database and never sent to the
- * browser: STRIPE_SECRET_KEY (sk_test_… or sk_live_…) and STRIPE_WEBHOOK_SECRET.
+ * browser. Standard (sk_…) and restricted (rk_…) keys both work; the test key
+ * is used unless a live key is present, so demo mode is the safe default.
  */
 
 const API = "https://api.stripe.com/v1";
 
 export class StripeSetupError extends Error {}
 
+/** Live key wins only when it exists; otherwise we stay in Stripe's test mode. */
+function resolveKey(): string | undefined {
+  const live = process.env["STRIPE_LIVE_API_KEY"] ?? process.env["STRIPE_SECRET_KEY"];
+  const test = process.env["STRIPE_TEST_API_KEY"];
+  const isLive = (live ?? "").includes("_live_");
+  return isLive ? live : (test ?? live);
+}
+
 export function stripeKey(): string {
-  const key = process.env["STRIPE_SECRET_KEY"];
-  if (!key) throw new StripeSetupError("Card payments aren't connected yet. Add your Stripe secret key in Settings, then try again.");
+  const key = resolveKey();
+  if (!key) throw new StripeSetupError("Card payments aren't connected yet. Add your Stripe key in Settings, then try again.");
   return key;
 }
 
 export function stripeReady(): boolean {
-  return Boolean(process.env["STRIPE_SECRET_KEY"]);
+  return Boolean(resolveKey());
 }
 
 export function stripeLiveMode(): boolean {
-  return (process.env["STRIPE_SECRET_KEY"] ?? "").startsWith("sk_live_");
+  return (resolveKey() ?? "").includes("_live_");
 }
 
 /** Stripe wants form-encoded bodies with bracket notation for nested values. */
