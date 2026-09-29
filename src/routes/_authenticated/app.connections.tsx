@@ -572,6 +572,12 @@ function ConnectionsPage() {
         <Badge variant="outline">{copy.comingSoon}</Badge>
       </section>
 
+      <section className="card-soft p-5">
+        <p className="font-medium">{calendarUi.managerTitle}</p>
+        <p className="text-sm text-muted-foreground">{calendarUi.managerBody}</p>
+        <Badge className="mt-2" variant="secondary">Coming soon</Badge>
+      </section>
+
       <AddConnectionDialog
         open={addOpen}
         onOpenChange={setAddOpen}
