@@ -386,7 +386,7 @@ export const chooseOfflinePayment = createServerFn({ method: "POST" })
     const { raiseAlert } = await import("./checkin.server");
     const names = Array.isArray(r.items) ? (r.items as any[]).map((i) => `${i.qty ?? 1}× ${i.name}`).join(", ") : "Extras";
     await raiseAlert({
-      hostId: b.properties.host_id, propertyId: b.property_id, bookingId: b.id, kind: "payment_offline",
+      hostId: b.properties.host_id, propertyId: b.property_id, bookingId: b.id, kind: "service_request",
       message: `Guest will pay ${data.method === "bank" ? "by bank transfer" : "in cash"} for: ${names}. Confirm once the money arrives.`,
     });
     return { ok: true };
