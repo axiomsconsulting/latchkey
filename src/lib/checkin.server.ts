@@ -75,7 +75,7 @@ export async function raiseAlert(input: {
   hostId: string;
   propertyId: string;
   bookingId?: string | null;
-  kind: "lockout" | "id_mismatch" | "id_partial" | "self_declared";
+  kind: "lockout" | "id_mismatch" | "id_partial" | "self_declared" | "service_request";
   message: string;
 }) {
   const db = await admin();

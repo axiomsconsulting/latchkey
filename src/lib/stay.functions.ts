@@ -109,7 +109,7 @@ export const createStayRequest = createServerFn({ method: "POST" })
       hostId: booking.properties.host_id,
       propertyId: booking.property_id,
       bookingId: booking.id,
-      kind: "service_request" as never,
+      kind: "service_request",
       message: `${urgency === "urgent" ? "Urgent: " : ""}${cat.label}${data.note ? ` — ${data.note}` : ""}`,
     });
     return { id: row.id };
