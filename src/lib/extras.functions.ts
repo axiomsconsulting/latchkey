@@ -156,7 +156,7 @@ export const listExtrasRequests = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("requests")
-      .select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, late_until, early_from, message, host_note, created_at, bookings!inner(id, property_id, guest_full_name, rooms(display_name))")
+      .select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, late_until, early_from, message, host_note, created_at, payment_method, bookings!inner(id, property_id, guest_full_name, rooms(display_name))")
       .eq("kind", "extras")
       .eq("bookings.property_id", data.propertyId)
       .order("created_at", { ascending: false })
@@ -166,6 +166,7 @@ export const listExtrasRequests = createServerFn({ method: "GET" })
       window: r.time_window as string | null, totalPence: r.total_pence as number, payBy: r.pay_by as string | null,
       suggested: r.suggested_window as string | null, lateUntil: r.late_until as string | null, earlyFrom: r.early_from as string | null,
       note: r.message as string | null, hostNote: (r.host_note as string | null) ?? null, createdAt: r.created_at as string,
+      paymentMethod: (r.payment_method as string | null) ?? null,
       guest: (r.bookings?.guest_full_name as string | null) ?? "Guest", room: (r.bookings?.rooms?.display_name as string | null) ?? null,
     }));
   });
