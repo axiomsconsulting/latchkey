@@ -129,18 +129,10 @@ export const matchBooking = createServerFn({ method: "POST" })
       .from("bookings")
       .select("id, channel, status, check_in_date, check_out_date, guest_full_name, mirror_of")
       .eq("property_id", p.id)
-      .gte("check_in_date", today.slice(0, 8) + "01" > today ? today : today)
       .lte("check_in_date", today)
-      .limit(200);
-    // Narrow the query client-side to yesterday/today candidates.
-    const { data: yRows } = await db
-      .from("bookings")
-      .select("id, channel, status, check_in_date, check_out_date, guest_full_name, mirror_of")
-      .eq("property_id", p.id)
-      .lt("check_in_date", today)
       .gt("check_out_date", today)
       .limit(200);
-    const all = [...(rows ?? []), ...(yRows ?? [])];
+    const all = rows ?? [];
 
     const hit = findBooking(all, today, data);
     await db.from("check_in_attempts").insert({
