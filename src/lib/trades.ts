@@ -12,13 +12,14 @@
  */
 
 export type Directory = {
-  id: "checkatrade" | "mybuilder" | "rated_people" | "bark" | "trustatrader" | "google_maps";
+  id: string;
   name: string;
   blurb: string;
   /** How the host is charged or contacted. */
   note: string;
   search: (term: string, postcode: string) => string;
 };
+
 
 /** Plain search words for each service category used across Latchkey. */
 export const TRADE_TERMS: Record<string, string> = {
