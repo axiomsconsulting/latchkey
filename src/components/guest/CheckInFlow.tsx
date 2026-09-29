@@ -293,7 +293,7 @@ export function CheckInFlow({
                   >
                     <span>{i.label}</span>
                     <span className="text-sm font-normal text-muted-foreground">
-                      {copy.stepCheckout.replace("Which day do you check out?", "Check-out")} {formatUkDate(i.checkOut)}
+                      {copy.stayCheckout} {formatUkDate(i.checkOut)}
                     </span>
                   </Button>
                 ))}

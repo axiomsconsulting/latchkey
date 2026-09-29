@@ -55,6 +55,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       today,
       checkoutChoices: checkoutChoices(today, hourIn(tz)),
       listFlow: usesListFlow(methods),
+      hostPhone: p.host_contact_phone,
     };
   });
 
