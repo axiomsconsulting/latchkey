@@ -614,6 +614,7 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          integration_modes: Json
           timezone: string
         }
         Insert: {
@@ -623,6 +624,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          integration_modes?: Json
           timezone?: string
         }
         Update: {
@@ -632,6 +634,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          integration_modes?: Json
           timezone?: string
         }
         Relationships: []
@@ -644,6 +647,7 @@ export type Database = {
           created_at: string
           direction: string
           id: string
+          job_id: string | null
           sent_at: string | null
         }
         Insert: {
@@ -653,6 +657,7 @@ export type Database = {
           created_at?: string
           direction?: string
           id?: string
+          job_id?: string | null
           sent_at?: string | null
         }
         Update: {
@@ -662,6 +667,7 @@ export type Database = {
           created_at?: string
           direction?: string
           id?: string
+          job_id?: string | null
           sent_at?: string | null
         }
         Relationships: [
@@ -678,6 +684,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cleaner_schedule"
             referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "messages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "service_jobs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -798,6 +811,7 @@ export type Database = {
           quiet_hours_end: string
           quiet_hours_start: string
           short_code: string
+          theme_config: Json
           timezone: string | null
           wifi_name: string | null
           wifi_password: string | null
@@ -821,6 +835,7 @@ export type Database = {
           quiet_hours_end?: string
           quiet_hours_start?: string
           short_code: string
+          theme_config?: Json
           timezone?: string | null
           wifi_name?: string | null
           wifi_password?: string | null
@@ -844,6 +859,7 @@ export type Database = {
           quiet_hours_end?: string
           quiet_hours_start?: string
           short_code?: string
+          theme_config?: Json
           timezone?: string | null
           wifi_name?: string | null
           wifi_password?: string | null
@@ -1010,6 +1026,120 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_jobs: {
+        Row: {
+          acknowledged_at: string | null
+          booking_id: string | null
+          category: string
+          completed_at: string | null
+          created_at: string
+          eta_at: string | null
+          guest_price_pence: number | null
+          host_id: string
+          id: string
+          is_demo: boolean
+          note: string | null
+          property_id: string
+          provider: Json | null
+          provider_mode: string | null
+          provider_ref: string | null
+          quoted_pence: number | null
+          room_id: string | null
+          scheduled_at: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          booking_id?: string | null
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          eta_at?: string | null
+          guest_price_pence?: number | null
+          host_id: string
+          id?: string
+          is_demo?: boolean
+          note?: string | null
+          property_id: string
+          provider?: Json | null
+          provider_mode?: string | null
+          provider_ref?: string | null
+          quoted_pence?: number | null
+          room_id?: string | null
+          scheduled_at?: string | null
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          booking_id?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          eta_at?: string | null
+          guest_price_pence?: number | null
+          host_id?: string
+          id?: string
+          is_demo?: boolean
+          note?: string | null
+          property_id?: string
+          provider?: Json | null
+          provider_mode?: string | null
+          provider_ref?: string | null
+          quoted_pence?: number | null
+          room_id?: string | null
+          scheduled_at?: string | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_jobs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_jobs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "service_jobs_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_jobs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_jobs_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
