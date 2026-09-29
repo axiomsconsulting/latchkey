@@ -53,12 +53,16 @@ function Stay() {
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
       <main className="mx-auto max-w-4xl space-y-6 py-8">
-        <div>
-          <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
-          <p className="mt-2 text-lg text-muted-foreground">
-            {s.room ? copy.roomLine(s.room.display_name, s.room.public_title) : p?.name}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
+            <p className="mt-2 text-lg text-muted-foreground">
+              {s.room ? copy.roomLine(s.room.display_name, s.room.public_title) : p?.name}
+            </p>
+          </div>
+          <StayInbox token={token} />
         </div>
+
 
         <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">
           <h2 id="forget" className="text-xl">{gcopy.forgetTitle}</h2>
