@@ -15,7 +15,15 @@ import { directoryLinks, tradeTerm } from "@/lib/trades";
  * directories have no API and forbid automated extraction, so every search
  * opens in a new tab rather than being copied into Latchkey.
  */
-export function TradeDirectory({ postcode, address }: { postcode: string; address?: string | null }) {
+export function TradeDirectory({
+  postcode,
+  address,
+  countryCode = "GB",
+}: {
+  postcode: string;
+  address?: string | null;
+  countryCode?: string;
+}) {
   const [category, setCategory] = useState<string>(SERVICE_CATEGORIES[0]?.id ?? "cleaning");
   const propertyArea = [postcode, address].find((v) => v && v.trim()) ?? "";
   const [area, setArea] = useState(propertyArea);
@@ -30,7 +38,7 @@ export function TradeDirectory({ postcode, address }: { postcode: string; addres
   }
 
   const effectiveTerm = term.trim() || tradeTerm(category);
-  const links = directoryLinks(category, area).map((d) => ({
+  const links = directoryLinks(category, area, countryCode).map((d) => ({
     ...d,
     url: d.search(effectiveTerm, area.trim() || "UK"),
   }));

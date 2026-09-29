@@ -2,12 +2,13 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, CalendarPlus, ExternalLink, Loader2, Star, Wrench } from "lucide-react";
+import { BadgeCheck, CalendarPlus, ExternalLink, Loader2, Mail, MessageCircle, Phone, Star, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
+import { TradeContacts } from "@/components/host/TradeContacts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,12 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { common, services as copy, trades as tradesCopy } from "@/content/copy";
+import { common, services as copy, trades as tradesDir, tradesCopy } from "@/content/copy";
 import { ContraStudio } from "@/components/host/ContraStudio";
 import { TradeDirectory } from "@/components/host/TradeDirectory";
 import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { SERVICE_CATEGORIES, categoryById, formatPence, rateLabel } from "@/lib/services";
+import { contactLinks, tradeCategoryLabel } from "@/lib/trade-contacts";
+import { listTrades, assignTradeToJob } from "@/lib/trades.functions";
 import {
   acknowledgeJob,
   appointProvider,
@@ -114,7 +117,7 @@ function ServicesPage() {
             {copy.tabInbox} {inbox.filter((j) => j.status === "new").length ? <Badge className="ml-2">{inbox.filter((j) => j.status === "new").length}</Badge> : null}
           </TabsTrigger>
           <TabsTrigger value="planned" className="h-10 rounded-xl px-4">{copy.tabScheduled}</TabsTrigger>
-          <TabsTrigger value="trades" className="h-10 rounded-xl px-4">{tradesCopy.tabLabel}</TabsTrigger>
+          <TabsTrigger value="trades" className="h-10 rounded-xl px-4">{tradesDir.tabLabel}</TabsTrigger>
           <TabsTrigger value="providers" className="h-10 rounded-xl px-4">{copy.tabProviders}</TabsTrigger>
         </TabsList>
 
@@ -150,7 +153,15 @@ function ServicesPage() {
         </TabsContent>
       </Tabs>
 
-      {recFor ? <RecommendDialog job={recFor} onClose={() => setRecFor(null)} /> : null}
+      {recFor ? (
+        <RecommendDialog
+          job={recFor}
+          hostId={ws.data!.hostId}
+          propertyId={selectedId}
+          countryCode={selectedProperty?.country_code ?? "GB"}
+          onClose={() => setRecFor(null)}
+        />
+      ) : null}
       <NewJobDialog open={newOpen} onOpenChange={setNewOpen} hostId={ws.data!.hostId} propertyId={selectedId} />
     </div>
   );

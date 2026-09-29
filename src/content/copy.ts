@@ -880,6 +880,7 @@ export const tradesCopy = {
   whatsapp: "WhatsApp",
   email: "Email",
   preferred: "First call",
+  noneForJob: "No saved contacts yet. Add someone in the address book above, or search the directories below.",
   noContact: "No number or email saved yet.",
   deleteConfirm: "Remove this contact?",
   fields: {
