@@ -44,9 +44,11 @@ export const Route = createFileRoute("/p/$code")({
 
 function GuestCheckIn() {
   const p = Route.useLoaderData();
+  const { resume } = Route.useSearch();
   return (
     <GuestFrame theme={p.theme} name={p.name}>
-      <CheckInFlow property={p} hostPhone={p.hostPhone} />
+      <CheckInFlow property={p} hostPhone={p.hostPhone} resumeToken={resume ?? null} />
     </GuestFrame>
   );
 }
+
