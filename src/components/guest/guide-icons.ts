@@ -1,4 +1,4 @@
-import { Bath, BedDouble, CalendarX, Car, DoorOpen, Footprints, LogOut, Moon, Phone, ScrollText, Utensils, type LucideIcon } from "lucide-react";
+import { Bath, BedDouble, CalendarX, Car, CarTaxiFront, DoorOpen, Footprints, LogOut, Moon, Phone, ScrollText, Utensils, type LucideIcon } from "lucide-react";
 
 import type { SectionKey } from "@/lib/guide";
 
@@ -9,6 +9,7 @@ export const guestGuideIcons: Record<SectionKey, LucideIcon> = {
   kitchenette: Utensils,
   bathroom: Bath,
   parking: Car,
+  taxis: CarTaxiFront,
   rules: ScrollText,
   quiet: Moon,
   unavailable: CalendarX,
