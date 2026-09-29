@@ -28,6 +28,7 @@ import { Route as AuthenticatedAppServicesRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
+import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
@@ -131,6 +132,11 @@ const AuthenticatedAppTodayRoute = AuthenticatedAppTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
+  id: '/api/public/stripe-webhook',
+  path: '/api/public/stripe-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppPrintPropertyIdRoute =
   AuthenticatedAppPrintPropertyIdRouteImport.update({
     id: '/print/$propertyId',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
+  '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
@@ -188,6 +195,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
+  '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
+  '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
+    | '/api/public/stripe-webhook'
     | '/app/'
     | '/app/print/$propertyId'
     | '/api/public/calendar/$token'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
+    | '/api/public/stripe-webhook'
     | '/app'
     | '/app/print/$propertyId'
     | '/api/public/calendar/$token'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup'
     | '/_authenticated/app/today'
+    | '/api/public/stripe-webhook'
     | '/_authenticated/app/'
     | '/_authenticated/app/print/$propertyId'
     | '/api/public/calendar/$token'
@@ -300,6 +312,7 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   PDemoRoute: typeof PDemoRoute
   StayTokenRoute: typeof StayTokenRoute
+  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
 }
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppTodayRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/stripe-webhook': {
+      id: '/api/public/stripe-webhook'
+      path: '/api/public/stripe-webhook'
+      fullPath: '/api/public/stripe-webhook'
+      preLoaderRoute: typeof ApiPublicStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/print/$propertyId': {
       id: '/_authenticated/app/print/$propertyId'
       path: '/print/$propertyId'
@@ -513,6 +533,7 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   PDemoRoute: PDemoRoute,
   StayTokenRoute: StayTokenRoute,
+  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
 }
