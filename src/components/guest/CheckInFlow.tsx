@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Phone } from "lucide-react";
 
+import { ChannelIcon } from "@/components/ChannelIcon";
+
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
@@ -54,6 +56,9 @@ export type CheckinProperty = {
   code: string;
   checkoutChoices: string[];
   listFlow: boolean;
+  checkInFrom?: string;
+  checkOutBy?: string;
+  channelLabels?: Record<string, string>;
 };
 
 export function CheckInFlow({
