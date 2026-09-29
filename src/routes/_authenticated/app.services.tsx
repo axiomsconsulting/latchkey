@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { common, services as copy, trades as tradesCopy } from "@/content/copy";
+import { common, services as copy, trades as tradesDir, tradesCopy } from "@/content/copy";
 import { ContraStudio } from "@/components/host/ContraStudio";
 import { TradeDirectory } from "@/components/host/TradeDirectory";
 import { ExtrasInbox } from "@/components/host/ExtrasInbox";
@@ -117,7 +117,7 @@ function ServicesPage() {
             {copy.tabInbox} {inbox.filter((j) => j.status === "new").length ? <Badge className="ml-2">{inbox.filter((j) => j.status === "new").length}</Badge> : null}
           </TabsTrigger>
           <TabsTrigger value="planned" className="h-10 rounded-xl px-4">{copy.tabScheduled}</TabsTrigger>
-          <TabsTrigger value="trades" className="h-10 rounded-xl px-4">{tradesCopy.tabLabel}</TabsTrigger>
+          <TabsTrigger value="trades" className="h-10 rounded-xl px-4">{tradesDir.tabLabel}</TabsTrigger>
           <TabsTrigger value="providers" className="h-10 rounded-xl px-4">{copy.tabProviders}</TabsTrigger>
         </TabsList>
 

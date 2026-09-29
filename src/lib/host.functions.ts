@@ -112,7 +112,7 @@ const propertyInput = z.object({
   name: z.string().min(1),
   address: z.string().nullable().default(null),
   postcode: z.string().nullable().default(null),
-  country_code: z.string().length(2).nullable().default(null),
+  country_code: z.string().length(2).transform((v) => v.toUpperCase()),
   short_code: z.string().min(2).regex(/^[a-z0-9-]+$/),
   check_in_pin: z.string().regex(/^\d{6}$/).nullable().default(null),
   timezone: z.string().nullable().default(null),
