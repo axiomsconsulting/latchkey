@@ -409,8 +409,8 @@ export const emailReceipt = createServerFn({ method: "POST" })
 
     const number = r.receipt_number ?? receiptNumber(r.id, r.created_at);
     const lines = (Array.isArray(r.items) ? (r.items as any[]) : []).map((i) => `${i.qty ?? 1} × ${i.name}`).join("\n");
-    const { sendAlertEmail } = await import("./alert-email.server");
-    const sent = await sendAlertEmail({
+    const { sendGuestEmail } = await import("./alert-email.server");
+    const sent = await sendGuestEmail({
       to,
       subject: `Receipt ${number} · ${b.properties.name ?? "your stay"}`,
       body: `Receipt ${number}\n\n${lines}\n\nTotal: ${(r.total_pence / 100).toFixed(2)} ${b.properties.hosts?.currency ?? "GBP"}\nPaid by: ${r.payment_method ?? "card"}`,
