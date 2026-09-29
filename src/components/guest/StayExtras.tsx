@@ -89,6 +89,24 @@ export function StayExtras({ token }: { token: string }) {
     catch (e) { toast.error(e instanceof Error ? e.message : "Please try again."); }
   }
 
+  // Coming back from the card page: say thank you, or offer the other ways to pay.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const paid = url.searchParams.get("paid");
+    if (!paid) return;
+    url.searchParams.delete("paid");
+    window.history.replaceState(null, "", url.toString());
+    if (paid === "1") {
+      toast.success(paymentsCopy.paidToast);
+      void qc.invalidateQueries({ queryKey: ["stay-extras", token] });
+    } else {
+      const pending = q.data?.requests.find((r) => r.status === "awaiting_payment");
+      if (pending) setTroubleId(pending.id);
+      toast.info(copy.payTrouble);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data]);
+
   if (q.isLoading) return <div className="card-soft h-40 animate-pulse" />;
   if (!d) return null;
 
