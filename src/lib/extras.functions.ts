@@ -185,7 +185,7 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
       data.action === "approve" ? { status: r.total_pence > 0 ? "awaiting_payment" : "approved", pay_by: r.total_pence > 0 ? new Date(now.getTime() + HOLD_MS).toISOString() : null }
       : data.action === "decline" ? { status: "declined", resolved_at: now.toISOString() }
       : data.action === "suggest" ? { status: "suggested", suggested_window: data.window, suggestion_expires_at: new Date(now.getTime() + HOLD_MS).toISOString() }
-      : data.action === "mark_paid" ? { status: "confirmed" }
+      : data.action === "mark_paid" ? { status: "confirmed", paid_at: now.toISOString() }
       : { status: "delivered", resolved_at: now.toISOString() };
     if (data.note) patch["host_note"] = data.note;
     const { error } = await context.supabase.from("requests").update(patch as never).eq("id", data.id);
