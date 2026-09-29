@@ -41,7 +41,19 @@ export function ThemeScope({
   className?: string;
 }) {
   useThemeFonts(theme);
-  const style = (theme ? themeVars(theme) : {}) as CSSProperties;
+  const vars = theme ? themeVars(theme) : {};
+  const style = vars as CSSProperties;
+  const key = JSON.stringify(vars);
+
+  // Also theme the page root so dialogs and menus (rendered outside) match.
+  useEffect(() => {
+    const root = document.documentElement;
+    const entries = Object.entries(JSON.parse(key) as Record<string, string>);
+    for (const [k, v] of entries) root.style.setProperty(k, v);
+    return () => {
+      for (const [k] of entries) root.style.removeProperty(k);
+    };
+  }, [key]);
   return (
     <div
       style={style}
