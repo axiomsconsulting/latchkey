@@ -30,7 +30,7 @@ export async function loadPropertyByCode(code: string) {
   const { data } = await db
     .from("properties")
     .select(
-      "id, host_id, name, short_code, timezone, check_in_pin, checkin_methods, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active, theme_config",
+      "id, host_id, name, short_code, timezone, check_in_pin, checkin_methods, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active, theme_config",
     )
     .eq("short_code", code.toLowerCase())
     .eq("active", true)
