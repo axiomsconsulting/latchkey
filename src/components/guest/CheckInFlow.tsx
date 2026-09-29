@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Phone } from "lucide-react";
 
 import { IdCamera } from "@/components/guest/IdCamera";
+import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guest as copy } from "@/content/copy";
@@ -479,27 +480,40 @@ function Last4Step({
       ) : (
         <p className="mt-4 text-lg">{copy.last4Kinds[kind]}</p>
       )}
-      <form
-        className="mt-6 space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void onSubmit(kind, value);
-        }}
-      >
-        <Input
-          aria-label={copy.last4Kinds[kind]}
-          className="h-16 text-center text-2xl tracking-widest"
-          value={value}
-          inputMode={isEmail ? "email" : kind === "phone" ? "numeric" : "text"}
-          autoComplete="off"
-          maxLength={isEmail ? 254 : 4}
-          onChange={(e) => setValue(e.target.value)}
-        />
-        <Button type="submit" size="touch-xl" className="w-full" disabled={busy || value.trim().length < 4}>
-          {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-          {copy.last4Submit}
-        </Button>
-      </form>
+      {kind === "phone" ? (
+        <div className="mt-6">
+          <PinPad
+            value={value}
+            onChange={setValue}
+            length={4}
+            busy={busy}
+            onComplete={(v) => void onSubmit(kind, v)}
+          />
+          {busy ? <Loader2 className="mx-auto mt-4 size-6 animate-spin text-muted-foreground" /> : null}
+        </div>
+      ) : (
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void onSubmit(kind, value);
+          }}
+        >
+          <Input
+            aria-label={copy.last4Kinds[kind]}
+            className="h-16 text-center text-2xl tracking-widest"
+            value={value}
+            inputMode={isEmail ? "email" : "text"}
+            autoComplete="off"
+            maxLength={isEmail ? 254 : 4}
+            onChange={(e) => setValue(e.target.value)}
+          />
+          <Button type="submit" size="touch-xl" className="w-full" disabled={busy || value.trim().length < 4}>
+            {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+            {copy.last4Submit}
+          </Button>
+        </form>
+      )}
       <Button variant="ghost" size="lg" className="mt-3 w-full" onClick={onOther}>
         {copy.idUseOther}
       </Button>

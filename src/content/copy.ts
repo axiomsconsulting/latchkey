@@ -442,6 +442,8 @@ export const guest = {
   pinTitle: "Enter the property PIN",
   pinBody: "You'll find the 6-digit PIN in your booking message or by the front door.",
   pinWrong: "We couldn't find a property with that PIN.",
+  clear: "Clear",
+  backspace: "Delete last digit",
   notFound: "We couldn't find that property. Please check the link or ask your host.",
   error: "Something went wrong. Please try again, or call your host.",
   // Stay page

@@ -4,8 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 
 import { GuestFrame } from "@/components/guest/GuestFrame";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PinPad } from "@/components/guest/PinPad";
 import { guest as copy } from "@/content/copy";
 import { resolvePin } from "@/lib/checkin.functions";
 
@@ -30,16 +29,21 @@ function PinEntry() {
   const resolve = useServerFn(resolvePin);
   const navigate = useNavigate();
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(value: string) {
+    if (value.length !== 6 || busy) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await resolve({ data: { pin } });
-      if (res.code) await navigate({ to: "/p/$code", params: { code: res.code } });
-      else setError(copy.pinWrong);
+      const res = await resolve({ data: { pin: value } });
+      if (res.code) {
+        await navigate({ to: "/p/$code", params: { code: res.code } });
+      } else {
+        setError(copy.pinWrong);
+        setPin("");
+      }
     } catch {
       setError(copy.error);
+      setPin("");
     } finally {
       setBusy(false);
     }
@@ -48,24 +52,17 @@ function PinEntry() {
   return (
     <GuestFrame>
       <main className="mx-auto max-w-lg py-12">
-        <form onSubmit={submit} className="card-soft space-y-5 p-8 text-center">
+        <div className="card-soft space-y-6 p-8 text-center">
           <h1 className="text-3xl">{copy.pinTitle}</h1>
           <p className="text-muted-foreground">{copy.pinBody}</p>
-          <Input
-            aria-label={copy.pinTitle}
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-            className="h-20 text-center text-4xl tracking-[0.5em]"
-          />
-          {error ? <p role="alert" className="text-destructive">{error}</p> : null}
-          <Button type="submit" size="touch-xl" className="w-full" disabled={busy || pin.length !== 6}>
-            {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-            {copy.startCta}
-          </Button>
-        </form>
+          <PinPad value={pin} onChange={setPin} length={6} busy={busy} onComplete={(v) => void submit(v)} />
+          {busy ? <Loader2 className="mx-auto size-8 animate-spin text-muted-foreground" /> : null}
+          {error ? (
+            <p role="alert" className="text-lg text-destructive">
+              {error}
+            </p>
+          ) : null}
+        </div>
       </main>
     </GuestFrame>
   );
