@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { PinPad } from "@/components/guest/PinPad";
 import { guest as copy } from "@/content/copy";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 
@@ -129,16 +129,7 @@ function Kiosk() {
             <DialogDescription>{copy.kioskExitBody}</DialogDescription>
           </DialogHeader>
           <form onSubmit={tryUnlock} className="space-y-4">
-            <Input
-              aria-label={copy.kioskExitBody}
-              inputMode="numeric"
-              type="password"
-              autoComplete="off"
-              maxLength={8}
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-              className="h-16 text-center text-3xl tracking-[0.4em]"
-            />
+            <PinPad value={pin} onChange={setPin} length={8} />
             {pinError ? <p role="alert" className="text-destructive">{copy.kioskWrongPin}</p> : null}
             <Button type="submit" size="touch" className="w-full" disabled={pin.length < 4}>
               {copy.kioskExitCta}
