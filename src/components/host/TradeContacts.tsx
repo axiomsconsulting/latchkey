@@ -26,7 +26,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { common, tradesCopy as copy } from "@/content/copy";
 import { parseCsv } from "@/lib/csv";
-import { region } from "@/lib/regions";
 import {
   TRADE_CATEGORIES,
   TRADE_IMPORT_FIELDS,
@@ -547,4 +546,3 @@ function ImportDialog({
   );
 }
 
-export { region };
