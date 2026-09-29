@@ -37,7 +37,7 @@ type Step =
   | { name: "pick"; items: Array<{ id: string; label: string; checkOut: string }> }
   | { name: "no_match" }
   | { name: "locked"; until: string }
-  | { name: "confirm"; firstName: string }
+  | { name: "confirm"; firstName: string; returning?: boolean }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
   | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
 
@@ -128,7 +128,7 @@ export function CheckInFlow({
     if (res.status === "locked") return setStep({ name: "locked", until: res.until });
     if (res.status === "no_match") return setStep({ name: "no_match" });
     setToken(res.token);
-    setStep({ name: "confirm", firstName: res.firstName });
+    setStep({ name: "confirm", firstName: res.firstName, returning: res.returning === true });
   }
 
   async function onPick(bookingId: string) {
