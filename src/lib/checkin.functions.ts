@@ -462,11 +462,11 @@ export const getStay = createServerFn({ method: "GET" })
         .eq("id", b.property_id)
         .single(),
       b.room_id
-        ? db.from("rooms").select("display_name, public_title, description, has_ensuite, guide_mode").eq("id", b.room_id).maybeSingle()
+        ? db.from("rooms").select("display_name, public_title, description, has_ensuite, guide_mode, amenities").eq("id", b.room_id).maybeSingle()
         : Promise.resolve({ data: null }),
       db
         .from("guides")
-        .select("room_id, section_key, summary, published, guide_steps(heading, body, image_url, sort_order)")
+        .select("room_id, section_key, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)")
         .eq("property_id", b.property_id)
         .eq("published", true)
         .not("section_key", "is", null),
@@ -511,10 +511,20 @@ export const getStay = createServerFn({ method: "GET" })
       roomId: g.room_id,
       sectionKey: g.section_key as import("./guide").SectionKey,
       summary: g.summary,
+      pinned: g.pinned === true,
+      sortOrder: g.sort_order ?? 0,
       steps: [...(g.guide_steps ?? [])]
         .sort((a, c) => a.sort_order - c.sort_order)
         .map((s) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
     }));
+
+    const sections = buildGuide(stored, b.room_id, mode, facts).map((sec) =>
+      doorLocked && DOOR_SECTIONS.includes(sec.key) ? { ...sec, summary: "DOOR_LOCKED", steps: [] } : sec,
+    );
+    const forget = forgetCard(sections, windowsOn(windows ?? [], b.room_id, today, tz));
+    // Anything on the reminder card is left out of the list below, so guests
+    // never read the same rule twice.
+    const reminded = new Set(forget.map((i) => i.key));
 
     return {
       found: true as const,
@@ -523,14 +533,16 @@ export const getStay = createServerFn({ method: "GET" })
       checkOutTime,
       property: p,
       room,
+      amenities: Array.isArray((room as { amenities?: unknown } | null)?.amenities)
+        ? ((room as { amenities: unknown[] }).amenities.filter((a): a is string => typeof a === "string"))
+        : [],
       theme: normaliseTheme(p?.theme_config),
       mode,
-      guide: buildGuide(stored, b.room_id, mode, facts).map((sec) =>
-        doorLocked && DOOR_SECTIONS.includes(sec.key) ? { ...sec, summary: "DOOR_LOCKED", steps: [] } : sec,
-      ),
+      guide: sections.filter((sec) => !reminded.has(sec.key)),
+      pinnedSections: sections.filter((sec) => reminded.has(sec.key)),
       doorOpensAt: win.doorOpensAt.toISOString(),
       readOnly,
-      forget: forgetCard(facts, windowsOn(windows ?? [], b.room_id, today, tz)),
+      forget,
     };
   });
 

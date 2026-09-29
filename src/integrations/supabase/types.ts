@@ -500,6 +500,7 @@ export type Database = {
           id: string
           is_demo: boolean
           is_starter: boolean
+          pinned: boolean
           property_id: string
           published: boolean
           room_id: string | null
@@ -514,6 +515,7 @@ export type Database = {
           id?: string
           is_demo?: boolean
           is_starter?: boolean
+          pinned?: boolean
           property_id: string
           published?: boolean
           room_id?: string | null
@@ -528,6 +530,7 @@ export type Database = {
           id?: string
           is_demo?: boolean
           is_starter?: boolean
+          pinned?: boolean
           property_id?: string
           published?: boolean
           room_id?: string | null
@@ -655,6 +658,7 @@ export type Database = {
         Row: {
           bank_details: string | null
           business_name: string
+          channel_labels: Json
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -674,6 +678,7 @@ export type Database = {
         Insert: {
           bank_details?: string | null
           business_name: string
+          channel_labels?: Json
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -693,6 +698,7 @@ export type Database = {
         Update: {
           bank_details?: string | null
           business_name?: string
+          channel_labels?: Json
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -960,6 +966,9 @@ export type Database = {
           message: string | null
           paid_at: string | null
           pay_by: string | null
+          payment_method: string | null
+          receipt_emailed_at: string | null
+          receipt_number: string | null
           resolved_at: string | null
           status: string
           stripe_payment_intent: string | null
@@ -982,6 +991,9 @@ export type Database = {
           message?: string | null
           paid_at?: string | null
           pay_by?: string | null
+          payment_method?: string | null
+          receipt_emailed_at?: string | null
+          receipt_number?: string | null
           resolved_at?: string | null
           status?: string
           stripe_payment_intent?: string | null
@@ -1004,6 +1016,9 @@ export type Database = {
           message?: string | null
           paid_at?: string | null
           pay_by?: string | null
+          payment_method?: string | null
+          receipt_emailed_at?: string | null
+          receipt_number?: string | null
           resolved_at?: string | null
           status?: string
           stripe_payment_intent?: string | null
@@ -1085,6 +1100,7 @@ export type Database = {
       rooms: {
         Row: {
           active: boolean
+          amenities: Json
           created_at: string
           description: string | null
           display_name: string
@@ -1103,6 +1119,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          amenities?: Json
           created_at?: string
           description?: string | null
           display_name: string
@@ -1121,6 +1138,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          amenities?: Json
           created_at?: string
           description?: string | null
           display_name?: string

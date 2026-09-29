@@ -25,7 +25,16 @@ export const SECTIONS: { key: SectionKey; title: string; hint: string }[] = [
 ];
 
 export type GuideStep = { heading: string; body: string | null; imageUrl: string | null };
-export type StoredSection = { roomId: string | null; sectionKey: SectionKey; summary: string | null; steps: GuideStep[] };
+export type StoredSection = {
+  roomId: string | null;
+  sectionKey: SectionKey;
+  summary: string | null;
+  steps: GuideStep[];
+  /** Host has pinned this to the "things people usually forget" card. */
+  pinned?: boolean;
+  /** Host's own ordering; lower shows first. */
+  sortOrder?: number;
+};
 
 export type GuideFacts = {
   wifiName: string | null;
@@ -41,7 +50,7 @@ export type GuideFacts = {
   unavailableLines: string[];
 };
 
-export type GuideSection = { key: SectionKey; title: string; summary: string | null; steps: GuideStep[] };
+export type GuideSection = { key: SectionKey; title: string; summary: string | null; steps: GuideStep[]; pinned: boolean };
 
 /** One-line facts used when the host hasn't written a summary. */
 export function autoSummary(key: SectionKey, f: GuideFacts): string | null {
@@ -61,20 +70,27 @@ export function autoSummary(key: SectionKey, f: GuideFacts): string | null {
 
 /**
  * Room sections replace house sections with the same key. Basic mode keeps
- * one short text per section and drops steps and photos.
+ * one short text per section and drops steps and photos. Sections come back
+ * in the host's own order, with anything they haven't ordered keeping the
+ * standard running order.
  */
 export function buildGuide(stored: StoredSection[], roomId: string | null, mode: "basic" | "detailed", facts: GuideFacts): GuideSection[] {
-  const out: GuideSection[] = [];
-  for (const s of SECTIONS) {
+  const out: (GuideSection & { order: number })[] = [];
+  SECTIONS.forEach((s, i) => {
     const room = roomId ? stored.find((x) => x.roomId === roomId && x.sectionKey === s.key) : undefined;
     const house = stored.find((x) => x.roomId === null && x.sectionKey === s.key);
     const src = room ?? house;
     const summary = src?.summary?.trim() || autoSummary(s.key, facts);
     const steps = mode === "detailed" ? (src?.steps ?? []).filter((st) => st.heading.trim() || st.body?.trim()) : [];
-    if (!summary && steps.length === 0) continue;
-    out.push({ key: s.key, title: s.title, summary, steps });
-  }
-  return out;
+    if (!summary && steps.length === 0) return;
+    // Pinning and ordering are set once for the whole house, so a room's own
+    // wording doesn't quietly unpin a reminder.
+    const meta = house ?? room;
+    const order = meta?.sortOrder && meta.sortOrder > 0 ? meta.sortOrder : 100 + i;
+    out.push({ key: s.key, title: s.title, summary, steps, pinned: meta?.pinned === true, order });
+  });
+  out.sort((a, b) => a.order - b.order);
+  return out.map(({ order: _order, ...rest }) => rest);
 }
 
 export type Window = {
@@ -117,16 +133,31 @@ export function weeklyLines(windows: Window[], roomId: string | null): string[] 
     .map((w) => `${days[w.day_of_week!]} ${w.start_time!.slice(0, 5)}–${w.end_time!.slice(0, 5)}${w.reason ? ` (${w.reason})` : ""}`);
 }
 
-export type ForgetItem = { key: "quiet" | "shoes" | "checkout" | "unavailable"; text: string };
+export type ForgetItem = { key: SectionKey | "today"; text: string };
 
-export function forgetCard(f: GuideFacts, todayWindows: string[]): ForgetItem[] {
-  const items: ForgetItem[] = [
-    { key: "quiet", text: `Quiet hours ${f.quietStart}–${f.quietEnd}` },
-    { key: "shoes", text: "Shoes off at the front door" },
-    { key: "checkout", text: `Check-out by ${f.checkOutTime}, ${f.checkOutDateLabel}` },
-  ];
-  for (const t of todayWindows) items.push({ key: "unavailable", text: `Today: ${t}` });
+/** Pinned when the host hasn't chosen anything yet. */
+export const DEFAULT_PINNED: SectionKey[] = ["quiet", "shoes", "checkout"];
+
+/**
+ * The "things people usually forget" card is built from the sections the host
+ * has pinned, so it never repeats what's already in the list below: the stay
+ * page shows pinned sections here and unpinned ones underneath. Until a host
+ * pins anything, quiet hours, shoes and check-out stand in.
+ */
+export function forgetCard(sections: GuideSection[], todayWindows: string[]): ForgetItem[] {
+  const chosen = sections.filter((s) => s.pinned);
+  const source = chosen.length ? chosen : sections.filter((s) => DEFAULT_PINNED.includes(s.key));
+  const items: ForgetItem[] = source
+    .map((s) => ({ key: s.key, text: (s.summary?.trim() || s.title) }))
+    .filter((i) => i.text.length > 0);
+  for (const t of todayWindows) items.push({ key: "today", text: `Today: ${t}` });
   return items;
+}
+
+/** Which sections the reminder card is currently showing. */
+export function pinnedKeys(sections: GuideSection[]): SectionKey[] {
+  const chosen = sections.filter((s) => s.pinned).map((s) => s.key);
+  return chosen.length ? chosen : sections.filter((s) => DEFAULT_PINNED.includes(s.key)).map((s) => s.key);
 }
 
 /** UTC instant for a local date + time in a timezone. */

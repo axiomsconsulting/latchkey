@@ -38,11 +38,36 @@ describe("forget card and windows", () => {
   it("includes today's windows for this room only", () => {
     const lines = windowsOn(windows, "r1", "2026-09-29", "Europe/London"); // Tuesday
     expect(lines).toEqual(["Cleaning 13:00–15:00"]);
-    const card = forgetCard(facts, lines);
-    expect(card.map((c) => c.key)).toEqual(["quiet", "shoes", "checkout", "unavailable"]);
+    const card = forgetCard(buildGuide(stored, "r1", "detailed", facts), lines);
+    expect(card.map((c) => c.key)).toEqual(["shoes", "quiet", "checkout", "today"]);
   });
   it("no windows on other days", () => {
     expect(windowsOn(windows, "r1", "2026-09-30", "Europe/London")).toEqual([]);
+  });
+});
+
+describe("pinned reminders", () => {
+  const pinned: StoredSection[] = [
+    ...stored,
+    { roomId: null, sectionKey: "parking", summary: "Park on Amersham Hill.", steps: [], pinned: true },
+  ];
+  it("uses the host's pinned sections instead of the defaults", () => {
+    const card = forgetCard(buildGuide(pinned, "r1", "detailed", facts), []);
+    expect(card).toEqual([{ key: "parking", text: "Park on Amersham Hill." }]);
+  });
+  it("never repeats a pinned section in the list below", () => {
+    const sections = buildGuide(pinned, "r1", "detailed", facts);
+    const card = forgetCard(sections, []);
+    const shown = sections.filter((s) => !card.some((c) => c.key === s.key));
+    expect(shown.some((s) => s.key === "parking")).toBe(false);
+  });
+  it("follows the host's running order", () => {
+    const ordered: StoredSection[] = [
+      { roomId: null, sectionKey: "checkout", summary: "Leave by 11.", steps: [], sortOrder: 1 },
+      { roomId: null, sectionKey: "getting_in", summary: "House door", steps: [], sortOrder: 2 },
+    ];
+    const keys = buildGuide(ordered, null, "detailed", facts).map((s) => s.key);
+    expect(keys.slice(0, 2)).toEqual(["checkout", "getting_in"]);
   });
 });
 

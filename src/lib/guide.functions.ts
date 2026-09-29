@@ -30,7 +30,7 @@ export const getGuideEditor = createServerFn({ method: "GET" })
       supabase.from("rooms").select("id, display_name, guide_mode").eq("property_id", data.propertyId).order("sort_order"),
       supabase
         .from("guides")
-        .select("id, room_id, section_key, summary, is_starter, guide_steps(id, heading, body, image_url, sort_order)")
+        .select("id, room_id, section_key, summary, is_starter, pinned, sort_order, guide_steps(id, heading, body, image_url, sort_order)")
         .eq("property_id", data.propertyId)
         .not("section_key", "is", null),
     ]);
@@ -43,11 +43,60 @@ export const getGuideEditor = createServerFn({ method: "GET" })
         sectionKey: g.section_key as SectionKey,
         summary: g.summary,
         isStarter: g.is_starter,
+        pinned: g.pinned === true,
+        sortOrder: g.sort_order ?? 0,
         steps: [...(g.guide_steps ?? [])]
           .sort((a, b) => a.sort_order - b.sort_order)
           .map((s) => ({ heading: s.heading, body: s.body, imagePath: s.image_url, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
       })),
     };
+  });
+
+/**
+ * Pinning and ordering live on the house row for a section, so the reminder
+ * card and the running order are the same for every room.
+ */
+async function houseRow(supabase: any, propertyId: string, key: SectionKey): Promise<string> {
+  const { data: existing } = await supabase
+    .from("guides")
+    .select("id")
+    .eq("property_id", propertyId)
+    .eq("section_key", key)
+    .is("room_id", null)
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+  const title = SECTIONS.find((s) => s.key === key)!.title;
+  const { data: row, error } = await supabase
+    .from("guides")
+    .insert({ property_id: propertyId, room_id: null, section_key: key, title, published: true })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return row.id as string;
+}
+
+/** Pins or unpins a section on the "things people usually forget" card. */
+export const setSectionPin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, sectionKey, pinned: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const id = await houseRow(context.supabase, data.propertyId, data.sectionKey);
+    const { error } = await context.supabase.from("guides").update({ pinned: data.pinned }).eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Saves the host's running order for the whole guide, in one go. */
+export const reorderSections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, order: z.array(sectionKey).max(40) }).parse(d))
+  .handler(async ({ data, context }) => {
+    for (let i = 0; i < data.order.length; i++) {
+      const id = await houseRow(context.supabase, data.propertyId, data.order[i]!);
+      const { error } = await context.supabase.from("guides").update({ sort_order: i + 1 }).eq("id", id);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
   });
 
 export const saveGuideSection = createServerFn({ method: "POST" })
@@ -206,4 +255,16 @@ export const createGuideLink = createServerFn({ method: "POST" })
     });
     if (error) throw new Error("Couldn't create the link.");
     return { token: t.token, validFrom: w.validFrom.toISOString() };
+  });
+
+/** What's already in a room, so guests don't ask for a kettle that's there. */
+export const saveRoomAmenities = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ roomId: uuid, amenities: z.array(z.string().trim().min(1).max(60)).max(30) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("rooms").update({ amenities: data.amenities }).eq("id", data.roomId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
