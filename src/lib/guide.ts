@@ -173,6 +173,14 @@ export const STARTER: Record<SectionKey, { summary: string; steps: { heading: st
   kitchenette: { summary: "Shared kitchenette on the ground floor: kettle, microwave and fridge.", steps: [{ heading: "Fridge", body: "Label your food with your room number. The top shelf is yours." }, { heading: "Washing up", body: "Please wash, dry and put away anything you use." }] },
   bathroom: { summary: "Hot water takes about a minute to come through.", steps: [{ heading: "Shower", body: "Turn the left dial for power and the right dial for temperature." }] },
   parking: { summary: "Free on-street parking on Amersham Hill.", steps: [] },
+  taxis: {
+    summary: "Local firms are quicker than an app here, especially late at night.",
+    steps: [
+      { heading: "Booking ahead", body: "For an early train, book the night before. Cars are scarce before 6am." },
+      { heading: "To the station", body: "High Wycombe station is about five minutes by car." },
+      { heading: "Replace these details", body: "Add two or three local firms with their phone numbers and the usual fare." },
+    ],
+  },
   rules: { summary: "No smoking anywhere indoors. No visitors after 10pm.", steps: [] },
   quiet: { summary: "", steps: [] },
   unavailable: { summary: "", steps: [] },
