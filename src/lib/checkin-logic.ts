@@ -92,17 +92,39 @@ export function arrivalCandidates(bookings: MatchableBooking[], today: string): 
   );
 }
 
+/**
+ * Guests who are already checked in and still staying. They come back to the
+ * kiosk to reread the rules or order towels, so we look them up rather than
+ * telling them their booking doesn't exist.
+ */
+export function stayingCandidates(bookings: MatchableBooking[], today: string): MatchableBooking[] {
+  return bookings.filter((b) => b.status === "checked_in" && !b.mirror_of && b.check_in_date <= today && b.check_out_date > today);
+}
+
+function matches(b: MatchableBooking, answers: { letter: string; checkOut: string; channel: string }): boolean {
+  return (
+    surnameInitial(b.guest_full_name) === answers.letter.toUpperCase() &&
+    b.check_out_date === answers.checkOut &&
+    b.channel === answers.channel
+  );
+}
+
 export function findBooking(
   bookings: MatchableBooking[],
   today: string,
   answers: { letter: string; checkOut: string; channel: string },
 ): MatchableBooking | null {
-  const hits = arrivalCandidates(bookings, today).filter(
-    (b) =>
-      surnameInitial(b.guest_full_name) === answers.letter.toUpperCase() &&
-      b.check_out_date === answers.checkOut &&
-      b.channel === answers.channel,
-  );
+  const hits = arrivalCandidates(bookings, today).filter((b) => matches(b, answers));
+  return hits.length === 1 ? hits[0]! : null;
+}
+
+/** Same three answers, but for someone who has already checked in. */
+export function findStaying(
+  bookings: MatchableBooking[],
+  today: string,
+  answers: { letter: string; checkOut: string; channel: string },
+): MatchableBooking | null {
+  const hits = stayingCandidates(bookings, today).filter((b) => matches(b, answers));
   return hits.length === 1 ? hits[0]! : null;
 }
 
