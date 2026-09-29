@@ -212,7 +212,7 @@ async function stayContext(t: string) {
   if (!st || Date.parse(st.expires_at) < Date.now()) throw new Error("This stay link has expired.");
   const { data: b } = await db
     .from("bookings")
-    .select("id, property_id, room_id, status, check_in_date, check_out_date, check_in_time, check_out_time, properties(host_id, timezone, quiet_hours_start, quiet_hours_end, default_check_in_time, default_check_out_time, hosts(currency, out_until))")
+    .select("id, property_id, room_id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, guest_email, properties(name, host_id, timezone, quiet_hours_start, quiet_hours_end, default_check_in_time, default_check_out_time, hosts(business_name, currency, out_until, bank_details, contact_phone, contact_email, tax_registered, tax_label, tax_rate_bp, prices_include_tax))")
     .eq("id", st.booking_id)
     .single();
   if (!b || b.status === "cancelled") throw new Error("This stay link has expired.");
