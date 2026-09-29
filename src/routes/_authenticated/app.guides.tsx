@@ -41,7 +41,25 @@ export const Route = createFileRoute("/_authenticated/app/guides")({
 });
 
 type Step = { heading: string; body: string | null; imagePath: string | null; imageUrl: string | null };
-type Section = { roomId: string | null; sectionKey: SectionKey; summary: string | null; isStarter: boolean; steps: Step[] };
+type Section = {
+  roomId: string | null;
+  sectionKey: SectionKey;
+  summary: string | null;
+  isStarter: boolean;
+  pinned: boolean;
+  sortOrder: number;
+  steps: Step[];
+};
+
+/** The host's running order, with anything unordered keeping its usual place. */
+function orderedKeys(sections: Section[]): SectionKey[] {
+  return SECTIONS.map((s, i) => {
+    const house = sections.find((x) => x.roomId === null && x.sectionKey === s.key);
+    return { key: s.key, order: house?.sortOrder && house.sortOrder > 0 ? house.sortOrder : 100 + i };
+  })
+    .sort((a, b) => a.order - b.order)
+    .map((x) => x.key);
+}
 
 function GuidesPage() {
   const ws = useWorkspace();
