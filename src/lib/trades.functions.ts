@@ -187,3 +187,52 @@ export const addSuggestedTrade = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { id: row.id };
   });
+
+/** Puts one of the host's own contacts on a job and tells the guest. */
+export const assignTradeToJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ jobId: uuid, tradeId: uuid, etaIso: z.string().datetime().nullable().default(null) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: trade, error: tradeError } = await context.supabase
+      .from("trades")
+      .select("id, name, company_name, phone, category")
+      .eq("id", data.tradeId)
+      .single();
+    if (tradeError || !trade) throw new Error("We could not find that contact.");
+
+    const { data: job, error: jobError } = await context.supabase
+      .from("service_jobs")
+      .update({
+        provider: {
+          id: trade.id,
+          name: trade.company_name || trade.name,
+          contact: trade.phone,
+          source: "own_contacts",
+        },
+        provider_mode: "own",
+        provider_ref: trade.id,
+        status: "booked",
+        eta_at: data.etaIso,
+      })
+      .eq("id", data.jobId)
+      .select("id, booking_id, source, title")
+      .single();
+    if (jobError || !job) throw new Error(jobError?.message ?? "We could not update that job.");
+
+    if (job.booking_id && job.source === "guest") {
+      const who = trade.company_name || trade.name;
+      await context.supabase.from("messages").insert({
+        booking_id: job.booking_id,
+        job_id: job.id,
+        direction: "outbound",
+        channel: "stay_page",
+        body: data.etaIso
+          ? `${who} is coming about "${job.title}". Expected around ${new Date(data.etaIso).toLocaleString("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.`
+          : `${who} is coming about "${job.title}". We will confirm a time shortly.`,
+        sent_at: new Date().toISOString(),
+      });
+    }
+    return { ok: true };
+  });
