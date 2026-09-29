@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { CheckInFlow } from "@/components/guest/CheckInFlow";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
+import { LogoMark } from "@/components/theme/LogoMark";
+import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -103,7 +105,12 @@ function Kiosk() {
   }
 
   return (
+    <ThemeScope theme={p.theme} global>
     <div className="relative min-h-screen select-none bg-background px-4 sm:px-8" onPointerDown={goFullscreen}>
+      <header className="mx-auto flex max-w-4xl items-center gap-3 pt-6">
+        <LogoMark theme={p.theme} name={p.name} />
+        <span className="font-display text-lg">{p.name}</span>
+      </header>
       <button
         type="button"
         aria-label={copy.kioskExitTitle}
@@ -140,5 +147,6 @@ function Kiosk() {
         </DialogContent>
       </Dialog>
     </div>
+    </ThemeScope>
   );
 }
