@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Phone } from "lucide-react";
 
 import { IdCamera } from "@/components/guest/IdCamera";
+import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guest as copy } from "@/content/copy";
@@ -510,8 +511,9 @@ function Last4Step({
           <Button type="submit" size="touch-xl" className="w-full" disabled={busy || value.trim().length < 4}>
             {busy ? <Loader2 className="size-6 animate-spin" /> : null}
             {copy.last4Submit}
-        </Button>
-      </form>
+          </Button>
+        </form>
+      )}
       <Button variant="ghost" size="lg" className="mt-3 w-full" onClick={onOther}>
         {copy.idUseOther}
       </Button>
