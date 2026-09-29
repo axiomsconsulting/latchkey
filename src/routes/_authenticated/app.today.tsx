@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { common, today as copy } from "@/content/copy";
-import { usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { useAlerts, usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { alerts as alertCopy } from "@/content/copy";
+import { markAlertRead } from "@/lib/host.functions";
 import { dayOfWeek, formatUkDate, formatUkTime, nightsBetween, stayState } from "@/lib/dates";
 import { saveBooking } from "@/lib/host.functions";
 
@@ -276,6 +278,8 @@ function TodayPage() {
         <StatCard icon={Sparkles} label={copy.actionRequired} value={needsDetails.length} />
       </div>
 
+      <AlertsPanel />
+
       {doubleBooked.length > 0 ? (
         <div role="alert" className="flex gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
           <AlertTriangle className="size-5 shrink-0 text-destructive" />
@@ -362,5 +366,43 @@ function TodayPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function AlertsPanel() {
+  const alerts = useAlerts();
+  const mark = useServerFn(markAlertRead);
+  const qc = useQueryClient();
+  const items = alerts.data?.alerts ?? [];
+  if (items.length === 0) return null;
+  return (
+    <section role="alert" className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+      <h2 className="flex items-center gap-2 text-lg">
+        <AlertTriangle className="size-5 text-destructive" /> {alertCopy.title}
+      </h2>
+      <ul className="mt-3 space-y-2">
+        {items.map((a) => (
+          <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface p-3 text-sm">
+            <span className="min-w-0 flex-1">
+              {a.message}
+              <span className="block text-xs text-muted-foreground">
+                {formatUkDate(a.created_at.slice(0, 10))},{" "}
+                {new Date(a.created_at).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await mark({ data: { id: a.id } });
+                await qc.invalidateQueries({ queryKey: ["alerts"] });
+              }}
+            >
+              {alertCopy.dismiss}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
