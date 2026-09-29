@@ -749,6 +749,7 @@ function PropertiesPage() {
                 >
                   <Trash2 className="size-4" />
                 </Button>
+                <RoomFeedPanel roomId={r.id} roomName={r.display_name} />
               </li>
             ))}
           </ul>
