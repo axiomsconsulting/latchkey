@@ -451,7 +451,7 @@ export const getStay = createServerFn({ method: "GET" })
     }
     const { data: b } = await db
       .from("bookings")
-      .select("guest_full_name, check_out_date, check_out_time, room_id, property_id, status")
+      .select("guest_full_name, check_in_date, check_out_date, check_out_time, room_id, property_id, status")
       .eq("id", t.booking_id)
       .single();
     if (!b || b.status === "cancelled") return { found: false as const };
@@ -476,7 +476,7 @@ export const getStay = createServerFn({ method: "GET" })
         .eq("property_id", b.property_id),
     ]);
 
-    const { buildGuide, forgetCard, weeklyLines, windowsOn } = await import("./guide");
+    const { buildGuide, forgetCard, weeklyLines, windowsOn, guideWindow, DOOR_SECTIONS } = await import("./guide");
     const tz = p?.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const checkOutTime = (b.check_out_time ?? p?.default_check_out_time ?? "11:00").slice(0, 5);
@@ -493,6 +493,9 @@ export const getStay = createServerFn({ method: "GET" })
       roomName: room?.display_name ?? null,
       unavailableLines: weeklyLines(windows ?? [], b.room_id),
     };
+    const win = guideWindow(b.check_in_date, b.check_out_date, checkOutTime, tz);
+    const doorLocked = Date.now() < win.doorOpensAt.getTime();
+    const readOnly = Date.now() >= win.readOnlyAt.getTime();
     const mode = (room?.guide_mode === "basic" ? "basic" : "detailed") as "basic" | "detailed";
 
     // Photos live in private storage; sign short-lived links for this view only.
@@ -522,7 +525,11 @@ export const getStay = createServerFn({ method: "GET" })
       room,
       theme: normaliseTheme(p?.theme_config),
       mode,
-      guide: buildGuide(stored, b.room_id, mode, facts),
+      guide: buildGuide(stored, b.room_id, mode, facts).map((sec) =>
+        doorLocked && DOOR_SECTIONS.includes(sec.key) ? { ...sec, summary: "DOOR_LOCKED", steps: [] } : sec,
+      ),
+      doorOpensAt: win.doorOpensAt.toISOString(),
+      readOnly,
       forget: forgetCard(facts, windowsOn(windows ?? [], b.room_id, today, tz)),
     };
   });
