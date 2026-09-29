@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
-import { getPropertyBoard, getWorkspace, listConnections } from "@/lib/host.functions";
+import { getPropertyBoard, getWorkspace, listAlerts, listConnections } from "@/lib/host.functions";
 
 const STORAGE_KEY = "latchkey.property";
 
@@ -51,5 +51,14 @@ export function useConnections(propertyId: string | null) {
     queryKey: ["connections", propertyId],
     enabled: Boolean(propertyId),
     queryFn: () => fn({ data: { propertyId: propertyId! } }),
+  });
+}
+
+export function useAlerts() {
+  const fn = useServerFn(listAlerts);
+  return useQuery({
+    queryKey: ["alerts"],
+    queryFn: () => fn(),
+    refetchInterval: 60_000,
   });
 }

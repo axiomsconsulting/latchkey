@@ -23,14 +23,17 @@ export type Database = {
           check_in_time: string | null
           check_out_date: string
           check_out_time: string | null
+          checked_in_at: string | null
           connection_id: string | null
           created_at: string
           external_uid: string | null
           feed_status: string | null
           guest_count: number
+          guest_email: string | null
           guest_full_name: string | null
           guest_surname_initial: string | null
           id: string
+          id_check_status: string | null
           is_demo: boolean
           last_synced_at: string | null
           listing_id: string | null
@@ -54,14 +57,17 @@ export type Database = {
           check_in_time?: string | null
           check_out_date: string
           check_out_time?: string | null
+          checked_in_at?: string | null
           connection_id?: string | null
           created_at?: string
           external_uid?: string | null
           feed_status?: string | null
           guest_count?: number
+          guest_email?: string | null
           guest_full_name?: string | null
           guest_surname_initial?: string | null
           id?: string
+          id_check_status?: string | null
           is_demo?: boolean
           last_synced_at?: string | null
           listing_id?: string | null
@@ -85,14 +91,17 @@ export type Database = {
           check_in_time?: string | null
           check_out_date?: string
           check_out_time?: string | null
+          checked_in_at?: string | null
           connection_id?: string | null
           created_at?: string
           external_uid?: string | null
           feed_status?: string | null
           guest_count?: number
+          guest_email?: string | null
           guest_full_name?: string | null
           guest_surname_initial?: string | null
           id?: string
+          id_check_status?: string | null
           is_demo?: boolean
           last_synced_at?: string | null
           listing_id?: string | null
@@ -221,6 +230,7 @@ export type Database = {
           booking_id: string | null
           code_last4: string | null
           created_at: string
+          device_hash: string | null
           id: string
           ip_hash: string | null
           property_id: string
@@ -231,6 +241,7 @@ export type Database = {
           booking_id?: string | null
           code_last4?: string | null
           created_at?: string
+          device_hash?: string | null
           id?: string
           ip_hash?: string | null
           property_id: string
@@ -241,6 +252,7 @@ export type Database = {
           booking_id?: string | null
           code_last4?: string | null
           created_at?: string
+          device_hash?: string | null
           id?: string
           ip_hash?: string | null
           property_id?: string
@@ -264,6 +276,70 @@ export type Database = {
           },
           {
             foreignKeyName: "check_in_attempts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkin_sessions: {
+        Row: {
+          booking_id: string
+          completed_at: string | null
+          confirmed: boolean
+          created_at: string
+          expires_at: string
+          id: string
+          last4_attempts: number
+          photo_attempts: number
+          property_id: string
+          token_hash: string
+          verified_method: string | null
+        }
+        Insert: {
+          booking_id: string
+          completed_at?: string | null
+          confirmed?: boolean
+          created_at?: string
+          expires_at: string
+          id?: string
+          last4_attempts?: number
+          photo_attempts?: number
+          property_id: string
+          token_hash: string
+          verified_method?: string | null
+        }
+        Update: {
+          booking_id?: string
+          completed_at?: string | null
+          confirmed?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last4_attempts?: number
+          photo_attempts?: number
+          property_id?: string
+          token_hash?: string
+          verified_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_sessions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkin_sessions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "checkin_sessions_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
@@ -429,6 +505,71 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      host_alerts: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          emailed_at: string | null
+          host_id: string
+          id: string
+          kind: string
+          message: string
+          property_id: string | null
+          read_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          emailed_at?: string | null
+          host_id: string
+          id?: string
+          kind: string
+          message: string
+          property_id?: string | null
+          read_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          emailed_at?: string | null
+          host_id?: string
+          id?: string
+          kind?: string
+          message?: string
+          property_id?: string | null
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_alerts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_alerts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "host_alerts_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_alerts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
@@ -642,6 +783,7 @@ export type Database = {
           active: boolean
           address: string | null
           check_in_pin: string | null
+          checkin_methods: Json
           created_at: string
           default_check_in_time: string
           default_check_out_time: string
@@ -664,6 +806,7 @@ export type Database = {
           active?: boolean
           address?: string | null
           check_in_pin?: string | null
+          checkin_methods?: Json
           created_at?: string
           default_check_in_time?: string
           default_check_out_time?: string
@@ -686,6 +829,7 @@ export type Database = {
           active?: boolean
           address?: string | null
           check_in_pin?: string | null
+          checkin_methods?: Json
           created_at?: string
           default_check_in_time?: string
           default_check_out_time?: string
@@ -867,6 +1011,45 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "properties"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      stay_tokens: {
+        Row: {
+          booking_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          token_hash: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          token_hash: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stay_tokens_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_tokens_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
           },
         ]
       }

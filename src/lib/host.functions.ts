@@ -243,6 +243,7 @@ const bookingInput = z.object({
   check_out_time: z.string().nullable(),
   status: z.enum(["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged", "blocked"]),
   notes: z.string().nullable(),
+  guest_email: z.string().trim().email().max(254).nullable().default(null),
 });
 
 const TRACKED = [
@@ -658,4 +659,50 @@ export const saveHost = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+/* ------------------------------ check-in ------------------------------- */
+
+const methodKey = z.enum(["photo_id", "last4", "self_declare"]);
+
+export const saveCheckinMethods = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        propertyId: uuid,
+        methods: z.object({
+          order: z.array(methodKey).max(3),
+          enabled: z.object({ photo_id: z.boolean(), last4: z.boolean(), self_declare: z.boolean() }),
+        }),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("properties")
+      .update({ checkin_methods: data.methods })
+      .eq("id", data.propertyId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listAlerts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase
+      .from("host_alerts")
+      .select("id, kind, message, booking_id, property_id, created_at, read_at")
+      .is("read_at", null)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return { alerts: data ?? [] };
+  });
+
+export const markAlertRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    await context.supabase.from("host_alerts").update({ read_at: new Date().toISOString() }).eq("id", data.id);
+    return { ok: true };
   });

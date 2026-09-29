@@ -116,6 +116,8 @@ export const today = {
 export const bookings = {
   title: "Bookings",
   subtitle: "Every stay across your channels, in one place.",
+  guestEmail: "Guest email (optional)",
+  guestEmailHint: "Lets the guest confirm who they are at check-in",
   mirrorNote: "Another platform is showing this stay as closed. It is linked to the real booking, so it is not counted twice.",
   listing: "Listing",
   tentative: "The platform marks this stay as not yet confirmed.",
@@ -241,6 +243,38 @@ export const common = {
   retry: "Try again",
 };
 
+export const checkinSettings = {
+  title: "Guest check-in",
+  body: "Choose how guests confirm who they are when they check themselves in.",
+  printQr: "Print QR card",
+  openKiosk: "Open front-door kiosk",
+  methods: {
+    photo_id: "Photo ID check",
+    last4: "Booking details check",
+    self_declare: "Guest self-declaration",
+  } as Record<string, string>,
+  methodHelp: {
+    photo_id: "Guest photographs their ID. We read the name, keep only the result and never store the photo.",
+    last4: "Guest enters the last 4 of their booking reference or phone, or their email, whichever the booking has.",
+    self_declare: "Always offered as the last resort so no one is stuck at the door. You'll get an alert to check ID in person.",
+  } as Record<string, string>,
+  primary: "Ask first",
+  fallbackNote: "If the camera won't start or a guest needs more than 2 photo tries, Latchkey moves to the next option automatically.",
+  listFlowNote: "ID checks are off: guests choose their platform, then pick their booking from a list showing first name and initial only.",
+  saved: "Check-in settings saved",
+  back: "Back to properties",
+  print: "Print",
+  cardHeadline: "Scan to check yourself in",
+  cardOrVisit: "Or visit",
+  cardPin: "Property PIN",
+  qrAlt: "QR code for guest check-in",
+};
+
+export const alerts = {
+  title: "Needs your attention",
+  dismiss: "Mark as seen",
+};
+
 export const guest = {
   propertyName: "The Trinity Rooms",
   location: "High Wycombe",
@@ -250,6 +284,85 @@ export const guest = {
   startCta: "Start check-in",
   helpCta: "I need help",
   reassurance: "Arriving late? That is absolutely fine — the door code works at any hour.",
+  // Flow
+  welcomeTo: (name: string) => `Welcome to ${name}.`,
+  letsCheckIn: "Let's get you checked in.",
+  back: "Back",
+  startAgain: "Start again",
+  stepLetter: "What does your surname start with?",
+  stepLetterHint: "Your family name, as on your booking.",
+  stepCheckout: "Which day do you check out?",
+  stepPlatform: "Where did you book?",
+  stepPickBooking: "Which booking is yours?",
+  noArrivals: "We can't see any arrivals on that platform today. Please try another, or call your host.",
+  platforms: {
+    airbnb: "Airbnb",
+    booking_com: "Booking.com",
+    homestay: "Homestay.com",
+    direct: "Booked directly",
+    other: "Somewhere else",
+  } as Record<string, string>,
+  noMatchTitle: "We couldn't find that booking",
+  noMatchBody: "Please check your answers and try again. If it still doesn't work, your host is happy to help.",
+  lockedTitle: "Let's pause for a moment",
+  lockedBody: (time: string) =>
+    `We've let your host know you're here. You can try again at ${time}, or give them a call.`,
+  callHost: "Call your host",
+  hi: (name: string) => `Hi ${name}`,
+  confirmBody: "Is this your booking?",
+  confirmYes: "Yes, that's me",
+  confirmNo: "No, start again",
+  idTitle: "A quick ID check",
+  idConsent:
+    "We only check your name matches your booking. We don't keep a copy of your ID.",
+  idConsentAgree: "I'm happy to continue",
+  idUseOther: "Use another way",
+  idCameraHelp: "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
+  idTakePhoto: "Take photo",
+  idChecking: "Checking your name…",
+  idRetry: (left: number) =>
+    `We couldn't read that clearly. Try again with more light and less glare (${left} ${left === 1 ? "try" : "tries"} left).`,
+  idCameraFailed: "The camera didn't start, so let's try another way.",
+  last4Title: "Confirm a few details",
+  last4Kinds: {
+    reference: "Last 4 characters of your booking reference",
+    phone: "Last 4 digits of the phone number on your booking",
+    email: "The email address on your booking",
+  } as Record<string, string>,
+  last4Submit: "Check",
+  last4Retry: (left: number) => `That doesn't match. ${left} ${left === 1 ? "try" : "tries"} left.`,
+  selfTitle: "Nearly there",
+  selfBody: "Please confirm you are the guest named on this booking.",
+  selfConfirm: "I confirm I'm the guest on this booking",
+  selfNote:
+    "Thank you. Your host will say hello and check your ID in person during your stay. Nothing more to do for now.",
+  continue: "Continue",
+  doneTitle: (name: string) => `You're all checked in, ${name}`,
+  roomLine: (room: string, title: string | null) => `You're in ${room}${title ? `, ${title}` : ""}.`,
+  noRoom: "Your host will show you to your room.",
+  stayGuideCta: "Your stay guide",
+  kioskResetting: "Starting over for the next guest…",
+  kioskExitTitle: "Host access",
+  kioskExitBody: "Enter the door PIN to leave kiosk mode.",
+  kioskExitCta: "Unlock",
+  kioskWrongPin: "That PIN isn't right.",
+  pinTitle: "Enter the property PIN",
+  pinBody: "You'll find the 6-digit PIN in your booking message or by the front door.",
+  pinWrong: "We couldn't find a property with that PIN.",
+  notFound: "We couldn't find that property. Please check the link or ask your host.",
+  error: "Something went wrong. Please try again, or call your host.",
+  // Stay page
+  stayTitle: (name: string) => `Welcome, ${name}`,
+  stayWifi: "Wi-Fi",
+  stayNetwork: "Network",
+  stayPassword: "Password",
+  stayCheckout: "Check-out",
+  stayQuiet: "Quiet hours",
+  stayParking: "Parking",
+  stayHost: "Your host",
+  stayRules: "House rules",
+  stayRulesList: ["Shoes off indoors, please.", "Please keep the shared kitchenette tidy."],
+  stayGone: "This stay link has expired. We hope you enjoyed your stay.",
 };
 
 export const hostPlaceholders = {

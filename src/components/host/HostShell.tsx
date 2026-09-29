@@ -2,7 +2,7 @@ import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Home, LogOut, Plug, Settings, Sun, type LucideIcon } from "lucide-react";
 
 import { auth, brand, hostNav } from "@/content/copy";
-import { useWorkspace } from "@/hooks/use-host-data";
+import { useAlerts, useWorkspace } from "@/hooks/use-host-data";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ const navItems: NavItem[] = [
 
 export function HostShell() {
   const navigate = useNavigate();
+  const alertCount = useAlerts().data?.alerts.length ?? 0;
   const { data } = useWorkspace();
   const host = data?.host as { business_name?: string } | null | undefined;
   const businessName = host?.business_name ?? "";
@@ -29,7 +30,7 @@ export function HostShell() {
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-sidebar p-5 text-sidebar-foreground md:flex">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-sidebar p-5 text-sidebar-foreground md:flex print:hidden">
         <Link to="/" className="flex items-center gap-3 rounded-xl px-2 py-2">
           <span className="grid size-10 place-items-center rounded-2xl bg-sidebar-primary font-display text-lg text-sidebar-primary-foreground">
             L
@@ -55,6 +56,11 @@ export function HostShell() {
             >
               <Icon className="size-5 shrink-0" />
               <span className="truncate">{label}</span>
+              {to === "/app/today" && alertCount > 0 ? (
+                <span className="ml-auto rounded-full bg-destructive px-2 text-xs text-destructive-foreground" aria-label={`${alertCount} alerts`}>
+                  {alertCount}
+                </span>
+              ) : null}
             </Link>
           ))}
         </nav>
@@ -69,7 +75,7 @@ export function HostShell() {
         </button>
       </aside>
 
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface px-4 py-3 md:hidden">
+      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-surface px-4 py-3 md:hidden print:hidden">
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary font-display text-primary-foreground">
           L
         </span>
@@ -92,7 +98,7 @@ export function HostShell() {
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
       >
         {navItems.map(({ to, label, icon: Icon }) => (
           <Link
@@ -101,7 +107,12 @@ export function HostShell() {
             className="flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium text-muted-foreground"
             activeProps={{ className: "text-primary", "aria-current": "page" }}
           >
-            <Icon className="size-5" />
+            <span className="relative">
+              <Icon className="size-5" />
+              {to === "/app/today" && alertCount > 0 ? (
+                <span className="absolute -right-2 -top-1 size-2.5 rounded-full bg-destructive" aria-label={`${alertCount} alerts`} />
+              ) : null}
+            </span>
             <span className="truncate">{label}</span>
           </Link>
         ))}

@@ -47,6 +47,8 @@ export type BookingRow = {
   booking_url?: string | null;
   listing_title?: string | null;
   feed_status?: string | null;
+  guest_email?: string | null;
+  id_check_status?: string | null;
 };
 
 type Props = {
@@ -86,6 +88,7 @@ function blank(propertyId: string, roomId: string | null, defaults?: Props["defa
     check_out_time: defaults?.check_out_time?.slice(0, 5) ?? "11:00",
     status: "upcoming",
     notes: "",
+    guest_email: "",
   };
 }
 
@@ -121,6 +124,7 @@ export function BookingDialog({
         check_out_time: (booking.check_out_time ?? "11:00").slice(0, 5),
         status: booking.status,
         notes: booking.notes ?? "",
+        guest_email: booking.guest_email ?? "",
       });
     } else {
       setForm(blank(propertyId, rooms[0]?.id ?? null, defaults));
@@ -155,6 +159,7 @@ export function BookingDialog({
           check_out_time: form.check_out_time || null,
           status: form.status as (typeof STATUS_KEYS)[number],
           notes: form.notes.trim() || null,
+          guest_email: form.guest_email.trim() || null,
         },
       });
       await qc.invalidateQueries({ queryKey: ["board"] });
@@ -338,6 +343,18 @@ export function BookingDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="guest_email">{copy.guestEmail}</Label>
+            <Input
+              id="guest_email"
+              type="email"
+              className="h-12"
+              value={form.guest_email}
+              onChange={(e) => set("guest_email", e.target.value)}
+              placeholder={copy.guestEmailHint}
+            />
           </div>
 
           <div className="space-y-2 sm:col-span-2">

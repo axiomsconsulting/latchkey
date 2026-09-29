@@ -29,6 +29,13 @@
       "when": 1790633509887,
       "tag": "0003_booking_mirrors_and_details",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790667442715,
+      "tag": "0004_guest_checkin",
+      "breakpoints": true
     }
   ]
 }
