@@ -1,7 +1,9 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { BookOpen, CalendarDays, Home, LogOut, Plug, Settings, Sun, Wrench, type LucideIcon } from "lucide-react";
 
+import { HostInbox } from "@/components/host/HostInbox";
 import { LogoMark } from "@/components/theme/LogoMark";
+
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { auth, brand, hostNav } from "@/content/copy";
 import { useAlerts, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
