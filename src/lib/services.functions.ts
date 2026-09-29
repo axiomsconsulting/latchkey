@@ -215,7 +215,7 @@ export const appointProvider = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: job } = await context.supabase
       .from("service_jobs")
-      .select("id, host_id, category, title, note, booking_id, properties(timezone, address_line1, postcode)")
+      .select("id, host_id, category, title, note, booking_id, properties(timezone, address, postcode)")
       .eq("id", data.jobId)
       .single();
     if (!job) throw new Error("Request not found.");
@@ -231,7 +231,7 @@ export const appointProvider = createServerFn({ method: "POST" })
       title: job.title,
       note: job.note,
       etaIso: data.etaIso,
-      address: [prop.address_line1, prop.postcode].filter(Boolean).join(", ") || null,
+      address: [prop.address, prop.postcode].filter(Boolean).join(", ") || null,
     });
     const { error } = await context.supabase
       .from("service_jobs")
