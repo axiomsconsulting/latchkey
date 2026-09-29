@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { common, settings as copy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { ChannelLabels } from "@/components/host/ChannelLabels";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
@@ -201,6 +202,12 @@ function SettingsPage() {
       {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
       {themedProperty ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
       {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
+      {workspace.data ? (
+        <ChannelLabels
+          hostId={workspace.data.hostId}
+          labels={((host as { channel_labels?: Record<string, string> } | null)?.channel_labels ?? {}) as Record<string, string>}
+        />
+      ) : null}
       {workspace.data ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
 
       <section className="card-soft p-5">
