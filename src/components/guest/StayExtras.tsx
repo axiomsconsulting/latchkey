@@ -5,7 +5,7 @@ import { Loader2, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { extrasCopy as copy } from "@/content/copy";
+import { extrasCopy as copy, responseNotes } from "@/content/copy";
 import { formatPence } from "@/lib/services";
 import { acceptSuggestion, cancelExtrasRequest, createExtrasRequest, getStayExtras } from "@/lib/extras.functions";
 import { cn } from "@/lib/utils";
@@ -109,7 +109,10 @@ export function StayExtras({ token }: { token: string }) {
                 <span className="flex-1 font-medium">{r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</span>
                 {r.totalPence > 0 ? <span>{formatPence(r.totalPence, cur)}</span> : null}
                 <span className="rounded-full bg-secondary px-3 py-1 text-sm">{copy.statuses[r.status] ?? r.status}</span>
+                {r.lateUntil ? <span className="text-sm text-muted-foreground">{copy.until(r.lateUntil.slice(0, 5))}</span> : null}
+                {r.earlyFrom ? <span className="text-sm text-muted-foreground">{copy.from(r.earlyFrom.slice(0, 5))}</span> : null}
                 {r.status === "awaiting_payment" && left !== null ? <span className="text-sm text-accent">{copy.payLeft(left)}</span> : null}
+                {r.hostNote ? <p className="w-full text-sm text-primary">{responseNotes.fromHost(r.hostNote)}</p> : null}
                 {r.status === "suggested" && r.suggested ? (
                   <>
                     <span className="w-full text-sm">{copy.suggested(copy.windows[r.suggested] ?? r.suggested)}</span>

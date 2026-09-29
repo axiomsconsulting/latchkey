@@ -30,7 +30,7 @@ function toItem(r: Row): ExtraItem {
 const COLS = "item_key, name, price_pence, unit, max_qty, is_free, auto_approve, active, is_loan, options, sort_order";
 
 async function loadItems(db: any, propertyId: string, currency: string, seed: boolean): Promise<ExtraItem[]> {
-  const { data } = await db.from("extras_catalogue").select(COLS).eq("property_id", propertyId).not("item_key", "is", null).order("sort_order");
+  const { data } = await db.from("extras_catalogue").select(COLS).eq("property_id", propertyId).not("item_key", "is", null).is("deleted_at", null).order("sort_order");
   if ((data ?? []).length || !seed) return (data ?? []).map(toItem);
   const rows = DEFAULT_EXTRAS.map((e, i) => ({
     property_id: propertyId, item_key: e.key, name: e.name, price_pence: e.pricePence, unit: e.unit, max_qty: e.maxQty,
@@ -79,6 +79,62 @@ export const savePriceItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Add a new item the host has invented (key derived from the name). */
+export const addPriceItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, item: itemSchema.omit({ key: true }) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const i = data.item;
+    const base = i.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 32) || "item";
+    const { data: p } = await context.supabase.from("properties").select("hosts(currency)").eq("id", data.propertyId).single();
+    const currency = ((p as any)?.hosts?.currency as string) ?? "GBP";
+    const { data: existing } = await context.supabase.from("extras_catalogue").select("item_key, sort_order").eq("property_id", data.propertyId);
+    const keys = new Set((existing ?? []).map((r: any) => r.item_key));
+    let key = base;
+    let n = 2;
+    while (keys.has(key)) key = `${base}_${n++}`;
+    const nextOrder = Math.max(0, ...(existing ?? []).map((r: any) => r.sort_order ?? 0)) + 1;
+    const { error } = await context.supabase.from("extras_catalogue").insert({
+      property_id: data.propertyId, item_key: key, name: i.name, price_pence: i.isFree ? 0 : i.pricePence,
+      unit: i.unit, max_qty: i.maxQty, is_free: i.isFree, auto_approve: i.autoApprove, requires_approval: !i.autoApprove,
+      active: i.active, is_loan: i.isLoan, sort_order: nextOrder, currency, options: {},
+    });
+    if (error) throw new Error("Couldn't add that item.");
+    return { ok: true, key };
+  });
+
+/** Soft delete: past requests keep the item details they were priced with. */
+export const deletePriceItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, key: z.string().min(1).max(40) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("extras_catalogue")
+      .update({ deleted_at: new Date().toISOString(), active: false })
+      .eq("property_id", data.propertyId).eq("item_key", data.key);
+    if (error) throw new Error("Couldn't remove that item.");
+    return { ok: true };
+  });
+
+/** Swap this item with its neighbour in the list. */
+export const reorderPriceItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, key: z.string().min(1).max(40), direction: z.enum(["up", "down"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows } = await context.supabase.from("extras_catalogue")
+      .select("item_key, sort_order").eq("property_id", data.propertyId).is("deleted_at", null).order("sort_order");
+    const list = (rows ?? []) as { item_key: string; sort_order: number }[];
+    const idx = list.findIndex((r) => r.item_key === data.key);
+    const swap = data.direction === "up" ? idx - 1 : idx + 1;
+    if (idx < 0 || swap < 0 || swap >= list.length) return { ok: true };
+    const a = list[idx]!;
+    const b = list[swap]!;
+    await Promise.all([
+      context.supabase.from("extras_catalogue").update({ sort_order: b.sort_order }).eq("property_id", data.propertyId).eq("item_key", a.item_key),
+      context.supabase.from("extras_catalogue").update({ sort_order: a.sort_order }).eq("property_id", data.propertyId).eq("item_key", b.item_key),
+    ]);
+    return { ok: true };
+  });
+
 export const saveMoneySettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
@@ -100,7 +156,7 @@ export const listExtrasRequests = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("requests")
-      .select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, late_until, early_from, message, created_at, bookings!inner(id, property_id, guest_full_name, rooms(display_name))")
+      .select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, late_until, early_from, message, host_note, created_at, bookings!inner(id, property_id, guest_full_name, rooms(display_name))")
       .eq("kind", "extras")
       .eq("bookings.property_id", data.propertyId)
       .order("created_at", { ascending: false })
@@ -109,7 +165,7 @@ export const listExtrasRequests = createServerFn({ method: "GET" })
       id: r.id, status: r.status as string, items: r.items as { name: string; qty: number; totalPence: number }[],
       window: r.time_window as string | null, totalPence: r.total_pence as number, payBy: r.pay_by as string | null,
       suggested: r.suggested_window as string | null, lateUntil: r.late_until as string | null, earlyFrom: r.early_from as string | null,
-      note: r.message as string | null, createdAt: r.created_at as string,
+      note: r.message as string | null, hostNote: (r.host_note as string | null) ?? null, createdAt: r.created_at as string,
       guest: (r.bookings?.guest_full_name as string | null) ?? "Guest", room: (r.bookings?.rooms?.display_name as string | null) ?? null,
     }));
   });
@@ -119,6 +175,7 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({
     id: uuid, action: z.enum(["approve", "decline", "suggest", "delivered", "mark_paid"]),
     window: z.enum(["asap", "evening", "morning", "door"]).nullable().default(null),
+    note: z.string().trim().max(200).nullable().default(null),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: r } = await context.supabase.from("requests").select("id, booking_id, total_pence, status").eq("id", data.id).single();
@@ -130,6 +187,7 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
       : data.action === "suggest" ? { status: "suggested", suggested_window: data.window, suggestion_expires_at: new Date(now.getTime() + HOLD_MS).toISOString() }
       : data.action === "mark_paid" ? { status: "confirmed" }
       : { status: "delivered", resolved_at: now.toISOString() };
+    if (data.note) patch["host_note"] = data.note;
     const { error } = await context.supabase.from("requests").update(patch as never).eq("id", data.id);
     if (error) throw new Error("Couldn't update that request.");
     const body =
@@ -138,7 +196,10 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
       : data.action === "suggest" ? "Your host has suggested another time. Please accept it within 2 hours."
       : data.action === "mark_paid" ? "Payment received. You're booked."
       : "Your request has been delivered.";
-    await context.supabase.from("messages").insert({ booking_id: r.booking_id, direction: "outbound", channel: "stay_page", body, sent_at: now.toISOString() });
+    await context.supabase.from("messages").insert({
+      booking_id: r.booking_id, direction: "outbound", channel: "stay_page",
+      body: data.note ? `${body} ${data.note}` : body, sent_at: now.toISOString(),
+    });
     return { ok: true };
   });
 
@@ -178,7 +239,7 @@ export const getStayExtras = createServerFn({ method: "GET" })
     const late = items.find((i) => i.key === "late_checkout");
     const early = items.find((i) => i.key === "early_checkin");
     const { data: reqs } = await db
-      .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at")
+      .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at, host_note, late_until, early_from")
       .eq("booking_id", b.id).eq("kind", "extras").order("created_at", { ascending: false }).limit(20);
     const outUntil = p.hosts?.out_until && Date.parse(p.hosts.out_until) > Date.now() ? p.hosts.out_until : null;
     return {
@@ -192,6 +253,8 @@ export const getStayExtras = createServerFn({ method: "GET" })
       requests: (reqs ?? []).map((r: any) => ({
         id: r.id, status: r.status as string, items: r.items as { name: string; qty: number }[], totalPence: r.total_pence as number,
         payBy: r.pay_by as string | null, suggested: r.suggested_window as string | null, window: r.time_window as string | null,
+        hostNote: (r.host_note as string | null) ?? null,
+        lateUntil: (r.late_until as string | null) ?? null, earlyFrom: (r.early_from as string | null) ?? null,
       })),
     };
   });

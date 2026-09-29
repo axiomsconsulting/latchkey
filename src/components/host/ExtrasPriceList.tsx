@@ -9,17 +9,35 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { extrasCopy as copy } from "@/content/copy";
+import { extrasCopy as copy, priceListUi as ui } from "@/content/copy";
 import type { ExtraItem } from "@/lib/extras";
-import { getPriceList, saveMoneySettings, savePriceItem } from "@/lib/extras.functions";
+import { addPriceItem, deletePriceItem, getPriceList, reorderPriceItem, saveMoneySettings, savePriceItem } from "@/lib/extras.functions";
+
+const UNITS = ["item", "hour", "pack", "bag_day"] as const;
+
+const BLANK = { name: "", price: "3.00", unit: "item" as (typeof UNITS)[number], maxQty: 4, isFree: false, isLoan: false, autoApprove: false };
 
 export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; hostId: string }) {
   const qc = useQueryClient();
   const fn = useServerFn(getPriceList);
   const saveItem = useServerFn(savePriceItem);
   const saveMoney = useServerFn(saveMoneySettings);
+  const addItem = useServerFn(addPriceItem);
+  const removeItem = useServerFn(deletePriceItem);
+  const moveItem = useServerFn(reorderPriceItem);
   const q = useQuery({ queryKey: ["price-list", propertyId], queryFn: () => fn({ data: { propertyId } }) });
   const [money, setMoney] = useState({ registered: false, label: "VAT", rate: "20", pricesInclude: true, bank: "", outUntil: "" });
+  const [draft, setDraft] = useState<typeof BLANK | null>(null);
+
+  async function run(work: () => Promise<unknown>, done?: string) {
+    try {
+      await work();
+      await qc.invalidateQueries({ queryKey: ["price-list", propertyId] });
+      if (done) toast.success(done);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Please try again.");
+    }
+  }
 
   useEffect(() => {
     if (!q.data) return;
@@ -85,9 +103,57 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
                 <Switch checked={it.active} onCheckedChange={(v) => update(it, { active: v })} aria-label={`${it.name} offered`} />
                 {it.isFree ? copy.free : copy.active}
               </label>
+              <div className="flex items-center gap-1 sm:col-span-5">
+                <Button size="sm" variant="ghost" aria-label={`${it.name}: ${ui.moveUp}`} onClick={() => run(() => moveItem({ data: { propertyId, key: it.key, direction: "up" } }))}>↑</Button>
+                <Button size="sm" variant="ghost" aria-label={`${it.name}: ${ui.moveDown}`} onClick={() => run(() => moveItem({ data: { propertyId, key: it.key, direction: "down" } }))}>↓</Button>
+                <Button size="sm" variant="ghost" className="text-destructive"
+                  onClick={() => { if (confirm(ui.removeConfirm)) void run(() => removeItem({ data: { propertyId, key: it.key } }), ui.removed); }}>
+                  {ui.remove}
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
+
+        {draft ? (
+          <div className="mt-4 grid gap-3 rounded-2xl border border-border p-4 sm:grid-cols-2">
+            <div className="sm:col-span-2"><Label>{ui.name}</Label><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></div>
+            <div>
+              <Label>{ui.price}</Label>
+              <Input type="number" step="0.5" min="0" disabled={draft.isFree} value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} />
+            </div>
+            <div>
+              <Label>{ui.unit}</Label>
+              <select className="h-10 w-full rounded-xl border border-border bg-surface px-3" value={draft.unit}
+                onChange={(e) => setDraft({ ...draft, unit: e.target.value as (typeof UNITS)[number] })}>
+                {UNITS.map((u) => <option key={u} value={u}>{copy.units[u]}</option>)}
+              </select>
+            </div>
+            <div><Label>{ui.maxQty}</Label><Input type="number" min="1" max="20" value={draft.maxQty} onChange={(e) => setDraft({ ...draft, maxQty: Number(e.target.value) })} /></div>
+            <div className="flex flex-wrap items-center gap-4 pt-6">
+              <label className="flex items-center gap-2 text-sm"><Switch checked={draft.isFree} onCheckedChange={(v) => setDraft({ ...draft, isFree: v })} />{ui.isFree}</label>
+              <label className="flex items-center gap-2 text-sm"><Switch checked={draft.isLoan} onCheckedChange={(v) => setDraft({ ...draft, isLoan: v })} />{ui.isLoan}</label>
+              <label className="flex items-center gap-2 text-sm"><Switch checked={draft.autoApprove} onCheckedChange={(v) => setDraft({ ...draft, autoApprove: v })} />{copy.autoApprove}</label>
+            </div>
+            <div className="flex gap-2 sm:col-span-2">
+              <Button
+                disabled={!draft.name.trim()}
+                onClick={() => run(async () => {
+                  await addItem({ data: { propertyId, item: {
+                    name: draft.name.trim(), pricePence: draft.isFree ? 0 : Math.round(Number(draft.price || 0) * 100),
+                    unit: draft.unit, maxQty: draft.maxQty, isFree: draft.isFree, autoApprove: draft.autoApprove, active: true, isLoan: draft.isLoan,
+                  } } });
+                  setDraft(null);
+                }, ui.added)}
+              >
+                {ui.addItem}
+              </Button>
+              <Button variant="ghost" onClick={() => setDraft(null)}>{copy.cancel}</Button>
+            </div>
+          </div>
+        ) : (
+          <Button className="mt-4" variant="outline" onClick={() => setDraft({ ...BLANK })}>{ui.addItem}</Button>
+        )}
       </section>
 
       <section className="card-soft space-y-4 p-5">

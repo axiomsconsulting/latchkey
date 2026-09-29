@@ -91,8 +91,99 @@ export const channels = {
   airbnb: "Airbnb",
   booking_com: "Booking.com",
   homestay: "Homestay.com",
+  vrbo: "Vrbo",
+  agoda: "Agoda",
   direct: "Direct",
-  other: "Other",
+  other: "Other website (.ics link)",
+};
+
+/**
+ * Where a host finds the calendar export link on each platform.
+ * Kept here so the steps can be updated without touching code.
+ * `screenshot` is a placeholder for an image to be added later.
+ */
+export const calendarGuides: Record<
+  string,
+  { title: string; steps: string[]; helpUrl: string | null; helpLabel: string; note?: string; screenshot: string | null }
+> = {
+  airbnb: {
+    title: "Where do I find my Airbnb calendar link?",
+    steps: [
+      "Open Calendar and choose the listing.",
+      "Go to Availability.",
+      "Choose Connect calendars, then Connect to another website.",
+      "Copy the Airbnb calendar link.",
+    ],
+    note: "One link per listing.",
+    helpUrl: "https://www.airbnb.co.uk/help/article/99",
+    helpLabel: "Airbnb help: sync calendars",
+    screenshot: null,
+  },
+  booking_com: {
+    title: "Where do I find my Booking.com calendar link?",
+    steps: [
+      "Sign in to the Extranet.",
+      "Go to Rates & Availability, then Sync calendars.",
+      "Choose Add calendar connection.",
+      "Copy the Booking.com calendar link.",
+    ],
+    note: "Calendar sync may not be available for hotel-type properties, or if you already use a channel manager.",
+    helpUrl: "https://partner.booking.com/en-gb/help/rates-availability/calendar-sync",
+    helpLabel: "Booking.com help: calendar sync",
+    screenshot: null,
+  },
+  vrbo: {
+    title: "Where do I find my Vrbo calendar link?",
+    steps: [
+      "Open your owner dashboard and go to Calendar.",
+      "Choose Import/Export.",
+      "Choose Export calendar.",
+      "Copy the .ics link.",
+    ],
+    helpUrl: "https://help.vrbo.com/articles/How-do-I-sync-my-calendars",
+    helpLabel: "Vrbo help: sync calendars",
+    screenshot: null,
+  },
+  homestay: {
+    title: "Where do I find my Homestay.com calendar link?",
+    steps: [
+      "Open your host dashboard and go to Calendar.",
+      "Choose Sync calendar.",
+      "Copy the export link.",
+    ],
+    helpUrl: "https://www.homestay.com/help",
+    helpLabel: "Homestay help: synchronise your calendar with a 3rd party",
+    screenshot: null,
+  },
+  agoda: {
+    title: "Where do I find my Agoda calendar link?",
+    steps: [
+      "Sign in to YCS or the Agoda Homes portal.",
+      "Go to Calendar.",
+      "Choose Calendar sync.",
+      "Copy the export link.",
+    ],
+    helpUrl: "https://ycs.agoda.com",
+    helpLabel: "Agoda YCS",
+    screenshot: null,
+  },
+  other: {
+    title: "Where do I find my calendar link?",
+    steps: [
+      "Look for Calendar sync, iCal or Export calendar in your platform's settings.",
+      "Copy the export link. It usually ends in .ics.",
+    ],
+    helpUrl: null,
+    helpLabel: "",
+    screenshot: null,
+  },
+  direct: {
+    title: "Direct bookings",
+    steps: ["Direct bookings are added by hand in Latchkey, so there is no calendar link to paste."],
+    helpUrl: null,
+    helpLabel: "",
+    screenshot: null,
+  },
 };
 
 export const today = {
@@ -540,4 +631,73 @@ export const extrasCopy = {
   suggest: "Suggest another time",
   delivered: "Mark delivered",
   markPaid: "Payment received",
+};
+
+/** Calendar connection help, validation messages and the outbound feed. */
+export const calendarUi = {
+  stepsChecked: "Steps last checked: Sep 2026",
+  openHelp: "Open the platform's help page",
+  howItWorks:
+    "Latchkey checks this calendar every 30 minutes. Airbnb and Booking.com only share dates, and sometimes a reservation code, so you'll add guest names for some bookings on the Today page.",
+  helpTitle: "Calendar help",
+  helpSubtitle: "Where to find the calendar link on each platform.",
+  managerTitle: "Channel manager API",
+  managerBody:
+    "Expedia and hotel-style listings connect through a channel manager rather than a calendar link. Direct connections are coming soon.",
+  errors: {
+    https: "The link must start with https://",
+    notCalendar: "This link looks like a web page, not a calendar.",
+    noEvents: "The link returned no events. Check you copied the export link, not the import box.",
+  },
+};
+
+export const feedCopy = {
+  title: "Share this room's Latchkey calendar",
+  body:
+    "Only needed if you take direct bookings in Latchkey. If your platforms already sync with each other, leave this off.",
+  detail:
+    "The feed includes direct bookings and whole-day blocks you created here. It never repeats bookings imported from a platform, and it doesn't include cleaning or late check-out times.",
+  enable: "Share this calendar",
+  copy: "Copy feed link",
+  copied: "Feed link copied",
+  regenerate: "Make a new link",
+  regenerated: "New feed link created. Update it anywhere you pasted the old one.",
+};
+
+/** One-tap notes the host can send with a decision. */
+export const responseNotes = {
+  label: "Add a note for the guest",
+  custom: "Write your own note",
+  approve: ["Left outside your door", "Will bring it at 18:30", "Ready to collect from the hallway"],
+  decline: ["Room needed for an arrival", "Sorry, we've run out today", "Outside our service hours"],
+  suggest: ["This is the earliest I can manage", "Cleaner is in the house until then"],
+  fromHost: (note: string) => `Note from your host: ${note}`,
+  send: "Send",
+};
+
+/** Guest requests waiting on the host, shown on Today. */
+export const todayRequests = {
+  title: "Guest requests",
+  empty: "No requests waiting.",
+  viewAll: "See all requests",
+  tightTurnaround: (mins: number) =>
+    `Tight turnaround: only ${mins} minutes between check-out and the next arrival.`,
+};
+
+/** Adding and editing price list items. */
+export const priceListUi = {
+  addItem: "Add an item",
+  editItem: "Edit item",
+  name: "Name",
+  price: "Price",
+  isFree: "Free on request",
+  unit: "Charged",
+  maxQty: "Most a guest can ask for",
+  isLoan: "Lent, not kept",
+  moveUp: "Move up",
+  moveDown: "Move down",
+  remove: "Remove from the list",
+  removeConfirm: "Remove this item? Past requests keep their details.",
+  removed: "Item removed",
+  added: "Item added",
 };

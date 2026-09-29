@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { channels, common, connections as copy } from "@/content/copy";
+import { calendarGuides, calendarUi, channels, common, connections as copy } from "@/content/copy";
 import {
   useConnections,
   usePropertyBoard,
@@ -65,7 +65,16 @@ export const Route = createFileRoute("/_authenticated/app/connections")({
   component: ConnectionsPage,
 });
 
-const CHANNEL_KEYS = ["airbnb", "booking_com", "homestay", "direct", "other"] as const;
+const CHANNEL_KEYS = ["airbnb", "booking_com", "vrbo", "homestay", "agoda", "direct", "other"] as const;
+
+/** Friendly checks before we bother the platform with a request. */
+function urlIssue(raw: string): string | null {
+  const u = raw.trim();
+  if (!u) return null;
+  if (!u.startsWith("https://")) return calendarUi.errors.https;
+  if (!/\.ics|\/calendar|\/ical/i.test(u)) return calendarUi.errors.notCalendar;
+  return null;
+}
 
 type Connection = {
   id: string;
@@ -130,7 +139,8 @@ function AddConnectionDialog({
   async function runTest() {
     setTesting(true);
     try {
-      setPreview(await test({ data: { url: url.trim(), channel } }));
+      const res = await test({ data: { url: url.trim(), channel } });
+      setPreview(res.ok && !res.total ? { ok: false, message: calendarUi.errors.noEvents } : res);
     } catch (err) {
       setPreview({ ok: false, message: err instanceof Error ? err.message : common.errorBody });
     } finally {
@@ -152,7 +162,7 @@ function AddConnectionDialog({
         },
       });
       await qc.invalidateQueries({ queryKey: ["connections"] });
-      toast.success("Calendar link added");
+      toast.success("Calendar link added", { description: calendarUi.howItWorks });
       setUrl("");
       setPreview(null);
       onOpenChange(false);
@@ -185,6 +195,9 @@ function AddConnectionDialog({
               }}
               placeholder="https://www.airbnb.co.uk/calendar/ical/…"
             />
+            {urlIssue(url) ? (
+              <p className="text-sm text-destructive">{urlIssue(url)}</p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -223,6 +236,31 @@ function AddConnectionDialog({
               </Select>
             </div>
           </div>
+
+          <aside className="rounded-2xl border border-border bg-secondary/40 p-4">
+            <p className="font-medium">{calendarGuides[channel]?.title ?? calendarUi.helpTitle}</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+              {(calendarGuides[channel]?.steps ?? []).map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ol>
+            {calendarGuides[channel]?.note ? (
+              <p className="mt-2 text-sm text-muted-foreground">{calendarGuides[channel]?.note}</p>
+            ) : null}
+            <p className="mt-2 text-xs text-muted-foreground">{calendarUi.stepsChecked}</p>
+            {calendarGuides[channel]?.helpUrl ? (
+              <a
+                className="mt-1 inline-block text-sm underline"
+                href={calendarGuides[channel]!.helpUrl!}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {calendarGuides[channel]?.helpLabel ?? calendarUi.openHelp}
+              </a>
+            ) : null}
+          </aside>
+
+
 
           <div className="space-y-2">
             <Label htmlFor="ln">{copy.listingLabel}</Label>

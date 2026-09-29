@@ -5,7 +5,7 @@
 
 import { zonedParts } from "./dates";
 
-export type Channel = "airbnb" | "booking_com" | "homestay" | "direct" | "other";
+export type Channel = "airbnb" | "booking_com" | "homestay" | "vrbo" | "agoda" | "direct" | "other";
 
 export type IcsEvent = {
   uid: string;

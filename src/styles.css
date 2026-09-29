@@ -206,11 +206,19 @@
 :root {
   --channel-other: oklch(0.6 0.03 84.6);
   --channel-other-foreground: oklch(0.99 0.01 84.6);
+  --channel-vrbo: oklch(0.38 0.11 255);
+  --channel-vrbo-foreground: oklch(0.99 0.01 84.6);
+  --channel-agoda: oklch(0.58 0.13 25);
+  --channel-agoda-foreground: oklch(0.99 0.01 84.6);
 }
 
 @theme inline {
   --color-channel-other: var(--channel-other);
   --color-channel-other-foreground: var(--channel-other-foreground);
+  --color-channel-vrbo: var(--channel-vrbo);
+  --color-channel-vrbo-foreground: var(--channel-vrbo-foreground);
+  --color-channel-agoda: var(--channel-agoda);
+  --color-channel-agoda-foreground: var(--channel-agoda-foreground);
 }
 
 /* Diagonal hatching used for cleaning / unavailable windows on the timeline */
