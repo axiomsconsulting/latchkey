@@ -116,6 +116,8 @@ export const today = {
 export const bookings = {
   title: "Bookings",
   subtitle: "Every stay across your channels, in one place.",
+  guestEmail: "Guest email (optional)",
+  guestEmailHint: "Lets the guest confirm who they are at check-in",
   mirrorNote: "Another platform is showing this stay as closed. It is linked to the real booking, so it is not counted twice.",
   listing: "Listing",
   tentative: "The platform marks this stay as not yet confirmed.",
