@@ -701,3 +701,45 @@ export const priceListUi = {
   removed: "Item removed",
   added: "Item added",
 };
+
+/** Card payments through Stripe. */
+export const payments = {
+  title: "Card payments (Stripe)",
+  body: "Guests pay for approved extras on their stay page. Latchkey stays the single price list; Stripe just takes the money.",
+  notConnected: "Not connected",
+  testBadge: "Test mode",
+  liveBadge: "Live payments",
+  connectedTo: (name: string) => `Connected to ${name}.`,
+  webhookMissing: "Almost there: add the webhook signing secret so payments confirm automatically.",
+  webhookTitle: "Add the payment webhook",
+  webhookBody:
+    "In Stripe, go to Developers > Webhooks > Add endpoint, paste the address below, tick checkout.session.completed, then save its signing secret in Latchkey as STRIPE_WEBHOOK_SECRET.",
+  steps: [
+    { title: "Create a Stripe account", body: "Sign up at stripe.com. You can take test payments straight away and switch to real ones after Stripe verifies your details." },
+    { title: "Copy your secret key", body: "In Stripe, go to Developers > API keys and copy the secret key (starts sk_test_ for testing, sk_live_ when you go live)." },
+    { title: "Save it in Latchkey", body: "Ask me to add it and I'll open a secure form. It is stored as STRIPE_SECRET_KEY and never shown in the app." },
+  ],
+  syncButton: "Send price list to Stripe",
+  syncedCount: (n: number) => (n === 0 ? "No items sent to Stripe yet." : `${n} paid item${n === 1 ? "" : "s"} set up in Stripe.`),
+  synced: (created: number, updated: number) => `Sent to Stripe: ${created} new, ${updated} updated.`,
+  syncFailed: "Stripe wouldn't accept that. Check the key and try again.",
+  payNow: "Pay now",
+  payFailed: "We couldn't open the payment page. Please try again.",
+  paidToast: "Thank you, that's paid and confirmed.",
+};
+
+/** Finding tradespeople for property work. */
+export const trades = {
+  tabLabel: "Find a trade",
+  intro:
+    "Pick what needs doing and Latchkey opens a ready-made search on the UK sites that vet and review tradespeople. Latchkey doesn't copy their listings, so you always see live, up-to-date firms.",
+  jobLabel: "What needs doing",
+  areaLabel: "Postcode or town",
+  searching: (term: string, area: string) => `Searching for “${term}” near ${area}.`,
+  openOn: (name: string) => `Search ${name}`,
+  legalNote:
+    "These sites don't offer a way to pull their listings into other apps, and copying them automatically isn't allowed, so Latchkey links out instead. Once you've found someone you like, add them to a job so their details stay with the property.",
+  growthTitle: "Property growth & marketing",
+  growthBody:
+    "Contra is a marketplace for creative and marketing freelancers, not trades. It's the right place for photography, listing copy, signage and a direct-booking site.",
+};
