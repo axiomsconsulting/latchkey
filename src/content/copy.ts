@@ -311,6 +311,10 @@ export const settings = {
   removeDemo: "Remove demo data",
   demoBanner: "You are looking at demo content.",
   removing: "Removing…",
+  channelsTitle: "What you call each booking site",
+  channelsBody:
+    "Guests see these names when they choose where they booked. Rename any of them — for example \"Booked directly\" to \"Our website\". Leave one blank to keep the standard name. Your calendars and reports are unaffected.",
+  channelsSaved: "Names saved",
   privacyTitle: "Privacy and retention",
   privacyBody:
     "Guest names, phone digits and notes are cleared 90 days after check-out. Anonymous stay records are kept for your statistics.",
