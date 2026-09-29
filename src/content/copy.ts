@@ -376,7 +376,7 @@ export const guest = {
     "Check yourself in, find your room and ask for anything you need. It takes about a minute and there is nothing to download.",
   startCta: "Start check-in",
   helpCta: "I need help",
-  reassurance: "Arriving late? That is absolutely fine — the door code works at any hour.",
+  stayWindow: (from: string, by: string) => `Rooms are ready from ${from}. Check-out is by ${by}.`,
   // Flow
   welcomeTo: (name: string) => `Welcome to ${name}.`,
   letsCheckIn: "Let's get you checked in.",
