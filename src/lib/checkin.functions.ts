@@ -423,6 +423,7 @@ export const completeCheckIn = createServerFn({ method: "POST" })
     await db.from("stay_tokens").insert({
       token_hash: stay.hash,
       booking_id: booking.id,
+      valid_from: win.validFrom.toISOString(),
       expires_at: win.expiresAt.toISOString(),
     });
 

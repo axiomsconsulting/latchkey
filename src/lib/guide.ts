@@ -136,13 +136,24 @@ export function zonedToUtc(date: string, time: string, tz: string): Date {
   return new Date(guess.getTime() - (shown - guess.getTime()));
 }
 
-/** Guide link window: midnight on arrival day until check-out time (local). */
+/**
+ * Guide link window: opens 48 hours before midnight on arrival day, door
+ * details unlock at local midnight on arrival day, the stay becomes read-only
+ * at check-out time and the link closes 24 hours after check-out.
+ */
 export function guideWindow(checkIn: string, checkOut: string, checkOutTime: string, tz: string) {
+  const doorOpensAt = zonedToUtc(checkIn, "00:00", tz);
+  const checkOutAt = zonedToUtc(checkOut, checkOutTime, tz);
   return {
-    validFrom: zonedToUtc(checkIn, "00:00", tz),
-    expiresAt: zonedToUtc(checkOut, checkOutTime, tz),
+    validFrom: new Date(doorOpensAt.getTime() - 48 * 3600_000),
+    doorOpensAt,
+    readOnlyAt: checkOutAt,
+    expiresAt: new Date(checkOutAt.getTime() + 24 * 3600_000),
   };
 }
+
+/** Sections that give away how to get in; hidden until door details unlock. */
+export const DOOR_SECTIONS: SectionKey[] = ["getting_in"];
 
 export { addDays };
 
