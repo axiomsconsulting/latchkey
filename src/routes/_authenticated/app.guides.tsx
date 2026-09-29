@@ -161,11 +161,18 @@ function GuidesPage() {
         <p className="basis-full text-sm text-muted-foreground">{room ? copy.basicHelp : copy.scopeHelp}</p>
       </div>
 
+      {q.isLoading ? null : room ? (
+        <RoomAmenities propertyId={selectedId} roomId={room.id} amenities={roomAmenities} />
+      ) : (
+        <GuideOrderPanel propertyId={selectedId} order={order} pinned={pinned} />
+      )}
+
       {q.isLoading ? (
         <Skeleton className="h-96 rounded-2xl" />
       ) : (
         <Accordion type="single" collapsible className="space-y-3">
-          {SECTIONS.map((s) => {
+          {order.map((key) => {
+            const s = SECTIONS.find((x) => x.key === key)!;
             const own = sections.find((x) => x.sectionKey === s.key && x.roomId === roomId) ?? null;
             const house = roomId ? sections.find((x) => x.sectionKey === s.key && x.roomId === null) ?? null : null;
             const Icon = guestGuideIcons[s.key];
