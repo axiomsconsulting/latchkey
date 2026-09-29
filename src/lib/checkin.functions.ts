@@ -265,6 +265,31 @@ export const confirmBooking = createServerFn({ method: "POST" })
     };
   });
 
+/**
+ * Picks a check-in back up on another device. The QR on the first screen
+ * carries the session token, so the guest can move from the kiosk to their
+ * phone (or hand it to a companion) without entering anything again.
+ */
+export const resumeSession = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const { session, booking, property } = await sessionContext(data.token);
+    const methods = normaliseMethods(property.checkin_methods);
+    const kinds = last4Kinds(booking);
+    return {
+      firstName: firstName(booking.guest_full_name) || "there",
+      confirmed: session.confirmed,
+      completed: session.completed_at !== null,
+      verified: session.verified_method !== null,
+      listFlow: usesListFlow(methods),
+      sequence: usesListFlow(methods)
+        ? (["self_declare"] as const)
+        : methodSequence(methods, { last4: kinds.length > 0 }),
+      last4Kinds: kinds,
+    };
+  });
+
+
 async function recordResult(
   ctx: Awaited<ReturnType<typeof sessionContext>>,
   method: string,
