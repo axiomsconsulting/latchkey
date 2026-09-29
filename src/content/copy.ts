@@ -697,6 +697,8 @@ export const extrasCopy = {
   suggest: "Suggest another time",
   delivered: "Mark delivered",
   markPaid: "Payment received",
+  payingBank: "Guest is paying by bank transfer",
+  payingCash: "Guest is paying cash",
 };
 
 /** Calendar connection help, validation messages and the outbound feed. */
