@@ -367,3 +367,54 @@ export const acceptSuggestion = createServerFn({ method: "POST" })
     }).eq("id", data.id);
     return { ok: true };
   });
+
+/**
+ * Card payment didn't work (or the guest would rather not use one). They tell
+ * us how they'll settle up instead: bank transfer or cash to the host. The
+ * request stays unpaid until the host confirms the money arrived, and the
+ * guest is told as much.
+ */
+export const chooseOfflinePayment = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token, id: uuid, method: z.enum(["bank", "cash"]) }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, b } = await stayContext(data.token);
+    const { data: r } = await db.from("requests").select("id, status, items, total_pence").eq("id", data.id).eq("booking_id", b.id).maybeSingle();
+    if (!r) throw new Error("We couldn't find that request.");
+    if (r.status !== "awaiting_payment") throw new Error("That request isn't waiting for payment.");
+    // No countdown once they've chosen to pay the host directly.
+    await db.from("requests").update({ payment_method: data.method, pay_by: null }).eq("id", r.id);
+    const { raiseAlert } = await import("./checkin.server");
+    const names = Array.isArray(r.items) ? (r.items as any[]).map((i) => `${i.qty ?? 1}× ${i.name}`).join(", ") : "Extras";
+    await raiseAlert({
+      hostId: b.properties.host_id, propertyId: b.property_id, bookingId: b.id, kind: "payment_offline",
+      message: `Guest will pay ${data.method === "bank" ? "by bank transfer" : "in cash"} for: ${names}. Confirm once the money arrives.`,
+    });
+    return { ok: true };
+  });
+
+/**
+ * Emails the itemised receipt to the guest. Sending only happens when a real
+ * email sender is configured; otherwise we say so honestly and the guest can
+ * still print or save the receipt.
+ */
+export const emailReceipt = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token, id: uuid, to: z.string().email().nullable().default(null) }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, b } = await stayContext(data.token);
+    const { data: r } = await db.from("requests").select("id, status, items, total_pence, receipt_number, payment_method, created_at").eq("id", data.id).eq("booking_id", b.id).maybeSingle();
+    if (!r) throw new Error("We couldn't find that request.");
+    if (r.status !== "confirmed") throw new Error("The receipt is ready once payment is confirmed.");
+    const to = data.to ?? (b.guest_email as string | null);
+    if (!to) return { sent: false, reason: "no_address" as const };
+
+    const number = r.receipt_number ?? receiptNumber(r.id, r.created_at);
+    const lines = (Array.isArray(r.items) ? (r.items as any[]) : []).map((i) => `${i.qty ?? 1} × ${i.name}`).join("\n");
+    const { sendAlertEmail } = await import("./alert-email.server");
+    const sent = await sendAlertEmail({
+      to,
+      subject: `Receipt ${number} · ${b.properties.name ?? "your stay"}`,
+      body: `Receipt ${number}\n\n${lines}\n\nTotal: ${(r.total_pence / 100).toFixed(2)} ${b.properties.hosts?.currency ?? "GBP"}\nPaid by: ${r.payment_method ?? "card"}`,
+    });
+    if (sent) await db.from("requests").update({ receipt_number: number, receipt_emailed_at: new Date().toISOString() }).eq("id", r.id);
+    return { sent, reason: sent ? null : ("not_configured" as const) };
+  });
