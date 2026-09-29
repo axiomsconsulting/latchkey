@@ -14,6 +14,7 @@ import {
   checkoutChoices,
   emailMatches,
   findBooking,
+  findStaying,
   firstName,
   last4Matches,
   lockedUntil,
