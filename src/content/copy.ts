@@ -68,6 +68,7 @@ export const hostNav = {
   properties: "Properties",
   connections: "Connections",
   services: "Services",
+  guides: "Guides",
   settings: "Settings",
 };
 
