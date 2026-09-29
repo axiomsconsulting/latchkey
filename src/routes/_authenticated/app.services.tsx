@@ -126,12 +126,20 @@ function ServicesPage() {
           ) : planned.map((j) => <JobCard key={j.id} job={j} onRecommend={() => setRecFor(j)} />)}
         </TabsContent>
 
-        <TabsContent value="trades" className="mt-4">
+        <TabsContent value="trades" className="mt-4 space-y-6">
+          <TradeContacts
+            hostId={ws.data!.hostId}
+            propertyId={selectedId}
+            postcode={selectedProperty?.postcode ?? ""}
+            countryCode={selectedProperty?.country_code ?? "GB"}
+          />
           <TradeDirectory
-            postcode={(properties.find((p) => p.id === selectedId) as { postcode?: string } | undefined)?.postcode ?? ""}
-            address={(properties.find((p) => p.id === selectedId) as { address?: string | null } | undefined)?.address ?? null}
+            postcode={selectedProperty?.postcode ?? ""}
+            address={selectedProperty?.address ?? null}
+            countryCode={selectedProperty?.country_code ?? "GB"}
           />
         </TabsContent>
+
 
         <TabsContent value="providers" className="mt-4">
           <ContraStudio />
