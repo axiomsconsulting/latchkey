@@ -141,7 +141,11 @@ export const matchBooking = createServerFn({ method: "POST" })
       .limit(200);
     const all = rows ?? [];
 
-    const hit = findBooking(all, today, data);
+    // Someone already checked in is coming back for the guide or to order
+    // something, not arriving: recognise them instead of turning them away.
+    const arriving = findBooking(all, today, data);
+    const returning = arriving ? null : findStaying(all, today, data);
+    const hit = arriving ?? returning;
     await db.from("check_in_attempts").insert({
       property_id: p.id,
       booking_id: hit?.id ?? null,
@@ -168,6 +172,7 @@ export const matchBooking = createServerFn({ method: "POST" })
       status: "matched" as const,
       token: await startSession(p.id, hit.id),
       firstName: firstName(hit.guest_full_name),
+      returning: Boolean(returning),
     };
   });
 
