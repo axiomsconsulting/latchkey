@@ -414,7 +414,7 @@ export function CheckInFlow({
               {step.roomName ? copy.roomLine(step.roomName, step.roomTitle) : copy.noRoom}
             </p>
             <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
-              <Link to="/stay/$token" params={{ token: step.stayToken }} target={kiosk ? "_self" : undefined}>
+              <Link to="/stay/$token" params={{ token: step.stayToken }}>
                 <BookOpen className="size-6" /> {copy.stayGuideCta}
               </Link>
             </Button>
