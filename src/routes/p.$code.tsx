@@ -6,9 +6,9 @@ import { guest as copy } from "@/content/copy";
 import { getCheckinProperty } from "@/lib/checkin.functions";
 
 export const Route = createFileRoute("/p/$code")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    resume: typeof search["resume"] === "string" ? search["resume"] : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { resume?: string } =>
+    typeof search["resume"] === "string" ? { resume: search["resume"] } : {},
+
   loader: async ({ params }) => {
     const p = await getCheckinProperty({ data: { code: params.code } });
     if (!p.found) throw notFound();
