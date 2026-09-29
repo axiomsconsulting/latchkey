@@ -43,6 +43,13 @@
       "when": 1790670992671,
       "tag": "0005_contra_services_theming",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790671786511,
+      "tag": "0006_stay_guides",
+      "breakpoints": true
     }
   ]
 }

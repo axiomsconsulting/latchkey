@@ -463,34 +463,43 @@ export type Database = {
           created_at: string
           id: string
           is_demo: boolean
+          is_starter: boolean
           property_id: string
           published: boolean
           room_id: string | null
+          section_key: string | null
           sort_order: number
           summary: string | null
           title: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           is_demo?: boolean
+          is_starter?: boolean
           property_id: string
           published?: boolean
           room_id?: string | null
+          section_key?: string | null
           sort_order?: number
           summary?: string | null
           title: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           is_demo?: boolean
+          is_starter?: boolean
           property_id?: string
           published?: boolean
           room_id?: string | null
+          section_key?: string | null
           sort_order?: number
           summary?: string | null
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -980,6 +989,7 @@ export type Database = {
           created_at: string
           description: string | null
           display_name: string
+          guide_mode: string
           has_ensuite: boolean
           id: string
           is_demo: boolean
@@ -995,6 +1005,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_name: string
+          guide_mode?: string
           has_ensuite?: boolean
           id?: string
           is_demo?: boolean
@@ -1010,6 +1021,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_name?: string
+          guide_mode?: string
           has_ensuite?: boolean
           id?: string
           is_demo?: boolean
@@ -1151,6 +1163,7 @@ export type Database = {
           expires_at: string
           id: string
           token_hash: string
+          valid_from: string | null
         }
         Insert: {
           booking_id: string
@@ -1158,6 +1171,7 @@ export type Database = {
           expires_at: string
           id?: string
           token_hash: string
+          valid_from?: string | null
         }
         Update: {
           booking_id?: string
@@ -1165,6 +1179,7 @@ export type Database = {
           expires_at?: string
           id?: string
           token_hash?: string
+          valid_from?: string | null
         }
         Relationships: [
           {
