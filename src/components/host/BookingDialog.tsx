@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { bookings as copy, channels, common, statuses } from "@/content/copy";
 import { saveBooking } from "@/lib/host.functions";
+import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 
 export type BookingRow = {
   id: string;
@@ -369,6 +370,7 @@ export function BookingDialog({
           </div>
 
           <DialogFooter className="sm:col-span-2">
+            {booking ? <GuideLinkButton bookingId={booking.id} className="sm:mr-auto" /> : null}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {common.cancel}
             </Button>

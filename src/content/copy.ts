@@ -68,6 +68,7 @@ export const hostNav = {
   properties: "Properties",
   connections: "Connections",
   services: "Services",
+  guides: "Guides",
   settings: "Settings",
 };
 
@@ -452,4 +453,35 @@ export const integrations = {
     guest_messages: { name: "Guest updates", demo: "Updates show on the guest's stay page.", live: "Stay page plus email to the guest when a sender address is set up." },
   },
   saved: "Switches saved",
+};
+
+export const guideCopy = {
+  navLabel: "Guides",
+  title: "Stay guides",
+  subtitle: "Step-by-step guides guests see on their private link, from arrival day to check-out.",
+  scopeHouse: "Whole house",
+  scopeHelp: "House sections apply to every room. Pick a room to add its own version of a section.",
+  modeLabel: "Guide style for this room",
+  basic: "Basic",
+  detailed: "Detailed",
+  basicHelp: "Basic shows one short line per section, no photos. Detailed shows every step and photo.",
+  summary: "Short summary (shown in basic and detailed)",
+  addStep: "Add step",
+  stepHeading: "Step title",
+  stepBody: "What to do",
+  addPhoto: "Add photo",
+  removePhoto: "Remove photo",
+  save: "Save section",
+  saved: "Section saved",
+  useHouse: "Use the house version",
+  roomOwn: "This room has its own version",
+  inherits: "Using the house version. Edit to give this room its own.",
+  starterBadge: "Starter text: replace with your own",
+  addStarter: "Add starter text",
+  starterAdded: (n: number) => `Starter text added to ${n} sections`,
+  forgetTitle: "Things people usually forget",
+  guideLink: "Copy guide link",
+  guideLinkCopied: "Guide link copied. It opens on arrival day and stops at check-out.",
+  notYet: (when: string) => `Your guide opens on ${when}. See you soon!`,
+  photoAlt: (step: string) => `Photo: ${step}`,
 };

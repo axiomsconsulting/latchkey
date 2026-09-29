@@ -6,7 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { todayInZone, zonedParts } from "./dates";
+import { formatUkDate, todayInZone, zonedParts } from "./dates";
 import {
   MAX_LAST4_ATTEMPTS,
   MAX_PHOTO_ATTEMPTS,
@@ -407,10 +407,23 @@ export const completeCheckIn = createServerFn({ method: "POST" })
     }
 
     const stay = newToken();
+    const { guideWindow } = await import("./guide");
+    const { data: bt } = await db
+      .from("bookings")
+      .select("check_in_date, check_out_date, check_out_time, properties(timezone, default_check_out_time)")
+      .eq("id", booking.id)
+      .single();
+    const bp = (bt as { properties?: { timezone: string | null; default_check_out_time: string } } | null)?.properties;
+    const win = guideWindow(
+      bt?.check_in_date ?? booking.check_out_date,
+      booking.check_out_date,
+      (bt?.check_out_time ?? bp?.default_check_out_time ?? "11:00").slice(0, 5),
+      bp?.timezone ?? "Europe/London",
+    );
     await db.from("stay_tokens").insert({
       token_hash: stay.hash,
       booking_id: booking.id,
-      expires_at: new Date(Date.parse(`${booking.check_out_date}T23:59:59Z`)).toISOString(),
+      expires_at: win.expiresAt.toISOString(),
     });
 
     return {
@@ -428,34 +441,88 @@ export const getStay = createServerFn({ method: "GET" })
     const db = await admin();
     const { data: t } = await db
       .from("stay_tokens")
-      .select("booking_id, expires_at")
+      .select("booking_id, expires_at, valid_from")
       .eq("token_hash", sha256(data.token))
       .maybeSingle();
     if (!t || Date.parse(t.expires_at) < Date.now()) return { found: false as const };
+    if (t.valid_from && Date.parse(t.valid_from) > Date.now()) {
+      return { found: false as const, opensAt: t.valid_from };
+    }
     const { data: b } = await db
       .from("bookings")
       .select("guest_full_name, check_out_date, check_out_time, room_id, property_id, status")
       .eq("id", t.booking_id)
       .single();
     if (!b || b.status === "cancelled") return { found: false as const };
-    const [{ data: p }, { data: room }] = await Promise.all([
+    const [{ data: p }, { data: room }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("name, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
+        .select("name, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
         .eq("id", b.property_id)
         .single(),
       b.room_id
-        ? db.from("rooms").select("display_name, public_title, description, has_ensuite").eq("id", b.room_id).maybeSingle()
+        ? db.from("rooms").select("display_name, public_title, description, has_ensuite, guide_mode").eq("id", b.room_id).maybeSingle()
         : Promise.resolve({ data: null }),
+      db
+        .from("guides")
+        .select("room_id, section_key, summary, published, guide_steps(heading, body, image_url, sort_order)")
+        .eq("property_id", b.property_id)
+        .eq("published", true)
+        .not("section_key", "is", null),
+      db
+        .from("unavailability_windows")
+        .select("room_id, reason, starts_at, ends_at, day_of_week, start_time, end_time")
+        .eq("property_id", b.property_id),
     ]);
+
+    const { buildGuide, forgetCard, weeklyLines, windowsOn } = await import("./guide");
+    const tz = p?.timezone ?? "Europe/London";
+    const today = todayInZone(tz);
+    const checkOutTime = (b.check_out_time ?? p?.default_check_out_time ?? "11:00").slice(0, 5);
+    const facts = {
+      wifiName: p?.wifi_name ?? null,
+      wifiPassword: p?.wifi_password ?? null,
+      quietStart: (p?.quiet_hours_start ?? "22:00").slice(0, 5),
+      quietEnd: (p?.quiet_hours_end ?? "07:00").slice(0, 5),
+      checkOutTime,
+      checkOutDateLabel: formatUkDate(b.check_out_date),
+      parkingNotes: p?.parking_notes ?? null,
+      hostName: p?.host_contact_name ?? null,
+      hostPhone: p?.host_contact_phone ?? null,
+      roomName: room?.display_name ?? null,
+      unavailableLines: weeklyLines(windows ?? [], b.room_id),
+    };
+    const mode = (room?.guide_mode === "basic" ? "basic" : "detailed") as "basic" | "detailed";
+
+    // Photos live in private storage; sign short-lived links for this view only.
+    const paths = mode === "detailed"
+      ? (guides ?? []).flatMap((g) => (g.guide_steps ?? []).map((s) => s.image_url).filter((x): x is string => !!x))
+      : [];
+    const signed: Record<string, string> = {};
+    if (paths.length) {
+      const { data: urls } = await db.storage.from("guides").createSignedUrls(paths, 60 * 60 * 2);
+      for (const u of urls ?? []) if (u.path && u.signedUrl) signed[u.path] = u.signedUrl;
+    }
+    const stored = (guides ?? []).map((g) => ({
+      roomId: g.room_id,
+      sectionKey: g.section_key as import("./guide").SectionKey,
+      summary: g.summary,
+      steps: [...(g.guide_steps ?? [])]
+        .sort((a, c) => a.sort_order - c.sort_order)
+        .map((s) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
+    }));
+
     return {
       found: true as const,
       firstName: firstName(b.guest_full_name),
       checkOutDate: b.check_out_date,
-      checkOutTime: (b.check_out_time ?? p?.default_check_out_time ?? "11:00").slice(0, 5),
+      checkOutTime,
       property: p,
       room,
       theme: normaliseTheme(p?.theme_config),
+      mode,
+      guide: buildGuide(stored, b.room_id, mode, facts),
+      forget: forgetCard(facts, windowsOn(windows ?? [], b.room_id, today, tz)),
     };
   });
 

@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, Home, LogOut, Plug, Settings, Sun, Wrench, type LucideIcon } from "lucide-react";
+import { BookOpen, CalendarDays, Home, LogOut, Plug, Settings, Sun, Wrench, type LucideIcon } from "lucide-react";
 
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
@@ -14,6 +14,7 @@ const navItems: NavItem[] = [
   { to: "/app/today", label: hostNav.today, icon: Sun },
   { to: "/app/bookings", label: hostNav.bookings, icon: CalendarDays },
   { to: "/app/services", label: hostNav.services, icon: Wrench },
+  { to: "/app/guides", label: hostNav.guides, icon: BookOpen },
   { to: "/app/properties", label: hostNav.properties, icon: Home },
   { to: "/app/connections", label: hostNav.connections, icon: Plug },
   { to: "/app/settings", label: hostNav.settings, icon: Settings },
@@ -102,7 +103,7 @@ export function HostShell() {
       {/* Floating pill dock */}
       <nav
         aria-label="Main"
-        className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 mx-auto grid max-w-xl grid-cols-6 gap-1 rounded-[1.75rem] p-1.5 md:hidden print:hidden"
+        className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 mx-auto grid max-w-2xl grid-cols-7 gap-1 rounded-[1.75rem] p-1.5 md:hidden print:hidden"
       >
         {navItems.map(({ to, label, icon: Icon }) => (
           <Link
