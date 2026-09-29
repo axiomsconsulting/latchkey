@@ -6,11 +6,15 @@ import { guest as copy } from "@/content/copy";
 import { getCheckinProperty } from "@/lib/checkin.functions";
 
 export const Route = createFileRoute("/p/$code")({
+  validateSearch: (search: Record<string, unknown>): { resume?: string } =>
+    typeof search["resume"] === "string" ? { resume: search["resume"] } : {},
+
   loader: async ({ params }) => {
     const p = await getCheckinProperty({ data: { code: params.code } });
     if (!p.found) throw notFound();
     return p;
   },
+
   head: ({ loaderData }) => {
     const name = loaderData?.name ?? "Latchkey";
     return {
@@ -40,9 +44,11 @@ export const Route = createFileRoute("/p/$code")({
 
 function GuestCheckIn() {
   const p = Route.useLoaderData();
+  const { resume } = Route.useSearch();
   return (
     <GuestFrame theme={p.theme} name={p.name}>
-      <CheckInFlow property={p} hostPhone={p.hostPhone} />
+      <CheckInFlow property={p} hostPhone={p.hostPhone} resumeToken={resume ?? null} />
     </GuestFrame>
   );
 }
+

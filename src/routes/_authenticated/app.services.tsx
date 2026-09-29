@@ -86,6 +86,10 @@ function ServicesPage() {
   const all = (jobs.data?.jobs ?? []) as unknown as Job[];
   const inbox = all.filter((j) => j.source === "guest");
   const planned = all.filter((j) => j.source !== "guest");
+  const selectedProperty = properties.find((p) => p.id === selectedId) as
+    | { postcode?: string | null; address?: string | null; country_code?: string | null }
+    | undefined;
+
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -126,12 +130,20 @@ function ServicesPage() {
           ) : planned.map((j) => <JobCard key={j.id} job={j} onRecommend={() => setRecFor(j)} />)}
         </TabsContent>
 
-        <TabsContent value="trades" className="mt-4">
+        <TabsContent value="trades" className="mt-4 space-y-6">
+          <TradeContacts
+            hostId={ws.data!.hostId}
+            propertyId={selectedId}
+            postcode={selectedProperty?.postcode ?? ""}
+            countryCode={selectedProperty?.country_code ?? "GB"}
+          />
           <TradeDirectory
-            postcode={(properties.find((p) => p.id === selectedId) as { postcode?: string } | undefined)?.postcode ?? ""}
-            address={(properties.find((p) => p.id === selectedId) as { address?: string | null } | undefined)?.address ?? null}
+            postcode={selectedProperty?.postcode ?? ""}
+            address={selectedProperty?.address ?? null}
+            countryCode={selectedProperty?.country_code ?? "GB"}
           />
         </TabsContent>
+
 
         <TabsContent value="providers" className="mt-4">
           <ContraStudio />
@@ -218,17 +230,48 @@ function JobCard({ job, onRecommend }: { job: Job; onRecommend: () => void }) {
   );
 }
 
-function RecommendDialog({ job, onClose }: { job: Job; onClose: () => void }) {
+/** Picks someone from the host's own address book for this job. */
+function RecommendDialog({
+  job,
+  hostId,
+  propertyId,
+  countryCode,
+  onClose,
+}: {
+  job: Job;
+  hostId: string;
+  propertyId: string;
+  countryCode: string;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
-  const recFn = useServerFn(recommendForJob);
-  const appoint = useServerFn(appointProvider);
-  const recs = useQuery({ queryKey: ["recs", job.id], queryFn: () => recFn({ data: { jobId: job.id } }) });
+  const listFn = useServerFn(listTrades);
+  const assign = useServerFn(assignTradeToJob);
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function pick(providerId: string, etaIso: string) {
-    setBusy(providerId);
+  const trades = useQuery({
+    queryKey: ["trades", hostId, propertyId],
+    queryFn: () => listFn({ data: { hostId, propertyId } }),
+  });
+
+  const all = (trades.data ?? []) as Array<{
+    id: string;
+    name: string;
+    company_name: string | null;
+    category: string;
+    phone: string | null;
+    whatsapp_phone: string | null;
+    email: string | null;
+    area: string | null;
+    is_preferred: boolean;
+  }>;
+  const matching = all.filter((t) => t.category === job.category);
+  const shown = matching.length > 0 ? matching : all;
+
+  async function pick(tradeId: string) {
+    setBusy(tradeId);
     try {
-      await appoint({ data: { jobId: job.id, providerId, etaIso } });
+      await assign({ data: { jobId: job.id, tradeId, etaIso: job.scheduled_at ?? null } });
       await qc.invalidateQueries({ queryKey: ["jobs"] });
       toast.success(job.source === "guest" ? copy.guestTold : "Booked");
       onClose();
@@ -243,55 +286,61 @@ function RecommendDialog({ job, onClose }: { job: Job; onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl rounded-3xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {copy.recommendedTitle}
-            {recs.data ? <Badge variant="outline">{recs.data.mode === "live" ? copy.liveBadge : copy.demoBadge}</Badge> : null}
-          </DialogTitle>
+          <DialogTitle>{copy.recommendedTitle}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">{job.title} · ranked by arrival time, rating and price</p>
-        {recs.isLoading ? (
+        <p className="text-sm text-muted-foreground">{job.title}</p>
+        {trades.isLoading ? (
           <div className="space-y-2"><Skeleton className="h-24 rounded-2xl" /><Skeleton className="h-24 rounded-2xl" /></div>
-        ) : recs.data?.error ? (
-          <p role="alert" className="rounded-2xl bg-destructive/10 p-4 text-destructive">{recs.data.error}</p>
-        ) : !recs.data?.recommendations.length ? (
-          <p className="text-muted-foreground">{copy.noProviders}</p>
+        ) : shown.length === 0 ? (
+          <p className="text-muted-foreground">{tradesCopy.noneForJob}</p>
         ) : (
           <ul className="space-y-2">
-            {recs.data.recommendations.map((r, i) => (
-              <li key={r.provider.id} className={`rounded-2xl border p-4 ${i === 0 ? "border-primary bg-secondary" : "border-border"}`}>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 font-medium">
-                      {r.provider.name}
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Star className="size-4 fill-accent text-accent" /> {r.provider.rating} ({r.provider.reviews})
-                      </span>
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {rateLabel(r.provider)} · arrives {when(r.etaIso)}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {r.reasons.map((x) => <Badge key={x} variant="secondary">{x}</Badge>)}
+            {shown.map((t) => {
+              const links = contactLinks(t, countryCode);
+              return (
+                <li key={t.id} className="rounded-2xl border border-border p-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-2 font-medium">
+                        {t.company_name || t.name}
+                        {t.is_preferred ? <Badge variant="secondary">{tradesCopy.preferred}</Badge> : null}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {[tradeCategoryLabel(t.category), t.area, t.phone].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {links.tel ? (
+                        <Button asChild variant="ghost" size="icon" aria-label={tradesCopy.call}>
+                          <a href={links.tel}><Phone className="size-4" /></a>
+                        </Button>
+                      ) : null}
+                      {links.whatsapp ? (
+                        <Button asChild variant="ghost" size="icon" aria-label={tradesCopy.whatsapp}>
+                          <a href={links.whatsapp} target="_blank" rel="noreferrer"><MessageCircle className="size-4" /></a>
+                        </Button>
+                      ) : null}
+                      {links.email ? (
+                        <Button asChild variant="ghost" size="icon" aria-label={tradesCopy.email}>
+                          <a href={links.email}><Mail className="size-4" /></a>
+                        </Button>
+                      ) : null}
+                      <Button disabled={busy !== null} onClick={() => pick(t.id)}>
+                        {busy === t.id ? <Loader2 className="size-4 animate-spin" /> : null}
+                        {copy.appoint}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button asChild variant="ghost" size="icon" aria-label={copy.viewOnContra}>
-                      <a href={r.provider.contraUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-4" /></a>
-                    </Button>
-                    <Button disabled={busy !== null} onClick={() => pick(r.provider.id, r.etaIso)}>
-                      {busy === r.provider.id ? <Loader2 className="size-4 animate-spin" /> : null}
-                      {copy.appoint}
-                    </Button>
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </DialogContent>
     </Dialog>
   );
 }
+
 
 function NewJobDialog({ open, onOpenChange, hostId, propertyId }: { open: boolean; onOpenChange: (o: boolean) => void; hostId: string; propertyId: string }) {
   const qc = useQueryClient();

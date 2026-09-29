@@ -5,11 +5,13 @@ import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Phone } from "lucide-react"
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
+import { CheckInQr } from "@/components/guest/CheckInQr";
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guest as copy } from "@/content/copy";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { CheckinMethod } from "@/lib/checkin-logic";
 import {
   completeCheckIn,
@@ -17,10 +19,12 @@ import {
   listArrivals,
   matchBooking,
   pickArrival,
+  resumeSession,
   selfDeclare,
   verifyLast4,
   verifyPhotoId,
 } from "@/lib/checkin.functions";
+
 import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -66,11 +70,14 @@ export function CheckInFlow({
   hostPhone,
   kiosk = false,
   onActivity,
+  resumeToken,
 }: {
   property: CheckinProperty;
   hostPhone?: string | null;
   kiosk?: boolean;
   onActivity?: () => void;
+  /** Present when the guest scanned the square on another device. */
+  resumeToken?: string | null;
 }) {
   const [step, setStep] = useState<Step>({ name: "welcome" });
   const [letter, setLetter] = useState("");
@@ -80,6 +87,7 @@ export function CheckInFlow({
   const [kinds, setKinds] = useState<Last4Kind[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const onPhone = useIsMobile();
 
   const match = useServerFn(matchBooking);
   const list = useServerFn(listArrivals);
@@ -89,11 +97,44 @@ export function CheckInFlow({
   const last4 = useServerFn(verifyLast4);
   const declare = useServerFn(selfDeclare);
   const complete = useServerFn(completeCheckIn);
+  const resume = useServerFn(resumeSession);
 
   useEffect(() => {
     onActivity?.();
     setMessage(null);
   }, [step, onActivity]);
+
+  // Scanned square: rejoin the same check-in rather than starting over.
+  useEffect(() => {
+    if (!resumeToken || kiosk) return;
+    let live = true;
+    setBusy(true);
+    resume({ data: { token: resumeToken } })
+      .then(async (res) => {
+        if (!live) return;
+        setToken(resumeToken);
+        setSequence([...res.sequence] as CheckinMethod[]);
+        setKinds(res.last4Kinds);
+        if (res.completed || res.verified) {
+          const done = await complete({ data: { token: resumeToken } });
+          if (live) setStep({ name: "done", ...done });
+          return;
+        }
+        setStep({ name: "confirm", firstName: res.firstName });
+      })
+      .catch(() => {
+        if (live) setMessage(copy.error);
+      })
+      .finally(() => {
+        if (live) setBusy(false);
+      });
+    return () => {
+      live = false;
+    };
+    // Runs once for the scanned token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeToken, kiosk]);
+
 
   async function run<T>(fn: () => Promise<T>): Promise<T | null> {
     setBusy(true);
@@ -176,8 +217,18 @@ export function CheckInFlow({
 
   const canGoBack = ["letter", "checkout", "platform", "pick"].includes(step.name);
 
+  // The square only means something once there is a stay to carry across.
+  const handoffUrl =
+    typeof window === "undefined"
+      ? null
+      : step.name === "done"
+        ? `${window.location.origin}/stay/${step.stayToken}`
+        : token
+          ? `${window.location.origin}/p/${property.code}?resume=${encodeURIComponent(token)}`
+          : null;
+
   return (
-    <div className={cn("mx-auto w-full max-w-4xl", kiosk ? "py-6" : "py-8")}>
+    <div className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}>
       {canGoBack ? (
         <Button
           variant="ghost"
@@ -198,6 +249,14 @@ export function CheckInFlow({
           <ArrowLeft className="size-5" /> {copy.back}
         </Button>
       ) : null}
+
+      <div
+        className={cn(
+          "grid gap-6",
+          handoffUrl && !onPhone ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start" : "",
+        )}
+      >
+
 
       <main className="card-soft p-6 sm:p-10" aria-live="polite">
         {step.name === "welcome" ? (
@@ -435,8 +494,19 @@ export function CheckInFlow({
             {message}
           </p>
         ) : null}
-      </main>
+        </main>
+
+        {handoffUrl ? (
+          <CheckInQr
+            url={handoffUrl}
+            heading={step.name === "done" ? copy.qrDoneHeading : copy.qrHeading}
+            blurb={step.name === "done" ? copy.qrDoneBlurb : copy.qrBlurb}
+            compact={onPhone}
+          />
+        ) : null}
+      </div>
     </div>
+
   );
 }
 

@@ -470,7 +470,28 @@ export const guest = {
   stayRules: "House rules",
   stayRulesList: ["Shoes off indoors, please.", "Please keep the shared kitchenette tidy."],
   stayGone: "This stay link has expired. We hope you enjoyed your stay.",
+  // Carrying on somewhere else
+  qrHeading: "Carry on with your phone",
+  qrBlurb: "Point your camera at this square. You will pick up exactly where you are now.",
+  qrDoneHeading: "Your room details",
+  qrDoneBlurb: "Scan this to keep your door code, Wi-Fi and house notes on your phone.",
+  qrSwitch: "Use another phone",
+  qrOpen: "Show a square to scan with another phone",
+  qrAlt: "Square code to scan with a phone camera",
+  qrResuming: "Picking up where you left off…",
+  // Messages and past requests
+  inboxTitle: "Messages",
+  inboxOpen: "Messages and requests",
+  inboxEmpty: "No messages yet. Write below and your host will see it.",
+  inboxSend: "Send",
+  inboxPlaceholder: "Type your message to your host",
+  inboxSent: "Sent. Your host has been told.",
+  inboxHistory: "What you have asked for",
+  inboxHistoryEmpty: "Nothing yet.",
+  inboxYou: "You",
+  inboxHost: "Your host",
 };
+
 
 export const hostPlaceholders = {
   comingSoon: "Coming in a later stage",
@@ -816,4 +837,64 @@ export const trades = {
   notMaintenance:
     "Contra has no cleaners, plumbers or electricians, so it's never used for guest problems or maintenance. Use Find a trade for those.",
   contraNote: "Each search opens on Contra in a new tab with the words already filled in.",
+};
+
+export const hostInbox = {
+  title: "Guest messages",
+  open: "Open guest messages",
+  empty: "No guest messages yet. Anything a guest sends from their stay page lands here.",
+  pick: "Choose a guest to read the conversation.",
+  back: "All conversations",
+  placeholder: "Reply to your guest",
+  send: "Send reply",
+  unreadOne: "1 unread message",
+  unreadMany: (n: number) => `${n} unread messages`,
+};
+
+export const tradesCopy = {
+  title: "Your trades and helpers",
+  blurb:
+    "Your own list of people you actually call. One tap to ring, text, WhatsApp or email them from this device.",
+  empty: "No contacts yet. Add someone, bring in a spreadsheet, or let Latchkey suggest who you'll need.",
+  add: "Add a contact",
+  edit: "Edit contact",
+  importCta: "Import a spreadsheet",
+  importTitle: "Import contacts",
+  importBlurb: "Drop in a CSV from your phone, email or accountant. You'll check the columns before anything is saved.",
+  importChoose: "Choose a CSV file",
+  importMap: "Match your columns",
+  importPreview: (n: number) => `${n} contact${n === 1 ? "" : "s"} ready to add`,
+  importSkipped: (n: number) => `${n} row${n === 1 ? "" : "s"} skipped — no name or no way to contact them.`,
+  importConfirm: "Add these contacts",
+  importIgnore: "Ignore this column",
+  suggestCta: "Suggest who I'll need",
+  suggestAgain: "Suggest again",
+  suggestBlurb:
+    "Uses a little AI to list the trades a place like yours usually needs nearby. It never invents phone numbers — you add the real ones.",
+  suggestDone: "Already suggested for this property.",
+  suggestions: "Suggested for this property",
+  suggestAdd: "Add to my list",
+  searchFor: (role: string) => `Find a ${role.toLowerCase()}`,
+  call: "Call",
+  text: "Text",
+  whatsapp: "WhatsApp",
+  email: "Email",
+  preferred: "First call",
+  noContact: "No number or email saved yet.",
+  deleteConfirm: "Remove this contact?",
+  fields: {
+    name: "Name",
+    company_name: "Company",
+    category: "What they do",
+    phone: "Phone",
+    whatsapp_phone: "WhatsApp number (if different)",
+    email: "Email",
+    website: "Website",
+    area: "Area they cover",
+    notes: "Notes",
+    is_preferred: "Call this one first",
+  },
+  save: "Save contact",
+  cancel: "Cancel",
+  remove: "Remove",
 };

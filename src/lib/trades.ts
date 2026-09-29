@@ -11,14 +11,18 @@
  * extraction of member listings, so Latchkey links out rather than copying.
  */
 
+import { region as regionFor } from "./regions";
+
+
 export type Directory = {
-  id: "checkatrade" | "mybuilder" | "rated_people" | "bark" | "trustatrader" | "google_maps";
+  id: string;
   name: string;
   blurb: string;
   /** How the host is charged or contacted. */
   note: string;
   search: (term: string, postcode: string) => string;
 };
+
 
 /** Plain search words for each service category used across Latchkey. */
 export const TRADE_TERMS: Record<string, string> = {
@@ -85,6 +89,55 @@ export const DIRECTORIES: Directory[] = [
     search: (t, p) => `https://www.trustatrader.com/search?trade=${q(t)}&location=${q(p)}`,
   },
   {
+    id: "angi",
+    name: "Angi",
+    blurb: "Large US network of reviewed home-service pros.",
+    note: "Free to search and request quotes.",
+    search: (t, p) => `https://www.angi.com/companylist/us/${q(p)}/${q(t)}.htm`,
+  },
+  {
+    id: "thumbtack",
+    name: "Thumbtack",
+    blurb: "Quick quotes from local US pros, good for cleaning and handyman work.",
+    note: "Free to request quotes.",
+    search: (t, p) => `https://www.thumbtack.com/search?query=${q(t)}&zip_code=${q(p)}`,
+  },
+  {
+    id: "yelp",
+    name: "Yelp",
+    blurb: "Reviews and phone numbers for nearby businesses across the US and Canada.",
+    note: "Free to search.",
+    search: (t, p) => `https://www.yelp.com/search?find_desc=${q(t)}&find_loc=${q(p)}`,
+  },
+  {
+    id: "homestars",
+    name: "HomeStars",
+    blurb: "Canada's reviewed home-improvement and repair directory.",
+    note: "Free to search.",
+    search: (t, p) => `https://homestars.com/companies?q=${q(t)}&location=${q(p)}`,
+  },
+  {
+    id: "hipages",
+    name: "hipages",
+    blurb: "Australia's largest tradie marketplace, with quick job posting.",
+    note: "Free to post a job.",
+    search: (t, p) => `https://hipages.com.au/find/${q(t)}/${q(p)}`,
+  },
+  {
+    id: "airtasker",
+    name: "Airtasker",
+    blurb: "Good for one-off Australian jobs: cleaning, moving, small repairs.",
+    note: "Free to post; taskers bid.",
+    search: (t, p) => `https://www.airtasker.com/tasks/?q=${q(t)}&location=${q(p)}`,
+  },
+  {
+    id: "buildercrack",
+    name: "Buildercrack",
+    blurb: "New Zealand trade marketplace covering repairs and maintenance.",
+    note: "Free to post a job.",
+    search: (t, p) => `https://buildercrack.co.nz/search?q=${q(`${t} ${p}`)}`,
+  },
+  {
     id: "google_maps",
     name: "Google Maps",
     blurb: "Nearest firms with opening hours and phone numbers, handy late at night.",
@@ -93,11 +146,14 @@ export const DIRECTORIES: Directory[] = [
   },
 ];
 
-export function directoryLinks(category: string, postcode: string) {
+/** Only the directories that actually operate in the property's country. */
+export function directoryLinks(category: string, postcode: string, country = "GB") {
   const term = tradeTerm(category);
   const where = postcode.trim() || "UK";
-  return DIRECTORIES.map((d) => ({ ...d, url: d.search(term, where) }));
+  const ids = new Set(regionFor(country).directoryIds);
+  return DIRECTORIES.filter((d) => ids.has(d.id)).map((d) => ({ ...d, url: d.search(term, where) }));
 }
+
 
 /* ----------------------------- Contra (creative) -------------------------- */
 
