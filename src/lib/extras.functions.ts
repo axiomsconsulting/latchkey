@@ -219,6 +219,13 @@ async function stayContext(t: string) {
   return { db, b: b as any };
 }
 
+/** Short human receipt number, e.g. LK-260430-8F2C. Stable for one request. */
+function receiptNumber(id: string, createdAt: string) {
+  const d = new Date(createdAt);
+  const ymd = `${String(d.getUTCFullYear()).slice(2)}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+  return `LK-${ymd}-${id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+}
+
 async function roomDayFlags(db: any, b: any) {
   if (!b.room_id) return { sameDayArrival: true, sameDayDeparture: true };
   const [{ count: arr }, { count: dep }] = await Promise.all([
