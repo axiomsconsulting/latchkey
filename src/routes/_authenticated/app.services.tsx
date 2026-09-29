@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, CalendarPlus, ExternalLink, Loader2, Star } from "lucide-react";
+import { BadgeCheck, CalendarPlus, ExternalLink, Loader2, Star, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
@@ -79,7 +79,7 @@ function ServicesPage() {
   const [newOpen, setNewOpen] = useState(false);
 
   if (ws.isLoading) return <Skeleton className="mx-auto h-64 max-w-5xl rounded-2xl" />;
-  if (!selectedId) return <EmptyState title={copy.title} body="Add a property first." />;
+  if (!selectedId) return <EmptyState icon={Wrench} title={copy.title} body="Add a property first." />;
 
   const all = (jobs.data?.jobs ?? []) as unknown as Job[];
   const inbox = all.filter((j) => j.source === "guest");
