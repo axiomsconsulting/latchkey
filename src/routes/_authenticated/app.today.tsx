@@ -253,6 +253,21 @@ function TodayPage() {
   const needsDetails = withState.filter((x) => x.state === "needs_details");
   const doubleBooked = live.filter((b) => b.status === "flagged" && b.check_out_date >= todayIso);
 
+  // Same room emptying and filling on the same day: warn when there is little
+  // time for cleaning between the two.
+  const mins = (t: string | null | undefined, fallback: string) => {
+    const [h = "0", m = "0"] = (t ?? fallback).slice(0, 5).split(":");
+    return Number(h) * 60 + Number(m);
+  };
+  const turnarounds = departing
+    .map(({ b }) => {
+      const next = arriving.find((a) => a.b.room_id && a.b.room_id === b.room_id);
+      if (!next) return null;
+      const gap = mins(next.b.check_in_time, "15:00") - mins(b.check_out_time, "11:00");
+      return gap < 120 ? { id: b.id, room: roomName(b.room_id), gap } : null;
+    })
+    .filter((x): x is { id: string; room: string; gap: number } => x !== null);
+
   const windowsToday = ((data?.windows ?? []) as Array<{
     id: string;
     day_of_week: number | null;
