@@ -17,7 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { common, services as copy } from "@/content/copy";
+import { common, services as copy, trades as tradesCopy } from "@/content/copy";
+import { TradeDirectory } from "@/components/host/TradeDirectory";
+import { CONTRA_USES } from "@/lib/trades";
 import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { SERVICE_CATEGORIES, categoryById, formatPence, rateLabel } from "@/lib/services";
@@ -109,6 +111,7 @@ function ServicesPage() {
             {copy.tabInbox} {inbox.filter((j) => j.status === "new").length ? <Badge className="ml-2">{inbox.filter((j) => j.status === "new").length}</Badge> : null}
           </TabsTrigger>
           <TabsTrigger value="planned" className="h-10 rounded-xl px-4">{copy.tabScheduled}</TabsTrigger>
+          <TabsTrigger value="trades" className="h-10 rounded-xl px-4">{tradesCopy.tabLabel}</TabsTrigger>
           <TabsTrigger value="providers" className="h-10 rounded-xl px-4">{copy.tabProviders}</TabsTrigger>
         </TabsList>
 
@@ -124,7 +127,18 @@ function ServicesPage() {
           ) : planned.map((j) => <JobCard key={j.id} job={j} onRecommend={() => setRecFor(j)} />)}
         </TabsContent>
 
-        <TabsContent value="providers" className="mt-4">
+        <TabsContent value="trades" className="mt-4">
+          <TradeDirectory postcode={(properties.find((p) => p.id === selectedId) as { postcode?: string } | undefined)?.postcode ?? ""} />
+        </TabsContent>
+
+        <TabsContent value="providers" className="mt-4 space-y-4">
+          <div className="card-soft p-4">
+            <h3 className="text-lg">{tradesCopy.growthTitle}</h3>
+            <p className="text-sm text-muted-foreground">{tradesCopy.growthBody}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CONTRA_USES.map((u) => <Badge key={u.id} variant="secondary">{u.label}</Badge>)}
+            </div>
+          </div>
           <ProviderDirectory hostId={ws.data!.hostId} />
         </TabsContent>
       </Tabs>
