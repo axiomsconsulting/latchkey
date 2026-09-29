@@ -5,11 +5,13 @@ import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Phone } from "lucide-react"
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
+import { CheckInQr } from "@/components/guest/CheckInQr";
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guest as copy } from "@/content/copy";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { CheckinMethod } from "@/lib/checkin-logic";
 import {
   completeCheckIn,
@@ -17,10 +19,12 @@ import {
   listArrivals,
   matchBooking,
   pickArrival,
+  resumeSession,
   selfDeclare,
   verifyLast4,
   verifyPhotoId,
 } from "@/lib/checkin.functions";
+
 import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
