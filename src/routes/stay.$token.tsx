@@ -4,7 +4,9 @@ import { CalendarX, Check, Wifi } from "lucide-react";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { StayExtras } from "@/components/guest/StayExtras";
+import { StayInbox } from "@/components/guest/StayInbox";
 import { StayServices } from "@/components/guest/StayServices";
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { guestGuideIcons } from "@/components/guest/guide-icons";
 import { guideCopy as gcopy, guest as copy } from "@/content/copy";
