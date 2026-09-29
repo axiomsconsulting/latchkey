@@ -566,16 +566,38 @@ function ConnectionsPage() {
 
       <section className="card-soft flex flex-wrap items-center gap-3 p-5">
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg">{copy.managerTitle}</h2>
-          <p className="text-sm text-muted-foreground">{copy.managerBody}</p>
+          <h2 className="text-lg">{calendarUi.managerTitle}</h2>
+          <p className="text-sm text-muted-foreground">{calendarUi.managerBody}</p>
         </div>
         <Badge variant="outline">{copy.comingSoon}</Badge>
       </section>
 
       <section className="card-soft p-5">
-        <p className="font-medium">{calendarUi.managerTitle}</p>
-        <p className="text-sm text-muted-foreground">{calendarUi.managerBody}</p>
-        <Badge className="mt-2" variant="secondary">Coming soon</Badge>
+        <h2 className="text-lg">{calendarUi.helpTitle}</h2>
+        <p className="text-sm text-muted-foreground">{calendarUi.helpSubtitle}</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {CHANNEL_KEYS.filter((c) => calendarGuides[c]?.steps.length).map((c) => (
+            <details key={c} className="rounded-2xl border border-border p-3">
+              <summary className="cursor-pointer font-medium">{channels[c]}</summary>
+              <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
+                {calendarGuides[c]!.steps.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ol>
+              {calendarGuides[c]?.helpUrl ? (
+                <a
+                  className="mt-1 inline-block text-sm underline"
+                  href={calendarGuides[c]!.helpUrl!}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {calendarGuides[c]?.helpLabel ?? calendarUi.openHelp}
+                </a>
+              ) : null}
+            </details>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{calendarUi.stepsChecked}</p>
       </section>
 
       <AddConnectionDialog
