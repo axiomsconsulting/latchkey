@@ -706,3 +706,50 @@ export const markAlertRead = createServerFn({ method: "POST" })
     await context.supabase.from("host_alerts").update({ read_at: new Date().toISOString() }).eq("id", data.id);
     return { ok: true };
   });
+
+/**
+ * Puts a checked-in stay back to upcoming: wrong guest tapped through, or the
+ * host checked someone in by mistake. Old stay links stop working, so the
+ * guest checks in again and gets a fresh one.
+ */
+export const undoCheckIn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ bookingId: uuid }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: b } = await context.supabase
+      .from("bookings")
+      .select("id, status")
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (!b) throw new Error("Booking not found.");
+    if (b.status !== "checked_in") throw new Error("This guest isn't checked in.");
+
+    const { error } = await context.supabase
+      .from("bookings")
+      .update({ status: "upcoming", checked_in_at: null })
+      .eq("id", data.bookingId);
+    if (error) throw new Error(error.message);
+
+    // Close the session and the stay link that check-in created.
+    const { admin } = await import("./checkin.server");
+    const db = await admin();
+    const nowIso = new Date().toISOString();
+    await db.from("checkin_sessions").update({ expires_at: nowIso }).eq("booking_id", data.bookingId);
+    await db.from("stay_tokens").update({ expires_at: nowIso }).eq("booking_id", data.bookingId);
+    await db.from("presence_log").insert({ booking_id: data.bookingId, event: "left", source: "host_undo" });
+    return { ok: true };
+  });
+
+/** Host wording for each booking platform; internal ids are never changed. */
+export const saveChannelLabels = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ hostId: uuid, labels: z.record(z.string(), z.string().trim().max(40)) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const clean: Record<string, string> = {};
+    for (const [k, v] of Object.entries(data.labels)) if (v.trim()) clean[k] = v.trim();
+    const { error } = await context.supabase.from("hosts").update({ channel_labels: clean }).eq("id", data.hostId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
