@@ -213,8 +213,18 @@ export function CheckInFlow({
 
   const canGoBack = ["letter", "checkout", "platform", "pick"].includes(step.name);
 
+  // The square only means something once there is a stay to carry across.
+  const handoffUrl =
+    typeof window === "undefined"
+      ? null
+      : step.name === "done"
+        ? `${window.location.origin}/stay/${step.stayToken}`
+        : token
+          ? `${window.location.origin}/p/${property.code}?resume=${encodeURIComponent(token)}`
+          : null;
+
   return (
-    <div className={cn("mx-auto w-full max-w-4xl", kiosk ? "py-6" : "py-8")}>
+    <div className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}>
       {canGoBack ? (
         <Button
           variant="ghost"
@@ -235,6 +245,14 @@ export function CheckInFlow({
           <ArrowLeft className="size-5" /> {copy.back}
         </Button>
       ) : null}
+
+      <div
+        className={cn(
+          "grid gap-6",
+          handoffUrl && !onPhone ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start" : "",
+        )}
+      >
+
 
       <main className="card-soft p-6 sm:p-10" aria-live="polite">
         {step.name === "welcome" ? (
