@@ -5,7 +5,7 @@ import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { StayServices } from "@/components/guest/StayServices";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { guestGuideIcons } from "@/components/guest/guide-icons";
-import { guide as gcopy, guest as copy } from "@/content/copy";
+import { guideCopy as gcopy, guest as copy } from "@/content/copy";
 import { getStay } from "@/lib/checkin.functions";
 
 export const Route = createFileRoute("/stay/$token")({
