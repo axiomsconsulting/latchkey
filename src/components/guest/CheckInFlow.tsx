@@ -472,8 +472,19 @@ export function CheckInFlow({
             {message}
           </p>
         ) : null}
-      </main>
+        </main>
+
+        {handoffUrl ? (
+          <CheckInQr
+            url={handoffUrl}
+            heading={step.name === "done" ? copy.qrDoneHeading : copy.qrHeading}
+            blurb={step.name === "done" ? copy.qrDoneBlurb : copy.qrBlurb}
+            compact={onPhone}
+          />
+        ) : null}
+      </div>
     </div>
+
   );
 }
 
