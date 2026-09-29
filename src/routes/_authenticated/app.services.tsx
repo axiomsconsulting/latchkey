@@ -86,6 +86,10 @@ function ServicesPage() {
   const all = (jobs.data?.jobs ?? []) as unknown as Job[];
   const inbox = all.filter((j) => j.source === "guest");
   const planned = all.filter((j) => j.source !== "guest");
+  const selectedProperty = properties.find((p) => p.id === selectedId) as
+    | { postcode?: string | null; address?: string | null; country_code?: string | null }
+    | undefined;
+
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
