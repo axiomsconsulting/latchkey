@@ -7,7 +7,7 @@ import { addDays, dayOfWeek, zonedParts } from "./dates";
 
 export type SectionKey =
   | "getting_in" | "shoes" | "room" | "kitchenette" | "bathroom" | "parking"
-  | "rules" | "quiet" | "unavailable" | "checkout" | "contact";
+  | "taxis" | "rules" | "quiet" | "unavailable" | "checkout" | "contact";
 
 export const SECTIONS: { key: SectionKey; title: string; hint: string }[] = [
   { key: "getting_in", title: "Getting in", hint: "How to open the front door and use the lock. Add photos of the keypad." },
@@ -16,6 +16,7 @@ export const SECTIONS: { key: SectionKey; title: string; hint: string }[] = [
   { key: "kitchenette", title: "Kitchenette", hint: "What guests can use, labelling food, washing up." },
   { key: "bathroom", title: "Bathroom and hot water", hint: "Shower controls, how long hot water takes, towels." },
   { key: "parking", title: "Parking", hint: "Where to park, permits, where not to park." },
+  { key: "taxis", title: "Local taxis", hint: "Two or three local firms with phone numbers, and the usual fare to the station." },
   { key: "rules", title: "House rules", hint: "Smoking, guests, pets, the shared spaces." },
   { key: "quiet", title: "Quiet hours", hint: "Anything to add to your quiet hours." },
   { key: "unavailable", title: "Times the house is unavailable", hint: "Cleaning windows when rooms or shared spaces are closed." },
