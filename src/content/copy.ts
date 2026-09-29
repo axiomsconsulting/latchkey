@@ -479,6 +479,8 @@ export const guideCopy = {
   starterBadge: "Starter text: replace with your own",
   addStarter: "Add starter text",
   starterAdded: (n: number) => `Starter text added to ${n} sections`,
+  doorLocked: (when: string) => `Door and lock details appear here from ${when}.`,
+  readOnly: "Your stay has ended. This guide stays open for 24 hours in case you left something behind.",
   forgetTitle: "Things people usually forget",
   guideLink: "Copy guide link",
   guideLinkCopied: "Guide link copied. It opens on arrival day and stops at check-out.",

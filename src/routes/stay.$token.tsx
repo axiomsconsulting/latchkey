@@ -96,7 +96,9 @@ function Stay() {
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pb-5 text-base">
-                  {sec.summary ? <p className="text-lg">{sec.summary}</p> : null}
+                  {sec.summary === "DOOR_LOCKED" ? (
+                    <p className="text-lg">{gcopy.doorLocked(new Intl.DateTimeFormat("en-GB", { timeZone: p?.timezone ?? "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(s.doorOpensAt)))}</p>
+                  ) : sec.summary ? <p className="text-lg">{sec.summary}</p> : null}
                   {sec.steps.length ? (
                     <ol className="space-y-4">
                       {sec.steps.map((st, i) => (
@@ -119,7 +121,7 @@ function Stay() {
           })}
         </Accordion>
 
-        <StayServices token={token} />
+        {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : <StayServices token={token} />}
       </main>
     </GuestFrame>
   );
