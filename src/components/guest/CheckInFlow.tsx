@@ -66,11 +66,14 @@ export function CheckInFlow({
   hostPhone,
   kiosk = false,
   onActivity,
+  resumeToken,
 }: {
   property: CheckinProperty;
   hostPhone?: string | null;
   kiosk?: boolean;
   onActivity?: () => void;
+  /** Present when the guest scanned the square on another device. */
+  resumeToken?: string | null;
 }) {
   const [step, setStep] = useState<Step>({ name: "welcome" });
   const [letter, setLetter] = useState("");
@@ -80,6 +83,7 @@ export function CheckInFlow({
   const [kinds, setKinds] = useState<Last4Kind[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const onPhone = useIsMobile();
 
   const match = useServerFn(matchBooking);
   const list = useServerFn(listArrivals);
@@ -89,11 +93,44 @@ export function CheckInFlow({
   const last4 = useServerFn(verifyLast4);
   const declare = useServerFn(selfDeclare);
   const complete = useServerFn(completeCheckIn);
+  const resume = useServerFn(resumeSession);
 
   useEffect(() => {
     onActivity?.();
     setMessage(null);
   }, [step, onActivity]);
+
+  // Scanned square: rejoin the same check-in rather than starting over.
+  useEffect(() => {
+    if (!resumeToken || kiosk) return;
+    let live = true;
+    setBusy(true);
+    resume({ data: { token: resumeToken } })
+      .then(async (res) => {
+        if (!live) return;
+        setToken(resumeToken);
+        setSequence([...res.sequence] as CheckinMethod[]);
+        setKinds(res.last4Kinds);
+        if (res.completed || res.verified) {
+          const done = await complete({ data: { token: resumeToken } });
+          if (live) setStep({ name: "done", ...done });
+          return;
+        }
+        setStep({ name: "confirm", firstName: res.firstName });
+      })
+      .catch(() => {
+        if (live) setMessage(copy.error);
+      })
+      .finally(() => {
+        if (live) setBusy(false);
+      });
+    return () => {
+      live = false;
+    };
+    // Runs once for the scanned token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeToken, kiosk]);
+
 
   async function run<T>(fn: () => Promise<T>): Promise<T | null> {
     setBusy(true);
