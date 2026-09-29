@@ -232,6 +232,11 @@ export const bookings = {
   nights: "nights",
   night: "night",
   editBooking: "Edit booking",
+  undoCheckIn: "Undo check-in",
+  undoCheckInHelp: "This guest is checked in.",
+  undoCheckInConfirm:
+    "Undo this check-in? The guest's stay link stops working and they'll need to check in again.",
+  undoCheckInDone: "Check-in undone. The booking is back to upcoming.",
   manualNote: "Fields you change here are kept, even when the channel calendar updates.",
   importTitle: "Import bookings from a file",
   importBody: "Upload a CSV export from a channel or spreadsheet, then match the columns.",
