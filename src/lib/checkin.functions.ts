@@ -43,12 +43,13 @@ function hourIn(tz: string): number {
 export const getCheckinProperty = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
-    const { loadPropertyByCode } = await srv();
-    const p = await loadPropertyByCode(data.code);
+    const srvMod = await srv();
+    const p = await srvMod.loadPropertyByCode(data.code);
     if (!p) return { found: false as const };
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const methods = normaliseMethods(p.checkin_methods);
+    const { channelLabels } = await import("./checkin.server");
     return {
       found: true as const,
       name: p.name,
@@ -57,6 +58,9 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       checkoutChoices: checkoutChoices(today, hourIn(tz)),
       listFlow: usesListFlow(methods),
       hostPhone: p.host_contact_phone,
+      checkInFrom: (p.default_check_in_time ?? "15:00").slice(0, 5),
+      checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
+      channelLabels: await channelLabels(p.host_id),
       theme: normaliseTheme(p.theme_config),
     };
   });
