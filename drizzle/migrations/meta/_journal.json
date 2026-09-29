@@ -64,6 +64,13 @@
       "when": 1790676242546,
       "tag": "0008_channels_notes_feed_and_soft_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790680409058,
+      "tag": "0009_stripe_payments_and_trades",
+      "breakpoints": true
     }
   ]
 }
