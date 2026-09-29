@@ -376,39 +376,63 @@ export type Database = {
       extras_catalogue: {
         Row: {
           active: boolean
+          auto_approve: boolean
           created_at: string
           currency: string
           description: string | null
           id: string
           is_demo: boolean
+          is_free: boolean
+          is_loan: boolean
+          item_key: string | null
+          max_qty: number
           name: string
+          options: Json
           price_pence: number
           property_id: string
           requires_approval: boolean
+          sort_order: number
+          unit: string
         }
         Insert: {
           active?: boolean
+          auto_approve?: boolean
           created_at?: string
           currency?: string
           description?: string | null
           id?: string
           is_demo?: boolean
+          is_free?: boolean
+          is_loan?: boolean
+          item_key?: string | null
+          max_qty?: number
           name: string
+          options?: Json
           price_pence?: number
           property_id: string
           requires_approval?: boolean
+          sort_order?: number
+          unit?: string
         }
         Update: {
           active?: boolean
+          auto_approve?: boolean
           created_at?: string
           currency?: string
           description?: string | null
           id?: string
           is_demo?: boolean
+          is_free?: boolean
+          is_loan?: boolean
+          item_key?: string | null
+          max_qty?: number
           name?: string
+          options?: Json
           price_pence?: number
           property_id?: string
           requires_approval?: boolean
+          sort_order?: number
+          unit?: string
         }
         Relationships: [
           {
@@ -617,6 +641,7 @@ export type Database = {
       }
       hosts: {
         Row: {
+          bank_details: string | null
           business_name: string
           contact_email: string | null
           contact_phone: string | null
@@ -624,9 +649,15 @@ export type Database = {
           currency: string
           id: string
           integration_modes: Json
+          out_until: string | null
+          prices_include_tax: boolean
+          tax_label: string
+          tax_rate_bp: number
+          tax_registered: boolean
           timezone: string
         }
         Insert: {
+          bank_details?: string | null
           business_name: string
           contact_email?: string | null
           contact_phone?: string | null
@@ -634,9 +665,15 @@ export type Database = {
           currency?: string
           id?: string
           integration_modes?: Json
+          out_until?: string | null
+          prices_include_tax?: boolean
+          tax_label?: string
+          tax_rate_bp?: number
+          tax_registered?: boolean
           timezone?: string
         }
         Update: {
+          bank_details?: string | null
           business_name?: string
           contact_email?: string | null
           contact_phone?: string | null
@@ -644,6 +681,11 @@ export type Database = {
           currency?: string
           id?: string
           integration_modes?: Json
+          out_until?: string | null
+          prices_include_tax?: boolean
+          tax_label?: string
+          tax_rate_bp?: number
+          tax_registered?: boolean
           timezone?: string
         }
         Relationships: []
@@ -887,32 +929,56 @@ export type Database = {
         Row: {
           booking_id: string
           created_at: string
+          early_from: string | null
           extra_id: string | null
           id: string
+          items: Json
           kind: string
+          late_until: string | null
           message: string | null
+          pay_by: string | null
           resolved_at: string | null
           status: string
+          suggested_window: string | null
+          suggestion_expires_at: string | null
+          time_window: string | null
+          total_pence: number
         }
         Insert: {
           booking_id: string
           created_at?: string
+          early_from?: string | null
           extra_id?: string | null
           id?: string
+          items?: Json
           kind?: string
+          late_until?: string | null
           message?: string | null
+          pay_by?: string | null
           resolved_at?: string | null
           status?: string
+          suggested_window?: string | null
+          suggestion_expires_at?: string | null
+          time_window?: string | null
+          total_pence?: number
         }
         Update: {
           booking_id?: string
           created_at?: string
+          early_from?: string | null
           extra_id?: string | null
           id?: string
+          items?: Json
           kind?: string
+          late_until?: string | null
           message?: string | null
+          pay_by?: string | null
           resolved_at?: string | null
           status?: string
+          suggested_window?: string | null
+          suggestion_expires_at?: string | null
+          time_window?: string | null
+          total_pence?: number
         }
         Relationships: [
           {

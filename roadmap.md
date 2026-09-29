@@ -19,8 +19,12 @@
 - [x] House sections + room overrides, block editor with photos, basic/detailed per room
 - [x] Private guide link: arrival day to check-out; forget card; starter text
 
-## Requests & extras (waiting on user answers to 14 questions)
-- [ ] Price list, guest basket, late/early check-in availability, auto-approve, Stripe payment
-
-## Host–guest messaging (waiting on user answers)
-- [ ] Realtime thread, quick chips, urgent maintenance, presence, automatic reminders
+## Requests, extras & messaging (plan approved)
+- [x] A: price list per property (demo defaults), luggage sizes, tax + bank + "out until" settings
+- [x] A: guide link opens 48h early, door details from arrival-day midnight, read-only 24h after check-out
+- [x] B: guest basket, time windows, late/early hours only when free, auto-approve, host approve/decline/suggest
+- [ ] A: "Local taxis" guide section
+- [ ] B: room schedule extension + cleaning-gap warning; expire unpaid after 2h (cron)
+- [ ] C: Stripe payments (needs user to confirm the Stripe form), bank transfer screenshot
+- [ ] D: live messaging, chips, urgent maintenance, do not disturb
+- [ ] E: who's in card, automatic reminders, 30-day message deletion

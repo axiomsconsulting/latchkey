@@ -67,7 +67,6 @@ export function StayServices({ token }: { token: string }) {
   }
 
   const issues = SERVICE_CATEGORIES.filter((c) => c.kind === "issue");
-  const extras = SERVICE_CATEGORIES.filter((c) => c.kind === "extra");
 
   return (
     <section className="space-y-5 pt-4">
@@ -109,13 +108,6 @@ export function StayServices({ token }: { token: string }) {
           {issues.map((c) => <Tile key={c.id} cat={c} onPick={() => { setPicked(c); setUrgent(c.defaultUrgency === "urgent"); }} />)}
         </div>
       </div>
-      <div>
-        <h3 className="mb-2 text-lg">{copy.extras}</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {extras.map((c) => <Tile key={c.id} cat={c} onPick={() => { setPicked(c); setUrgent(false); }} />)}
-        </div>
-      </div>
-
       <Sheet open={picked !== null} onOpenChange={(o) => !o && setPicked(null)}>
         <SheetContent side="bottom" className="mx-auto max-w-xl rounded-t-[2rem] p-6">
           <SheetHeader>

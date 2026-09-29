@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { common, settings as copy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
+import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 
@@ -196,6 +197,7 @@ function SettingsPage() {
         </div>
       </form>
 
+      {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
       {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
       {workspace.data ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
 

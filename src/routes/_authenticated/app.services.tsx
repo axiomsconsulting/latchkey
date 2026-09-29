@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { common, services as copy } from "@/content/copy";
+import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { SERVICE_CATEGORIES, categoryById, formatPence, rateLabel } from "@/lib/services";
 import {
@@ -99,6 +100,8 @@ function ServicesPage() {
           </div>
         }
       />
+
+      <ExtrasInbox propertyId={selectedId} />
 
       <Tabs defaultValue="inbox">
         <TabsList className="h-12 rounded-2xl p-1">

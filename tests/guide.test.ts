@@ -47,13 +47,15 @@ describe("forget card and windows", () => {
 });
 
 describe("guideWindow", () => {
-  it("opens at local midnight and closes at local check-out time (BST)", () => {
+  it("opens 48h before arrival day, door at local midnight, closes 24h after check-out (BST)", () => {
     const w = guideWindow("2026-09-29", "2026-10-01", "11:00", "Europe/London");
-    expect(w.validFrom.toISOString()).toBe("2026-09-28T23:00:00.000Z");
-    expect(w.expiresAt.toISOString()).toBe("2026-10-01T10:00:00.000Z");
+    expect(w.doorOpensAt.toISOString()).toBe("2026-09-28T23:00:00.000Z");
+    expect(w.validFrom.toISOString()).toBe("2026-09-26T23:00:00.000Z");
+    expect(w.readOnlyAt.toISOString()).toBe("2026-10-01T10:00:00.000Z");
+    expect(w.expiresAt.toISOString()).toBe("2026-10-02T10:00:00.000Z");
   });
   it("handles GMT in winter", () => {
     const w = guideWindow("2026-12-01", "2026-12-02", "11:00", "Europe/London");
-    expect(w.expiresAt.toISOString()).toBe("2026-12-02T11:00:00.000Z");
+    expect(w.readOnlyAt.toISOString()).toBe("2026-12-02T11:00:00.000Z");
   });
 });
