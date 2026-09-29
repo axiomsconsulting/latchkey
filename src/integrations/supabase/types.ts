@@ -726,6 +726,8 @@ export type Database = {
           direction: string
           id: string
           job_id: string | null
+          read_by_guest_at: string | null
+          read_by_host_at: string | null
           sent_at: string | null
         }
         Insert: {
@@ -736,6 +738,8 @@ export type Database = {
           direction?: string
           id?: string
           job_id?: string | null
+          read_by_guest_at?: string | null
+          read_by_host_at?: string | null
           sent_at?: string | null
         }
         Update: {
@@ -746,6 +750,8 @@ export type Database = {
           direction?: string
           id?: string
           job_id?: string | null
+          read_by_guest_at?: string | null
+          read_by_host_at?: string | null
           sent_at?: string | null
         }
         Relationships: [
@@ -875,6 +881,7 @@ export type Database = {
           address: string | null
           check_in_pin: string | null
           checkin_methods: Json
+          country_code: string
           created_at: string
           default_check_in_time: string
           default_check_out_time: string
@@ -891,6 +898,7 @@ export type Database = {
           short_code: string
           theme_config: Json
           timezone: string | null
+          trades_ai_at: string | null
           wifi_name: string | null
           wifi_password: string | null
         }
@@ -899,6 +907,7 @@ export type Database = {
           address?: string | null
           check_in_pin?: string | null
           checkin_methods?: Json
+          country_code?: string
           created_at?: string
           default_check_in_time?: string
           default_check_out_time?: string
@@ -915,6 +924,7 @@ export type Database = {
           short_code: string
           theme_config?: Json
           timezone?: string | null
+          trades_ai_at?: string | null
           wifi_name?: string | null
           wifi_password?: string | null
         }
@@ -923,6 +933,7 @@ export type Database = {
           address?: string | null
           check_in_pin?: string | null
           checkin_methods?: Json
+          country_code?: string
           created_at?: string
           default_check_in_time?: string
           default_check_out_time?: string
@@ -939,6 +950,7 @@ export type Database = {
           short_code?: string
           theme_config?: Json
           timezone?: string | null
+          trades_ai_at?: string | null
           wifi_name?: string | null
           wifi_password?: string | null
         }
@@ -1367,6 +1379,87 @@ export type Database = {
             columns: ["connection_id"]
             isOneToOne: false
             referencedRelation: "channel_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trades: {
+        Row: {
+          area: string | null
+          category: string
+          company_name: string | null
+          created_at: string
+          email: string | null
+          host_id: string
+          id: string
+          is_demo: boolean
+          is_preferred: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          property_id: string | null
+          rating: number | null
+          sort_order: number
+          source: string
+          updated_at: string
+          website: string | null
+          whatsapp_phone: string | null
+        }
+        Insert: {
+          area?: string | null
+          category?: string
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          host_id: string
+          id?: string
+          is_demo?: boolean
+          is_preferred?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          property_id?: string | null
+          rating?: number | null
+          sort_order?: number
+          source?: string
+          updated_at?: string
+          website?: string | null
+          whatsapp_phone?: string | null
+        }
+        Update: {
+          area?: string | null
+          category?: string
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          host_id?: string
+          id?: string
+          is_demo?: boolean
+          is_preferred?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          property_id?: string | null
+          rating?: number | null
+          sort_order?: number
+          source?: string
+          updated_at?: string
+          website?: string | null
+          whatsapp_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trades_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trades_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
