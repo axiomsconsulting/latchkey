@@ -211,7 +211,9 @@ export function CheckInFlow({
             >
               {copy.startCta}
             </Button>
-            <p className="mt-6 text-muted-foreground">{copy.reassurance}</p>
+            {property.checkInFrom && property.checkOutBy ? (
+              <p className="mt-6 text-muted-foreground">{copy.stayWindow(property.checkInFrom, property.checkOutBy)}</p>
+            ) : null}
           </div>
         ) : null}
 
@@ -269,11 +271,12 @@ export function CheckInFlow({
                   key={p}
                   variant="outline"
                   size="touch-xl"
-                  className="text-xl"
+                  className="justify-start gap-4 text-xl"
                   disabled={busy}
                   onClick={() => void onPlatform(p)}
                 >
-                  {copy.platforms[p]}
+                  <ChannelIcon channel={p} />
+                  {property.channelLabels?.[p] ?? copy.platforms[p]}
                 </Button>
               ))}
             </div>
