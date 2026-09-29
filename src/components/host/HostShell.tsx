@@ -82,10 +82,16 @@ export function HostShell() {
         </button>
       </aside>
 
+      {/* Desktop: messages sit top right, away from the sidebar */}
+      <div className="glass fixed right-6 top-6 z-30 hidden rounded-2xl p-1 md:block print:hidden">
+        <HostInbox propertyId={selectedId ?? null} />
+      </div>
+
       {/* Phone/tablet portrait: compact glass header */}
-      <header className="glass sticky top-2 z-10 mx-3 mt-2 flex items-center gap-3 rounded-2xl px-3 py-2 md:hidden print:hidden">
+      <header className="glass sticky top-2 z-10 mx-3 mt-2 flex items-center gap-1 rounded-2xl px-3 py-2 md:hidden print:hidden">
         <LogoMark theme={theme} name={title} className="size-9" />
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
+        <HostInbox propertyId={selectedId ?? null} />
         <button
           type="button"
           onClick={signOut}
@@ -99,6 +105,7 @@ export function HostShell() {
       <main className="px-4 py-6 pb-32 sm:px-6 md:ml-72 md:py-10 md:pb-10">
         <Outlet />
       </main>
+
 
       {/* Floating pill dock */}
       <nav
