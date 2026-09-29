@@ -23,8 +23,14 @@
 - [x] A: price list per property (demo defaults), luggage sizes, tax + bank + "out until" settings
 - [x] A: guide link opens 48h early, door details from arrival-day midnight, read-only 24h after check-out
 - [x] B: guest basket, time windows, late/early hours only when free, auto-approve, host approve/decline/suggest
+- [x] Extras cart: dismissable basket, free + paid items, £0 flow without Stripe, bank/cash fallback, itemised receipt
+- [x] Guest/host messaging: stay-page inbox, host bell + unread badges, read receipts
+- [x] Check-in QR handoff: resume token, QR switches to stay link, desktop card + mobile icon
+- [x] Trades address book: manual add, CSV import with mapping preview, one-tap call/text/WhatsApp/email, AI trade suggestions, regional address fields (country per property)
+- [x] Directory search per property postcode/country; Contra repositioned as "Grow your listing"
 - [ ] A: "Local taxis" guide section
 - [ ] B: room schedule extension + cleaning-gap warning; expire unpaid after 2h (cron)
-- [ ] C: Stripe payments (needs user to confirm the Stripe form), bank transfer screenshot
-- [ ] D: live messaging, chips, urgent maintenance, do not disturb
+- [ ] C: Stripe live webhook (STRIPE_WEBHOOK_SECRET) — test payments work; live key on request
+- [ ] D: live messaging delivery (outbound email/SMS) — needs sender domain
 - [ ] E: who's in card, automatic reminders, 30-day message deletion
+- [ ] Live Contra mode: needs Contra API key/endpoint from the user
