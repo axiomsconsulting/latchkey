@@ -25,6 +25,7 @@ import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
+import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 
 const IndexRoute = IndexRouteImport.update({
@@ -110,6 +111,12 @@ const AuthenticatedAppTodayRoute = AuthenticatedAppTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppPrintPropertyIdRoute =
+  AuthenticatedAppPrintPropertyIdRouteImport.update({
+    id: '/print/$propertyId',
+    path: '/print/$propertyId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
   id: '/api/public/cron/latchkey',
   path: '/api/public/cron/latchkey',
@@ -132,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRoutesByTo {
@@ -149,6 +157,7 @@ export interface FileRoutesByTo {
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRoutesById {
@@ -169,6 +178,7 @@ export interface FileRoutesById {
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
 }
 export interface FileRouteTypes {
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/app/setup'
     | '/app/today'
     | '/app/'
+    | '/app/print/$propertyId'
     | '/api/public/cron/latchkey'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/app/setup'
     | '/app/today'
     | '/app'
+    | '/app/print/$propertyId'
     | '/api/public/cron/latchkey'
   id:
     | '__root__'
@@ -225,6 +237,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/setup'
     | '/_authenticated/app/today'
     | '/_authenticated/app/'
+    | '/_authenticated/app/print/$propertyId'
     | '/api/public/cron/latchkey'
   fileRoutesById: FileRoutesById
 }
@@ -354,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppTodayRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/print/$propertyId': {
+      id: '/_authenticated/app/print/$propertyId'
+      path: '/print/$propertyId'
+      fullPath: '/app/print/$propertyId'
+      preLoaderRoute: typeof AuthenticatedAppPrintPropertyIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/api/public/cron/latchkey': {
       id: '/api/public/cron/latchkey'
       path: '/api/public/cron/latchkey'
@@ -372,6 +392,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSetupRoute: typeof AuthenticatedAppSetupRoute
   AuthenticatedAppTodayRoute: typeof AuthenticatedAppTodayRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppPrintPropertyIdRoute: typeof AuthenticatedAppPrintPropertyIdRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -382,6 +403,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSetupRoute: AuthenticatedAppSetupRoute,
   AuthenticatedAppTodayRoute: AuthenticatedAppTodayRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppPrintPropertyIdRoute: AuthenticatedAppPrintPropertyIdRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
