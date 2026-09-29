@@ -34,8 +34,15 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
     }
     let account: string | null = null;
     try {
-      const acct = await stripeCall<{ id: string; business_profile?: { name?: string }; settings?: { dashboard?: { display_name?: string } } }>("/account");
-      account = acct.settings?.dashboard?.display_name ?? acct.business_profile?.name ?? acct.id;
+      try {
+        const acct = await stripeCall<{ id: string; business_profile?: { name?: string }; settings?: { dashboard?: { display_name?: string } } }>("/account");
+        account = acct.settings?.dashboard?.display_name ?? acct.business_profile?.name ?? acct.id;
+      } catch {
+        // Restricted keys often can't read the account. A products call proves
+        // the key works and has the permissions Latchkey actually needs.
+        await stripeCall("/products?limit=1");
+        account = "your Stripe account (restricted key)";
+      }
     } catch (err) {
       return { connected: false, live: false, account: null, webhookReady: Boolean(process.env["STRIPE_WEBHOOK_SECRET"]), syncedCount: count ?? 0, currency: (p as any).hosts?.currency ?? "GBP", error: err instanceof Error ? err.message : "Stripe rejected the key." };
     }
