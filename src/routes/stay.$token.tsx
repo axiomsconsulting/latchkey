@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AlarmClock, CalendarX, Footprints, Moon, Wifi } from "lucide-react";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
+import { StayExtras } from "@/components/guest/StayExtras";
 import { StayServices } from "@/components/guest/StayServices";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { guestGuideIcons } from "@/components/guest/guide-icons";
@@ -121,7 +122,7 @@ function Stay() {
           })}
         </Accordion>
 
-        {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : <StayServices token={token} />}
+        {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><StayExtras token={token} /><StayServices token={token} /></>)}
       </main>
     </GuestFrame>
   );
