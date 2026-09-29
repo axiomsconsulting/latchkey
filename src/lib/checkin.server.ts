@@ -30,12 +30,20 @@ export async function loadPropertyByCode(code: string) {
   const { data } = await db
     .from("properties")
     .select(
-      "id, host_id, name, short_code, timezone, check_in_pin, checkin_methods, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active",
+      "id, host_id, name, short_code, timezone, check_in_pin, checkin_methods, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active, theme_config",
     )
     .eq("short_code", code.toLowerCase())
     .eq("active", true)
     .maybeSingle();
   return data;
+}
+
+/** The host's demo/live switches. */
+export async function hostModes(hostId: string) {
+  const { normaliseModes } = await import("./integration-modes");
+  const db = await admin();
+  const { data } = await db.from("hosts").select("integration_modes").eq("id", hostId).maybeSingle();
+  return normaliseModes(data?.integration_modes);
 }
 
 export type Session = {
@@ -83,6 +91,11 @@ export async function raiseAlert(input: {
     .select("id")
     .single();
   try {
+    const modes = await hostModes(input.hostId);
+    if (modes.host_email === "demo") {
+      console.info("[demo] host alert email not sent:", input.message);
+      return;
+    }
     const { sendAlertEmail } = await import("./alert-email.server");
     const sent = await sendAlertEmail(input.hostId, input.message);
     if (sent && data) {

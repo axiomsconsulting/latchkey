@@ -23,6 +23,7 @@ import {
   usesListFlow,
 } from "./checkin-logic";
 import { compareNames } from "./name-match";
+import { normaliseTheme } from "./theme";
 
 const code = z.string().trim().min(2).max(40).regex(/^[a-z0-9-]+$/i);
 const deviceId = z.string().min(8).max(80);
@@ -56,6 +57,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       checkoutChoices: checkoutChoices(today, hourIn(tz)),
       listFlow: usesListFlow(methods),
       hostPhone: p.host_contact_phone,
+      theme: normaliseTheme(p.theme_config),
     };
   });
 
@@ -315,10 +317,14 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
       .eq("id", ctx.session.id);
     const left = MAX_PHOTO_ATTEMPTS - ctx.session.photo_attempts - 1;
 
-    const { readNameFromId } = await srv();
+    const { readNameFromId, hostModes } = await srv();
     let read: { name: string | null; isId: boolean };
     try {
-      read = await readNameFromId(data.image);
+      const modes = await hostModes(ctx.property.host_id);
+      // Demo mode: skip the AI call and pretend the ID shows the booking name.
+      read = modes.id_check === "demo"
+        ? { name: ctx.booking.guest_full_name, isId: true }
+        : await readNameFromId(data.image);
     } catch {
       return left > 0 ? { status: "retry" as const, left } : { status: "fallback" as const };
     }
@@ -435,7 +441,7 @@ export const getStay = createServerFn({ method: "GET" })
     const [{ data: p }, { data: room }] = await Promise.all([
       db
         .from("properties")
-        .select("name, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone")
+        .select("name, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
         .eq("id", b.property_id)
         .single(),
       b.room_id
@@ -449,6 +455,7 @@ export const getStay = createServerFn({ method: "GET" })
       checkOutTime: (b.check_out_time ?? p?.default_check_out_time ?? "11:00").slice(0, 5),
       property: p,
       room,
+      theme: normaliseTheme(p?.theme_config),
     };
   });
 
