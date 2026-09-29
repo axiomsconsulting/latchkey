@@ -14,3 +14,7 @@
 - [x] Themed guest pages + host dashboard; vanity link /trinity with Host portal link
 - [x] iOS-style floating glass navigation
 - [ ] Live Contra mode: needs Contra API key/endpoint from the user
+
+## Stay guides (done)
+- [x] House sections + room overrides, block editor with photos, basic/detailed per room
+- [x] Private guide link: arrival day to check-out; forget card; starter text
