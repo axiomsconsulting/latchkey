@@ -716,7 +716,7 @@ export const payments = {
     "In Stripe, go to Developers > Webhooks > Add endpoint, paste the address below, tick checkout.session.completed, then save its signing secret in Latchkey as STRIPE_WEBHOOK_SECRET.",
   steps: [
     { title: "Create a Stripe account", body: "Sign up at stripe.com. You can take test payments straight away and switch to real ones after Stripe verifies your details." },
-    { title: "Copy your secret key", body: "In Stripe, go to Developers > API keys and copy the secret key (starts sk_test_ for testing, sk_live_ when you go live)." },
+    { title: "Copy your key", body: "In Stripe, turn Test mode on, then go to Developers > API keys. A standard secret key (sk_) or a restricted key (rk_) both work, as long as the restricted key can write Checkout Sessions, Products, Prices and Payment Intents." },
     { title: "Save it in Latchkey", body: "Ask me to add it and I'll open a secure form. It is stored as STRIPE_SECRET_KEY and never shown in the app." },
   ],
   syncButton: "Send price list to Stripe",
