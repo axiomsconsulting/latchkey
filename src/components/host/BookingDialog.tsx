@@ -102,8 +102,27 @@ export function BookingDialog({
   defaults,
 }: Props) {
   const save = useServerFn(saveBooking);
+  const undo = useServerFn(undoCheckIn);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+
+  async function onUndo() {
+    if (!booking) return;
+    if (!window.confirm(copy.undoCheckInConfirm)) return;
+    setUndoing(true);
+    try {
+      await undo({ data: { bookingId: booking.id } });
+      await qc.invalidateQueries({ queryKey: ["board"] });
+      toast.success(copy.undoCheckInDone);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    } finally {
+      setUndoing(false);
+    }
+  }
+
   const [form, setForm] = useState(() =>
     blank(propertyId, rooms[0]?.id ?? null, defaults),
   );
@@ -202,7 +221,17 @@ export function BookingDialog({
               ) : null}
             </div>
           ) : null}
+          {booking && booking.status === "checked_in" ? (
+            <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl bg-muted px-3 py-2 text-sm">
+              <span className="flex-1">{copy.undoCheckInHelp}</span>
+              <Button type="button" variant="outline" size="sm" disabled={undoing} onClick={onUndo}>
+                {undoing ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+                {copy.undoCheckIn}
+              </Button>
+            </div>
+          ) : null}
         </DialogHeader>
+
 
         <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">

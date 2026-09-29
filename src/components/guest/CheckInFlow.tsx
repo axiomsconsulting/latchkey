@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Phone } from "lucide-react";
 
+import { ChannelIcon } from "@/components/ChannelIcon";
+
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
@@ -35,7 +37,7 @@ type Step =
   | { name: "pick"; items: Array<{ id: string; label: string; checkOut: string }> }
   | { name: "no_match" }
   | { name: "locked"; until: string }
-  | { name: "confirm"; firstName: string }
+  | { name: "confirm"; firstName: string; returning?: boolean }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
   | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
 
@@ -54,6 +56,9 @@ export type CheckinProperty = {
   code: string;
   checkoutChoices: string[];
   listFlow: boolean;
+  checkInFrom?: string;
+  checkOutBy?: string;
+  channelLabels?: Record<string, string>;
 };
 
 export function CheckInFlow({
@@ -123,7 +128,7 @@ export function CheckInFlow({
     if (res.status === "locked") return setStep({ name: "locked", until: res.until });
     if (res.status === "no_match") return setStep({ name: "no_match" });
     setToken(res.token);
-    setStep({ name: "confirm", firstName: res.firstName });
+    setStep({ name: "confirm", firstName: res.firstName, returning: res.returning === true });
   }
 
   async function onPick(bookingId: string) {
@@ -206,7 +211,9 @@ export function CheckInFlow({
             >
               {copy.startCta}
             </Button>
-            <p className="mt-6 text-muted-foreground">{copy.reassurance}</p>
+            {property.checkInFrom && property.checkOutBy ? (
+              <p className="mt-6 text-muted-foreground">{copy.stayWindow(property.checkInFrom, property.checkOutBy)}</p>
+            ) : null}
           </div>
         ) : null}
 
@@ -264,11 +271,12 @@ export function CheckInFlow({
                   key={p}
                   variant="outline"
                   size="touch-xl"
-                  className="text-xl"
+                  className="justify-start gap-4 text-xl"
                   disabled={busy}
                   onClick={() => void onPlatform(p)}
                 >
-                  {copy.platforms[p]}
+                  <ChannelIcon channel={p} />
+                  {property.channelLabels?.[p] ?? copy.platforms[p]}
                 </Button>
               ))}
             </div>
@@ -328,8 +336,8 @@ export function CheckInFlow({
 
         {step.name === "confirm" ? (
           <section className="py-4 text-center">
-            <h1 className="text-4xl sm:text-6xl">{copy.hi(step.firstName)}</h1>
-            <p className="mt-4 text-xl text-muted-foreground">{copy.confirmBody}</p>
+            <h1 className="text-4xl sm:text-6xl">{step.returning ? copy.welcomeBack(step.firstName) : copy.hi(step.firstName)}</h1>
+            <p className="mt-4 text-xl text-muted-foreground">{step.returning ? copy.welcomeBackBody : copy.confirmBody}</p>
             <div className="mx-auto mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
               <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
                 {busy ? <Loader2 className="size-6 animate-spin" /> : null}

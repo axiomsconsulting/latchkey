@@ -18,8 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { common, services as copy, trades as tradesCopy } from "@/content/copy";
+import { ContraStudio } from "@/components/host/ContraStudio";
 import { TradeDirectory } from "@/components/host/TradeDirectory";
-import { CONTRA_USES } from "@/lib/trades";
 import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { SERVICE_CATEGORIES, categoryById, formatPence, rateLabel } from "@/lib/services";
@@ -28,7 +28,6 @@ import {
   appointProvider,
   createHostJob,
   listJobs,
-  listProviders,
   recommendForJob,
   setJobStatus,
 } from "@/lib/services.functions";
@@ -128,18 +127,14 @@ function ServicesPage() {
         </TabsContent>
 
         <TabsContent value="trades" className="mt-4">
-          <TradeDirectory postcode={(properties.find((p) => p.id === selectedId) as { postcode?: string } | undefined)?.postcode ?? ""} />
+          <TradeDirectory
+            postcode={(properties.find((p) => p.id === selectedId) as { postcode?: string } | undefined)?.postcode ?? ""}
+            address={(properties.find((p) => p.id === selectedId) as { address?: string | null } | undefined)?.address ?? null}
+          />
         </TabsContent>
 
-        <TabsContent value="providers" className="mt-4 space-y-4">
-          <div className="card-soft p-4">
-            <h3 className="text-lg">{tradesCopy.growthTitle}</h3>
-            <p className="text-sm text-muted-foreground">{tradesCopy.growthBody}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {CONTRA_USES.map((u) => <Badge key={u.id} variant="secondary">{u.label}</Badge>)}
-            </div>
-          </div>
-          <ProviderDirectory hostId={ws.data!.hostId} />
+        <TabsContent value="providers" className="mt-4">
+          <ContraStudio />
         </TabsContent>
       </Tabs>
 
@@ -369,52 +364,5 @@ function NewJobDialog({ open, onOpenChange, hostId, propertyId }: { open: boolea
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ProviderDirectory({ hostId }: { hostId: string }) {
-  const fn = useServerFn(listProviders);
-  const [category, setCategory] = useState<string>("all");
-  const q = useQuery({
-    queryKey: ["providers", hostId, category],
-    queryFn: () => fn({ data: { hostId, category: category === "all" ? null : category } }),
-  });
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="h-11 w-60"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All services</SelectItem>
-            {SERVICE_CATEGORIES.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {q.data ? <Badge variant="outline">{q.data.mode === "live" ? copy.liveBadge : copy.demoBadge}</Badge> : null}
-      </div>
-      {q.isLoading ? <Skeleton className="h-40 rounded-2xl" /> : q.data?.error ? (
-        <p role="alert" className="rounded-2xl bg-destructive/10 p-4 text-destructive">{q.data.error}</p>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(q.data?.providers ?? []).map((p) => (
-            <article key={p.id} className="card-soft p-4">
-              <div className="flex items-start gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary font-display text-primary">{p.name[0]}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1 font-medium">{p.name} {p.verified ? <BadgeCheck className="size-4 text-primary" aria-label="Verified" /> : null}</p>
-                  <p className="text-sm text-muted-foreground">{p.headline}</p>
-                  <p className="mt-1 flex items-center gap-1 text-sm"><Star className="size-4 fill-accent text-accent" /> {p.rating} · {p.reviews} reviews · {rateLabel(p)}</p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {p.categories.map((c) => <Badge key={c} variant="secondary">{categoryById(c)?.label ?? c}</Badge>)}
-                  </div>
-                </div>
-              </div>
-              <Button asChild variant="link" className="mt-1 px-0">
-                <a href={p.contraUrl} target="_blank" rel="noreferrer">{copy.viewOnContra} <ExternalLink className="size-3" /></a>
-              </Button>
-            </article>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }

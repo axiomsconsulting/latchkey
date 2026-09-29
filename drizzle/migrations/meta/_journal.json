@@ -71,6 +71,13 @@
       "when": 1790680409058,
       "tag": "0009_stripe_payments_and_trades",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790684698362,
+      "tag": "0010_guide_pins_amenities_channel_labels_receipts",
+      "breakpoints": true
     }
   ]
 }

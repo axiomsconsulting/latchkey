@@ -30,7 +30,7 @@ export async function loadPropertyByCode(code: string) {
   const { data } = await db
     .from("properties")
     .select(
-      "id, host_id, name, short_code, timezone, check_in_pin, checkin_methods, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active, theme_config",
+      "id, host_id, name, short_code, timezone, check_in_pin, checkin_methods, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active, theme_config",
     )
     .eq("short_code", code.toLowerCase())
     .eq("active", true)
@@ -204,4 +204,20 @@ export async function readNameFromId(imageDataUrl: string): Promise<{ name: stri
   } catch {
     return { name: null, isId: false };
   }
+}
+
+/**
+ * Host-chosen wording for each booking platform. The internal channel id never
+ * changes, so a host renaming "Direct" to "Our website" can't break matching.
+ */
+export async function channelLabels(hostId: string): Promise<Record<string, string>> {
+  const db = await admin();
+  const { data } = await db.from("hosts").select("channel_labels").eq("id", hostId).maybeSingle();
+  const raw = data?.channel_labels;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 40);
+  }
+  return out;
 }

@@ -6,6 +6,9 @@
  * directories below: Latchkey builds a pre-filled search link for the job's
  * category and the property's postcode, so the host lands on real, reviewed
  * local firms instead of invented ones.
+ *
+ * None of these directories publish an API, and their terms forbid automated
+ * extraction of member listings, so Latchkey links out rather than copying.
  */
 
 export type Directory = {
@@ -92,14 +95,81 @@ export const DIRECTORIES: Directory[] = [
 
 export function directoryLinks(category: string, postcode: string) {
   const term = tradeTerm(category);
-  return DIRECTORIES.map((d) => ({ ...d, url: d.search(term, postcode || "High Wycombe") }));
+  const where = postcode.trim() || "UK";
+  return DIRECTORIES.map((d) => ({ ...d, url: d.search(term, where) }));
 }
 
-/** Contra still fits these: creative and marketing work for the listing itself. */
-export const CONTRA_USES = [
-  { id: "photography", label: "Listing photography and editing" },
-  { id: "copy", label: "Listing copy and guidebook writing" },
-  { id: "brand", label: "Logo, signage and welcome-card design" },
-  { id: "web", label: "Direct-booking website and landing pages" },
-  { id: "marketing", label: "Social posts and local ads" },
+/* ----------------------------- Contra (creative) -------------------------- */
+
+export type ContraCategory = {
+  id: string;
+  label: string;
+  blurb: string;
+  /** Sub-searches, each opening Contra pre-filled. */
+  subcategories: { id: string; label: string; term: string }[];
+};
+
+const contraSearch = (term: string) => `https://contra.com/search?q=${q(term)}`;
+
+export function contraLink(term: string): string {
+  return contraSearch(term);
+}
+
+/**
+ * What Contra is actually good for: the work that fills rooms, not the work
+ * that fixes them.
+ */
+export const CONTRA_CATEGORIES: ContraCategory[] = [
+  {
+    id: "photography",
+    label: "Photography and video",
+    blurb: "New listing photos, a room walkthrough and a short reel for social.",
+    subcategories: [
+      { id: "interiors", label: "Interior photography", term: "interior photographer airbnb" },
+      { id: "video", label: "Room walkthrough video", term: "short form property video editor" },
+      { id: "retouch", label: "Photo editing and retouching", term: "real estate photo retoucher" },
+      { id: "drone", label: "Exterior and drone", term: "drone property photographer" },
+    ],
+  },
+  {
+    id: "copy",
+    label: "Listing copy and guidebooks",
+    blurb: "Listing descriptions that rank, plus a welcome guide guests actually read.",
+    subcategories: [
+      { id: "listing", label: "Listing descriptions", term: "airbnb listing copywriter" },
+      { id: "guidebook", label: "Guest guidebook writing", term: "travel guidebook writer" },
+      { id: "translation", label: "Translation", term: "english to french hospitality translator" },
+      { id: "seo", label: "SEO and search copy", term: "seo copywriter hospitality" },
+    ],
+  },
+  {
+    id: "brand",
+    label: "Branding and signage",
+    blurb: "A name, a mark and the printed pieces guests see at the door.",
+    subcategories: [
+      { id: "logo", label: "Logo and identity", term: "logo designer hospitality brand" },
+      { id: "print", label: "Door signs and welcome cards", term: "print designer signage" },
+      { id: "qr", label: "QR and kiosk artwork", term: "graphic designer qr signage" },
+    ],
+  },
+  {
+    id: "web",
+    label: "Direct-booking website",
+    blurb: "Take bookings without a platform fee.",
+    subcategories: [
+      { id: "site", label: "Website build", term: "webflow developer booking site" },
+      { id: "booking", label: "Booking engine setup", term: "direct booking engine developer" },
+      { id: "analytics", label: "Analytics and tracking", term: "ga4 analytics consultant" },
+    ],
+  },
+  {
+    id: "marketing",
+    label: "Marketing and social",
+    blurb: "Fill the quiet midweek nights.",
+    subcategories: [
+      { id: "social", label: "Social media manager", term: "social media manager travel" },
+      { id: "ads", label: "Local ads", term: "google ads freelancer local business" },
+      { id: "email", label: "Email and repeat guests", term: "email marketing freelancer" },
+    ],
+  },
 ];

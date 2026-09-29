@@ -19,6 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { common, guideCopy as copy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { GuideOrderPanel } from "@/components/host/GuideOrderPanel";
+import { RoomAmenities } from "@/components/host/RoomAmenities";
 import { SECTIONS, type SectionKey } from "@/lib/guide";
 import {
   addStarterGuide,
@@ -41,7 +43,25 @@ export const Route = createFileRoute("/_authenticated/app/guides")({
 });
 
 type Step = { heading: string; body: string | null; imagePath: string | null; imageUrl: string | null };
-type Section = { roomId: string | null; sectionKey: SectionKey; summary: string | null; isStarter: boolean; steps: Step[] };
+type Section = {
+  roomId: string | null;
+  sectionKey: SectionKey;
+  summary: string | null;
+  isStarter: boolean;
+  pinned: boolean;
+  sortOrder: number;
+  steps: Step[];
+};
+
+/** The host's running order, with anything unordered keeping its usual place. */
+function orderedKeys(sections: Section[]): SectionKey[] {
+  return SECTIONS.map((s, i) => {
+    const house = sections.find((x) => x.roomId === null && x.sectionKey === s.key);
+    return { key: s.key, order: house?.sortOrder && house.sortOrder > 0 ? house.sortOrder : 100 + i };
+  })
+    .sort((a, b) => a.order - b.order)
+    .map((x) => x.key);
+}
 
 function GuidesPage() {
   const ws = useWorkspace();
@@ -58,11 +78,14 @@ function GuidesPage() {
   if (ws.isLoading) return <Skeleton className="mx-auto h-64 max-w-4xl rounded-2xl" />;
   if (!selectedId) return <EmptyState icon={BookOpen} title={copy.title} body="Add a property first." />;
 
-  const rooms = q.data?.rooms ?? [];
+  const rooms = (q.data?.rooms ?? []) as Array<{ id: string; display_name: string; guide_mode: string; amenities?: unknown }>;
   const sections = (q.data?.sections ?? []) as Section[];
   const roomId = scope === "house" ? null : scope;
   const room = rooms.find((r) => r.id === roomId);
   const houseCount = sections.filter((s) => s.roomId === null).length;
+  const order = orderedKeys(sections);
+  const pinned = new Set(sections.filter((s) => s.roomId === null && s.pinned).map((s) => s.sectionKey));
+  const roomAmenities = Array.isArray(room?.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [];
 
   async function runStarter() {
     setBusy(true);
@@ -138,11 +161,18 @@ function GuidesPage() {
         <p className="basis-full text-sm text-muted-foreground">{room ? copy.basicHelp : copy.scopeHelp}</p>
       </div>
 
+      {q.isLoading ? null : room ? (
+        <RoomAmenities propertyId={selectedId} roomId={room.id} amenities={roomAmenities} />
+      ) : (
+        <GuideOrderPanel propertyId={selectedId} order={order} pinned={pinned} />
+      )}
+
       {q.isLoading ? (
         <Skeleton className="h-96 rounded-2xl" />
       ) : (
         <Accordion type="single" collapsible className="space-y-3">
-          {SECTIONS.map((s) => {
+          {order.map((key) => {
+            const s = SECTIONS.find((x) => x.key === key)!;
             const own = sections.find((x) => x.sectionKey === s.key && x.roomId === roomId) ?? null;
             const house = roomId ? sections.find((x) => x.sectionKey === s.key && x.roomId === null) ?? null : null;
             const Icon = guestGuideIcons[s.key];

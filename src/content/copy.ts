@@ -376,7 +376,7 @@ export const guest = {
     "Check yourself in, find your room and ask for anything you need. It takes about a minute and there is nothing to download.",
   startCta: "Start check-in",
   helpCta: "I need help",
-  reassurance: "Arriving late? That is absolutely fine — the door code works at any hour.",
+  stayWindow: (from: string, by: string) => `Rooms are ready from ${from}. Check-out is by ${by}.`,
   // Flow
   welcomeTo: (name: string) => `Welcome to ${name}.`,
   letsCheckIn: "Let's get you checked in.",
@@ -397,6 +397,9 @@ export const guest = {
   } as Record<string, string>,
   noMatchTitle: "We couldn't find that booking",
   noMatchBody: "Please check your answers and try again. If it still doesn't work, your host is happy to help.",
+  welcomeBack: (name: string) => `Welcome back, ${name}`,
+  welcomeBackBody:
+    "You're already checked in. Just confirm it's you and we'll open your stay guide, where you can reread the house rules or ask for anything you need.",
   lockedTitle: "Let's pause for a moment",
   lockedBody: (time: string) =>
     `We've let your host know you're here. You can try again at ${time}, or give them a call.`,
@@ -466,24 +469,25 @@ export const hostPlaceholders = {
 
 export const services = {
   title: "Services",
-  subtitle: "Guest requests, issues and maintenance, booked through Contra.",
+  subtitle: "Guest requests, problems and maintenance, and where to find someone to do the work.",
   tabInbox: "Requests",
   tabScheduled: "Maintenance",
-  tabProviders: "Contra providers",
+  tabProviders: "Grow your listing",
   emptyInbox: "No requests yet. When a guest asks for something on their stay page, it lands here.",
   emptyScheduled: "No maintenance booked. Plan a boiler service, deep clean or handyman visit.",
   acknowledge: "Acknowledge",
-  recommend: "Find a provider",
+  recommend: "Find someone",
   appoint: "Appoint",
   decline: "Decline",
   markDone: "Mark done",
   inProgress: "Start",
-  recommendedTitle: "Recommended on Contra",
-  noProviders: "No Contra providers can cover this right now.",
+  recommendedTitle: "Who can come",
+  noProviders:
+    "Latchkey doesn't hold a list of trades. Open Find a trade to search the UK directories for this property's postcode.",
   bookMaintenance: "Book maintenance",
   demoBadge: "Demo",
   liveBadge: "Live",
-  viewOnContra: "View on Contra",
+  viewOnContra: "View profile",
   guestTold: "Guest has been told the arrival time.",
   statuses: {
     new: "New", acknowledged: "Acknowledged", booked: "Booked", in_progress: "In progress",
@@ -579,6 +583,22 @@ export const guideCopy = {
   guideLinkCopied: "Guide link copied. It opens on arrival day and stops at check-out.",
   notYet: (when: string) => `Your guide opens on ${when}. See you soon!`,
   photoAlt: (step: string) => `Photo: ${step}`,
+  showMore: "More",
+  showLess: "Less",
+  amenitiesTitle: "Already in your room",
+  amenitiesBody: "No need to ask for these — they're waiting for you.",
+  pinLabel: "Show on the reminder card",
+  pinHelp:
+    "Pick the few things guests always forget. Whatever you pin appears in the card at the top of the guide, and is left out of the list below so it's never said twice.",
+  pinnedBadge: "On the reminder card",
+  pinLimit: "Four reminders is about as many as anyone reads.",
+  orderTitle: "Running order",
+  orderHelp: "Move sections so the guide reads the way you'd explain it in person.",
+  moveUp: "Move up",
+  moveDown: "Move down",
+  orderSaved: "Order saved",
+  amenitiesLabel: "What's already in this room",
+  amenitiesHelp: "One per line, for example: Kettle, Hair dryer, Iron and board, Fresh towels.",
 };
 
 export const extrasCopy = {
@@ -734,14 +754,20 @@ export const payments = {
 export const trades = {
   tabLabel: "Find a trade",
   intro:
-    "Pick what needs doing and Latchkey opens a ready-made search on the UK sites that vet and review tradespeople. Latchkey doesn't copy their listings, so you always see live, up-to-date firms.",
+    "Pick what needs doing and Latchkey opens a ready-made search on the UK sites that vet and review tradespeople, using this property's own address. Latchkey doesn't copy their listings, so you always see live, up-to-date firms.",
   jobLabel: "What needs doing",
+  termLabel: "Search words",
   areaLabel: "Postcode or town",
+  needArea: "Add a postcode to this property, or type a town above, and the searches will open for that area.",
   searching: (term: string, area: string) => `Searching for “${term}” near ${area}.`,
+  searchNow: (name: string) => `Search ${name} now`,
   openOn: (name: string) => `Search ${name}`,
   legalNote:
     "These sites don't offer a way to pull their listings into other apps, and copying them automatically isn't allowed, so Latchkey links out instead. Once you've found someone you like, add them to a job so their details stay with the property.",
-  growthTitle: "Property growth & marketing",
+  growthTitle: "Grow your listing",
   growthBody:
-    "Contra is a marketplace for creative and marketing freelancers, not trades. It's the right place for photography, listing copy, signage and a direct-booking site.",
+    "Contra is a marketplace for creative, tech and marketing freelancers. It's the right place for photography, listing copy, signage, a direct-booking site and marketing.",
+  notMaintenance:
+    "Contra has no cleaners, plumbers or electricians, so it's never used for guest problems or maintenance. Use Find a trade for those.",
+  contraNote: "Each search opens on Contra in a new tab with the words already filled in.",
 };
