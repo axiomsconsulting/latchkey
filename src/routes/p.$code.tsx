@@ -41,7 +41,7 @@ export const Route = createFileRoute("/p/$code")({
 function GuestCheckIn() {
   const p = Route.useLoaderData();
   return (
-    <GuestFrame>
+    <GuestFrame theme={p.theme} name={p.name}>
       <CheckInFlow property={p} hostPhone={p.hostPhone} />
     </GuestFrame>
   );

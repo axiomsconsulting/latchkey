@@ -3,6 +3,7 @@ import { Car, Clock, Moon, Phone, ScrollText, Wifi } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
+import { StayServices } from "@/components/guest/StayServices";
 import { guest as copy } from "@/content/copy";
 import { getStay } from "@/lib/checkin.functions";
 import { formatUkDate, formatUkTime } from "@/lib/dates";
@@ -49,8 +50,9 @@ function Stay() {
     );
   }
   const p = s.property;
+  const { token } = Route.useParams();
   return (
-    <GuestFrame>
+    <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
       <main className="mx-auto max-w-4xl space-y-4 py-8">
         <div>
           <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
@@ -101,6 +103,7 @@ function Stay() {
             </Card>
           ) : null}
         </div>
+        <StayServices token={token} />
       </main>
     </GuestFrame>
   );

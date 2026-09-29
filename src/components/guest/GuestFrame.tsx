@@ -1,14 +1,35 @@
 import type { ReactNode } from "react";
 import { KeyRound } from "lucide-react";
 
-export function GuestFrame({ children }: { children: ReactNode }) {
+import { LogoMark } from "@/components/theme/LogoMark";
+import { ThemeScope } from "@/components/theme/ThemeScope";
+import type { ThemeConfig } from "@/lib/theme";
+
+export function GuestFrame({
+  children,
+  theme,
+  name,
+}: {
+  children: ReactNode;
+  theme?: ThemeConfig | null;
+  name?: string;
+}) {
   return (
-    <div className="min-h-screen bg-background px-4 sm:px-8">
-      <header className="mx-auto flex max-w-4xl items-center gap-2 pt-6 text-sm font-medium text-muted-foreground">
-        <KeyRound className="size-4 text-primary" /> Latchkey
+    <ThemeScope theme={theme} global className="min-h-screen px-4 sm:px-8">
+      <header className="mx-auto flex max-w-4xl items-center gap-3 pt-6 text-sm font-medium text-muted-foreground">
+        {theme && name ? (
+          <>
+            <LogoMark theme={theme} name={name} />
+            <span className="font-display text-lg text-foreground">{name}</span>
+          </>
+        ) : (
+          <>
+            <KeyRound className="size-4 text-primary" /> Latchkey
+          </>
+        )}
       </header>
       {children}
-    </div>
+    </ThemeScope>
   );
 }
 
