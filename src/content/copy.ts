@@ -397,6 +397,9 @@ export const guest = {
   } as Record<string, string>,
   noMatchTitle: "We couldn't find that booking",
   noMatchBody: "Please check your answers and try again. If it still doesn't work, your host is happy to help.",
+  welcomeBack: (name: string) => `Welcome back, ${name}`,
+  welcomeBackBody:
+    "You're already checked in. Just confirm it's you and we'll open your stay guide, where you can reread the house rules or ask for anything you need.",
   lockedTitle: "Let's pause for a moment",
   lockedBody: (time: string) =>
     `We've let your host know you're here. You can try again at ${time}, or give them a call.`,

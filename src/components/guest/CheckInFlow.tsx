@@ -336,8 +336,8 @@ export function CheckInFlow({
 
         {step.name === "confirm" ? (
           <section className="py-4 text-center">
-            <h1 className="text-4xl sm:text-6xl">{copy.hi(step.firstName)}</h1>
-            <p className="mt-4 text-xl text-muted-foreground">{copy.confirmBody}</p>
+            <h1 className="text-4xl sm:text-6xl">{step.returning ? copy.welcomeBack(step.firstName) : copy.hi(step.firstName)}</h1>
+            <p className="mt-4 text-xl text-muted-foreground">{step.returning ? copy.welcomeBackBody : copy.confirmBody}</p>
             <div className="mx-auto mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
               <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
                 {busy ? <Loader2 className="size-6 animate-spin" /> : null}
