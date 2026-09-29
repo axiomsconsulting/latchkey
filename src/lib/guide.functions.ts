@@ -27,7 +27,7 @@ export const getGuideEditor = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const [{ data: rooms }, { data: guides }] = await Promise.all([
-      supabase.from("rooms").select("id, display_name, guide_mode").eq("property_id", data.propertyId).order("sort_order"),
+      supabase.from("rooms").select("id, display_name, guide_mode, amenities").eq("property_id", data.propertyId).order("sort_order"),
       supabase
         .from("guides")
         .select("id, room_id, section_key, summary, is_starter, pinned, sort_order, guide_steps(id, heading, body, image_url, sort_order)")
