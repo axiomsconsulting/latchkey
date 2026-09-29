@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
+import { TodayRequests } from "@/components/host/TodayRequests";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { StatusBadge } from "@/components/host/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -279,6 +280,8 @@ function TodayPage() {
       </div>
 
       <AlertsPanel />
+
+      {selectedId ? <TodayRequests propertyId={selectedId} /> : null}
 
       {doubleBooked.length > 0 ? (
         <div role="alert" className="flex gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
