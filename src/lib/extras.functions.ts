@@ -239,7 +239,7 @@ export const getStayExtras = createServerFn({ method: "GET" })
     const late = items.find((i) => i.key === "late_checkout");
     const early = items.find((i) => i.key === "early_checkin");
     const { data: reqs } = await db
-      .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at, host_note, late_until, early_from")
+      .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at, host_note, late_until, early_from, payment_method, receipt_number, paid_at")
       .eq("booking_id", b.id).eq("kind", "extras").order("created_at", { ascending: false }).limit(20);
     const outUntil = p.hosts?.out_until && Date.parse(p.hosts.out_until) > Date.now() ? p.hosts.out_until : null;
     return {
@@ -248,13 +248,30 @@ export const getStayExtras = createServerFn({ method: "GET" })
       items,
       windows: availableWindows((p.quiet_hours_start ?? "22:00").slice(0, 5), (p.quiet_hours_end ?? "07:00").slice(0, 5), []),
       outUntil,
+      // Everything the receipt and the "card didn't work" fallback need.
+      propertyName: (p.name as string | null) ?? "Your stay",
+      hostName: (p.hosts?.business_name as string | null) ?? "your host",
+      hostPhone: (p.hosts?.contact_phone as string | null) ?? null,
+      bankDetails: (p.hosts?.bank_details as string | null) ?? "",
+      guestName: (b.guest_full_name as string | null) ?? null,
+      guestEmail: (b.guest_email as string | null) ?? null,
+      tax: {
+        registered: !!p.hosts?.tax_registered,
+        label: (p.hosts?.tax_label as string | null) ?? "VAT",
+        rateBp: (p.hosts?.tax_rate_bp as number | null) ?? 2000,
+        pricesInclude: p.hosts?.prices_include_tax ?? true,
+      },
       lateOptions: late ? lateCheckoutOptions({ checkOutTime: (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5), maxHours: late.maxQty, sameDayArrival: flags.sameDayArrival, blocked: [] }) : [],
       earlyOptions: early ? earlyCheckinOptions({ checkInTime: (b.check_in_time ?? p.default_check_in_time ?? "15:00").slice(0, 5), maxHours: early.maxQty, sameDayDeparture: flags.sameDayDeparture, blocked: [] }) : [],
       requests: (reqs ?? []).map((r: any) => ({
-        id: r.id, status: r.status as string, items: r.items as { name: string; qty: number }[], totalPence: r.total_pence as number,
+        id: r.id, status: r.status as string, items: r.items as { name: string; qty: number; totalPence?: number }[], totalPence: r.total_pence as number,
         payBy: r.pay_by as string | null, suggested: r.suggested_window as string | null, window: r.time_window as string | null,
         hostNote: (r.host_note as string | null) ?? null,
         lateUntil: (r.late_until as string | null) ?? null, earlyFrom: (r.early_from as string | null) ?? null,
+        paymentMethod: (r.payment_method as string | null) ?? null,
+        receiptNumber: (r.receipt_number as string | null) ?? null,
+        paidAt: (r.paid_at as string | null) ?? null,
+        createdAt: r.created_at as string,
       })),
     };
   });
