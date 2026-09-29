@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
+import { todayRequests as todayRequestsCopy } from "@/content/copy";
 import { TodayRequests } from "@/components/host/TodayRequests";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { StatusBadge } from "@/components/host/StatusBadge";
@@ -297,6 +298,18 @@ function TodayPage() {
       <AlertsPanel />
 
       {selectedId ? <TodayRequests propertyId={selectedId} /> : null}
+
+      {turnarounds.length > 0 ? (
+        <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
+          <ul className="space-y-1 text-sm">
+            {turnarounds.map((t) => (
+              <li key={t.id}>
+                <span className="font-medium">{t.room}</span> · {todayRequestsCopy.tightTurnaround(t.gap)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {doubleBooked.length > 0 ? (
         <div role="alert" className="flex gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
