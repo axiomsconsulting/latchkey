@@ -18,3 +18,9 @@
 ## Stay guides (done)
 - [x] House sections + room overrides, block editor with photos, basic/detailed per room
 - [x] Private guide link: arrival day to check-out; forget card; starter text
+
+## Requests & extras (waiting on user answers to 14 questions)
+- [ ] Price list, guest basket, late/early check-in availability, auto-approve, Stripe payment
+
+## Host–guest messaging (waiting on user answers)
+- [ ] Realtime thread, quick chips, urgent maintenance, presence, automatic reminders
