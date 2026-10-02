@@ -97,7 +97,10 @@ export function StayExtras({ token }: { token: string }) {
     url.searchParams.delete("paid");
     window.history.replaceState(null, "", url.toString());
     if (paid === "1") {
-      toast.success(paymentsCopy.paidToast);
+      void confirmPay({ data: { token } })
+        .then((r) => (r.confirmed ? toast.success(paymentsCopy.paidToast) : toast.info(copy.payTrouble)))
+        .catch(() => toast.info(copy.payTrouble))
+        .finally(() => qc.invalidateQueries({ queryKey: ["stay-extras", token] }));
       void qc.invalidateQueries({ queryKey: ["stay-extras", token] });
     } else {
       const pending = q.data?.requests.find((r) => r.status === "awaiting_payment");
