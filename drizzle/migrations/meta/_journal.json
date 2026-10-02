@@ -85,6 +85,13 @@
       "when": 1790691380029,
       "tag": "0011_trades_country_message_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790931861116,
+      "tag": "0012_tighten_hosts_pricing_policies",
+      "breakpoints": true
     }
   ]
 }

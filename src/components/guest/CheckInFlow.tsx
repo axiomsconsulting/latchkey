@@ -157,7 +157,7 @@ export function CheckInFlow({
 
   async function onPlatform(channel: Platform) {
     if (property.listFlow) {
-      const res = await run(() => list({ data: { code: property.code, deviceId: deviceId(), channel } }));
+      const res = await run(() => list({ data: { code: property.code, deviceId: deviceId(), channel, letter } }));
       if (!res) return;
       if ("until" in res && res.until) return setStep({ name: "locked", until: res.until });
       return setStep({ name: "pick", items: res.items });
@@ -173,7 +173,7 @@ export function CheckInFlow({
   }
 
   async function onPick(bookingId: string) {
-    const res = await run(() => pick({ data: { code: property.code, deviceId: deviceId(), bookingId } }));
+    const res = await run(() => pick({ data: { code: property.code, deviceId: deviceId(), bookingId, letter } }));
     if (!res) return;
     setToken(res.token);
     setStep({ name: "confirm", firstName: res.firstName });
@@ -236,9 +236,9 @@ export function CheckInFlow({
           className="mb-4"
           onClick={() =>
             setStep(
-              step.name === "letter" || (step.name === "platform" && property.listFlow)
+              step.name === "letter"
                 ? { name: "welcome" }
-                : step.name === "checkout"
+                : step.name === "checkout" || (step.name === "platform" && property.listFlow)
                   ? { name: "letter" }
                   : step.name === "platform"
                     ? { name: "checkout" }
@@ -266,7 +266,7 @@ export function CheckInFlow({
             <Button
               size="touch-xl"
               className="mt-10 w-full max-w-md text-xl"
-              onClick={() => setStep(property.listFlow ? { name: "platform" } : { name: "letter" })}
+              onClick={() => setStep({ name: "letter" })}
             >
               {copy.startCta}
             </Button>
@@ -289,7 +289,7 @@ export function CheckInFlow({
                   className="text-2xl font-semibold"
                   onClick={() => {
                     setLetter(l);
-                    setStep({ name: "checkout" });
+                    setStep(property.listFlow ? { name: "platform" } : { name: "checkout" });
                   }}
                 >
                   {l}

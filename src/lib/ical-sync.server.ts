@@ -44,17 +44,28 @@ export function assertSafeFeedUrl(raw: string): URL {
 }
 
 export async function fetchFeed(rawUrl: string): Promise<string> {
-  const url = assertSafeFeedUrl(rawUrl);
+  let url = assertSafeFeedUrl(rawUrl);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: { accept: "text/calendar, text/plain;q=0.8, */*;q=0.5" },
-    });
-    if (!res.ok) {
-      throw new FeedError(`The calendar provider replied with an error (${res.status}).`);
+    // Follow redirects by hand so every hop is re-checked against the safety rules.
+    let res: Response | null = null;
+    for (let hop = 0; hop <= 3; hop++) {
+      res = await fetch(url.toString(), {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: { accept: "text/calendar, text/plain;q=0.8, */*;q=0.5" },
+      });
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc || hop === 3) throw new FeedError("That calendar link redirects too many times.");
+        url = assertSafeFeedUrl(new URL(loc, url).toString());
+        continue;
+      }
+      break;
+    }
+    if (!res || !res.ok) {
+      throw new FeedError(`The calendar provider replied with an error (${res?.status ?? 0}).`);
     }
     const text = await res.text();
     if (text.length > MAX_BYTES) {
