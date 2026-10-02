@@ -33,7 +33,7 @@ export function PricingAdmin() {
   async function submit() {
     setBusy(true);
     try {
-      await save({ data: { base_pence: form.base_pence!, extra_room_pence: form.extra_room_pence!, extra_property_pence: form.extra_property_pence!, trial_days: form.trial_days! } });
+      await save({ data: { base_pence: form["base_pence"] ?? 0, extra_room_pence: form["extra_room_pence"] ?? 0, extra_property_pence: form["extra_property_pence"] ?? 0, trial_days: form["trial_days"] ?? 0 } });
       await qc.invalidateQueries({ queryKey: ["pricing"] });
       toast.success(c.saved);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Please try again."); }
