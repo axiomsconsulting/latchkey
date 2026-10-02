@@ -415,6 +415,8 @@ export const emailReceipt = createServerFn({ method: "POST" })
       to,
       subject: `Receipt ${number} · ${b.properties.name ?? "your stay"}`,
       body: `Receipt ${number}\n\n${lines}\n\nTotal: ${(r.total_pence / 100).toFixed(2)} ${b.properties.hosts?.currency ?? "GBP"}\nPaid by: ${r.payment_method ?? "card"}`,
+      from: b.properties.name ?? "Latchkey",
+      key: `receipt-${r.id}`,
     });
     if (sent) await db.from("requests").update({ receipt_number: number, receipt_emailed_at: new Date().toISOString() }).eq("id", r.id);
     return { sent, reason: sent ? null : ("not_configured" as const) };
