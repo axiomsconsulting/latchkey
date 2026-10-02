@@ -97,7 +97,7 @@ export async function raiseAlert(input: {
       return;
     }
     const { sendAlertEmail } = await import("./alert-email.server");
-    const sent = await sendAlertEmail(input.hostId, input.message);
+    const sent = await sendAlertEmail(input.hostId, input.message, data?.id);
     if (sent && data) {
       await db.from("host_alerts").update({ emailed_at: new Date().toISOString() }).eq("id", data.id);
     }

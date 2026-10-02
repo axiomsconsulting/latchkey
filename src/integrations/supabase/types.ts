@@ -836,6 +836,36 @@ export type Database = {
           },
         ]
       }
+      platform_pricing: {
+        Row: {
+          base_pence: number
+          currency: string
+          extra_property_pence: number
+          extra_room_pence: number
+          id: number
+          trial_days: number
+          updated_at: string
+        }
+        Insert: {
+          base_pence?: number
+          currency?: string
+          extra_property_pence?: number
+          extra_room_pence?: number
+          id?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Update: {
+          base_pence?: number
+          currency?: string
+          extra_property_pence?: number
+          extra_room_pence?: number
+          id?: number
+          trial_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       presence_log: {
         Row: {
           at: string
@@ -1521,6 +1551,24 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       verification_results: {
         Row: {
           booking_id: string
@@ -1611,11 +1659,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_host_member: { Args: { _host_id: string }; Returns: boolean }
       is_host_staff: { Args: { _host_id: string }; Returns: boolean }
       property_host_id: { Args: { _property_id: string }; Returns: string }
     }
     Enums: {
+      app_role: "admin" | "user"
       booking_channel:
         | "airbnb"
         | "booking_com"
@@ -1763,6 +1819,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       booking_channel: [
         "airbnb",
         "booking_com",
