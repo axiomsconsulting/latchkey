@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 
+import { DemoTrialCta } from "@/components/PricingSection";
 import { GuestFrame } from "@/components/guest/GuestFrame";
 import { PinPad } from "@/components/guest/PinPad";
 import { guest as copy } from "@/content/copy";
@@ -64,6 +65,7 @@ function PinEntry() {
           ) : null}
         </div>
       </main>
+      <DemoTrialCta />
     </GuestFrame>
   );
 }

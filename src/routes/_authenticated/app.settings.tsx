@@ -17,6 +17,7 @@ import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
+import { PricingAdmin } from "@/components/host/PricingAdmin";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
@@ -209,6 +210,7 @@ function SettingsPage() {
         />
       ) : null}
       {workspace.data ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
+      <PricingAdmin />
 
       <section className="card-soft p-5">
         <div className="flex items-start gap-3">
