@@ -399,13 +399,14 @@ export const chooseOfflinePayment = createServerFn({ method: "POST" })
  * still print or save the receipt.
  */
 export const emailReceipt = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ token, id: uuid, to: z.string().email().nullable().default(null) }).parse(d))
+  .inputValidator((d) => z.object({ token, id: uuid, to: z.null().optional() }).parse(d))
   .handler(async ({ data }) => {
     const { db, b } = await stayContext(data.token);
     const { data: r } = await db.from("requests").select("id, status, items, total_pence, receipt_number, payment_method, created_at").eq("id", data.id).eq("booking_id", b.id).maybeSingle();
     if (!r) throw new Error("We couldn't find that request.");
     if (r.status !== "confirmed") throw new Error("The receipt is ready once payment is confirmed.");
-    const to = data.to ?? (b.guest_email as string | null);
+    // Only ever sent to the address on the booking, never a caller-chosen one.
+    const to = (b.guest_email as string | null) ?? null;
     if (!to) return { sent: false, reason: "no_address" as const };
 
     const number = r.receipt_number ?? receiptNumber(r.id, r.created_at);

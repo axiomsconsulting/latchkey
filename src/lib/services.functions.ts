@@ -98,8 +98,10 @@ export const uploadBrandAsset = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     // RLS check: the caller must be able to read this property.
-    const { data: prop } = await context.supabase.from("properties").select("id").eq("id", data.propertyId).maybeSingle();
+    const { data: prop } = await context.supabase.from("properties").select("id, host_id").eq("id", data.propertyId).maybeSingle();
     if (!prop) throw new Error("Property not found.");
+    const { data: canEdit } = await context.supabase.rpc("is_host_member", { _host_id: prop.host_id });
+    if (!canEdit) throw new Error("Only owners and co-hosts can upload files.");
 
     const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(data.dataUrl);
     if (!m) throw new Error("That file couldn't be read.");

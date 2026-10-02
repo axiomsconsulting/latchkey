@@ -172,8 +172,10 @@ export const uploadGuidePhoto = createServerFn({ method: "POST" })
     z.object({ propertyId: uuid, dataUrl: z.string().max(7_000_000).regex(/^data:image\/(jpeg|png|webp);base64,/) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: prop } = await context.supabase.from("properties").select("id").eq("id", data.propertyId).maybeSingle();
+    const { data: prop } = await context.supabase.from("properties").select("id, host_id").eq("id", data.propertyId).maybeSingle();
     if (!prop) throw new Error("Property not found.");
+    const { data: canEdit } = await context.supabase.rpc("is_host_member", { _host_id: prop.host_id });
+    if (!canEdit) throw new Error("Only owners and co-hosts can upload files.");
     const m = /^data:image\/(jpeg|png|webp);base64,(.+)$/.exec(data.dataUrl)!;
     const bytes = Buffer.from(m[2]!, "base64");
     if (bytes.length > 5 * 1024 * 1024) throw new Error("Photos must be under 5 MB.");
