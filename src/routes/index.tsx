@@ -4,6 +4,7 @@ import { ArrowRight, Check, Minus, ScanLine, Sparkles, Layers } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { brand, marketing } from "@/content/copy";
+import { PricingSection } from "@/components/PricingSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -12,6 +13,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: marketing.subhead },
       { property: "og:title", content: "Latchkey — self-service arrivals for small hosts" },
       { property: "og:description", content: marketing.subhead },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Landing,
@@ -29,6 +32,9 @@ function Landing() {
           </span>
           <span className="truncate font-display text-xl">{brand.name}</span>
         </span>
+        <Button asChild variant="outline" size="sm">
+          <a href="#pricing">Pricing</a>
+        </Button>
         <Button asChild variant="outline" size="sm">
           <Link to="/app/today">Host dashboard</Link>
         </Button>
@@ -64,6 +70,8 @@ function Landing() {
             <ChannelBadge channel="direct" />
           </div>
         </section>
+
+        <PricingSection />
 
         <section className="grid gap-5 sm:grid-cols-3">
           {marketing.benefits.map((benefit, i) => {

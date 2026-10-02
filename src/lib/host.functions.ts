@@ -605,7 +605,8 @@ export const loadDemoData = createServerFn({ method: "POST" })
         channel: c.channel,
         listing_name: c.listing_name,
         masked_url: "example-calendar.test/…demo",
-        sync_status: "never" as const,
+        sync_status: "ok" as const,
+        last_synced_at: new Date(Date.now() - 12 * 60_000).toISOString(),
         is_demo: true,
       })),
     );

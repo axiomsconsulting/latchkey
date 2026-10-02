@@ -899,3 +899,23 @@ export const tradesCopy = {
   cancel: "Cancel",
   remove: "Remove",
 };
+
+export const pricingCopy = {
+  eyebrow: "Pricing",
+  title: (days: number) => `Free for ${days} days, then pennies a month`,
+  base: (v: string) => `${v} a month for your first property and room`,
+  room: (v: string) => `${v} a month for each extra room`,
+  property: (v: string) => `${v} a month for each extra property`,
+  guarantee: "Money-back guarantee if it isn't for you",
+  cta: (days: number) => `Start your ${days}-day free trial`,
+  estimator: "What would I pay?",
+  properties: "Properties",
+  roomsEach: "Rooms in each",
+  after: (days: number) => `After your ${days}-day free trial`,
+  perMonth: "a month",
+  demoTitle: "Like what you see? Run your own rooms this way.",
+  demoBody: (days: number) => `Register as a host and try Latchkey free for ${days} days, with a money-back guarantee.`,
+  adminTitle: "Subscription pricing (super admin)",
+  adminBody: "Amounts in pence. Changes show on the home page straight away.",
+  saved: "Pricing saved",
+};

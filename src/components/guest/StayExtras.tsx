@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { extrasCopy as copy, payments as paymentsCopy, responseNotes } from "@/content/copy";
 import { formatPence } from "@/lib/services";
 import { acceptSuggestion, cancelExtrasRequest, chooseOfflinePayment, createExtrasRequest, getStayExtras } from "@/lib/extras.functions";
-import { startExtrasCheckout } from "@/lib/payments.functions";
+import { confirmExtrasPayment, startExtrasCheckout } from "@/lib/payments.functions";
 import { cn } from "@/lib/utils";
 
 type Line = { key: string; qty: number; size: string | null };
@@ -23,6 +23,7 @@ export function StayExtras({ token }: { token: string }) {
   const accept = useServerFn(acceptSuggestion);
   const offline = useServerFn(chooseOfflinePayment);
   const checkout = useServerFn(startExtrasCheckout);
+  const confirmPay = useServerFn(confirmExtrasPayment);
   const [payingId, setPayingId] = useState<string | null>(null);
   const q = useQuery({ queryKey: ["stay-extras", token], queryFn: () => fetchFn({ data: { token } }), refetchInterval: 20_000 });
   const [lines, setLines] = useState<Line[]>([]);
@@ -97,7 +98,10 @@ export function StayExtras({ token }: { token: string }) {
     url.searchParams.delete("paid");
     window.history.replaceState(null, "", url.toString());
     if (paid === "1") {
-      toast.success(paymentsCopy.paidToast);
+      void confirmPay({ data: { token } })
+        .then((r) => (r.confirmed ? toast.success(paymentsCopy.paidToast) : toast.info(copy.payTrouble)))
+        .catch(() => toast.info(copy.payTrouble))
+        .finally(() => qc.invalidateQueries({ queryKey: ["stay-extras", token] }));
       void qc.invalidateQueries({ queryKey: ["stay-extras", token] });
     } else {
       const pending = q.data?.requests.find((r) => r.status === "awaiting_payment");
