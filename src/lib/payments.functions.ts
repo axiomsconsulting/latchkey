@@ -149,3 +149,32 @@ export const startExtrasCheckout = createServerFn({ method: "POST" })
     await db.from("requests").update({ stripe_session_id: session.id }).eq("id", r.id);
     return { url: session.url };
   });
+
+/** On return from Stripe, check the session directly so payment confirms without waiting for the webhook. */
+export const confirmExtrasPayment = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const { stripeCall } = await import("./stripe.server");
+    const { admin, sha256 } = await import("./checkin.server");
+    const db = await admin();
+    const { data: st } = await db.from("stay_tokens").select("booking_id").eq("token_hash", sha256(data.token)).maybeSingle();
+    if (!st) return { confirmed: false };
+    const { data: pending } = await db
+      .from("requests")
+      .select("id, booking_id, stripe_session_id")
+      .eq("booking_id", st.booking_id)
+      .eq("status", "awaiting_payment")
+      .not("stripe_session_id", "is", null);
+    let confirmed = false;
+    for (const r of pending ?? []) {
+      const s = await stripeCall<{ payment_status: string; payment_intent: string | null; client_reference_id: string | null }>(
+        `/checkout/sessions/${r.stripe_session_id}`,
+      ).catch(() => null);
+      if (!s || s.payment_status !== "paid" || s.client_reference_id !== r.id) continue;
+      const now = new Date().toISOString();
+      await db.from("requests").update({ status: "confirmed", paid_at: now, pay_by: null, payment_method: "card", stripe_payment_intent: s.payment_intent }).eq("id", r.id).eq("status", "awaiting_payment");
+      await db.from("messages").insert({ booking_id: r.booking_id, direction: "outbound", channel: "stay_page", body: "Payment received, thank you. You're all booked.", sent_at: now });
+      confirmed = true;
+    }
+    return { confirmed };
+  });
