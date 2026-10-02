@@ -185,6 +185,29 @@ export const matchBooking = createServerFn({ method: "POST" })
  */
 const letterField = z.string().regex(/^[A-Za-z]$/);
 
+/**
+ * Listed stays are handed out as short-lived, device-bound handles instead of
+ * raw booking ids, so pickArrival only accepts stays this device was shown.
+ */
+async function arrivalHandle(bookingId: string, hash: string): Promise<string> {
+  const { createHmac } = await import("crypto");
+  const exp = Date.now() + 10 * 60_000;
+  const body = `${Buffer.from(bookingId).toString("base64url")}.${exp}`;
+  const mac = createHmac("sha256", `arrival:${process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? ""}`).update(`${body}.${hash}`).digest("base64url");
+  return `${body}.${mac}`;
+}
+
+async function readArrivalHandle(handle: string, hash: string): Promise<string | null> {
+  const { createHmac, timingSafeEqual } = await import("crypto");
+  const [id64, exp, mac] = handle.split(".");
+  if (!id64 || !exp || !mac || Number(exp) < Date.now()) return null;
+  const want = createHmac("sha256", `arrival:${process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? ""}`).update(`${id64}.${exp}.${hash}`).digest("base64url");
+  const a = Buffer.from(mac), b = Buffer.from(want);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  const id = Buffer.from(id64, "base64url").toString();
+  return /^[0-9a-f-]{36}$/i.test(id) ? id : null;
+}
+
 export const listArrivals = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ code, deviceId, channel, letter: letterField }).parse(d))
   .handler(async ({ data }) => {
@@ -220,13 +243,15 @@ export const listArrivals = createServerFn({ method: "POST" })
       if (nowLocked) return { items: [], until: nowLocked.toISOString() };
     }
     return {
-      items: items.map((b) => ({ id: b.id, label: shortName(b.guest_full_name), checkOut: b.check_out_date })),
+      items: await Promise.all(
+        items.map(async (b) => ({ id: await arrivalHandle(b.id, hash), label: shortName(b.guest_full_name), checkOut: b.check_out_date })),
+      ),
     };
   });
 
 export const pickArrival = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z.object({ code, deviceId, bookingId: z.string().uuid(), letter: letterField }).parse(d),
+    z.object({ code, deviceId, bookingId: z.string().max(300), letter: letterField }).parse(d),
   )
   .handler(async ({ data }) => {
     const { admin, deviceHash, loadPropertyByCode } = await srv();
@@ -234,12 +259,14 @@ export const pickArrival = createServerFn({ method: "POST" })
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) throw new Error("Not available.");
     const hash = deviceHash(p.id, data.deviceId);
     if (await deviceLock(p.id, hash)) throw new Error("Check-in is paused on this device for a few minutes.");
+    const bookingId = await readArrivalHandle(data.bookingId, hash);
+    if (!bookingId) throw new Error("That stay is not available. Please start again.");
     const db = await admin();
     const today = todayInZone(p.timezone ?? "Europe/London");
     const { data: b } = await db
       .from("bookings")
       .select("id, channel, status, check_in_date, check_out_date, guest_full_name, mirror_of")
-      .eq("id", data.bookingId)
+      .eq("id", bookingId)
       .eq("property_id", p.id)
       .maybeSingle();
     const ok =
