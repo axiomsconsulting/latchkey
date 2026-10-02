@@ -50,6 +50,7 @@ const main = { backgroundColor: '#faf6ef', fontFamily: 'Georgia, serif' }
 const container = { padding: '28px 28px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e8e0d2', margin: '24px auto', maxWidth: '520px' }
 const h1 = {
   fontSize: '22px',
+  fontFamily: 'Georgia, serif',
   fontWeight: 'bold' as const,
   color: '#2f4a38',
   margin: '0 0 20px',
@@ -73,8 +74,8 @@ const footer = { fontSize: '12px', color: '#8a8478', margin: '30px 0 0' }
 // Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
 const darkModeCss = `
   @media (prefers-color-scheme: dark) {
-    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+    .dm-btn { background-color: #2f4a38 !important; color: #ffffff !important; }
   }
-  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
-  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  [data-ogsc] .dm-btn { background-color: #2f4a38 !important; color: #ffffff !important; }
+  [data-ogsb] .dm-btn { background-color: #2f4a38 !important; color: #ffffff !important; }
 `

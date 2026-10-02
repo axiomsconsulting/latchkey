@@ -9,7 +9,7 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 // Configuration
-const SITE_NAME = "Latch Key"
+const SITE_NAME = "Latchkey"
 const SENDER_DOMAIN = "notify.latchkey.omsestates.uk"
 const ROOT_DOMAIN = "latchkey.omsestates.uk"
 const FROM_DOMAIN = "notify.latchkey.omsestates.uk"

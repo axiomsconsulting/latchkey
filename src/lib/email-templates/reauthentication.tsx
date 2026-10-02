@@ -38,6 +38,7 @@ const main = { backgroundColor: '#faf6ef', fontFamily: 'Georgia, serif' }
 const container = { padding: '28px 28px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e8e0d2', margin: '24px auto', maxWidth: '520px' }
 const h1 = {
   fontSize: '22px',
+  fontFamily: 'Georgia, serif',
   fontWeight: 'bold' as const,
   color: '#2f4a38',
   margin: '0 0 20px',
@@ -51,6 +52,7 @@ const text = {
 const codeStyle = {
   fontFamily: 'Courier, monospace',
   fontSize: '22px',
+  fontFamily: 'Georgia, serif',
   fontWeight: 'bold' as const,
   color: '#2f4a38',
   margin: '0 0 30px',
