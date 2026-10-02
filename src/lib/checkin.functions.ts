@@ -21,6 +21,7 @@ import {
   methodSequence,
   normaliseMethods,
   shortName,
+  surnameInitial,
   usesListFlow,
 } from "./checkin-logic";
 import { compareNames } from "./name-match";
@@ -177,14 +178,21 @@ export const matchBooking = createServerFn({ method: "POST" })
     };
   });
 
-/** Pick-your-booking list, only when the host has switched ID checks off. */
+/**
+ * Pick-your-booking list, only when the host has switched ID checks off.
+ * The guest must give their surname initial first, every lookup counts as an
+ * attempt (so the device lock applies), and only matching stays are listed.
+ */
+const letterField = z.string().regex(/^[A-Za-z]$/);
+
 export const listArrivals = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ code, deviceId, channel }).parse(d))
+  .inputValidator((d) => z.object({ code, deviceId, channel, letter: letterField }).parse(d))
   .handler(async ({ data }) => {
     const { admin, deviceHash, loadPropertyByCode } = await srv();
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) return { items: [] };
-    const locked = await deviceLock(p.id, deviceHash(p.id, data.deviceId));
+    const hash = deviceHash(p.id, data.deviceId);
+    const locked = await deviceLock(p.id, hash);
     if (locked) return { items: [], until: locked.toISOString() };
     const db = await admin();
     const today = todayInZone(p.timezone ?? "Europe/London");
@@ -196,19 +204,36 @@ export const listArrivals = createServerFn({ method: "POST" })
       .lte("check_in_date", today)
       .gt("check_out_date", today)
       .limit(50);
+    const letter = data.letter.toUpperCase();
+    const items = arrivalCandidates(rows ?? [], today).filter(
+      (b) => b.guest_full_name && surnameInitial(b.guest_full_name) === letter,
+    );
+    await db.from("check_in_attempts").insert({
+      property_id: p.id,
+      booking_id: null,
+      surname_attempt: letter,
+      succeeded: items.length > 0,
+      device_hash: hash,
+    });
+    if (items.length === 0) {
+      const nowLocked = await deviceLock(p.id, hash);
+      if (nowLocked) return { items: [], until: nowLocked.toISOString() };
+    }
     return {
-      items: arrivalCandidates(rows ?? [], today)
-        .filter((b) => b.guest_full_name)
-        .map((b) => ({ id: b.id, label: shortName(b.guest_full_name), checkOut: b.check_out_date })),
+      items: items.map((b) => ({ id: b.id, label: shortName(b.guest_full_name), checkOut: b.check_out_date })),
     };
   });
 
 export const pickArrival = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ code, deviceId, bookingId: z.string().uuid() }).parse(d))
+  .inputValidator((d) =>
+    z.object({ code, deviceId, bookingId: z.string().uuid(), letter: letterField }).parse(d),
+  )
   .handler(async ({ data }) => {
-    const { admin, loadPropertyByCode } = await srv();
+    const { admin, deviceHash, loadPropertyByCode } = await srv();
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) throw new Error("Not available.");
+    const hash = deviceHash(p.id, data.deviceId);
+    if (await deviceLock(p.id, hash)) throw new Error("Check-in is paused on this device for a few minutes.");
     const db = await admin();
     const today = todayInZone(p.timezone ?? "Europe/London");
     const { data: b } = await db
@@ -217,7 +242,18 @@ export const pickArrival = createServerFn({ method: "POST" })
       .eq("id", data.bookingId)
       .eq("property_id", p.id)
       .maybeSingle();
-    if (!b || arrivalCandidates([b], today).length !== 1) throw new Error("That stay is not available.");
+    const ok =
+      !!b &&
+      arrivalCandidates([b], today).length === 1 &&
+      surnameInitial(b.guest_full_name) === data.letter.toUpperCase();
+    await db.from("check_in_attempts").insert({
+      property_id: p.id,
+      booking_id: ok ? b!.id : null,
+      surname_attempt: data.letter.toUpperCase(),
+      succeeded: ok,
+      device_hash: hash,
+    });
+    if (!ok || !b) throw new Error("That stay is not available.");
     return { token: await startSession(p.id, b.id), firstName: firstName(b.guest_full_name) };
   });
 
