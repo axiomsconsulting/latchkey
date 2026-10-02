@@ -55,17 +55,19 @@ export function ReceiptCard(p: Props) {
   }));
 
   function print() {
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${copy.receiptNo(r.receiptNumber ?? "")}</title>
+    const e = (v: unknown) =>
+      String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${e(copy.receiptNo(r.receiptNumber ?? ""))}</title>
       <style>body{font-family:system-ui,sans-serif;margin:32px;color:#2c2a26}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:16px}
       td,th{text-align:left;padding:8px 0;border-bottom:1px solid #e6e0d6}tfoot td{font-weight:600;border:0}</style></head><body>
-      <h1>${p.propertyName}</h1><p>${p.hostName}</p>
-      <p>${copy.receiptNo(r.receiptNumber ?? "")}<br>${when}${p.guestName ? `<br>${p.guestName}` : ""}</p>
+      <h1>${e(p.propertyName)}</h1><p>${e(p.hostName)}</p>
+      <p>${e(copy.receiptNo(r.receiptNumber ?? ""))}<br>${e(when)}${p.guestName ? `<br>${e(p.guestName)}` : ""}</p>
       <table><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
-      ${rows.map((x) => `<tr><td>${x.name}</td><td>${x.qty}</td><td>${x.total ? formatPence(x.total, p.currency) : copy.free}</td></tr>`).join("")}
+      ${rows.map((x) => `<tr><td>${e(x.name)}</td><td>${e(x.qty)}</td><td>${x.total ? e(formatPence(x.total, p.currency)) : e(copy.free)}</td></tr>`).join("")}
       </tbody><tfoot>
-      ${taxPence ? `<tr><td colspan="2">${p.tax.label}</td><td>${formatPence(taxPence, p.currency)}</td></tr>` : ""}
-      <tr><td colspan="2">${copy.receiptTotal}</td><td>${formatPence(r.totalPence, p.currency)}</td></tr>
-      <tr><td colspan="2">Paid by</td><td>${copy.receiptPaidBy[r.paymentMethod ?? "card"] ?? "Card"}</td></tr>
+      ${taxPence ? `<tr><td colspan="2">${e(p.tax.label)}</td><td>${e(formatPence(taxPence, p.currency))}</td></tr>` : ""}
+      <tr><td colspan="2">${e(copy.receiptTotal)}</td><td>${e(formatPence(r.totalPence, p.currency))}</td></tr>
+      <tr><td colspan="2">Paid by</td><td>${e(copy.receiptPaidBy[r.paymentMethod ?? "card"] ?? "Card")}</td></tr>
       </tfoot></table></body></html>`;
     const w = window.open("", "_blank", "width=720,height=900");
     if (!w) return;

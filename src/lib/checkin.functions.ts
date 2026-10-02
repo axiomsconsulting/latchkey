@@ -381,6 +381,17 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
     const methods = normaliseMethods(ctx.property.checkin_methods);
     if (!ctx.session.confirmed || !methods.enabled.photo_id) throw new Error("Not available.");
     if (ctx.session.photo_attempts >= MAX_PHOTO_ATTEMPTS) return { status: "fallback" as const };
+    // Property-wide cap on paid ID reads per hour, so new sessions cannot be
+    // used to run up AI charges.
+    const { data: recent } = await ctx.db
+      .from("checkin_sessions")
+      .select("photo_attempts")
+      .eq("property_id", ctx.property.id)
+      .gt("created_at", new Date(Date.now() - 3_600_000).toISOString())
+      .gt("photo_attempts", 0)
+      .limit(500);
+    const used = (recent ?? []).reduce((n, r) => n + (r.photo_attempts ?? 0), 0);
+    if (used >= 30) return { status: "fallback" as const };
 
     await ctx.db
       .from("checkin_sessions")
