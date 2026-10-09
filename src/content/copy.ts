@@ -8,12 +8,39 @@ export const brand = {
   tagline: "Self-service arrivals for small hosts",
 };
 
+export const demoCopy = {
+  cta: "Try the demo",
+  title: "Try Latchkey",
+  body: "No sign-up or PIN needed. Pick a side to explore.",
+  guestTitle: "As a guest",
+  guestBody: "Check in, read the stay guide and order extras.",
+  hostTitle: "As a host",
+  hostBody: "See arrivals, bookings, calendars and requests.",
+  resetNote: "Demo data is shared and resets every day.",
+  error: "The demo couldn't start just now. Please try again.",
+};
+
+export const siteMenu = {
+  open: "Open menu",
+  title: "Menu",
+  demo: "Try the demo",
+  pricing: "Pricing",
+  guest: "Guest check-in",
+  signIn: "Host sign in or register",
+  dashboard: "Host dashboard",
+  bookings: "Bookings",
+  services: "Services",
+  admin: "Settings and admin",
+  signOut: "Sign out",
+};
+
 export const marketing = {
   headline: "Your guests let themselves in, calmly, while you get on with your day.",
   subhead:
     "Latchkey handles arrivals, house rules and extras for hosts who let a few rooms across Airbnb, Booking.com, Homestay.com and direct bookings.",
-  primaryCta: "See a guest arrival",
-  secondaryCta: "Open host dashboard",
+  primaryCta: "Try the demo",
+  secondaryCta: "Start free trial",
+  footer: "© 2026 Latchkey. Self-service arrivals and stay companion for hospitality hosts.",
   benefits: [
     {
       title: "Check-in without you",
