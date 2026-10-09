@@ -52,7 +52,7 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog {...(open !== undefined ? { open } : {})} {...(onOpenChange ? { onOpenChange } : {})}>
       {children ? <DialogTrigger asChild>{children}</DialogTrigger> : null}
       <DialogContent className="max-w-md">
         <DialogHeader>
