@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { brand, marketing } from "@/content/copy";
 import { PricingSection } from "@/components/PricingSection";
+import { DemoPicker } from "@/components/DemoPicker";
+import { SiteMenu } from "@/components/SiteMenu";
 
 export const Route = createFileRoute("/")({
   head: () => ({
