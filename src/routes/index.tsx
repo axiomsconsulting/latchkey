@@ -32,12 +32,7 @@ function Landing() {
           </span>
           <span className="truncate font-display text-xl">{brand.name}</span>
         </span>
-        <Button asChild variant="outline" size="sm">
-          <a href="#pricing">Pricing</a>
-        </Button>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/app/today">Host dashboard</Link>
-        </Button>
+        <SiteMenu />
       </header>
 
       <main className="mx-auto max-w-6xl px-5 pb-24">
@@ -52,14 +47,14 @@ function Landing() {
             {marketing.subhead}
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <Button asChild size="lg" variant="accent">
-              <Link to="/p/demo">
+            <DemoPicker>
+              <Button size="lg" variant="accent">
                 {marketing.primaryCta}
                 <ArrowRight />
-              </Link>
-            </Button>
+              </Button>
+            </DemoPicker>
             <Button asChild size="lg" variant="outline">
-              <Link to="/app/today">{marketing.secondaryCta}</Link>
+              <Link to="/auth">{marketing.secondaryCta}</Link>
             </Button>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-2">
