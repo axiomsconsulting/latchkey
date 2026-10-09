@@ -527,17 +527,22 @@ export const loadDemoData = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ hostId: uuid }).parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    await removeDemoRows(supabase, data.hostId);
+    const property = await seedDemo(context.supabase, data.hostId);
+    return { propertyId: property.id };
+  });
+
+/** Wipes and re-creates the demo property for a host. Used by the public demo too. */
+export async function seedDemo(supabase: Client, hostId: string, shortCode?: string) {
+    await removeDemoRows(supabase, hostId);
 
     const suffix = Math.random().toString(36).slice(2, 6);
     const { data: property, error } = await supabase
       .from("properties")
       .insert({
         ...DEMO_PROPERTY,
-        short_code: `${DEMO_PROPERTY.short_code}-${suffix}`,
+        short_code: shortCode ?? `${DEMO_PROPERTY.short_code}-${suffix}`,
         check_in_pin: String(100000 + Math.floor(Math.random() * 899999)),
-        host_id: data.hostId,
+        host_id: hostId,
         is_demo: true,
       })
       .select("*")
@@ -611,8 +616,8 @@ export const loadDemoData = createServerFn({ method: "POST" })
       })),
     );
 
-    return { propertyId: property.id };
-  });
+    return property as { id: string; short_code: string };
+}
 
 export const removeDemoData = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
