@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, Outlet, redirect, useRouter } from "@tanstack/react-router";
 
 import { supabase } from "@/integrations/supabase/client";
 import { isDemoBrowser } from "@/lib/demo-session";
@@ -26,5 +27,23 @@ export const Route = createFileRoute("/_authenticated")({
     if (!user) throw redirect({ to: "/auth" });
     return { user };
   },
-  component: () => <Outlet />,
+  component: AuthenticatedLayout,
 });
+
+function AuthenticatedLayout() {
+  const router = useRouter();
+  // A demo session can also lapse while a page is open (refresh fails and
+  // Supabase signs this tab out). Sign back in instead of leaving it broken.
+  // A deliberate sign-out clears the demo flag first, so it is left alone.
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_OUT" || !isDemoBrowser()) return;
+      void resumeDemo().then((user) => {
+        if (user) void router.invalidate();
+        else void router.navigate({ to: "/auth" });
+      });
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router]);
+  return <Outlet />;
+}

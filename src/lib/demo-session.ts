@@ -4,8 +4,9 @@
  * session: a global sign-out would revoke every other visitor's session too.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { DEMO_EMAIL } from "@/lib/demo-account";
 
-export const DEMO_EMAIL = "demo@latchkey.omsestates.uk";
+export { DEMO_EMAIL };
 const FLAG = "latchkey-demo";
 
 export function markDemo(on: boolean) {

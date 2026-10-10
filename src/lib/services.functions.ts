@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertNotSharedDemo } from "@/lib/demo-account";
 import { INTEGRATION_KEYS, normaliseModes } from "./integration-modes";
 import { categoryById, recommendProviders, type Provider } from "./services";
 import { normaliseTheme, RESERVED_SLUGS } from "./theme";
@@ -97,6 +98,7 @@ export const uploadBrandAsset = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
     // RLS check: the caller must be able to read this property.
     const { data: prop } = await context.supabase.from("properties").select("id, host_id").eq("id", data.propertyId).maybeSingle();
     if (!prop) throw new Error("Property not found.");

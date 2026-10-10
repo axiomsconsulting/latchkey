@@ -26,6 +26,7 @@ import {
   surnameInitial,
   usesListFlow,
 } from "./checkin-logic";
+import { DEMO_CODE, isTour } from "./demo-account";
 import { compareNames } from "./name-match";
 import { normaliseTheme } from "./theme";
 
@@ -45,9 +46,9 @@ function hourIn(tz: string): number {
 /* --------------------------- property + entry ---------------------------- */
 
 /**
- * Shared demo only: the answers for one fake guest, so visitors always reach a
- * successful check-in. Falls back to someone already staying once today's
- * arrival has been checked in by an earlier visitor.
+ * Guest tour only: the answers for one fake guest, so visitors always reach a
+ * successful check-in. If an earlier visitor already checked today's arrival
+ * in, they are put back to arriving so the next visitor gets the same flow.
  */
 async function demoHint(propertyId: string, today: string) {
   const { admin } = await srv();
@@ -62,7 +63,12 @@ async function demoHint(propertyId: string, today: string) {
     .limit(50);
   const rows = (data ?? []) as Array<MatchableBooking & { phone_last4: string | null; reservation_code: string | null }>;
   const named = (list: MatchableBooking[]) => list.find((x) => surnameInitial(x.guest_full_name));
-  const hit = named(arrivalCandidates(rows, today)) ?? named(stayingCandidates(rows, today));
+  let hit = named(arrivalCandidates(rows, today));
+  if (!hit) {
+    const done = rows.find((r) => r.status === "checked_in" && r.check_in_date === today && surnameInitial(r.guest_full_name));
+    if (done) await db.from("bookings").update({ status: "upcoming", checked_in_at: null }).eq("id", done.id);
+    hit = done ?? named(stayingCandidates(rows, today));
+  }
   const b = rows.find((r) => r.id === hit?.id);
   return b
     ? {
@@ -79,20 +85,25 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
     const srvMod = await srv();
-    let p = await srvMod.loadPropertyByCode(data.code);
-    if (!p) return { found: false as const };
     // The public guest tour rebuilds itself once a day, even when visitors
     // arrive straight from a link instead of through the demo picker.
-    const { DEMO_CODE, freshDemoCode } = await import("./demo.functions");
-    if (p.is_demo && p.short_code === DEMO_CODE) {
+    const tour = data.code.toLowerCase() === DEMO_CODE;
+    if (tour) {
       try {
-        await freshDemoCode(await srvMod.admin(), p.host_id);
+        const { ensureTour } = await import("./demo.functions");
+        await ensureTour(await srvMod.admin());
       } catch {
         // Another visitor may be rebuilding it at the same moment.
       }
-      p = await srvMod.loadPropertyByCode(data.code);
-      if (!p) return { found: false as const };
     }
+    type Property = Awaited<ReturnType<typeof srvMod.loadPropertyByCode>>;
+    let p: Property = await srvMod.loadPropertyByCode(data.code);
+    // A rebuild replaces the tour in well under a few seconds; wait it out.
+    for (let i = 0; tour && !p && i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      p = await srvMod.loadPropertyByCode(data.code);
+    }
+    if (!p) return { found: false as const };
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const methods = normaliseMethods(p.checkin_methods);
@@ -109,7 +120,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
       channelLabels: await channelLabels(p.host_id),
       theme: normaliseTheme(p.theme_config),
-      demoHint: p.is_demo ? await demoHint(p.id, today) : null,
+      demoHint: isTour(p) ? await demoHint(p.id, today) : null,
     };
   });
 
@@ -131,9 +142,9 @@ export const resolvePin = createServerFn({ method: "POST" })
 
 /* ------------------------------ matching -------------------------------- */
 
-async function deviceLock(propertyId: string, hash: string, demo = false) {
-  // Shared demo property: visitors guess freely, never locked or alerted.
-  if (demo) return null;
+async function deviceLock(propertyId: string, hash: string, tour = false) {
+  // The public guest tour: visitors guess freely, never locked or alerted.
+  if (tour) return null;
   const { admin } = await srv();
   const db = await admin();
   const { data } = await db
@@ -177,7 +188,7 @@ export const matchBooking = createServerFn({ method: "POST" })
     if (!p) throw new Error("We could not find this property.");
     const hash = deviceHash(p.id, data.deviceId);
 
-    const locked = await deviceLock(p.id, hash, p.is_demo);
+    const locked = await deviceLock(p.id, hash, isTour(p));
     if (locked) return { status: "locked" as const, until: locked.toISOString() };
 
     const db = await admin();
@@ -205,7 +216,7 @@ export const matchBooking = createServerFn({ method: "POST" })
     });
 
     if (!hit) {
-      const nowLocked = await deviceLock(p.id, hash, p.is_demo);
+      const nowLocked = await deviceLock(p.id, hash, isTour(p));
       if (nowLocked) {
         await raiseAlert({
           hostId: p.host_id,
@@ -263,7 +274,7 @@ export const listArrivals = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) return { items: [] };
     const hash = deviceHash(p.id, data.deviceId);
-    const locked = await deviceLock(p.id, hash, p.is_demo);
+    const locked = await deviceLock(p.id, hash, isTour(p));
     if (locked) return { items: [], until: locked.toISOString() };
     const db = await admin();
     const today = todayInZone(p.timezone ?? "Europe/London");
@@ -287,7 +298,7 @@ export const listArrivals = createServerFn({ method: "POST" })
       device_hash: hash,
     });
     if (items.length === 0) {
-      const nowLocked = await deviceLock(p.id, hash, p.is_demo);
+      const nowLocked = await deviceLock(p.id, hash, isTour(p));
       if (nowLocked) return { items: [], until: nowLocked.toISOString() };
     }
     return {
@@ -306,7 +317,7 @@ export const pickArrival = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) throw new Error("Not available.");
     const hash = deviceHash(p.id, data.deviceId);
-    if (await deviceLock(p.id, hash, p.is_demo)) throw new Error("Check-in is paused on this device for a few minutes.");
+    if (await deviceLock(p.id, hash, isTour(p))) throw new Error("Check-in is paused on this device for a few minutes.");
     const bookingId = await readArrivalHandle(data.bookingId, hash);
     if (!bookingId) throw new Error("That stay is not available. Please start again.");
     const db = await admin();
@@ -345,7 +356,7 @@ async function sessionContext(t: string) {
     .single();
   const { data: p } = await db
     .from("properties")
-    .select("id, host_id, name, checkin_methods, is_demo")
+    .select("id, host_id, name, checkin_methods, is_demo, short_code")
     .eq("id", session.property_id)
     .single();
   if (!b || !p) throw new Error("This check-in has timed out. Please start again.");
@@ -478,8 +489,8 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
     let read: { name: string | null; isId: boolean };
     try {
       const modes = await hostModes(ctx.property.host_id);
-      // Demo mode or demo property: skip the AI call and pretend the ID shows the booking name.
-      read = modes.id_check === "demo" || ctx.property.is_demo
+      // Demo mode or the guest tour: skip the AI call and pretend the ID shows the booking name.
+      read = modes.id_check === "demo" || isTour(ctx.property)
         ? { name: ctx.booking.guest_full_name, isId: true }
         : await readNameFromId(data.image);
     } catch {

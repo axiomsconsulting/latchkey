@@ -8,7 +8,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertNotSharedDemo } from "@/lib/demo-account";
 import { maskUrl } from "./ical";
+import { RESERVED_SLUGS } from "./theme";
 import { todayInZone } from "./dates";
 import {
   DEMO_BOOKINGS,
@@ -132,6 +134,12 @@ export const saveProperty = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => propertyInput.parse(input))
   .handler(async ({ data, context }) => {
     const { id, hostId, ...fields } = data;
+    if (RESERVED_SLUGS.has(fields.short_code)) {
+      const { data: current } = id
+        ? await context.supabase.from("properties").select("short_code").eq("id", id).maybeSingle()
+        : { data: null };
+      if (current?.short_code !== fields.short_code) throw new Error("That short link is reserved. Try another.");
+    }
     const payload = { ...fields, host_id: hostId };
     const q = id
       ? context.supabase.from("properties").update(payload).eq("id", id).select("*").single()
@@ -527,7 +535,13 @@ export const loadDemoData = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ hostId: uuid }).parse(input))
   .handler(async ({ data, context }) => {
-    const property = await seedDemo(context.supabase, data.hostId);
+    // The shared demo resets itself; one visitor must not wipe it for everyone.
+    assertNotSharedDemo(context.claims);
+    const { data: isOwner } = await context.supabase.rpc("has_host_role", { _host_id: data.hostId, _role: "owner" });
+    if (!isOwner) throw new Error("Only the owner can load sample rooms.");
+    // Only Latchkey's server may mark rows as demo, so seed with the service role.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const property = await seedDemo(supabaseAdmin, data.hostId);
     return { propertyId: property.id };
   });
 
