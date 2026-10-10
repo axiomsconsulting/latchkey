@@ -55,7 +55,7 @@ async function demoHint(propertyId: string, today: string) {
   const b = arrivalCandidates((data ?? []) as never[], today).find((x: { guest_full_name: string | null }) => x.guest_full_name) as
     | { guest_full_name: string; check_out_date: string; channel: string }
     | undefined;
-  return b ? { letter: surnameInitial(b.guest_full_name), checkOut: b.check_out_date, channel: b.channel } : null;
+  return b ? { letter: surnameInitial(b.guest_full_name) ?? "", checkOut: b.check_out_date, channel: b.channel } : null;
 }
 
 export const getCheckinProperty = createServerFn({ method: "GET" })
