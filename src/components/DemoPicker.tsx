@@ -6,6 +6,7 @@ import { KeyRound, LayoutDashboard, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { demoCopy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
+import { markDemo } from "@/lib/demo-session";
 import { startDemo } from "@/lib/demo.functions";
 
 export function DemoPicker({ children, open, onOpenChange }: { children?: ReactNode; open?: boolean; onOpenChange?: (o: boolean) => void }) {
@@ -23,10 +24,11 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
         await navigate({ to: "/p/$code", params: { code: res.code } });
         return;
       }
-      await supabase.auth.signOut();
+      // Local only: a global sign-out here would end every other demo visitor's session.
+      await supabase.auth.signOut({ scope: "local" });
       const { error: e } = await supabase.auth.verifyOtp({ token_hash: res.tokenHash!, type: "magiclink" });
       if (e) throw e;
-      localStorage.setItem("latchkey-demo", "1");
+      markDemo(true);
       await navigate({ to: "/app/today" });
     } catch {
       setError(demoCopy.error);

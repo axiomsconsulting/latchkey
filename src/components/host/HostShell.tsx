@@ -7,7 +7,7 @@ import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { auth, brand, hostNav } from "@/content/copy";
 import { useAlerts, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
-import { supabase } from "@/integrations/supabase/client";
+import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
 import { normaliseTheme } from "@/lib/theme";
 
 type NavItem = { to: string; label: string; icon: LucideIcon };
@@ -37,8 +37,8 @@ export function HostShell() {
   const host = data?.host as { business_name?: string } | null | undefined;
   const title = property?.name ?? host?.business_name ?? brand.name;
 
-  async function signOut() {
-    await supabase.auth.signOut();
+  async function leave() {
+    await signOut();
     await navigate({ to: "/auth" });
   }
 
@@ -76,7 +76,7 @@ export function HostShell() {
 
         <button
           type="button"
-          onClick={signOut}
+          onClick={leave}
           className="spring mt-auto flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <LogOut className="size-5" />
@@ -84,10 +84,10 @@ export function HostShell() {
         </button>
       </aside>
 
-      {(host as { contact_email?: string } | null | undefined)?.contact_email === "demo@latchkey.omsestates.uk" ? (
+      {(host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL ? (
         <button
           type="button"
-          onClick={async () => { localStorage.removeItem("latchkey-demo"); await supabase.auth.signOut(); await navigate({ to: "/auth" }); }}
+          onClick={() => void leave()}
           className="fixed bottom-24 right-4 z-40 h-12 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:bottom-6 md:right-6 print:hidden"
         >
           Start your free trial
@@ -106,7 +106,7 @@ export function HostShell() {
         <HostInbox propertyId={selectedId ?? null} />
         <button
           type="button"
-          onClick={signOut}
+          onClick={leave}
           aria-label={auth.signOut}
           className="grid size-11 place-items-center rounded-xl text-muted-foreground"
         >

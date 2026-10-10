@@ -59,7 +59,7 @@ export type CheckinProperty = {
   name: string;
   code: string;
   checkoutChoices: string[];
-  demoHint?: { letter: string; checkOut: string; channel: string } | null;
+  demoHint?: { letter: string; checkOut: string; channel: string; refLast4: string | null; phoneLast4: string | null } | null;
   listFlow: boolean;
   checkInFrom?: string;
   checkOutBy?: string;
@@ -216,6 +216,20 @@ export function CheckInFlow({
 
   const lockedTime = step.name === "locked" ? formatUkTime(new Date(step.until).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })) : "";
 
+  // Shared demo only: tell visitors the fake guest's answers for the step they're on.
+  const hint = property.demoHint;
+  const demoHint = !hint
+    ? null
+    : ["welcome", "letter", "checkout", "platform", "no_match"].includes(step.name)
+      ? copy.demoHint(
+          hint.letter,
+          formatUkDate(hint.checkOut),
+          property.channelLabels?.[hint.channel] ?? copy.platforms[hint.channel as Platform] ?? hint.channel,
+        )
+      : step.name === "identity" && step.method !== "self_declare"
+        ? copy.demoIdHint(hint.refLast4, hint.phoneLast4)
+        : null;
+
   const canGoBack = ["letter", "checkout", "platform", "pick"].includes(step.name);
 
   // The square only means something once there is a stay to carry across.
@@ -260,10 +274,8 @@ export function CheckInFlow({
 
 
       <main className="card-soft p-6 sm:p-10" aria-live="polite">
-        {property.demoHint && step.name !== "done" ? (
-          <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">
-            {copy.demoHint(property.demoHint.letter, formatUkDate(property.demoHint.checkOut))}
-          </p>
+        {demoHint ? (
+          <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">{demoHint}</p>
         ) : null}
         {step.name === "welcome" ? (
           <div className="py-6 text-center">

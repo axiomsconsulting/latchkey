@@ -1,11 +1,12 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { supabase } from "@/integrations/supabase/client";
+import { isDemoBrowser } from "@/lib/demo-session";
 import { startDemo } from "@/lib/demo.functions";
 
 /** Shared demo browsers silently sign the demo account back in instead of bouncing to /auth. */
 async function resumeDemo() {
-  if (localStorage.getItem("latchkey-demo") !== "1") return null;
+  if (!isDemoBrowser()) return null;
   try {
     const res = await startDemo({ data: { as: "host" } });
     const { data, error } = await supabase.auth.verifyOtp({ token_hash: res.tokenHash!, type: "magiclink" });

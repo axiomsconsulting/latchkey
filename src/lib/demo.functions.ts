@@ -9,8 +9,29 @@ import { z } from "zod";
 import { seedDemo } from "./host.functions";
 
 const DEMO_EMAIL = "demo@latchkey.omsestates.uk";
-const DEMO_CODE = "tour";
+export const DEMO_CODE = "tour";
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Rebuilds the shared demo property when it is missing, from an earlier day,
+ * or has no arrival today, so the guest tour always has someone to check in.
+ */
+export async function freshDemoCode(admin: any, hostId: string): Promise<string> {
+  const { data: prop } = await admin
+    .from("properties").select("id, short_code, created_at")
+    .eq("host_id", hostId).eq("is_demo", true).limit(1).maybeSingle();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  let stale = !prop || Date.now() - new Date(prop.created_at).getTime() > DAY_MS;
+  if (prop && !stale) {
+    const seededOn = new Date(prop.created_at).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+    const { count } = await admin.from("bookings").select("id", { count: "exact", head: true })
+      .eq("property_id", prop.id).eq("check_in_date", today);
+    stale = seededOn !== today || !count;
+  }
+  if (!stale) return prop.short_code as string;
+  const fresh = await seedDemo(admin, hostId, DEMO_CODE);
+  return fresh.short_code;
+}
 
 export const startDemo = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ as: z.enum(["host", "guest"]) }).parse(input))
@@ -47,26 +68,12 @@ export const startDemo = createServerFn({ method: "POST" })
     }
 
     // 3. Daily reset: rebuild if missing or older than a day.
-    const { data: prop } = await admin
-      .from("properties").select("id, short_code, created_at")
-      .eq("host_id", hostId).eq("is_demo", true).limit(1).maybeSingle();
-    let code = prop?.short_code as string | undefined;
-    let stale = false;
-    if (prop) {
-      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
-      const { count } = await admin.from("bookings").select("id", { count: "exact", head: true })
-        .eq("property_id", prop.id).eq("check_in_date", today);
-      stale = !count;
-    }
-    if (!prop || stale || Date.now() - new Date(prop.created_at).getTime() > DAY_MS) {
-      const fresh = await seedDemo(admin, hostId!, DEMO_CODE);
-      code = fresh.short_code;
-    }
+    const code = await freshDemoCode(admin, hostId!);
 
-    if (data.as === "guest") return { code: code!, tokenHash: null };
+    if (data.as === "guest") return { code, tokenHash: null };
 
     // 4. Host: one-time sign-in token, verified in the browser.
     const { data: link, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: DEMO_EMAIL });
     if (error) throw new Error("The demo is unavailable right now.");
-    return { code: code!, tokenHash: link.properties.hashed_token as string };
+    return { code, tokenHash: link.properties.hashed_token as string };
   });

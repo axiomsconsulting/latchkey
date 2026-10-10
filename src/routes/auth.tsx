@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth as copy, brand } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
+import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -41,9 +42,8 @@ function AuthPage() {
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return;
       // Shared demo session: drop it so visitors can register their own account.
-      if (data.session.user.email === "demo@latchkey.omsestates.uk") {
-        localStorage.removeItem("latchkey-demo");
-        await supabase.auth.signOut();
+      if (data.session.user.email === DEMO_EMAIL) {
+        await signOut();
         setMode("sign_up");
         return;
       }
@@ -70,6 +70,8 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
+      // A real account from here on: never fall back to the demo when it expires.
+      markDemo(false);
       await navigate({ to: "/app/today" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : copy.genericError);

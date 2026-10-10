@@ -480,7 +480,12 @@ export const guest = {
   kioskWrongPin: "That PIN isn't right.",
   pinTitle: "Enter the property PIN",
   pinNote: "For guests with a booking PIN from their host.",
-  demoHint: (letter: string, date: string) => `Demo: tap ${letter}, then check-out ${date}.`,
+  demoHint: (letter: string, date: string, platform: string) =>
+    `Demo: tap ${letter}, then check-out ${date}, then ${platform}.`,
+  demoIdHint: (ref: string | null, phone: string | null) =>
+    ["Demo: any photo works", ref ? `booking reference ends ${ref}` : null, phone ? `phone ends ${phone}` : null]
+      .filter(Boolean)
+      .join(", ") + ".",
   pinBody: "You'll find the 6-digit PIN in your booking message or by the front door.",
   pinWrong: "We couldn't find a property with that PIN.",
   clear: "Clear",

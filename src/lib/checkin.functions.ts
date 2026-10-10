@@ -17,10 +17,12 @@ import {
   findStaying,
   firstName,
   last4Matches,
+  type MatchableBooking,
   lockedUntil,
   methodSequence,
   normaliseMethods,
   shortName,
+  stayingCandidates,
   surnameInitial,
   usesListFlow,
 } from "./checkin-logic";
@@ -42,28 +44,55 @@ function hourIn(tz: string): number {
 
 /* --------------------------- property + entry ---------------------------- */
 
+/**
+ * Shared demo only: the answers for one fake guest, so visitors always reach a
+ * successful check-in. Falls back to someone already staying once today's
+ * arrival has been checked in by an earlier visitor.
+ */
 async function demoHint(propertyId: string, today: string) {
   const { admin } = await srv();
   const db = await admin();
   const { data } = await db
     .from("bookings")
-    .select("channel, status, check_in_date, check_out_date, guest_full_name, mirror_of")
+    .select("id, channel, status, check_in_date, check_out_date, guest_full_name, mirror_of, phone_last4, reservation_code")
     .eq("property_id", propertyId)
     .lte("check_in_date", today)
     .gt("check_out_date", today)
+    .order("check_in_date", { ascending: false })
     .limit(50);
-  const b = arrivalCandidates((data ?? []) as never[], today).find((x: { guest_full_name: string | null }) => x.guest_full_name) as
-    | { guest_full_name: string; check_out_date: string; channel: string }
-    | undefined;
-  return b ? { letter: surnameInitial(b.guest_full_name) ?? "", checkOut: b.check_out_date, channel: b.channel } : null;
+  const rows = (data ?? []) as Array<MatchableBooking & { phone_last4: string | null; reservation_code: string | null }>;
+  const named = (list: MatchableBooking[]) => list.find((x) => surnameInitial(x.guest_full_name));
+  const hit = named(arrivalCandidates(rows, today)) ?? named(stayingCandidates(rows, today));
+  const b = rows.find((r) => r.id === hit?.id);
+  return b
+    ? {
+        letter: surnameInitial(b.guest_full_name) ?? "",
+        checkOut: b.check_out_date,
+        channel: b.channel,
+        refLast4: b.reservation_code ? b.reservation_code.replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase() : null,
+        phoneLast4: b.phone_last4,
+      }
+    : null;
 }
 
 export const getCheckinProperty = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
     const srvMod = await srv();
-    const p = await srvMod.loadPropertyByCode(data.code);
+    let p = await srvMod.loadPropertyByCode(data.code);
     if (!p) return { found: false as const };
+    // The public guest tour rebuilds itself once a day, even when visitors
+    // arrive straight from a link instead of through the demo picker.
+    const { DEMO_CODE, freshDemoCode } = await import("./demo.functions");
+    if (p.is_demo && p.short_code === DEMO_CODE) {
+      try {
+        await freshDemoCode(await srvMod.admin(), p.host_id);
+      } catch {
+        // Another visitor may be rebuilding it at the same moment.
+      }
+      p = await srvMod.loadPropertyByCode(data.code);
+      if (!p) return { found: false as const };
+    }
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const methods = normaliseMethods(p.checkin_methods);
@@ -80,7 +109,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
       channelLabels: await channelLabels(p.host_id),
       theme: normaliseTheme(p.theme_config),
-      demoHint: (p as { is_demo?: boolean }).is_demo ? await demoHint(p.id, today) : null,
+      demoHint: p.is_demo ? await demoHint(p.id, today) : null,
     };
   });
 
@@ -148,7 +177,7 @@ export const matchBooking = createServerFn({ method: "POST" })
     if (!p) throw new Error("We could not find this property.");
     const hash = deviceHash(p.id, data.deviceId);
 
-    const locked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
+    const locked = await deviceLock(p.id, hash, p.is_demo);
     if (locked) return { status: "locked" as const, until: locked.toISOString() };
 
     const db = await admin();
@@ -176,7 +205,7 @@ export const matchBooking = createServerFn({ method: "POST" })
     });
 
     if (!hit) {
-      const nowLocked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
+      const nowLocked = await deviceLock(p.id, hash, p.is_demo);
       if (nowLocked) {
         await raiseAlert({
           hostId: p.host_id,
@@ -234,7 +263,7 @@ export const listArrivals = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) return { items: [] };
     const hash = deviceHash(p.id, data.deviceId);
-    const locked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
+    const locked = await deviceLock(p.id, hash, p.is_demo);
     if (locked) return { items: [], until: locked.toISOString() };
     const db = await admin();
     const today = todayInZone(p.timezone ?? "Europe/London");
@@ -258,7 +287,7 @@ export const listArrivals = createServerFn({ method: "POST" })
       device_hash: hash,
     });
     if (items.length === 0) {
-      const nowLocked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
+      const nowLocked = await deviceLock(p.id, hash, p.is_demo);
       if (nowLocked) return { items: [], until: nowLocked.toISOString() };
     }
     return {
@@ -277,7 +306,7 @@ export const pickArrival = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) throw new Error("Not available.");
     const hash = deviceHash(p.id, data.deviceId);
-    if (await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo))) throw new Error("Check-in is paused on this device for a few minutes.");
+    if (await deviceLock(p.id, hash, p.is_demo)) throw new Error("Check-in is paused on this device for a few minutes.");
     const bookingId = await readArrivalHandle(data.bookingId, hash);
     if (!bookingId) throw new Error("That stay is not available. Please start again.");
     const db = await admin();
@@ -316,7 +345,7 @@ async function sessionContext(t: string) {
     .single();
   const { data: p } = await db
     .from("properties")
-    .select("id, host_id, name, checkin_methods")
+    .select("id, host_id, name, checkin_methods, is_demo")
     .eq("id", session.property_id)
     .single();
   if (!b || !p) throw new Error("This check-in has timed out. Please start again.");
@@ -449,8 +478,8 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
     let read: { name: string | null; isId: boolean };
     try {
       const modes = await hostModes(ctx.property.host_id);
-      // Demo mode: skip the AI call and pretend the ID shows the booking name.
-      read = modes.id_check === "demo"
+      // Demo mode or demo property: skip the AI call and pretend the ID shows the booking name.
+      read = modes.id_check === "demo" || ctx.property.is_demo
         ? { name: ctx.booking.guest_full_name, isId: true }
         : await readNameFromId(data.image);
     } catch {

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { siteMenu } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/demo-session";
 
 const item =
   "flex min-h-12 w-full items-center rounded-2xl px-4 text-left text-base font-medium hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -53,7 +54,7 @@ export function SiteMenu() {
                 <button
                   type="button"
                   className={item}
-                  onClick={async () => { close(); await supabase.auth.signOut(); await navigate({ to: "/" }); }}
+                  onClick={async () => { close(); await signOut(); await navigate({ to: "/" }); }}
                 >
                   {siteMenu.signOut}
                 </button>
