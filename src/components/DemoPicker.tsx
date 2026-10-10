@@ -26,6 +26,7 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
       await supabase.auth.signOut();
       const { error: e } = await supabase.auth.verifyOtp({ token_hash: res.tokenHash!, type: "magiclink" });
       if (e) throw e;
+      localStorage.setItem("latchkey-demo", "1");
       await navigate({ to: "/app/today" });
     } catch {
       setError(demoCopy.error);

@@ -42,6 +42,22 @@ function hourIn(tz: string): number {
 
 /* --------------------------- property + entry ---------------------------- */
 
+async function demoHint(propertyId: string, today: string) {
+  const { admin } = await srv();
+  const db = await admin();
+  const { data } = await db
+    .from("bookings")
+    .select("channel, status, check_in_date, check_out_date, guest_full_name, mirror_of")
+    .eq("property_id", propertyId)
+    .lte("check_in_date", today)
+    .gt("check_out_date", today)
+    .limit(50);
+  const b = arrivalCandidates((data ?? []) as never[], today).find((x: { guest_full_name: string | null }) => x.guest_full_name) as
+    | { guest_full_name: string; check_out_date: string; channel: string }
+    | undefined;
+  return b ? { letter: surnameInitial(b.guest_full_name) ?? "", checkOut: b.check_out_date, channel: b.channel } : null;
+}
+
 export const getCheckinProperty = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
@@ -64,6 +80,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
       channelLabels: await channelLabels(p.host_id),
       theme: normaliseTheme(p.theme_config),
+      demoHint: (p as { is_demo?: boolean }).is_demo ? await demoHint(p.id, today) : null,
     };
   });
 
@@ -85,7 +102,9 @@ export const resolvePin = createServerFn({ method: "POST" })
 
 /* ------------------------------ matching -------------------------------- */
 
-async function deviceLock(propertyId: string, hash: string) {
+async function deviceLock(propertyId: string, hash: string, demo = false) {
+  // Shared demo property: visitors guess freely, never locked or alerted.
+  if (demo) return null;
   const { admin } = await srv();
   const db = await admin();
   const { data } = await db
@@ -129,7 +148,7 @@ export const matchBooking = createServerFn({ method: "POST" })
     if (!p) throw new Error("We could not find this property.");
     const hash = deviceHash(p.id, data.deviceId);
 
-    const locked = await deviceLock(p.id, hash);
+    const locked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
     if (locked) return { status: "locked" as const, until: locked.toISOString() };
 
     const db = await admin();
@@ -157,7 +176,7 @@ export const matchBooking = createServerFn({ method: "POST" })
     });
 
     if (!hit) {
-      const nowLocked = await deviceLock(p.id, hash);
+      const nowLocked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
       if (nowLocked) {
         await raiseAlert({
           hostId: p.host_id,
@@ -215,7 +234,7 @@ export const listArrivals = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) return { items: [] };
     const hash = deviceHash(p.id, data.deviceId);
-    const locked = await deviceLock(p.id, hash);
+    const locked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
     if (locked) return { items: [], until: locked.toISOString() };
     const db = await admin();
     const today = todayInZone(p.timezone ?? "Europe/London");
@@ -239,7 +258,7 @@ export const listArrivals = createServerFn({ method: "POST" })
       device_hash: hash,
     });
     if (items.length === 0) {
-      const nowLocked = await deviceLock(p.id, hash);
+      const nowLocked = await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo));
       if (nowLocked) return { items: [], until: nowLocked.toISOString() };
     }
     return {
@@ -258,7 +277,7 @@ export const pickArrival = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p || !usesListFlow(normaliseMethods(p.checkin_methods))) throw new Error("Not available.");
     const hash = deviceHash(p.id, data.deviceId);
-    if (await deviceLock(p.id, hash)) throw new Error("Check-in is paused on this device for a few minutes.");
+    if (await deviceLock(p.id, hash, Boolean((p as { is_demo?: boolean }).is_demo))) throw new Error("Check-in is paused on this device for a few minutes.");
     const bookingId = await readArrivalHandle(data.bookingId, hash);
     if (!bookingId) throw new Error("That stay is not available. Please start again.");
     const db = await admin();

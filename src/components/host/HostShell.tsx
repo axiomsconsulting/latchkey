@@ -87,7 +87,7 @@ export function HostShell() {
       {(host as { contact_email?: string } | null | undefined)?.contact_email === "demo@latchkey.omsestates.uk" ? (
         <button
           type="button"
-          onClick={async () => { await supabase.auth.signOut(); await navigate({ to: "/auth" }); }}
+          onClick={async () => { localStorage.removeItem("latchkey-demo"); await supabase.auth.signOut(); await navigate({ to: "/auth" }); }}
           className="fixed bottom-24 right-4 z-40 h-12 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:bottom-6 md:right-6 print:hidden"
         >
           Start your free trial

@@ -51,7 +51,14 @@ export const startDemo = createServerFn({ method: "POST" })
       .from("properties").select("id, short_code, created_at")
       .eq("host_id", hostId).eq("is_demo", true).limit(1).maybeSingle();
     let code = prop?.short_code as string | undefined;
-    if (!prop || Date.now() - new Date(prop.created_at).getTime() > DAY_MS) {
+    let stale = false;
+    if (prop) {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+      const { count } = await admin.from("bookings").select("id", { count: "exact", head: true })
+        .eq("property_id", prop.id).eq("check_in_date", today);
+      stale = !count;
+    }
+    if (!prop || stale || Date.now() - new Date(prop.created_at).getTime() > DAY_MS) {
       const fresh = await seedDemo(admin, hostId!, DEMO_CODE);
       code = fresh.short_code;
     }
