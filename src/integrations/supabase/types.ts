@@ -1668,6 +1668,7 @@ export type Database = {
       }
       is_host_member: { Args: { _host_id: string }; Returns: boolean }
       is_host_staff: { Args: { _host_id: string }; Returns: boolean }
+      is_shared_demo_user: { Args: never; Returns: boolean }
       property_host_id: { Args: { _property_id: string }; Returns: string }
     }
     Enums: {
