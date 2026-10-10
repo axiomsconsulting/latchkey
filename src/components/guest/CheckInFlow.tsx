@@ -59,6 +59,7 @@ export type CheckinProperty = {
   name: string;
   code: string;
   checkoutChoices: string[];
+  demoHint?: { letter: string; checkOut: string; channel: string } | null;
   listFlow: boolean;
   checkInFrom?: string;
   checkOutBy?: string;
@@ -259,6 +260,11 @@ export function CheckInFlow({
 
 
       <main className="card-soft p-6 sm:p-10" aria-live="polite">
+        {property.demoHint && step.name !== "done" ? (
+          <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">
+            {copy.demoHint(property.demoHint.letter, formatUkDate(property.demoHint.checkOut))}
+          </p>
+        ) : null}
         {step.name === "welcome" ? (
           <div className="py-6 text-center">
             <h1 className="text-3xl leading-tight sm:text-5xl">{copy.welcomeTo(property.name)}</h1>

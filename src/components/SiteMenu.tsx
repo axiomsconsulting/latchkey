@@ -43,7 +43,7 @@ export function SiteMenu() {
               {siteMenu.demo}
             </button>
             <a href="/#pricing" className={item} onClick={close}>{siteMenu.pricing}</a>
-            <Link to="/checkin" className={item} onClick={close}>{siteMenu.guest}</Link>
+            <Link to="/p/$code" params={{ code: "tour" }} className={item} onClick={close}>{siteMenu.guest}</Link>
             {signedIn ? (
               <>
                 <Link to="/app/today" className={item} onClick={close}>{siteMenu.dashboard}</Link>

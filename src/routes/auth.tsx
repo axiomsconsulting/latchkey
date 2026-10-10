@@ -42,6 +42,7 @@ function AuthPage() {
       if (!data.session) return;
       // Shared demo session: drop it so visitors can register their own account.
       if (data.session.user.email === "demo@latchkey.omsestates.uk") {
+        localStorage.removeItem("latchkey-demo");
         await supabase.auth.signOut();
         setMode("sign_up");
         return;
