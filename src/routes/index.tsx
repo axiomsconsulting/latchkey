@@ -114,7 +114,7 @@ function Landing() {
 
       <footer className="border-t border-border px-5 py-8">
         <p className="mx-auto max-w-6xl text-sm text-muted-foreground">
-          {brand.name} — demo workspace for The Trinity Rooms, High Wycombe.
+          {marketing.footer}
         </p>
       </footer>
     </div>

@@ -38,8 +38,15 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) void navigate({ to: "/app/today" });
+    void supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      // Shared demo session: drop it so visitors can register their own account.
+      if (data.session.user.email === "demo@latchkey.omsestates.uk") {
+        await supabase.auth.signOut();
+        setMode("sign_up");
+        return;
+      }
+      void navigate({ to: "/app/today" });
     });
   }, [navigate]);
 
