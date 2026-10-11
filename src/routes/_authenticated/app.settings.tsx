@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { History, Loader2, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { common, settings as copy } from "@/content/copy";
-import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { activity as activityCopy, common, settings as copy } from "@/content/copy";
+import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { TeamPanel } from "@/components/host/TeamPanel";
+import { DEMO_EMAIL } from "@/lib/demo-account";
 import { ChannelLabels } from "@/components/host/ChannelLabels";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
@@ -44,6 +46,7 @@ type Host = {
 
 function SettingsPage() {
   const workspace = useWorkspace();
+  const { isOwner } = useRole();
   const save = useServerFn(saveHost);
   const load = useServerFn(loadDemoData);
   const drop = useServerFn(removeDemoData);
@@ -124,6 +127,7 @@ function SettingsPage() {
   const hasDemo = workspace.data?.hasDemo ?? false;
   const themedProperty = propsList.find((p) => p.id === selectedId) ?? null;
   const propertyCount = (workspace.data?.properties ?? []).length;
+  const demo = (host as { contact_email?: string | null } | null)?.contact_email === DEMO_EMAIL;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -140,7 +144,9 @@ function SettingsPage() {
         }
       />
 
-      <form onSubmit={submit} className="card-soft grid gap-4 p-5 sm:grid-cols-2">
+      <form onSubmit={submit} className="card-soft p-5">
+        {/* Business details and billing are the owner's; others can read them. */}
+        <fieldset disabled={!isOwner} className="grid gap-4 sm:grid-cols-2">
         <h2 className="text-lg sm:col-span-2">{copy.business}</h2>
 
         <div className="space-y-2 sm:col-span-2">
@@ -192,16 +198,30 @@ function SettingsPage() {
           />
         </div>
 
-        <div className="sm:col-span-2">
-          <Button type="submit" disabled={busy}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {copy.save}
-          </Button>
-        </div>
+        {isOwner ? (
+          <div className="sm:col-span-2">
+            <Button type="submit" disabled={busy}>
+              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+              {copy.save}
+            </Button>
+          </div>
+        ) : null}
+        </fieldset>
       </form>
 
+      {workspace.data ? <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} /> : null}
+      {isOwner ? (
+        <Link to="/app/activity" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
+          <History className="size-5 text-primary" />
+          <span>
+            <span className="block text-lg">{activityCopy.title}</span>
+            <span className="block text-sm text-muted-foreground">{activityCopy.subtitle}</span>
+          </span>
+        </Link>
+      ) : null}
+
       {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
-      {themedProperty ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
+      {themedProperty && isOwner ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
       {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
       {workspace.data ? (
         <ChannelLabels
@@ -209,9 +229,10 @@ function SettingsPage() {
           labels={((host as { channel_labels?: Record<string, string> } | null)?.channel_labels ?? {}) as Record<string, string>}
         />
       ) : null}
-      {workspace.data ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
+      {workspace.data && isOwner ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
       <PricingAdmin />
 
+      {isOwner ? (
       <section className="card-soft p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
@@ -239,6 +260,7 @@ function SettingsPage() {
           ) : null}
         </div>
       </section>
+      ) : null}
 
       <section className="card-soft p-5">
         <div className="flex items-start gap-3">

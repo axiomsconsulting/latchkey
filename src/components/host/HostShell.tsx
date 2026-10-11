@@ -1,12 +1,18 @@
+import { useState } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { BookOpen, CalendarDays, Home, LogOut, Plug, Settings, Sun, Wrench, type LucideIcon } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { BookOpen, CalendarDays, Eye, History, Home, Loader2, LogOut, Mail, Plug, Settings, Sun, Wrench, type LucideIcon } from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
+import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
 import { LogoMark } from "@/components/theme/LogoMark";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
-import { auth, brand, hostNav } from "@/content/copy";
-import { useAlerts, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { Button } from "@/components/ui/button";
+import { auth, brand, hostNav, invite as inviteCopy, team as teamCopy } from "@/content/copy";
+import { useAlerts, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { getWorkspace } from "@/lib/host.functions";
 import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
 import { normaliseTheme } from "@/lib/theme";
 
@@ -30,6 +36,8 @@ export function HostShell() {
   const navigate = useNavigate();
   const alertCount = useAlerts().data?.alerts.length ?? 0;
   const { data } = useWorkspace();
+  const { canWrite, isOwner } = useRole();
+  useAccessWatch();
   const properties = (data?.properties ?? []) as Array<{ id: string; name: string; theme_config: unknown }>;
   const { selectedId } = useSelectedProperty(properties);
   const property = properties.find((p) => p.id === selectedId) ?? null;
@@ -42,6 +50,14 @@ export function HostShell() {
     await navigate({ to: "/auth" });
   }
 
+  if (data?.pendingInvite) return <PendingInvite onSignOut={() => void leave()} />;
+
+  const readOnly = data && !canWrite ? (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+      <Eye className="size-3.5" /> {teamCopy.readOnlyBadge}
+    </span>
+  ) : null;
+
   return (
     <ThemeScope theme={theme} global className="min-h-screen">
       {/* Desktop: floating frosted sidebar */}
@@ -53,6 +69,9 @@ export function HostShell() {
             <span className="block truncate text-xs text-muted-foreground">{brand.name}</span>
           </span>
         </Link>
+
+        <HostSwitcher className="mt-3 h-10 rounded-2xl" />
+        {readOnly ? <div className="mt-3 px-2">{readOnly}</div> : null}
 
         <nav className="mt-6 flex flex-col gap-1" aria-label="Main">
           {navItems.map(({ to, label, icon: Icon }) => (
@@ -74,10 +93,21 @@ export function HostShell() {
           ))}
         </nav>
 
+        {isOwner ? (
+          <Link
+            to="/app/activity"
+            onClick={haptic}
+            className="spring mt-auto flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+            activeProps={{ className: "bg-primary !text-primary-foreground shadow-soft", "aria-current": "page" }}
+          >
+            <History className="size-5" />
+            {hostNav.activity}
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={leave}
-          className="spring mt-auto flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className={`spring ${isOwner ? "" : "mt-auto "}flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground`}
         >
           <LogOut className="size-5" />
           {auth.signOut}
@@ -113,6 +143,12 @@ export function HostShell() {
           <LogOut className="size-5" />
         </button>
       </header>
+      {(data?.memberships.length ?? 0) > 1 || readOnly ? (
+        <div className="mx-3 mt-2 flex items-center gap-2 md:hidden print:hidden">
+          <HostSwitcher className="h-10 flex-1 rounded-2xl" />
+          {readOnly}
+        </div>
+      ) : null}
 
       <main className="px-4 py-6 pb-32 sm:px-6 md:ml-72 md:py-10 md:pb-10">
         <Outlet />
@@ -143,5 +179,43 @@ export function HostShell() {
         ))}
       </nav>
     </ThemeScope>
+  );
+}
+
+/** Signed in, no workspace yet, and an invitation is waiting for this email. */
+function PendingInvite({ onSignOut }: { onSignOut: () => void }) {
+  const fetchWorkspace = useServerFn(getWorkspace);
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  return (
+    <main className="grid min-h-screen place-items-center px-4">
+      <div className="card-soft max-w-md space-y-4 p-8 text-center">
+        <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-secondary text-primary">
+          <Mail className="size-7" />
+        </span>
+        <h1 className="text-2xl">{inviteCopy.pendingTitle}</h1>
+        <p className="text-muted-foreground">{inviteCopy.pendingBody}</p>
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const ws = await fetchWorkspace({ data: { create: true } });
+              qc.setQueryData(["workspace"], ws);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+          {inviteCopy.pendingOwn}
+        </Button>
+        <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:underline" onClick={onSignOut}>
+          {auth.signOut}
+        </button>
+      </div>
+    </main>
   );
 }

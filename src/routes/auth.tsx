@@ -11,7 +11,17 @@ import { auth as copy, brand } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
 
+/** Only same-site paths, so a crafted link can't send people elsewhere. */
+function safeNext(value: unknown): string | undefined {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : undefined;
+}
+
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>): { next?: string; email?: string } => {
+    const next = safeNext(search["next"]);
+    const email = typeof search["email"] === "string" ? search["email"].slice(0, 254) : undefined;
+    return { ...(next ? { next } : {}), ...(email ? { email } : {}) };
+  },
   head: () => ({
     meta: [
       { title: "Host sign in — Latchkey" },
@@ -33,8 +43,11 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  // Where to go after signing in, e.g. back to an invitation link.
+  const next = search.next ?? "/app/today";
   const [mode, setMode] = useState<"sign_in" | "sign_up">("sign_in");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -47,9 +60,9 @@ function AuthPage() {
         setMode("sign_up");
         return;
       }
-      void navigate({ to: "/app/today" });
+      void navigate({ href: next });
     });
-  }, [navigate]);
+  }, [navigate, next]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +72,7 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/app/today` },
+          options: { emailRedirectTo: `${window.location.origin}${next}` },
         });
         if (error) throw error;
         if (!data.session) {
@@ -72,7 +85,7 @@ function AuthPage() {
       }
       // A real account from here on: never fall back to the demo when it expires.
       markDemo(false);
-      await navigate({ to: "/app/today" });
+      await navigate({ href: next });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : copy.genericError);
     } finally {

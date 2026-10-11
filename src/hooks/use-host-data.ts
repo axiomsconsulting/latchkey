@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { getPropertyBoard, getWorkspace, listAlerts, listConnections } from "@/lib/host.functions";
+import { canWrite, isOwner } from "@/lib/roles";
 
 const STORAGE_KEY = "latchkey.property";
 
@@ -12,6 +13,13 @@ export function useWorkspace() {
     queryKey: ["workspace"],
     queryFn: () => fn(),
   });
+}
+
+/** What the signed-in person may do in the active host. */
+export function useRole() {
+  const { data } = useWorkspace();
+  const role = data?.role ?? null;
+  return { role, canWrite: canWrite(role), isOwner: isOwner(role), loading: !data };
 }
 
 /** Remembers which property the host was last looking at. */
