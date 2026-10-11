@@ -12,15 +12,15 @@ import {
   MAX_PHOTO_ATTEMPTS,
   arrivalCandidates,
   checkoutChoices,
+  cleanGuestName,
   emailMatches,
-  findBooking,
-  findStaying,
   firstName,
   last4Matches,
   type MatchableBooking,
   lockedUntil,
   methodSequence,
   normaliseMethods,
+  resolveArrival,
   shortName,
   stayingCandidates,
   surnameInitial,
@@ -178,7 +178,8 @@ export const matchBooking = createServerFn({ method: "POST" })
         deviceId,
         letter: z.string().regex(/^[A-Za-z]$/),
         checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        channel,
+        // Only sent when the first answers fit stays on more than one platform.
+        channel: channel.optional(),
       })
       .parse(d),
   )
@@ -202,11 +203,11 @@ export const matchBooking = createServerFn({ method: "POST" })
       .limit(200);
     const all = rows ?? [];
 
-    // Someone already checked in is coming back for the guide or to order
-    // something, not arriving: recognise them instead of turning them away.
-    const arriving = findBooking(all, today, data);
-    const returning = arriving ? null : findStaying(all, today, data);
-    const hit = arriving ?? returning;
+    // The platform question only comes up when it tells stays apart; a guest
+    // already checked in is recognised as returning, not turned away.
+    const found = resolveArrival(all, today, data);
+    if (found.kind === "choose") return { status: "choose_platform" as const, channels: found.channels };
+    const hit = found.kind === "match" ? found.booking : null;
     await db.from("check_in_attempts").insert({
       property_id: p.id,
       booking_id: hit?.id ?? null,
@@ -233,7 +234,8 @@ export const matchBooking = createServerFn({ method: "POST" })
       status: "matched" as const,
       token: await startSession(p.id, hit.id),
       firstName: firstName(hit.guest_full_name),
-      returning: Boolean(returning),
+      returning: found.kind === "match" && found.returning,
+      needsName: found.kind === "match" && found.needsName,
     };
   });
 
@@ -268,7 +270,7 @@ async function readArrivalHandle(handle: string, hash: string): Promise<string |
 }
 
 export const listArrivals = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ code, deviceId, channel, letter: letterField }).parse(d))
+  .inputValidator((d) => z.object({ code, deviceId, channel: channel.optional(), letter: letterField }).parse(d))
   .handler(async ({ data }) => {
     const { admin, deviceHash, loadPropertyByCode } = await srv();
     const p = await loadPropertyByCode(data.code);
@@ -282,7 +284,7 @@ export const listArrivals = createServerFn({ method: "POST" })
       .from("bookings")
       .select("id, channel, status, check_in_date, check_out_date, guest_full_name, mirror_of")
       .eq("property_id", p.id)
-      .eq("channel", data.channel)
+      .in("channel", data.channel ? [data.channel] : ["airbnb", "booking_com", "homestay", "direct", "other"])
       .lte("check_in_date", today)
       .gt("check_out_date", today)
       .limit(50);
@@ -303,7 +305,7 @@ export const listArrivals = createServerFn({ method: "POST" })
     }
     return {
       items: await Promise.all(
-        items.map(async (b) => ({ id: await arrivalHandle(b.id, hash), label: shortName(b.guest_full_name), checkOut: b.check_out_date })),
+        items.map(async (b) => ({ id: await arrivalHandle(b.id, hash), label: shortName(b.guest_full_name), checkOut: b.check_out_date, channel: b.channel })),
       ),
     };
   });
@@ -341,6 +343,45 @@ export const pickArrival = createServerFn({ method: "POST" })
     });
     if (!ok || !b) throw new Error("That stay is not available.");
     return { token: await startSession(p.id, b.id), firstName: firstName(b.guest_full_name) };
+  });
+
+/**
+ * The stay arrived from a calendar without a guest name, and the host hasn't
+ * added one: the guest types it. The host is told, and the usual identity
+ * step still follows.
+ */
+export const setGuestName = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token, fullName: z.string().max(100) }).parse(d))
+  .handler(async ({ data }) => {
+    const name = cleanGuestName(data.fullName);
+    if (!name) throw new Error("Please type your first name and surname.");
+    const { admin, loadSession, raiseAlert } = await srv();
+    const session = await loadSession(data.token);
+    const db = await admin();
+    const { data: b } = await db
+      .from("bookings")
+      .select("id, guest_full_name, status, property_id, rooms(display_name), properties(name, host_id)")
+      .eq("id", session.booking_id)
+      .single();
+    if (!b) throw new Error("This check-in has timed out. Please start again.");
+    // Only ever fills a gap: a name the host already has is never replaced.
+    if (b.guest_full_name?.trim()) return { firstName: firstName(b.guest_full_name) };
+    await db
+      .from("bookings")
+      .update({ guest_full_name: name, ...(b.status === "needs_details" ? { status: "upcoming" as const } : {}) })
+      .eq("id", b.id);
+    const prop = (b as { properties?: { name: string; host_id: string } | null }).properties;
+    const room = (b as { rooms?: { display_name: string } | null }).rooms?.display_name;
+    if (prop) {
+      await raiseAlert({
+        hostId: prop.host_id,
+        propertyId: b.property_id,
+        bookingId: b.id,
+        kind: "self_declared",
+        message: `${name} added their own name while checking in at ${prop.name}${room ? ` (${room})` : ""}; the booking had none. Worth a quick check.`,
+      });
+    }
+    return { firstName: firstName(name) };
   });
 
 /* ------------------------------ identity -------------------------------- */

@@ -481,6 +481,9 @@ export const guest = {
   kioskWrongPin: "That PIN isn't right.",
   pinTitle: "Enter the property PIN",
   pinNote: "For guests with a booking PIN from their host.",
+  nameTitle: "What's your full name?",
+  nameHint: "Your booking reached us without a name. Type it as it appears on your booking.",
+  nameCta: "Continue",
   demoHint: (letter: string, date: string, platform: string) =>
     `Demo: tap ${letter}, then check-out ${date}, then ${platform}.`,
   demoIdHint: (ref: string | null, phone: string | null) =>

@@ -21,6 +21,7 @@ import {
   pickArrival,
   resumeSession,
   selfDeclare,
+  setGuestName,
   verifyLast4,
   verifyPhotoId,
 } from "@/lib/checkin.functions";
@@ -37,10 +38,12 @@ type Step =
   | { name: "welcome" }
   | { name: "letter" }
   | { name: "checkout" }
-  | { name: "platform" }
-  | { name: "pick"; items: Array<{ id: string; label: string; checkOut: string }> }
+  /** Only when the first answers fit stays on more than one platform. */
+  | { name: "platform"; only: string[] }
+  | { name: "pick"; items: Array<{ id: string; label: string; checkOut: string; channel?: string }> }
   | { name: "no_match" }
   | { name: "locked"; until: string }
+  | { name: "guestName" }
   | { name: "confirm"; firstName: string; returning?: boolean }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
   | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
@@ -99,6 +102,8 @@ export function CheckInFlow({
   const declare = useServerFn(selfDeclare);
   const complete = useServerFn(completeCheckIn);
   const resume = useServerFn(resumeSession);
+  const saveName = useServerFn(setGuestName);
+  const [fullName, setFullName] = useState("");
 
   useEffect(() => {
     onActivity?.();
@@ -156,21 +161,32 @@ export function CheckInFlow({
     setStep({ name: "welcome" });
   }
 
-  async function onPlatform(channel: Platform) {
-    if (property.listFlow) {
-      const res = await run(() => list({ data: { code: property.code, deviceId: deviceId(), channel, letter } }));
-      if (!res) return;
-      if ("until" in res && res.until) return setStep({ name: "locked", until: res.until });
-      return setStep({ name: "pick", items: res.items });
-    }
+  /** List flow: every stay with that initial, across platforms. */
+  async function listStays(chosenLetter: string) {
+    const res = await run(() => list({ data: { code: property.code, deviceId: deviceId(), letter: chosenLetter } }));
+    if (!res) return;
+    if ("until" in res && res.until) return setStep({ name: "locked", until: res.until });
+    setStep({ name: "pick", items: res.items });
+  }
+
+  /** Asks for the platform only if the server says the answers so far fit more than one. */
+  async function findStay(day: string, channel?: Platform) {
     const res = await run(() =>
-      match({ data: { code: property.code, deviceId: deviceId(), letter, checkOut, channel } }),
+      match({ data: { code: property.code, deviceId: deviceId(), letter, checkOut: day, ...(channel ? { channel } : {}) } }),
     );
     if (!res) return;
     if (res.status === "locked") return setStep({ name: "locked", until: res.until });
     if (res.status === "no_match") return setStep({ name: "no_match" });
+    if (res.status === "choose_platform") return setStep({ name: "platform", only: res.channels });
     setToken(res.token);
+    if (res.needsName) return setStep({ name: "guestName" });
     setStep({ name: "confirm", firstName: res.firstName, returning: res.returning === true });
+  }
+
+  async function onGuestName(e: React.FormEvent) {
+    e.preventDefault();
+    const res = await run(() => saveName({ data: { token, fullName } }));
+    if (res) setStep({ name: "confirm", firstName: res.firstName });
   }
 
   async function onPick(bookingId: string) {
@@ -230,7 +246,7 @@ export function CheckInFlow({
         ? copy.demoIdHint(hint.refLast4, hint.phoneLast4)
         : null;
 
-  const canGoBack = ["letter", "checkout", "platform", "pick"].includes(step.name);
+  const canGoBack = ["letter", "checkout", "platform", "pick", "guestName"].includes(step.name);
 
   // The square only means something once there is a stay to carry across.
   const handoffUrl =
@@ -253,11 +269,9 @@ export function CheckInFlow({
             setStep(
               step.name === "letter"
                 ? { name: "welcome" }
-                : step.name === "checkout" || (step.name === "platform" && property.listFlow)
+                : step.name === "checkout" || step.name === "pick"
                   ? { name: "letter" }
-                  : step.name === "platform"
-                    ? { name: "checkout" }
-                    : { name: "platform" },
+                  : { name: "checkout" },
             )
           }
         >
@@ -305,9 +319,11 @@ export function CheckInFlow({
                   variant="outline"
                   size="touch"
                   className="text-2xl font-semibold"
+                  disabled={busy}
                   onClick={() => {
                     setLetter(l);
-                    setStep(property.listFlow ? { name: "platform" } : { name: "checkout" });
+                    if (property.listFlow) void listStays(l);
+                    else setStep({ name: "checkout" });
                   }}
                 >
                   {l}
@@ -327,9 +343,10 @@ export function CheckInFlow({
                   variant="outline"
                   size="touch-xl"
                   className="text-xl"
+                  disabled={busy}
                   onClick={() => {
                     setCheckOut(d);
-                    setStep({ name: "platform" });
+                    void findStay(d);
                   }}
                 >
                   {formatUkDate(d)}
@@ -343,14 +360,14 @@ export function CheckInFlow({
           <section>
             <h1 className="text-2xl sm:text-4xl">{copy.stepPlatform}</h1>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {PLATFORMS.map((p) => (
+              {PLATFORMS.filter((p) => step.only.includes(p)).map((p) => (
                 <Button
                   key={p}
                   variant="outline"
                   size="touch-xl"
                   className="justify-start gap-4 text-xl"
                   disabled={busy}
-                  onClick={() => void onPlatform(p)}
+                  onClick={() => void findStay(checkOut, p)}
                 >
                   <ChannelIcon channel={p} />
                   {property.channelLabels?.[p] ?? copy.platforms[p]}
@@ -377,7 +394,10 @@ export function CheckInFlow({
                     disabled={busy}
                     onClick={() => void onPick(i.id)}
                   >
-                    <span>{i.label}</span>
+                    <span className="flex items-center gap-2">
+                      {i.channel ? <ChannelIcon channel={i.channel as Platform} /> : null}
+                      {i.label}
+                    </span>
                     <span className="text-sm font-normal text-muted-foreground">
                       {copy.stayCheckout} {formatUkDate(i.checkOut)}
                     </span>
@@ -408,6 +428,27 @@ export function CheckInFlow({
             <div className="mt-8 flex justify-center">
               <HostCall phone={hostPhone} />
             </div>
+          </section>
+        ) : null}
+
+        {step.name === "guestName" ? (
+          <section className="mx-auto max-w-xl">
+            <h1 className="text-2xl sm:text-4xl">{copy.nameTitle}</h1>
+            <p className="mt-2 text-muted-foreground">{copy.nameHint}</p>
+            <form className="mt-6 space-y-4" onSubmit={(e) => void onGuestName(e)}>
+              <Input
+                aria-label={copy.nameTitle}
+                className="h-16 text-2xl"
+                autoComplete="name"
+                autoFocus
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+              <Button type="submit" size="touch-xl" className="w-full" disabled={busy || fullName.trim().split(/\s+/).length < 2}>
+                {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                {copy.nameCta}
+              </Button>
+            </form>
           </section>
         ) : null}
 
