@@ -2,13 +2,23 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, CalendarPlus, ExternalLink, Loader2, Mail, MessageCircle, Phone, Star, Wrench } from "lucide-react";
+import { Archive, ArchiveRestore, BadgeCheck, CalendarPlus, ExternalLink, Loader2, Mail, MessageCircle, Phone, Star, Trash2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { TradeContacts } from "@/components/host/TradeContacts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,11 +28,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { common, services as copy, trades as tradesDir, tradesCopy } from "@/content/copy";
+import { common, jobTools, services as copy, trades as tradesDir, tradesCopy } from "@/content/copy";
 import { ContraStudio } from "@/components/host/ContraStudio";
 import { TradeDirectory } from "@/components/host/TradeDirectory";
 import { ExtrasInbox } from "@/components/host/ExtrasInbox";
-import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { archiveJobs, deleteJobs } from "@/lib/guests.functions";
 import { SERVICE_CATEGORIES, categoryById, formatPence, rateLabel } from "@/lib/services";
 import { contactLinks, tradeCategoryLabel } from "@/lib/trade-contacts";
 import { listTrades, assignTradeToJob } from "@/lib/trades.functions";
@@ -86,7 +97,9 @@ function ServicesPage() {
   if (ws.isLoading) return <Skeleton className="mx-auto h-64 max-w-5xl rounded-2xl" />;
   if (!selectedId) return <EmptyState icon={Wrench} title={copy.title} body="Add a property first." />;
 
-  const all = (jobs.data?.jobs ?? []) as unknown as Job[];
+  const everything = (jobs.data?.jobs ?? []) as unknown as Array<Job & { archived_at?: string | null }>;
+  const all = everything.filter((j) => !j.archived_at);
+  const archived = everything.filter((j) => j.archived_at);
   const inbox = all.filter((j) => j.source === "guest");
   const planned = all.filter((j) => j.source !== "guest");
   const selectedProperty = properties.find((p) => p.id === selectedId) as
@@ -119,6 +132,7 @@ function ServicesPage() {
           <TabsTrigger value="planned" className="h-10 rounded-xl px-4">{copy.tabScheduled}</TabsTrigger>
           <TabsTrigger value="trades" className="h-10 rounded-xl px-4">{tradesDir.tabLabel}</TabsTrigger>
           <TabsTrigger value="providers" className="h-10 rounded-xl px-4">{copy.tabProviders}</TabsTrigger>
+          <TabsTrigger value="archive" className="h-10 rounded-xl px-4">{jobTools.archiveTab}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inbox" className="mt-4 space-y-3">
@@ -151,6 +165,12 @@ function ServicesPage() {
         <TabsContent value="providers" className="mt-4">
           <ContraStudio />
         </TabsContent>
+
+        <TabsContent value="archive" className="mt-4 space-y-3">
+          {archived.length === 0 ? (
+            <div className="card-soft p-8 text-center text-muted-foreground">{jobTools.archiveEmpty}</div>
+          ) : archived.map((j) => <JobCard key={j.id} job={j} archived onRecommend={() => setRecFor(j)} />)}
+        </TabsContent>
       </Tabs>
 
       {recFor ? (
@@ -167,11 +187,15 @@ function ServicesPage() {
   );
 }
 
-function JobCard({ job, onRecommend }: { job: Job; onRecommend: () => void }) {
+function JobCard({ job, onRecommend, archived = false }: { job: Job; onRecommend: () => void; archived?: boolean }) {
   const qc = useQueryClient();
   const ack = useServerFn(acknowledgeJob);
   const setStatus = useServerFn(setJobStatus);
+  const archiveFn = useServerFn(archiveJobs);
+  const deleteFn = useServerFn(deleteJobs);
+  const { canWrite } = useRole();
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   async function run(name: string, fn: () => Promise<unknown>) {
     setBusy(name);
@@ -185,7 +209,7 @@ function JobCard({ job, onRecommend }: { job: Job; onRecommend: () => void }) {
     }
   }
 
-  const open = !["done", "declined", "cancelled"].includes(job.status);
+  const open = !archived && !["done", "declined", "cancelled"].includes(job.status);
   return (
     <article className="card-soft p-4 sm:p-5">
       <div className="flex flex-wrap items-start gap-3">
@@ -237,6 +261,49 @@ function JobCard({ job, onRecommend }: { job: Job; onRecommend: () => void }) {
           ) : null}
         </div>
       ) : null}
+      {canWrite ? (
+        <div className="mt-3 flex flex-wrap justify-end gap-1 border-t border-border pt-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy !== null}
+            onClick={() =>
+              run("archive", async () => {
+                await archiveFn({ data: { ids: [job.id], archived: !archived } });
+                toast.success(archived ? jobTools.restored : jobTools.archived);
+              })
+            }
+          >
+            {archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
+            {archived ? jobTools.restore : jobTools.archive}
+          </Button>
+          <Button variant="ghost" size="sm" className="text-destructive" disabled={busy !== null} onClick={() => setConfirmDelete(true)}>
+            <Trash2 className="size-4" /> {common.remove}
+          </Button>
+        </div>
+      ) : null}
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{jobTools.deleteTitle(job.title)}</AlertDialogTitle>
+            <AlertDialogDescription>{jobTools.deleteBody}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() =>
+                void run("delete", async () => {
+                  await deleteFn({ data: { ids: [job.id] } });
+                  toast.success(jobTools.deleted);
+                })
+              }
+            >
+              {common.remove}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </article>
   );
 }
