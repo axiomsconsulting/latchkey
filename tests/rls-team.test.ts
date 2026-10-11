@@ -157,13 +157,17 @@ describe("viewer", () => {
     expect(await as("viewer", "select * from host_team($1)", [hostId])).toHaveLength(3);
   });
 
-  it("writes nothing", async () => {
-    expect(await as("viewer", "update rooms set display_name = 'X' where id = $1 returning id", [roomId])).toHaveLength(0);
-    expect(await as("viewer", "update bookings set notes = 'x' where property_id = $1 returning id", [propertyId])).toHaveLength(0);
+  it("writes nothing, and is told so instead of a silent no-op", async () => {
+    const readOnly = /read-only access/;
+    await expect(as("viewer", "update rooms set display_name = 'X' where id = $1", [roomId])).rejects.toThrow(readOnly);
+    await expect(as("viewer", "update bookings set notes = 'x' where property_id = $1", [propertyId])).rejects.toThrow(readOnly);
+    await expect(as("viewer", "delete from bookings where property_id = $1", [propertyId])).rejects.toThrow(readOnly);
+    await expect(as("viewer", "update properties set name = 'X' where id = $1", [propertyId])).rejects.toThrow(readOnly);
     await expect(
       as("viewer", "insert into bookings (property_id, channel, check_in_date, check_out_date) values ($1, 'direct', '2026-11-01', '2026-11-02')", [propertyId]),
-    ).rejects.toThrow(/row-level security/);
+    ).rejects.toThrow(readOnly);
     await expect(as("viewer", "select update_host_ops($1, '{}'::jsonb)", [hostId])).rejects.toThrow(/read-only/);
+    expect(await as("viewer", "select display_name from rooms where id = $1", [roomId])).toEqual([{ display_name: "Trinity One" }]);
   });
 });
 
@@ -171,6 +175,8 @@ describe("outsider", () => {
   it("sees nothing", async () => {
     expect(await as("outsider", "select id from properties where host_id = $1", [hostId])).toHaveLength(0);
     expect(await as("outsider", "select * from host_team($1)", [hostId])).toHaveLength(0);
+    expect(await as("outsider", "update rooms set display_name = 'X' where id = $1 returning id", [roomId])).toHaveLength(0);
+    expect(await as("outsider", "delete from bookings where property_id = $1 returning id", [propertyId])).toHaveLength(0);
   });
 });
 

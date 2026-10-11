@@ -127,6 +127,13 @@
       "when": 1791741910114,
       "tag": "0017_team_invites_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791742570719,
+      "tag": "0018_read_only_members_get_clear_errors",
+      "breakpoints": true
     }
   ]
 }
