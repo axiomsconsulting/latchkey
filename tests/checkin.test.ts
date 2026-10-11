@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { compareNames } from "../src/lib/name-match";
 import {
   checkoutChoices,
+  cleanGuestName,
+  resolveArrival,
   findBooking,
   last4Matches,
   lockedUntil,
@@ -98,5 +100,58 @@ describe("identity method fallback", () => {
     expect(last4Matches("HMABCD1234", "1234")).toBe(true);
     expect(last4Matches("07700 900142", "0142")).toBe(true);
     expect(last4Matches("HS-55219", "5218")).toBe(false);
+  });
+});
+
+describe("resolveArrival", () => {
+  const ask = (rows: MatchableBooking[], channel?: string) =>
+    resolveArrival(rows, today, { letter: "S", checkOut: "2026-10-01", ...(channel ? { channel } : {}) });
+
+  it("skips the platform question when the answers point to one stay", () => {
+    const r = ask([b({})]);
+    expect(r.kind === "match" && r.booking.id).toBe("1");
+  });
+
+  it("asks only about the platforms that clash", () => {
+    const rows = [b({}), b({ id: "2", guest_full_name: "Sam Smith", channel: "booking_com" }), b({ id: "3", guest_full_name: "Ann Ord", channel: "homestay" })];
+    expect(ask(rows)).toEqual({ kind: "choose", channels: ["airbnb", "booking_com"] });
+    const picked = ask(rows, "booking_com");
+    expect(picked.kind === "match" && picked.booking.id).toBe("2");
+  });
+
+  it("matches a stay with no guest name on the day, and asks for the name", () => {
+    const r = ask([b({ guest_full_name: null, status: "needs_details" })]);
+    expect(r).toMatchObject({ kind: "match", needsName: true });
+  });
+
+  it("prefers a named stay with that initial over a nameless one", () => {
+    const r = ask([b({ id: "named" }), b({ id: "blank", guest_full_name: null, status: "needs_details", channel: "booking_com" })]);
+    expect(r.kind === "match" && r.booking.id).toBe("named");
+  });
+
+  it("won't guess between two nameless stays on the same platform", () => {
+    expect(ask([b({ guest_full_name: null }), b({ id: "2", guest_full_name: null })])).toEqual({ kind: "none" });
+  });
+
+  it("recognises a guest who already checked in", () => {
+    const r = ask([b({ status: "checked_in", check_in_date: "2026-09-27" })]);
+    expect(r).toMatchObject({ kind: "match", returning: true });
+  });
+
+  it("ignores blocked mirrors, cancelled stays and other days", () => {
+    expect(ask([b({ mirror_of: "x" }), b({ id: "2", status: "cancelled" }), b({ id: "3", check_out_date: "2026-10-02" })])).toEqual({ kind: "none" });
+  });
+});
+
+describe("cleanGuestName", () => {
+  it("accepts a full name and tidies spaces", () => {
+    expect(cleanGuestName("  Dawn   Soffe ")).toBe("Dawn Soffe");
+    expect(cleanGuestName("José Álvarez-Ruiz")).toBe("José Álvarez-Ruiz");
+  });
+
+  it("needs a first name and a surname", () => {
+    expect(cleanGuestName("Dawn")).toBeNull();
+    expect(cleanGuestName("D 1")).toBeNull();
+    expect(cleanGuestName("")).toBeNull();
   });
 });

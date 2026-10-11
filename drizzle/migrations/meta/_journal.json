@@ -134,6 +134,20 @@
       "when": 1791742570719,
       "tag": "0018_read_only_members_get_clear_errors",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791748754320,
+      "tag": "0019_archive_delete_bookings_sync_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791749374818,
+      "tag": "0020_user_profiles",
+      "breakpoints": true
     }
   ]
 }

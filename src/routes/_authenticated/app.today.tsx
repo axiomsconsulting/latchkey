@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, BedDouble, CalendarClock, DoorOpen, Loader2, Sparkles, Sun } from "lucide-react";
@@ -10,17 +10,19 @@ import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { todayRequests as todayRequestsCopy } from "@/content/copy";
 import { TodayRequests } from "@/components/host/TodayRequests";
+import { GuestSheet } from "@/components/host/GuestSheet";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
+import { StayCalendar, type Activity } from "@/components/host/StayCalendar";
 import { StatusBadge } from "@/components/host/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { common, today as copy } from "@/content/copy";
+import { common, stayCalendar as calCopy, today as copy } from "@/content/copy";
 import { useAlerts, usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { alerts as alertCopy } from "@/content/copy";
 import { markAlertRead } from "@/lib/host.functions";
-import { dayOfWeek, formatUkDate, formatUkTime, nightsBetween, stayState } from "@/lib/dates";
+import { addDays, dayOfWeek, formatUkDate, formatUkTime, nightsBetween, stayState } from "@/lib/dates";
 import { saveBooking } from "@/lib/host.functions";
 
 export const Route = createFileRoute("/_authenticated/app/today")({
@@ -51,19 +53,31 @@ type Booking = {
   check_out_time: string | null;
   status: string;
   notes: string | null;
+  mirror_of?: string | null;
+  archived_at?: string | null;
 };
 
 function StatCard({
   icon: Icon,
   label,
   value,
+  target,
 }: {
   icon: typeof Sun;
   label: string;
   value: number;
+  /** The section on this page listing these guests. */
+  target: string;
 }) {
   return (
-    <div className="card-soft flex items-center gap-3 p-4">
+    <a
+      href={`#${target}`}
+      onClick={(e) => {
+        e.preventDefault();
+        document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }}
+      className="card-soft spring flex items-center gap-3 p-4 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
         <Icon className="size-5" />
       </span>
@@ -71,7 +85,7 @@ function StatCard({
         <span className="block font-display text-2xl leading-none">{value}</span>
         <span className="block truncate text-xs text-muted-foreground">{label}</span>
       </span>
-    </div>
+    </a>
   );
 }
 
@@ -79,14 +93,21 @@ function BookingRow({
   booking,
   roomName,
   state,
+  onOpen,
 }: {
   booking: Booking;
   roomName: string;
   state: string;
+  onOpen: (id: string) => void;
 }) {
   const nights = nightsBetween(booking.check_in_date, booking.check_out_date);
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-4 last:border-0">
+    <li className="border-b border-border last:border-0">
+      <button
+        type="button"
+        onClick={() => onOpen(booking.id)}
+        className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 text-left transition-colors hover:bg-muted"
+      >
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">
           {booking.guest_full_name ?? copy.actionRequired}
@@ -103,6 +124,7 @@ function BookingRow({
       </span>
       <ChannelBadge channel={booking.channel as Channel} />
       <StatusBadge state={state} />
+      </button>
     </li>
   );
 }
@@ -209,6 +231,9 @@ function TodayPage() {
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);
+  const navigate = useNavigate();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   if (workspace.isLoading || board.isLoading) {
     return (
@@ -244,14 +269,24 @@ function TodayPage() {
   const roomName = (id: string | null) =>
     rooms.find((r) => r.id === id)?.display_name ?? "No room allocated";
   const todayIso = data?.today ?? new Date().toISOString().slice(0, 10);
-  const all = (data?.bookings ?? []) as Booking[];
-  const live = all.filter((b) => b.status !== "cancelled" && b.status !== "blocked");
+  // Archived stays are tidied away and never shown here.
+  const all = ((data?.bookings ?? []) as Booking[]).filter((b) => !b.archived_at);
+  const live = all.filter((b) => b.status !== "cancelled" && b.status !== "blocked" && !b.mirror_of);
+  const activity = (data as { activity?: Activity } | undefined)?.activity ?? {};
 
-  const withState = live.map((b) => ({ b, state: stayState(b, todayIso) }));
+  // Who is arriving, staying or leaving goes by dates, even when the stay
+  // still needs a guest name; "needs details" is a separate to-do list.
+  const withState = live.map((b) => ({
+    b,
+    state: stayState(b.status === "needs_details" ? { ...b, status: "upcoming" } : b, todayIso),
+  }));
   const arriving = withState.filter((x) => x.state === "arriving_today");
   const inStay = withState.filter((x) => x.state === "in_stay");
   const departing = withState.filter((x) => x.state === "departing_today");
-  const needsDetails = withState.filter((x) => x.state === "needs_details");
+  const needsDetails = live
+    .filter((b) => b.status === "needs_details" && b.check_out_date >= todayIso)
+    .map((b) => ({ b, state: "needs_details" }));
+  const days = Array.from({ length: 14 }, (_, i) => addDays(todayIso, weekOffset * 7 + i));
   const doubleBooked = live.filter((b) => b.status === "flagged" && b.check_out_date >= todayIso);
 
   // Same room emptying and filling on the same day: warn when there is little
@@ -289,10 +324,10 @@ function TodayPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={DoorOpen} label={copy.arriving} value={arriving.length} />
-        <StatCard icon={BedDouble} label={copy.inStay} value={inStay.length} />
-        <StatCard icon={CalendarClock} label={copy.departing} value={departing.length} />
-        <StatCard icon={Sparkles} label={copy.actionRequired} value={needsDetails.length} />
+        <StatCard icon={DoorOpen} label={copy.arriving} value={arriving.length} target="arriving" />
+        <StatCard icon={BedDouble} label={copy.inStay} value={inStay.length} target="in-stay" />
+        <StatCard icon={CalendarClock} label={copy.departing} value={departing.length} target="departing" />
+        <StatCard icon={Sparkles} label={copy.actionRequired} value={needsDetails.length} target="needs-details" />
       </div>
 
       <AlertsPanel />
@@ -346,8 +381,36 @@ function TodayPage() {
         </div>
       ) : null}
 
-      {needsDetails.length > 0 ? (
+      {rooms.length > 0 ? (
         <section className="space-y-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="mr-auto">
+              <h2 className="text-xl">{calCopy.title}</h2>
+              <p className="text-sm text-muted-foreground">{calCopy.subtitle}</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setWeekOffset((o) => o - 1)}>
+              {calCopy.earlier}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setWeekOffset((o) => o + 1)}>
+              {calCopy.later}
+            </Button>
+          </div>
+          <div className="card-soft overflow-x-auto p-0">
+            <StayCalendar
+              rooms={rooms}
+              stays={all}
+              windows={(data?.windows ?? []) as Array<{ room_id: string | null; day_of_week: number | null }>}
+              days={days}
+              today={todayIso}
+              activity={activity}
+              onOpen={setOpenId}
+            />
+          </div>
+        </section>
+      ) : null}
+
+      {needsDetails.length > 0 ? (
+        <section id="needs-details" className="scroll-mt-20 space-y-3">
           <div>
             <h2 className="text-xl">{copy.actionRequired}</h2>
             <p className="text-sm text-muted-foreground">{copy.actionBody}</p>
@@ -358,44 +421,51 @@ function TodayPage() {
         </section>
       ) : null}
 
-      <section className="space-y-3">
+      <section id="arriving" className="scroll-mt-20 space-y-3">
         <h2 className="text-xl">{copy.arriving}</h2>
         {arriving.length === 0 ? (
           <EmptyState icon={DoorOpen} title={copy.noArrivals} />
         ) : (
           <ul className="card-soft overflow-hidden p-0">
             {arriving.map(({ b, state }) => (
-              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} />
+              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} onOpen={setOpenId} />
             ))}
           </ul>
         )}
       </section>
 
-      <section className="space-y-3">
+      <section id="in-stay" className="scroll-mt-20 space-y-3">
         <h2 className="text-xl">{copy.inStay}</h2>
         {inStay.length === 0 ? (
           <EmptyState icon={BedDouble} title={copy.noStays} />
         ) : (
           <ul className="card-soft overflow-hidden p-0">
             {inStay.map(({ b, state }) => (
-              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} />
+              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} onOpen={setOpenId} />
             ))}
           </ul>
         )}
       </section>
 
-      <section className="space-y-3">
+      <section id="departing" className="scroll-mt-20 space-y-3">
         <h2 className="text-xl">{copy.departing}</h2>
         {departing.length === 0 ? (
           <EmptyState icon={CalendarClock} title={copy.noDepartures} />
         ) : (
           <ul className="card-soft overflow-hidden p-0">
             {departing.map(({ b, state }) => (
-              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} />
+              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} onOpen={setOpenId} />
             ))}
           </ul>
         )}
       </section>
+
+      <GuestSheet
+        bookingId={openId}
+        today={todayIso}
+        onOpenChange={(o) => (o ? null : setOpenId(null))}
+        onEdit={(id) => void navigate({ to: "/app/bookings", search: { guest: id } })}
+      />
     </div>
   );
 }

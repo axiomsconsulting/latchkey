@@ -81,12 +81,41 @@ export const listTeam = createServerFn({ method: "GET" })
       .is("accepted_at", null)
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
+    type Row = {
+      user_id: string;
+      email: string;
+      role: string;
+      created_at: string;
+      display_name?: string | null;
+      avatar_path?: string | null;
+      last_sign_in_at?: string | null;
+    };
+    const rows = (members ?? []) as Row[];
+    // Photos sit in private storage; sign short-lived links for this view.
+    const paths = rows.map((m) => m.avatar_path).filter((x): x is string => !!x);
+    const signed: Record<string, string> = {};
+    if (paths.length) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: urls } = await supabaseAdmin.storage.from("branding").createSignedUrls(paths, 60 * 60);
+      for (const u of urls ?? []) if (u.path && u.signedUrl) signed[u.path] = u.signedUrl;
+    }
+    // Access is host-wide today: every member reaches every property.
+    const { data: props } = await context.supabase
+      .from("properties")
+      .select("name, rooms(id)")
+      .eq("host_id", data.hostId)
+      .order("created_at", { ascending: true });
     return {
-      members: ((members ?? []) as Array<{ user_id: string; email: string; role: string; created_at: string }>).map((m) => ({
+      properties: (props ?? []).map((p) => ({ name: p.name, rooms: (p.rooms as unknown[] | null)?.length ?? 0 })),
+      members: rows.map((m) => ({
         userId: m.user_id,
         email: m.email,
         role: displayRole(m.role),
         isYou: m.user_id === context.userId,
+        name: m.display_name ?? null,
+        avatarUrl: m.avatar_path ? (signed[m.avatar_path] ?? null) : null,
+        joined: m.created_at,
+        lastSignIn: m.last_sign_in_at ?? null,
       })),
       invites: ((invites ?? []) as Array<{ id: string; email: string; role: string; created_at: string; expires_at: string }>).map((i) => ({
         id: i.id,
@@ -339,4 +368,39 @@ export const listActivity = createServerFn({ method: "GET" })
       at: r.at,
     }));
     return { items, more: items.length === 50 };
+  });
+/** Your own name on team cards. */
+export const saveMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ displayName: z.string().trim().max(80) }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    const { error } = await untyped(context.supabase)
+      .from("user_profiles")
+      .upsert({ user_id: context.userId, display_name: data.displayName || null, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Your own photo: stored privately, shown through short-lived links. */
+export const uploadMyAvatar = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ dataUrl: z.string().max(3_000_000).regex(/^data:image\/(jpeg|png|webp);base64,/) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    const m = /^data:image\/(jpeg|png|webp);base64,(.+)$/.exec(data.dataUrl)!;
+    const bytes = Buffer.from(m[2]!, "base64");
+    if (bytes.length > 2 * 1024 * 1024) throw new Error("Photos must be under 2 MB.");
+    const ext = m[1] === "jpeg" ? "jpg" : m[1]!;
+    const path = `avatars/${context.userId}-${Date.now()}.${ext}`;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const up = await supabaseAdmin.storage.from("branding").upload(path, bytes, { contentType: `image/${m[1]}` });
+    if (up.error) throw new Error(up.error.message);
+    const { error } = await untyped(context.supabase)
+      .from("user_profiles")
+      .upsert({ user_id: context.userId, avatar_path: path, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

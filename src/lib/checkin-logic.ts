@@ -128,6 +128,63 @@ export function findStaying(
   return hits.length === 1 ? hits[0]! : null;
 }
 
+export type Resolution =
+  | { kind: "match"; booking: MatchableBooking; needsName: boolean; returning: boolean }
+  | { kind: "choose"; channels: string[] }
+  | { kind: "none" };
+
+function hasName(b: MatchableBooking): boolean {
+  return !!b.guest_full_name?.trim();
+}
+
+/**
+ * Works out who is checking in from their surname initial and check-out day,
+ * asking for the platform only when that alone tells two stays apart.
+ *  - A named stay with that initial wins.
+ *  - Otherwise a stay that has no guest name yet (calendar links often send
+ *    none) can match on the day alone; the guest then types their name.
+ *  - Someone already checked in is recognised as returning.
+ * A channel narrows the search once the guest has picked one.
+ */
+export function resolveArrival(
+  bookings: MatchableBooking[],
+  today: string,
+  answers: { letter: string; checkOut: string; channel?: string | null | undefined },
+): Resolution {
+  const letter = answers.letter.toUpperCase();
+  const fits = (b: MatchableBooking) =>
+    b.check_out_date === answers.checkOut && (!answers.channel || b.channel === answers.channel);
+
+  const arriving = bookings.filter(
+    (b) =>
+      !b.mirror_of &&
+      (b.status === "upcoming" || b.status === "flagged" || b.status === "needs_details") &&
+      (b.check_in_date === today || b.check_in_date === addDays(today, -1)) &&
+      b.check_out_date > today &&
+      fits(b),
+  );
+  const named = arriving.filter((b) => hasName(b) && surnameInitial(b.guest_full_name) === letter);
+  const staying = stayingCandidates(bookings, today).filter((b) => fits(b) && surnameInitial(b.guest_full_name) === letter);
+  const nameless = arriving.filter((b) => !hasName(b));
+
+  const hits = named.length ? named : staying.length ? staying : nameless;
+  if (hits.length === 0) return { kind: "none" };
+  const channels = [...new Set(hits.map((b) => b.channel))];
+  if (!answers.channel && channels.length > 1) return { kind: "choose", channels };
+  if (hits.length !== 1) return { kind: "none" };
+  const booking = hits[0]!;
+  return { kind: "match", booking, needsName: !hasName(booking), returning: booking.status === "checked_in" };
+}
+
+/** A full name a guest types at check-in: two or more words, letters first. */
+export function cleanGuestName(raw: string): string | null {
+  const name = raw.trim().replace(/\s+/g, " ");
+  if (name.length < 3 || name.length > 80) return null;
+  const parts = name.split(" ");
+  if (parts.length < 2 || parts.some((p) => !/^\p{L}/u.test(p))) return null;
+  return name;
+}
+
 /**
  * Seven check-out day buttons. Before 06:00 a late arrival from yesterday may
  * be leaving today, so the list starts today; otherwise it starts tomorrow.
