@@ -15,11 +15,13 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckinRouteImport } from './routes/checkin'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as PDemoRouteImport } from './routes/p.demo'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppActivityRouteImport } from './routes/_authenticated/app.activity'
 import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenticated/app.bookings'
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
 import { Route as AuthenticatedAppGuidesRouteImport } from './routes/_authenticated/app.guides'
@@ -65,6 +67,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KioskCodeRoute = KioskCodeRouteImport.update({
   id: '/kiosk/$code',
   path: '/kiosk/$code',
@@ -90,6 +97,12 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppActivityRoute =
+  AuthenticatedAppActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppBookingsRoute =
   AuthenticatedAppBookingsRouteImport.update({
     id: '/bookings',
@@ -179,10 +192,12 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
   '/stay/$token': typeof StayTokenRoute
+  '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
@@ -205,10 +220,12 @@ export interface FileRoutesByTo {
   '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
   '/stay/$token': typeof StayTokenRoute
+  '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
@@ -234,10 +251,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
   '/stay/$token': typeof StayTokenRoute
+  '/_authenticated/app/activity': typeof AuthenticatedAppActivityRoute
   '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/_authenticated/app/guides': typeof AuthenticatedAppGuidesRoute
@@ -263,10 +282,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkin'
     | '/app'
+    | '/invite/$token'
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
     | '/stay/$token'
+    | '/app/activity'
     | '/app/bookings'
     | '/app/connections'
     | '/app/guides'
@@ -289,10 +310,12 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/auth'
     | '/checkin'
+    | '/invite/$token'
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
     | '/stay/$token'
+    | '/app/activity'
     | '/app/bookings'
     | '/app/connections'
     | '/app/guides'
@@ -317,10 +340,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkin'
     | '/_authenticated/app'
+    | '/invite/$token'
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
     | '/stay/$token'
+    | '/_authenticated/app/activity'
     | '/_authenticated/app/bookings'
     | '/_authenticated/app/connections'
     | '/_authenticated/app/guides'
@@ -345,6 +370,7 @@ export interface RootRouteChildren {
   SlugRoute: typeof SlugRoute
   AuthRoute: typeof AuthRoute
   CheckinRoute: typeof CheckinRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
   PCodeRoute: typeof PCodeRoute
   PDemoRoute: typeof PDemoRoute
@@ -401,6 +427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/kiosk/$code': {
       id: '/kiosk/$code'
       path: '/kiosk/$code'
@@ -434,6 +467,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/activity': {
+      id: '/_authenticated/app/activity'
+      path: '/activity'
+      fullPath: '/app/activity'
+      preLoaderRoute: typeof AuthenticatedAppActivityRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/bookings': {
@@ -545,6 +585,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppActivityRoute: typeof AuthenticatedAppActivityRoute
   AuthenticatedAppBookingsRoute: typeof AuthenticatedAppBookingsRoute
   AuthenticatedAppConnectionsRoute: typeof AuthenticatedAppConnectionsRoute
   AuthenticatedAppGuidesRoute: typeof AuthenticatedAppGuidesRoute
@@ -558,6 +599,7 @@ interface AuthenticatedAppRouteChildren {
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppActivityRoute: AuthenticatedAppActivityRoute,
   AuthenticatedAppBookingsRoute: AuthenticatedAppBookingsRoute,
   AuthenticatedAppConnectionsRoute: AuthenticatedAppConnectionsRoute,
   AuthenticatedAppGuidesRoute: AuthenticatedAppGuidesRoute,
@@ -590,6 +632,7 @@ const rootRouteChildren: RootRouteChildren = {
   SlugRoute: SlugRoute,
   AuthRoute: AuthRoute,
   CheckinRoute: CheckinRoute,
+  InviteTokenRoute: InviteTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
   PCodeRoute: PCodeRoute,
   PDemoRoute: PDemoRoute,

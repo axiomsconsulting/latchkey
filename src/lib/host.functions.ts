@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
+import { hostOfProperty, requireOwner, requireWrite } from "@/lib/roles";
 import { maskUrl } from "./ical";
 import { RESERVED_SLUGS } from "./theme";
 import { todayInZone } from "./dates";
@@ -23,24 +24,64 @@ import {
 
 const uuid = z.string().uuid();
 
-/** Ensures the signed-in user has a host workspace, creating one on first use. */
+/** Calls functions added after the generated types (migration 0017). */
+type RpcClient = {
+  rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+};
+
+const HOST_COLUMNS = "id, business_name, contact_email, contact_phone, currency, timezone, channel_labels";
+
+type Membership = { host_id: string; role: string; hosts: { business_name: string } | null };
+
+/**
+ * The signed-in user's active host workspace and their role in it. People
+ * can belong to several hosts; the last one they switched to is remembered.
+ * A first-time user gets a new workspace, unless an invitation is waiting
+ * for them (they would otherwise get an empty "My rooms" before accepting).
+ */
 export const getWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: unknown) => z.object({ create: z.boolean().optional() }).optional().parse(input))
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const rpc = supabase as unknown as RpcClient;
 
-    const { data: membership } = await supabase
+    const { data: rows } = await supabase
       .from("host_members")
-      .select("host_id, role, hosts(id, business_name, contact_email, contact_phone, currency, timezone, channel_labels)")
+      .select("host_id, role, hosts(business_name)")
       .eq("user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: true });
+    const memberships = (rows ?? []) as unknown as Membership[];
 
-    let hostId = membership?.host_id ?? null;
-    let host = (membership as { hosts?: unknown } | null)?.hosts ?? null;
+    let hostId: string | null = null;
+    if (memberships.length > 1) {
+      // user_prefs arrives with migration 0017; until then, the first host.
+      const { data: prefs } = await (supabase as unknown as { from: (t: string) => any })
+        .from("user_prefs")
+        .select("last_host_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const last = (prefs as { last_host_id?: string } | null)?.last_host_id;
+      hostId = memberships.find((m) => m.host_id === last)?.host_id ?? null;
+    }
+    hostId ??= memberships[0]?.host_id ?? null;
 
     if (!hostId) {
+      if (!data?.create) {
+        const { data: pending } = await rpc.rpc("has_pending_invite");
+        if (pending === true) {
+          // The app shows "accept your invitation" instead of a workspace.
+          return {
+            hostId: "",
+            role: "viewer",
+            host: null,
+            properties: [],
+            hasDemo: false,
+            memberships: [],
+            pendingInvite: true,
+          };
+        }
+      }
       // Atomic, server-side: creates the host and owner membership together
       // (a plain insert+select fails RLS because the user isn't a member yet).
       const { data: newId, error } = await supabase.rpc("create_host_workspace", {
@@ -48,28 +89,28 @@ export const getWorkspace = createServerFn({ method: "GET" })
         _contact_email: (context.claims?.email as string | undefined) ?? "",
       });
       if (error) throw new Error(error.message);
-      const { data: created, error: readErr } = await supabase
-        .from("hosts")
-        .select("id, business_name, contact_email, contact_phone, currency, timezone, channel_labels")
-        .eq("id", newId as string)
-        .single();
-      if (readErr) throw new Error(readErr.message);
-      hostId = created.id;
-      host = created;
+      hostId = newId as string;
+      memberships.push({ host_id: hostId, role: "owner", hosts: { business_name: "My rooms" } });
     }
 
-    const { data: properties } = await supabase
-      .from("properties")
-      .select("*")
-      .eq("host_id", hostId)
-      .order("created_at", { ascending: true });
+    const [{ data: host, error: hostErr }, { data: properties }] = await Promise.all([
+      supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
+      supabase.from("properties").select("*").eq("host_id", hostId).order("created_at", { ascending: true }),
+    ]);
+    if (hostErr) throw new Error(hostErr.message);
 
     return {
-      hostId: hostId!,
-      role: membership?.role ?? "owner",
+      hostId,
+      role: memberships.find((m) => m.host_id === hostId)?.role ?? "owner",
       host,
       properties: properties ?? [],
       hasDemo: (properties ?? []).some((p) => p.is_demo),
+      memberships: memberships.map((m) => ({
+        hostId: m.host_id,
+        businessName: m.hosts?.business_name ?? "",
+        role: m.role,
+      })),
+      pendingInvite: false,
     };
   });
 
@@ -513,10 +554,12 @@ export const syncConnectionNow = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: allowed } = await context.supabase
       .from("channel_connections")
-      .select("id")
+      .select("id, property_id")
       .eq("id", data.id)
       .maybeSingle();
     if (!allowed) throw new Error("You do not have access to that connection.");
+    // Viewers can see connections, but the sync itself writes bookings.
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, allowed.property_id));
 
     const { syncConnection, FeedError } = await import("./ical-sync.server");
     try {
@@ -537,8 +580,7 @@ export const loadDemoData = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     // The shared demo resets itself; one visitor must not wipe it for everyone.
     assertNotSharedDemo(context.claims);
-    const { data: isOwner } = await context.supabase.rpc("has_host_role", { _host_id: data.hostId, _role: "owner" });
-    if (!isOwner) throw new Error("Only the owner can load sample rooms.");
+    await requireOwner(context.supabase, data.hostId);
     // Only Latchkey's server may mark rows as demo, so seed with the service role.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const property = await seedDemo(supabaseAdmin, data.hostId);
@@ -637,6 +679,7 @@ export const removeDemoData = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ hostId: uuid }).parse(input))
   .handler(async ({ data, context }) => {
+    await requireOwner(context.supabase, data.hostId);
     await removeDemoRows(context.supabase, data.hostId);
     return { ok: true };
   });
@@ -671,6 +714,7 @@ export const saveHost = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await requireOwner(context.supabase, data.id);
     const { id, ...fields } = data;
     const { data: row, error } = await context.supabase
       .from("hosts")
@@ -739,11 +783,13 @@ export const undoCheckIn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: b } = await context.supabase
       .from("bookings")
-      .select("id, status")
+      .select("id, status, property_id")
       .eq("id", data.bookingId)
       .maybeSingle();
     if (!b) throw new Error("Booking not found.");
     if (b.status !== "checked_in") throw new Error("This guest isn't checked in.");
+    // The steps below use the admin client, so check before RLS would.
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, b.property_id));
 
     const { error } = await context.supabase
       .from("bookings")
@@ -770,7 +816,16 @@ export const saveChannelLabels = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const clean: Record<string, string> = {};
     for (const [k, v] of Object.entries(data.labels)) if (v.trim()) clean[k] = v.trim();
-    const { error } = await context.supabase.from("hosts").update({ channel_labels: clean }).eq("id", data.hostId);
-    if (error) throw new Error(error.message);
+    // Managers may rename platforms, but hosts itself is owner-only, so this
+    // goes through a narrow function that checks write access.
+    const { error } = await (context.supabase as unknown as RpcClient).rpc("update_host_ops", {
+      _host_id: data.hostId,
+      _channel_labels: clean,
+    });
+    if (error?.code === "PGRST202") {
+      // Before migration 0017 is applied the function doesn't exist yet.
+      const { error: e2 } = await context.supabase.from("hosts").update({ channel_labels: clean }).eq("id", data.hostId);
+      if (e2) throw new Error(e2.message);
+    } else if (error) throw new Error(error.message);
     return { ok: true };
   });
