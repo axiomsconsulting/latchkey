@@ -1,60 +1,17 @@
 /**
- * Team access and RLS, run against the real migrations in an in-memory
- * Postgres (PGlite) with a small stand-in for Supabase's auth schema.
- * Never touches a hosted database.
+ * Team access and RLS, run against the real migrations (see pg-harness.ts).
  */
-import { readFileSync, readdirSync } from "fs";
-import { join } from "path";
-
-import { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 
-const SUPABASE_STUB = `
-create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
-create schema auth; create schema extensions; create schema storage;
-create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz);
-create function auth.jwt() returns jsonb language sql stable as $$
-  select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
-create function auth.uid() returns uuid language sql stable as $$ select nullif(auth.jwt() ->> 'sub', '')::uuid $$;
-create function auth.role() returns text language sql stable as $$ select auth.jwt() ->> 'role' $$;
-grant usage on schema public, auth to anon, authenticated, service_role;
-grant execute on all functions in schema auth to anon, authenticated, service_role;
--- Created by Lovable outside drizzle/migrations.
-create table public.platform_pricing (id int primary key);
-`;
+import { USERS, bootDb, type Db, type Who } from "./pg-harness";
 
-const USERS = {
-  owner: { id: "00000000-0000-0000-0000-00000000000a", email: "owner@example.com" },
-  manager: { id: "00000000-0000-0000-0000-00000000000b", email: "manager@example.com" },
-  viewer: { id: "00000000-0000-0000-0000-00000000000c", email: "viewer@example.com" },
-  outsider: { id: "00000000-0000-0000-0000-00000000000d", email: "outsider@example.com" },
-  demo: { id: "00000000-0000-0000-0000-00000000000e", email: "demo@latchkey.omsestates.uk" },
-} as const;
-type Who = keyof typeof USERS;
-
-let db: PGlite;
+let db: Db;
 let hostId: string;
 let propertyId: string;
 let roomId: string;
 
-/** Runs SQL as a signed-in user, the way PostgREST does. */
-async function as<T = Record<string, unknown>>(who: Who | "anon", sql: string, params: unknown[] = []): Promise<T[]> {
-  const claims =
-    who === "anon" ? { role: "anon" } : { sub: USERS[who].id, email: USERS[who].email, role: "authenticated" };
-  await db.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify(claims)]);
-  await db.exec(`set role ${who === "anon" ? "anon" : "authenticated"}`);
-  try {
-    return (await db.query<T>(sql, params)).rows;
-  } finally {
-    await db.exec("reset role");
-    await db.query("select set_config('request.jwt.claims', '', false)");
-  }
-}
-
-/** Runs SQL as Latchkey's server (service role: no user, RLS bypassed). */
-async function system<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
-  return (await db.query<T>(sql, params)).rows;
-}
+const as = <T = Record<string, unknown>>(who: Who | "anon", sql: string, params: unknown[] = []) => db.as<T>(who, sql, params);
+const system = <T = Record<string, unknown>>(sql: string, params: unknown[] = []) => db.system<T>(sql, params);
 
 async function invite(email: string, role: string, token: string) {
   await as("owner", "insert into host_invitations (host_id, email, role, token_hash, invited_by) values ($1, $2, $3, invitation_hash($4), $5)", [
@@ -63,17 +20,7 @@ async function invite(email: string, role: string, token: string) {
 }
 
 beforeAll(async () => {
-  db = new PGlite();
-  await db.exec(SUPABASE_STUB);
-  const dir = join(__dirname, "../drizzle/migrations");
-  for (const f of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
-    await db.exec(readFileSync(join(dir, f), "utf8"));
-  }
-  await db.exec(`grant select, insert, update, delete on all tables in schema public to authenticated, service_role;
-                 grant usage, select on all sequences in schema public to authenticated, service_role;`);
-  for (const u of Object.values(USERS)) {
-    await system("insert into auth.users (id, email, email_confirmed_at) values ($1, $2, now())", [u.id, u.email]);
-  }
+  db = await bootDb();
   hostId = (await as<{ id: string }>("owner", "select create_host_workspace('Trinity', $1) as id", [USERS.owner.email]))[0]!.id;
   propertyId = (await as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Trinity Suites', 'trinity-suites') returning id", [hostId]))[0]!.id;
   roomId = (await as<{ id: string }>("owner", "insert into rooms (property_id, room_number, display_name) values ($1, '1', 'Trinity 1') returning id", [propertyId]))[0]!.id;

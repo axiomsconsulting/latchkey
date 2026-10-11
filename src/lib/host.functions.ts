@@ -138,11 +138,45 @@ export const getPropertyBoard = createServerFn({ method: "GET" })
         supabase.from("unavailability_windows").select("*").eq("property_id", data.propertyId),
       ]);
 
+    // What each stay has waiting: unread guest messages and open requests.
+    const [{ data: unread }, { data: openRequests }, { data: openJobs }] = await Promise.all([
+      supabase
+        .from("messages")
+        .select("booking_id, bookings!inner(property_id)")
+        .eq("bookings.property_id", data.propertyId)
+        .eq("direction", "inbound")
+        .is("read_by_host_at", null)
+        .limit(500),
+      supabase
+        .from("requests")
+        .select("booking_id, bookings!inner(property_id)")
+        .eq("bookings.property_id", data.propertyId)
+        .in("status", ["pending", "awaiting_payment", "suggested", "approved"])
+        .limit(500),
+      supabase
+        .from("service_jobs")
+        .select("booking_id")
+        .eq("property_id", data.propertyId)
+        .not("booking_id", "is", null)
+        .not("status", "in", "(done,declined,cancelled)")
+        .limit(500),
+    ]);
+    const activity: Record<string, { messages: number; requests: number }> = {};
+    const bump = (id: string | null, key: "messages" | "requests") => {
+      if (!id) return;
+      activity[id] ??= { messages: 0, requests: 0 };
+      activity[id][key] += 1;
+    };
+    for (const m of unread ?? []) bump(m.booking_id, "messages");
+    for (const r of openRequests ?? []) bump(r.booking_id, "requests");
+    for (const j of openJobs ?? []) bump(j.booking_id, "requests");
+
     return {
       property,
       rooms: rooms ?? [],
       bookings: bookings ?? [],
       windows: windows ?? [],
+      activity,
       today: todayInZone(property?.timezone ?? "Europe/London"),
     };
   });

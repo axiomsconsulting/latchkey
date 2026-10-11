@@ -126,6 +126,13 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
   let updated = 0;
   let cancelled = 0;
 
+  // Shown as "Syncing…" on the Connections page. Its own update, so a
+  // database without the column (before migration 0019) still syncs.
+  const marker = supabaseAdmin as unknown as { from: (t: string) => any };
+  const markSyncing = (on: boolean) =>
+    marker.from("channel_connections").update({ sync_started_at: on ? new Date().toISOString() : null }).eq("id", connectionId);
+  await markSyncing(true);
+
   try {
     const text = await fetchFeed(secret.ical_url);
     const events = parseIcs(text, timezone);
@@ -219,8 +226,10 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       .update({ last_synced_at: new Date().toISOString(), sync_status: status, last_error: null })
       .eq("id", conn.id);
 
+    await markSyncing(false);
     return { created, updated, cancelled, skipped, warnings };
   } catch (err) {
+    await markSyncing(false);
     const message = err instanceof Error ? err.message : "Sync failed.";
     await supabaseAdmin.from("sync_runs").insert({
       connection_id: conn.id,
