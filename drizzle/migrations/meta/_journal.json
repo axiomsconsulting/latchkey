@@ -120,6 +120,13 @@
       "when": 1791741907062,
       "tag": "0016_team_roles_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791741910114,
+      "tag": "0017_team_invites_audit",
+      "breakpoints": true
     }
   ]
 }

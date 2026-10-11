@@ -1,0 +1,359 @@
+-- Team access: owners invite managers and viewers by email; every member
+-- signs in with their own account. Roles are compared as text so this file
+-- never depends on the enum values from 0016 being committed first.
+--   owner          everything, including billing, members, deleting
+--   manager        run the business (co_host is treated the same)
+--   viewer/cleaner read only
+
+-- ============ ROLE HELPERS ============
+create or replace function public.member_role(_host_id uuid)
+returns text language sql stable security definer set search_path = public as $$
+  select m.role::text from public.host_members m where m.host_id = _host_id and m.user_id = auth.uid()
+$$;
+
+create or replace function public.can_read_host(_host_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_host_member(_host_id)
+$$;
+
+create or replace function public.can_write_host(_host_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.host_members m
+    where m.host_id = _host_id and m.user_id = auth.uid() and m.role::text in ('owner', 'manager', 'co_host'))
+$$;
+
+create or replace function public.is_host_owner(_host_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.host_members m
+    where m.host_id = _host_id and m.user_id = auth.uid() and m.role::text = 'owner')
+$$;
+
+-- Every existing write policy goes through is_host_staff, so managers get
+-- write access everywhere staff had it. Owner-only policies are unchanged.
+create or replace function public.is_host_staff(_host_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.can_write_host(_host_id)
+$$;
+
+-- ============ READ ACCESS FOR EVERY MEMBER ============
+-- Many tables had one "for all" staff policy, which also hid reads from
+-- non-staff. Add member read policies so viewers can see everything.
+do $$
+declare
+  spec text[];
+  specs text[][] := array[
+    array['channel_connections', 'public.property_host_id(property_id)'],
+    array['room_listings', 'public.property_host_id((select r.property_id from public.rooms r where r.id = room_id))'],
+    array['bookings', 'public.property_host_id(property_id)'],
+    array['presence_log', 'public.property_host_id((select b.property_id from public.bookings b where b.id = booking_id))'],
+    array['sync_runs', 'public.property_host_id((select c.property_id from public.channel_connections c where c.id = connection_id))'],
+    array['guides', 'public.property_host_id(property_id)'],
+    array['guide_steps', 'public.property_host_id((select g.property_id from public.guides g where g.id = guide_id))'],
+    array['extras_catalogue', 'public.property_host_id(property_id)'],
+    array['requests', 'public.property_host_id((select b.property_id from public.bookings b where b.id = booking_id))'],
+    array['payments', 'public.property_host_id((select b.property_id from public.bookings b where b.id = booking_id))'],
+    array['messages', 'public.property_host_id((select b.property_id from public.bookings b where b.id = booking_id))'],
+    array['check_in_attempts', 'public.property_host_id(property_id)'],
+    array['verification_results', 'public.property_host_id((select b.property_id from public.bookings b where b.id = booking_id))'],
+    array['checkin_sessions', 'public.property_host_id(property_id)'],
+    array['host_alerts', 'host_id'],
+    array['service_jobs', 'host_id'],
+    array['trades', 'host_id']
+  ];
+begin
+  foreach spec slice 1 in array specs loop
+    execute format('drop policy if exists %I on public.%I', spec[1] || '_member_read', spec[1]);
+    execute format('create policy %I on public.%I for select to authenticated using (public.is_host_member(%s))',
+      spec[1] || '_member_read', spec[1], spec[2]);
+  end loop;
+end $$;
+
+-- Trades were writable by any member; only staff now.
+drop policy if exists "Host members insert trades" on public.trades;
+drop policy if exists "Host members update trades" on public.trades;
+drop policy if exists "Host members delete trades" on public.trades;
+create policy trades_staff_insert on public.trades for insert to authenticated with check (public.is_host_staff(host_id));
+create policy trades_staff_update on public.trades for update to authenticated
+  using (public.is_host_staff(host_id)) with check (public.is_host_staff(host_id));
+create policy trades_staff_delete on public.trades for delete to authenticated using (public.is_host_staff(host_id));
+
+-- ============ MEMBERS ============
+alter table public.host_members add column if not exists invited_by uuid;
+alter table public.host_members add column if not exists updated_at timestamptz not null default now();
+
+-- Every member can see who else is on the team.
+drop policy if exists host_members_select on public.host_members;
+create policy host_members_select on public.host_members for select to authenticated
+  using (user_id = auth.uid() or public.is_host_member(host_id));
+
+-- Owners manage members; anyone may leave (the last owner is kept below).
+drop policy if exists host_members_delete on public.host_members;
+create policy host_members_delete on public.host_members for delete to authenticated
+  using (user_id = auth.uid() or public.is_host_owner(host_id));
+
+create or replace function public.keep_last_owner()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if old.role::text = 'owner'
+     and (tg_op = 'DELETE' or new.role::text <> 'owner')
+     -- When the whole host is being deleted, its members go with it.
+     and exists (select 1 from public.hosts h where h.id = old.host_id)
+     and not exists (select 1 from public.host_members m
+       where m.host_id = old.host_id and m.id <> old.id and m.role::text = 'owner') then
+    raise exception 'Every host needs at least one owner. Make someone else an owner first.'
+      using errcode = 'P0001';
+  end if;
+  if tg_op = 'UPDATE' then
+    new.updated_at := now();
+    return new;
+  end if;
+  return old;
+end $$;
+
+drop trigger if exists keep_last_owner on public.host_members;
+create trigger keep_last_owner before update or delete on public.host_members
+  for each row execute function public.keep_last_owner();
+
+-- ============ INVITATIONS ============
+create table if not exists public.host_invitations (
+  id uuid primary key default gen_random_uuid(),
+  host_id uuid not null references public.hosts(id) on delete cascade,
+  email text not null check (email = lower(email)),
+  role public.host_role not null check (role::text in ('owner', 'manager', 'viewer')),
+  token_hash text not null unique,
+  invited_by uuid not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '7 days',
+  accepted_at timestamptz,
+  accepted_by uuid,
+  revoked_at timestamptz
+);
+create unique index if not exists host_invitations_open_idx
+  on public.host_invitations (host_id, email) where accepted_at is null and revoked_at is null;
+
+alter table public.host_invitations enable row level security;
+drop policy if exists host_invitations_owner_select on public.host_invitations;
+drop policy if exists host_invitations_owner_insert on public.host_invitations;
+drop policy if exists host_invitations_owner_update on public.host_invitations;
+create policy host_invitations_owner_select on public.host_invitations for select to authenticated
+  using (public.is_host_owner(host_id));
+create policy host_invitations_owner_insert on public.host_invitations for insert to authenticated
+  with check (public.is_host_owner(host_id) and invited_by = auth.uid());
+create policy host_invitations_owner_update on public.host_invitations for update to authenticated
+  using (public.is_host_owner(host_id)) with check (public.is_host_owner(host_id));
+
+drop trigger if exists shared_demo_read_only on public.host_invitations;
+create trigger shared_demo_read_only before insert or update or delete on public.host_invitations
+  for each row execute function public.block_shared_demo_writes();
+
+create or replace function public.invitation_hash(_token text)
+returns text language sql immutable as $$
+  select encode(sha256(convert_to(_token, 'UTF8')), 'hex')
+$$;
+
+/** Accepts an invite for the signed-in user and returns the host id. */
+create or replace function public.accept_host_invitation(_token text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  _uid uuid := auth.uid();
+  _email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  _confirmed timestamptz;
+  inv public.host_invitations%rowtype;
+begin
+  if _uid is null then
+    raise exception 'Please sign in first.' using errcode = 'P0001';
+  end if;
+  if public.is_shared_demo_user() then
+    raise exception 'The shared demo can''t join a team. Create your own account first.' using errcode = 'P0001';
+  end if;
+  select * into inv from public.host_invitations where token_hash = public.invitation_hash(_token) for update;
+  if not found or inv.accepted_at is not null or inv.revoked_at is not null or inv.expires_at < now() then
+    raise exception 'This invite is no longer valid. Ask the owner to send a new one.' using errcode = 'P0001';
+  end if;
+  if inv.email <> _email then
+    raise exception 'This invite was sent to a different email address.' using errcode = 'P0001';
+  end if;
+  select email_confirmed_at into _confirmed from auth.users where id = _uid;
+  if _confirmed is null then
+    raise exception 'Please confirm your email address first.' using errcode = 'P0001';
+  end if;
+
+  insert into public.host_members (host_id, user_id, role, invited_by)
+    values (inv.host_id, _uid, inv.role, inv.invited_by)
+    on conflict (host_id, user_id) do update set role = excluded.role, invited_by = excluded.invited_by;
+  update public.host_invitations set accepted_at = now(), accepted_by = _uid where id = inv.id;
+  return inv.host_id;
+end $$;
+
+/** What the invite page may show before sign-in: nothing that identifies people. */
+create or replace function public.peek_invitation(_token text)
+returns table (business_name text, role text, email_masked text, status text)
+language sql stable security definer set search_path = public as $$
+  select h.business_name,
+         i.role::text,
+         left(i.email, 1) || '***@' || split_part(i.email, '@', 2),
+         case
+           when i.revoked_at is not null then 'revoked'
+           when i.accepted_at is not null then 'used'
+           when i.expires_at < now() then 'expired'
+           else 'open'
+         end
+  from public.host_invitations i
+  join public.hosts h on h.id = i.host_id
+  where i.token_hash = public.invitation_hash(_token)
+$$;
+
+/** True when someone has invited the signed-in user's email and it is still open. */
+create or replace function public.has_pending_invite()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.host_invitations i
+    where i.email = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and i.accepted_at is null and i.revoked_at is null and i.expires_at > now())
+$$;
+
+/** The team list with emails, for members of that host only. */
+create or replace function public.host_team(_host_id uuid)
+returns table (user_id uuid, email text, role text, created_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select m.user_id, u.email::text, m.role::text, m.created_at
+  from public.host_members m
+  join auth.users u on u.id = m.user_id
+  where m.host_id = _host_id and public.is_host_member(_host_id)
+  order by m.created_at
+$$;
+
+/** Day-to-day host settings managers may change; hosts itself stays owner-only. */
+create or replace function public.update_host_ops(_host_id uuid, _channel_labels jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.can_write_host(_host_id) then
+    raise exception 'You have read-only access.' using errcode = 'P0001';
+  end if;
+  update public.hosts set channel_labels = _channel_labels where id = _host_id;
+end $$;
+
+revoke all on function public.accept_host_invitation(text) from public, anon;
+revoke all on function public.has_pending_invite() from public, anon;
+revoke all on function public.host_team(uuid) from public, anon;
+revoke all on function public.update_host_ops(uuid, jsonb) from public, anon;
+grant execute on function public.accept_host_invitation(text) to authenticated;
+grant execute on function public.has_pending_invite() to authenticated;
+grant execute on function public.host_team(uuid) to authenticated;
+grant execute on function public.update_host_ops(uuid, jsonb) to authenticated;
+grant execute on function public.peek_invitation(text) to anon, authenticated;
+
+-- ============ PER-USER PREFERENCES ============
+create table if not exists public.user_prefs (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  last_host_id uuid references public.hosts(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+alter table public.user_prefs enable row level security;
+drop policy if exists user_prefs_own on public.user_prefs;
+create policy user_prefs_own on public.user_prefs for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- ============ AUDIT LOG ============
+create table if not exists public.audit_log (
+  id bigserial primary key,
+  host_id uuid,
+  actor_id uuid,
+  actor_email text,
+  table_name text not null,
+  row_id text,
+  action text not null check (action in ('insert', 'update', 'delete')),
+  changed jsonb,
+  at timestamptz not null default now()
+);
+create index if not exists audit_log_host_at_idx on public.audit_log (host_id, at desc);
+alter table public.audit_log enable row level security;
+-- Owners read their host's history. Nobody writes from the client.
+drop policy if exists audit_log_owner_read on public.audit_log;
+create policy audit_log_owner_read on public.audit_log for select to authenticated
+  using (public.is_host_owner(host_id));
+
+/** Values that must never be copied into the log; only the fact they changed. */
+create or replace function public.audit_redacted(_key text)
+returns boolean language sql immutable as $$
+  select _key in ('check_in_pin', 'wifi_password', 'feed_token', 'token_hash', 'bank_details',
+                  'reservation_code', 'phone_last4', 'notes')
+      or _key like '%\_url' or _key like 'guest\_%' or _key like '%password%'
+      or _key like '%secret%' or _key like '%email%' or _key like '%phone%'
+$$;
+
+/** Bookkeeping columns that change on every sync and say nothing about people's actions. */
+create or replace function public.audit_noise(_key text)
+returns boolean language sql immutable as $$
+  select _key in ('updated_at', 'last_synced_at', 'sync_status', 'last_error', 'feed_status',
+                  'listing_title', 'created_at')
+$$;
+
+create or replace function public.audit_row()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  r jsonb := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
+  o jsonb := case when tg_op = 'UPDATE' then to_jsonb(old) else null end;
+  h uuid;
+  diff jsonb := '{}'::jsonb;
+  k text;
+begin
+  -- Latchkey's own demo rebuilds aren't anyone's action.
+  if auth.uid() is null and coalesce((r ->> 'is_demo')::boolean, false) then
+    return null;
+  end if;
+
+  if tg_table_name = 'hosts' then
+    h := (r ->> 'id')::uuid;
+  elsif r ? 'host_id' then
+    h := (r ->> 'host_id')::uuid;
+  elsif r ? 'property_id' then
+    h := public.property_host_id((r ->> 'property_id')::uuid);
+  elsif tg_table_name = 'room_listings' then
+    select p.host_id into h from public.rooms x join public.properties p on p.id = x.property_id
+      where x.id = (r ->> 'room_id')::uuid;
+  elsif tg_table_name = 'guide_steps' then
+    select p.host_id into h from public.guides g join public.properties p on p.id = g.property_id
+      where g.id = (r ->> 'guide_id')::uuid;
+  end if;
+
+  if tg_op = 'UPDATE' then
+    for k in select jsonb_object_keys(r) loop
+      if not public.audit_noise(k) and (r -> k) is distinct from (o -> k) then
+        diff := diff || jsonb_build_object(k, case when public.audit_redacted(k)
+          then jsonb_build_object('old', '[redacted]', 'new', '[redacted]')
+          else jsonb_build_object('old', o -> k, 'new', r -> k) end);
+      end if;
+    end loop;
+    if diff = '{}'::jsonb then
+      return null;
+    end if;
+  else
+    for k in select jsonb_object_keys(r) loop
+      if not public.audit_noise(k) then
+        diff := diff || jsonb_build_object(k, case when public.audit_redacted(k) and r -> k <> 'null'::jsonb
+          then to_jsonb('[redacted]'::text) else r -> k end);
+      end if;
+    end loop;
+  end if;
+
+  insert into public.audit_log (host_id, actor_id, actor_email, table_name, row_id, action, changed)
+  values (h, auth.uid(),
+          case when auth.uid() is null then 'system' else auth.jwt() ->> 'email' end,
+          tg_table_name, r ->> 'id', lower(tg_op), diff);
+  return null;
+end $$;
+
+-- AFTER triggers: writes the demo lock or RLS rejects never reach the log.
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'hosts', 'host_members', 'host_invitations', 'properties', 'rooms', 'channel_connections',
+    'room_listings', 'bookings', 'guides', 'guide_steps', 'extras_catalogue',
+    'unavailability_windows', 'trades'
+  ] loop
+    execute format('drop trigger if exists audit_row on public.%I', t);
+    execute format('create trigger audit_row after insert or update or delete on public.%I
+      for each row execute function public.audit_row()', t);
+  end loop;
+end $$;
