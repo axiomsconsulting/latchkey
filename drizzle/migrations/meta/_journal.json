@@ -113,6 +113,13 @@
       "when": 1791740528911,
       "tag": "0015_owner_only_host_members_insert",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791741907062,
+      "tag": "0016_team_roles_enum",
+      "breakpoints": true
     }
   ]
 }
