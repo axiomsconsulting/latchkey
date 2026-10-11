@@ -5,6 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireOwner } from "@/lib/roles";
 import {
   DEFAULT_EXTRAS, availableWindows, basketAutoApproves, earlyCheckinOptions, lateCheckoutOptions, priceBasket,
   type ExtraItem, type ExtraUnit, type WindowKey,
@@ -142,6 +143,7 @@ export const saveMoneySettings = createServerFn({ method: "POST" })
     pricesInclude: z.boolean(), bankDetails: z.string().max(500), outUntil: z.string().datetime().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await requireOwner(context.supabase, data.hostId);
     const { error } = await context.supabase.from("hosts").update({
       tax_registered: data.registered, tax_label: data.label, tax_rate_bp: data.rateBp, prices_include_tax: data.pricesInclude,
       bank_details: data.bankDetails.trim() || null, out_until: data.outUntil,

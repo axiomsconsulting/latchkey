@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
+import { hostOfProperty, requireWrite } from "@/lib/roles";
 import { SECTIONS, STARTER, guideWindow, type SectionKey } from "./guide";
 
 const uuid = z.string().uuid();
@@ -176,8 +177,7 @@ export const uploadGuidePhoto = createServerFn({ method: "POST" })
     assertNotSharedDemo(context.claims);
     const { data: prop } = await context.supabase.from("properties").select("id, host_id").eq("id", data.propertyId).maybeSingle();
     if (!prop) throw new Error("Property not found.");
-    const { data: canEdit } = await context.supabase.rpc("is_host_member", { _host_id: prop.host_id });
-    if (!canEdit) throw new Error("Only owners and co-hosts can upload files.");
+    await requireWrite(context.supabase, prop.host_id);
     const m = /^data:image\/(jpeg|png|webp);base64,(.+)$/.exec(data.dataUrl)!;
     const bytes = Buffer.from(m[2]!, "base64");
     if (bytes.length > 5 * 1024 * 1024) throw new Error("Photos must be under 5 MB.");
@@ -239,10 +239,12 @@ export const createGuideLink = createServerFn({ method: "POST" })
     // RLS: only staff of this booking's host can read it.
     const { data: b } = await context.supabase
       .from("bookings")
-      .select("id, check_in_date, check_out_date, check_out_time, status, properties(timezone, default_check_out_time)")
+      .select("id, property_id, check_in_date, check_out_date, check_out_time, status, properties(timezone, default_check_out_time)")
       .eq("id", data.bookingId)
       .maybeSingle();
     if (!b) throw new Error("Booking not found.");
+    // Viewers can read bookings, but minting a guest link is a write.
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, b.property_id));
     if (b.status === "cancelled" || b.status === "blocked") throw new Error("This booking has no guest.");
     const p = (b as any).properties ?? {};
     const tz = p.timezone ?? "Europe/London";

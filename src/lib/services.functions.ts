@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
+import { requireOwner, requireWrite } from "@/lib/roles";
 import { INTEGRATION_KEYS, normaliseModes } from "./integration-modes";
 import { categoryById, recommendProviders, type Provider } from "./services";
 import { normaliseTheme, RESERVED_SLUGS } from "./theme";
@@ -50,6 +51,8 @@ export const saveIntegrationModes = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    // Going live spends money and contacts real people: owner only.
+    await requireOwner(context.supabase, data.hostId);
     const { error } = await context.supabase
       .from("hosts")
       .update({ integration_modes: normaliseModes(data.modes) })
@@ -102,8 +105,7 @@ export const uploadBrandAsset = createServerFn({ method: "POST" })
     // RLS check: the caller must be able to read this property.
     const { data: prop } = await context.supabase.from("properties").select("id, host_id").eq("id", data.propertyId).maybeSingle();
     if (!prop) throw new Error("Property not found.");
-    const { data: canEdit } = await context.supabase.rpc("is_host_member", { _host_id: prop.host_id });
-    if (!canEdit) throw new Error("Only owners and co-hosts can upload files.");
+    await requireWrite(context.supabase, prop.host_id);
 
     const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(data.dataUrl);
     if (!m) throw new Error("That file couldn't be read.");
@@ -223,6 +225,8 @@ export const appointProvider = createServerFn({ method: "POST" })
       .eq("id", data.jobId)
       .single();
     if (!job) throw new Error("Request not found.");
+    // Appointing can call Contra live, so it needs write access, not just a read.
+    await requireWrite(context.supabase, job.host_id);
     const { modes } = await hostContext(context.supabase, job.host_id);
     const { searchProviders, bookProvider } = await import("./contra.server");
     const providers = await searchProviders(modes.contra, job.category, null);

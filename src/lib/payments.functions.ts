@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { hostOfProperty, requireOwner } from "@/lib/roles";
 
 const uuid = z.string().uuid();
 const token = z.string().min(20).max(80);
@@ -61,6 +62,8 @@ export const syncPriceListToStripe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
+    // Billing set-up is the owner's: this creates products in Stripe.
+    await requireOwner(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const { stripeCall } = await import("./stripe.server");
     const { data: p } = await context.supabase.from("properties").select("id, name, hosts(currency)").eq("id", data.propertyId).single();
     if (!p) throw new Error("Property not found.");
