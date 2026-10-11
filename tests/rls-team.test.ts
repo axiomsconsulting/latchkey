@@ -194,3 +194,20 @@ describe("shared demo", () => {
     expect(await system("select id from audit_log where host_id = $1 and table_name = 'properties'", [demoHost])).toHaveLength(0);
   });
 });
+
+describe("profiles", () => {
+  it("are edited only by their owner and shown to teammates", async () => {
+    await as("manager", "insert into user_profiles (user_id, display_name) values ($1, 'Maya Manager')", [USERS.manager.id]);
+    await expect(
+      as("manager", "insert into user_profiles (user_id, display_name) values ($1, 'Not me')", [USERS.owner.id]),
+    ).rejects.toThrow(/row-level security/);
+    const team = await as<{ email: string; display_name: string | null }>("owner", "select email, display_name from host_team($1)", [hostId]);
+    expect(team.find((m) => m.email === USERS.manager.email)?.display_name).toBe("Maya Manager");
+  });
+
+  it("can't be changed on the shared demo account", async () => {
+    await expect(
+      as("demo", "insert into user_profiles (user_id, display_name) values ($1, 'Hacked')", [USERS.demo.id]),
+    ).rejects.toThrow(/locked in the shared demo/);
+  });
+});
