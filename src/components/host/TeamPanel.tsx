@@ -184,7 +184,6 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
                 </Button>
               ) : null}
             </li>
-            </li>
           ))}
           {invites.map((i) => (
             <li key={i.id} className="flex flex-wrap items-center gap-3 py-3">
@@ -254,6 +253,7 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
           onSaved={() => qc.invalidateQueries({ queryKey: ["team", hostId] })}
         />
       ) : null}
+
       <AlertDialog open={confirm !== null} onOpenChange={(o) => (o ? null : setConfirm(null))}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -269,6 +269,7 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
     </section>
   );
 }
+
 function Avatar({ name, url }: { name: string; url: string | null }) {
   const initials = name
     .replace(/@.*/, "")

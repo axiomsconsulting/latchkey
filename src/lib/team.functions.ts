@@ -369,6 +369,7 @@ export const listActivity = createServerFn({ method: "GET" })
     }));
     return { items, more: items.length === 50 };
   });
+
 /** Your own name on team cards. */
 export const saveMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

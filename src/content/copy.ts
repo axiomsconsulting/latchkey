@@ -1058,6 +1058,7 @@ export const activity = {
     trades: "trade contact",
   } as Record<string, string>,
 };
+
 export const guestCard = {
   noName: "Guest name to confirm",
   archived: "Archived",
