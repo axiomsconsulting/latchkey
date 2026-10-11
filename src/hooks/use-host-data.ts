@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { getPropertyBoard, getWorkspace, listAlerts, listConnections } from "@/lib/host.functions";
 import { canWrite, isOwner } from "@/lib/roles";
+import { linkState } from "@/lib/sync-status";
 
 const STORAGE_KEY = "latchkey.property";
 
@@ -59,6 +60,11 @@ export function useConnections(propertyId: string | null) {
     queryKey: ["connections", propertyId],
     enabled: Boolean(propertyId),
     queryFn: () => fn({ data: { propertyId: propertyId! } }),
+    // Keep the "Syncing…" badges honest while a sync runs.
+    refetchInterval: (q) =>
+      (q.state.data?.connections ?? []).some((c) => linkState(c as { sync_status: string; sync_started_at?: string | null }) === "syncing")
+        ? 4000
+        : false,
   });
 }
 

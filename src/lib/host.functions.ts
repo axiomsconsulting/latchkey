@@ -556,7 +556,8 @@ export const saveConnection = createServerFn({ method: "POST" })
       if (secretErr) throw new Error(secretErr.message);
     }
 
-    if (data.room_id) {
+    // A new link records which listing feeds the room; editing doesn't add another.
+    if (data.room_id && !data.id) {
       await context.supabase.from("room_listings").insert({
         room_id: data.room_id,
         channel: data.channel,
@@ -571,14 +572,39 @@ export const saveConnection = createServerFn({ method: "POST" })
 
 export const deleteConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: uuid }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ id: uuid, withBookings: z.boolean().default(false) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
+    let removed = 0;
+    let archived = 0;
+    if (data.withBookings) {
+      // The stays this link brought in go too. Any with payments are archived
+      // instead, so money records are never lost.
+      const { data: stays } = await context.supabase.from("bookings").select("id").eq("connection_id", data.id);
+      const ids = (stays ?? []).map((b) => b.id);
+      if (ids.length) {
+        const { data: paid } = await context.supabase.from("payments").select("booking_id").in("booking_id", ids);
+        const keep = new Set((paid ?? []).map((p) => p.booking_id));
+        const db = context.supabase as unknown as RpcClient & { from: (t: string) => any };
+        const gone = ids.filter((id) => !keep.has(id));
+        if (gone.length) {
+          const { error } = await db.rpc("delete_bookings", { _ids: gone });
+          if (error) throw new Error(error.message);
+          removed = gone.length;
+        }
+        if (keep.size) {
+          await db.from("bookings").update({ archived_at: new Date().toISOString() }).in("id", [...keep]);
+          archived = keep.size;
+        }
+      }
+    }
     const { error } = await context.supabase
       .from("channel_connections")
       .delete()
       .eq("id", data.id);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, removed, archived };
   });
 
 /** Manual "sync now". Membership is confirmed through the user's own client. */

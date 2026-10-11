@@ -1126,3 +1126,25 @@ export const jobTools = {
   deleteBody: "This removes the job for good. Archive it instead if you might want to look it up later.",
   deleted: "Job deleted",
 };
+
+export const linkTools = {
+  subtitle: "Every room's calendar links in one place, with how each one is doing.",
+  addLink: "Add link",
+  unlinked: "Not linked to a room",
+  noRooms: "Add rooms to this property first.",
+  noLink: "No link saved",
+  editTitle: "Edit calendar link",
+  editBody: (masked: string) => `Change the room, platform or name. To replace the link (${masked || "none saved"}), paste the new one; leave it empty to keep it.`,
+  testNeedsLink: "Paste a link to test it",
+  saved: "Calendar link updated",
+  syncResult: (created: number, updated: number, cancelled: number) => `Synced · ${created} new, ${updated} updated, ${cancelled} cancelled`,
+  syncedAll: (n: number) => `${n} calendar ${n === 1 ? "link" : "links"} synced`,
+  removeTitle: "Remove this calendar link?",
+  removeBody: "Latchkey stops reading this calendar. Bookings it brought in stay unless you tick the box.",
+  withStays: "Also remove the stays this link brought in",
+  withStaysHint: "Their messages and requests go too. Any with payments are archived instead.",
+  removed: "Calendar link removed",
+  removedWithStays: (removed: number, archived: number) =>
+    `Calendar link removed with ${removed} ${removed === 1 ? "stay" : "stays"}${archived ? `; ${archived} with payments archived` : ""}`,
+  states: { syncing: "Syncing…", ok: "Working", warning: "Needs a look", error: "Not working", never: "Not checked yet" },
+};
