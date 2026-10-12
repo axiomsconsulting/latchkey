@@ -26,6 +26,7 @@ import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
 import { Route as AuthenticatedAppGuidesRouteImport } from './routes/_authenticated/app.guides'
 import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authenticated/app.properties'
+import { Route as AuthenticatedAppRegisterRouteImport } from './routes/_authenticated/app.register'
 import { Route as AuthenticatedAppServicesRouteImport } from './routes/_authenticated/app.services'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
@@ -126,6 +127,12 @@ const AuthenticatedAppPropertiesRoute =
     path: '/properties',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppRegisterRoute =
+  AuthenticatedAppRegisterRouteImport.update({
+    id: '/register',
+    path: '/register',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppServicesRoute =
   AuthenticatedAppServicesRouteImport.update({
     id: '/services',
@@ -202,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
+  '/app/register': typeof AuthenticatedAppRegisterRoute
   '/app/services': typeof AuthenticatedAppServicesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
@@ -230,6 +238,7 @@ export interface FileRoutesByTo {
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
+  '/app/register': typeof AuthenticatedAppRegisterRoute
   '/app/services': typeof AuthenticatedAppServicesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
@@ -261,6 +270,7 @@ export interface FileRoutesById {
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/_authenticated/app/guides': typeof AuthenticatedAppGuidesRoute
   '/_authenticated/app/properties': typeof AuthenticatedAppPropertiesRoute
+  '/_authenticated/app/register': typeof AuthenticatedAppRegisterRoute
   '/_authenticated/app/services': typeof AuthenticatedAppServicesRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
@@ -292,6 +302,7 @@ export interface FileRouteTypes {
     | '/app/connections'
     | '/app/guides'
     | '/app/properties'
+    | '/app/register'
     | '/app/services'
     | '/app/settings'
     | '/app/setup'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/app/connections'
     | '/app/guides'
     | '/app/properties'
+    | '/app/register'
     | '/app/services'
     | '/app/settings'
     | '/app/setup'
@@ -350,6 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/connections'
     | '/_authenticated/app/guides'
     | '/_authenticated/app/properties'
+    | '/_authenticated/app/register'
     | '/_authenticated/app/services'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup'
@@ -504,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppPropertiesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/register': {
+      id: '/_authenticated/app/register'
+      path: '/register'
+      fullPath: '/app/register'
+      preLoaderRoute: typeof AuthenticatedAppRegisterRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/services': {
       id: '/_authenticated/app/services'
       path: '/services'
@@ -590,6 +610,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppConnectionsRoute: typeof AuthenticatedAppConnectionsRoute
   AuthenticatedAppGuidesRoute: typeof AuthenticatedAppGuidesRoute
   AuthenticatedAppPropertiesRoute: typeof AuthenticatedAppPropertiesRoute
+  AuthenticatedAppRegisterRoute: typeof AuthenticatedAppRegisterRoute
   AuthenticatedAppServicesRoute: typeof AuthenticatedAppServicesRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetupRoute: typeof AuthenticatedAppSetupRoute
@@ -604,6 +625,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppConnectionsRoute: AuthenticatedAppConnectionsRoute,
   AuthenticatedAppGuidesRoute: AuthenticatedAppGuidesRoute,
   AuthenticatedAppPropertiesRoute: AuthenticatedAppPropertiesRoute,
+  AuthenticatedAppRegisterRoute: AuthenticatedAppRegisterRoute,
   AuthenticatedAppServicesRoute: AuthenticatedAppServicesRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetupRoute: AuthenticatedAppSetupRoute,

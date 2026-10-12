@@ -40,6 +40,13 @@ import {
   takesFacePhoto,
   type IdRead,
 } from "./guest-records";
+import {
+  REGISTER_AGE,
+  cleanRegisterEntry,
+  nationalityFromId,
+  registerApplies,
+  registerKeepUntil,
+} from "./hotel-register";
 import { compareNames } from "./name-match";
 import { normaliseTheme } from "./theme";
 
@@ -427,7 +434,7 @@ async function sessionContext(t: string) {
     () => db.from("bookings").select(`${bookingCols}, site_key`).eq("id", session.booking_id).single(),
     () => db.from("bookings").select(bookingCols).eq("id", session.booking_id).single(),
   );
-  const propertyCols = "id, host_id, name, checkin_methods, is_demo, short_code, timezone";
+  const propertyCols = "id, host_id, name, checkin_methods, is_demo, short_code, timezone, country_code";
   const { data: p } = await withLegacy(
     () => db.from("properties").select(`${propertyCols}, guest_records`).eq("id", session.property_id).single(),
     () => db.from("properties").select(propertyCols).eq("id", session.property_id).single(),
@@ -439,12 +446,17 @@ async function sessionContext(t: string) {
         () => db.from("rooms").select("max_guests").eq("id", b.room_id!).maybeSingle(),
       )
     : { data: null };
+  // The UK guest register, once migration 0022 has created its table.
+  const register = registerApplies(p.country_code)
+    ? !(await db.from("guest_register").select("id", { head: true }).limit(1)).error
+    : false;
   return {
     db,
     session,
     booking: b,
     property: p,
     room,
+    register,
   };
 }
 
@@ -456,8 +468,11 @@ function partyPlan(ctx: Ctx) {
   // Someone popping back to reread the rules isn't asked again, and nothing
   // new is asked until the database has the columns to keep the answers.
   const returning = ctx.booking.status === "checked_in" || ctx.property.guest_records === undefined;
+  // The register needs to know who's here, so it always asks in the UK.
+  const register = ctx.register && ctx.booking.status !== "checked_in";
   return {
-    ask: rec.askWhoIsStaying && !returning,
+    ask: (rec.askWhoIsStaying || register) && !returning,
+    register,
     booked: bookedPartySize(ctx.booking),
     capacity: ctx.room?.max_guests ?? null,
     childrenAllowed: ctx.room?.children_allowed ?? true,
@@ -474,6 +489,28 @@ function last4Kinds(b: { reservation_code: string | null; phone_last4: string | 
   if (b.phone_last4) kinds.push("phone");
   if (b.guest_email) kinds.push("email");
   return kinds;
+}
+
+/**
+ * What's already done on this stay, so a check-in picked up on another
+ * device only asks for what's still missing.
+ */
+async function progress(ctx: Ctx) {
+  const [{ data: people }, { data: entries }] = await Promise.all([
+    ctx.db.from("guest_ids").select("position, kind, age, id_checked, skipped").eq("booking_id", ctx.booking.id),
+    ctx.register
+      ? ctx.db.from("guest_register").select("position").eq("booking_id", ctx.booking.id)
+      : Promise.resolve({ data: [] as Array<{ position: number | null }> }),
+  ]);
+  const rows = people ?? [];
+  return {
+    childAges: rows
+      .filter((r) => r.kind === "child")
+      .sort((a, b) => a.position - b.position)
+      .map((r) => r.age ?? 0),
+    idsDone: rows.filter((r) => r.kind === "adult" && (r.id_checked || r.skipped)).map((r) => r.position),
+    registered: (entries ?? []).map((r) => r.position).filter((x): x is number => x !== null),
+  };
 }
 
 export const confirmBooking = createServerFn({ method: "POST" })
@@ -511,6 +548,7 @@ export const resumeSession = createServerFn({ method: "POST" })
       platform: platformKey(booking),
       party: partyPlan(ctx),
       adults: session.adults ?? null,
+      ...(await progress(ctx)),
       confirmed: session.confirmed,
       completed: session.completed_at !== null,
       verified: session.verified_method !== null,
@@ -561,6 +599,19 @@ async function recordResult(
   }
 }
 
+/**
+ * What the register form starts with, from the guest's own ID. Only sent
+ * back to the device that just photographed it.
+ */
+function prefillFrom(read: IdRead) {
+  return {
+    fullName: read.fullName,
+    nationality: nationalityFromId(read.nationality),
+    documentNumber: read.documentNumber,
+    placeOfIssue: read.placeOfIssue ?? read.issuingCountry,
+  };
+}
+
 /** Property-wide cap on paid ID reads per hour, so new sessions can't run up AI charges. */
 async function readsLeftThisHour(ctx: Ctx): Promise<boolean> {
   const { data: recent } = await ctx.db
@@ -594,6 +645,9 @@ async function readId(ctx: Ctx, image: string, position: number): Promise<IdRead
       expiryDate: "2031-01-01",
       issuingCountry: "United Kingdom",
       numberLast4: "0000",
+      nationality: "GBR",
+      documentNumber: null,
+      placeOfIssue: null,
     };
   }
   return readIdDetails(image);
@@ -725,7 +779,7 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
         message: `${firstName(ctx.booking.guest_full_name) || "A guest"} showed an expired ID at ${ctx.property.name}.`,
       });
     }
-    return { status: "done" as const, result };
+    return { status: "done" as const, result, prefill: prefillFrom(read) };
   });
 
 /**
@@ -836,7 +890,12 @@ export const checkCompanionId = createServerFn({ method: "POST" })
       skipped: false,
       idPhoto: data.small ?? null,
     });
-    return { status: "done" as const, firstName: firstName(read.fullName), under18: age !== null && age < ADULT_AGE };
+    return {
+      status: "done" as const,
+      firstName: firstName(read.fullName),
+      under18: age !== null && age < ADULT_AGE,
+      prefill: prefillFrom(read),
+    };
   });
 
 /** No ID to hand: the host is told and will check in person. */
@@ -854,6 +913,84 @@ export const skipCompanionId = createServerFn({ method: "POST" })
       kind: "self_declared",
       message: `Adult ${data.position + 1} with ${firstName(ctx.booking.guest_full_name) || "a guest"} at ${ctx.property.name} didn't show ID. Please check it in person.`,
     });
+    return { ok: true as const };
+  });
+
+/**
+ * One person's entry in the UK guest register: full name and nationality for
+ * everyone 16 or over, plus document number, place of issue and next
+ * destination for guests who aren't British, Irish or Commonwealth citizens.
+ */
+export const saveRegister = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        token,
+        position: z.number().int().min(0).max(29),
+        fullName: z.string().max(200),
+        nationality: z.string().max(10),
+        documentNumber: z.string().max(60).nullish(),
+        placeOfIssue: z.string().max(120).nullish(),
+        nextDestination: z.string().max(200).nullish(),
+        nextAddress: z.string().max(400).nullish(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const ctx = await sessionContext(data.token);
+    if (!ctx.session.confirmed || !partyPlan(ctx).register) throw new Error("Not available.");
+    const adults = Math.max(1, ctx.session.adults ?? 1);
+    if (data.position >= adults) {
+      // Children are only registered from 16.
+      const { data: child } = await ctx.db
+        .from("guest_ids")
+        .select("age")
+        .eq("booking_id", ctx.booking.id)
+        .eq("position", data.position)
+        .maybeSingle();
+      if (!child || (child.age ?? 0) < REGISTER_AGE) throw new Error("Not available.");
+    }
+    const clean = cleanRegisterEntry(data);
+    if (!clean.ok) return { ok: false as const, missing: clean.missing };
+    // The public tour never keeps what visitors type.
+    if (isTour(ctx.property)) return { ok: true as const };
+
+    const e = clean.entry;
+    const arrival = todayInZone(ctx.property.timezone ?? "Europe/London");
+    const { data: room } = ctx.booking.room_id
+      ? await ctx.db.from("rooms").select("display_name").eq("id", ctx.booking.room_id).maybeSingle()
+      : { data: null };
+    const row = {
+      host_id: ctx.property.host_id,
+      property_id: ctx.property.id,
+      property_name: ctx.property.name,
+      booking_id: ctx.booking.id,
+      room_name: room?.display_name ?? null,
+      position: data.position,
+      arrival_date: arrival,
+      full_name: e.fullName,
+      nationality: e.nationality,
+      is_alien: e.alien,
+      document_number: e.documentNumber,
+      place_of_issue: e.placeOfIssue,
+      next_destination: e.nextDestination,
+      next_address: e.nextAddress,
+      source: "guest",
+      keep_until: registerKeepUntil(arrival),
+    };
+    const { data: prev } = await ctx.db
+      .from("guest_register")
+      .select("id")
+      .eq("booking_id", ctx.booking.id)
+      .eq("position", data.position)
+      .maybeSingle();
+    const { error } = prev
+      ? await ctx.db.from("guest_register").update(row).eq("id", prev.id)
+      : await ctx.db.from("guest_register").insert(row);
+    if (error) {
+      console.error("guest_register save failed", error.message);
+      throw new Error("We couldn't save that. Please try again.");
+    }
     return { ok: true as const };
   });
 

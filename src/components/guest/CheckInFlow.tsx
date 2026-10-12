@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Minus, Phone, Plus } from "lucide-react";
@@ -25,6 +25,7 @@ import {
   resumeSession,
   selfDeclare,
   setGuestName,
+  saveRegister,
   setParty,
   skipCompanionId,
   verifyLast4,
@@ -32,6 +33,7 @@ import {
 } from "@/lib/checkin.functions";
 
 import { formatUkDate, formatUkTime } from "@/lib/dates";
+import { REGISTER_AGE, cleanRegisterEntry, isAlien, nationalityOptions } from "@/lib/hotel-register";
 import { cn } from "@/lib/utils";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -49,10 +51,23 @@ type PartyPlan = {
   facePhoto: boolean;
   keepIdPhoto: boolean;
   keepDays: number;
+  /** UK guest register: name and nationality of everyone 16 or over. */
+  register: boolean;
+};
+
+/** What the register form starts with, read from the person's own ID. */
+type Prefill = {
+  fullName: string | null;
+  nationality: string | null;
+  documentNumber: string | null;
+  placeOfIssue: string | null;
 };
 
 /** Steps after the lead guest's ID, run in order. */
-type After = { kind: "face"; position: number } | { kind: "companion"; position: number };
+type After =
+  | { kind: "face"; position: number }
+  | { kind: "companion"; position: number }
+  | { kind: "register"; position: number; child: boolean };
 
 type Step =
   | { name: "welcome" }
@@ -68,6 +83,7 @@ type Step =
   | { name: "party" }
   | { name: "companion"; position: number; ready: boolean }
   | { name: "face"; position: number }
+  | { name: "register"; position: number; child: boolean }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
   | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
 
@@ -120,6 +136,10 @@ export function CheckInFlow({
   const [listFlow, setListFlow] = useState(false);
   const [adults, setAdults] = useState(1);
   const [queue, setQueue] = useState<After[]>([]);
+  const [prefill, setPrefill] = useState<Record<number, Prefill>>({});
+  // Read when the steps after the lead guest are planned, sometimes in the
+  // same tap that set them, so kept in a ref rather than state.
+  const childAges = useRef<number[]>([]);
   const onPhone = useIsMobile();
 
   const match = useServerFn(matchBooking);
@@ -136,6 +156,7 @@ export function CheckInFlow({
   const companionId = useServerFn(checkCompanionId);
   const skipCompanion = useServerFn(skipCompanionId);
   const face = useServerFn(addFacePhoto);
+  const register = useServerFn(saveRegister);
   const [fullName, setFullName] = useState("");
 
   useEffect(() => {
@@ -158,6 +179,22 @@ export function CheckInFlow({
         setPlan(res.party);
         setListFlow(res.listFlow);
         if (res.adults) setAdults(res.adults);
+        if (res.verified && !res.completed) {
+          // Identity is done: carry on with only the steps still missing.
+          childAges.current = res.childAges;
+          const people = res.adults ?? 1;
+          const steps: After[] = [];
+          for (let i = 0; i < people; i++) {
+            if (i > 0 && res.party.everyAdult && !res.idsDone.includes(i)) steps.push({ kind: "companion", position: i });
+            if (res.party.register && !res.registered.includes(i)) steps.push({ kind: "register", position: i, child: false });
+          }
+          res.childAges.forEach((age, i) => {
+            if (res.party.register && age >= REGISTER_AGE && !res.registered.includes(people + i)) {
+              steps.push({ kind: "register", position: people + i, child: true });
+            }
+          });
+          if (steps.length && live) return void advance(steps);
+        }
         if (res.completed || res.verified) {
           const done = await complete({ data: { token: resumeToken } });
           if (live) setStep({ name: "done", ...done });
@@ -199,6 +236,8 @@ export function CheckInFlow({
     setPlan(null);
     setAdults(1);
     setQueue([]);
+    setPrefill({});
+    childAges.current = [];
     setStep({ name: "welcome" });
   }
 
@@ -279,20 +318,32 @@ export function CheckInFlow({
     setStep({ name: "identity", method: seq[0] ?? "self_declare", consented: false });
   }
 
-  async function onParty(nextAdults: number, childAges: number[]) {
-    const res = await run(() => party({ data: { token, adults: nextAdults, childAges } }));
+  async function onParty(nextAdults: number, ages: number[]) {
+    const res = await run(() => party({ data: { token, adults: nextAdults, childAges: ages } }));
     if (!res) return;
     setAdults(nextAdults);
+    childAges.current = ages;
     await startIdentity(listFlow, sequence, nextAdults);
   }
 
-  /** After the lead guest: their face photo, then each other adult's ID and face. */
+  /**
+   * After the lead guest: their register entry and face photo, then each
+   * other adult's ID, register entry and face, then any 16 or 17 year olds'
+   * register entries.
+   */
   function afterLead(people = adults, p = plan) {
     const steps: After[] = [];
+    if (p?.register) steps.push({ kind: "register", position: 0, child: false });
     if (p?.facePhoto) steps.push({ kind: "face", position: 0 });
     for (let i = 1; i < people; i++) {
       if (p?.everyAdult) steps.push({ kind: "companion", position: i });
+      if (p?.register) steps.push({ kind: "register", position: i, child: false });
       if (p?.facePhoto) steps.push({ kind: "face", position: i });
+    }
+    if (p?.register) {
+      childAges.current.forEach((age, i) => {
+        if (age >= REGISTER_AGE) steps.push({ kind: "register", position: people + i, child: true });
+      });
     }
     void advance(steps);
   }
@@ -304,6 +355,8 @@ export function CheckInFlow({
       await finish();
     } else if (next.kind === "face") {
       setStep({ name: "face", position: next.position });
+    } else if (next.kind === "register") {
+      setStep({ name: "register", position: next.position, child: next.child });
     } else {
       setStep({ name: "companion", position: next.position, ready: false });
     }
@@ -323,7 +376,15 @@ export function CheckInFlow({
       if (ok) await advance(queue, copy.companionSkipped);
       return;
     }
+    setPrefill((p) => ({ ...p, [position]: res.prefill }));
     await advance(queue, res.under18 ? copy.companionUnder18 : copy.companionThanks(res.firstName));
+  }
+
+  async function onRegister(position: number, entry: RegisterForm) {
+    const res = await run(() => register({ data: { token, position, ...entry } }));
+    if (!res) return;
+    if (!res.ok) return setMessage(res.missing.map((m) => copy.registerMissing[m]).join(" "));
+    await advance(queue);
   }
 
   async function onSkipCompanion(position: number) {
@@ -350,6 +411,7 @@ export function CheckInFlow({
       return setMessage(res.reason === "not_photo_id" ? `${copy.idNotPhotoId} ${copy.idTriesLeft(res.left)}` : copy.idRetry(res.left));
     }
     if (res.status === "fallback") return fallback("photo_id");
+    setPrefill((p) => ({ ...p, 0: res.prefill }));
     afterLead();
   }
 
@@ -706,6 +768,22 @@ export function CheckInFlow({
           </section>
         ) : null}
 
+        {step.name === "register" ? (
+          <RegisterStep
+            key={`register-${step.position}`}
+            title={
+              step.child
+                ? copy.registerTitleChild
+                : step.position === 0
+                  ? copy.registerTitleYou
+                  : copy.registerTitleAdult(step.position + 1)
+            }
+            prefill={prefill[step.position] ?? null}
+            busy={busy}
+            onSubmit={(entry) => void onRegister(step.position, entry)}
+          />
+        ) : null}
+
         {step.name === "face" ? (
           <section className="mx-auto max-w-xl">
             <h1 className="text-2xl sm:text-4xl">
@@ -967,7 +1045,7 @@ function PartyStep({
 
       {ages.length > 0 ? (
         <div className="mt-6">
-          <p className="text-muted-foreground">{copy.partyChildAgeHint}</p>
+          <p className="text-muted-foreground">{plan.register ? copy.partyChildAgeHintRegister : copy.partyChildAgeHint}</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {ages.map((age, i) => (
               <div key={i} className="space-y-1">
@@ -1014,6 +1092,139 @@ function PartyStep({
         {busy ? <Loader2 className="size-6 animate-spin" /> : null}
         {missingAge ? copy.partyAgesMissing : copy.partyContinue}
       </Button>
+    </section>
+  );
+}
+
+type RegisterForm = {
+  fullName: string;
+  nationality: string;
+  documentNumber: string | null;
+  placeOfIssue: string | null;
+  nextDestination: string | null;
+  nextAddress: string | null;
+};
+
+/**
+ * The UK guest register entry for one person: name and nationality, and for
+ * guests who aren't British, Irish or Commonwealth citizens, their passport
+ * or ID details and where they're going next. Prefilled from their ID.
+ */
+function RegisterStep({
+  title,
+  prefill,
+  busy,
+  onSubmit,
+}: {
+  title: string;
+  prefill: Prefill | null;
+  busy: boolean;
+  onSubmit: (entry: RegisterForm) => void;
+}) {
+  const [fullName, setFullName] = useState(prefill?.fullName ?? "");
+  const [nationality, setNationality] = useState(prefill?.nationality ?? "");
+  const [documentNumber, setDocumentNumber] = useState(prefill?.documentNumber ?? "");
+  const [placeOfIssue, setPlaceOfIssue] = useState(prefill?.placeOfIssue ?? "");
+  const [nextDestination, setNextDestination] = useState("");
+  const [nextAddress, setNextAddress] = useState("");
+  const options = nationalityOptions();
+  const alien = !!nationality && isAlien(nationality);
+  const entry: RegisterForm = {
+    fullName,
+    nationality,
+    documentNumber: alien ? documentNumber : null,
+    placeOfIssue: alien ? placeOfIssue : null,
+    nextDestination: alien ? nextDestination : null,
+    nextAddress: alien ? nextAddress : null,
+  };
+  const ready = cleanRegisterEntry(entry).ok;
+
+  return (
+    <section className="mx-auto max-w-xl">
+      <h1 className="text-2xl sm:text-4xl">{title}</h1>
+      <p className="mt-2 text-muted-foreground">{copy.registerWhy}</p>
+      {prefill?.fullName ? <p className="mt-2 rounded-2xl bg-secondary p-3 text-secondary-foreground">{copy.registerFromId}</p> : null}
+      <form
+        className="mt-6 space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit(entry);
+        }}
+      >
+        <div className="space-y-1">
+          <label htmlFor="reg-name" className="text-lg">
+            {copy.registerName}
+          </label>
+          <Input
+            id="reg-name"
+            className="h-14 text-xl"
+            autoComplete="name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+          <p className="text-sm text-muted-foreground">{copy.registerNameHint}</p>
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="reg-nationality" className="text-lg">
+            {copy.registerNationality}
+          </label>
+          <Select value={nationality} onValueChange={setNationality}>
+            <SelectTrigger id="reg-nationality" className="h-14 text-xl">
+              <SelectValue placeholder={copy.registerPick} />
+            </SelectTrigger>
+            <SelectContent className="max-h-80">
+              {options.map((o) => (
+                <SelectItem key={o.code} value={o.code} className="text-lg">
+                  {o.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {alien ? (
+          <>
+            <p className="rounded-2xl bg-secondary p-4 text-secondary-foreground">{copy.registerAlienWhy}</p>
+            <div className="space-y-1">
+              <label htmlFor="reg-doc" className="text-lg">
+                {copy.registerDocNumber}
+              </label>
+              <Input
+                id="reg-doc"
+                className="h-14 text-xl uppercase"
+                autoComplete="off"
+                value={documentNumber}
+                onChange={(e) => setDocumentNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="reg-place" className="text-lg">
+                {copy.registerPlace}
+              </label>
+              <Input id="reg-place" className="h-14 text-xl" value={placeOfIssue} onChange={(e) => setPlaceOfIssue(e.target.value)} />
+              <p className="text-sm text-muted-foreground">{copy.registerPlaceHint}</p>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="reg-next" className="text-lg">
+                {copy.registerNext}
+              </label>
+              <Input id="reg-next" className="h-14 text-xl" value={nextDestination} onChange={(e) => setNextDestination(e.target.value)} />
+              <p className="text-sm text-muted-foreground">{copy.registerNextHint}</p>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="reg-address" className="text-lg">
+                {copy.registerAddress}
+              </label>
+              <Input id="reg-address" className="h-14 text-xl" value={nextAddress} onChange={(e) => setNextAddress(e.target.value)} />
+            </div>
+          </>
+        ) : null}
+
+        <Button type="submit" size="touch-xl" className="w-full" disabled={busy || !ready}>
+          {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+          {copy.registerSave}
+        </Button>
+      </form>
     </section>
   );
 }

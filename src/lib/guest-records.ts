@@ -132,6 +132,12 @@ export type IdRead = {
   expiryDate: string | null;
   issuingCountry: string | null;
   numberLast4: string | null;
+  /** As printed: "GBR", "FRA", "British Citizen". Used to prefill the UK register. */
+  nationality: string | null;
+  /** Full number, only ever kept in the register and only for non-Commonwealth guests. */
+  documentNumber: string | null;
+  /** Issuing authority or place, as printed. */
+  placeOfIssue: string | null;
 };
 
 export type IdVerdict =

@@ -98,6 +98,7 @@ export const hostNav = {
   guides: "Guides",
   settings: "Settings",
   activity: "Activity",
+  register: "Guest register",
 };
 
 export const statuses = {
@@ -419,8 +420,10 @@ export const checkinSettings = {
     regulatorHelp:
       "Keeping photos of IDs and faces is personal data. In the UK you normally need to pay the ICO data protection fee and tell guests why you keep them and for how long. Photo options stay off until you tick this.",
     regulatorNeeded: "Tick the registration box above to keep photos.",
-    lawNote:
-      "UK hotels, B&Bs and short lets must also record the full name and nationality of every guest aged 16 or over (Immigration (Hotel Records) Order 1972), and keep it for 12 months. Check what applies to you.",
+    askRequiredUk: "Always on in the UK: the guest register needs to know who's staying.",
+    lawNoteUk:
+      "UK guest register: everyone aged 16 or over gives their full name and nationality at check-in, and guests who aren't British, Irish or Commonwealth citizens also give their passport or ID number, where it was issued and where they're going next (Immigration (Hotel Records) Order 1972). This is always on, kept for 12 months from arrival whatever you choose above, and found under Guest register.",
+    lawNoteElsewhere: "This property isn't in the UK, so the UK guest register doesn't apply. Check what your local law asks you to record.",
   },
   back: "Back to properties",
   print: "Print",
@@ -549,6 +552,8 @@ export const guest = {
   partyAdultsOnly: "This room is for adults only.",
   partyChildAge: (n: number) => `Age of child ${n}`,
   partyChildAgeHint: "Just their age. Children don't need ID.",
+  partyChildAgeHintRegister:
+    "Just their age. Children don't need ID. If they're 16 or 17, we'll ask their name and nationality next, as UK law requires.",
   partyAgePick: "Age",
   partyBooked: (n: number) => `Your booking is for ${n} ${n === 1 ? "guest" : "guests"}.`,
   partyDiffers: (booked: number, total: number) =>
@@ -567,6 +572,33 @@ export const guest = {
   companionUnder18: "Thanks. They're under 18, so no ID is needed.",
   companionSkip: "They don't have ID with them",
   companionSkipped: "No problem. Your host will check it when they say hello.",
+  // UK guest register
+  registerTitleYou: "Your details for the guest register",
+  registerTitleAdult: (n: number) => `Guest register: adult ${n}`,
+  registerTitleChild: "Guest register: your 16 or 17 year old",
+  registerWhy:
+    "UK law asks every place you stay to record the full name and nationality of everyone aged 16 or over. Your host keeps it for 12 months and only shows it to the police or immigration officers if they ask.",
+  registerFromId: "We've filled in what we could from the ID. Please check it.",
+  registerName: "Full name",
+  registerNameHint: "As on the passport or ID card",
+  registerNationality: "Nationality",
+  registerPick: "Choose a nationality",
+  registerAlienWhy:
+    "As this isn't a British, Irish or Commonwealth nationality, the law also asks for the passport or ID details and where you're going next.",
+  registerDocNumber: "Passport or ID card number",
+  registerPlace: "Place of issue",
+  registerPlaceHint: "As printed on it, for example the city, country or issuing office",
+  registerNext: "Where are you going after this stay?",
+  registerNextHint: "A town and country is fine",
+  registerAddress: "Address there, if you know it (optional)",
+  registerSave: "Save and continue",
+  registerMissing: {
+    name: "Please type a first name and surname.",
+    nationality: "Please choose a nationality.",
+    document: "Please type the passport or ID card number.",
+    place: "Please type where the passport or ID card was issued.",
+    destination: "Please tell us where you're going next.",
+  } as Record<string, string>,
   // Face photo
   faceTitle: "And a quick photo of your face",
   faceTitleOther: (n: number) => `A quick photo of adult ${n}`,
@@ -1163,7 +1195,7 @@ export const guestCard = {
   activity: "Arrivals and departures",
   presence: { arrived: "Arrived", left: "Left", returned: "Came back", checked_out: "Checked out" } as Record<string, string>,
   deleteTitle: (name: string) => `Remove ${name}?`,
-  deleteBody: "This deletes the stay with its messages, requests and alerts. It can't be undone. Archive it instead if you might need it later.",
+  deleteBody: "This deletes the stay with its messages, requests and alerts. It can't be undone. Archive it instead if you might need it later. Guest register entries are kept for 12 months, as UK law requires.",
   deleteSynced: "It came from a calendar link, so it will come back on the next sync if the platform still lists it.",
   deleted: "Stay removed",
   whoStaying: "Who's staying",
@@ -1193,6 +1225,12 @@ export const guestCard = {
   detailExpiry: "Expires",
   detailNumber: "Number ends",
   deletedOn: (date: string) => `Deleted automatically on ${date}.`,
+  registerTitle: "Guest register (kept 12 months)",
+  registerNationality: "Nationality",
+  registerDocument: "Passport or ID number",
+  registerPlace: "Place of issue",
+  registerNext: "Next destination",
+  registerAddress: "Address there",
 };
 
 export const bookingTools = {
@@ -1261,4 +1299,41 @@ export const linkTools = {
   removedWithStays: (removed: number, archived: number) =>
     `Calendar link removed with ${removed} ${removed === 1 ? "stay" : "stays"}${archived ? `; ${archived} with payments archived` : ""}`,
   states: { syncing: "Syncing…", ok: "Working", warning: "Needs a look", error: "Not working", never: "Not checked yet" },
+};
+
+/** The UK guest register (Immigration (Hotel Records) Order 1972). */
+export const registerPage = {
+  title: "Guest register",
+  subtitle:
+    "UK law asks you to record the full name and nationality of every guest aged 16 or over, and keep it for 12 months. Guests fill this in when they check in.",
+  law:
+    "Guests who aren't British, Irish or Commonwealth citizens also give their passport or ID number, where it was issued, and where they're going next. Show this register to the police or an immigration officer if they ask to inspect it. Entries are removed automatically 12 months after arrival.",
+  notUk: "None of your properties are in the UK, so there's nothing to record here.",
+  staffOnly: "Only owners and managers can see the guest register.",
+  allProperties: "All properties",
+  from: "Arrived from",
+  to: "to",
+  download: "Download spreadsheet",
+  downloaded: (n: number) => `Downloaded ${n} ${n === 1 ? "entry" : "entries"}.`,
+  print: "Print",
+  add: "Add a guest",
+  edit: "Correct",
+  empty: "No guests registered for these dates.",
+  count: (n: number) => `${n} ${n === 1 ? "guest" : "guests"}`,
+  colArrived: "Arrived",
+  colName: "Full name",
+  colNationality: "Nationality",
+  colDocument: "Passport or ID",
+  colNext: "Next destination",
+  colWhere: "Where",
+  issuedAt: (place: string) => `issued ${place}`,
+  byHost: "Added by you",
+  dialogAdd: "Add a guest to the register",
+  dialogEdit: "Correct this entry",
+  dialogHelp: "For anyone aged 16 or over who checked in with you in person.",
+  property: "Property",
+  arrival: "Arrival date",
+  room: "Room (optional)",
+  saved: "Register updated",
+  keptUntil: (date: string) => `Kept until ${date}`,
 };

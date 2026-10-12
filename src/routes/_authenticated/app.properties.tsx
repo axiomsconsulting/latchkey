@@ -745,7 +745,7 @@ function PropertiesPage() {
           property={property as unknown as { id: string; short_code: string; checkin_methods: unknown }}
         />
       ) : null}
-      {property ? <GuestRecordsSettings property={property as unknown as { id: string; guest_records?: unknown }} /> : null}
+      {property ? <GuestRecordsSettings property={property as unknown as { id: string; guest_records?: unknown; country_code?: string | null }} /> : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">

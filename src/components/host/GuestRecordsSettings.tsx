@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { checkinSettings, common } from "@/content/copy";
 import { KEEP_DAY_CHOICES, normaliseRecords, type GuestRecords, type KeepDays } from "@/lib/guest-records";
+import { registerApplies } from "@/lib/hotel-register";
 import { saveGuestRecords } from "@/lib/host.functions";
 
 const copy = checkinSettings.records;
@@ -28,7 +29,13 @@ const TOGGLES: Array<{ key: Toggle; photo: boolean }> = [
  * them. Photo options only take effect once the host confirms they are
  * registered with their data regulator.
  */
-export function GuestRecordsSettings({ property }: { property: { id: string; guest_records?: unknown } }) {
+export function GuestRecordsSettings({
+  property,
+}: {
+  property: { id: string; guest_records?: unknown; country_code?: string | null };
+}) {
+  // UK properties keep the guest register, which needs to know who's staying.
+  const uk = registerApplies(property.country_code);
   const [form, setForm] = useState<GuestRecords>(() => normaliseRecords(property.guest_records));
   const [busy, setBusy] = useState(false);
   const save = useServerFn(saveGuestRecords);
@@ -78,7 +85,8 @@ export function GuestRecordsSettings({ property }: { property: { id: string; gue
 
       <div className="mt-4 space-y-4">
         {TOGGLES.map(({ key, photo }) => {
-          const locked = photo && !form.regulatorConfirmed;
+          const required = uk && key === "askWhoIsStaying";
+          const locked = (photo && !form.regulatorConfirmed) || required;
           return (
             <div key={key} className="flex items-start justify-between gap-4 rounded-xl border border-border p-4">
               <div>
@@ -86,11 +94,12 @@ export function GuestRecordsSettings({ property }: { property: { id: string; gue
                   {copy[key]}
                 </Label>
                 <p className="text-sm text-muted-foreground">{copy[`${key}Help`]}</p>
-                {locked && form[key] ? <p className="mt-1 text-sm text-destructive">{copy.regulatorNeeded}</p> : null}
+                {required ? <p className="mt-1 text-sm">{copy.askRequiredUk}</p> : null}
+                {locked && !required && form[key] ? <p className="mt-1 text-sm text-destructive">{copy.regulatorNeeded}</p> : null}
               </div>
               <Switch
                 id={`gr-${key}`}
-                checked={form[key] && !locked}
+                checked={required || (form[key] && !locked)}
                 disabled={locked}
                 onCheckedChange={(v) => setForm((f) => ({ ...f, [key]: v }))}
               />
@@ -115,7 +124,7 @@ export function GuestRecordsSettings({ property }: { property: { id: string; gue
         </Select>
       </div>
 
-      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{copy.lawNote}</p>
+      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{uk ? copy.lawNoteUk : copy.lawNoteElsewhere}</p>
 
       <Button className="mt-4" onClick={onSave} disabled={busy}>
         {busy ? <Loader2 className="size-4 animate-spin" /> : null}

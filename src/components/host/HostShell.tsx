@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BookOpen, CalendarDays, Eye, History, Home, Loader2, LogOut, Mail, Plug, Settings, Sun, Wrench, type LucideIcon } from "lucide-react";
+import { BookOpen, CalendarDays, Eye, History, Home, Loader2, LogOut, Mail, NotebookPen, Plug, Settings, Sun, Wrench, type LucideIcon } from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
@@ -93,11 +93,22 @@ export function HostShell() {
           ))}
         </nav>
 
+        {canWrite ? (
+          <Link
+            to="/app/register"
+            onClick={haptic}
+            className="spring mt-auto flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+            activeProps={{ className: "bg-primary !text-primary-foreground shadow-soft", "aria-current": "page" }}
+          >
+            <NotebookPen className="size-5" />
+            {hostNav.register}
+          </Link>
+        ) : null}
         {isOwner ? (
           <Link
             to="/app/activity"
             onClick={haptic}
-            className="spring mt-auto flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className="spring flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
             activeProps={{ className: "bg-primary !text-primary-foreground shadow-soft", "aria-current": "page" }}
           >
             <History className="size-5" />
@@ -107,7 +118,7 @@ export function HostShell() {
         <button
           type="button"
           onClick={leave}
-          className={`spring ${isOwner ? "" : "mt-auto "}flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground`}
+          className={`spring ${canWrite ? "" : "mt-auto "}flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground`}
         >
           <LogOut className="size-5" />
           {auth.signOut}

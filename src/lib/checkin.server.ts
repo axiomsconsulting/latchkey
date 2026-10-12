@@ -159,7 +159,8 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
                 "or a document shown on a phone or computer screen. " +
                 "Set has_holder_photo to true only if the holder's face photo printed on the document is clearly visible. " +
                 "Return the holder's full name exactly as printed (given names then surname), the date of birth and expiry date " +
-                "as YYYY-MM-DD, the issuing country in English, and only the last 4 characters of the document number. " +
+                "as YYYY-MM-DD, the issuing country in English, the nationality exactly as printed (for example GBR or FRA), " +
+                "the document number, and the place or authority of issue as printed. " +
                 "Use null for anything you cannot read clearly. Do not guess and do not return any other details.",
             },
             { type: "input_image", image_url: imageDataUrl },
@@ -187,6 +188,9 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
               expiry_date: { type: ["string", "null"] },
               issuing_country: { type: ["string", "null"] },
               number_last4: { type: ["string", "null"] },
+              nationality: { type: ["string", "null"] },
+              document_number: { type: ["string", "null"] },
+              place_of_issue: { type: ["string", "null"] },
             },
             required: [
               "is_id_document",
@@ -198,6 +202,9 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
               "expiry_date",
               "issuing_country",
               "number_last4",
+              "nationality",
+              "document_number",
+              "place_of_issue",
             ],
           },
         },
@@ -254,7 +261,12 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
       dateOfBirth: date(p["date_of_birth"]),
       expiryDate: date(p["expiry_date"]),
       issuingCountry: str(p["issuing_country"], 60),
-      numberLast4: last4Of(typeof p["number_last4"] === "string" ? p["number_last4"] : null),
+      numberLast4: last4Of(
+        typeof p["document_number"] === "string" ? p["document_number"] : typeof p["number_last4"] === "string" ? p["number_last4"] : null,
+      ),
+      nationality: str(p["nationality"], 40),
+      documentNumber: str(p["document_number"], 40),
+      placeOfIssue: str(p["place_of_issue"], 80),
     };
   } catch {
     return {
@@ -267,6 +279,9 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
       expiryDate: null,
       issuingCountry: null,
       numberLast4: null,
+      nationality: null,
+      documentNumber: null,
+      placeOfIssue: null,
     };
   }
 }

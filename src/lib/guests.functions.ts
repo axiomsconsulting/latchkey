@@ -43,7 +43,7 @@ export const getGuestDetails = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!booking) throw new Error("We couldn't find that stay.");
 
-    const [messages, requests, jobs, presence, people] = await Promise.all([
+    const [messages, requests, jobs, presence, people, register] = await Promise.all([
       sb
         .from("messages")
         .select("id, body, direction, created_at")
@@ -75,7 +75,13 @@ export const getGuestDetails = createServerFn({ method: "GET" })
         )
         .eq("booking_id", data.bookingId)
         .order("position", { ascending: true }),
+      // The UK guest register entries for this stay (staff only by RLS).
+      sb
+        .from("guest_register")
+        .select("position, full_name, nationality, document_number, place_of_issue, next_destination, next_address")
+        .eq("booking_id", data.bookingId),
     ]);
+    const registerAt = new Map((register.data ?? []).map((r) => [r.position, r]));
     const peopleRows = people.data ?? [];
     const { signGuestPhotos } = await import("./checkin.server");
     const signed = await signGuestPhotos(
@@ -130,6 +136,19 @@ export const getGuestDetails = createServerFn({ method: "GET" })
         idPhotoUrl: p.id_photo_path ? (signed[p.id_photo_path] ?? null) : null,
         facePhotoUrl: p.face_photo_path ? (signed[p.face_photo_path] ?? null) : null,
         deleteAfter: p.delete_after,
+        register: (() => {
+          const r = registerAt.get(p.position);
+          return r
+            ? {
+                fullName: r.full_name,
+                nationality: r.nationality,
+                documentNumber: r.document_number,
+                placeOfIssue: r.place_of_issue,
+                nextDestination: r.next_destination,
+                nextAddress: r.next_address,
+              }
+            : null;
+        })(),
       })),
       messages: (messages.data ?? []).map((m) => ({
         id: m.id,

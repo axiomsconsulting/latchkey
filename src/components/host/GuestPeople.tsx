@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { guestCard as copy } from "@/content/copy";
 import { formatUkDate } from "@/lib/dates";
+import { nationalityName } from "@/lib/hotel-register";
 
 export type GuestPerson = {
   id: string;
@@ -23,11 +24,20 @@ export type GuestPerson = {
   idPhotoUrl: string | null;
   facePhotoUrl: string | null;
   deleteAfter: string;
+  /** Their UK guest register entry, when there is one. */
+  register: {
+    fullName: string;
+    nationality: string;
+    documentNumber: string | null;
+    placeOfIssue: string | null;
+    nextDestination: string | null;
+    nextAddress: string | null;
+  } | null;
 };
 
 function title(p: GuestPerson) {
-  if (p.kind === "child") return copy.child(p.age);
-  return p.fullName ?? (p.position === 0 ? copy.leadGuest : copy.adult(p.position + 1));
+  if (p.kind === "child") return p.register ? `${p.register.fullName} (${p.age})` : copy.child(p.age);
+  return p.fullName ?? p.register?.fullName ?? (p.position === 0 ? copy.leadGuest : copy.adult(p.position + 1));
 }
 
 /** The tick a host looks for: the photo ID matches the name on the booking. */
@@ -110,6 +120,7 @@ export function GuestPeople({
                   <span className="block text-xs text-muted-foreground">
                     {p.kind === "adult" && p.position === 0 ? copy.leadGuest : null}
                     {p.kind === "adult" && p.documentType ? `${p.position === 0 ? " · " : ""}${copy.docType[p.documentType] ?? p.documentType}` : null}
+                    {p.register ? `${p.kind === "adult" && (p.position === 0 || p.documentType) ? " · " : ""}${nationalityName(p.register.nationality)}` : null}
                   </span>
                 </span>
                 <IdBadge p={p} />
@@ -175,6 +186,24 @@ export function GuestPeople({
                 <Detail label={copy.detailExpiry} value={open.documentExpiry ? formatUkDate(open.documentExpiry, { withYear: true }) : null} />
                 <Detail label={copy.detailNumber} value={open.documentLast4 ? `•••• ${open.documentLast4}` : null} />
               </dl>
+
+              {open.register ? (
+                <section className="rounded-xl border border-border p-3">
+                  <h4 className="font-medium">{copy.registerTitle}</h4>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <Detail label={copy.detailName} value={open.register.fullName} />
+                    <Detail label={copy.registerNationality} value={nationalityName(open.register.nationality)} />
+                    {open.register.documentNumber ? (
+                      <>
+                        <Detail label={copy.registerDocument} value={open.register.documentNumber} />
+                        <Detail label={copy.registerPlace} value={open.register.placeOfIssue} />
+                        <Detail label={copy.registerNext} value={open.register.nextDestination} />
+                        <Detail label={copy.registerAddress} value={open.register.nextAddress} />
+                      </>
+                    ) : null}
+                  </dl>
+                </section>
+              ) : null}
             </>
           ) : null}
         </DialogContent>

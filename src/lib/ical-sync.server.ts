@@ -311,6 +311,8 @@ export async function runRetentionSweep(): Promise<number> {
   const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
   await supabaseAdmin.from("verification_results").delete().lt("delete_after", today);
   await purgeGuestIds(today);
+  // The UK guest register is kept for 12 months from arrival, then removed.
+  await supabaseAdmin.from("guest_register").delete().lt("keep_until", today);
   await supabaseAdmin.from("check_in_attempts").delete().lt("created_at", monthAgo);
   await supabaseAdmin.from("checkin_sessions").delete().lt("expires_at", new Date().toISOString());
   await supabaseAdmin.from("stay_tokens").delete().lt("expires_at", new Date().toISOString());

@@ -79,6 +79,9 @@ describe("judgeId", () => {
     expiryDate: "2030-01-01",
     issuingCountry: "United Kingdom",
     numberLast4: "1234",
+    nationality: "GBR",
+    documentNumber: "123451234",
+    placeOfIssue: "HMPO",
   };
   it("accepts a printed photo ID", () => {
     expect(judgeId(good, "2026-10-12")).toEqual({ ok: true, expired: false });

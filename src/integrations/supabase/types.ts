@@ -558,6 +558,97 @@ export type Database = {
           },
         ]
       }
+      guest_register: {
+        Row: {
+          arrival_date: string
+          booking_id: string | null
+          created_at: string
+          document_number: string | null
+          full_name: string
+          host_id: string
+          id: string
+          is_alien: boolean
+          is_demo: boolean
+          keep_until: string
+          nationality: string
+          next_address: string | null
+          next_destination: string | null
+          place_of_issue: string | null
+          position: number | null
+          property_id: string | null
+          property_name: string
+          room_name: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          arrival_date: string
+          booking_id?: string | null
+          created_at?: string
+          document_number?: string | null
+          full_name: string
+          host_id: string
+          id?: string
+          is_alien: boolean
+          is_demo?: boolean
+          keep_until: string
+          nationality: string
+          next_address?: string | null
+          next_destination?: string | null
+          place_of_issue?: string | null
+          position?: number | null
+          property_id?: string | null
+          property_name: string
+          room_name?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          arrival_date?: string
+          booking_id?: string | null
+          created_at?: string
+          document_number?: string | null
+          full_name?: string
+          host_id?: string
+          id?: string
+          is_alien?: boolean
+          is_demo?: boolean
+          keep_until?: string
+          nationality?: string
+          next_address?: string | null
+          next_destination?: string | null
+          place_of_issue?: string | null
+          position?: number | null
+          property_id?: string | null
+          property_name?: string
+          room_name?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_register_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_register_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_register_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_steps: {
         Row: {
           body: string | null
