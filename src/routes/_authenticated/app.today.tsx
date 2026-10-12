@@ -464,7 +464,7 @@ function TodayPage() {
         bookingId={openId}
         today={todayIso}
         onOpenChange={(o) => (o ? null : setOpenId(null))}
-        onEdit={(id) => void navigate({ to: "/app/bookings", search: { guest: id } })}
+        onEdit={(id) => void navigate({ to: "/app/bookings", search: { guest: id, edit: true } })}
       />
     </div>
   );

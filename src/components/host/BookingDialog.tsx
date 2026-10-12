@@ -116,7 +116,11 @@ export function BookingDialog({
     setUndoing(true);
     try {
       await undo({ data: { bookingId: booking.id } });
-      await qc.invalidateQueries({ queryKey: ["board"] });
+      // The guest panel keeps its own copy of the stay; refresh it too.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["board"] }),
+        qc.invalidateQueries({ queryKey: ["guest"] }),
+      ]);
       toast.success(copy.undoCheckInDone);
       onOpenChange(false);
     } catch (err) {
@@ -186,7 +190,11 @@ export function BookingDialog({
           guest_email: form.guest_email.trim() || null,
         },
       });
-      await qc.invalidateQueries({ queryKey: ["board"] });
+      // The guest panel keeps its own copy of the stay; refresh it too.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["board"] }),
+        qc.invalidateQueries({ queryKey: ["guest"] }),
+      ]);
       toast.success(common.save === "Save" ? "Booking saved" : common.save);
       onOpenChange(false);
     } catch (err) {

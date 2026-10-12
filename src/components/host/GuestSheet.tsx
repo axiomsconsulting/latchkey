@@ -85,12 +85,19 @@ export function GuestSheet({
     setBusy(key);
     try {
       await fn();
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["board"] }),
-        qc.invalidateQueries({ queryKey: ["guest", bookingId] }),
-      ]);
+      if (close) {
+        // Close first, and forget the stay rather than reloading it: after a
+        // delete it no longer exists, and the panel must not linger on it.
+        onOpenChange(false);
+        qc.removeQueries({ queryKey: ["guest", bookingId] });
+        await qc.invalidateQueries({ queryKey: ["board"] });
+      } else {
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ["board"] }),
+          qc.invalidateQueries({ queryKey: ["guest", bookingId] }),
+        ]);
+      }
       toast.success(done);
-      if (close) onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
     } finally {

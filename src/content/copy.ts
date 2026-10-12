@@ -1279,6 +1279,10 @@ export const stayCalendar = {
   requests: (n: number) => `${n} open ${n === 1 ? "request" : "requests"}`,
   earlier: "Earlier",
   later: "Later",
+  nights: (n: number) => `${n} ${n === 1 ? "night" : "nights"}`,
+  stayDates: (from: string, to: string) => `${from} to ${to}`,
+  continues: "Continues",
+  continued: "Continued",
 };
 
 export const jobTools = {

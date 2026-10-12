@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -42,8 +42,11 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/bookings")({
   // ?guest=<booking id> opens that guest's card, e.g. from Today.
-  validateSearch: (search: Record<string, unknown>): { guest?: string } =>
-    typeof search["guest"] === "string" ? { guest: search["guest"] } : {},
+  // ?edit=1 also opens the edit form, e.g. from the Edit button on Today.
+  validateSearch: (search: Record<string, unknown>): { guest?: string; edit?: boolean } => ({
+    ...(typeof search["guest"] === "string" ? { guest: search["guest"] } : {}),
+    ...(search["edit"] === true || search["edit"] === "1" || search["edit"] === 1 ? { edit: true } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Bookings · Latchkey host dashboard" },
@@ -74,7 +77,7 @@ function BookingsPage() {
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);
-  const { guest } = Route.useSearch();
+  const { guest, edit } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const { canWrite } = useRole();
   const qc = useQueryClient();
@@ -102,6 +105,16 @@ function BookingsPage() {
   // Archived stays live only in the Archive view.
   const all = everything.filter((b) => (scope === "archive") === !!b.archived_at);
   const activity = (data as { activity?: Activity } | undefined)?.activity ?? {};
+
+  // Arrived from Edit on Today: open the form once the stay has loaded.
+  useEffect(() => {
+    if (!edit || !guest) return;
+    const b = everything.find((x) => x.id === guest);
+    if (!b) return;
+    setEditing(b);
+    setDialogOpen(true);
+    void navigate({ to: "/app/bookings", search: { guest }, replace: true });
+  }, [edit, guest, everything, navigate]);
   const todayIso = data?.today ?? new Date().toISOString().slice(0, 10);
   const windows = (data?.windows ?? []) as Array<{
     id: string;
@@ -139,7 +152,7 @@ function BookingsPage() {
   }
 
   function openGuest(id: string | null) {
-    void navigate({ search: id ? { guest: id } : {}, replace: true });
+    void navigate({ to: "/app/bookings", search: id ? { guest: id } : {}, replace: true });
   }
 
   function toggle(id: string) {
