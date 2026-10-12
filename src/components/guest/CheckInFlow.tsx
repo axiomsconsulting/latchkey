@@ -5,7 +5,7 @@ import { ArrowLeft, BookOpen, CheckCircle2, CircleHelp, HandHeart, Loader2, Minu
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
-import { CheckInQr } from "@/components/guest/CheckInQr";
+import { CheckInQr, GuideLink } from "@/components/guest/CheckInQr";
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
@@ -451,7 +451,7 @@ export function CheckInFlow({
     typeof window === "undefined"
       ? null
       : step.name === "done"
-        ? `${window.location.origin}/stay/${step.stayToken}`
+        ? null // The guest guide link and its QR sit on the done screen itself.
         : token
           ? `${window.location.origin}/p/${property.code}?resume=${encodeURIComponent(token)}`
           : null;
@@ -847,6 +847,9 @@ export function CheckInFlow({
                 <BookOpen className="size-6" /> {copy.stayGuideCta}
               </Link>
             </Button>
+            {typeof window !== "undefined" ? (
+              <GuideLink url={`${window.location.origin}/stay/${step.stayToken}`} kiosk={kiosk} />
+            ) : null}
           </section>
         ) : null}
 

@@ -21,6 +21,32 @@ function still(video: HTMLVideoElement, max: number, quality: number, mirror: bo
   return url;
 }
 
+/**
+ * The right camera for the job: the back camera to photograph an ID, the
+ * front one for a face. Asked for strictly first, because some phones treat
+ * a preference loosely; then as a preference; then any camera, so a laptop
+ * with a single webcam still works.
+ */
+async function openCamera(facing: "environment" | "user"): Promise<MediaStream> {
+  const width = { ideal: facing === "user" ? 1280 : 1920 };
+  const tries: MediaTrackConstraints[] = [
+    { facingMode: { exact: facing }, width },
+    { facingMode: { ideal: facing }, width },
+    { width },
+  ];
+  let last: unknown = null;
+  for (const video of tries) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ video, audio: false });
+    } catch (err) {
+      last = err;
+      // Permission refused: asking again in another way won't help.
+      if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError")) break;
+    }
+  }
+  throw last ?? new Error("no camera");
+}
+
 /** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
 const SMALL = { environment: { max: 1024, quality: 0.62 }, user: { max: 480, quality: 0.6 } } as const;
 
@@ -56,10 +82,7 @@ export function IdCamera({
     async function start() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("no camera");
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: facing }, width: { ideal: facing === "user" ? 1280 : 1920 } },
-          audio: false,
-        });
+        const stream = await openCamera(facing);
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;

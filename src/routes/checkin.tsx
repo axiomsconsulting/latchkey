@@ -12,9 +12,9 @@ import { resolvePin } from "@/lib/checkin.functions";
 export const Route = createFileRoute("/checkin")({
   head: () => ({
     meta: [
-      { title: "Guest check-in — Latchkey" },
+      { title: "Checking in — Latchkey" },
       { name: "description", content: "Enter your property's 6-digit PIN to check yourself in." },
-      { property: "og:title", content: "Guest check-in — Latchkey" },
+      { property: "og:title", content: "Checking in — Latchkey" },
       { property: "og:description", content: "Enter your property's PIN to check yourself in." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

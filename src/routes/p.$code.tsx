@@ -19,10 +19,10 @@ export const Route = createFileRoute("/p/$code")({
     const name = loaderData?.name ?? "Latchkey";
     return {
       meta: [
-        { title: `Check in — ${name}` },
-        { name: "description", content: `Self check-in for ${name}. No app, no sign-up, about a minute.` },
-        { property: "og:title", content: `Check in — ${name}` },
-        { property: "og:description", content: `Self check-in for ${name}.` },
+        { title: `Checking in — ${name}` },
+        { name: "description", content: `Check yourself in at ${name}. No app, no sign-up, about a minute.` },
+        { property: "og:title", content: `Checking in — ${name}` },
+        { property: "og:description", content: `Check yourself in at ${name}.` },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary" },
         { name: "robots", content: "noindex" },

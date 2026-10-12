@@ -29,9 +29,9 @@ export const Route = createFileRoute("/kiosk/$code")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: `Front door check-in — ${loaderData?.name ?? "Latchkey"}` },
+      { title: `Checking in — ${loaderData?.name ?? "Latchkey"}` },
       { name: "description", content: "Front-door tablet for guest self check-in." },
-      { property: "og:title", content: "Front door check-in" },
+      { property: "og:title", content: "Checking in" },
       { property: "og:description", content: "Front-door tablet for guest self check-in." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

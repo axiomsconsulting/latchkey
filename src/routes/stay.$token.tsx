@@ -16,9 +16,9 @@ export const Route = createFileRoute("/stay/$token")({
   loader: ({ params }) => getStay({ data: { token: params.token } }),
   head: () => ({
     meta: [
-      { title: "Your stay guide — Latchkey" },
+      { title: "Your guest guide — Latchkey" },
       { name: "description", content: "Your private step-by-step guide for your stay." },
-      { property: "og:title", content: "Your stay guide — Latchkey" },
+      { property: "og:title", content: "Your guest guide — Latchkey" },
       { property: "og:description", content: "Your private step-by-step guide for your stay." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

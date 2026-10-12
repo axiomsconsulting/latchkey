@@ -23,7 +23,7 @@ export const Route = createFileRoute("/$slug")({
         { title: `${name} — welcome` },
         { name: "description", content: `Check in, find your room and ask for anything during your stay at ${name}.` },
         { property: "og:title", content: `${name} — welcome` },
-        { property: "og:description", content: `Self check-in and stay guide for ${name}.` },
+        { property: "og:description", content: `Check yourself in and find your guest guide at ${name}.` },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary" },
       ],
@@ -63,7 +63,7 @@ function PropertyHome() {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Already checked in? Use the private link from your check-in to see your stay page.
+          Already checked in? Open the private guest guide link you were given when you checked in.
         </p>
       </main>
       <footer className="mx-auto flex max-w-4xl justify-end pb-8">

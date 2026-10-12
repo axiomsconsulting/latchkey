@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { QrCode, Smartphone } from "lucide-react";
+import { Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -79,5 +79,78 @@ export function CheckInQr({
       <img src={src} alt={copy.qrAlt} className="mx-auto my-3 w-full max-w-[13rem] rounded-xl" />
       <p className="text-sm text-muted-foreground">{blurb}</p>
     </aside>
+  );
+}
+
+/**
+ * The end of check-in: the private link to this booking's guest guide, to
+ * bookmark or save, so the guest never has to check in again to read it.
+ * The QR opens inline for another phone; on the kiosk it starts open,
+ * because the link itself is no use on a shared screen.
+ */
+export function GuideLink({ url, kiosk = false }: { url: string; kiosk?: boolean }) {
+  const [qrOpen, setQrOpen] = useState(kiosk);
+  const [copied, setCopied] = useState(false);
+  const src = useQrImage(qrOpen ? url : null);
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const touch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked: the link is selectable on screen anyway.
+    }
+  }
+
+  return (
+    <div className="mx-auto mt-8 max-w-md rounded-2xl border border-border bg-card p-5 text-left">
+      <h2 className="text-xl">{copy.guideLinkTitle}</h2>
+      {!kiosk ? (
+        <>
+          <p className="mt-1 text-muted-foreground">{copy.guideLinkBody}</p>
+          <input
+            readOnly
+            value={url}
+            aria-label={copy.guideLinkTitle}
+            onFocus={(e) => e.currentTarget.select()}
+            className="mt-3 h-12 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground"
+          />
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" size="lg" onClick={() => void copyLink()}>
+              {copied ? <Check className="size-5" /> : <Copy className="size-5" />}
+              {copied ? copy.guideLinkCopied : copy.guideLinkCopy}
+            </Button>
+            {canShare ? (
+              <Button variant="outline" size="lg" onClick={() => void navigator.share({ title: copy.guideLinkTitle, url }).catch(() => {})}>
+                <Share2 className="size-5" /> {copy.guideLinkShare}
+              </Button>
+            ) : null}
+          </div>
+          {!touch ? <p className="mt-2 text-sm text-muted-foreground">{copy.guideLinkBookmarkKeys(mac)}</p> : null}
+        </>
+      ) : null}
+
+      <button
+        type="button"
+        aria-expanded={qrOpen}
+        onClick={() => setQrOpen((o) => !o)}
+        className="mt-4 flex min-h-11 w-full items-center justify-between rounded-xl px-1 text-left font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="flex items-center gap-2">
+          <QrCode className="size-5" /> {qrOpen ? copy.guideLinkQrHide : copy.guideLinkQrShow}
+        </span>
+        <ChevronDown className={cn("size-5 transition-transform", qrOpen && "rotate-180")} />
+      </button>
+      {qrOpen ? (
+        <div className="mt-2 text-center animate-in fade-in slide-in-from-top-1">
+          {src ? <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[15rem] rounded-xl" /> : <div className="mx-auto aspect-square w-full max-w-[15rem] rounded-xl bg-muted" />}
+          <p className="mt-2 text-sm text-muted-foreground">{copy.guideLinkQrBody}</p>
+        </div>
+      ) : null}
+    </div>
   );
 }
