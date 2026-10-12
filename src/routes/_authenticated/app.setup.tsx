@@ -54,6 +54,7 @@ function SetupPage() {
     short_code: "",
   });
   const [rooms, setRooms] = useState<string[]>(["", "", ""]);
+  const [sleeps, setSleeps] = useState<number[]>([2, 2, 2]);
   const [times, setTimes] = useState({
     check_in: "15:00",
     check_out: "11:00",
@@ -84,8 +85,10 @@ function SetupPage() {
         },
       });
 
-      const named = rooms.map((r) => r.trim()).filter(Boolean);
-      for (const [i, name] of named.entries()) {
+      const named = rooms
+        .map((r, i) => ({ name: r.trim(), sleeps: sleeps[i] ?? 2 }))
+        .filter((r) => r.name);
+      for (const [i, { name, sleeps: maxGuests }] of named.entries()) {
         await addRoom({
           data: {
             property_id: created.id,
@@ -93,7 +96,8 @@ function SetupPage() {
             room_number: null,
             public_title: null,
             description: null,
-            max_guests: 2,
+            max_guests: Math.min(30, Math.max(1, maxGuests || 2)),
+            children_allowed: true,
             has_ensuite: false,
             sort_order: i,
             active: true,
@@ -200,23 +204,50 @@ function SetupPage() {
         {step === 1 ? (
           <>
             <p className="text-sm text-muted-foreground">
-              Name the rooms you let. You can add more or rename them later.
+              Name the rooms you let and how many people each one sleeps in total. You can change these later.
             </p>
             {rooms.map((room, i) => (
-              <div key={i} className="space-y-2">
-                <Label htmlFor={`room-${i}`}>Room {i + 1}</Label>
-                <Input
-                  id={`room-${i}`}
-                  className="h-12"
-                  value={room}
-                  onChange={(e) =>
-                    setRooms((rs) => rs.map((r, j) => (j === i ? e.target.value : r)))
-                  }
-                  placeholder={["Garden Room", "Hill Room", "Loft Room"][i] ?? "Room name"}
-                />
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor={`room-${i}`}>Room {i + 1}</Label>
+                  <Input
+                    id={`room-${i}`}
+                    className="h-12"
+                    value={room}
+                    onChange={(e) =>
+                      setRooms((rs) => rs.map((r, j) => (j === i ? e.target.value : r)))
+                    }
+                    placeholder={["Garden Room", "Hill Room", "Loft Room"][i] ?? "Room name"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`sleeps-${i}`}>Sleeps</Label>
+                  <Input
+                    id={`sleeps-${i}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={30}
+                    className="h-12"
+                    value={sleeps[i] ?? 2}
+                    onChange={(e) =>
+                      setSleeps((ss) => {
+                        const next = [...ss];
+                        next[i] = Number(e.target.value);
+                        return next;
+                      })
+                    }
+                  />
+                </div>
               </div>
             ))}
-            <Button variant="outline" onClick={() => setRooms((rs) => [...rs, ""])}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRooms((rs) => [...rs, ""]);
+                setSleeps((ss) => [...ss, 2]);
+              }}
+            >
               Add another room
             </Button>
           </>

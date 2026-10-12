@@ -43,7 +43,7 @@ export const getGuestDetails = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!booking) throw new Error("We couldn't find that stay.");
 
-    const [messages, requests, jobs, presence] = await Promise.all([
+    const [messages, requests, jobs, presence, people] = await Promise.all([
       sb
         .from("messages")
         .select("id, body, direction, created_at")
@@ -67,7 +67,20 @@ export const getGuestDetails = createServerFn({ method: "GET" })
         .eq("booking_id", data.bookingId)
         .order("at", { ascending: false })
         .limit(20),
+      // Staff only by RLS: read-only viewers get an empty list.
+      sb
+        .from("guest_ids")
+        .select(
+          "id, position, kind, age, full_name, document_type, issuing_country, date_of_birth, document_expiry, document_last4, name_match, id_checked, skipped, id_photo_path, face_photo_path, delete_after",
+        )
+        .eq("booking_id", data.bookingId)
+        .order("position", { ascending: true }),
     ]);
+    const peopleRows = people.data ?? [];
+    const { signGuestPhotos } = await import("./checkin.server");
+    const signed = await signGuestPhotos(
+      peopleRows.flatMap((p) => [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x)),
+    );
 
     const b = booking as typeof booking & {
       rooms: { display_name: string; public_title: string | null } | null;
@@ -95,7 +108,29 @@ export const getGuestDetails = createServerFn({ method: "GET" })
         listingName: b.channel_connections?.listing_name ?? null,
         archived: !!b.archived_at,
         checkedInAt: b.checked_in_at,
+        siteKey: b.site_key,
+        arrivedAdults: b.arrived_adults,
+        arrivedChildren: b.arrived_children,
+        idCheckStatus: b.id_check_status,
       },
+      people: peopleRows.map((p) => ({
+        id: p.id,
+        position: p.position,
+        kind: p.kind as "adult" | "child",
+        age: p.age,
+        fullName: p.full_name,
+        documentType: p.document_type,
+        issuingCountry: p.issuing_country,
+        dateOfBirth: p.date_of_birth,
+        documentExpiry: p.document_expiry,
+        documentLast4: p.document_last4,
+        nameMatch: p.name_match as "matched" | "partial" | "not_matched" | null,
+        idChecked: p.id_checked,
+        skipped: p.skipped,
+        idPhotoUrl: p.id_photo_path ? (signed[p.id_photo_path] ?? null) : null,
+        facePhotoUrl: p.face_photo_path ? (signed[p.face_photo_path] ?? null) : null,
+        deleteAfter: p.delete_after,
+      })),
       messages: (messages.data ?? []).map((m) => ({
         id: m.id,
         body: m.body ?? "",
@@ -140,8 +175,15 @@ export const deleteBookings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ ids }).parse(d))
   .handler(async ({ data, context }) => {
+    // ID photos live in storage, which the database cascade can't reach.
+    const { data: people } = await context.supabase
+      .from("guest_ids")
+      .select("id_photo_path, face_photo_path")
+      .in("booking_id", data.ids);
     const { data: count, error } = await untyped(context.supabase).rpc("delete_bookings", { _ids: data.ids });
     if (error) throw new Error(error.message);
+    const { removeGuestPhotos } = await import("./checkin.server");
+    await removeGuestPhotos((people ?? []).flatMap((p) => [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x)));
     return { count: (count as number | null) ?? 0 };
   });
 

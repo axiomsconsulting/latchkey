@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Phone } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Minus, Phone, Plus } from "lucide-react";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
@@ -10,10 +10,13 @@ import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { guest as copy } from "@/content/copy";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { CheckinMethod } from "@/lib/checkin-logic";
 import {
+  addFacePhoto,
+  checkCompanionId,
   completeCheckIn,
   confirmBooking,
   listArrivals,
@@ -22,6 +25,8 @@ import {
   resumeSession,
   selfDeclare,
   setGuestName,
+  setParty,
+  skipCompanionId,
   verifyLast4,
   verifyPhotoId,
 } from "@/lib/checkin.functions";
@@ -30,9 +35,24 @@ import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-const PLATFORMS = ["airbnb", "booking_com", "homestay", "direct", "other"] as const;
-type Platform = (typeof PLATFORMS)[number];
 type Last4Kind = "reference" | "phone" | "email";
+
+export type GuestSite = { key: string; label: string; iconUrl: string | null };
+
+/** Who's staying and what is asked, from the host's settings for this room. */
+type PartyPlan = {
+  ask: boolean;
+  booked: number | null;
+  capacity: number | null;
+  childrenAllowed: boolean;
+  everyAdult: boolean;
+  facePhoto: boolean;
+  keepIdPhoto: boolean;
+  keepDays: number;
+};
+
+/** Steps after the lead guest's ID, run in order. */
+type After = { kind: "face"; position: number } | { kind: "companion"; position: number };
 
 type Step =
   | { name: "welcome" }
@@ -45,6 +65,9 @@ type Step =
   | { name: "locked"; until: string }
   | { name: "guestName" }
   | { name: "confirm"; firstName: string; returning?: boolean }
+  | { name: "party" }
+  | { name: "companion"; position: number; ready: boolean }
+  | { name: "face"; position: number }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
   | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
 
@@ -67,6 +90,7 @@ export type CheckinProperty = {
   checkInFrom?: string;
   checkOutBy?: string;
   channelLabels?: Record<string, string>;
+  sites?: GuestSite[];
 };
 
 export function CheckInFlow({
@@ -91,6 +115,11 @@ export function CheckInFlow({
   const [kinds, setKinds] = useState<Last4Kind[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [platform, setPlatform] = useState<string | null>(null);
+  const [plan, setPlan] = useState<PartyPlan | null>(null);
+  const [listFlow, setListFlow] = useState(false);
+  const [adults, setAdults] = useState(1);
+  const [queue, setQueue] = useState<After[]>([]);
   const onPhone = useIsMobile();
 
   const match = useServerFn(matchBooking);
@@ -103,6 +132,10 @@ export function CheckInFlow({
   const complete = useServerFn(completeCheckIn);
   const resume = useServerFn(resumeSession);
   const saveName = useServerFn(setGuestName);
+  const party = useServerFn(setParty);
+  const companionId = useServerFn(checkCompanionId);
+  const skipCompanion = useServerFn(skipCompanionId);
+  const face = useServerFn(addFacePhoto);
   const [fullName, setFullName] = useState("");
 
   useEffect(() => {
@@ -121,6 +154,10 @@ export function CheckInFlow({
         setToken(resumeToken);
         setSequence([...res.sequence] as CheckinMethod[]);
         setKinds(res.last4Kinds);
+        setPlatform(res.platform);
+        setPlan(res.party);
+        setListFlow(res.listFlow);
+        if (res.adults) setAdults(res.adults);
         if (res.completed || res.verified) {
           const done = await complete({ data: { token: resumeToken } });
           if (live) setStep({ name: "done", ...done });
@@ -158,7 +195,22 @@ export function CheckInFlow({
     setLetter("");
     setCheckOut("");
     setToken("");
+    setPlatform(null);
+    setPlan(null);
+    setAdults(1);
+    setQueue([]);
     setStep({ name: "welcome" });
+  }
+
+  /** The host's name and icon for a booking site, or the standard wording. */
+  function siteOf(key: string): GuestSite {
+    return (
+      property.sites?.find((s) => s.key === key) ?? {
+        key,
+        label: property.channelLabels?.[key] ?? copy.platforms[key] ?? key,
+        iconUrl: null,
+      }
+    );
   }
 
   /** List flow: every stay with that initial, across platforms. */
@@ -170,7 +222,7 @@ export function CheckInFlow({
   }
 
   /** Asks for the platform only if the server says the answers so far fit more than one. */
-  async function findStay(day: string, channel?: Platform) {
+  async function findStay(day: string, channel?: string) {
     const res = await run(() =>
       match({ data: { code: property.code, deviceId: deviceId(), letter, checkOut: day, ...(channel ? { channel } : {}) } }),
     );
@@ -179,6 +231,7 @@ export function CheckInFlow({
     if (res.status === "no_match") return setStep({ name: "no_match" });
     if (res.status === "choose_platform") return setStep({ name: "platform", only: res.channels });
     setToken(res.token);
+    setPlatform(res.platform);
     if (res.needsName) return setStep({ name: "guestName" });
     setStep({ name: "confirm", firstName: res.firstName, returning: res.returning === true });
   }
@@ -193,6 +246,7 @@ export function CheckInFlow({
     const res = await run(() => pick({ data: { code: property.code, deviceId: deviceId(), bookingId, letter } }));
     if (!res) return;
     setToken(res.token);
+    setPlatform(res.platform);
     setStep({ name: "confirm", firstName: res.firstName });
   }
 
@@ -207,12 +261,79 @@ export function CheckInFlow({
     const seq = [...res.sequence] as CheckinMethod[];
     setSequence(seq);
     setKinds(res.last4Kinds);
-    if (res.listFlow) {
+    setPlan(res.party);
+    setListFlow(res.listFlow);
+    if (res.party.ask) {
+      setAdults(Math.max(1, res.party.booked ?? 1));
+      return setStep({ name: "party" });
+    }
+    await startIdentity(res.listFlow, seq, 1, res.party);
+  }
+
+  async function startIdentity(list = listFlow, seq = sequence, people = adults, p = plan) {
+    if (list) {
       const ok = await run(() => declare({ data: { token } }));
-      if (ok) await finish();
+      if (ok) afterLead(people, p);
       return;
     }
     setStep({ name: "identity", method: seq[0] ?? "self_declare", consented: false });
+  }
+
+  async function onParty(nextAdults: number, childAges: number[]) {
+    const res = await run(() => party({ data: { token, adults: nextAdults, childAges } }));
+    if (!res) return;
+    setAdults(nextAdults);
+    await startIdentity(listFlow, sequence, nextAdults);
+  }
+
+  /** After the lead guest: their face photo, then each other adult's ID and face. */
+  function afterLead(people = adults, p = plan) {
+    const steps: After[] = [];
+    if (p?.facePhoto) steps.push({ kind: "face", position: 0 });
+    for (let i = 1; i < people; i++) {
+      if (p?.everyAdult) steps.push({ kind: "companion", position: i });
+      if (p?.facePhoto) steps.push({ kind: "face", position: i });
+    }
+    void advance(steps);
+  }
+
+  async function advance(steps: After[], note?: string) {
+    const [next, ...rest] = steps;
+    setQueue(rest);
+    if (!next) {
+      await finish();
+    } else if (next.kind === "face") {
+      setStep({ name: "face", position: next.position });
+    } else {
+      setStep({ name: "companion", position: next.position, ready: false });
+    }
+    if (note) setTimeout(() => setMessage(note), 0);
+  }
+
+  async function onCompanion(position: number, full: string, small: string) {
+    const res = await run(() =>
+      companionId({ data: { token, position, image: full, ...(plan?.keepIdPhoto ? { small } : {}) } }),
+    );
+    if (!res) return;
+    if (res.status === "retry") {
+      return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
+    }
+    if (res.status === "skip") {
+      const ok = await run(() => skipCompanion({ data: { token, position } }));
+      if (ok) await advance(queue, copy.companionSkipped);
+      return;
+    }
+    await advance(queue, res.under18 ? copy.companionUnder18 : copy.companionThanks(res.firstName));
+  }
+
+  async function onSkipCompanion(position: number) {
+    const ok = await run(() => skipCompanion({ data: { token, position } }));
+    if (ok) await advance(queue, copy.companionSkipped);
+  }
+
+  async function onFace(position: number, small: string) {
+    const ok = await run(() => face({ data: { token, position, image: small } }));
+    if (ok) await advance(queue);
   }
 
   function fallback(from: CheckinMethod, note?: string) {
@@ -222,12 +343,14 @@ export function CheckInFlow({
     if (note) setTimeout(() => setMessage(note), 0);
   }
 
-  async function onPhoto(dataUrl: string) {
-    const res = await run(() => photo({ data: { token, image: dataUrl } }));
+  async function onPhoto(full: string, small: string) {
+    const res = await run(() => photo({ data: { token, image: full, ...(plan?.keepIdPhoto ? { small } : {}) } }));
     if (!res) return fallback("photo_id");
-    if (res.status === "retry") return setMessage(copy.idRetry(res.left));
+    if (res.status === "retry") {
+      return setMessage(res.reason === "not_photo_id" ? `${copy.idNotPhotoId} ${copy.idTriesLeft(res.left)}` : copy.idRetry(res.left));
+    }
     if (res.status === "fallback") return fallback("photo_id");
-    await finish();
+    afterLead();
   }
 
   const lockedTime = step.name === "locked" ? formatUkTime(new Date(step.until).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })) : "";
@@ -240,7 +363,7 @@ export function CheckInFlow({
       ? copy.demoHint(
           hint.letter,
           formatUkDate(hint.checkOut),
-          property.channelLabels?.[hint.channel] ?? copy.platforms[hint.channel as Platform] ?? hint.channel,
+          siteOf(hint.channel).label,
         )
       : step.name === "identity" && step.method !== "self_declare"
         ? copy.demoIdHint(hint.refLast4, hint.phoneLast4)
@@ -360,17 +483,17 @@ export function CheckInFlow({
           <section>
             <h1 className="text-2xl sm:text-4xl">{copy.stepPlatform}</h1>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {PLATFORMS.filter((p) => step.only.includes(p)).map((p) => (
+              {step.only.map(siteOf).map((site) => (
                 <Button
-                  key={p}
+                  key={site.key}
                   variant="outline"
                   size="touch-xl"
                   className="justify-start gap-4 text-xl"
                   disabled={busy}
-                  onClick={() => void findStay(checkOut, p)}
+                  onClick={() => void findStay(checkOut, site.key)}
                 >
-                  <ChannelIcon channel={p} />
-                  {property.channelLabels?.[p] ?? copy.platforms[p]}
+                  <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} />
+                  {site.label}
                 </Button>
               ))}
             </div>
@@ -395,7 +518,9 @@ export function CheckInFlow({
                     onClick={() => void onPick(i.id)}
                   >
                     <span className="flex items-center gap-2">
-                      {i.channel ? <ChannelIcon channel={i.channel as Platform} /> : null}
+                      {i.channel ? (
+                        <ChannelIcon channel={i.channel} iconUrl={siteOf(i.channel).iconUrl} label={siteOf(i.channel).label} size="1em" />
+                      ) : null}
                       {i.label}
                     </span>
                     <span className="text-sm font-normal text-muted-foreground">
@@ -455,7 +580,15 @@ export function CheckInFlow({
         {step.name === "confirm" ? (
           <section className="py-4 text-center">
             <h1 className="text-4xl sm:text-6xl">{step.returning ? copy.welcomeBack(step.firstName) : copy.hi(step.firstName)}</h1>
-            <p className="mt-4 text-xl text-muted-foreground">{step.returning ? copy.welcomeBackBody : copy.confirmBody}</p>
+            <p className="mt-4 text-xl text-muted-foreground">
+              {step.returning ? (
+                copy.welcomeBackBody
+              ) : platform && !(platform === "other" && siteOf(platform).label === copy.platforms["other"]) ? (
+                <ConfirmOnSite site={siteOf(platform)} />
+              ) : (
+                copy.confirmBody
+              )}
+            </p>
             <div className="mx-auto mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
               <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
                 {busy ? <Loader2 className="size-6 animate-spin" /> : null}
@@ -473,7 +606,9 @@ export function CheckInFlow({
             <h1 className="text-2xl sm:text-4xl">{copy.idTitle}</h1>
             {!step.consented ? (
               <>
-                <p className="mt-4 text-lg">{copy.idConsent}</p>
+                <p className="mt-4 text-lg">
+                  {plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}
+                </p>
                 <div className="mt-8 grid gap-3">
                   <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
                     {copy.idConsentAgree}
@@ -487,7 +622,7 @@ export function CheckInFlow({
               <div className="mt-6">
                 <IdCamera
                   busy={busy}
-                  onCapture={(url) => void onPhoto(url)}
+                  onCapture={(full, small) => void onPhoto(full, small)}
                   onFail={() => fallback("photo_id", copy.idCameraFailed)}
                 />
                 <Button variant="ghost" size="lg" className="mt-3 w-full" onClick={() => fallback("photo_id")}>
@@ -507,7 +642,7 @@ export function CheckInFlow({
               if (!res) return;
               if (res.status === "retry") return setMessage(copy.last4Retry(res.left));
               if (res.status === "fallback") return fallback("last4");
-              await finish();
+              afterLead();
             }}
             onOther={() => fallback("last4")}
           />
@@ -524,12 +659,73 @@ export function CheckInFlow({
               disabled={busy}
               onClick={async () => {
                 const ok = await run(() => declare({ data: { token } }));
-                if (ok) await finish();
+                if (ok) afterLead();
               }}
             >
               {busy ? <Loader2 className="size-6 animate-spin" /> : null}
               {copy.selfConfirm}
             </Button>
+          </section>
+        ) : null}
+
+        {step.name === "party" && plan ? (
+          <PartyStep plan={plan} initialAdults={adults} busy={busy} onSubmit={(a, ages) => void onParty(a, ages)} />
+        ) : null}
+
+        {step.name === "companion" ? (
+          <section className="mx-auto max-w-xl">
+            <h1 className="text-2xl sm:text-4xl">{copy.companionTitle(step.position + 1, adults)}</h1>
+            {!step.ready ? (
+              <>
+                <p className="mt-4 text-lg">{copy.companionBody}</p>
+                <p className="mt-2 text-muted-foreground">
+                  {plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}
+                </p>
+                <div className="mt-8 grid gap-3">
+                  <Button size="touch-xl" onClick={() => setStep({ ...step, ready: true })}>
+                    {copy.companionReady}
+                  </Button>
+                  <Button size="touch" variant="outline" disabled={busy} onClick={() => void onSkipCompanion(step.position)}>
+                    {copy.companionSkip}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="mt-6">
+                <IdCamera
+                  key={`companion-${step.position}`}
+                  busy={busy}
+                  onCapture={(full, small) => void onCompanion(step.position, full, small)}
+                  onFail={() => void onSkipCompanion(step.position)}
+                />
+                <Button variant="ghost" size="lg" className="mt-3 w-full" disabled={busy} onClick={() => void onSkipCompanion(step.position)}>
+                  {copy.companionSkip}
+                </Button>
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {step.name === "face" ? (
+          <section className="mx-auto max-w-xl">
+            <h1 className="text-2xl sm:text-4xl">
+              {step.position === 0 ? copy.faceTitle : copy.faceTitleOther(step.position + 1)}
+            </h1>
+            <div className="mt-6">
+              <IdCamera
+                key={`face-${step.position}`}
+                facing="user"
+                busy={busy}
+                help={copy.faceBody}
+                cta={copy.faceTake}
+                busyLabel={copy.faceSaving}
+                onCapture={(_full, small) => void onFace(step.position, small)}
+                onFail={() => void advance(queue)}
+              />
+              <Button variant="ghost" size="lg" className="mt-3 w-full" disabled={busy} onClick={() => void advance(queue)}>
+                {copy.faceSkip}
+              </Button>
+            </div>
           </section>
         ) : null}
 
@@ -653,6 +849,170 @@ function Last4Step({
       )}
       <Button variant="ghost" size="lg" className="mt-3 w-full" onClick={onOther}>
         {copy.idUseOther}
+      </Button>
+    </section>
+  );
+}
+
+/** "Is this your [icon] Airbnb booking?", with the icon sized to the line. */
+function ConfirmOnSite({ site }: { site: GuestSite }) {
+  return (
+    <>
+      {copy.confirmOnSite.before}{" "}
+      <span className="inline-flex items-baseline gap-[0.3em] whitespace-nowrap font-medium text-foreground">
+        <span className="self-center">
+          <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} size="1.15em" />
+        </span>
+        {/* The standard "Booked directly" reads badly mid-sentence. */}
+        {site.key === "direct" && site.label === copy.platforms["direct"] ? copy.confirmDirect : site.label}
+      </span>{" "}
+      {copy.confirmOnSite.after}
+    </>
+  );
+}
+
+function Counter({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-border p-4">
+      <div>
+        <p className="text-xl font-medium">{label}</p>
+        <p className="text-muted-foreground">{hint}</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-14 rounded-full"
+          aria-label={copy.partyLess(label)}
+          disabled={value <= min}
+          onClick={() => onChange(value - 1)}
+        >
+          <Minus className="size-6" />
+        </Button>
+        <span className="w-10 text-center text-3xl tabular-nums" aria-live="polite">
+          {value}
+        </span>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-14 rounded-full"
+          aria-label={copy.partyMore(label)}
+          disabled={value >= max}
+          onClick={() => onChange(value + 1)}
+        >
+          <Plus className="size-6" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** How many adults and children, and each child's age. Never blocks the guest. */
+function PartyStep({
+  plan,
+  initialAdults,
+  busy,
+  onSubmit,
+}: {
+  plan: PartyPlan;
+  initialAdults: number;
+  busy: boolean;
+  onSubmit: (adults: number, childAges: number[]) => void;
+}) {
+  const [adults, setAdults] = useState(initialAdults);
+  const [ages, setAges] = useState<Array<number | null>>([]);
+  const total = adults + ages.length;
+  const missingAge = ages.some((a) => a === null);
+  const notes = [
+    plan.booked !== null && plan.booked !== total ? copy.partyDiffers(plan.booked, total) : null,
+    plan.capacity !== null && total > plan.capacity ? copy.partyOver(plan.capacity) : null,
+  ].filter((n): n is string => !!n);
+
+  return (
+    <section className="mx-auto max-w-xl">
+      <h1 className="text-2xl sm:text-4xl">{copy.partyTitle}</h1>
+      <p className="mt-2 text-muted-foreground">
+        {copy.partyBody}
+        {plan.booked !== null ? ` ${copy.partyBooked(plan.booked)}` : ""}
+      </p>
+      <div className="mt-6 space-y-3">
+        <Counter label={copy.partyAdults} hint={copy.partyAdultsHint} value={adults} min={1} max={30} onChange={setAdults} />
+        {plan.childrenAllowed ? (
+          <Counter
+            label={copy.partyChildren}
+            hint={copy.partyChildrenHint}
+            value={ages.length}
+            min={0}
+            max={29}
+            onChange={(n) => setAges((a) => (n > a.length ? [...a, null] : a.slice(0, n)))}
+          />
+        ) : (
+          <p className="rounded-2xl bg-secondary p-4 text-secondary-foreground">{copy.partyAdultsOnly}</p>
+        )}
+      </div>
+
+      {ages.length > 0 ? (
+        <div className="mt-6">
+          <p className="text-muted-foreground">{copy.partyChildAgeHint}</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {ages.map((age, i) => (
+              <div key={i} className="space-y-1">
+                <label className="text-sm text-muted-foreground" htmlFor={`child-age-${i}`}>
+                  {copy.partyChildAge(i + 1)}
+                </label>
+                <Select
+                  value={age === null ? "" : String(age)}
+                  onValueChange={(v) => setAges((a) => a.map((x, j) => (j === i ? Number(v) : x)))}
+                >
+                  <SelectTrigger id={`child-age-${i}`} className="h-14 text-xl">
+                    <SelectValue placeholder={copy.partyAgePick} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 18 }, (_, n) => (
+                      <SelectItem key={n} value={String(n)} className="text-lg">
+                        {n}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {notes.length ? (
+        <div className="mt-6 space-y-2">
+          {notes.map((n) => (
+            <p key={n} className="rounded-2xl bg-secondary p-4 text-secondary-foreground">
+              {n}
+            </p>
+          ))}
+        </div>
+      ) : null}
+
+      <Button
+        size="touch-xl"
+        className="mt-8 w-full"
+        disabled={busy || missingAge}
+        onClick={() => onSubmit(adults, ages.filter((a): a is number => a !== null))}
+      >
+        {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+        {missingAge ? copy.partyAgesMissing : copy.partyContinue}
       </Button>
     </section>
   );

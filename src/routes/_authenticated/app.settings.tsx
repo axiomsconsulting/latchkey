@@ -227,6 +227,7 @@ function SettingsPage() {
         <ChannelLabels
           hostId={workspace.data.hostId}
           labels={((host as { channel_labels?: Record<string, string> } | null)?.channel_labels ?? {}) as Record<string, string>}
+          sites={(host as { booking_sites?: unknown } | null)?.booking_sites}
         />
       ) : null}
       {workspace.data && isOwner ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}

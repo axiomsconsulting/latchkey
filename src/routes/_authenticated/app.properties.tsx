@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { CheckinSettings } from "@/components/host/CheckinSettings";
+import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
 import { RoomFeedPanel } from "@/components/host/RoomFeedPanel";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +65,7 @@ type Room = {
   public_title: string | null;
   description: string | null;
   max_guests: number;
+  children_allowed?: boolean;
   has_ensuite: boolean;
   sort_order: number;
   active: boolean;
@@ -111,6 +113,7 @@ function RoomDialog({
     public_title: room?.public_title ?? "",
     description: room?.description ?? "",
     max_guests: room?.max_guests ?? 2,
+    children_allowed: room?.children_allowed ?? true,
     has_ensuite: room?.has_ensuite ?? false,
   });
 
@@ -126,7 +129,8 @@ function RoomDialog({
           room_number: form.room_number.trim() || null,
           public_title: form.public_title.trim() || null,
           description: form.description.trim() || null,
-          max_guests: Number(form.max_guests) || 2,
+          max_guests: Math.min(30, Math.max(1, Number(form.max_guests) || 2)),
+          children_allowed: form.children_allowed,
           has_ensuite: form.has_ensuite,
           sort_order: room?.sort_order ?? nextOrder,
           active: room?.active ?? true,
@@ -172,12 +176,14 @@ function RoomDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mg">Sleeps</Label>
+              <Label htmlFor="mg">Sleeps (total people)</Label>
               <Input
                 id="mg"
                 type="number"
+                inputMode="numeric"
+                required
                 min={1}
-                max={12}
+                max={30}
                 className="h-12"
                 value={form.max_guests}
                 onChange={(e) => setForm((f) => ({ ...f, max_guests: Number(e.target.value) }))}
@@ -210,6 +216,15 @@ function RoomDialog({
               onChange={(e) => setForm((f) => ({ ...f, has_ensuite: e.target.checked }))}
             />
             Has an en-suite bathroom
+          </label>
+          <label className="flex items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="size-5 rounded border-input"
+              checked={form.children_allowed}
+              onChange={(e) => setForm((f) => ({ ...f, children_allowed: e.target.checked }))}
+            />
+            Children welcome (they give their age at check-in, no ID)
           </label>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -730,6 +745,7 @@ function PropertiesPage() {
           property={property as unknown as { id: string; short_code: string; checkin_methods: unknown }}
         />
       ) : null}
+      {property ? <GuestRecordsSettings property={property as unknown as { id: string; guest_records?: unknown }} /> : null}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -753,6 +769,7 @@ function PropertiesPage() {
                   <span className="block truncate font-medium">{r.display_name}</span>
                   <span className="block text-sm text-muted-foreground">
                     Sleeps {r.max_guests}
+                    {r.children_allowed === false ? " · Adults only" : ""}
                     {r.has_ensuite ? " · En-suite" : ""}
                     {r.room_number ? ` · Room ${r.room_number}` : ""}
                   </span>

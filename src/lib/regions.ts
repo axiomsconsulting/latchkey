@@ -102,7 +102,7 @@ export const REGIONS: Record<CountryCode, Region> = {
     mobileLabel: "Mobile",
     dialCode: "64",
     currency: "NZD",
-    directoryIds: ["buildercrack", "google_maps"],
+    directoryIds: ["builderscrack", "google_maps"],
   },
 };
 

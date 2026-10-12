@@ -16,6 +16,9 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          arrived_adults: number | null
+          arrived_children: number | null
+          site_key: string | null
           anonymised_at: string | null
           booking_url: string | null
           channel: Database["public"]["Enums"]["booking_channel"]
@@ -50,6 +53,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          arrived_adults?: number | null
+          arrived_children?: number | null
+          site_key?: string | null
           anonymised_at?: string | null
           booking_url?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
@@ -84,6 +90,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          arrived_adults?: number | null
+          arrived_children?: number | null
+          site_key?: string | null
           anonymised_at?: string | null
           booking_url?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
@@ -164,6 +173,7 @@ export type Database = {
       }
       channel_connections: {
         Row: {
+          site_key: string | null
           channel: Database["public"]["Enums"]["booking_channel"]
           created_at: string
           id: string
@@ -179,6 +189,7 @@ export type Database = {
           url_fingerprint: string | null
         }
         Insert: {
+          site_key?: string | null
           channel: Database["public"]["Enums"]["booking_channel"]
           created_at?: string
           id?: string
@@ -194,6 +205,7 @@ export type Database = {
           url_fingerprint?: string | null
         }
         Update: {
+          site_key?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
           created_at?: string
           id?: string
@@ -285,6 +297,9 @@ export type Database = {
       }
       checkin_sessions: {
         Row: {
+          adults: number | null
+          children: number | null
+          companion_attempts: number
           booking_id: string
           completed_at: string | null
           confirmed: boolean
@@ -298,6 +313,9 @@ export type Database = {
           verified_method: string | null
         }
         Insert: {
+          adults?: number | null
+          children?: number | null
+          companion_attempts?: number
           booking_id: string
           completed_at?: string | null
           confirmed?: boolean
@@ -311,6 +329,9 @@ export type Database = {
           verified_method?: string | null
         }
         Update: {
+          adults?: number | null
+          children?: number | null
+          companion_attempts?: number
           booking_id?: string
           completed_at?: string | null
           confirmed?: boolean
@@ -449,6 +470,87 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "extras_catalogue_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_ids: {
+        Row: {
+          age: number | null
+          booking_id: string
+          created_at: string
+          date_of_birth: string | null
+          delete_after: string
+          document_expiry: string | null
+          document_last4: string | null
+          document_type: string | null
+          face_photo_path: string | null
+          full_name: string | null
+          id: string
+          id_checked: boolean
+          id_photo_path: string | null
+          issuing_country: string | null
+          kind: string
+          name_match: string | null
+          position: number
+          property_id: string
+          skipped: boolean
+        }
+        Insert: {
+          age?: number | null
+          booking_id: string
+          created_at?: string
+          date_of_birth?: string | null
+          delete_after: string
+          document_expiry?: string | null
+          document_last4?: string | null
+          document_type?: string | null
+          face_photo_path?: string | null
+          full_name?: string | null
+          id?: string
+          id_checked?: boolean
+          id_photo_path?: string | null
+          issuing_country?: string | null
+          kind: string
+          name_match?: string | null
+          position: number
+          property_id: string
+          skipped?: boolean
+        }
+        Update: {
+          age?: number | null
+          booking_id?: string
+          created_at?: string
+          date_of_birth?: string | null
+          delete_after?: string
+          document_expiry?: string | null
+          document_last4?: string | null
+          document_type?: string | null
+          face_photo_path?: string | null
+          full_name?: string | null
+          id?: string
+          id_checked?: boolean
+          id_photo_path?: string | null
+          issuing_country?: string | null
+          kind?: string
+          name_match?: string | null
+          position?: number
+          property_id?: string
+          skipped?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_ids_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_ids_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
@@ -656,6 +758,7 @@ export type Database = {
       }
       hosts: {
         Row: {
+          booking_sites: Json
           bank_details: string | null
           business_name: string
           channel_labels: Json
@@ -676,6 +779,7 @@ export type Database = {
           timezone: string
         }
         Insert: {
+          booking_sites?: Json
           bank_details?: string | null
           business_name: string
           channel_labels?: Json
@@ -696,6 +800,7 @@ export type Database = {
           timezone?: string
         }
         Update: {
+          booking_sites?: Json
           bank_details?: string | null
           business_name?: string
           channel_labels?: Json
@@ -907,6 +1012,7 @@ export type Database = {
       }
       properties: {
         Row: {
+          guest_records: Json
           active: boolean
           address: string | null
           check_in_pin: string | null
@@ -933,6 +1039,7 @@ export type Database = {
           wifi_password: string | null
         }
         Insert: {
+          guest_records?: Json
           active?: boolean
           address?: string | null
           check_in_pin?: string | null
@@ -959,6 +1066,7 @@ export type Database = {
           wifi_password?: string | null
         }
         Update: {
+          guest_records?: Json
           active?: boolean
           address?: string | null
           check_in_pin?: string | null
@@ -1141,6 +1249,7 @@ export type Database = {
       }
       rooms: {
         Row: {
+          children_allowed: boolean
           active: boolean
           amenities: Json
           created_at: string
@@ -1160,6 +1269,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          children_allowed?: boolean
           active?: boolean
           amenities?: Json
           created_at?: string
@@ -1179,6 +1289,7 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          children_allowed?: boolean
           active?: boolean
           amenities?: Json
           created_at?: string

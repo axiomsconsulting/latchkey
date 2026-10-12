@@ -4,14 +4,13 @@
  */
 
 export type Mode = "demo" | "live";
-export type IntegrationKey = "contra" | "id_check" | "host_email" | "guest_messages";
+export type IntegrationKey = "id_check" | "host_email" | "guest_messages";
 
 export type IntegrationModes = Record<IntegrationKey, Mode>;
 
-export const INTEGRATION_KEYS: IntegrationKey[] = ["contra", "id_check", "host_email", "guest_messages"];
+export const INTEGRATION_KEYS: IntegrationKey[] = ["id_check", "host_email", "guest_messages"];
 
 export const DEFAULT_MODES: IntegrationModes = {
-  contra: "demo",
   id_check: "live",
   host_email: "demo",
   guest_messages: "demo",

@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
+import { ChannelIcon } from "@/components/ChannelIcon";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { RoomFeedPanel } from "@/components/host/RoomFeedPanel";
@@ -53,7 +54,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { calendarGuides, calendarUi, channels, common, connections as copy, feedCopy, linkTools } from "@/content/copy";
-import { useConnections, usePropertyBoard, useRole, useWorkspace } from "@/hooks/use-host-data";
+import { useBookingSites, useConnections, usePropertyBoard, useRole, useWorkspace } from "@/hooks/use-host-data";
+import { platformKey, toChannel } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { syncPropertyNow } from "@/lib/guests.functions";
 import {
@@ -91,6 +93,7 @@ function urlIssue(raw: string): string | null {
 type Connection = {
   id: string;
   channel: string;
+  site_key?: string | null;
   listing_name: string | null;
   masked_url: string | null;
   room_id: string | null;
@@ -135,9 +138,10 @@ function ConnectionDialog({
   const qc = useQueryClient();
   const editing = !!existing;
   const [url, setUrl] = useState("");
-  const [channel, setChannel] = useState<(typeof CHANNEL_KEYS)[number]>(
-    (existing?.channel as (typeof CHANNEL_KEYS)[number] | undefined) ?? "airbnb",
-  );
+  const sites = useBookingSites();
+  // A built-in id or a site the host added; saved as channel plus site_key.
+  const [siteKey, setSiteKey] = useState<string>(existing ? platformKey(existing) : "airbnb");
+  const channel = toChannel(siteKey).channel;
   const [roomId, setRoomId] = useState(existing ? (existing.room_id ?? "none") : (roomIdDefault ?? rooms[0]?.id ?? "none"));
   const [listing, setListing] = useState(existing?.listing_name ?? "");
   const [testing, setTesting] = useState(false);
@@ -178,7 +182,7 @@ function ConnectionDialog({
           ...(existing ? { id: existing.id } : {}),
           property_id: propertyId,
           room_id: roomId === "none" ? null : roomId,
-          channel,
+          ...toChannel(siteKey),
           listing_name: listing.trim() || null,
           // When editing, an empty box keeps the saved link.
           ...(url.trim() ? { ical_url: url.trim() } : {}),
@@ -226,17 +230,17 @@ function ConnectionDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Channel</Label>
-              <Select
-                value={channel}
-                onValueChange={(v) => setChannel(v as (typeof CHANNEL_KEYS)[number])}
-              >
+              <Select value={siteKey} onValueChange={setSiteKey}>
                 <SelectTrigger className="h-12">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CHANNEL_KEYS.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {channels[c]}
+                  {sites.map((site) => (
+                    <SelectItem key={site.key} value={site.key}>
+                      <span className="flex items-center gap-2">
+                        <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} size="1.25em" />
+                        {site.label}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -557,6 +561,7 @@ function RoomCard({
 function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run[]; canWrite: boolean; onEdit: () => void }) {
   const sync = useServerFn(syncConnectionNow);
   const remove = useServerFn(deleteConnection);
+  const site = useBookingSites().find((x) => x.key === platformKey(link));
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -597,9 +602,9 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <ChannelBadge channel={link.channel as Channel} />
+        <ChannelBadge channel={link.channel as Channel} label={site?.label} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{link.listing_name ?? channels[link.channel as Channel]}</span>
+          <span className="block truncate text-sm font-medium">{link.listing_name ?? site?.label ?? channels[link.channel as Channel]}</span>
           <span className="block truncate text-xs text-muted-foreground">{link.masked_url ?? linkTools.noLink}</span>
         </span>
         <StatePill state={state} />

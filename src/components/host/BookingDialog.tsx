@@ -23,7 +23,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { bookings as copy, channels, common, statuses } from "@/content/copy";
+import { ChannelIcon } from "@/components/ChannelIcon";
+import { bookings as copy, common, statuses } from "@/content/copy";
+import { useBookingSites } from "@/hooks/use-host-data";
+import { platformKey, toChannel } from "@/lib/booking-sites";
 import { saveBooking, undoCheckIn } from "@/lib/host.functions";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 
@@ -32,6 +35,7 @@ export type BookingRow = {
   property_id: string;
   room_id: string | null;
   channel: string;
+  site_key?: string | null;
   guest_full_name: string | null;
   reservation_code: string | null;
   guest_count: number;
@@ -61,7 +65,6 @@ type Props = {
   defaults?: { check_in_time?: string; check_out_time?: string };
 };
 
-const CHANNEL_KEYS = ["airbnb", "booking_com", "homestay", "direct", "other"] as const;
 const STATUS_KEYS = [
   "needs_details",
   "upcoming",
@@ -123,6 +126,7 @@ export function BookingDialog({
     }
   }
 
+  const sites = useBookingSites();
   const [form, setForm] = useState(() =>
     blank(propertyId, rooms[0]?.id ?? null, defaults),
   );
@@ -133,7 +137,7 @@ export function BookingDialog({
       setForm({
         property_id: booking.property_id,
         room_id: booking.room_id,
-        channel: booking.channel,
+        channel: platformKey(booking),
         guest_full_name: booking.guest_full_name ?? "",
         reservation_code: booking.reservation_code ?? "",
         guest_count: booking.guest_count ?? 1,
@@ -168,7 +172,7 @@ export function BookingDialog({
           ...(booking ? { id: booking.id } : {}),
           property_id: propertyId,
           room_id: form.room_id,
-          channel: form.channel as (typeof CHANNEL_KEYS)[number],
+          ...toChannel(form.channel),
           guest_full_name: form.guest_full_name.trim() || null,
           reservation_code: form.reservation_code.trim() || null,
           guest_count: Number(form.guest_count) || 1,
@@ -272,9 +276,12 @@ export function BookingDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CHANNEL_KEYS.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {channels[c]}
+                {sites.map((site) => (
+                  <SelectItem key={site.key} value={site.key}>
+                    <span className="flex items-center gap-2">
+                      <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} size="1.25em" />
+                      {site.label}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -23,6 +23,7 @@ const variants: Record<
   other: "other",
 };
 
-export function ChannelBadge({ channel }: { channel: Channel }) {
-  return <Badge variant={variants[channel] ?? "other"}>{channels[channel] ?? channel}</Badge>;
+/** `label` is the host's own name for the site, including sites they added. */
+export function ChannelBadge({ channel, label }: { channel: Channel; label?: string | undefined }) {
+  return <Badge variant={variants[channel] ?? "other"}>{label ?? channels[channel] ?? channel}</Badge>;
 }

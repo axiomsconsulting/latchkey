@@ -4,18 +4,48 @@ import { Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { guest as copy } from "@/content/copy";
 
+/** Draws the frame no larger than `max` pixels on its longest side. */
+function still(video: HTMLVideoElement, max: number, quality: number, mirror: boolean): string {
+  const scale = Math.min(1, max / Math.max(video.videoWidth, video.videoHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(video.videoWidth * scale);
+  canvas.height = Math.round(video.videoHeight * scale);
+  const ctx = canvas.getContext("2d");
+  if (ctx && mirror) {
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const url = canvas.toDataURL("image/jpeg", quality);
+  canvas.width = 0;
+  return url;
+}
+
+/** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
+const SMALL = { environment: { max: 1024, quality: 0.62 }, user: { max: 480, quality: 0.6 } } as const;
+
 /**
- * Live camera preview that captures one still as a JPEG data URL. The image
- * only ever lives in memory; it is sent once for reading and then discarded.
+ * Live camera preview that captures one still. `full` is sent once for
+ * reading and then discarded; `small` is a low-resolution JPEG the host may
+ * keep, made here so the full image never needs storing.
  */
 export function IdCamera({
   busy,
   onCapture,
   onFail,
+  facing = "environment",
+  help,
+  cta,
+  busyLabel,
 }: {
   busy: boolean;
-  onCapture: (dataUrl: string) => void;
+  onCapture: (full: string, small: string) => void;
   onFail: () => void;
+  /** "user" for a face photo with the front camera. */
+  facing?: "environment" | "user";
+  help?: string;
+  cta?: string;
+  busyLabel?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -27,7 +57,7 @@ export function IdCamera({
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("no camera");
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 } },
+          video: { facingMode: { ideal: facing }, width: { ideal: facing === "user" ? 1280 : 1920 } },
           audio: false,
         });
         if (cancelled) {
@@ -55,30 +85,30 @@ export function IdCamera({
   function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    const scale = Math.min(1, 1600 / Math.max(video.videoWidth, video.videoHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
-    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const url = canvas.toDataURL("image/jpeg", 0.85);
-    canvas.width = 0;
-    onCapture(url);
+    const mirror = facing === "user";
+    const small = SMALL[facing];
+    onCapture(still(video, 1600, 0.85, mirror), still(video, small.max, small.quality, mirror));
   }
 
   return (
     <div className="space-y-4">
       <div className="relative overflow-hidden rounded-2xl bg-muted">
-        <video ref={videoRef} playsInline muted className="aspect-[4/3] w-full object-cover" />
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className={facing === "user" ? "aspect-[4/3] w-full -scale-x-100 object-cover" : "aspect-[4/3] w-full object-cover"}
+        />
         {!ready ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
           </div>
         ) : null}
       </div>
-      <p className="text-center text-muted-foreground">{copy.idCameraHelp}</p>
+      <p className="text-center text-muted-foreground">{help ?? copy.idCameraHelp}</p>
       <Button size="touch-xl" className="w-full" onClick={capture} disabled={!ready || busy}>
         {busy ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
-        {busy ? copy.idChecking : copy.idTakePhoto}
+        {busy ? (busyLabel ?? copy.idChecking) : (cta ?? copy.idTakePhoto)}
       </Button>
     </div>
   );

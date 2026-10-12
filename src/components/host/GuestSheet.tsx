@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, ArchiveRestore, BedDouble, Loader2, Pencil, Send, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, BadgeCheck, BedDouble, Loader2, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
+import { GuestPeople } from "@/components/host/GuestPeople";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 import { StatusBadge } from "@/components/host/StatusBadge";
 import {
@@ -22,7 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { common, guestCard as copy } from "@/content/copy";
-import { useRole } from "@/hooks/use-host-data";
+import { useBookingSites, useRole } from "@/hooks/use-host-data";
+import { platformKey } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime, nightsBetween, stayState } from "@/lib/dates";
 import { archiveBookings, deleteBookings, getGuestDetails } from "@/lib/guests.functions";
 import { markHostRead, sendHostMessage } from "@/lib/messages.functions";
@@ -62,6 +64,7 @@ export function GuestSheet({
   const remove = useServerFn(deleteBookings);
   const qc = useQueryClient();
   const { canWrite } = useRole();
+  const sites = useBookingSites();
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -98,6 +101,7 @@ export function GuestSheet({
   const d = details.data;
   const b = d?.booking;
   const nights = b ? nightsBetween(b.checkIn, b.checkOut) : 0;
+  const site = b ? sites.find((x) => x.key === platformKey({ channel: b.channel, site_key: b.siteKey })) : undefined;
 
   return (
     <Sheet open={!!bookingId} onOpenChange={onOpenChange}>
@@ -113,9 +117,14 @@ export function GuestSheet({
         ) : (
           <>
             <SheetHeader>
-              <SheetTitle className="font-display text-2xl">{b.guestName ?? copy.noName}</SheetTitle>
+              <SheetTitle className="flex items-center gap-2 font-display text-2xl">
+                {b.guestName ?? copy.noName}
+                {b.idCheckStatus === "matched" ? (
+                  <BadgeCheck className="size-6 shrink-0 text-success" aria-label={copy.verified} />
+                ) : null}
+              </SheetTitle>
               <SheetDescription className="flex flex-wrap items-center gap-2">
-                <ChannelBadge channel={b.channel as Channel} />
+                <ChannelBadge channel={b.channel as Channel} label={site?.label} />
                 <StatusBadge state={stayState({ status: b.status, check_in_date: b.checkIn, check_out_date: b.checkOut }, today)} />
                 {b.archived ? <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{copy.archived}</span> : null}
               </SheetDescription>
@@ -127,7 +136,7 @@ export function GuestSheet({
               <Fact label={copy.leaves} value={`${formatUkDate(b.checkOut, { withYear: true })}${b.checkOutTime ? `, ${formatUkTime(b.checkOutTime)}` : ""}`} />
               <Fact label={copy.nights} value={String(nights)} />
               <Fact label={copy.guests} value={String(b.guestCount ?? 1)} />
-              <Fact label={copy.bookedOn} value={b.listingName ?? b.channel.replace("_", ".")} />
+              <Fact label={copy.bookedOn} value={b.listingName ?? site?.label ?? b.channel.replace("_", ".")} />
               <Fact label={copy.reference} value={b.reservationCode ?? "—"} />
               {b.email ? <Fact label={copy.email} value={b.email} /> : null}
               {b.phoneLast4 ? <Fact label={copy.phone} value={`•••• ${b.phoneLast4}`} /> : null}
@@ -159,6 +168,15 @@ export function GuestSheet({
                 </Button>
               </div>
             ) : null}
+
+            <Section title={copy.whoStaying} count={d.people.length}>
+              <GuestPeople
+                people={d.people}
+                arrivedAdults={b.arrivedAdults}
+                arrivedChildren={b.arrivedChildren}
+                bookedCount={b.guestCount ?? 1}
+              />
+            </Section>
 
             <Section title={copy.messages} count={d.messages.length}>
               {d.messages.length === 0 ? (

@@ -136,7 +136,7 @@ export function recommendProviders(
     if (eta.getTime() - from.getTime() === minW) reasons.push("Soonest");
     if (comparablePrice(p) === minP) reasons.push("Best price");
     if (p.rating >= 4.8) reasons.push("Top rated");
-    if (p.verified) reasons.push("Contra verified");
+    if (p.verified) reasons.push("Verified");
     return { provider: p, etaIso: eta.toISOString(), score: Math.round(score * 100) / 100, reasons };
   });
 

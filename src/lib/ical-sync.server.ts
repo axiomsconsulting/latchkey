@@ -101,7 +101,8 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
 
   const { data: conn, error: connErr } = await supabaseAdmin
     .from("channel_connections")
-    .select("id, property_id, room_id, channel, listing_name, is_active")
+    // All columns: site_key arrives with migration 0021 and is optional until then.
+    .select("*")
     .eq("id", connectionId)
     .maybeSingle();
   if (connErr || !conn) throw new FeedError("That calendar connection no longer exists.");
@@ -181,6 +182,7 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
           connection_id: conn.id,
           source: "ical",
           channel: conn.channel,
+          ...(conn.site_key ? { site_key: conn.site_key } : {}),
           external_uid: b.externalUid,
           reservation_code: b.reservationCode,
           guest_full_name: b.guestFullName,
@@ -308,6 +310,7 @@ export async function runRetentionSweep(): Promise<number> {
   const today = new Date().toISOString().slice(0, 10);
   const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
   await supabaseAdmin.from("verification_results").delete().lt("delete_after", today);
+  await purgeGuestIds(today);
   await supabaseAdmin.from("check_in_attempts").delete().lt("created_at", monthAgo);
   await supabaseAdmin.from("checkin_sessions").delete().lt("expires_at", new Date().toISOString());
   await supabaseAdmin.from("stay_tokens").delete().lt("expires_at", new Date().toISOString());
@@ -315,4 +318,23 @@ export async function runRetentionSweep(): Promise<number> {
   const yearAgo = new Date(Date.now() - 365 * 86_400_000).toISOString();
   await (supabaseAdmin as unknown as { from: (t: string) => any }).from("audit_log").delete().lt("at", yearAgo);
   return data?.length ?? 0;
+}
+
+/**
+ * ID details and photos go on the day the host's chosen keep period ends,
+ * a few hundred at a time so one run never times out.
+ */
+export async function purgeGuestIds(today: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { removeGuestPhotos } = await import("./checkin.server");
+  for (let round = 0; round < 10; round++) {
+    const { data } = await supabaseAdmin
+      .from("guest_ids")
+      .select("id, id_photo_path, face_photo_path")
+      .lt("delete_after", today)
+      .limit(300);
+    if (!data?.length) return;
+    await removeGuestPhotos(data.flatMap((r) => [r.id_photo_path, r.face_photo_path].filter((x): x is string => !!x)));
+    await supabaseAdmin.from("guest_ids").delete().in("id", data.map((r) => r.id));
+  }
 }

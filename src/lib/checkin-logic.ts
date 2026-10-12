@@ -3,6 +3,7 @@
  * can be unit tested.
  */
 
+import { platformKey } from "./booking-sites";
 import { addDays } from "./dates";
 
 export type CheckinMethod = "photo_id" | "last4" | "self_declare";
@@ -66,6 +67,8 @@ export type MatchableBooking = {
   check_out_date: string;
   guest_full_name: string | null;
   mirror_of: string | null;
+  /** Set when the stay came from a booking site the host added. */
+  site_key?: string | null;
 };
 
 export function surnameInitial(name: string | null | undefined): string | null {
@@ -105,7 +108,7 @@ function matches(b: MatchableBooking, answers: { letter: string; checkOut: strin
   return (
     surnameInitial(b.guest_full_name) === answers.letter.toUpperCase() &&
     b.check_out_date === answers.checkOut &&
-    b.channel === answers.channel
+    platformKey(b) === answers.channel
   );
 }
 
@@ -153,7 +156,7 @@ export function resolveArrival(
 ): Resolution {
   const letter = answers.letter.toUpperCase();
   const fits = (b: MatchableBooking) =>
-    b.check_out_date === answers.checkOut && (!answers.channel || b.channel === answers.channel);
+    b.check_out_date === answers.checkOut && (!answers.channel || platformKey(b) === answers.channel);
 
   const arriving = bookings.filter(
     (b) =>
@@ -169,7 +172,7 @@ export function resolveArrival(
 
   const hits = named.length ? named : staying.length ? staying : nameless;
   if (hits.length === 0) return { kind: "none" };
-  const channels = [...new Set(hits.map((b) => b.channel))];
+  const channels = [...new Set(hits.map(platformKey))];
   if (!answers.channel && channels.length > 1) return { kind: "choose", channels };
   if (hits.length !== 1) return { kind: "none" };
   const booking = hits[0]!;

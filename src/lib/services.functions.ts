@@ -1,6 +1,7 @@
 /**
- * Host-side services hub: guest requests, Contra recommendations and booking,
- * scheduled maintenance, theme and integration switches.
+ * Host-side services hub: guest requests, scheduled maintenance, theme and
+ * integration switches. Tradespeople come from the host's own contacts and
+ * the local directories in trades.ts.
  */
 
 import { createServerFn } from "@tanstack/react-start";
@@ -10,7 +11,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { requireOwner, requireWrite } from "@/lib/roles";
 import { INTEGRATION_KEYS, normaliseModes } from "./integration-modes";
-import { categoryById, recommendProviders, type Provider } from "./services";
+import { categoryById } from "./services";
 import { normaliseTheme, RESERVED_SLUGS } from "./theme";
 
 const uuid = z.string().uuid();
@@ -28,11 +29,9 @@ export const getIntegrations = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const { modes } = await hostContext(context.supabase, data.hostId);
-    const { contraLiveReady } = await import("./contra.server");
     return {
       modes,
       ready: {
-        contra: contraLiveReady(),
         id_check: Boolean(process.env["LOVABLE_API_KEY"]),
         host_email: false, // needs a sender email domain
         guest_messages: true, // stay page always works; email copy needs a sender domain
@@ -144,46 +143,6 @@ export const listJobs = createServerFn({ method: "GET" })
     return { jobs: jobs ?? [] };
   });
 
-export const listProviders = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, category: z.string().nullable().default(null) }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { modes } = await hostContext(context.supabase, data.hostId);
-    const { searchProviders } = await import("./contra.server");
-    try {
-      return { mode: modes.contra, providers: await searchProviders(modes.contra, data.category, "High Wycombe"), error: null };
-    } catch (err) {
-      return { mode: modes.contra, providers: [] as Provider[], error: err instanceof Error ? err.message : "Contra is unavailable." };
-    }
-  });
-
-export const recommendForJob = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ jobId: uuid }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: job } = await context.supabase
-      .from("service_jobs")
-      .select("id, host_id, category, urgency, scheduled_at, properties(timezone, postcode)")
-      .eq("id", data.jobId)
-      .single();
-    if (!job) throw new Error("Request not found.");
-    const { modes } = await hostContext(context.supabase, job.host_id);
-    const { searchProviders } = await import("./contra.server");
-    const tz = (job as any).properties?.timezone ?? "Europe/London";
-    try {
-      const providers = await searchProviders(modes.contra, job.category, (job as any).properties?.postcode ?? null);
-      const recs = recommendProviders(providers, job.category, {
-        now: new Date(),
-        tz,
-        wantedAt: job.scheduled_at ? new Date(job.scheduled_at) : null,
-        urgency: job.urgency as "low" | "normal" | "urgent",
-      });
-      return { mode: modes.contra, recommendations: recs.slice(0, 4), error: null };
-    } catch (err) {
-      return { mode: modes.contra, recommendations: [], error: err instanceof Error ? err.message : "Contra is unavailable." };
-    }
-  });
-
 async function messageGuest(supabase: any, jobId: string, bookingId: string | null, body: string) {
   if (!bookingId) return;
   await supabase.from("messages").insert({
@@ -213,56 +172,6 @@ export const acknowledgeJob = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     await messageGuest(context.supabase, job.id, job.booking_id, `Thanks — your host has seen "${job.title}" and is arranging it now.`);
     return { ok: true };
-  });
-
-export const appointProvider = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ jobId: uuid, providerId: z.string().min(1).max(120), etaIso: z.string().datetime() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: job } = await context.supabase
-      .from("service_jobs")
-      .select("id, host_id, category, title, note, booking_id, properties(timezone, address, postcode)")
-      .eq("id", data.jobId)
-      .single();
-    if (!job) throw new Error("Request not found.");
-    // Appointing can call Contra live, so it needs write access, not just a read.
-    await requireWrite(context.supabase, job.host_id);
-    const { modes } = await hostContext(context.supabase, job.host_id);
-    const { searchProviders, bookProvider } = await import("./contra.server");
-    const providers = await searchProviders(modes.contra, job.category, null);
-    const provider = providers.find((p) => p.id === data.providerId);
-    if (!provider) throw new Error("That provider is no longer available.");
-    const prop = (job as any).properties ?? {};
-    const booked = await bookProvider(modes.contra, {
-      provider,
-      category: job.category,
-      title: job.title,
-      note: job.note,
-      etaIso: data.etaIso,
-      address: [prop.address, prop.postcode].filter(Boolean).join(", ") || null,
-    });
-    const { error } = await context.supabase
-      .from("service_jobs")
-      .update({
-        status: "booked",
-        provider: { id: provider.id, name: provider.name, rating: provider.rating, contraUrl: provider.contraUrl, rateUnit: provider.rateUnit, ratePence: provider.ratePence },
-        provider_mode: modes.contra,
-        provider_ref: booked.ref,
-        quoted_pence: booked.quotedPence,
-        eta_at: booked.confirmedEtaIso,
-        acknowledged_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", job.id);
-    if (error) throw new Error(error.message);
-    const tz = prop.timezone ?? "Europe/London";
-    await messageGuest(
-      context.supabase,
-      job.id,
-      job.booking_id,
-      `Good news — ${provider.name} is booked for "${job.title}". Expected ${ukTime(booked.confirmedEtaIso, tz)}.`,
-    );
-    return { ok: true, ref: booked.ref };
   });
 
 export const setJobStatus = createServerFn({ method: "POST" })

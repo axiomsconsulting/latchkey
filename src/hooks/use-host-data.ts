@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
+import { channels } from "@/content/copy";
+import { resolveSites, type Site } from "@/lib/booking-sites";
 import { getPropertyBoard, getWorkspace, listAlerts, listConnections } from "@/lib/host.functions";
 import { canWrite, isOwner } from "@/lib/roles";
 import { linkState } from "@/lib/sync-status";
@@ -75,4 +77,14 @@ export function useAlerts() {
     queryFn: () => fn(),
     refetchInterval: 60_000,
   });
+}
+
+/** The host's booking sites: built-ins with their wording and icons, then any they added. */
+export function useBookingSites(): Site[] {
+  const { data } = useWorkspace();
+  const host = data?.host as { channel_labels?: Record<string, string>; booking_sites?: unknown } | null | undefined;
+  return useMemo(
+    () => resolveSites(host?.channel_labels ?? {}, host?.booking_sites, channels),
+    [host?.channel_labels, host?.booking_sites],
+  );
 }

@@ -11,7 +11,7 @@ import { SERVICE_CATEGORIES } from "@/lib/services";
 import { directoryLinks, tradeTerm } from "@/lib/trades";
 
 /**
- * Searches real UK trade directories for the property's own address. The
+ * Searches the local trade directories for the property's own area. The
  * directories have no API and forbid automated extraction, so every search
  * opens in a new tab rather than being copied into Latchkey.
  */
@@ -89,9 +89,14 @@ export function TradeDirectory({
             <p className="font-medium">{d.name}</p>
             <p className="mt-1 text-sm text-muted-foreground">{d.blurb}</p>
             <Badge variant="secondary" className="mt-2 w-fit">{d.note}</Badge>
-            <Button asChild variant="outline" size="touch" className="mt-3" disabled={!ready}>
-              <a href={d.url} target="_blank" rel="noreferrer">{copy.openOn(d.name)} <ExternalLink className="size-4" /></a>
-            </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="touch" className="flex-1" disabled={!ready}>
+                <a href={d.url} target="_blank" rel="noreferrer">{copy.openOn(d.name)} <ExternalLink className="size-4" /></a>
+              </Button>
+              <Button asChild variant="ghost" size="touch">
+                <a href={d.site} target="_blank" rel="noreferrer">{copy.visit(d.name)}</a>
+              </Button>
+            </div>
           </article>
         ))}
       </div>

@@ -341,8 +341,18 @@ export const settings = {
   removing: "Removing…",
   channelsTitle: "What you call each booking site",
   channelsBody:
-    "Guests see these names when they choose where they booked. Rename any of them — for example \"Booked directly\" to \"Our website\". Leave one blank to keep the standard name. Your calendars and reports are unaffected.",
-  channelsSaved: "Names saved",
+    "Guests see these names and icons when they check in. Rename any of them — for example \"Booked directly\" to \"Our website\" — tap an icon to upload your own, and add new sites as you start using them. Leave a name blank to keep the standard one. Your calendars and reports are unaffected.",
+  channelsSaved: "Booking sites saved",
+  channelsAdd: "Add a booking site",
+  channelsNewName: "Site name",
+  channelsNewPlaceholder: "For example Expedia",
+  channelsIcon: "Icon",
+  channelsUploadIcon: (name: string) => `Upload an icon for ${name}`,
+  channelsRemoveIcon: "Use the standard icon",
+  channelsRemove: (name: string) => `Remove ${name}`,
+  channelsIconHelp: "Square images work best. We shrink them to fit on one line.",
+  channelsIconBad: "Please choose a PNG, JPG, WebP or ICO image.",
+  channelsNeedName: "Give each site you add a name.",
   privacyTitle: "Privacy and retention",
   privacyBody:
     "Guest names, phone digits and notes are cleared 90 days after check-out. Anonymous stay records are kept for your statistics.",
@@ -392,6 +402,26 @@ export const checkinSettings = {
   fallbackNote: "If the camera won't start or a guest needs more than 2 photo tries, Latchkey moves to the next option automatically.",
   listFlowNote: "ID checks are off: guests choose their platform, then pick their booking from a list showing first name and initial only.",
   saved: "Check-in settings saved",
+  records: {
+    title: "Who's staying and ID records",
+    body: "Ask how many people arrived, check every adult's ID, and choose what you keep. Children only give their age.",
+    askWhoIsStaying: "Ask who's staying",
+    askWhoIsStayingHelp: "Guests say how many adults and children arrived. You're told if it differs from the booking or the room's size.",
+    checkEveryAdult: "Check every adult's ID",
+    checkEveryAdultHelp: "After the lead guest, each adult photographs their own photo ID. Anyone without one can carry on, and you're told.",
+    idPhoto: "Keep a small copy of each ID",
+    idPhotoHelp: "Low-resolution, still readable on your phone. Without this, only the main details are kept: name, date of birth, ID type, country and last 4 of the number.",
+    facePhoto: "Take a face photo",
+    facePhotoHelp: "Each adult takes a quick photo so you can see it matches their ID.",
+    keepDays: "Keep details and photos for",
+    keepDaysOption: (n: number) => `${n} days after check-out`,
+    regulator: "I'm registered with the ICO (or my country's data regulator) and my privacy notice tells guests about ID photos",
+    regulatorHelp:
+      "Keeping photos of IDs and faces is personal data. In the UK you normally need to pay the ICO data protection fee and tell guests why you keep them and for how long. Photo options stay off until you tick this.",
+    regulatorNeeded: "Tick the registration box above to keep photos.",
+    lawNote:
+      "UK hotels, B&Bs and short lets must also record the full name and nationality of every guest aged 16 or over (Immigration (Hotel Records) Order 1972), and keep it for 12 months. Check what applies to you.",
+  },
   back: "Back to properties",
   print: "Print",
   cardHeadline: "Scan to check yourself in",
@@ -443,11 +473,20 @@ export const guest = {
   callHost: "Call your host",
   hi: (name: string) => `Hi ${name}`,
   confirmBody: "Is this your booking?",
+  /** Shown as: Is this your [icon] Airbnb booking? */
+  confirmOnSite: { before: "Is this your", after: "booking?" },
+  confirmDirect: "direct",
   confirmYes: "Yes, that's me",
   confirmNo: "No, start again",
   idTitle: "A quick ID check",
   idConsent:
     "We only check your name matches your booking. We don't keep a copy of your ID.",
+  idConsentDetails: (days: number) =>
+    `We check your name matches your booking. Your host keeps your name, date of birth and the type of ID for ${days} days after you leave, then it's deleted. We don't keep a copy of the photo.`,
+  idConsentPhoto: (days: number) =>
+    `We check your name matches your booking. For everyone's safety, your host keeps a small copy of your ID and its main details for ${days} days after you leave, then it's deleted.`,
+  idNotPhotoId:
+    "That doesn't look like a photo ID. Please use a passport, driving licence or ID card that shows your photo.",
   idConsentAgree: "I'm happy to continue",
   idUseOther: "Use another way",
   idCameraHelp: "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
@@ -456,6 +495,8 @@ export const guest = {
   idRetry: (left: number) =>
     `We couldn't read that clearly. Try again with more light and less glare (${left} ${left === 1 ? "try" : "tries"} left).`,
   idCameraFailed: "The camera didn't start, so let's try another way.",
+  idRetryPlain: "We couldn't read that clearly. Try again with more light and less glare.",
+  idTriesLeft: (left: number) => `${left} ${left === 1 ? "try" : "tries"} left.`,
   last4Title: "Confirm a few details",
   last4Kinds: {
     reference: "Last 4 characters of your booking reference",
@@ -496,6 +537,43 @@ export const guest = {
   backspace: "Delete last digit",
   notFound: "We couldn't find that property. Please check the link or ask your host.",
   error: "Something went wrong. Please try again, or call your host.",
+  // Who's staying
+  partyTitle: "Who's staying?",
+  partyBody: "Count everyone sleeping here tonight, including you.",
+  partyAdults: "Adults",
+  partyAdultsHint: "18 and over",
+  partyChildren: "Children",
+  partyChildrenHint: "Under 18",
+  partyLess: (what: string) => `One fewer ${what.toLowerCase()}`,
+  partyMore: (what: string) => `One more ${what.toLowerCase()}`,
+  partyAdultsOnly: "This room is for adults only.",
+  partyChildAge: (n: number) => `Age of child ${n}`,
+  partyChildAgeHint: "Just their age. Children don't need ID.",
+  partyAgePick: "Age",
+  partyBooked: (n: number) => `Your booking is for ${n} ${n === 1 ? "guest" : "guests"}.`,
+  partyDiffers: (booked: number, total: number) =>
+    `Your booking says ${booked}, and you've said ${total}. That's fine, we'll let your host know.`,
+  partyOver: (capacity: number) =>
+    `This room sleeps ${capacity}. We'll let your host know so they can help.`,
+  partyChildrenNotAllowed: "This room is for adults only. We'll let your host know so they can help.",
+  partyContinue: "Continue",
+  partyAgesMissing: "Please choose each child's age.",
+  // Everyone else's ID
+  companionTitle: (n: number, total: number) => `Now adult ${n} of ${total}`,
+  companionBody:
+    "Please pass the device over so they can photograph their own passport, driving licence or ID card.",
+  companionReady: "I'm ready",
+  companionThanks: (name: string) => (name ? `Thanks, ${name}.` : "Thanks."),
+  companionUnder18: "Thanks. They're under 18, so no ID is needed.",
+  companionSkip: "They don't have ID with them",
+  companionSkipped: "No problem. Your host will check it when they say hello.",
+  // Face photo
+  faceTitle: "And a quick photo of your face",
+  faceTitleOther: (n: number) => `A quick photo of adult ${n}`,
+  faceBody: "Look at the screen. It's only shared with your host and deleted after your stay.",
+  faceTake: "Take photo",
+  faceSkip: "Skip this",
+  faceSaving: "Saving…",
   // Stay page
   stayTitle: (name: string) => `Welcome, ${name}`,
   stayWifi: "Wi-Fi",
@@ -540,7 +618,6 @@ export const services = {
   subtitle: "Guest requests, problems and maintenance, and where to find someone to do the work.",
   tabInbox: "Requests",
   tabScheduled: "Maintenance",
-  tabProviders: "Grow your listing",
   emptyInbox: "No requests yet. When a guest asks for something on their stay page, it lands here.",
   emptyScheduled: "No maintenance booked. Plan a boiler service, deep clean or handyman visit.",
   acknowledge: "Acknowledge",
@@ -551,11 +628,10 @@ export const services = {
   inProgress: "Start",
   recommendedTitle: "Who can come",
   noProviders:
-    "Latchkey doesn't hold a list of trades. Open Find a trade to search the UK directories for this property's postcode.",
+    "Latchkey doesn't hold a list of trades. Open Local tradespeople to search the directories near this property.",
   bookMaintenance: "Book maintenance",
   demoBadge: "Demo",
   liveBadge: "Live",
-  viewOnContra: "View profile",
   guestTold: "Guest has been told the arrival time.",
   statuses: {
     new: "New", acknowledged: "Acknowledged", booked: "Booked", in_progress: "In progress",
@@ -612,7 +688,6 @@ export const integrations = {
   ready: "Ready",
   needsSetup: "Needs setup",
   items: {
-    contra: { name: "Contra marketplace", demo: "Sample local freelancers, bookings confirm instantly.", live: "Searches and books real providers on Contra." },
     id_check: { name: "Photo ID reading", demo: "Any photo passes as a match, no AI call.", live: "AI reads the name on the ID and compares it." },
     host_email: { name: "Email alerts to you", demo: "Alerts show on Today only.", live: "Also emails you. Needs a sender email address." },
     guest_messages: { name: "Guest updates", demo: "Updates show on the guest's stay page.", live: "Stay page plus email to the guest when a sender address is set up." },
@@ -857,9 +932,9 @@ export const payments = {
 
 /** Finding tradespeople for property work. */
 export const trades = {
-  tabLabel: "Find a trade",
+  tabLabel: "Local tradespeople",
   intro:
-    "Pick what needs doing and Latchkey opens a ready-made search on the UK sites that vet and review tradespeople, using this property's own address. Latchkey doesn't copy their listings, so you always see live, up-to-date firms.",
+    "Pick what needs doing and Latchkey searches the sites that vet and review tradespeople near this property. Latchkey doesn't copy their listings, so you always see live, up-to-date firms.",
   jobLabel: "What needs doing",
   termLabel: "Search words",
   areaLabel: "Postcode or town",
@@ -867,14 +942,9 @@ export const trades = {
   searching: (term: string, area: string) => `Searching for “${term}” near ${area}.`,
   searchNow: (name: string) => `Search ${name} now`,
   openOn: (name: string) => `Search ${name}`,
+  visit: (name: string) => `Go to ${name}`,
   legalNote:
     "These sites don't offer a way to pull their listings into other apps, and copying them automatically isn't allowed, so Latchkey links out instead. Once you've found someone you like, add them to a job so their details stay with the property.",
-  growthTitle: "Grow your listing",
-  growthBody:
-    "Contra is a marketplace for creative, tech and marketing freelancers. It's the right place for photography, listing copy, signage, a direct-booking site and marketing.",
-  notMaintenance:
-    "Contra has no cleaners, plumbers or electricians, so it's never used for guest problems or maintenance. Use Find a trade for those.",
-  contraNote: "Each search opens on Contra in a new tab with the words already filled in.",
 };
 
 export const hostInbox = {
@@ -1096,6 +1166,33 @@ export const guestCard = {
   deleteBody: "This deletes the stay with its messages, requests and alerts. It can't be undone. Archive it instead if you might need it later.",
   deleteSynced: "It came from a calendar link, so it will come back on the next sync if the platform still lists it.",
   deleted: "Stay removed",
+  whoStaying: "Who's staying",
+  arrivedCount: (adults: number, children: number) =>
+    `${adults} ${adults === 1 ? "adult" : "adults"}${children ? `, ${children} ${children === 1 ? "child" : "children"}` : ""}`,
+  bookedFor: (n: number) => `booked for ${n}`,
+  leadGuest: "Lead guest",
+  adult: (n: number) => `Adult ${n}`,
+  child: (age: number | null) => (age === null ? "Child" : `Child, ${age}`),
+  verified: "ID matches booking",
+  idChecked: "ID checked",
+  idPartial: "ID partly matches",
+  idMismatch: "ID doesn't match",
+  idSkipped: "No ID shown",
+  idNone: "No ID check",
+  noPeople: "Guests haven't said who's staying yet.",
+  viewId: (name: string) => `View ID for ${name}`,
+  idDialogTitle: (name: string) => `${name}'s ID`,
+  idPhoto: "ID photo",
+  facePhoto: "Face photo",
+  noPhotos: "No photos kept for this guest.",
+  docType: { passport: "Passport", driving_licence: "Driving licence", national_id: "ID card", residence_permit: "Residence permit", other: "Other ID" } as Record<string, string>,
+  detailName: "Name on ID",
+  detailDob: "Date of birth",
+  detailDoc: "ID type",
+  detailCountry: "Issued by",
+  detailExpiry: "Expires",
+  detailNumber: "Number ends",
+  deletedOn: (date: string) => `Deleted automatically on ${date}.`,
 };
 
 export const bookingTools = {

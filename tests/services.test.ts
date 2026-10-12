@@ -68,6 +68,6 @@ describe("formatting and theme", () => {
     expect(themeVars(normaliseTheme({}))["--radius"]).toBe("1rem");
   });
   it("normalises integration modes", () => {
-    expect(normaliseModes({ contra: "live", id_check: "bogus" })).toMatchObject({ contra: "live", id_check: "live", host_email: "demo" });
+    expect(normaliseModes({ contra: "live", id_check: "bogus" })).toEqual({ id_check: "live", host_email: "demo", guest_messages: "demo" });
   });
 });

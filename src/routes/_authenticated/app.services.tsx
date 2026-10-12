@@ -29,7 +29,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { common, jobTools, services as copy, trades as tradesDir, tradesCopy } from "@/content/copy";
-import { ContraStudio } from "@/components/host/ContraStudio";
 import { TradeDirectory } from "@/components/host/TradeDirectory";
 import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
@@ -39,10 +38,8 @@ import { contactLinks, tradeCategoryLabel } from "@/lib/trade-contacts";
 import { listTrades, assignTradeToJob } from "@/lib/trades.functions";
 import {
   acknowledgeJob,
-  appointProvider,
   createHostJob,
   listJobs,
-  recommendForJob,
   setJobStatus,
 } from "@/lib/services.functions";
 
@@ -50,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/app/services")({
   head: () => ({
     meta: [
       { title: "Services · Latchkey host dashboard" },
-      { name: "description", content: "Approve guest requests and book trusted Contra freelancers." },
+      { name: "description", content: "Approve guest requests and find local tradespeople for the work." },
     ],
   }),
   component: ServicesPage,
@@ -131,7 +128,6 @@ function ServicesPage() {
           </TabsTrigger>
           <TabsTrigger value="planned" className="h-10 rounded-xl px-4">{copy.tabScheduled}</TabsTrigger>
           <TabsTrigger value="trades" className="h-10 rounded-xl px-4">{tradesDir.tabLabel}</TabsTrigger>
-          <TabsTrigger value="providers" className="h-10 rounded-xl px-4">{copy.tabProviders}</TabsTrigger>
           <TabsTrigger value="archive" className="h-10 rounded-xl px-4">{jobTools.archiveTab}</TabsTrigger>
         </TabsList>
 
@@ -161,10 +157,6 @@ function ServicesPage() {
           />
         </TabsContent>
 
-
-        <TabsContent value="providers" className="mt-4">
-          <ContraStudio />
-        </TabsContent>
 
         <TabsContent value="archive" className="mt-4 space-y-3">
           {archived.length === 0 ? (
@@ -446,7 +438,7 @@ function NewJobDialog({ open, onOpenChange, hostId, propertyId }: { open: boolea
         },
       });
       await qc.invalidateQueries({ queryKey: ["jobs"] });
-      toast.success("Added. Tap Find a provider to book it.");
+      toast.success("Added. Tap Find someone to choose who does it.");
       onOpenChange(false);
       setTitle(""); setNote(""); setDate("");
     } catch (err) {

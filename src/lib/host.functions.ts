@@ -94,7 +94,13 @@ export const getWorkspace = createServerFn({ method: "GET" })
     }
 
     const [{ data: host, error: hostErr }, { data: properties }] = await Promise.all([
-      supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
+      (async () => {
+        const { withLegacy } = await import("./checkin.server");
+        return withLegacy(
+          () => supabase.from("hosts").select(`${HOST_COLUMNS}, booking_sites`).eq("id", hostId).single(),
+          () => supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
+        );
+      })(),
       supabase.from("properties").select("*").eq("host_id", hostId).order("created_at", { ascending: true }),
     ]);
     if (hostErr) throw new Error(hostErr.message);
@@ -237,7 +243,8 @@ const roomInput = z.object({
   display_name: z.string().min(1),
   public_title: z.string().nullable().default(null),
   description: z.string().nullable().default(null),
-  max_guests: z.number().int().min(1).max(12),
+  max_guests: z.number().int().min(1).max(30),
+  children_allowed: z.boolean().default(true),
   has_ensuite: z.boolean(),
   sort_order: z.number().int(),
   active: z.boolean(),
@@ -309,6 +316,12 @@ export const deleteUnavailability = createServerFn({ method: "POST" })
 
 /* -------------------------------- bookings ------------------------------- */
 
+const siteKey = z
+  .string()
+  .regex(/^site_[a-z0-9]{4,24}$/)
+  .nullable()
+  .default(null);
+
 const bookingInput = z.object({
   id: uuid.optional(),
   property_id: uuid,
@@ -328,6 +341,8 @@ const bookingInput = z.object({
   status: z.enum(["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged", "blocked"]),
   notes: z.string().nullable(),
   guest_email: z.string().trim().email().max(254).nullable().default(null),
+  /** A booking site the host added; the stay is then stored as channel "other". */
+  site_key: siteKey,
 });
 
 const TRACKED = [
@@ -348,7 +363,12 @@ export const saveBooking = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => bookingInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { id, ...fields } = data;
+    const { id, site_key, ...rest } = data;
+    // An added site is stored as "other" plus its key. site_key is only sent
+    // when there is one to set or clear, so saving works before migration 0021.
+    const fields: typeof rest & { site_key?: string | null } = site_key
+      ? { ...rest, channel: "other", site_key }
+      : rest;
 
     if (!id) {
       const { data: row, error } = await supabase
@@ -366,6 +386,8 @@ export const saveBooking = createServerFn({ method: "POST" })
       .eq("id", id)
       .single();
     if (readErr) throw new Error(readErr.message);
+
+    if (!site_key && (existing as { site_key?: string | null }).site_key) fields.site_key = null;
 
     const manual = new Set<string>(existing.manual_fields ?? []);
     const cameFromFeed = existing.source === "ical";
@@ -508,6 +530,7 @@ export const saveConnection = createServerFn({ method: "POST" })
         ical_url: z.string().min(8).optional(),
         external_listing_id: z.string().nullable().default(null),
         external_listing_title: z.string().nullable().default(null),
+        site_key: siteKey,
       })
       .parse(input),
   )
@@ -523,11 +546,17 @@ export const saveConnection = createServerFn({ method: "POST" })
       fingerprint = createHash("sha256").update(data.ical_url.trim()).digest("hex");
     }
 
+    // An added site is stored as "other" plus its key; the key is only sent
+    // when set or being cleared, so this works before migration 0021.
+    const { data: before } = data.id
+      ? await context.supabase.from("channel_connections").select("*").eq("id", data.id).maybeSingle()
+      : { data: null };
     const base = {
       property_id: data.property_id,
       room_id: data.room_id,
-      channel: data.channel,
+      channel: data.site_key ? ("other" as const) : data.channel,
       listing_name: data.listing_name,
+      ...(data.site_key ? { site_key: data.site_key } : before?.site_key ? { site_key: null } : {}),
       ...(masked ? { masked_url: masked, url_fingerprint: fingerprint } : {}),
     };
 
@@ -546,6 +575,16 @@ export const saveConnection = createServerFn({ method: "POST" })
           ? "That calendar link is already connected to this property."
           : error.message,
       );
+    }
+
+    // Moving a link to another site moves its stays too, so the next sync
+    // recognises them instead of adding them again.
+    if (before && (before.channel !== base.channel || (before.site_key ?? null) !== (data.site_key ?? null))) {
+      const { error: moveErr } = await context.supabase
+        .from("bookings")
+        .update({ channel: base.channel, ...("site_key" in base ? { site_key: base.site_key } : {}) })
+        .eq("connection_id", before.id);
+      if (moveErr) console.error("Moving stays to the new site failed", moveErr.message);
     }
 
     if (data.ical_url) {
@@ -812,6 +851,33 @@ export const saveCheckinMethods = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Who's staying, ID checks for every adult, and what is kept and for how long. */
+export const saveGuestRecords = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        propertyId: uuid,
+        records: z.object({
+          askWhoIsStaying: z.boolean(),
+          checkEveryAdult: z.boolean(),
+          idPhoto: z.boolean(),
+          facePhoto: z.boolean(),
+          keepDays: z.union([z.literal(7), z.literal(14), z.literal(30)]),
+          regulatorConfirmed: z.boolean(),
+        }),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("properties")
+      .update({ guest_records: data.records })
+      .eq("id", data.propertyId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const listAlerts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -864,6 +930,47 @@ export const undoCheckIn = createServerFn({ method: "POST" })
     await db.from("checkin_sessions").update({ expires_at: nowIso }).eq("booking_id", data.bookingId);
     await db.from("stay_tokens").update({ expires_at: nowIso }).eq("booking_id", data.bookingId);
     await db.from("presence_log").insert({ booking_id: data.bookingId, event: "left", source: "host_undo" });
+    return { ok: true };
+  });
+
+/**
+ * The host's booking sites: names and icons for the built-in platforms plus
+ * any they added. Built-in ids never change, so calendars keep matching.
+ */
+export const saveBookingSites = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        hostId: uuid,
+        sites: z
+          .array(
+            z.object({
+              key: z.string().max(40),
+              label: z.string().trim().max(40),
+              icon_url: z.string().max(40_000).nullable(),
+            }),
+          )
+          .max(40),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { isBuiltIn, normaliseStoredSites } = await import("./booking-sites");
+    if (data.sites.some((s) => !isBuiltIn(s.key) && !s.label.trim())) throw new Error("Give each site you add a name.");
+    const sites = normaliseStoredSites(data.sites);
+    // Older screens still read channel_labels, so keep it in step.
+    const labels: Record<string, string> = {};
+    for (const s of sites) if (isBuiltIn(s.key) && s.label) labels[s.key] = s.label;
+    const { error } = await (context.supabase as unknown as RpcClient).rpc("update_host_sites", {
+      _host_id: data.hostId,
+      _channel_labels: labels,
+      _booking_sites: sites,
+    });
+    if (error?.code === "PGRST202") {
+      // Before migration 0021 is applied the function doesn't exist yet.
+      throw new Error("Adding booking sites needs the latest database update. Please try again shortly.");
+    } else if (error) throw new Error(error.message);
     return { ok: true };
   });
 

@@ -1,13 +1,14 @@
 /**
- * Finding a trade for property work.
+ * Finding local tradespeople for property work.
  *
- * Contra is a marketplace for creative, tech and marketing freelancers, so it
- * has no plumbers, electricians or cleaners. Property jobs go to the UK trade
- * directories below: Latchkey builds a pre-filled search link for the job's
- * category and the property's postcode, so the host lands on real, reviewed
- * local firms instead of invented ones.
+ * Latchkey points the host at the directories where trades in their country
+ * are vetted and reviewed, already narrowed to the job and the property's
+ * area. Most of these sites have no search link that takes free words and a
+ * postcode (some only have per-city pages, others block anything but a
+ * browser), so each card opens a web search limited to that site, which
+ * always works and always includes the area, plus a link to the site itself.
  *
- * None of these directories publish an API, and their terms forbid automated
+ * None of the directories publish an API, and their terms forbid automated
  * extraction of member listings, so Latchkey links out rather than copying.
  */
 
@@ -20,7 +21,9 @@ export type Directory = {
   blurb: string;
   /** How the host is charged or contacted. */
   note: string;
-  search: (term: string, postcode: string) => string;
+  /** The site's own page to browse or post a job (checked to load). */
+  site: string;
+  search: (term: string, area: string) => string;
 };
 
 
@@ -52,40 +55,49 @@ export function tradeTerm(category: string): string {
 
 const q = (s: string) => encodeURIComponent(s.trim());
 
+/** A web search limited to one directory, for the job near the area. */
+const onSite = (domain: string) => (term: string, area: string) =>
+  `https://www.google.com/search?q=${q(`${term} ${area} site:${domain}`)}`;
+
 export const DIRECTORIES: Directory[] = [
   {
     id: "checkatrade",
     name: "Checkatrade",
     blurb: "Vetted trades with verified reviews. Strongest for gas, electrics and emergencies.",
     note: "Free to search. Members are background-checked.",
-    search: (t, p) => `https://www.checkatrade.com/search?what=${q(t)}&where=${q(p)}`,
+    site: "https://www.checkatrade.com/",
+    search: onSite("checkatrade.com"),
   },
   {
     id: "mybuilder",
     name: "MyBuilder",
     blurb: "Post the job, get quotes back from local tradespeople within hours.",
     note: "Free to post. Good for small repairs and one-off jobs.",
-    search: (t, p) => `https://www.mybuilder.com/search?q=${q(t)}&location=${q(p)}`,
+    site: "https://www.mybuilder.com/",
+    search: onSite("mybuilder.com"),
   },
   {
     id: "rated_people",
     name: "Rated People",
     blurb: "Up to three quotes per job, with ratings from previous customers.",
     note: "Free to post a job.",
-    search: (t, p) => `https://www.ratedpeople.com/find-a-tradesman?q=${q(t)}&postcode=${q(p)}`,
+    site: "https://www.ratedpeople.com/post-a-job",
+    search: onSite("ratedpeople.com"),
   },
   {
     id: "bark",
     name: "Bark",
     blurb: "Broadest coverage, including cleaners, laundry, drivers and one-off help.",
     note: "Free to post; sellers pay to reply, so expect quick contact.",
-    search: (t, p) => `https://www.bark.com/en/gb/search/?q=${q(t)}&location=${q(p)}`,
+    site: "https://www.bark.com/en/gb/",
+    search: onSite("bark.com"),
   },
   {
     id: "trustatrader",
     name: "TrustATrader",
     blurb: "Smaller, well-reviewed independents. Useful as a second opinion on price.",
     note: "Free to search.",
+    site: "https://www.trustatrader.com/",
     search: (t, p) => `https://www.trustatrader.com/search?trade=${q(t)}&location=${q(p)}`,
   },
   {
@@ -93,13 +105,15 @@ export const DIRECTORIES: Directory[] = [
     name: "Angi",
     blurb: "Large US network of reviewed home-service pros.",
     note: "Free to search and request quotes.",
-    search: (t, p) => `https://www.angi.com/companylist/us/${q(p)}/${q(t)}.htm`,
+    site: "https://www.angi.com/",
+    search: onSite("angi.com"),
   },
   {
     id: "thumbtack",
     name: "Thumbtack",
     blurb: "Quick quotes from local US pros, good for cleaning and handyman work.",
     note: "Free to request quotes.",
+    site: "https://www.thumbtack.com/",
     search: (t, p) => `https://www.thumbtack.com/search?query=${q(t)}&zip_code=${q(p)}`,
   },
   {
@@ -107,6 +121,7 @@ export const DIRECTORIES: Directory[] = [
     name: "Yelp",
     blurb: "Reviews and phone numbers for nearby businesses across the US and Canada.",
     note: "Free to search.",
+    site: "https://www.yelp.com/",
     search: (t, p) => `https://www.yelp.com/search?find_desc=${q(t)}&find_loc=${q(p)}`,
   },
   {
@@ -114,34 +129,39 @@ export const DIRECTORIES: Directory[] = [
     name: "HomeStars",
     blurb: "Canada's reviewed home-improvement and repair directory.",
     note: "Free to search.",
-    search: (t, p) => `https://homestars.com/companies?q=${q(t)}&location=${q(p)}`,
+    site: "https://www.homestars.com/",
+    search: onSite("homestars.com"),
   },
   {
     id: "hipages",
     name: "hipages",
     blurb: "Australia's largest tradie marketplace, with quick job posting.",
     note: "Free to post a job.",
-    search: (t, p) => `https://hipages.com.au/find/${q(t)}/${q(p)}`,
+    site: "https://hipages.com.au/",
+    search: onSite("hipages.com.au"),
   },
   {
     id: "airtasker",
     name: "Airtasker",
     blurb: "Good for one-off Australian jobs: cleaning, moving, small repairs.",
     note: "Free to post; taskers bid.",
+    site: "https://www.airtasker.com/",
     search: (t, p) => `https://www.airtasker.com/tasks/?q=${q(t)}&location=${q(p)}`,
   },
   {
-    id: "buildercrack",
-    name: "Buildercrack",
+    id: "builderscrack",
+    name: "Builders Crack",
     blurb: "New Zealand trade marketplace covering repairs and maintenance.",
     note: "Free to post a job.",
-    search: (t, p) => `https://buildercrack.co.nz/search?q=${q(`${t} ${p}`)}`,
+    site: "https://builderscrack.co.nz/",
+    search: onSite("builderscrack.co.nz"),
   },
   {
     id: "google_maps",
     name: "Google Maps",
     blurb: "Nearest firms with opening hours and phone numbers, handy late at night.",
     note: "Free to search. Copying listings into Latchkey is not allowed, so it opens in a new tab.",
+    site: "https://www.google.com/maps",
     search: (t, p) => `https://www.google.com/maps/search/${q(`${t} near ${p}`)}`,
   },
 ];
@@ -153,79 +173,3 @@ export function directoryLinks(category: string, postcode: string, country = "GB
   const ids = new Set(regionFor(country).directoryIds);
   return DIRECTORIES.filter((d) => ids.has(d.id)).map((d) => ({ ...d, url: d.search(term, where) }));
 }
-
-
-/* ----------------------------- Contra (creative) -------------------------- */
-
-export type ContraCategory = {
-  id: string;
-  label: string;
-  blurb: string;
-  /** Sub-searches, each opening Contra pre-filled. */
-  subcategories: { id: string; label: string; term: string }[];
-};
-
-const contraSearch = (term: string) => `https://contra.com/search?q=${q(term)}`;
-
-export function contraLink(term: string): string {
-  return contraSearch(term);
-}
-
-/**
- * What Contra is actually good for: the work that fills rooms, not the work
- * that fixes them.
- */
-export const CONTRA_CATEGORIES: ContraCategory[] = [
-  {
-    id: "photography",
-    label: "Photography and video",
-    blurb: "New listing photos, a room walkthrough and a short reel for social.",
-    subcategories: [
-      { id: "interiors", label: "Interior photography", term: "interior photographer airbnb" },
-      { id: "video", label: "Room walkthrough video", term: "short form property video editor" },
-      { id: "retouch", label: "Photo editing and retouching", term: "real estate photo retoucher" },
-      { id: "drone", label: "Exterior and drone", term: "drone property photographer" },
-    ],
-  },
-  {
-    id: "copy",
-    label: "Listing copy and guidebooks",
-    blurb: "Listing descriptions that rank, plus a welcome guide guests actually read.",
-    subcategories: [
-      { id: "listing", label: "Listing descriptions", term: "airbnb listing copywriter" },
-      { id: "guidebook", label: "Guest guidebook writing", term: "travel guidebook writer" },
-      { id: "translation", label: "Translation", term: "english to french hospitality translator" },
-      { id: "seo", label: "SEO and search copy", term: "seo copywriter hospitality" },
-    ],
-  },
-  {
-    id: "brand",
-    label: "Branding and signage",
-    blurb: "A name, a mark and the printed pieces guests see at the door.",
-    subcategories: [
-      { id: "logo", label: "Logo and identity", term: "logo designer hospitality brand" },
-      { id: "print", label: "Door signs and welcome cards", term: "print designer signage" },
-      { id: "qr", label: "QR and kiosk artwork", term: "graphic designer qr signage" },
-    ],
-  },
-  {
-    id: "web",
-    label: "Direct-booking website",
-    blurb: "Take bookings without a platform fee.",
-    subcategories: [
-      { id: "site", label: "Website build", term: "webflow developer booking site" },
-      { id: "booking", label: "Booking engine setup", term: "direct booking engine developer" },
-      { id: "analytics", label: "Analytics and tracking", term: "ga4 analytics consultant" },
-    ],
-  },
-  {
-    id: "marketing",
-    label: "Marketing and social",
-    blurb: "Fill the quiet midweek nights.",
-    subcategories: [
-      { id: "social", label: "Social media manager", term: "social media manager travel" },
-      { id: "ads", label: "Local ads", term: "google ads freelancer local business" },
-      { id: "email", label: "Email and repeat guests", term: "email marketing freelancer" },
-    ],
-  },
-];
