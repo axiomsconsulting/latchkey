@@ -1,5 +1,9 @@
 # Roadmap
 
+## To do
+
+- [ ] Guest side panel goes stale after editing or deleting a stay. Editing the guest's details from the panel (popup) doesn't refresh the panel, and deleting doesn't close it: it keeps showing the old view. Likely cause for edits: `BookingDialog` only refreshes `["board"]`, not the panel's `["guest", bookingId]` query (`src/components/host/BookingDialog.tsx`). Delete closes via `GuestSheet`'s `act(..., close = true)`, but on Bookings the panel is driven by the `guest` URL param (`openGuest`), so check that path in `src/routes/_authenticated/app.bookings.tsx` and on Today.
+
 ## Guest self check-in (done)
 - [x] Schema, logic + tests, server functions, guest screens, host settings, QR card
 - [ ] Email alerts (needs sender email domain)
