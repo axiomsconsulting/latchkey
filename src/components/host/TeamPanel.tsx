@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Lock, Users } from "lucide-react";
@@ -56,6 +57,15 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const manage = isOwner && !demo;
+  const section = useRef<HTMLElement>(null);
+  // The account chip next to Sign out links here: bring the card into view
+  // and open your profile.
+  const hash = useLocation({ select: (l) => l.hash });
+  useEffect(() => {
+    if (hash !== "profile") return;
+    section.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setProfileOpen(true);
+  }, [hash]);
 
   async function act(key: string, fn: () => Promise<unknown>, done?: string) {
     setBusy(key);
@@ -106,7 +116,7 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
   const invites = team.data?.invites ?? [];
 
   return (
-    <section className="card-soft p-5">
+    <section id="profile" ref={section} className="card-soft scroll-mt-28 p-5">
       <div className="flex flex-wrap items-start gap-3">
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
           <Users className="size-5" />

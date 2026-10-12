@@ -99,6 +99,20 @@ export const hostNav = {
   settings: "Settings",
   activity: "Activity",
   register: "Guest register",
+  yourProfile: (name: string) => `Your profile: ${name}`,
+  /** Bottom bar on narrow phones; full names stay as the accessible label. */
+  short: {
+    today: "Today",
+    bookings: "Bkgs",
+    services: "Svcs",
+    guides: "Guides",
+    properties: "Props",
+    connections: "Conns",
+    settings: "Sett.",
+  } as Record<string, string>,
+  menuGrab: "Menu size: drag, or use the arrow keys",
+  menuModes: { full: "Full menu", rail: "Icons only", top: "Menu along the top" } as Record<string, string>,
+  menuToSide: "Show the menu down the side",
 };
 
 export const statuses = {
