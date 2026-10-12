@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, BookOpen, CheckCircle2, Loader2, Minus, Phone, Plus } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, CircleHelp, HandHeart, Loader2, Minus, Phone, Plus } from "lucide-react";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
@@ -16,6 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { CheckinMethod } from "@/lib/checkin-logic";
 import {
   addFacePhoto,
+  askHostToCheckIn,
   checkCompanionId,
   completeCheckIn,
   confirmBooking,
@@ -84,6 +85,8 @@ type Step =
   | { name: "companion"; position: number; ready: boolean }
   | { name: "face"; position: number }
   | { name: "register"; position: number; child: boolean }
+  /** The guest asked the host to check them in; `back` resumes where they were. */
+  | { name: "handover"; back: Step }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
   | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
 
@@ -157,6 +160,7 @@ export function CheckInFlow({
   const skipCompanion = useServerFn(skipCompanionId);
   const face = useServerFn(addFacePhoto);
   const register = useServerFn(saveRegister);
+  const handover = useServerFn(askHostToCheckIn);
   const [fullName, setFullName] = useState("");
 
   useEffect(() => {
@@ -432,6 +436,15 @@ export function CheckInFlow({
         : null;
 
   const canGoBack = ["letter", "checkout", "platform", "pick", "guestName"].includes(step.name);
+  // Every step between the welcome and the end offers a way out to the host.
+  const canHandOver = !["welcome", "done", "handover", "locked"].includes(step.name);
+
+  async function handOver() {
+    const back = step;
+    // The host is told even if this call fails, so never leave the guest stuck.
+    await run(() => handover({ data: { code: property.code, ...(token ? { token } : {}) } }));
+    setStep({ name: "handover", back });
+  }
 
   // The square only means something once there is a stay to carry across.
   const handoffUrl =
@@ -668,9 +681,8 @@ export function CheckInFlow({
             <h1 className="text-2xl sm:text-4xl">{copy.idTitle}</h1>
             {!step.consented ? (
               <>
-                <p className="mt-4 text-lg">
-                  {plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}
-                </p>
+                <p className="mt-4 text-lg">{copy.idConsentLead}</p>
+                <WhyAsk>{plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}</WhyAsk>
                 <div className="mt-8 grid gap-3">
                   <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
                     {copy.idConsentAgree}
@@ -740,9 +752,8 @@ export function CheckInFlow({
             {!step.ready ? (
               <>
                 <p className="mt-4 text-lg">{copy.companionBody}</p>
-                <p className="mt-2 text-muted-foreground">
-                  {plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}
-                </p>
+                <p className="mt-2 text-muted-foreground">{copy.companionConsentLead}</p>
+                <WhyAsk>{plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}</WhyAsk>
                 <div className="mt-8 grid gap-3">
                   <Button size="touch-xl" onClick={() => setStep({ ...step, ready: true })}>
                     {copy.companionReady}
@@ -775,9 +786,12 @@ export function CheckInFlow({
               step.child
                 ? copy.registerTitleChild
                 : step.position === 0
-                  ? copy.registerTitleYou
+                  ? prefill[0]?.fullName
+                    ? copy.registerTitleYou
+                    : copy.registerTitleBlank
                   : copy.registerTitleAdult(step.position + 1)
             }
+            lead={step.position === 0 ? copy.registerLead : copy.registerLeadOther}
             prefill={prefill[step.position] ?? null}
             busy={busy}
             onSubmit={(entry) => void onRegister(step.position, entry)}
@@ -807,6 +821,20 @@ export function CheckInFlow({
           </section>
         ) : null}
 
+        {step.name === "handover" ? (
+          <section className="py-4 text-center">
+            <HandHeart className="mx-auto size-14 text-primary" />
+            <h1 className="mt-4 text-2xl sm:text-4xl">{copy.handoverTitle}</h1>
+            <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">{copy.handoverBody}</p>
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <HostCall phone={hostPhone} />
+              <Button size="touch" variant="ghost" className="w-full max-w-md" onClick={() => setStep(step.back)}>
+                {copy.handoverResume}
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         {step.name === "done" ? (
           <section className="py-4 text-center">
             <CheckCircle2 className="mx-auto size-14 text-success" />
@@ -826,6 +854,14 @@ export function CheckInFlow({
           <p role="alert" className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground">
             {message}
           </p>
+        ) : null}
+
+        {canHandOver ? (
+          <div className="mt-8 border-t border-border pt-4 text-center">
+            <Button variant="ghost" size="lg" className="text-muted-foreground" disabled={busy} onClick={() => void handOver()}>
+              <HandHeart className="size-5" /> {copy.handoverCta}
+            </Button>
+          </div>
         ) : null}
         </main>
 
@@ -1112,11 +1148,13 @@ type RegisterForm = {
  */
 function RegisterStep({
   title,
+  lead,
   prefill,
   busy,
   onSubmit,
 }: {
   title: string;
+  lead: string;
   prefill: Prefill | null;
   busy: boolean;
   onSubmit: (entry: RegisterForm) => void;
@@ -1142,8 +1180,9 @@ function RegisterStep({
   return (
     <section className="mx-auto max-w-xl">
       <h1 className="text-2xl sm:text-4xl">{title}</h1>
-      <p className="mt-2 text-muted-foreground">{copy.registerWhy}</p>
-      {prefill?.fullName ? <p className="mt-2 rounded-2xl bg-secondary p-3 text-secondary-foreground">{copy.registerFromId}</p> : null}
+      <p className="mt-2 text-lg text-muted-foreground">{lead}</p>
+      <WhyAsk>{copy.registerWhy}</WhyAsk>
+      {prefill?.fullName ? <p className="mt-3 text-sm text-muted-foreground">{copy.registerFromId}</p> : null}
       <form
         className="mt-6 space-y-4"
         onSubmit={(e) => {
@@ -1184,7 +1223,10 @@ function RegisterStep({
 
         {alien ? (
           <>
-            <p className="rounded-2xl bg-secondary p-4 text-secondary-foreground">{copy.registerAlienWhy}</p>
+            <div>
+              <p className="text-lg">{copy.registerAlienLead}</p>
+              <WhyAsk>{copy.registerAlienWhy}</WhyAsk>
+            </div>
             <div className="space-y-1">
               <label htmlFor="reg-doc" className="text-lg">
                 {copy.registerDocNumber}
@@ -1226,5 +1268,38 @@ function RegisterStep({
         </Button>
       </form>
     </section>
+  );
+}
+
+/**
+ * A small "Why do we ask?" that opens the reason in plain words, so each
+ * step leads with the question and the legal detail is there for anyone
+ * who wants it.
+ */
+function WhyAsk({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <CircleHelp className="size-4" /> {copy.whyAsk}
+      </button>
+      {open ? (
+        <div className="mt-1 rounded-2xl bg-secondary p-4 text-secondary-foreground animate-in fade-in slide-in-from-top-1">
+          <p>{children}</p>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="mt-2 min-h-11 text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {copy.whyAskClose}
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }

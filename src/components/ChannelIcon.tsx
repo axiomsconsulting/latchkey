@@ -44,9 +44,10 @@ export function ChannelIcon({
     <span
       aria-hidden
       className="inline-grid shrink-0 place-items-center rounded-[22%] align-middle font-semibold leading-none"
-      style={{ width: box, height: box, background: m.bg, color: m.fg, fontSize: `calc(${box} * 0.5)` }}
+      style={{ width: box, height: box, background: m.bg, color: m.fg }}
     >
-      {m.letter}
+      {/* The letter sizes itself inside, so an "em" box keeps the text's size. */}
+      <span style={{ fontSize: `calc(${box} * 0.5)` }}>{m.letter}</span>
     </span>
   );
 }

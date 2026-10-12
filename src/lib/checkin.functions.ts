@@ -1215,6 +1215,66 @@ export const getStay = createServerFn({ method: "GET" })
     };
   });
 
+/* ------------------------------- handover -------------------------------- */
+
+/**
+ * The guest would rather be checked in by the host, at any step. The host is
+ * told who it is when we know, and the stay is left for them to finish.
+ * Rate-limited so a kiosk can't flood the host with alerts.
+ */
+export const askHostToCheckIn = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ code, token: token.optional() }).parse(d))
+  .handler(async ({ data }) => {
+    const { admin, loadPropertyByCode, raiseAlert, loadSession } = await srv();
+    const p = await loadPropertyByCode(data.code);
+    if (!p) throw new Error("We could not find this property.");
+    if (isTour(p)) return { ok: true as const };
+    const db = await admin();
+
+    let who = "A guest";
+    let room: string | null = null;
+    let bookingId: string | null = null;
+    if (data.token) {
+      try {
+        const session = await loadSession(data.token);
+        if (session.property_id === p.id) {
+          const { data: b } = await db
+            .from("bookings")
+            .select("id, guest_full_name, rooms(display_name)")
+            .eq("id", session.booking_id)
+            .maybeSingle();
+          if (b) {
+            bookingId = b.id;
+            who = b.guest_full_name?.trim() || who;
+            room = (b as { rooms?: { display_name: string } | null }).rooms?.display_name ?? null;
+          }
+        }
+      } catch {
+        // Timed out: still tell the host someone needs them.
+      }
+    }
+
+    // Once per stay every few minutes, and at most a few anonymous ones.
+    const since = new Date(Date.now() - 5 * 60_000).toISOString();
+    const recent = db
+      .from("host_alerts")
+      .select("id", { count: "exact", head: true })
+      .eq("property_id", p.id)
+      .eq("kind", "handover")
+      .gt("created_at", since);
+    const { count } = await (bookingId ? recent.eq("booking_id", bookingId) : recent.is("booking_id", null));
+    if ((count ?? 0) >= (bookingId ? 1 : 3)) return { ok: true as const };
+
+    await raiseAlert({
+      hostId: p.host_id,
+      propertyId: p.id,
+      bookingId,
+      kind: "handover",
+      message: `${who}${room ? ` (${room})` : ""} would like you to check them in at ${p.name}.`,
+    });
+    return { ok: true as const };
+  });
+
 /* -------------------------------- kiosk --------------------------------- */
 
 export const kioskUnlock = createServerFn({ method: "POST" })
