@@ -26,11 +26,33 @@ export function useRole() {
 }
 
 /** Remembers which property the host was last looking at. */
+const PROPERTY_EVENT = "latchkey:property";
+
+function readStored(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The property the dashboard is showing. Shared by every part of the screen,
+ * so picking one in the menu updates the page underneath straight away, and
+ * remembered in this browser.
+ */
 export function useSelectedProperty(properties: Array<{ id: string; name: string }> | undefined) {
   const [stored, setStored] = useState<string | null>(null);
 
   useEffect(() => {
-    setStored(window.localStorage.getItem(STORAGE_KEY));
+    setStored(readStored());
+    const sync = () => setStored(readStored());
+    window.addEventListener(PROPERTY_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PROPERTY_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
   const selectedId = useMemo(() => {
@@ -40,8 +62,13 @@ export function useSelectedProperty(properties: Array<{ id: string; name: string
   }, [properties, stored]);
 
   function select(id: string) {
-    window.localStorage.setItem(STORAGE_KEY, id);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      // Not remembered, but this screen still switches.
+    }
     setStored(id);
+    window.dispatchEvent(new Event(PROPERTY_EVENT));
   }
 
   return { selectedId, select };

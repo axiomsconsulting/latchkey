@@ -22,12 +22,13 @@ import {
 
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
+import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
-import { auth, brand, hostNav, invite as inviteCopy, team as teamCopy } from "@/content/copy";
+import { auth, brand, hostNav, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
 import { useAlerts, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { getWorkspace } from "@/lib/host.functions";
 import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
@@ -67,7 +68,10 @@ export function HostShell() {
   const { canWrite, isOwner } = useRole();
   useAccessWatch();
   const properties = (data?.properties ?? []) as Array<{ id: string; name: string; theme_config: unknown }>;
-  const { selectedId } = useSelectedProperty(properties);
+  const { selectedId, select } = useSelectedProperty(properties);
+  const switcher = (className: string) => (
+    <PropertyPicker properties={properties} value={selectedId} onChange={select} className={className} label={siteMenu.switchProperty} />
+  );
   const property = properties.find((p) => p.id === selectedId) ?? null;
   const theme = normaliseTheme(property?.theme_config);
   const host = data?.host as { business_name?: string } | null | undefined;
@@ -113,6 +117,7 @@ export function HostShell() {
         title={title}
         alertCount={alertCount}
         readOnly={readOnly}
+        switcher={switcher}
         canWrite={canWrite}
         isOwner={isOwner}
         onSignOut={() => void leave()}
@@ -148,9 +153,10 @@ export function HostShell() {
           <LogOut className="size-5" />
         </button>
       </header>
-      {(data?.memberships.length ?? 0) > 1 || readOnly ? (
+      {(data?.memberships.length ?? 0) > 1 || properties.length > 1 || readOnly ? (
         <div className="mx-3 mt-2 flex items-center gap-2 md:hidden print:hidden">
           <HostSwitcher className="h-10 flex-1 rounded-2xl" />
+          {switcher("h-10 min-w-0 flex-1 rounded-2xl")}
           {readOnly}
         </div>
       ) : null}
@@ -207,6 +213,7 @@ function DesktopNav({
   title,
   alertCount,
   readOnly,
+  switcher,
   canWrite,
   isOwner,
   onSignOut,
@@ -217,6 +224,8 @@ function DesktopNav({
   title: string;
   alertCount: number;
   readOnly: ReactNode;
+  /** The property picker, sized for where it sits; empty with one property. */
+  switcher: (className: string) => ReactNode;
   canWrite: boolean;
   isOwner: boolean;
   onSignOut: () => void;
@@ -292,6 +301,7 @@ function DesktopNav({
       {!top && !narrow ? (
         <div className={fade}>
           <HostSwitcher className="mt-3 h-10 rounded-2xl" />
+          {switcher("mt-2 h-10 w-full rounded-2xl")}
           {readOnly ? <div className="mt-3 px-2">{readOnly}</div> : null}
         </div>
       ) : null}
@@ -331,6 +341,7 @@ function DesktopNav({
 
       <div className={cn("flex gap-1", top ? "shrink-0 flex-row items-center" : "mt-auto flex-col", fade)}>
         {top ? <HostSwitcher className="hidden h-10 w-44 rounded-2xl @[84rem]:flex" /> : null}
+        {top ? switcher("hidden h-10 w-44 rounded-2xl @[72rem]:flex") : null}
         {canWrite ? (
           <Link
             to="/app/register"

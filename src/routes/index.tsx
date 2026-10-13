@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Check, Minus, ScanLine, Sparkles, Layers } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,15 @@ import { ChannelBadge } from "@/components/ChannelBadge";
 import { brand, marketing } from "@/content/copy";
 import { PricingSection } from "@/components/PricingSection";
 import { DemoPicker } from "@/components/DemoPicker";
-import { SiteMenu } from "@/components/SiteMenu";
+import { SiteHeader } from "@/components/SiteHeader";
+import { supabase } from "@/integrations/supabase/client";
+import { getWorkspace } from "@/lib/host.functions";
+import { canWrite } from "@/lib/roles";
 
 export const Route = createFileRoute("/")({
+  // ?home=1 shows this page even to a signed-in host (the logo and "Home" link use it).
+  validateSearch: (search: Record<string, unknown>): { home?: boolean } =>
+    search["home"] === true || search["home"] === "1" || search["home"] === 1 ? { home: true } : {},
   head: () => ({
     meta: [
       { title: "Latchkey — self-service arrivals for small hosts" },
@@ -34,17 +40,29 @@ function Landing() {
   // The server renders UK time; the browser then switches to the visitor's day.
   const [day, setDay] = useState(() => weekday("Europe/London"));
   useEffect(() => setDay(weekday()), []);
+  const { home } = Route.useSearch();
+  const navigate = useNavigate();
+
+  // Hosts and managers who are signed in go straight to their dashboard.
+  useEffect(() => {
+    if (home) return;
+    let live = true;
+    void supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session || !live) return;
+      try {
+        const ws = await getWorkspace();
+        if (live && canWrite(ws.role)) await navigate({ to: "/app/today", replace: true });
+      } catch {
+        // Not a host after all, or offline: stay on the home page.
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, [home, navigate]);
   return (
     <div className="min-h-screen bg-background">
-      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-6">
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary font-display text-lg text-primary-foreground">
-            L
-          </span>
-          <span className="truncate font-display text-xl">{brand.name}</span>
-        </span>
-        <SiteMenu />
-      </header>
+      <SiteHeader />
 
       <main className="mx-auto max-w-6xl px-5 pb-24">
         <section className="py-10 sm:py-16">

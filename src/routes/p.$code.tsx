@@ -46,7 +46,7 @@ function GuestCheckIn() {
   const p = Route.useLoaderData();
   const { resume } = Route.useSearch();
   return (
-    <GuestFrame theme={p.theme} name={p.name}>
+    <GuestFrame theme={p.theme} name={p.name} switchable>
       <CheckInFlow property={p} hostPhone={p.hostPhone} resumeToken={resume ?? null} />
     </GuestFrame>
   );

@@ -32,6 +32,26 @@ export const siteMenu = {
   services: "Services",
   admin: "Settings and admin",
   signOut: "Sign out",
+  home: "Home",
+  about: "About and what's new",
+  switchProperty: "Switch property",
+  guestPin: "Check in somewhere else (enter a PIN)",
+  shortcuts: "Shortcuts",
+  host: "Host",
+  guestShort: "Guest",
+  hostHint: "Your dashboard",
+  guestHint: "Check in with a PIN",
+};
+
+export const about = {
+  title: "About Latchkey",
+  intro:
+    "Latchkey lets guests check themselves in, read their guest guide and ask for what they need, while hosts keep every booking, request and record in one place.",
+  tabChanges: "What's new",
+  tabFeatures: "All features",
+  kinds: { new: "New", improved: "Improved", fixed: "Fixed" } as Record<string, string>,
+  version: (v: string) => `Version ${v}`,
+  since: (v: string) => `since ${v}`,
 };
 
 export const marketing = {
@@ -459,6 +479,7 @@ export const guest = {
   welcomeBody:
     "Check yourself in, find your room and ask for anything you need. It takes about a minute and there is nothing to download.",
   startCta: "Start checking in",
+  switchProperty: "Checking in somewhere else?",
   helpCta: "I need help",
   stayWindow: (from: string, by: string) => `Rooms are ready from ${from}. Check-out is by ${by}.`,
   // Flow

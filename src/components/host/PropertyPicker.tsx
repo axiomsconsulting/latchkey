@@ -10,15 +10,20 @@ export function PropertyPicker({
   properties,
   value,
   onChange,
+  className,
+  label,
 }: {
   properties: Array<{ id: string; name: string }>;
   value: string | null;
   onChange: (id: string) => void;
+  className?: string;
+  /** Accessible name, e.g. "Switch property". */
+  label?: string;
 }) {
   if (properties.length < 2) return null;
   return (
     <Select value={value ?? ""} onValueChange={onChange}>
-      <SelectTrigger className="h-11 w-full sm:w-56">
+      <SelectTrigger className={className ?? "h-11 w-full sm:w-56"} aria-label={label}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

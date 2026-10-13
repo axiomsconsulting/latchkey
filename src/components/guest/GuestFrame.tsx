@@ -1,18 +1,23 @@
 import type { ReactNode } from "react";
-import { KeyRound } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { KeyRound, Repeat } from "lucide-react";
 
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
+import { guest as guestCopy } from "@/content/copy";
 import type { ThemeConfig } from "@/lib/theme";
 
 export function GuestFrame({
   children,
   theme,
   name,
+  switchable = false,
 }: {
   children: ReactNode;
   theme?: ThemeConfig | null;
   name?: string | undefined;
+  /** Offer "checking in somewhere else?", which goes to PIN entry. Never on the kiosk. */
+  switchable?: boolean;
 }) {
   return (
     <ThemeScope theme={theme} global className="min-h-screen px-4 sm:px-8">
@@ -27,6 +32,16 @@ export function GuestFrame({
             <KeyRound className="size-4 text-primary" /> Latchkey
           </>
         )}
+        {switchable ? (
+          <Link
+            to="/checkin"
+            aria-label={guestCopy.switchProperty}
+            title={guestCopy.switchProperty}
+            className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Repeat className="size-4" /> <span className="hidden sm:inline">{guestCopy.switchProperty}</span>
+          </Link>
+        ) : null}
       </header>
       {children}
     </ThemeScope>
