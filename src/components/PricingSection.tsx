@@ -40,7 +40,7 @@ export function PricingSection() {
           <li className="flex gap-2"><Check className="size-4 text-primary" />{c.property(money(p.extra_property_pence, p.currency))}</li>
           <li className="flex gap-2"><ShieldCheck className="size-4 text-primary" />{c.guarantee}</li>
         </ul>
-        <Button asChild size="lg" variant="accent" className="mt-6 h-14"><Link to="/auth">{c.cta(p.trial_days)}</Link></Button>
+        <Button asChild size="lg" variant="accent" className="mt-6 h-14"><Link to="/start">{c.cta(p.trial_days)}</Link></Button>
       </div>
       <div className="card-soft space-y-4 p-6">
         <h3 className="text-lg">{c.estimator}</h3>
@@ -64,7 +64,7 @@ export function DemoTrialCta() {
         <p className="font-display text-lg">{c.demoTitle}</p>
         <p className="text-sm opacity-90">{c.demoBody(days)}</p>
       </div>
-      <Button asChild variant="accent" className="h-12"><Link to="/auth">{c.cta(days)}</Link></Button>
+      <Button asChild variant="accent" className="h-12"><Link to="/start">{c.cta(days)}</Link></Button>
     </div>
   );
 }

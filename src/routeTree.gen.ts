@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckinRouteImport } from './routes/checkin'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
@@ -68,6 +69,11 @@ const AuthRoute = AuthRouteImport.update({
 const CheckinRoute = CheckinRouteImport.update({
   id: '/checkin',
   path: '/checkin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
+  '/start': typeof StartRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
+  '/start': typeof StartRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
+  '/start': typeof StartRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/checkin'
+    | '/start'
     | '/app'
     | '/invite/$token'
     | '/invoice/$token'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/checkin'
+    | '/start'
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/checkin'
+    | '/start'
     | '/_authenticated/app'
     | '/invite/$token'
     | '/invoice/$token'
@@ -408,6 +420,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   CheckinRoute: typeof CheckinRoute
+  StartRoute: typeof StartRoute
   InviteTokenRoute: typeof InviteTokenRoute
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
@@ -464,6 +477,13 @@ declare module '@tanstack/react-router' {
       path: '/checkin'
       fullPath: '/checkin'
       preLoaderRoute: typeof CheckinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app': {
@@ -695,6 +715,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   CheckinRoute: CheckinRoute,
+  StartRoute: StartRoute,
   InviteTokenRoute: InviteTokenRoute,
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,

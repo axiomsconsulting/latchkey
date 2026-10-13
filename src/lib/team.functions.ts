@@ -383,6 +383,29 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * The free trial's first step: your name on your profile, and your email as
+ * the business's contact email. That email is how the trial is saved later,
+ * and a record of the lead even if it never is.
+ */
+export const saveTrialDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: z.string().uuid(), name: z.string().trim().min(1).max(80), email: z.string().trim().email().max(254) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    await requireOwner(context.supabase, data.hostId);
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      untyped(context.supabase)
+        .from("user_profiles")
+        .upsert({ user_id: context.userId, display_name: data.name, updated_at: new Date().toISOString() }),
+      context.supabase.from("hosts").update({ contact_email: normaliseEmail(data.email) }).eq("id", data.hostId),
+    ]);
+    if (e1 || e2) throw new Error((e1 ?? e2)!.message);
+    return { ok: true };
+  });
+
 /** Your own photo: stored privately, shown through short-lived links. */
 export const uploadMyAvatar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -83,7 +83,7 @@ function Landing() {
               </Button>
             </DemoPicker>
             <Button asChild size="lg" variant="outline">
-              <Link to="/auth">{marketing.secondaryCta}</Link>
+              <Link to="/start">{marketing.secondaryCta}</Link>
             </Button>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-2">

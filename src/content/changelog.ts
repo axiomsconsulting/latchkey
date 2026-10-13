@@ -22,6 +22,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.15",
+    date: "2026-10-13",
+    title: "Start a free trial without signing up",
+    items: [
+      { kind: "new", area: "Website", text: "Start a free trial straight away: tell us your name and email, set up your property and rooms, and save your account by email link when you're ready." },
+      { kind: "new", area: "Website", text: "Sign in with an emailed link instead of a password." },
+      { kind: "improved", area: "Website", text: "Host and Guest shortcuts show as separate bubbles under the menu; on phones the bottom bar adds Demo and Free trial." },
+    ],
+  },
+  {
     version: "0.14",
     date: "2026-10-13",
     title: "Menus, About page and switching property",

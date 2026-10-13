@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,9 +9,11 @@ import { PageHeader } from "@/components/host/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { common, onboarding as copy } from "@/content/copy";
+import { common, onboarding as copy, trial as trialCopy } from "@/content/copy";
+import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/use-host-data";
 import { loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
+import { saveTrialDetails } from "@/lib/team.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/setup")({
@@ -47,6 +49,33 @@ function SetupPage() {
 
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
+  // Free trial: who they are comes first, in place of a sign-up form.
+  const [trialUser, setTrialUser] = useState(false);
+  const [about, setAbout] = useState({ name: "", email: "", done: false });
+  const saveAbout = useServerFn(saveTrialDetails);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setTrialUser(!!data.user?.is_anonymous));
+  }, []);
+  const askAbout = trialUser && !about.done;
+
+  async function submitAbout(e: React.FormEvent) {
+    e.preventDefault();
+    if (!workspace.data) return;
+    const name = about.name.trim();
+    const email = about.email.trim();
+    if (!name) return void toast.error(trialCopy.needName);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return void toast.error(trialCopy.needEmail);
+    setBusy(true);
+    try {
+      await saveAbout({ data: { hostId: workspace.data.hostId, name, email } });
+      await qc.invalidateQueries({ queryKey: ["workspace"] });
+      setAbout((a) => ({ ...a, done: true }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    } finally {
+      setBusy(false);
+    }
+  }
   const [property, setProperty] = useState({
     name: "",
     address: "",
@@ -106,7 +135,7 @@ function SetupPage() {
       }
 
       await qc.invalidateQueries();
-      toast.success("Your rooms are set up");
+      toast.success(trialUser ? trialCopy.setupDone : "Your rooms are set up");
       await navigate({ to: "/app/today" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -131,6 +160,47 @@ function SetupPage() {
 
   const canContinue =
     step === 0 ? property.name.trim().length > 1 : step === 1 ? rooms.some((r) => r.trim()) : true;
+
+  if (askAbout) {
+    return (
+      <div className="mx-auto w-full max-w-2xl space-y-6">
+        <PageHeader title={copy.title} subtitle={copy.subtitle} />
+        <form onSubmit={submitAbout} className="card-soft grid gap-4 p-5">
+          <div>
+            <h2 className="text-xl">{trialCopy.aboutTitle}</h2>
+            <p className="text-sm text-muted-foreground">{trialCopy.aboutBody}</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="about-name">{trialCopy.name}</Label>
+            <Input
+              id="about-name"
+              className="h-12"
+              autoComplete="name"
+              autoFocus
+              value={about.name}
+              onChange={(e) => setAbout((a) => ({ ...a, name: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="about-email">{trialCopy.email}</Label>
+            <Input
+              id="about-email"
+              type="email"
+              className="h-12"
+              autoComplete="email"
+              value={about.email}
+              onChange={(e) => setAbout((a) => ({ ...a, email: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground">{trialCopy.emailHint}</p>
+          </div>
+          <Button type="submit" size="lg" disabled={busy}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+            {trialCopy.next}
+          </Button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">

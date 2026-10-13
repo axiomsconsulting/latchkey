@@ -26,7 +26,8 @@ export const siteMenu = {
   demo: "Try the demo",
   pricing: "Pricing",
   guest: "Guest check-in demo",
-  signIn: "Host sign in or register",
+  signIn: "Host sign in",
+  trial: "Start free trial",
   dashboard: "Host dashboard",
   bookings: "Bookings",
   services: "Services",
@@ -41,6 +42,8 @@ export const siteMenu = {
   guestShort: "Guest",
   hostHint: "Your dashboard",
   guestHint: "Check in with a PIN",
+  demoShort: "Demo",
+  trialShort: "Free trial",
 };
 
 export const about = {
@@ -107,6 +110,35 @@ export const auth = {
   checkInbox: "Check your inbox to confirm your email address, then sign in.",
   genericError: "Something went wrong. Please try again.",
   signOut: "Sign out",
+  magicCta: "Email me a sign-in link",
+  magicSent: (email: string) => `We've sent a sign-in link to ${email}. Open it on this device to sign in.`,
+  magicNeedsEmail: "Type your email address first.",
+  orPassword: "or sign in with your password",
+};
+
+/** The free trial: straight into setting up, account saved at the end. */
+export const trial = {
+  starting: "Setting up your free trial…",
+  aboutTitle: "About you",
+  aboutBody: "So we can save your setup and send you your sign-in link later. No password needed now.",
+  name: "Your name",
+  email: "Your email address",
+  emailHint: "We'll only use it for your Latchkey account.",
+  needName: "Please type your name.",
+  needEmail: "Please type a valid email address.",
+  bannerTitle: "You're on a free trial",
+  bannerBody: (email: string | null) =>
+    email
+      ? `Save your account to keep everything you set up. We'll email a sign-in link to ${email}.`
+      : "Save your account to keep everything you set up. We'll email you a sign-in link.",
+  bannerCta: "Save my account",
+  bannerEmail: "Email address",
+  bannerSend: "Send my sign-in link",
+  bannerSent: (email: string) => `Check ${email} and open the link to finish saving your account. Everything you've set up stays as it is.`,
+  bannerTaken: "That email already has a Latchkey account. Sign in to it instead, or use another email.",
+  bannerLater: "Later",
+  setupDone: "Your property is ready. Save your account any time from the bar at the top.",
+  next: "Next: your property",
 };
 
 export const hostNav = {

@@ -17,10 +17,14 @@ function safeNext(value: unknown): string | undefined {
 }
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>): { next?: string; email?: string } => {
+  validateSearch: (search: Record<string, unknown>): { next?: string; email?: string; mode?: "sign_up" } => {
     const next = safeNext(search["next"]);
     const email = typeof search["email"] === "string" ? search["email"].slice(0, 254) : undefined;
-    return { ...(next ? { next } : {}), ...(email ? { email } : {}) };
+    return {
+      ...(next ? { next } : {}),
+      ...(email ? { email } : {}),
+      ...(search["mode"] === "sign_up" ? { mode: "sign_up" as const } : {}),
+    };
   },
   head: () => ({
     meta: [
@@ -46,7 +50,7 @@ function AuthPage() {
   const search = Route.useSearch();
   // Where to go after signing in, e.g. back to an invitation link.
   const next = search.next ?? "/app/today";
-  const [mode, setMode] = useState<"sign_in" | "sign_up">("sign_in");
+  const [mode, setMode] = useState<"sign_in" | "sign_up">(search.mode ?? "sign_in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -54,6 +58,8 @@ function AuthPage() {
   useEffect(() => {
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return;
+      // A free trial in progress can sign in to a saved account from here.
+      if (data.session.user.is_anonymous) return;
       // Shared demo session: drop it so visitors can register their own account.
       if (data.session.user.email === DEMO_EMAIL) {
         await signOut();
@@ -86,6 +92,28 @@ function AuthPage() {
       // A real account from here on: never fall back to the demo when it expires.
       markDemo(false);
       await navigate({ href: next });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : copy.genericError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendLink() {
+    if (!email.trim()) {
+      toast.error(copy.magicNeedsEmail);
+      return;
+    }
+    setBusy(true);
+    try {
+      // Existing accounts only: new hosts start from the free trial instead.
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}${next}` },
+      });
+      if (error) throw error;
+      markDemo(false);
+      toast.success(copy.magicSent(email.trim()));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : copy.genericError);
     } finally {
@@ -144,6 +172,12 @@ function AuthPage() {
                 {mode === "sign_in" ? copy.signInCta : copy.signUpCta}
               </Button>
             </form>
+
+            {mode === "sign_in" ? (
+              <Button type="button" variant="outline" className="mt-3 w-full" size="lg" disabled={busy} onClick={() => void sendLink()}>
+                {copy.magicCta}
+              </Button>
+            ) : null}
 
             <button
               type="button"

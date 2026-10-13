@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Building2, Check, DoorOpen, LayoutDashboard, Menu } from "lucide-react";
+import { Building2, Check, DoorOpen, LayoutDashboard, Menu, PlayCircle, Sparkles } from "lucide-react";
 
 import { DemoPicker } from "@/components/DemoPicker";
 import { Button } from "@/components/ui/button";
@@ -79,42 +79,75 @@ export function SiteMenu() {
                   </button>
                 </>
               ) : (
+                <>
+                <Link to="/start" className={item} onClick={close}>{siteMenu.trial}</Link>
                 <Link to="/auth" className={item} onClick={close}>{siteMenu.signIn}</Link>
+              </>
               )}
             </nav>
           </SheetContent>
         </Sheet>
         {/* Larger screens: the shortcuts hang just below the menu button. */}
-        <Shortcuts signedIn={signedIn} className="absolute right-0 top-full -mt-2 hidden sm:flex" />
+        <Shortcuts signedIn={signedIn} className="absolute right-0 top-full mt-2 hidden sm:flex" />
       </div>
       {/* Phones: the same shortcuts in a bottom bar, within thumb reach. */}
-      <Shortcuts signedIn={signedIn} bar className="sm:hidden" />
+      <Shortcuts signedIn={signedIn} bar className="sm:hidden" onDemo={() => setDemoOpen(true)} />
       <DemoPicker open={demoOpen} onOpenChange={setDemoOpen} />
     </>
   );
 }
 
-function Shortcuts({ signedIn, bar = false, className }: { signedIn: boolean; bar?: boolean; className?: string }) {
-  const tab = bar
-    ? "spring flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-95"
-    : "spring flex items-center gap-1.5 px-2.5 pb-1.5 pt-3 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+function Shortcuts({
+  signedIn,
+  bar = false,
+  className,
+  onDemo,
+}: {
+  signedIn: boolean;
+  bar?: boolean;
+  className?: string;
+  onDemo?: () => void;
+}) {
   const host = signedIn ? "/app/today" : "/auth";
+  if (bar) {
+    // Phones: a bottom bar with the demo and trial up front, then Host and Guest.
+    const tab =
+      "spring flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 text-[11px] font-medium text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-95";
+    return (
+      <nav
+        aria-label={siteMenu.shortcuts}
+        className={cn(
+          "glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-md gap-1 rounded-[1.75rem] p-1.5",
+          className,
+        )}
+      >
+        <button type="button" className={tab} onClick={onDemo}>
+          <PlayCircle className="size-5" /> {siteMenu.demoShort}
+        </button>
+        {signedIn ? null : (
+          <Link to="/start" className={cn(tab, "bg-accent text-accent-foreground hover:bg-accent/90 hover:text-accent-foreground")}>
+            <Sparkles className="size-5" /> {siteMenu.trialShort}
+          </Link>
+        )}
+        <Link to={host} className={tab} title={siteMenu.hostHint}>
+          <LayoutDashboard className="size-5" /> {siteMenu.host}
+        </Link>
+        <Link to="/checkin" className={tab} title={siteMenu.guestHint}>
+          <DoorOpen className="size-5" /> {siteMenu.guestShort}
+        </Link>
+      </nav>
+    );
+  }
+  // Larger screens: two separate bubbles just below the menu button.
+  const bubble =
+    "spring flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-soft hover:-translate-y-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   return (
-    <nav
-      aria-label={siteMenu.shortcuts}
-      className={cn(
-        bar
-          ? "glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 mx-auto flex max-w-sm gap-1 rounded-[1.75rem] p-1.5"
-          : // One tab hanging from the menu button, its top tucked behind it.
-            "flex divide-x divide-border rounded-b-2xl border border-t-0 border-border bg-surface shadow-soft",
-        className,
-      )}
-    >
-      <Link to={host} className={tab} title={siteMenu.hostHint}>
-        <LayoutDashboard className={bar ? "size-5" : "size-3.5"} /> {siteMenu.host}
+    <nav aria-label={siteMenu.shortcuts} className={cn("flex gap-2", className)}>
+      <Link to={host} className={bubble} title={siteMenu.hostHint}>
+        <LayoutDashboard className="size-3.5" /> {siteMenu.host}
       </Link>
-      <Link to="/checkin" className={tab} title={siteMenu.guestHint}>
-        <DoorOpen className={bar ? "size-5" : "size-3.5"} /> {siteMenu.guestShort}
+      <Link to="/checkin" className={bubble} title={siteMenu.guestHint}>
+        <DoorOpen className="size-3.5" /> {siteMenu.guestShort}
       </Link>
     </nav>
   );

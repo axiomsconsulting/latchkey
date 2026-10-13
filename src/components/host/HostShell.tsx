@@ -23,6 +23,7 @@ import {
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
+import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
 
@@ -126,7 +127,8 @@ export function HostShell() {
       {(host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL ? (
         <button
           type="button"
-          onClick={() => void leave()}
+          // The trial page swaps the shared demo for the visitor's own trial.
+          onClick={() => void navigate({ to: "/start" })}
           className="fixed bottom-24 right-4 z-40 h-12 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:bottom-6 md:right-6 print:hidden"
         >
           Start your free trial
@@ -167,6 +169,7 @@ export function HostShell() {
           navMode === "full" ? "md:ml-72 md:py-10" : navMode === "rail" ? "md:ml-28 md:py-10" : "md:pb-10 md:pt-32",
         )}
       >
+        <TrialBanner />
         <Outlet />
       </main>
 
