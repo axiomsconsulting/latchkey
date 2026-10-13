@@ -16,6 +16,7 @@ import { TeamPanel } from "@/components/host/TeamPanel";
 import { DEMO_EMAIL } from "@/lib/demo-account";
 import { ChannelLabels } from "@/components/host/ChannelLabels";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
+import { InvoiceSettings } from "@/components/host/InvoiceSettings";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
@@ -231,6 +232,7 @@ function SettingsPage() {
 
       {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
       {themedProperty && isOwner ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
+      {workspace.data ? <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}
       {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
       {workspace.data ? (
         <ChannelLabels

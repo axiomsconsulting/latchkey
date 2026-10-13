@@ -5,6 +5,7 @@ import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { StayExtras } from "@/components/guest/StayExtras";
 import { StayInbox } from "@/components/guest/StayInbox";
+import { StayInvoice } from "@/components/guest/StayInvoice";
 import { StayServices } from "@/components/guest/StayServices";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -148,6 +149,7 @@ function Stay() {
         </Accordion>
 
         {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><StayExtras token={token} /><StayServices token={token} /></>)}
+        <StayInvoice token={token} place={p?.name ?? ""} />
       </main>
     </GuestFrame>
   );

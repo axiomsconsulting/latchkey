@@ -16,6 +16,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckinRouteImport } from './routes/checkin'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as PDemoRouteImport } from './routes/p.demo'
@@ -71,6 +72,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoiceTokenRoute = InvoiceTokenRouteImport.update({
+  id: '/invoice/$token',
+  path: '/invoice/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KioskCodeRoute = KioskCodeRouteImport.update({
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/checkin': typeof CheckinRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
+  '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/checkin': typeof CheckinRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
+  '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
@@ -293,6 +302,7 @@ export interface FileRouteTypes {
     | '/checkin'
     | '/app'
     | '/invite/$token'
+    | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkin'
     | '/invite/$token'
+    | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
@@ -353,6 +364,7 @@ export interface FileRouteTypes {
     | '/checkin'
     | '/_authenticated/app'
     | '/invite/$token'
+    | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
@@ -384,6 +396,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckinRoute: typeof CheckinRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
   PCodeRoute: typeof PCodeRoute
   PDemoRoute: typeof PDemoRoute
@@ -445,6 +458,13 @@ declare module '@tanstack/react-router' {
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoice/$token': {
+      id: '/invoice/$token'
+      path: '/invoice/$token'
+      fullPath: '/invoice/$token'
+      preLoaderRoute: typeof InvoiceTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kiosk/$code': {
@@ -655,6 +675,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckinRoute: CheckinRoute,
   InviteTokenRoute: InviteTokenRoute,
+  InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
   PCodeRoute: PCodeRoute,
   PDemoRoute: PDemoRoute,

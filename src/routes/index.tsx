@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Check, Minus, ScanLine, Sparkles, Layers } from "lucide-react";
 
@@ -24,7 +25,15 @@ export const Route = createFileRoute("/")({
 
 const benefitIcons = [ScanLine, Layers, Sparkles];
 
+/** "Tuesday", in the visitor's own time zone when given one. */
+function weekday(timeZone?: string): string {
+  return new Intl.DateTimeFormat("en-GB", { weekday: "long", ...(timeZone ? { timeZone } : {}) }).format(new Date());
+}
+
 function Landing() {
+  // The server renders UK time; the browser then switches to the visitor's day.
+  const [day, setDay] = useState(() => weekday("Europe/London"));
+  useEffect(() => setDay(weekday()), []);
   return (
     <div className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-6">
@@ -87,7 +96,7 @@ function Landing() {
 
         <section className="mt-16 grid gap-5 md:grid-cols-2">
           <article className="rounded-3xl border border-border bg-muted p-6 sm:p-8">
-            <h2 className="text-xl">{marketing.beforeAfter.beforeTitle}</h2>
+            <h2 className="text-xl">{marketing.beforeAfter.beforeTitle(day)}</h2>
             <ul className="mt-5 space-y-3">
               {marketing.beforeAfter.before.map((item) => (
                 <li key={item} className="flex gap-3 text-sm leading-relaxed text-muted-foreground">
@@ -99,7 +108,7 @@ function Landing() {
           </article>
 
           <article className="rounded-3xl bg-primary p-6 text-primary-foreground shadow-lifted sm:p-8">
-            <h2 className="text-xl">{marketing.beforeAfter.afterTitle}</h2>
+            <h2 className="text-xl">{marketing.beforeAfter.afterTitle(day)}</h2>
             <ul className="mt-5 space-y-3">
               {marketing.beforeAfter.after.map((item) => (
                 <li key={item} className="flex gap-3 text-sm leading-relaxed opacity-95">

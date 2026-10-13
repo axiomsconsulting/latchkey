@@ -6,6 +6,7 @@ import { Archive, ArchiveRestore, BadgeCheck, BedDouble, Loader2, Pencil, Send, 
 import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
+import { GuestInvoice } from "@/components/host/GuestInvoice";
 import { GuestPeople } from "@/components/host/GuestPeople";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 import { StatusBadge } from "@/components/host/StatusBadge";
@@ -22,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { common, guestCard as copy } from "@/content/copy";
+import { common, guestCard as copy, invoiceCopy } from "@/content/copy";
 import { useBookingSites, useRole } from "@/hooks/use-host-data";
 import { platformKey } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime, nightsBetween, stayState } from "@/lib/dates";
@@ -183,6 +184,10 @@ export function GuestSheet({
                 arrivedChildren={b.arrivedChildren}
                 bookedCount={b.guestCount ?? 1}
               />
+            </Section>
+
+            <Section title={invoiceCopy.hostSection} count={0}>
+              <GuestInvoice bookingId={b.id} channel={b.channel} canWrite={canWrite} />
             </Section>
 
             <Section title={copy.messages} count={d.messages.length}>

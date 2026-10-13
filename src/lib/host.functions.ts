@@ -343,6 +343,9 @@ const bookingInput = z.object({
   guest_email: z.string().trim().email().max(254).nullable().default(null),
   /** A booking site the host added; the stay is then stored as channel "other". */
   site_key: siteKey,
+  /** What the guest paid, for invoices; left out entirely when not given. */
+  stay_amount_pence: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  stay_amount_includes_tax: z.boolean().optional(),
 });
 
 const TRACKED = [
@@ -363,7 +366,13 @@ export const saveBooking = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => bookingInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { id, site_key, ...rest } = data;
+    const { id, site_key, stay_amount_pence, stay_amount_includes_tax, ...base } = data;
+    // The amount is only written when given, so saving works before migration 0023.
+    const rest = {
+      ...base,
+      ...(stay_amount_pence !== undefined ? { stay_amount_pence } : {}),
+      ...(stay_amount_includes_tax !== undefined ? { stay_amount_includes_tax } : {}),
+    };
     // An added site is stored as "other" plus its key. site_key is only sent
     // when there is one to set or clear, so saving works before migration 0021.
     const fields: typeof rest & { site_key?: string | null } = site_key

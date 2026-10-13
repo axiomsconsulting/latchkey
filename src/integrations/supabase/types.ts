@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          stay_amount_pence: number | null
+          stay_amount_includes_tax: boolean | null
           arrived_adults: number | null
           arrived_children: number | null
           site_key: string | null
@@ -53,6 +55,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          stay_amount_pence?: number | null
+          stay_amount_includes_tax?: boolean | null
           arrived_adults?: number | null
           arrived_children?: number | null
           site_key?: string | null
@@ -90,6 +94,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          stay_amount_pence?: number | null
+          stay_amount_includes_tax?: boolean | null
           arrived_adults?: number | null
           arrived_children?: number | null
           site_key?: string | null
@@ -849,6 +855,10 @@ export type Database = {
       }
       hosts: {
         Row: {
+          invoices_enabled: boolean
+          tax_number: string | null
+          invoice_prefix: string
+          invoice_counter: number
           booking_sites: Json
           bank_details: string | null
           business_name: string
@@ -870,6 +880,10 @@ export type Database = {
           timezone: string
         }
         Insert: {
+          invoices_enabled?: boolean
+          tax_number?: string | null
+          invoice_prefix?: string
+          invoice_counter?: number
           booking_sites?: Json
           bank_details?: string | null
           business_name: string
@@ -891,6 +905,10 @@ export type Database = {
           timezone?: string
         }
         Update: {
+          invoices_enabled?: boolean
+          tax_number?: string | null
+          invoice_prefix?: string
+          invoice_counter?: number
           booking_sites?: Json
           bank_details?: string | null
           business_name?: string
@@ -910,6 +928,105 @@ export type Database = {
           tax_rate_bp?: number
           tax_registered?: boolean
           timezone?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          access_token: string
+          booking_id: string | null
+          check_in_date: string | null
+          check_out_date: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          description: string
+          guest_locked_at: string | null
+          amended_at: string | null
+          host_id: string
+          id: string
+          issued_on: string
+          net_pence: number
+          number: string
+          property_id: string | null
+          seller_address: string | null
+          seller_name: string
+          seller_room: string | null
+          seller_tax_label: string | null
+          seller_tax_number: string | null
+          buyer_address: string | null
+          buyer_email: string | null
+          buyer_name: string
+          tax_name: string | null
+          tax_pence: number
+          tax_rate_bp: number
+          title: string
+          total_pence: number
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          booking_id?: string | null
+          check_in_date?: string | null
+          check_out_date?: string | null
+          created_at?: string
+          created_by: string
+          currency: string
+          description: string
+          guest_locked_at?: string | null
+          amended_at?: string | null
+          host_id: string
+          id?: string
+          issued_on: string
+          net_pence: number
+          number: string
+          property_id?: string | null
+          seller_address?: string | null
+          seller_name: string
+          seller_room?: string | null
+          seller_tax_label?: string | null
+          seller_tax_number?: string | null
+          buyer_address?: string | null
+          buyer_email?: string | null
+          buyer_name: string
+          tax_name?: string | null
+          tax_pence: number
+          tax_rate_bp?: number
+          title?: string
+          total_pence: number
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          booking_id?: string | null
+          check_in_date?: string | null
+          check_out_date?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string
+          guest_locked_at?: string | null
+          amended_at?: string | null
+          host_id?: string
+          id?: string
+          issued_on?: string
+          net_pence?: number
+          number?: string
+          property_id?: string | null
+          seller_address?: string | null
+          seller_name?: string
+          seller_room?: string | null
+          seller_tax_label?: string | null
+          seller_tax_number?: string | null
+          buyer_address?: string | null
+          buyer_email?: string | null
+          buyer_name?: string
+          tax_name?: string | null
+          tax_pence?: number
+          tax_rate_bp?: number
+          title?: string
+          total_pence?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1850,6 +1967,10 @@ export type Database = {
       }
     }
     Functions: {
+      claim_invoice_number: {
+        Args: { _host_id: string }
+        Returns: number
+      }
       create_host_workspace: {
         Args: { _business_name: string; _contact_email: string }
         Returns: string

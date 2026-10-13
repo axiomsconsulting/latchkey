@@ -24,8 +24,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ChannelIcon } from "@/components/ChannelIcon";
-import { bookings as copy, common, statuses } from "@/content/copy";
-import { useBookingSites } from "@/hooks/use-host-data";
+import { bookings as copy, common, invoiceCopy, statuses } from "@/content/copy";
+import { useBookingSites, useWorkspace } from "@/hooks/use-host-data";
+import { taxTerms } from "@/lib/invoice";
 import { platformKey, toChannel } from "@/lib/booking-sites";
 import { saveBooking, undoCheckIn } from "@/lib/host.functions";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
@@ -53,6 +54,8 @@ export type BookingRow = {
   listing_title?: string | null;
   feed_status?: string | null;
   guest_email?: string | null;
+  stay_amount_pence?: number | null;
+  stay_amount_includes_tax?: boolean | null;
   id_check_status?: string | null;
 };
 
@@ -93,6 +96,8 @@ function blank(propertyId: string, roomId: string | null, defaults?: Props["defa
     status: "upcoming",
     notes: "",
     guest_email: "",
+    stay_amount: "",
+    stay_amount_includes_tax: true,
   };
 }
 
@@ -131,6 +136,10 @@ export function BookingDialog({
   }
 
   const sites = useBookingSites();
+  const ws = useWorkspace();
+  const currency = (ws.data?.host as { currency?: string } | null | undefined)?.currency ?? "GBP";
+  const country = ((ws.data?.properties ?? []) as Array<{ id: string; country_code?: string | null }>).find((p) => p.id === propertyId)?.country_code;
+  const tax = taxTerms(country).name;
   const [form, setForm] = useState(() =>
     blank(propertyId, rooms[0]?.id ?? null, defaults),
   );
@@ -153,6 +162,8 @@ export function BookingDialog({
         status: booking.status,
         notes: booking.notes ?? "",
         guest_email: booking.guest_email ?? "",
+        stay_amount: booking.stay_amount_pence != null ? (booking.stay_amount_pence / 100).toFixed(2) : "",
+        stay_amount_includes_tax: booking.stay_amount_includes_tax ?? true,
       });
     } else {
       setForm(blank(propertyId, rooms[0]?.id ?? null, defaults));
@@ -188,6 +199,13 @@ export function BookingDialog({
           status: form.status as (typeof STATUS_KEYS)[number],
           notes: form.notes.trim() || null,
           guest_email: form.guest_email.trim() || null,
+          // Only sent when there's an amount to set or clear.
+          ...(form.stay_amount.trim() || booking?.stay_amount_pence != null
+            ? {
+                stay_amount_pence: form.stay_amount.trim() ? Math.round(Number(form.stay_amount.replace(/[^0-9.]/g, "")) * 100) : null,
+                stay_amount_includes_tax: form.stay_amount_includes_tax,
+              }
+            : {}),
         },
       });
       // The guest panel keeps its own copy of the stay; refresh it too.
@@ -294,6 +312,30 @@ export function BookingDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="amount">{invoiceCopy.stayAmount(currency)}</Label>
+            <div className="flex items-center gap-3">
+              <Input
+                id="amount"
+                inputMode="decimal"
+                className="h-12"
+                placeholder="0.00"
+                value={form.stay_amount}
+                onChange={(e) => set("stay_amount", e.target.value)}
+              />
+              <label className="flex shrink-0 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-5 rounded border-input"
+                  checked={form.stay_amount_includes_tax}
+                  onChange={(e) => set("stay_amount_includes_tax", e.target.checked)}
+                />
+                {invoiceCopy.stayIncludesTax(tax)}
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">{invoiceCopy.stayAmountHint}</p>
           </div>
 
           <div className="space-y-2">
