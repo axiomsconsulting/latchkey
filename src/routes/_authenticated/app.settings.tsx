@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { History, Loader2, NotebookPen, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { CreditCard, History, Loader2, NotebookPen, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
@@ -10,7 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { activity as activityCopy, common, registerPage as registerCopy, settings as copy } from "@/content/copy";
+import {
+  activity as activityCopy,
+  adminCopy,
+  billingCopy,
+  common,
+  registerPage as registerCopy,
+  settings as copy,
+} from "@/content/copy";
+import { SupportAccess } from "@/components/host/SupportAccess";
 import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { TeamPanel } from "@/components/host/TeamPanel";
 import { DEMO_EMAIL } from "@/lib/demo-account";
@@ -211,6 +219,24 @@ function SettingsPage() {
       </form>
 
       {workspace.data ? <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} /> : null}
+      {isOwner ? (
+        <Link to="/app/billing" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
+          <CreditCard className="size-5 text-primary" />
+          <span>
+            <span className="block text-lg">{billingCopy.title}</span>
+            <span className="block text-sm text-muted-foreground">{billingCopy.subtitle}</span>
+          </span>
+        </Link>
+      ) : null}
+      {workspace.data?.isSuperAdmin ? (
+        <Link to="/app/admin" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
+          <ShieldCheck className="size-5 text-primary" />
+          <span>
+            <span className="block text-lg">{adminCopy.title}</span>
+            <span className="block text-sm text-muted-foreground">{adminCopy.subtitle}</span>
+          </span>
+        </Link>
+      ) : null}
       {canWriteHost ? (
         <Link to="/app/register" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
           <NotebookPen className="size-5 text-primary" />
@@ -233,6 +259,13 @@ function SettingsPage() {
       {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
       {themedProperty && isOwner ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
       {workspace.data ? <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}
+      {workspace.data && !workspace.data.support ? (
+        <SupportAccess
+          hostId={workspace.data.hostId}
+          until={(host as { support_access_until?: string | null } | null)?.support_access_until}
+          isOwner={isOwner}
+        />
+      ) : null}
       {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
       {workspace.data ? (
         <ChannelLabels

@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { todayRequests as todayRequestsCopy } from "@/content/copy";
 import { TodayRequests } from "@/components/host/TodayRequests";
+import { GuestReviews } from "@/components/host/GuestReviews";
 import { GuestSheet } from "@/components/host/GuestSheet";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { StayCalendar, type Activity } from "@/components/host/StayCalendar";
@@ -459,6 +460,8 @@ function TodayPage() {
           </ul>
         )}
       </section>
+
+      {workspace.data?.hostId ? <GuestReviews hostId={workspace.data.hostId} /> : null}
 
       <GuestSheet
         bookingId={openId}

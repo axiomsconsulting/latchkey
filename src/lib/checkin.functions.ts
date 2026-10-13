@@ -129,6 +129,9 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       p = await srvMod.loadPropertyByCode(data.code);
     }
     if (!p) return { found: false as const };
+    // A host whose trial or subscription has ended can't take check-ins.
+    const { data: access, error: accessErr } = await (await srvMod.admin()).rpc("host_has_access" as never, { _host_id: p.host_id } as never);
+    if (!accessErr && access === false) return { found: false as const, paused: true as const };
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const methods = normaliseMethods(p.checkin_methods);

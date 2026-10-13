@@ -11,7 +11,7 @@ export const Route = createFileRoute("/p/$code")({
 
   loader: async ({ params }) => {
     const p = await getCheckinProperty({ data: { code: params.code } });
-    if (!p.found) throw notFound();
+    if (!p.found) throw notFound({ data: { paused: "paused" in p && p.paused === true } });
     return p;
   },
 
@@ -29,9 +29,9 @@ export const Route = createFileRoute("/p/$code")({
       ],
     };
   },
-  notFoundComponent: () => (
+  notFoundComponent: ({ data }) => (
     <GuestFrame>
-      <GuestMessage text={copy.notFound} />
+      <GuestMessage text={(data as { paused?: boolean } | undefined)?.paused ? copy.checkinPaused : copy.notFound} />
     </GuestFrame>
   ),
   errorComponent: () => (

@@ -19,7 +19,8 @@ create function auth.role() returns text language sql stable as $$ select auth.j
 grant usage on schema public, auth to anon, authenticated, service_role;
 grant execute on all functions in schema auth to anon, authenticated, service_role;
 -- Created by Lovable outside drizzle/migrations.
-create table public.platform_pricing (id int primary key);
+create table public.platform_pricing (id int primary key, base_pence int not null default 100, extra_room_pence int not null default 50, extra_property_pence int not null default 100, trial_days int not null default 30, currency text not null default 'GBP', updated_at timestamptz not null default now());
+insert into public.platform_pricing (id) values (1);
 `;
 
 export const USERS = {
@@ -28,6 +29,7 @@ export const USERS = {
   viewer: { id: "00000000-0000-0000-0000-00000000000c", email: "viewer@example.com" },
   outsider: { id: "00000000-0000-0000-0000-00000000000d", email: "outsider@example.com" },
   demo: { id: "00000000-0000-0000-0000-00000000000e", email: "demo@latchkey.omsestates.uk" },
+  admin: { id: "00000000-0000-0000-0000-00000000000f", email: "swapnil.kashyap@gmail.com" },
 } as const;
 export type Who = keyof typeof USERS;
 

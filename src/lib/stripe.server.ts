@@ -45,14 +45,18 @@ export function form(obj: Record<string, unknown>, prefix = ""): URLSearchParams
   return out;
 }
 
-export async function stripeCall<T>(path: string, body?: Record<string, unknown>, method: "GET" | "POST" = body ? "POST" : "GET"): Promise<T> {
+export async function stripeCall<T>(
+  path: string,
+  body?: Record<string, unknown>,
+  method: "GET" | "POST" | "DELETE" = body ? "POST" : "GET",
+): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${stripeKey()}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    ...(body ? { body: form(body).toString() } : {}),
+    ...(body && method === "POST" ? { body: form(body).toString() } : {}),
     signal: AbortSignal.timeout(15_000),
   });
   const json = (await res.json().catch(() => ({}))) as any;

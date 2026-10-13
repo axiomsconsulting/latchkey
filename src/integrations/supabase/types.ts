@@ -855,6 +855,14 @@ export type Database = {
       }
       hosts: {
         Row: {
+          subscription_status: string
+          trial_started_at: string
+          trial_ends_at: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          current_period_end: string | null
+          canceled_at: string | null
+          support_access_until: string | null
           invoices_enabled: boolean
           tax_number: string | null
           invoice_prefix: string
@@ -880,6 +888,14 @@ export type Database = {
           timezone: string
         }
         Insert: {
+          subscription_status?: string
+          trial_started_at?: string
+          trial_ends_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_end?: string | null
+          canceled_at?: string | null
+          support_access_until?: string | null
           invoices_enabled?: boolean
           tax_number?: string | null
           invoice_prefix?: string
@@ -905,6 +921,14 @@ export type Database = {
           timezone?: string
         }
         Update: {
+          subscription_status?: string
+          trial_started_at?: string
+          trial_ends_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_end?: string | null
+          canceled_at?: string | null
+          support_access_until?: string | null
           invoices_enabled?: boolean
           tax_number?: string | null
           invoice_prefix?: string

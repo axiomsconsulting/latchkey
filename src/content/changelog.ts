@@ -22,6 +22,19 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.16",
+    date: "2026-10-13",
+    title: "Subscriptions, support and feedback",
+    items: [
+      { kind: "new", area: "Settings", text: "Subscription page: add a card during your trial, and Stripe starts the monthly payment the moment it ends. Update your card or cancel at any time." },
+      { kind: "new", area: "Settings", text: "Support access: let Latchkey support make changes for 30 days, and stop it whenever you like." },
+      { kind: "new", area: "Website", text: "Rate Latchkey, suggest a feature or report a bug from the Feedback button." },
+      { kind: "new", area: "Guest guide", text: "Guests can rate their stay; their stars and comments go to their host." },
+      { kind: "new", area: "Bookings", text: "What guests said, with the average rating, on Today." },
+      { kind: "improved", area: "Security", text: "When a trial or subscription ends, changes and guest check-in stop at once; the guest register and invoices stay readable." },
+    ],
+  },
+  {
     version: "0.15",
     date: "2026-10-13",
     title: "Start a free trial without signing up",

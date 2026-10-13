@@ -66,6 +66,28 @@ export const getWorkspace = createServerFn({ method: "GET" })
     }
     hostId ??= memberships[0]?.host_id ?? null;
 
+    // The super admin can look at any business as support; changes need the
+    // host's permission, which the database checks on every write.
+    const { data: superAdmin } = await rpc.rpc("is_super_admin");
+    const isSuperAdmin = superAdmin === true;
+    let support: { hostId: string; businessName: string; writable: boolean; until: string | null } | null = null;
+    if (isSuperAdmin) {
+      const { data: prefs } = await (supabase as unknown as { from: (t: string) => any })
+        .from("user_prefs")
+        .select("support_host_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const target = (prefs as { support_host_id?: string | null } | null)?.support_host_id ?? null;
+      if (target) {
+        const { data: t } = await supabase.from("hosts").select("id, business_name, support_access_until").eq("id", target).maybeSingle();
+        if (t) {
+          const { data: writable } = await rpc.rpc("support_can_write", { _host_id: t.id });
+          support = { hostId: t.id, businessName: t.business_name, writable: writable === true, until: t.support_access_until };
+          hostId = t.id;
+        }
+      }
+    }
+
     if (!hostId) {
       if (!data?.create) {
         const { data: pending } = await rpc.rpc("has_pending_invite");
@@ -79,6 +101,11 @@ export const getWorkspace = createServerFn({ method: "GET" })
             hasDemo: false,
             memberships: [],
             pendingInvite: true,
+            isSuperAdmin,
+            support: null,
+            access: true,
+            billingPhase: "trial" as const,
+            trialDaysLeft: null,
           };
         }
       }
@@ -96,18 +123,41 @@ export const getWorkspace = createServerFn({ method: "GET" })
     const [{ data: host, error: hostErr }, { data: properties }] = await Promise.all([
       (async () => {
         const { withLegacy } = await import("./checkin.server");
+        // Newest columns first, falling back while migrations are pending.
         return withLegacy(
-          () => supabase.from("hosts").select(`${HOST_COLUMNS}, booking_sites`).eq("id", hostId).single(),
-          () => supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
+          () =>
+            supabase
+              .from("hosts")
+              .select(`${HOST_COLUMNS}, booking_sites, subscription_status, trial_ends_at, stripe_subscription_id, support_access_until`)
+              .eq("id", hostId)
+              .single(),
+          () =>
+            withLegacy(
+              () => supabase.from("hosts").select(`${HOST_COLUMNS}, booking_sites`).eq("id", hostId).single(),
+              () => supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
+            ),
         );
       })(),
       supabase.from("properties").select("*").eq("host_id", hostId).order("created_at", { ascending: true }),
     ]);
     if (hostErr) throw new Error(hostErr.message);
 
+    const billing = host as { subscription_status?: string; trial_ends_at?: string | null } | null;
+    const { hasAccess, billingPhase, trialDaysLeft } = await import("./billing");
+    const known = !!billing?.subscription_status;
     return {
       hostId,
-      role: memberships.find((m) => m.host_id === hostId)?.role ?? "owner",
+      role: support
+        ? support.writable
+          ? "manager"
+          : "viewer"
+        : (memberships.find((m) => m.host_id === hostId)?.role ?? "owner"),
+      isSuperAdmin,
+      support,
+      // Before migration 0024 there's no subscription yet, so access is open.
+      access: known ? hasAccess(billing as never) : true,
+      billingPhase: known ? billingPhase(billing as never) : "trial",
+      trialDaysLeft: known ? trialDaysLeft(billing as never) : null,
       host,
       properties: properties ?? [],
       hasDemo: (properties ?? []).some((p) => p.is_demo),

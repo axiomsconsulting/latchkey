@@ -25,6 +25,8 @@ import { Route as PDemoRouteImport } from './routes/p.demo'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppActivityRouteImport } from './routes/_authenticated/app.activity'
+import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
+import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
 import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenticated/app.bookings'
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
 import { Route as AuthenticatedAppGuidesRouteImport } from './routes/_authenticated/app.guides'
@@ -122,6 +124,16 @@ const AuthenticatedAppActivityRoute =
     path: '/activity',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppBookingsRoute =
   AuthenticatedAppBookingsRouteImport.update({
     id: '/bookings',
@@ -226,6 +238,8 @@ export interface FileRoutesByFullPath {
   '/p/demo': typeof PDemoRoute
   '/stay/$token': typeof StayTokenRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
+  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
@@ -258,6 +272,8 @@ export interface FileRoutesByTo {
   '/p/demo': typeof PDemoRoute
   '/stay/$token': typeof StayTokenRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
+  '/app/admin': typeof AuthenticatedAppAdminRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
@@ -293,6 +309,8 @@ export interface FileRoutesById {
   '/p/demo': typeof PDemoRoute
   '/stay/$token': typeof StayTokenRoute
   '/_authenticated/app/activity': typeof AuthenticatedAppActivityRoute
+  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
+  '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/_authenticated/app/guides': typeof AuthenticatedAppGuidesRoute
@@ -328,6 +346,8 @@ export interface FileRouteTypes {
     | '/p/demo'
     | '/stay/$token'
     | '/app/activity'
+    | '/app/admin'
+    | '/app/billing'
     | '/app/bookings'
     | '/app/connections'
     | '/app/guides'
@@ -360,6 +380,8 @@ export interface FileRouteTypes {
     | '/p/demo'
     | '/stay/$token'
     | '/app/activity'
+    | '/app/admin'
+    | '/app/billing'
     | '/app/bookings'
     | '/app/connections'
     | '/app/guides'
@@ -394,6 +416,8 @@ export interface FileRouteTypes {
     | '/p/demo'
     | '/stay/$token'
     | '/_authenticated/app/activity'
+    | '/_authenticated/app/admin'
+    | '/_authenticated/app/billing'
     | '/_authenticated/app/bookings'
     | '/_authenticated/app/connections'
     | '/_authenticated/app/guides'
@@ -549,6 +573,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppActivityRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/admin': {
+      id: '/_authenticated/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/billing': {
+      id: '/_authenticated/app/billing'
+      path: '/billing'
+      fullPath: '/app/billing'
+      preLoaderRoute: typeof AuthenticatedAppBillingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/bookings': {
       id: '/_authenticated/app/bookings'
       path: '/bookings'
@@ -666,6 +704,8 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppActivityRoute: typeof AuthenticatedAppActivityRoute
+  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
+  AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppBookingsRoute: typeof AuthenticatedAppBookingsRoute
   AuthenticatedAppConnectionsRoute: typeof AuthenticatedAppConnectionsRoute
   AuthenticatedAppGuidesRoute: typeof AuthenticatedAppGuidesRoute
@@ -681,6 +721,8 @@ interface AuthenticatedAppRouteChildren {
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppActivityRoute: AuthenticatedAppActivityRoute,
+  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
+  AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppBookingsRoute: AuthenticatedAppBookingsRoute,
   AuthenticatedAppConnectionsRoute: AuthenticatedAppConnectionsRoute,
   AuthenticatedAppGuidesRoute: AuthenticatedAppGuidesRoute,

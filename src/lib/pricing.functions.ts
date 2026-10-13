@@ -25,11 +25,19 @@ export const getPricing = createServerFn({ method: "GET" }).handler(async (): Pr
   return (data as PricingConfig | null) ?? DEFAULT_PRICING;
 });
 
+/** The backend's admin role, or the Latchkey super admin by email. */
+async function isAdmin(supabase: any, userId: string): Promise<boolean> {
+  const [{ data: role }, { data: superAdmin }] = await Promise.all([
+    supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+    supabase.rpc("is_super_admin"),
+  ]);
+  return role === true || superAdmin === true;
+}
+
 export const getAdminStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await (context.supabase as any).rpc("has_role", { _user_id: context.userId, _role: "admin" });
-    return { isAdmin: Boolean(data) };
+    return { isAdmin: await isAdmin(context.supabase, context.userId) };
   });
 
 export const savePricing = createServerFn({ method: "POST" })
@@ -46,8 +54,7 @@ export const savePricing = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
-    const { data: isAdmin } = await sb.rpc("has_role", { _user_id: context.userId, _role: "admin" });
-    if (!isAdmin) throw new Error("Only a super admin can change pricing.");
+    if (!(await isAdmin(sb, context.userId))) throw new Error("Only a super admin can change pricing.");
     const { error } = await sb.from("platform_pricing").update({ ...data, updated_at: new Date().toISOString() }).eq("id", 1);
     if (error) throw new Error(error.message);
     return { ok: true };

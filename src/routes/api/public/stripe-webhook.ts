@@ -1,7 +1,8 @@
 /**
  * Stripe webhook. Marks an extras request paid once the guest completes
- * checkout. The signature is verified against STRIPE_WEBHOOK_SECRET before
- * anything is read from the payload.
+ * checkout, and keeps each host's Latchkey subscription in step with Stripe
+ * (started, renewed, payment failing, cancelled). The signature is verified
+ * against STRIPE_WEBHOOK_SECRET before anything is read from the payload.
  */
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -22,6 +23,22 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
           event = JSON.parse(raw);
         } catch {
           return new Response("Bad payload", { status: 400 });
+        }
+
+        // Latchkey subscriptions: created, renewed, failing, cancelled.
+        if (typeof event.type === "string" && event.type.startsWith("customer.subscription.")) {
+          const { applyStripeSubscription } = await import("@/lib/billing.functions");
+          await applyStripeSubscription(event.data?.object ?? {});
+          return new Response("ok");
+        }
+        if (event.type === "checkout.session.completed" && event.data?.object?.metadata?.kind === "latchkey_subscription") {
+          const subId = event.data.object.subscription;
+          if (typeof subId === "string") {
+            const { stripeCall } = await import("@/lib/stripe.server");
+            const { applyStripeSubscription } = await import("@/lib/billing.functions");
+            await applyStripeSubscription(await stripeCall(`/subscriptions/${encodeURIComponent(subId)}`));
+          }
+          return new Response("ok");
         }
 
         if (event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") {

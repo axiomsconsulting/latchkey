@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
 import { trial as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
+import { getSiteSettings } from "@/lib/admin.functions";
 import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
 
 export const Route = createFileRoute("/start")({
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/start")({
  */
 function StartTrial() {
   const navigate = useNavigate();
+  const [closed, setClosed] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -33,6 +35,12 @@ function StartTrial() {
         return;
       }
       if (user) await signOut();
+      // The super admin can pause new trials from the admin page.
+      const site = await getSiteSettings().catch(() => null);
+      if (site && !site.signups_open) {
+        if (live) setClosed(true);
+        return;
+      }
       const { error } = await supabase.auth.signInAnonymously();
       if (!live) return;
       if (error) {
@@ -50,9 +58,13 @@ function StartTrial() {
 
   return (
     <main className="grid min-h-screen place-items-center bg-background px-4">
-      <p className="flex items-center gap-3 text-lg text-muted-foreground">
-        <Loader2 className="size-6 animate-spin text-primary" /> {copy.starting}
-      </p>
+      {closed ? (
+        <p className="max-w-md text-center text-lg">{copy.closed}</p>
+      ) : (
+        <p className="flex items-center gap-3 text-lg text-muted-foreground">
+          <Loader2 className="size-6 animate-spin text-primary" /> {copy.starting}
+        </p>
+      )}
     </main>
   );
 }

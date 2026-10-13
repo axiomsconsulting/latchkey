@@ -11,7 +11,9 @@ import {
   Loader2,
   LogOut,
   Mail,
+  CreditCard,
   NotebookPen,
+  ShieldCheck,
   PanelLeftOpen,
   Plug,
   Settings,
@@ -23,13 +25,14 @@ import {
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
+import { AccessGate, AnnouncementPopup, FeedbackButton, ShellBanners } from "@/components/host/ShellExtras";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
-import { auth, brand, hostNav, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
+import { adminCopy, auth, billingCopy, brand, hostNav, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
 import { useAlerts, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { getWorkspace } from "@/lib/host.functions";
 import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
@@ -145,6 +148,7 @@ export function HostShell() {
         <LogoMark theme={theme} name={title} className="size-9" />
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
         <HostInbox propertyId={selectedId ?? null} />
+        <FeedbackButton compact className="px-2.5" />
         <UserChip compact className="px-1.5" />
         <button
           type="button"
@@ -169,8 +173,12 @@ export function HostShell() {
           navMode === "full" ? "md:ml-72 md:py-10" : navMode === "rail" ? "md:ml-28 md:py-10" : "md:pb-10 md:pt-32",
         )}
       >
+        <ShellBanners />
         <TrialBanner />
-        <Outlet />
+        <AccessGate>
+          <Outlet />
+        </AccessGate>
+        <AnnouncementPopup />
       </main>
 
 
@@ -233,6 +241,7 @@ function DesktopNav({
   isOwner: boolean;
   onSignOut: () => void;
 }) {
+  const isSuperAdmin = useWorkspace().data?.isSuperAdmin === true;
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const [settling, setSettling] = useState(false);
   const drag = useRef<{ x: number; y: number; width: number; moved: boolean } | null>(null);
@@ -369,6 +378,31 @@ function DesktopNav({
             <span className={narrow || top ? "sr-only" : "truncate"}>{hostNav.activity}</span>
           </Link>
         ) : null}
+        {isOwner ? (
+          <Link
+            to="/app/billing"
+            onClick={haptic}
+            title={billingCopy.navLabel}
+            className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
+            activeProps={active}
+          >
+            <CreditCard className="size-5 shrink-0" />
+            <span className={narrow || top ? "sr-only" : "truncate"}>{billingCopy.navLabel}</span>
+          </Link>
+        ) : null}
+        {isSuperAdmin ? (
+          <Link
+            to="/app/admin"
+            onClick={haptic}
+            title={adminCopy.navLabel}
+            className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
+            activeProps={active}
+          >
+            <ShieldCheck className="size-5 shrink-0" />
+            <span className={narrow || top ? "sr-only" : "truncate"}>{adminCopy.navLabel}</span>
+          </Link>
+        ) : null}
+        <FeedbackButton compact={narrow || top} />
         <div className={cn("flex items-center gap-1", narrow ? "flex-col" : "", top ? "" : "mt-2 border-t border-border pt-2")}>
           <UserChip compact={narrow || top} className={narrow || top ? "justify-center" : "flex-1"} />
           <button
