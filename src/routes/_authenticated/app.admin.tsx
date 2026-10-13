@@ -36,6 +36,7 @@ import {
   type HostStats,
 } from "@/lib/admin.functions";
 import { formatUkDate } from "@/lib/dates";
+import { setPlatformStripe } from "@/lib/payments.functions";
 import { DEFAULT_PRICING, monthlyPence, money, type PricingConfig } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
@@ -167,6 +168,7 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
   const navigate = useNavigate();
   const plan = useServerFn(setHostPlan);
   const view = useServerFn(viewAsHost);
+  const platformStripe = useServerFn(setPlatformStripe);
 
   async function act(fn: () => Promise<unknown>, done?: () => Promise<unknown>) {
     try {
@@ -240,6 +242,13 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => void act(() => plan({ data: { hostId: h.host_id, action: "comp" } }))}>
                         {copy.comp}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => void act(() => platformStripe({ data: { hostId: h.host_id, on: true } }))}>
+                        {copy.platformStripeOn}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => void act(() => platformStripe({ data: { hostId: h.host_id, on: false } }))}>
+                        {copy.platformStripeOff}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem

@@ -49,12 +49,15 @@ export async function stripeCall<T>(
   path: string,
   body?: Record<string, unknown>,
   method: "GET" | "POST" | "DELETE" = body ? "POST" : "GET",
+  /** A host's connected account: the call is made on their behalf. */
+  account?: string | null,
 ): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${stripeKey()}`,
       "Content-Type": "application/x-www-form-urlencoded",
+      ...(account ? { "Stripe-Account": account } : {}),
     },
     ...(body && method === "POST" ? { body: form(body).toString() } : {}),
     signal: AbortSignal.timeout(15_000),

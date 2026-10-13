@@ -855,6 +855,10 @@ export type Database = {
       }
       hosts: {
         Row: {
+          stripe_account_id: string | null
+          stripe_account_ready: boolean
+          stripe_account_checked_at: string | null
+          uses_platform_stripe: boolean
           subscription_status: string
           trial_started_at: string
           trial_ends_at: string | null
@@ -888,6 +892,10 @@ export type Database = {
           timezone: string
         }
         Insert: {
+          stripe_account_id?: string | null
+          stripe_account_ready?: boolean
+          stripe_account_checked_at?: string | null
+          uses_platform_stripe?: boolean
           subscription_status?: string
           trial_started_at?: string
           trial_ends_at?: string | null
@@ -921,6 +929,10 @@ export type Database = {
           timezone?: string
         }
         Update: {
+          stripe_account_id?: string | null
+          stripe_account_ready?: boolean
+          stripe_account_checked_at?: string | null
+          uses_platform_stripe?: boolean
           subscription_status?: string
           trial_started_at?: string
           trial_ends_at?: string | null
@@ -1336,6 +1348,7 @@ export type Database = {
       }
       requests: {
         Row: {
+          stripe_account_id: string | null
           booking_id: string
           created_at: string
           early_from: string | null
@@ -1361,6 +1374,7 @@ export type Database = {
           total_pence: number
         }
         Insert: {
+          stripe_account_id?: string | null
           booking_id: string
           created_at?: string
           early_from?: string | null
@@ -1386,6 +1400,7 @@ export type Database = {
           total_pence?: number
         }
         Update: {
+          stripe_account_id?: string | null
           booking_id?: string
           created_at?: string
           early_from?: string | null

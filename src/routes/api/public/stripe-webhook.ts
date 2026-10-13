@@ -1,8 +1,11 @@
 /**
  * Stripe webhook. Marks an extras request paid once the guest completes
  * checkout, and keeps each host's Latchkey subscription in step with Stripe
- * (started, renewed, payment failing, cancelled). The signature is verified
- * against STRIPE_WEBHOOK_SECRET before anything is read from the payload.
+ * (started, renewed, payment failing, cancelled). Events from hosts' own
+ * Stripe accounts arrive through the Connect webhook: guest payments, and
+ * whether a newly linked account can take payments yet. The signature is
+ * verified against STRIPE_WEBHOOK_SECRET or STRIPE_CONNECT_WEBHOOK_SECRET
+ * before anything is read from the payload.
  */
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -10,12 +13,16 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env["STRIPE_WEBHOOK_SECRET"];
-        if (!secret) return new Response("Not configured", { status: 503 });
+        const secrets = [process.env["STRIPE_WEBHOOK_SECRET"], process.env["STRIPE_CONNECT_WEBHOOK_SECRET"]].filter(
+          (x): x is string => !!x,
+        );
+        if (secrets.length === 0) return new Response("Not configured", { status: 503 });
 
         const raw = await request.text();
         const { verifyStripeSignature } = await import("@/lib/stripe.server");
-        const ok = await verifyStripeSignature(raw, request.headers.get("stripe-signature"), secret);
+        const header = request.headers.get("stripe-signature");
+        let ok = false;
+        for (const secret of secrets) ok = ok || (await verifyStripeSignature(raw, header, secret));
         if (!ok) return new Response("Invalid signature", { status: 401 });
 
         let event: any;
@@ -25,13 +32,27 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
           return new Response("Bad payload", { status: 400 });
         }
 
-        // Latchkey subscriptions: created, renewed, failing, cancelled.
-        if (typeof event.type === "string" && event.type.startsWith("customer.subscription.")) {
+        // A host's linked account finished (or lost) the ability to take payments.
+        if (event.type === "account.updated") {
+          const acct = event.data?.object ?? {};
+          if (typeof acct.id === "string") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            await supabaseAdmin
+              .from("hosts")
+              .update({ stripe_account_ready: !!acct.charges_enabled, stripe_account_checked_at: new Date().toISOString() })
+              .eq("stripe_account_id", acct.id);
+          }
+          return new Response("ok");
+        }
+
+        // Latchkey subscriptions: created, renewed, failing, cancelled. Events
+        // from a host's own account are their business, not Latchkey billing.
+        if (typeof event.type === "string" && event.type.startsWith("customer.subscription.") && !event.account) {
           const { applyStripeSubscription } = await import("@/lib/billing.functions");
           await applyStripeSubscription(event.data?.object ?? {});
           return new Response("ok");
         }
-        if (event.type === "checkout.session.completed" && event.data?.object?.metadata?.kind === "latchkey_subscription") {
+        if (event.type === "checkout.session.completed" && !event.account && event.data?.object?.metadata?.kind === "latchkey_subscription") {
           const subId = event.data.object.subscription;
           if (typeof subId === "string") {
             const { stripeCall } = await import("@/lib/stripe.server");

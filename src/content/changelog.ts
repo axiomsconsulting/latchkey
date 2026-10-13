@@ -22,6 +22,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.17",
+    date: "2026-10-13",
+    title: "Your own Stripe account",
+    items: [
+      { kind: "new", area: "Settings", text: "Connect your own Stripe account from Settings: we start it with your email and Stripe asks the rest. Guests' card payments go straight to you." },
+      { kind: "improved", area: "Security", text: "Latchkey's own Stripe account now only collects subscriptions, never hosts' guest payments." },
+    ],
+  },
+  {
     version: "0.16",
     date: "2026-10-13",
     title: "Subscriptions, support and feedback",

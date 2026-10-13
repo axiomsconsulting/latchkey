@@ -120,3 +120,18 @@ describe("feedback", () => {
     ).rejects.toThrow(/row-level security/);
   });
 });
+
+describe("stripe connect", () => {
+  it("won't let an owner point payments at an account themselves", async () => {
+    await db.as("owner", "update hosts set stripe_account_id = 'acct_123', stripe_account_ready = true, uses_platform_stripe = true where id = $1", [hostId]);
+    expect(await db.system("select stripe_account_id, stripe_account_ready, uses_platform_stripe from hosts where id = $1", [hostId])).toEqual([
+      { stripe_account_id: null, stripe_account_ready: false, uses_platform_stripe: false },
+    ]);
+  });
+
+  it("keeps the super admin's own business on the platform account", async () => {
+    const id = (await db.as<{ id: string }>("admin", "select create_host_workspace('Trinity', $1) as id", [USERS.admin.email]))[0]!.id;
+    // Workspaces made after the migration start unlinked; the server sets it.
+    expect(await db.system("select uses_platform_stripe from hosts where id = $1", [id])).toEqual([{ uses_platform_stripe: false }]);
+  });
+});
