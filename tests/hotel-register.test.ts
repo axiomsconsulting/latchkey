@@ -103,10 +103,10 @@ describe("registerCsv", () => {
         place_of_issue: "Paris",
         next_destination: "Edinburgh",
         next_address: null,
-        property_name: "Trinity",
+        property_name: "Hill",
         room_name: "Garden",
       },
     ]);
-    expect(csv.split("\r\n")[1]).toBe(`2026-10-12,"'=Jean, Dupont",France,18AB12345,Paris,Edinburgh,,Trinity,Garden`);
+    expect(csv.split("\r\n")[1]).toBe(`2026-10-12,"'=Jean, Dupont",France,18AB12345,Paris,Edinburgh,,Hill,Garden`);
   });
 });

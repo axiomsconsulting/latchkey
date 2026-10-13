@@ -15,15 +15,15 @@ const insert = () =>
   db.system(
     `insert into guest_register (host_id, property_id, property_name, booking_id, position, arrival_date, full_name,
        nationality, is_alien, keep_until)
-     values ($1, $2, 'Trinity', $3, 0, '2026-10-12', 'Priya Shah', 'GB', false, '2027-10-12')`,
+     values ($1, $2, 'Hill', $3, 0, '2026-10-12', 'Priya Shah', 'GB', false, '2027-10-12')`,
     [hostId, propertyId, bookingId],
   );
 
 beforeAll(async () => {
   db = await bootDb();
-  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Trinity', $1) as id", [USERS.owner.email]))[0]!.id;
+  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [USERS.owner.email]))[0]!.id;
   propertyId = (
-    await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Trinity', 'trinity-reg') returning id", [hostId])
+    await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Hill', 'hill-reg') returning id", [hostId])
   )[0]!.id;
   bookingId = (
     await db.as<{ id: string }>(
@@ -52,14 +52,14 @@ describe("guest register", () => {
     await db.as(
       "owner",
       `insert into guest_register (host_id, property_id, property_name, arrival_date, full_name, nationality, is_alien, source, keep_until)
-       values ($1, $2, 'Trinity', '2026-10-12', 'Sam Jones', 'IE', false, 'host', '2027-10-12')`,
+       values ($1, $2, 'Hill', '2026-10-12', 'Sam Jones', 'IE', false, 'host', '2027-10-12')`,
       [hostId, propertyId],
     );
     await expect(
       db.as(
         "owner",
         `insert into guest_register (host_id, property_id, property_name, arrival_date, full_name, nationality, is_alien, source, keep_until)
-         values ($1, $2, 'Trinity', '2026-10-12', 'Sam Jones', 'IE', false, 'host', '2026-11-12')`,
+         values ($1, $2, 'Hill', '2026-10-12', 'Sam Jones', 'IE', false, 'host', '2026-11-12')`,
         [hostId, propertyId],
       ),
     ).rejects.toThrow(/row-level security/);
@@ -69,14 +69,14 @@ describe("guest register", () => {
     await expect(
       db.system(
         `insert into guest_register (host_id, property_name, arrival_date, full_name, nationality, is_alien, keep_until)
-         values ($1, 'Trinity', '2026-10-12', 'Jean Dupont', 'FR', true, '2027-10-12')`,
+         values ($1, 'Hill', '2026-10-12', 'Jean Dupont', 'FR', true, '2027-10-12')`,
         [hostId],
       ),
     ).rejects.toThrow(/guest_register_alien_details/);
     await expect(
       db.system(
         `insert into guest_register (host_id, property_name, arrival_date, full_name, nationality, is_alien, document_number, keep_until)
-         values ($1, 'Trinity', '2026-10-12', 'Priya Shah', 'GB', false, '123', '2027-10-12')`,
+         values ($1, 'Hill', '2026-10-12', 'Priya Shah', 'GB', false, '123', '2027-10-12')`,
         [hostId],
       ),
     ).rejects.toThrow(/guest_register_alien_details/);

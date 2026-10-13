@@ -189,7 +189,7 @@ export const DOOR_SECTIONS: SectionKey[] = ["getting_in"];
 
 export { addDays };
 
-/** Starter text for The Trinity Rooms style homes. Marked so hosts replace it. */
+/** Starter text for The Hill Rooms & Suites style homes. Marked so hosts replace it. */
 export const STARTER: Record<SectionKey, { summary: string; steps: { heading: string; body: string }[] }> = {
   getting_in: {
     summary: "The front door has a keypad lock. Your code is on your check-in screen.",

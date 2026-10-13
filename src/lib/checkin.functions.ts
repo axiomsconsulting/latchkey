@@ -97,6 +97,7 @@ async function demoHint(propertyId: string, today: string) {
   return b
     ? {
         letter: surnameInitial(b.guest_full_name) ?? "",
+        name: b.guest_full_name ?? "",
         checkOut: b.check_out_date,
         channel: b.channel,
         refLast4: b.reservation_code ? b.reservation_code.replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase() : null,

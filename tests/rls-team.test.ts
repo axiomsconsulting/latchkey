@@ -21,9 +21,9 @@ async function invite(email: string, role: string, token: string) {
 
 beforeAll(async () => {
   db = await bootDb();
-  hostId = (await as<{ id: string }>("owner", "select create_host_workspace('Trinity', $1) as id", [USERS.owner.email]))[0]!.id;
-  propertyId = (await as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Trinity Suites', 'trinity-suites') returning id", [hostId]))[0]!.id;
-  roomId = (await as<{ id: string }>("owner", "insert into rooms (property_id, room_number, display_name) values ($1, '1', 'Trinity 1') returning id", [propertyId]))[0]!.id;
+  hostId = (await as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [USERS.owner.email]))[0]!.id;
+  propertyId = (await as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Hill Suites', 'hill-suites') returning id", [hostId]))[0]!.id;
+  roomId = (await as<{ id: string }>("owner", "insert into rooms (property_id, room_number, display_name) values ($1, '1', 'Hill 1') returning id", [propertyId]))[0]!.id;
 }, 60_000);
 
 describe("joining a host", () => {
@@ -67,14 +67,14 @@ describe("joining a host", () => {
   it("shows only safe details before sign-in", async () => {
     await invite(USERS.viewer.email, "viewer", "token-viewer");
     const [peek] = await as("anon", "select * from peek_invitation('token-viewer')");
-    expect(peek).toEqual({ business_name: "Trinity", role: "viewer", email_masked: "v***@example.com", status: "open" });
+    expect(peek).toEqual({ business_name: "Hill", role: "viewer", email_masked: "v***@example.com", status: "open" });
     await as("viewer", "select accept_host_invitation('token-viewer')");
   });
 });
 
 describe("manager", () => {
   it("runs the business: rooms, bookings, channel labels", async () => {
-    const rows = await as("manager", "update rooms set display_name = 'Trinity One' where id = $1 returning id", [roomId]);
+    const rows = await as("manager", "update rooms set display_name = 'Hill One' where id = $1 returning id", [roomId]);
     expect(rows).toHaveLength(1);
     await as("manager", "insert into bookings (property_id, room_id, channel, check_in_date, check_out_date) values ($1, $2, 'direct', '2026-10-10', '2026-10-27')", [propertyId, roomId]);
     await as("manager", "select update_host_ops($1, '{\"direct\": \"Website\"}'::jsonb)", [hostId]);
@@ -114,7 +114,7 @@ describe("viewer", () => {
       as("viewer", "insert into bookings (property_id, channel, check_in_date, check_out_date) values ($1, 'direct', '2026-11-01', '2026-11-02')", [propertyId]),
     ).rejects.toThrow(readOnly);
     await expect(as("viewer", "select update_host_ops($1, '{}'::jsonb)", [hostId])).rejects.toThrow(/read-only/);
-    expect(await as("viewer", "select display_name from rooms where id = $1", [roomId])).toEqual([{ display_name: "Trinity One" }]);
+    expect(await as("viewer", "select display_name from rooms where id = $1", [roomId])).toEqual([{ display_name: "Hill One" }]);
   });
 });
 
@@ -135,7 +135,7 @@ describe("audit log", () => {
     );
     expect(roomRows).toHaveLength(1);
     expect(roomRows[0]!.actor_id).toBe(USERS.manager.id);
-    expect(roomRows[0]!.changed["display_name"]).toEqual({ old: "Trinity 1", new: "Trinity One" });
+    expect(roomRows[0]!.changed["display_name"]).toEqual({ old: "Hill 1", new: "Hill One" });
 
     await as("owner", "update properties set check_in_pin = '123456' where id = $1", [propertyId]);
     const [pin] = await as<{ changed: Record<string, unknown> }>(

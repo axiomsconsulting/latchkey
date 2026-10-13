@@ -31,5 +31,5 @@ export const template = {
   component: Notice,
   subject: (d: Record<string, any>) => String(d['title'] ?? 'A note from Latchkey'),
   displayName: 'Receipt / alert notice',
-  previewData: { title: 'Receipt R-1042 · The Trinity Rooms', body: '2 × Fresh towels\n1 × Late check-out\n\nTotal: £10.00\nPaid by: card', from: 'The Trinity Rooms' },
+  previewData: { title: 'Receipt R-1042 · The Hill Rooms & Suites', body: '2 × Fresh towels\n1 × Late check-out\n\nTotal: £10.00\nPaid by: card', from: 'The Hill Rooms & Suites' },
 } satisfies TemplateEntry

@@ -12,9 +12,9 @@ let bookingId: string;
 
 beforeAll(async () => {
   db = await bootDb();
-  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Trinity', $1) as id", [USERS.owner.email]))[0]!.id;
+  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [USERS.owner.email]))[0]!.id;
   const propertyId = (
-    await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Trinity', 'trinity-ids') returning id", [hostId])
+    await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Hill', 'hill-ids') returning id", [hostId])
   )[0]!.id;
   bookingId = (
     await db.as<{ id: string }>(

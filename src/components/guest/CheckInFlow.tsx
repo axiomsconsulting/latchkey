@@ -34,6 +34,7 @@ import {
 } from "@/lib/checkin.functions";
 
 import { formatUkDate, formatUkTime } from "@/lib/dates";
+import { demoLine, type DemoHint } from "@/lib/demo-guide";
 import { REGISTER_AGE, cleanRegisterEntry, isAlien, nationalityOptions } from "@/lib/hotel-register";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +105,7 @@ export type CheckinProperty = {
   name: string;
   code: string;
   checkoutChoices: string[];
-  demoHint?: { letter: string; checkOut: string; channel: string; refLast4: string | null; phoneLast4: string | null } | null;
+  demoHint?: DemoHint | null;
   listFlow: boolean;
   checkInFrom?: string;
   checkOutBy?: string;
@@ -422,18 +423,10 @@ export function CheckInFlow({
   const lockedTime = step.name === "locked" ? formatUkTime(new Date(step.until).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })) : "";
 
   // Shared demo only: tell visitors the fake guest's answers for the step they're on.
+  // Public demo only: a line for whichever screen is showing, so the
+  // guidance follows the flow as steps appear or are skipped.
   const hint = property.demoHint;
-  const demoHint = !hint
-    ? null
-    : ["welcome", "letter", "checkout", "platform", "no_match"].includes(step.name)
-      ? copy.demoHint(
-          hint.letter,
-          formatUkDate(hint.checkOut),
-          siteOf(hint.channel).label,
-        )
-      : step.name === "identity" && step.method !== "self_declare"
-        ? copy.demoIdHint(hint.refLast4, hint.phoneLast4)
-        : null;
+  const demoHint = hint ? demoLine(step, hint, siteOf(hint.channel).label) : null;
 
   const canGoBack = ["letter", "checkout", "platform", "pick", "guestName"].includes(step.name);
   // Every step between the welcome and the end offers a way out to the host.

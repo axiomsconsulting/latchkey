@@ -18,7 +18,7 @@ const UNAVAILABLE = "The demo is unavailable right now.";
 /** Every outside integration stays simulated on the shared account. */
 const ALL_DEMO = Object.fromEntries(INTEGRATION_KEYS.map((k) => [k, "demo"])) as IntegrationModes;
 const DEMO_HOST = {
-  business_name: "The Trinity Rooms (demo)",
+  business_name: "The Hill Rooms & Suites (demo)",
   contact_email: DEMO_EMAIL,
   currency: "GBP",
   timezone: "Europe/London",

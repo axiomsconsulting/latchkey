@@ -15,7 +15,7 @@
 - [x] Guest stay page: report issue / order extras, see ETA + messages
 - [x] Host Services hub: inbox, approve, recommend, appoint, scheduled maintenance, provider directory
 - [x] Theme studio: presets, colours, fonts (preset + upload), logo presets + upload, live preview
-- [x] Themed guest pages + host dashboard; vanity link /trinity with Host portal link
+- [x] Themed guest pages + host dashboard; vanity link /hill with Host portal link
 - [x] iOS-style floating glass navigation
 - [ ] Live Contra mode: needs Contra API key/endpoint from the user
 

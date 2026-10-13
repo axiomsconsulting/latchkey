@@ -214,7 +214,7 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
               </div>
               <div className="bg-card p-4 shadow-soft" style={{ borderRadius: "var(--radius)" }}>
                 <p className="font-display">Wi-Fi</p>
-                <p className="text-sm text-muted-foreground">TrinityGuest · password on your card</p>
+                <p className="text-sm text-muted-foreground">HillRoomsGuest · password on your card</p>
               </div>
               <span className="flex h-12 items-center justify-center bg-primary font-medium text-primary-foreground" style={{ borderRadius: "var(--radius)" }}>
                 Start check-in

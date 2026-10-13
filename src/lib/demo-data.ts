@@ -1,5 +1,5 @@
 /**
- * Demo content for The Trinity Rooms, High Wycombe. Dates are always relative
+ * Demo content for The Hill Rooms & Suites, High Wycombe. Dates are always relative
  * to today so the dashboard looks alive whenever it is opened.
  */
 
@@ -33,14 +33,14 @@ export type DemoBooking = {
 };
 
 export const DEMO_PROPERTY = {
-  name: "The Trinity Rooms",
+  name: "The Hill Rooms & Suites",
   address: "42 Amersham Hill",
   postcode: "HP13 6NX",
-  short_code: "trinity",
+  short_code: "hill",
   check_in_pin: "409271",
   timezone: "Europe/London",
   parking_notes: "One space on the drive, first come. Free on-street after 18:00.",
-  wifi_name: "TrinityRooms",
+  wifi_name: "HillRooms",
   wifi_password: "highwycombe42",
   host_contact_name: "Swapnil",
   host_contact_phone: "07700 900142",
@@ -51,7 +51,7 @@ export const DEMO_ROOMS: DemoRoom[] = [
     key: "r1",
     room_number: "1",
     display_name: "Room 1",
-    public_title: "The Trinity — Suite 1",
+    public_title: "The Hill — Suite 1",
     description: "Front double with a bay window, ensuite shower and a desk.",
     max_guests: 2,
     has_ensuite: true,
@@ -61,7 +61,7 @@ export const DEMO_ROOMS: DemoRoom[] = [
     key: "r2",
     room_number: "2",
     display_name: "Room 2",
-    public_title: "The Trinity — Garden Room",
+    public_title: "The Hill — Garden Room",
     description: "Quiet double at the back overlooking the garden. Shared bathroom.",
     max_guests: 2,
     has_ensuite: false,
@@ -71,7 +71,7 @@ export const DEMO_ROOMS: DemoRoom[] = [
     key: "r3",
     room_number: "3",
     display_name: "Room 3",
-    public_title: "The Trinity — Loft Single",
+    public_title: "The Hill — Loft Single",
     description: "Top-floor single with a skylight. Best for one guest travelling light.",
     max_guests: 1,
     has_ensuite: false,
@@ -194,7 +194,7 @@ export const DEMO_UNAVAILABILITY = [
 ];
 
 export const DEMO_CONNECTIONS = [
-  { roomKey: "r1", channel: "airbnb" as const, listing_name: "The Trinity — Suite 1" },
+  { roomKey: "r1", channel: "airbnb" as const, listing_name: "The Hill — Suite 1" },
   { roomKey: "r2", channel: "booking_com" as const, listing_name: "Garden Room, High Wycombe" },
   { roomKey: "r3", channel: "homestay" as const, listing_name: "Loft Single" },
 ];

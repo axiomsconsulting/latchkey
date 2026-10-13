@@ -25,8 +25,8 @@ async function count(table: string, bookingId: string) {
 
 beforeAll(async () => {
   db = await bootDb();
-  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Trinity', $1) as id", [USERS.owner.email]))[0]!.id;
-  propertyId = (await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Trinity Suites', 'trinity-suites') returning id", [hostId]))[0]!.id;
+  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [USERS.owner.email]))[0]!.id;
+  propertyId = (await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Hill Suites', 'hill-suites') returning id", [hostId]))[0]!.id;
   // A viewer on the team.
   await db.system("insert into host_members (host_id, user_id, role) values ($1, $2, 'viewer')", [hostId, USERS.viewer.id]);
 }, 60_000);

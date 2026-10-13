@@ -7,7 +7,7 @@ import { guest as copy } from "@/content/copy";
 import { getCheckinProperty } from "@/lib/checkin.functions";
 import { RESERVED_SLUGS } from "@/lib/theme";
 
-/** Branded home for one property, e.g. /trinity. Guests and the host can bookmark it. */
+/** Branded home for one property, e.g. /hill. Guests and the host can bookmark it. */
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
     const slug = params.slug.toLowerCase();

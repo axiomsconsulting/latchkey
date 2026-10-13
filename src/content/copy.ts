@@ -348,7 +348,7 @@ export const settings = {
   saved: "Saved",
   demoTitle: "Demo content",
   demoBody:
-    "Load The Trinity Rooms in High Wycombe: three rooms, bookings across four channels, and Tuesday and Thursday cleaning windows.",
+    "Load The Hill Rooms & Suites in High Wycombe: three rooms, bookings across four channels, and Tuesday and Thursday cleaning windows.",
   loadDemo: "Load demo rooms",
   resetDemo: "Reset demo dates",
   removeDemo: "Remove demo data",
@@ -453,9 +453,9 @@ export const alerts = {
 };
 
 export const guest = {
-  propertyName: "The Trinity Rooms",
+  propertyName: "The Hill Rooms & Suites",
   location: "High Wycombe",
-  welcome: "Welcome to The Trinity Rooms",
+  welcome: "Welcome to The Hill Rooms & Suites",
   welcomeBody:
     "Check yourself in, find your room and ask for anything you need. It takes about a minute and there is nothing to download.",
   startCta: "Start checking in",
@@ -560,12 +560,31 @@ export const guest = {
   nameTitle: "What's your full name?",
   nameHint: "Your booking reached us without a name. Type it as it appears on your booking.",
   nameCta: "Continue",
-  demoHint: (letter: string, date: string, platform: string) =>
-    `Demo: tap ${letter}, then check-out ${date}, then ${platform}.`,
-  demoIdHint: (ref: string | null, phone: string | null) =>
-    ["Demo: any photo works", ref ? `booking reference ends ${ref}` : null, phone ? `phone ends ${phone}` : null]
-      .filter(Boolean)
-      .join(", ") + ".",
+  /** The guidance banner in the public demo, one line per screen. */
+  demo: {
+    welcome: (name: string) => `Demo: you're checking in as ${name}. Tap Start checking in.`,
+    letter: (letter: string) => `Demo: tap ${letter}.`,
+    checkout: (date: string) => `Demo: tap ${date}.`,
+    platform: (platform: string) => `Demo: tap ${platform}.`,
+    pick: (name: string) => `Demo: tap ${name}${name.endsWith(".") ? "" : "."}`,
+    noMatch: (letter: string, date: string) => `Demo: that wasn't the demo booking. Tap Start again, then ${letter} and ${date}.`,
+    guestName: "Demo: type any first name and surname, then tap Continue.",
+    confirm: "Demo: tap Yes, that's me.",
+    party: "Demo: try adding a guest or a child to see how the room's size is checked, then tap Continue.",
+    idConsent: "Demo: tap I'm happy to continue. Nothing you photograph is kept.",
+    idCamera: "Demo: photograph anything. The demo treats it as a passport with the booking name.",
+    last4: (ref: string | null, phone: string | null) =>
+      ["Demo:", ref ? `booking reference ends ${ref}` : null, ref && phone ? "or" : null, phone ? `phone ends ${phone}` : null]
+        .filter(Boolean)
+        .join(" ") + ".",
+    selfDeclare: "Demo: tap I confirm I'm the guest on this booking.",
+    register: "Demo: check the details and pick a nationality. Try one outside the UK, Ireland and the Commonwealth to see the extra questions. Nothing is saved.",
+    companionReady: "Demo: tap I'm ready, or They don't have ID with them to see what your host is told.",
+    companionCamera: "Demo: photograph anything for the other guest's ID.",
+    face: "Demo: take any photo, or tap Skip this. Nothing is kept.",
+    handover: "Demo: in a real stay your host gets an alert now. Tap Carry on checking in myself to continue.",
+    done: "Demo: that's the end. Open the guest guide, or copy its link or QR code to open it on another phone.",
+  },
   pinBody: "You'll find the 6-digit PIN in your booking message or by the front door.",
   pinWrong: "We couldn't find a property with that PIN.",
   clear: "Clear",

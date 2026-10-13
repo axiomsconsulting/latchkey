@@ -8,7 +8,7 @@ describe("isTour", () => {
   });
 
   it("keeps real-guest protections on hosts' own sample properties", () => {
-    expect(isTour({ is_demo: true, short_code: "trinity-ab12" })).toBe(false);
+    expect(isTour({ is_demo: true, short_code: "hill-ab12" })).toBe(false);
   });
 
   it("never treats a real property as the tour, whatever its code", () => {
