@@ -969,6 +969,7 @@ export type Database = {
       }
       invoices: {
         Row: {
+          lines: Json | null
           access_token: string
           booking_id: string | null
           check_in_date: string | null
@@ -1001,6 +1002,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          lines?: Json | null
           access_token: string
           booking_id?: string | null
           check_in_date?: string | null
@@ -1033,6 +1035,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          lines?: Json | null
           access_token?: string
           booking_id?: string | null
           check_in_date?: string | null

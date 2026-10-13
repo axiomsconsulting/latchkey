@@ -241,13 +241,22 @@ export const dismissAnnouncement = createServerFn({ method: "POST" })
 
 /* ------------------------------ site settings ----------------------------- */
 
-export const getSiteSettings = createServerFn({ method: "GET" }).handler(async () => {
+type SiteSettings = { signups_open: boolean; support_email: string | null; notice: string | null; invoice_nightly_lines: boolean };
+
+export const getSiteSettings = createServerFn({ method: "GET" }).handler(async (): Promise<SiteSettings> => {
   const db = await admin();
-  const { data } = await loose(db).from("site_settings").select("signups_open, support_email, notice").eq("id", 1).maybeSingle();
-  return (data as { signups_open: boolean; support_email: string | null; notice: string | null } | null) ?? {
-    signups_open: true,
-    support_email: null,
-    notice: null,
+  const { withLegacy } = await import("./checkin.server");
+  const cols = "signups_open, support_email, notice";
+  const { data } = await withLegacy(
+    () => loose(db).from("site_settings").select(`${cols}, invoice_nightly_lines`).eq("id", 1).maybeSingle(),
+    () => loose(db).from("site_settings").select(cols).eq("id", 1).maybeSingle(),
+  );
+  const row = (data ?? {}) as Partial<SiteSettings>;
+  return {
+    signups_open: row.signups_open ?? true,
+    support_email: row.support_email ?? null,
+    notice: row.notice ?? null,
+    invoice_nightly_lines: row.invoice_nightly_lines ?? true,
   };
 });
 
@@ -257,6 +266,7 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
     z
       .object({
         signupsOpen: z.boolean(),
+        invoiceNightlyLines: z.boolean(),
         supportEmail: z.string().trim().max(254),
         notice: z.string().trim().max(300),
       })
@@ -268,6 +278,7 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
       .from("site_settings")
       .update({
         signups_open: data.signupsOpen,
+        invoice_nightly_lines: data.invoiceNightlyLines,
         support_email: data.supportEmail || null,
         notice: data.notice || null,
         updated_at: new Date().toISOString(),
@@ -289,6 +300,57 @@ export const setSupportAccess = createServerFn({ method: "POST" })
       .from("hosts")
       .update({ support_access_until: data.allow ? new Date(Date.now() + 30 * 86_400_000).toISOString() : null })
       .eq("id", data.hostId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/* ------------------------------ super admins ------------------------------ */
+
+/** Everyone who can manage Latchkey. Their email must be confirmed to count. */
+export const listSuperAdmins = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const db = await admin();
+    const { withLegacy } = await import("./checkin.server");
+    const { data } = await withLegacy(
+      () => loose(db).from("super_admins").select("email, added_by, added_at").order("email"),
+      () => loose(db).from("super_admins").select("email").order("email"),
+    );
+    return ((data ?? []) as Array<{ email: string; added_by?: string | null; added_at?: string | null }>).map((r) => ({
+      email: r.email,
+      addedBy: r.added_by ?? null,
+      addedAt: r.added_at ?? null,
+      you: r.email === String(context.claims?.email ?? "").toLowerCase(),
+    }));
+  });
+
+export const addSuperAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ email: z.string().trim().toLowerCase().email().max(254) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const db = await admin();
+    const { error } = await loose(db)
+      .from("super_admins")
+      .upsert({ email: data.email, added_by: String(context.claims?.email ?? "") || null }, { onConflict: "email" });
+    if (error) {
+      // Before migration 0026 there are no added_by/added_at columns.
+      const { error: e2 } = await loose(db).from("super_admins").upsert({ email: data.email }, { onConflict: "email" });
+      if (e2) throw new Error(e2.message);
+    }
+    return { ok: true };
+  });
+
+export const removeSuperAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ email: z.string().trim().toLowerCase().email() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const db = await admin();
+    const { count } = await loose(db).from("super_admins").select("email", { count: "exact", head: true });
+    if ((count ?? 0) <= 1) throw new Error("Latchkey needs at least one super admin.");
+    const { error } = await loose(db).from("super_admins").delete().eq("email", data.email);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

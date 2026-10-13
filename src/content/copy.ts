@@ -1526,6 +1526,7 @@ export const invoiceCopy = {
   description: "Description",
   amountLabel: (currency: string) => `Amount charged (${currency})`,
   includesTax: (tax: string) => `This amount includes ${tax}`,
+  useBookingAmount: (amount: string) => `Use the booking's amount (${amount})`,
   notRegistered: "You're not registered for tax, so no tax line is shown. Change this in Settings → Extras.",
   totalsPreview: (net: string, tax: string, total: string, name: string) => `${net} + ${tax} ${name} = ${total}`,
   saved: "Invoice saved",
@@ -1634,7 +1635,7 @@ export const feedbackCopy = {
 
 /** The super admin's area. */
 export const adminCopy = {
-  navLabel: "Admin",
+  navLabel: "Latchkey admin",
   title: "Latchkey admin",
   subtitle: "Every business, billing, trial checks, feedback, announcements and site settings.",
   tabOverview: "Overview",
@@ -1687,9 +1688,56 @@ export const adminCopy = {
   msgStop: "Stop showing",
   msgResume: "Show again",
   signupsOpen: "New free trials are open",
+  nightlyLines: "Invoices: one line per night",
+  nightlyLinesHelp: "Each night of the stay gets its own line with its share of the price, then the total. Off: one line for the whole stay. Applies to invoices made or edited from now on.",
   supportEmail: "Support email shown to hosts",
   notice: "Site notice (shown at the top of every host's dashboard)",
   saved: "Saved",
   pricingTitle: "Subscription pricing",
+  superAdminsTitle: "Super admins",
+  superAdminsBody:
+    "People who can manage all of Latchkey: every business, billing, announcements and these settings. They sign in with this email and must confirm it before they get access.",
+  you: "You",
+  addedBy: (by: string, when: string) => `Added by ${by} on ${when}`,
+  addPlaceholder: "name@example.com",
+  addAdmin: "Add super admin",
+  added: "Added. They'll see Latchkey admin once they sign in with that email.",
+  removeAdmin: "Remove",
+  removed: "Removed.",
   notAdmin: "This page is for the Latchkey super admin.",
+};
+
+/** The bookings table and its filters. */
+export const bookingTable = {
+  search: "Search guest or reference",
+  status: "Stays",
+  rooms: "Rooms",
+  platforms: "Platforms",
+  showPast: "Show past stays",
+  clear: "Show everything",
+  shown: (n: number, total: number) => (n === total ? `${n} ${n === 1 ? "stay" : "stays"}` : `${n} of ${total} stays`),
+  noRoom: "No room",
+  groups: {
+    here: "Staying now",
+    arriving: "Arriving today",
+    leaving: "Leaving today",
+    upcoming: "Coming up",
+    attention: "Needs details",
+    past: "Past stays",
+    cancelled: "Cancelled",
+    closed: "Closed nights",
+  } as Record<string, string>,
+  cols: {
+    guest: "Guest",
+    room: "Room",
+    checkIn: "Arrives",
+    checkOut: "Leaves",
+    nights: "Nights",
+    platform: "Booked on",
+    status: "Status",
+    amount: "Paid",
+  } as Record<string, string>,
+  sortBy: (col: string) => `Sort by ${col}`,
+  defaultOrder: "Default order",
+  nothing: "No stays match these filters.",
 };

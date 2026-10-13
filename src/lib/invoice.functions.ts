@@ -16,6 +16,7 @@ import {
   invoiceNumber,
   invoiceOffered,
   invoiceTotals,
+  nightlyLines,
   stayDescription,
   suggestPrefix,
   taxTerms,
@@ -53,6 +54,8 @@ type Draft = {
   amountPence: number;
   includesTax: boolean;
   prefix: string;
+  /** List each night on its own line (site setting); null before migration 0026. */
+  nightly: boolean | null;
 };
 
 /** Everything an invoice for this stay would say, from the stay, room, property and business. */
@@ -121,6 +124,7 @@ async function draftFor(bookingId: string): Promise<Draft | null> {
     amountPence: b.stay_amount_pence ?? 0,
     includesTax: b.stay_amount_includes_tax ?? h?.prices_include_tax ?? true,
     prefix: h?.invoice_prefix && h.invoice_prefix !== "INV" ? h.invoice_prefix : suggestPrefix(h?.business_name),
+    nightly: await nightlySetting(),
   };
 }
 
@@ -135,6 +139,18 @@ type Edits = {
   amountPence?: number;
   includesTax?: boolean;
 };
+
+/** The super admin's choice of one line per night; null if the setting doesn't exist yet. */
+async function nightlySetting(): Promise<boolean | null> {
+  const db = await admin();
+  const { data, error } = await (db as unknown as { from: (t: string) => any })
+    .from("site_settings")
+    .select("invoice_nightly_lines")
+    .eq("id", 1)
+    .maybeSingle();
+  if (error) return null;
+  return (data as { invoice_nightly_lines?: boolean } | null)?.invoice_nightly_lines !== false;
+}
 
 function fieldsFrom(d: Draft, e: Edits) {
   const totals = invoiceTotals({
@@ -162,6 +178,20 @@ function fieldsFrom(d: Draft, e: Edits) {
     net_pence: totals.net,
     tax_pence: totals.tax,
     total_pence: totals.total,
+    // Each night's share of the price before tax; the tax line follows the total.
+    ...(d.nightly === null
+      ? {}
+      : {
+          lines: d.nightly
+            ? nightlyLines(
+                totals.net,
+                d.checkIn,
+                d.checkOut,
+                (e.sellerRoom === undefined ? d.sellerRoom : e.sellerRoom)?.trim() || null,
+                (iso) => formatUkDate(iso, { withYear: true }),
+              )
+            : null,
+        }),
   };
 }
 
@@ -262,13 +292,13 @@ export const getInvoice = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ token: z.string().min(24).max(80) }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
-    const { data: inv } = await db
-      .from("invoices")
-      .select(
-        "number, issued_on, title, seller_name, seller_room, seller_address, seller_tax_label, seller_tax_number, buyer_name, buyer_email, buyer_address, description, check_in_date, check_out_date, currency, tax_name, tax_rate_bp, net_pence, tax_pence, total_pence, amended_at",
-      )
-      .eq("access_token", data.token)
-      .maybeSingle();
+    const { withLegacy } = await import("./checkin.server");
+    const cols =
+      "number, issued_on, title, seller_name, seller_room, seller_address, seller_tax_label, seller_tax_number, buyer_name, buyer_email, buyer_address, description, check_in_date, check_out_date, currency, tax_name, tax_rate_bp, net_pence, tax_pence, total_pence, amended_at";
+    const { data: inv } = await withLegacy(
+      () => db.from("invoices").select(`${cols}, lines`).eq("access_token", data.token).maybeSingle(),
+      () => db.from("invoices").select(cols).eq("access_token", data.token).maybeSingle(),
+    );
     return inv ? { found: true as const, invoice: inv } : { found: false as const };
   });
 

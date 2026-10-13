@@ -22,7 +22,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { adminCopy as copy, channels, common } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
 import {
+  addSuperAdmin,
   getAdminOverview,
+  listSuperAdmins,
+  removeSuperAdmin,
   getSiteSettings,
   listAllFeedback,
   listAnnouncements,
@@ -93,6 +96,7 @@ function AdminPage() {
         <TabsContent value="settings" className="mt-4 space-y-6">
           <SiteSettings />
           <PricingAdmin />
+          <SuperAdmins />
         </TabsContent>
       </Tabs>
     </div>
@@ -457,9 +461,16 @@ function SiteSettings() {
   const save = useServerFn(saveSiteSettings);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["site-settings"], queryFn: () => fetchSettings() });
-  const [form, setForm] = useState({ signupsOpen: true, supportEmail: "", notice: "" });
+  const [form, setForm] = useState({ signupsOpen: true, invoiceNightlyLines: true, supportEmail: "", notice: "" });
   useEffect(() => {
-    if (q.data) setForm({ signupsOpen: q.data.signups_open, supportEmail: q.data.support_email ?? "", notice: q.data.notice ?? "" });
+    if (q.data) {
+      setForm({
+        signupsOpen: q.data.signups_open,
+        invoiceNightlyLines: q.data.invoice_nightly_lines,
+        supportEmail: q.data.support_email ?? "",
+        notice: q.data.notice ?? "",
+      });
+    }
   }, [q.data]);
 
   return (
@@ -469,6 +480,19 @@ function SiteSettings() {
           {copy.signupsOpen}
         </Label>
         <Switch id="signups" checked={form.signupsOpen} onCheckedChange={(v) => setForm((f) => ({ ...f, signupsOpen: v }))} />
+      </div>
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
+        <div>
+          <Label htmlFor="nightly" className="text-base">
+            {copy.nightlyLines}
+          </Label>
+          <p className="text-sm text-muted-foreground">{copy.nightlyLinesHelp}</p>
+        </div>
+        <Switch
+          id="nightly"
+          checked={form.invoiceNightlyLines}
+          onCheckedChange={(v) => setForm((f) => ({ ...f, invoiceNightlyLines: v }))}
+        />
       </div>
       <div className="space-y-1">
         <Label htmlFor="support-email">{copy.supportEmail}</Label>
@@ -488,6 +512,68 @@ function SiteSettings() {
       >
         {common.save}
       </Button>
+    </section>
+  );
+}
+
+/** Who can manage Latchkey. A new super admin needs to sign in with a confirmed email. */
+function SuperAdmins() {
+  const fetchList = useServerFn(listSuperAdmins);
+  const add = useServerFn(addSuperAdmin);
+  const remove = useServerFn(removeSuperAdmin);
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["super-admins"], queryFn: () => fetchList() });
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function run(fn: () => Promise<unknown>, done: string) {
+    setBusy(true);
+    try {
+      await fn();
+      await qc.invalidateQueries({ queryKey: ["super-admins"] });
+      toast.success(done);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card-soft space-y-4 p-5">
+      <div>
+        <h2 className="text-lg">{copy.superAdminsTitle}</h2>
+        <p className="text-sm text-muted-foreground">{copy.superAdminsBody}</p>
+      </div>
+      <ul className="divide-y divide-border rounded-xl border border-border">
+        {(q.data ?? []).map((a) => (
+          <li key={a.email} className="flex flex-wrap items-center gap-3 p-3 text-sm">
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">
+                {a.email} {a.you ? <Badge variant="secondary" className="ml-1">{copy.you}</Badge> : null}
+              </span>
+              {a.addedBy ? <span className="block text-xs text-muted-foreground">{copy.addedBy(a.addedBy, day(a.addedAt))}</span> : null}
+            </span>
+            {!a.you && (q.data?.length ?? 0) > 1 ? (
+              <Button size="sm" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void run(() => remove({ data: { email: a.email } }), copy.removed)}>
+                {copy.removeAdmin}
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <form
+        className="flex flex-wrap gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void run(() => add({ data: { email } }), copy.added).then(() => setEmail(""));
+        }}
+      >
+        <Input type="email" required className="h-11 min-w-64 flex-1" placeholder={copy.addPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Button type="submit" disabled={busy}>
+          {copy.addAdmin}
+        </Button>
+      </form>
     </section>
   );
 }

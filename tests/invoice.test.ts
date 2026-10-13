@@ -73,3 +73,19 @@ describe("invoiceOffered", () => {
     expect(invoiceOffered({ channel: "direct", stay_amount_pence: 12000 }, false)).toBe(false);
   });
 });
+
+import { nightlyLines } from "../src/lib/invoice";
+
+describe("nightlyLines", () => {
+  const fmt = (d: string) => d;
+  it("shares the price across nights and adds up exactly", () => {
+    const lines = nightlyLines(10000, "2026-10-12", "2026-10-15", "Suite 1", fmt);
+    expect(lines.map((l) => l.amount_pence)).toEqual([3334, 3333, 3333]);
+    expect(lines.reduce((n, l) => n + l.amount_pence, 0)).toBe(10000);
+    expect(lines[0]).toEqual({ date: "2026-10-12", description: "Suite 1, night of 2026-10-12", amount_pence: 3334 });
+    expect(lines.at(-1)!.date).toBe("2026-10-14");
+  });
+  it("gives no lines for a stay without nights", () => {
+    expect(nightlyLines(5000, "2026-10-12", "2026-10-12", null, fmt)).toEqual([]);
+  });
+});

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -327,8 +327,8 @@ function DesktopNav({
         aria-label="Main"
       >
         {navItems.map(({ to, label, icon: Icon }) => (
+          <Fragment key={to}>
           <Link
-            key={to}
             to={to}
             onClick={haptic}
             title={label}
@@ -348,6 +348,20 @@ function DesktopNav({
               </span>
             ) : null}
           </Link>
+          {/* Super admins only: Latchkey's own settings, under Settings. */}
+          {to === "/app/settings" && isSuperAdmin ? (
+            <Link
+              to="/app/admin"
+              onClick={haptic}
+              title={adminCopy.navLabel}
+              className={cn(linkBase, top ? "shrink-0 px-3 py-2.5" : narrow ? "justify-center px-3 py-3" : "ml-4 px-3 py-2.5")}
+              activeProps={active}
+            >
+              <ShieldCheck className="size-5 shrink-0" />
+              <span className={labelClass}>{adminCopy.navLabel}</span>
+            </Link>
+          ) : null}
+          </Fragment>
         ))}
       </nav>
 
@@ -388,18 +402,6 @@ function DesktopNav({
           >
             <CreditCard className="size-5 shrink-0" />
             <span className={narrow || top ? "sr-only" : "truncate"}>{billingCopy.navLabel}</span>
-          </Link>
-        ) : null}
-        {isSuperAdmin ? (
-          <Link
-            to="/app/admin"
-            onClick={haptic}
-            title={adminCopy.navLabel}
-            className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
-            activeProps={active}
-          >
-            <ShieldCheck className="size-5 shrink-0" />
-            <span className={narrow || top ? "sr-only" : "truncate"}>{adminCopy.navLabel}</span>
           </Link>
         ) : null}
         <FeedbackButton compact={narrow || top} />

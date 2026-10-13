@@ -45,6 +45,10 @@ function InvoicePage() {
   }
   const i = res.invoice;
   const money = (p: number) => formatMoney(p, i.currency);
+  // One line per night when the invoice was made that way; older ones have a single line.
+  const lines = Array.isArray((i as { lines?: unknown }).lines)
+    ? ((i as unknown as { lines: Array<{ date: string; description: string; amount_pence: number }> }).lines)
+    : [];
   const url = typeof window === "undefined" ? "" : window.location.href;
   const mail = `mailto:${encodeURIComponent(i.buyer_email ?? "")}?subject=${encodeURIComponent(
     copy.emailSubject(i.number, i.seller_name),
@@ -119,20 +123,31 @@ function InvoicePage() {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-black/10">
-              <td className="py-3 pr-4">{i.description}</td>
-              <td className="py-3 text-right tabular-nums">{money(i.net_pence)}</td>
-            </tr>
+            {lines.length ? (
+              lines.map((l) => (
+                <tr key={l.date} className="border-b border-black/10">
+                  <td className="py-2.5 pr-4">{l.description}</td>
+                  <td className="py-2.5 text-right tabular-nums">{money(l.amount_pence)}</td>
+                </tr>
+              ))
+            ) : (
+              <tr className="border-b border-black/10">
+                <td className="py-3 pr-4">{i.description}</td>
+                <td className="py-3 text-right tabular-nums">{money(i.net_pence)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
 
         <dl className="ml-auto mt-4 w-full max-w-xs space-y-1 text-sm">
+          {i.tax_pence > 0 || lines.length > 1 ? (
+            <div className="flex justify-between">
+              <dt className="text-black/60">{copy.subtotal}</dt>
+              <dd className="tabular-nums">{money(i.net_pence)}</dd>
+            </div>
+          ) : null}
           {i.tax_pence > 0 ? (
             <>
-              <div className="flex justify-between">
-                <dt className="text-black/60">{copy.subtotal}</dt>
-                <dd className="tabular-nums">{money(i.net_pence)}</dd>
-              </div>
               <div className="flex justify-between">
                 <dt className="text-black/60">{copy.taxLine(i.tax_name ?? "Tax", (i.tax_rate_bp / 100).toString())}</dt>
                 <dd className="tabular-nums">{money(i.tax_pence)}</dd>

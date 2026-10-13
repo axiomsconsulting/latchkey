@@ -22,6 +22,18 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.18",
+    date: "2026-10-13",
+    title: "A clearer bookings list and per-night invoices",
+    items: [
+      { kind: "new", area: "Bookings", text: "Bookings as a table you can sort by any column, with search and show/hide filters for stays, rooms and platforms. Past stays are hidden until you ask for them." },
+      { kind: "improved", area: "Bookings", text: "A host-friendly order: staying now, arriving and leaving today, coming up, then past stays." },
+      { kind: "new", area: "Invoices", text: "Invoices list each night on its own line with its share of the price, then the total (can be switched off site-wide)." },
+      { kind: "fixed", area: "Invoices", text: "An invoice picks up the price as soon as you change it on the booking." },
+      { kind: "new", area: "Settings", text: "Latchkey admin sits under Settings for super admins, with all of Latchkey's own settings, and super admins can add more super admins." },
+    ],
+  },
+  {
     version: "0.17",
     date: "2026-10-13",
     title: "Your own Stripe account",

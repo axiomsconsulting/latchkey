@@ -171,6 +171,12 @@ function InvoiceDialog({ bookingId, data, onClose }: { bookingId: string; data: 
             <p className="text-xs text-muted-foreground">
               {totals.tax > 0 ? copy.totalsPreview(money(totals.net), money(totals.tax), money(totals.total), d.taxName) : money(totals.total)}
             </p>
+            {/* The stay's price changed since this invoice was made. */}
+            {inv && d.amountPence > 0 && d.amountPence !== amountPence ? (
+              <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={() => set("amount", (d.amountPence / 100).toFixed(2))}>
+                {copy.useBookingAmount(money(d.amountPence))}
+              </Button>
+            ) : null}
           </div>
           <Button type="submit" disabled={busy}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}

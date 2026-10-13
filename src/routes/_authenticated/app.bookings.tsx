@@ -5,7 +5,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { Archive, ArchiveRestore, CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { BookingDialog, type BookingRow } from "@/components/host/BookingDialog";
 import { EmptyState } from "@/components/host/EmptyState";
 import { ImportDialog } from "@/components/host/ImportDialog";
@@ -13,7 +12,7 @@ import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { GuestSheet } from "@/components/host/GuestSheet";
 import { StayCalendar, type Activity } from "@/components/host/StayCalendar";
-import { StatusBadge } from "@/components/host/StatusBadge";
+import { BookingFilters, BookingsTable } from "@/components/host/BookingsTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +24,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -35,8 +33,10 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { bookingTools as tools, bookings as copy, channels, common, statuses } from "@/content/copy";
-import { usePropertyBoard, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
-import { addDays, formatUkDate, nightsBetween, stayState } from "@/lib/dates";
+import { useBookingSites, usePropertyBoard, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { DEFAULT_FILTERS, filterBookings, readFilters, sortBookings, type ListBooking, type ListFilters, type SortKey } from "@/lib/booking-list";
+import { platformKey } from "@/lib/booking-sites";
+import { addDays, formatUkDate } from "@/lib/dates";
 import { archiveBookings, deleteBookings, syncPropertyNow } from "@/lib/guests.functions";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/_authenticated/app/bookings")({
   component: BookingsPage,
 });
 
-const CHANNEL_KEYS = ["airbnb", "booking_com", "homestay", "direct", "other"] as const;
+const FILTERS_KEY = "latchkey.bookingFilters";
 const STATUS_KEYS = [
   "needs_details",
   "upcoming",
@@ -91,9 +91,26 @@ function BookingsPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "timeline">("list");
-  const [room, setRoom] = useState("all");
-  const [channel, setChannel] = useState("all");
-  const [status, setStatus] = useState("all");
+  const sites = useBookingSites();
+  // Filters are remembered in this browser; past stays start hidden.
+  const [filters, setFiltersState] = useState<ListFilters>(DEFAULT_FILTERS);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(FILTERS_KEY);
+      if (saved) setFiltersState(readFilters(saved));
+    } catch {
+      // Private browsing: start from the defaults.
+    }
+  }, []);
+  function setFilters(f: ListFilters) {
+    setFiltersState(f);
+    try {
+      window.localStorage.setItem(FILTERS_KEY, JSON.stringify({ ...f, search: "" }));
+    } catch {
+      // Not remembered this time.
+    }
+  }
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "smart", dir: "asc" });
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<BookingRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -125,15 +142,19 @@ function BookingsPage() {
     reason: string | null;
   }>;
 
-  const filtered = useMemo(
+  const platformOf = (b: ListBooking) => platformKey(b);
+  const visible = useMemo(
     () =>
-      all.filter(
-        (b) =>
-          (room === "all" || b.room_id === room) &&
-          (channel === "all" || b.channel === channel) &&
-          (status === "all" || b.status === status),
-      ),
-    [all, room, channel, status],
+      sortBookings(filterBookings(all, filters, todayIso, platformOf), sort.key, sort.dir, todayIso, {
+        room: (id) => rooms.find((r) => r.id === id)?.display_name ?? "",
+        platform: (b) => sites.find((x) => x.key === platformKey(b))?.label ?? b.channel,
+      }),
+    [all, filters, sort, todayIso, rooms, sites],
+  );
+  // The timeline shows its own fortnight, so only room, platform and search apply.
+  const filtered = useMemo(
+    () => filterBookings(all, { ...filters, hideGroups: [] }, todayIso, platformOf),
+    [all, filters, todayIso],
   );
 
   const days = useMemo(
@@ -278,47 +299,6 @@ function BookingsPage() {
           ))}
         </div>
 
-        <Select value={room} onValueChange={setRoom}>
-          <SelectTrigger className="h-11 w-40" aria-label={copy.filtersRoom}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{copy.allRooms}</SelectItem>
-            {rooms.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                {r.display_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={channel} onValueChange={setChannel}>
-          <SelectTrigger className="h-11 w-40" aria-label={copy.filtersChannel}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{copy.allChannels}</SelectItem>
-            {CHANNEL_KEYS.map((c) => (
-              <SelectItem key={c} value={c}>
-                {channels[c]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="h-11 w-40" aria-label={copy.filtersStatus}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{copy.allStatuses}</SelectItem>
-            {STATUS_KEYS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {statuses[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         {canWrite && view === "list" ? (
           <Button
@@ -334,6 +314,15 @@ function BookingsPage() {
         ) : null}
       </div>
 
+      <BookingFilters
+        filters={filters}
+        onChange={setFilters}
+        rooms={rooms}
+        sites={sites}
+        shown={view === "list" ? visible.length : filtered.length}
+        total={all.length}
+      />
+
       {scope === "archive" ? <p className="text-sm text-muted-foreground">{tools.archiveHint}</p> : null}
 
       {selecting && view === "list" ? (
@@ -342,7 +331,7 @@ function BookingsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setPicked(picked.size === filtered.length ? new Set() : new Set(filtered.map((b) => b.id)))}
+            onClick={() => setPicked(picked.size === visible.length ? new Set() : new Set(visible.map((b) => b.id)))}
           >
             {tools.selectAll}
           </Button>
@@ -357,7 +346,7 @@ function BookingsPage() {
         </div>
       ) : null}
 
-      {filtered.length === 0 ? (
+      {all.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
           title={scope === "archive" ? tools.archiveEmpty : copy.empty}
@@ -369,41 +358,19 @@ function BookingsPage() {
           )}
         />
       ) : view === "list" ? (
-        <ul className="card-soft overflow-hidden p-0">
-          {filtered.map((b) => {
-            const nights = nightsBetween(b.check_in_date, b.check_out_date);
-            return (
-              <li key={b.id} className="flex items-center border-b border-border last:border-0">
-                {selecting ? (
-                  <Checkbox
-                    className="ml-4"
-                    checked={picked.has(b.id)}
-                    onCheckedChange={() => toggle(b.id)}
-                    aria-label={b.guest_full_name ?? copy.guestUnknown}
-                  />
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => (selecting ? toggle(b.id) : openGuest(b.id))}
-                  className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 text-left transition-colors hover:bg-muted"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">
-                      {b.guest_full_name ?? copy.guestUnknown}
-                    </span>
-                    <span className="block text-sm text-muted-foreground">
-                      {rooms.find((r) => r.id === b.room_id)?.display_name ?? "No room allocated"} ·{" "}
-                      {formatUkDate(b.check_in_date)} → {formatUkDate(b.check_out_date)} · {nights}{" "}
-                      {nights === 1 ? copy.night : copy.nights}
-                    </span>
-                  </span>
-                  <ChannelBadge channel={b.channel as Channel} />
-                  <StatusBadge state={stayState(b, todayIso)} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <BookingsTable
+          rows={visible}
+          today={todayIso}
+          rooms={rooms}
+          sites={sites}
+          currency={((workspace.data?.host as { currency?: string } | null | undefined)?.currency) ?? "GBP"}
+          sort={sort}
+          onSort={setSort}
+          selecting={selecting}
+          picked={picked}
+          onToggle={toggle}
+          onOpen={(id) => openGuest(id)}
+        />
       ) : (
         <div className="card-soft overflow-x-auto p-0">
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">

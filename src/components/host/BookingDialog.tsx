@@ -125,6 +125,8 @@ export function BookingDialog({
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["board"] }),
         qc.invalidateQueries({ queryKey: ["guest"] }),
+        // The invoice section reads the stay's price, so refresh it too.
+        qc.invalidateQueries({ queryKey: ["booking-invoice"] }),
       ]);
       toast.success(copy.undoCheckInDone);
       onOpenChange(false);
@@ -212,6 +214,8 @@ export function BookingDialog({
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["board"] }),
         qc.invalidateQueries({ queryKey: ["guest"] }),
+        // The invoice section reads the stay's price, so refresh it too.
+        qc.invalidateQueries({ queryKey: ["booking-invoice"] }),
       ]);
       toast.success(common.save === "Save" ? "Booking saved" : common.save);
       onOpenChange(false);

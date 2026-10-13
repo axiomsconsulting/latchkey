@@ -135,3 +135,12 @@ describe("stripe connect", () => {
     expect(await db.system("select uses_platform_stripe from hosts where id = $1", [id])).toEqual([{ uses_platform_stripe: false }]);
   });
 });
+
+describe("super admin list", () => {
+  it("can grow, but never empties", async () => {
+    await db.system("insert into super_admins (email, added_by) values ('second@example.com', 'swapnil.kashyap@gmail.com')");
+    await db.system("delete from super_admins where email = 'second@example.com'");
+    await expect(db.system("delete from super_admins")).rejects.toThrow(/at least one super admin/);
+    expect(await db.system("select email from super_admins")).toEqual([{ email: "swapnil.kashyap@gmail.com" }]);
+  });
+});

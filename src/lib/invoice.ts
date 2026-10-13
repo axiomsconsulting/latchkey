@@ -97,3 +97,32 @@ export function cleanGuestDetails(input: { email?: string | null; address?: stri
 export function invoiceOffered(b: { channel: string; stay_amount_pence: number | null }, enabled: boolean): boolean {
   return enabled && b.channel === "direct" && b.stay_amount_pence !== null && b.stay_amount_pence > 0;
 }
+
+export type InvoiceLine = { date: string; description: string; amount_pence: number };
+
+/**
+ * One line per night with the amount shared equally; any pennies that don't
+ * divide go to the earliest nights, so the lines always add up exactly.
+ */
+export function nightlyLines(
+  amountPence: number,
+  checkIn: string,
+  checkOut: string,
+  room: string | null,
+  formatDate: (iso: string) => string,
+): InvoiceLine[] {
+  const nights: string[] = [];
+  const start = Date.parse(`${checkIn}T00:00:00Z`);
+  const end = Date.parse(`${checkOut}T00:00:00Z`);
+  for (let t = start; t < end && nights.length < 366; t += 86_400_000) nights.push(new Date(t).toISOString().slice(0, 10));
+  if (nights.length === 0) return [];
+  const total = Math.max(0, Math.round(amountPence));
+  const each = Math.floor(total / nights.length);
+  const extra = total - each * nights.length;
+  const what = room ? `${room}, night of` : "Night of";
+  return nights.map((date, i) => ({
+    date,
+    description: `${what} ${formatDate(date)}`,
+    amount_pence: each + (i < extra ? 1 : 0),
+  }));
+}
