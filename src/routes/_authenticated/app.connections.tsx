@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useLandOn } from "@/hooks/use-land-on";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -67,6 +68,8 @@ import {
 import { explainSyncError, linkState } from "@/lib/sync-status";
 
 export const Route = createFileRoute("/_authenticated/app/connections")({
+  // ?link=<connection id> lands on that calendar link.
+  validateSearch: (s: Record<string, unknown>): { link?: string } => (typeof s["link"] === "string" ? { link: s["link"] } : {}),
   head: () => ({
     meta: [
       { title: "Connections · Latchkey host dashboard" },
@@ -354,6 +357,8 @@ function ConnectionDialog({
 function ConnectionsPage() {
   const workspace = useWorkspace();
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
+  const { link } = Route.useSearch();
+  useLandOn(link ? `link-${link}` : null, !workspace.isLoading);
 
   if (workspace.isLoading) {
     return (
@@ -600,7 +605,7 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
     : copy.never;
 
   return (
-    <li className="py-3">
+    <li id={`link-${link.id}`} className="scroll-mt-24 rounded-xl py-3">
       <div className="flex flex-wrap items-center gap-2">
         <ChannelBadge channel={link.channel as Channel} label={site?.label} />
         <span className="min-w-0 flex-1">

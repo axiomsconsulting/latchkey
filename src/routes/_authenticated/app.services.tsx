@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useLandOn } from "@/hooks/use-land-on";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Archive, ArchiveRestore, BadgeCheck, CalendarPlus, ExternalLink, Loader2, Mail, MessageCircle, Phone, Star, Trash2, Wrench } from "lucide-react";
@@ -43,7 +44,15 @@ import {
   setJobStatus,
 } from "@/lib/services.functions";
 
+const TABS = ["inbox", "planned", "trades", "archive"] as const;
+
 export const Route = createFileRoute("/_authenticated/app/services")({
+  // ?tab=inbox|planned|trades|archive opens that tab; ?job=<id> lands on that job, ?request=<id> on that extras request.
+  validateSearch: (s: Record<string, unknown>): { tab?: (typeof TABS)[number]; job?: string; request?: string } => ({
+    ...(typeof s["tab"] === "string" && (TABS as readonly string[]).includes(s["tab"]) ? { tab: s["tab"] as (typeof TABS)[number] } : {}),
+    ...(typeof s["job"] === "string" ? { job: s["job"] } : {}),
+    ...(typeof s["request"] === "string" ? { request: s["request"] } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Services · Latchkey host dashboard" },
@@ -89,6 +98,15 @@ function ServicesPage() {
     refetchInterval: 30_000,
   });
   const [recFor, setRecFor] = useState<Job | null>(null);
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<string>(search.tab ?? "inbox");
+  // A job link opens whichever tab holds that job.
+  useEffect(() => {
+    if (!search.job || !jobs.data) return;
+    const j = (jobs.data.jobs as Array<{ id: string; source: string; archived_at?: string | null }>).find((x) => x.id === search.job);
+    if (j) setTab(j.archived_at ? "archive" : j.source === "guest" ? "inbox" : "planned");
+  }, [search.job, jobs.data]);
+  useLandOn(search.job ? `job-${search.job}` : search.request ? `request-${search.request}` : null, !!jobs.data);
   const [newOpen, setNewOpen] = useState(false);
 
   if (ws.isLoading) return <Skeleton className="mx-auto h-64 max-w-5xl rounded-2xl" />;
@@ -121,7 +139,7 @@ function ServicesPage() {
 
       <ExtrasInbox propertyId={selectedId} />
 
-      <Tabs defaultValue="inbox">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="h-12 rounded-2xl p-1">
           <TabsTrigger value="inbox" className="h-10 rounded-xl px-4">
             {copy.tabInbox} {inbox.filter((j) => j.status === "new").length ? <Badge className="ml-2">{inbox.filter((j) => j.status === "new").length}</Badge> : null}
@@ -203,7 +221,7 @@ function JobCard({ job, onRecommend, archived = false }: { job: Job; onRecommend
 
   const open = !archived && !["done", "declined", "cancelled"].includes(job.status);
   return (
-    <article className="card-soft p-4 sm:p-5">
+    <article id={`job-${job.id}`} className="card-soft scroll-mt-24 p-4 sm:p-5">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">

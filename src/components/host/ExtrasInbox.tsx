@@ -61,7 +61,7 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
       ) : (
         <ul className="mt-4 space-y-3">
           {q.data.map((r) => (
-            <li key={r.id} className="rounded-2xl border border-border bg-surface p-4">
+            <li key={r.id} id={`request-${r.id}`} className="scroll-mt-24 rounded-2xl border border-border bg-surface p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">
                   {r.guest}

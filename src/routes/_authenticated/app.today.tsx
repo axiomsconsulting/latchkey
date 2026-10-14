@@ -1,248 +1,82 @@
-import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, BedDouble, CalendarClock, DoorOpen, Loader2, Sparkles, Sun } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BedDouble,
+  BookOpen,
+
+  CalendarSync,
+  ChevronRight,
+  DoorOpen,
+  ExternalLink,
+  Inbox,
+  LogOut,
+  Monitor,
+  Printer,
+  QrCode,
+  Settings2,
+  Sparkles,
+  SprayCan,
+  Wrench,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
-import { PageHeader } from "@/components/host/PageHeader";
-import { todayRequests as todayRequestsCopy } from "@/content/copy";
-import { TodayRequests } from "@/components/host/TodayRequests";
 import { GuestReviews } from "@/components/host/GuestReviews";
-import { GuestSheet } from "@/components/host/GuestSheet";
+import { GuideLinkButton } from "@/components/host/GuideLinkButton";
+import { PageHeader } from "@/components/host/PageHeader";
+import { Peek, PeekFact } from "@/components/host/Peek";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
-import { StayCalendar, type Activity } from "@/components/host/StayCalendar";
-import { StatusBadge } from "@/components/host/StatusBadge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { common, stayCalendar as calCopy, today as copy } from "@/content/copy";
-import { useAlerts, usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
-import { alerts as alertCopy } from "@/content/copy";
+import { alerts as alertCopy, common, extrasCopy, linkTools, today as oldCopy, todayDash as copy } from "@/content/copy";
+import { useAlerts, useBookingSites, useConnections, usePropertyBoard, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { platformKey } from "@/lib/booking-sites";
+import { formatUkDate, formatUkTime, nightsBetween } from "@/lib/dates";
+import { decideExtrasRequest, listExtrasRequests } from "@/lib/extras.functions";
+import { SECTIONS } from "@/lib/guide";
+import { getGuideEditor } from "@/lib/guide.functions";
 import { markAlertRead } from "@/lib/host.functions";
-import { addDays, dayOfWeek, formatUkDate, formatUkTime, nightsBetween, stayState } from "@/lib/dates";
-import { saveBooking } from "@/lib/host.functions";
+import { formatPence } from "@/lib/services";
+import { listJobs } from "@/lib/services.functions";
+import { explainSyncError, linkState } from "@/lib/sync-status";
+import { guideProgress, maintenanceAhead, openGuestRequests, tightTurnarounds, todayBoard, windowsToday, type TodayBooking } from "@/lib/today";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/today")({
   head: () => ({
     meta: [
       { title: "Today · Latchkey host dashboard" },
-      {
-        name: "description",
-        content: "Arrivals, departures and anything waiting on you across all your channels.",
-      },
+      { name: "description", content: "Today at a glance: guests, requests, cleaning, maintenance, connections and check-in." },
     ],
   }),
   component: TodayPage,
 });
 
-type Booking = {
-  id: string;
-  property_id: string;
-  room_id: string | null;
-  channel: string;
-  guest_full_name: string | null;
-  guest_count: number;
-  reservation_code: string | null;
-  phone_last4: string | null;
-  check_in_date: string;
-  check_out_date: string;
-  check_in_time: string | null;
-  check_out_time: string | null;
-  status: string;
-  notes: string | null;
-  mirror_of?: string | null;
-  archived_at?: string | null;
-};
+type Stay = TodayBooking & { property_id: string; checked_in_at?: string | null; listing_name?: string | null };
+type Room = { id: string; display_name: string };
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  target,
-}: {
-  icon: typeof Sun;
-  label: string;
-  value: number;
-  /** The section on this page listing these guests. */
-  target: string;
-}) {
-  return (
-    <a
-      href={`#${target}`}
-      onClick={(e) => {
-        e.preventDefault();
-        document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }}
-      className="card-soft spring flex items-center gap-3 p-4 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
-        <Icon className="size-5" />
-      </span>
-      <span className="min-w-0">
-        <span className="block font-display text-2xl leading-none">{value}</span>
-        <span className="block truncate text-xs text-muted-foreground">{label}</span>
-      </span>
-    </a>
-  );
-}
-
-function BookingRow({
-  booking,
-  roomName,
-  state,
-  onOpen,
-}: {
-  booking: Booking;
-  roomName: string;
-  state: string;
-  onOpen: (id: string) => void;
-}) {
-  const nights = nightsBetween(booking.check_in_date, booking.check_out_date);
-  return (
-    <li className="border-b border-border last:border-0">
-      <button
-        type="button"
-        onClick={() => onOpen(booking.id)}
-        className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 text-left transition-colors hover:bg-muted"
-      >
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">
-          {booking.guest_full_name ?? copy.actionRequired}
-        </span>
-        <span className="block text-sm text-muted-foreground">
-          {roomName} · {formatUkDate(booking.check_in_date)} → {formatUkDate(booking.check_out_date)}{" "}
-          · {nights} {nights === 1 ? "night" : "nights"}
-        </span>
-      </span>
-      <span className="text-sm tabular-nums text-muted-foreground">
-        {state === "departing_today"
-          ? formatUkTime(booking.check_out_time)
-          : formatUkTime(booking.check_in_time)}
-      </span>
-      <ChannelBadge channel={booking.channel as Channel} />
-      <StatusBadge state={state} />
-      </button>
-    </li>
-  );
-}
-
-function NeedsDetailsCard({ booking, roomName }: { booking: Booking; roomName: string }) {
-  const save = useServerFn(saveBooking);
-  const qc = useQueryClient();
-  const [name, setName] = useState("");
-  const [time, setTime] = useState((booking.check_in_time ?? "15:00").slice(0, 5));
-  const [guests, setGuests] = useState(booking.guest_count ?? 1);
-  const [busy, setBusy] = useState(false);
-
-  async function onSave(markBlocked = false) {
-    setBusy(true);
-    try {
-      await save({
-        data: {
-          id: booking.id,
-          property_id: booking.property_id,
-          room_id: booking.room_id,
-          channel: booking.channel as Channel,
-          guest_full_name: name.trim() || null,
-          reservation_code: booking.reservation_code,
-          guest_count: Number(guests) || 1,
-          phone_last4: booking.phone_last4,
-          check_in_date: booking.check_in_date,
-          check_out_date: booking.check_out_date,
-          check_in_time: time || null,
-          check_out_time: booking.check_out_time,
-          status: markBlocked ? "blocked" : name.trim() ? "upcoming" : "needs_details",
-          notes: booking.notes,
-        },
-      });
-      await qc.invalidateQueries({ queryKey: ["board"] });
-      toast.success(copy.saveDetails);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : common.errorBody);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="card-soft p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <ChannelBadge channel={booking.channel as Channel} />
-        <StatusBadge state="needs_details" />
-        <span className="text-sm text-muted-foreground">
-          {roomName} · {formatUkDate(booking.check_in_date)} →{" "}
-          {formatUkDate(booking.check_out_date)}
-        </span>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-        <div className="space-y-1.5">
-          <Label htmlFor={`n-${booking.id}`}>Guest name</Label>
-          <Input
-            id={`n-${booking.id}`}
-            className="h-12"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Who is arriving?"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={`t-${booking.id}`}>Arrival</Label>
-          <Input
-            id={`t-${booking.id}`}
-            type="time"
-            className="h-12"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={`g-${booking.id}`}>Guests</Label>
-          <Input
-            id={`g-${booking.id}`}
-            type="number"
-            min={1}
-            max={12}
-            className="h-12"
-            value={guests}
-            onChange={(e) => setGuests(Number(e.target.value))}
-          />
-        </div>
-        <Button className="h-12" onClick={() => onSave()} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-          {copy.saveDetails}
-        </Button>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <span>{copy.maybeBlock}</span>
-        <Button variant="ghost" size="sm" onClick={() => onSave(true)} disabled={busy}>
-          {copy.markBlocked}
-        </Button>
-      </div>
-    </div>
-  );
-}
+const clock = (iso: string) =>
+  new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
 function TodayPage() {
   const workspace = useWorkspace();
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);
-  const navigate = useNavigate();
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [weekOffset, setWeekOffset] = useState(0);
 
   if (workspace.isLoading || board.isLoading) {
     return (
-      <div className="mx-auto w-full max-w-5xl space-y-4">
+      <div className="mx-auto w-full max-w-6xl space-y-4">
         <Skeleton className="h-10 w-48" />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-2xl" />
+            <Skeleton key={i} className="h-36 rounded-2xl" />
           ))}
         </div>
         <Skeleton className="h-64 rounded-2xl" />
@@ -250,226 +84,597 @@ function TodayPage() {
     );
   }
 
-  if (!properties || properties.length === 0) {
+  if (!properties || properties.length === 0 || !selectedId) {
     return (
       <div className="mx-auto w-full max-w-3xl">
-        <PageHeader title={copy.title} subtitle={copy.subtitle} />
+        <PageHeader title={oldCopy.title} subtitle={oldCopy.subtitle} />
         <div className="mt-6">
-          <EmptyState
-            icon={Sparkles}
-            title="No rooms set up yet"
-            body="Add your first property in Settings, or load the demo rooms to have a look around."
-          />
+          <EmptyState icon={Sparkles} title="No rooms set up yet" body="Add your first property in Settings, or load the demo rooms to have a look around." />
         </div>
       </div>
     );
   }
 
   const data = board.data;
-  const rooms = (data?.rooms ?? []) as Array<{ id: string; display_name: string }>;
-  const roomName = (id: string | null) =>
-    rooms.find((r) => r.id === id)?.display_name ?? "No room allocated";
   const todayIso = data?.today ?? new Date().toISOString().slice(0, 10);
-  // Archived stays are tidied away and never shown here.
-  const all = ((data?.bookings ?? []) as Booking[]).filter((b) => !b.archived_at);
-  const live = all.filter((b) => b.status !== "cancelled" && b.status !== "blocked" && !b.mirror_of);
-  const activity = (data as { activity?: Activity } | undefined)?.activity ?? {};
-
-  // Who is arriving, staying or leaving goes by dates, even when the stay
-  // still needs a guest name; "needs details" is a separate to-do list.
-  const withState = live.map((b) => ({
-    b,
-    state: stayState(b.status === "needs_details" ? { ...b, status: "upcoming" } : b, todayIso),
-  }));
-  const arriving = withState.filter((x) => x.state === "arriving_today");
-  const inStay = withState.filter((x) => x.state === "in_stay");
-  const departing = withState.filter((x) => x.state === "departing_today");
-  const needsDetails = live
-    .filter((b) => b.status === "needs_details" && b.check_out_date >= todayIso)
-    .map((b) => ({ b, state: "needs_details" }));
-  const days = Array.from({ length: 14 }, (_, i) => addDays(todayIso, weekOffset * 7 + i));
-  const doubleBooked = live.filter((b) => b.status === "flagged" && b.check_out_date >= todayIso);
-
-  // Same room emptying and filling on the same day: warn when there is little
-  // time for cleaning between the two.
-  const mins = (t: string | null | undefined, fallback: string) => {
-    const [h = "0", m = "0"] = (t ?? fallback).slice(0, 5).split(":");
-    return Number(h) * 60 + Number(m);
-  };
-  const turnarounds = departing
-    .map(({ b }) => {
-      const next = arriving.find((a) => a.b.room_id && a.b.room_id === b.room_id);
-      if (!next) return null;
-      const gap = mins(next.b.check_in_time, "15:00") - mins(b.check_out_time, "11:00");
-      return gap < 120 ? { id: b.id, room: roomName(b.room_id), gap } : null;
-    })
-    .filter((x): x is { id: string; room: string; gap: number } => x !== null);
-
-  const windowsToday = ((data?.windows ?? []) as Array<{
-    id: string;
-    day_of_week: number | null;
-    start_time: string | null;
-    end_time: string | null;
-    reason: string | null;
-    room_id: string | null;
-  }>).filter((w) => w.day_of_week !== null && w.day_of_week === dayOfWeek(todayIso));
+  const rooms = (data?.rooms ?? []) as Room[];
+  const property = (data?.property ?? null) as { id: string; short_code: string; country_code?: string | null } | null;
+  const stays = (data?.bookings ?? []) as unknown as Stay[];
+  const lists = todayBoard(stays, todayIso);
+  const roomName = (id: string | null) => rooms.find((r) => r.id === id)?.display_name ?? "No room";
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageHeader
-        title={copy.title}
+        title={oldCopy.title}
         subtitle={`${formatUkDate(todayIso, { withYear: true })} · ${copy.subtitle}`}
-        actions={
-          <PropertyPicker properties={properties} value={selectedId} onChange={select} />
-        }
+        actions={<PropertyPicker properties={properties} value={selectedId} onChange={select} />}
       />
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={DoorOpen} label={copy.arriving} value={arriving.length} target="arriving" />
-        <StatCard icon={BedDouble} label={copy.inStay} value={inStay.length} target="in-stay" />
-        <StatCard icon={CalendarClock} label={copy.departing} value={departing.length} target="departing" />
-        <StatCard icon={Sparkles} label={copy.actionRequired} value={needsDetails.length} target="needs-details" />
-      </div>
+      <p className="-mt-3 text-xs text-muted-foreground">{copy.hint}</p>
 
       <AlertsPanel />
 
-      {selectedId ? <TodayRequests propertyId={selectedId} /> : null}
+      <section aria-labelledby="guests-today" className="space-y-3">
+        <h2 id="guests-today" className="sr-only">
+          {copy.guestsTitle}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <GuestTile icon={DoorOpen} label={copy.arriving} show="arriving" stays={lists.arriving} empty={copy.noneArriving} roomName={roomName} time="in" />
+          <GuestTile icon={BedDouble} label={copy.staying} show="staying" stays={lists.staying} empty={copy.noneStaying} roomName={roomName} time="out" />
+          <GuestTile icon={LogOut} label={copy.leaving} show="leaving" stays={lists.leaving} empty={copy.noneLeaving} roomName={roomName} time="out" />
+          <GuestTile
+            icon={Sparkles}
+            label={copy.needsDetails}
+            show="needs_details"
+            stays={lists.needsDetails}
+            empty={copy.noneNeeds}
+            roomName={roomName}
+            time="in"
+            tone={lists.needsDetails.length ? "attention" : undefined}
+          />
+        </div>
+        {lists.doubleBooked.length ? (
+          <Link
+            to="/app/bookings"
+            search={{ show: "double_booked" }}
+            className="flex items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm hover:bg-destructive/15"
+          >
+            <AlertTriangle className="size-5 shrink-0 text-destructive" />
+            <span className="flex-1">
+              <span className="font-medium">
+                {lists.doubleBooked.length} · {oldCopy.doubleBookedTitle}
+              </span>
+              <span className="block text-muted-foreground">{oldCopy.doubleBookedBody}</span>
+            </span>
+            <ChevronRight className="size-4" />
+          </Link>
+        ) : null}
+      </section>
 
-      {turnarounds.length > 0 ? (
-        <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
-          <ul className="space-y-1 text-sm">
-            {turnarounds.map((t) => (
-              <li key={t.id}>
-                <span className="font-medium">{t.room}</span> · {todayRequestsCopy.tightTurnaround(t.gap)}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <WaitingOnYou propertyId={selectedId} />
+        <CleaningToday windows={(data?.windows ?? []) as never} lists={lists} todayIso={todayIso} roomName={roomName} />
+        <MaintenanceAhead propertyId={selectedId} />
+        <Connections propertyId={selectedId} />
+        <GuideCard propertyId={selectedId} arriving={lists.arriving} />
+        {property ? <KioskCard property={property} /> : null}
+      </div>
+
+      <KeySettings isUk={(property?.country_code ?? "GB") === "GB"} />
+
+      {workspace.data?.hostId ? <GuestReviews hostId={workspace.data.hostId} /> : null}
+    </div>
+  );
+}
+
+/* --------------------------------- guests -------------------------------- */
+
+function GuestPeek({ b, roomName }: { b: Stay; roomName: (id: string | null) => string }) {
+  const sites = useBookingSites();
+  const site = sites.find((s) => s.key === platformKey(b));
+  const n = nightsBetween(b.check_in_date, b.check_out_date);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 truncate font-medium">{b.guest_full_name ?? copy.guestNoName}</span>
+        <ChannelBadge channel={b.channel as Channel} label={site?.label} />
+      </div>
+      <div>
+        <PeekFact label={copy.room} value={roomName(b.room_id)} />
+        <PeekFact label={copy.arrives} value={`${formatUkDate(b.check_in_date)}${b.check_in_time ? `, ${formatUkTime(b.check_in_time)}` : ""}`} />
+        <PeekFact label={copy.leaves} value={`${formatUkDate(b.check_out_date)}${b.check_out_time ? `, ${formatUkTime(b.check_out_time)}` : ""}`} />
+        <PeekFact label={copy.nights} value={n} />
+        <PeekFact label={copy.guests} value={b.guest_count ?? 1} />
+        {b.reservation_code ? <PeekFact label={copy.reference} value={b.reservation_code} /> : null}
+        <PeekFact label={copy.status} value={b.status === "checked_in" ? copy.checkedIn : b.status === "needs_details" ? copy.guestNoName : copy.notCheckedIn} />
+      </div>
+      <Link to="/app/bookings" search={{ guest: b.id }} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        {copy.openCard} <ArrowRight className="size-3.5" />
+      </Link>
+    </div>
+  );
+}
+
+function GuestTile({
+  icon: Icon,
+  label,
+  show,
+  stays,
+  empty,
+  roomName,
+  time,
+  tone,
+}: {
+  icon: typeof DoorOpen;
+  label: string;
+  show: "arriving" | "staying" | "leaving" | "needs_details";
+  stays: Stay[];
+  empty: string;
+  roomName: (id: string | null) => string;
+  time: "in" | "out";
+  tone?: "attention" | undefined;
+}) {
+  const when = (b: Stay) => (time === "in" ? formatUkTime(b.check_in_time) : b.check_out_date === b.check_in_date ? "" : formatUkDate(b.check_out_date));
+  return (
+    <article className={cn("card-soft flex flex-col p-4", tone === "attention" && "ring-1 ring-accent/50")}>
+      <Peek
+        className="block"
+        content={
+          stays.length ? (
+            <ul className="space-y-1.5">
+              {stays.slice(0, 8).map((b) => (
+                <li key={b.id}>
+                  <Link to="/app/bookings" search={{ guest: b.id }} className="flex items-center justify-between gap-3 rounded-lg px-1 py-0.5 hover:bg-muted">
+                    <span className="min-w-0 truncate">{b.guest_full_name ?? copy.guestNoName}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {roomName(b.room_id)} {when(b) ? `· ${when(b)}` : ""}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+              {stays.length > 8 ? <li className="text-xs text-muted-foreground">{copy.seeAll(stays.length)}</li> : null}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">{empty}</p>
+          )
+        }
+      >
+        <Link to="/app/bookings" search={{ show }} className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className={cn("grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary", tone === "attention" && "bg-accent/15 text-accent")}>
+            <Icon className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-3xl leading-none">{stays.length}</span>
+            <span className="block truncate text-sm text-muted-foreground">{label}</span>
+          </span>
+          <ChevronRight className="size-4 text-muted-foreground" />
+        </Link>
+      </Peek>
+      <ul className="mt-3 flex flex-wrap gap-1.5">
+        {stays.length === 0 ? <li className="text-xs text-muted-foreground">{empty}</li> : null}
+        {stays.slice(0, 4).map((b) => (
+          <li key={b.id} className="max-w-full">
+            <Peek content={<GuestPeek b={b} roomName={roomName} />}>
+              <Link
+                to="/app/bookings"
+                search={{ guest: b.id }}
+                className="inline-flex max-w-full items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium hover:bg-secondary/70"
+              >
+                <span className="truncate">{b.guest_full_name ?? copy.guestNoName}</span>
+                <span className="shrink-0 text-muted-foreground">· {roomName(b.room_id)}</span>
+              </Link>
+            </Peek>
+          </li>
+        ))}
+        {stays.length > 4 ? (
+          <li>
+            <Link to="/app/bookings" search={{ show }} className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium text-primary hover:underline">
+              {copy.seeAll(stays.length)}
+            </Link>
+          </li>
+        ) : null}
+      </ul>
+    </article>
+  );
+}
+
+/* ------------------------------- cards ---------------------------------- */
+
+function Card({ icon: Icon, title, action, children, id }: { icon: typeof DoorOpen; title: string; action?: ReactNode; children: ReactNode; id?: string }) {
+  return (
+    <section id={id} className="card-soft flex flex-col p-5">
+      <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Icon className="size-5 shrink-0 text-primary" />
+        <h2 className="mr-auto text-lg">{title}</h2>
+        <span className="text-sm">{action}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function CardLink({ to, search, children }: { to: string; search?: Record<string, string>; children: ReactNode }) {
+  return (
+    <Link to={to as never} search={search as never} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+      {children} <ArrowRight className="size-3.5" />
+    </Link>
+  );
+}
+
+const rowClass = "flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 hover:bg-muted";
+
+function WaitingOnYou({ propertyId }: { propertyId: string }) {
+  const jobsFn = useServerFn(listJobs);
+  const extrasFn = useServerFn(listExtrasRequests);
+  const decide = useServerFn(decideExtrasRequest);
+  const qc = useQueryClient();
+  const { canWrite } = useRole();
+  const jobs = useQuery({ queryKey: ["jobs", propertyId], queryFn: () => jobsFn({ data: { propertyId } }), refetchInterval: 30_000 });
+  const extras = useQuery({ queryKey: ["extras-inbox", propertyId], queryFn: () => extrasFn({ data: { propertyId } }), refetchInterval: 30_000 });
+  type J = { id: string; source: string; status: string; category: string; title: string; note: string | null; scheduled_at: string | null; created_at: string; archived_at?: string | null; rooms: { display_name: string } | null; bookings: { guest_full_name: string | null } | null };
+  const open = openGuestRequests((jobs.data?.jobs ?? []) as unknown as J[]);
+  const waitingExtras = (extras.data ?? []).filter((r) => r.status === "requested");
+  const label: Record<string, string> = { new: copy.requestNew, acknowledged: copy.requestSeen, booked: copy.requestBooked, in_progress: copy.requestDoing };
+
+  async function act(id: string, action: "approve" | "decline") {
+    try {
+      await decide({ data: { id, action, window: null, note: null } });
+      await qc.invalidateQueries({ queryKey: ["extras-inbox", propertyId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    }
+  }
+
+  const count = open.length + waitingExtras.length;
+  return (
+    <Card icon={Inbox} title={copy.waitingTitle} action={count ? <Badge>{count}</Badge> : null}>
+      {jobs.isLoading || extras.isLoading ? <Skeleton className="h-20 rounded-xl" /> : null}
+      {!jobs.isLoading && !extras.isLoading && count === 0 ? <p className="text-sm text-muted-foreground">{copy.waitingEmpty}</p> : null}
+      <ul className="space-y-1">
+        {waitingExtras.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center gap-2">
+            <Peek
+              className="min-w-0 flex-1"
+              content={
+                <div>
+                  <p className="font-medium">
+                    {r.guest}
+                    {r.room ? ` · ${r.room}` : ""}
+                  </p>
+                  <ul className="my-2 list-inside list-disc">
+                    {r.items.map((i) => (
+                      <li key={i.name}>
+                        {i.qty}× {i.name}
+                      </li>
+                    ))}
+                  </ul>
+                  {r.note ? <PeekFact label={copy.note} value={r.note} /> : null}
+                  <PeekFact label={copy.asked} value={clock(r.createdAt)} />
+                  {r.totalPence > 0 ? <PeekFact label={copy.total} value={formatPence(r.totalPence)} /> : null}
+                </div>
+              }
+            >
+              <Link to="/app/services" search={{ request: r.id }} className={rowClass}>
+                <Badge variant="secondary">{copy.extrasLabel}</Badge>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {r.guest} · {r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}
+                </span>
+              </Link>
+            </Peek>
+            {canWrite ? (
+              <span className="flex gap-1">
+                <Button size="sm" onClick={() => void act(r.id, "approve")}>
+                  {extrasCopy.approve}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => void act(r.id, "decline")}>
+                  {extrasCopy.decline}
+                </Button>
+              </span>
+            ) : null}
+          </li>
+        ))}
+        {open.map((j) => (
+          <li key={j.id}>
+            <Peek
+              className="block"
+              content={
+                <div>
+                  <p className="font-medium">{j.title}</p>
+                  {j.note ? <p className="mt-1 text-muted-foreground">{j.note}</p> : null}
+                  <div className="mt-2">
+                    {j.bookings?.guest_full_name ? <PeekFact label={copy.guests} value={j.bookings.guest_full_name} /> : null}
+                    {j.rooms?.display_name ? <PeekFact label={copy.room} value={j.rooms.display_name} /> : null}
+                    <PeekFact label={copy.asked} value={clock(j.created_at)} />
+                    <PeekFact label={copy.status} value={label[j.status] ?? j.status} />
+                  </div>
+                </div>
+              }
+            >
+              <Link to="/app/services" search={{ job: j.id }} className={rowClass}>
+                <Badge variant={j.status === "new" ? "default" : "outline"}>{label[j.status] ?? j.status}</Badge>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {j.title}
+                  {j.rooms?.display_name ? ` · ${j.rooms.display_name}` : ""}
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </Link>
+            </Peek>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function CleaningToday({
+  windows,
+  lists,
+  todayIso,
+  roomName,
+}: {
+  windows: Array<{ id: string; room_id: string | null; day_of_week: number | null; start_time: string | null; end_time: string | null; reason: string | null }>;
+  lists: ReturnType<typeof todayBoard<Stay>>;
+  todayIso: string;
+  roomName: (id: string | null) => string;
+}) {
+  const today = windowsToday(windows, todayIso);
+  const tight = tightTurnarounds(lists);
+  const stay = (id: string) => [...lists.arriving, ...lists.leaving].find((b) => b.id === id);
+  return (
+    <Card icon={SprayCan} title={copy.cleaningTitle} action={<CardLink to="/app/properties" search={{ focus: "cleaning" }}>{copy.setTimes}</CardLink>}>
+      {today.length === 0 && tight.length === 0 ? <p className="text-sm text-muted-foreground">{copy.cleaningEmpty}</p> : null}
+      <ul className="space-y-1">
+        {tight.map((t) => {
+          const out = stay(t.leavingId);
+          const inn = stay(t.arrivingId);
+          return (
+            <li key={t.leavingId}>
+              <Peek
+                className="block"
+                content={
+                  <div>
+                    <PeekFact label={copy.leaving} value={`${out?.guest_full_name ?? copy.guestNoName}, ${formatUkTime(out?.check_out_time ?? "11:00")}`} />
+                    <PeekFact label={copy.arriving} value={`${inn?.guest_full_name ?? copy.guestNoName}, ${formatUkTime(inn?.check_in_time ?? "15:00")}`} />
+                  </div>
+                }
+              >
+                <Link to="/app/bookings" search={{ guest: t.arrivingId }} className={cn(rowClass, "bg-accent/10")}>
+                  <AlertTriangle className="size-4 shrink-0 text-accent" />
+                  <span className="flex-1 text-sm">{copy.turnaround(roomName(t.roomId), t.gapMinutes)}</span>
+                </Link>
+              </Peek>
+            </li>
+          );
+        })}
+        {today.map((w) => (
+          <li key={w.id}>
+            <Peek className="block" content={<p>{w.reason ?? "Cleaning"} · {w.room_id ? roomName(w.room_id) : copy.wholeHouse}</p>}>
+              <Link to="/app/properties" search={{ focus: "cleaning" }} className={rowClass}>
+                <span className="w-28 shrink-0 text-sm tabular-nums">
+                  {formatUkTime(w.start_time)}–{formatUkTime(w.end_time)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {w.reason ?? "Cleaning"} · {w.room_id ? roomName(w.room_id) : copy.wholeHouse}
+                </span>
+              </Link>
+            </Peek>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function MaintenanceAhead({ propertyId }: { propertyId: string }) {
+  const jobsFn = useServerFn(listJobs);
+  const jobs = useQuery({ queryKey: ["jobs", propertyId], queryFn: () => jobsFn({ data: { propertyId } }), refetchInterval: 30_000 });
+  type J = { id: string; source: string; status: string; category: string; title: string; note: string | null; scheduled_at: string | null; created_at: string; archived_at?: string | null; rooms: { display_name: string } | null; provider: { name: string } | null };
+  const ahead = maintenanceAhead((jobs.data?.jobs ?? []) as unknown as J[], new Date());
+  return (
+    <Card icon={Wrench} title={copy.maintenanceTitle} action={<CardLink to="/app/services" search={{ tab: "planned" }}>{copy.bookMaintenance}</CardLink>}>
+      {jobs.isLoading ? <Skeleton className="h-16 rounded-xl" /> : ahead.length === 0 ? <p className="text-sm text-muted-foreground">{copy.maintenanceEmpty}</p> : null}
+      <ul className="space-y-1">
+        {ahead.map((j) => (
+          <li key={j.id}>
+            <Peek
+              className="block"
+              content={
+                <div>
+                  <p className="font-medium">{j.title}</p>
+                  {j.note ? <p className="mt-1 text-muted-foreground">{j.note}</p> : null}
+                  <div className="mt-2">
+                    <PeekFact label={copy.arrives} value={clock(j.scheduled_at!)} />
+                    {j.rooms?.display_name ? <PeekFact label={copy.room} value={j.rooms.display_name} /> : null}
+                    {j.provider?.name ? <PeekFact label={copy.trade} value={j.provider.name} /> : null}
+                    <PeekFact label={copy.status} value={j.status.replace("_", " ")} />
+                  </div>
+                </div>
+              }
+            >
+              <Link to="/app/services" search={{ job: j.id }} className={rowClass}>
+                <span className="w-32 shrink-0 text-sm tabular-nums">{clock(j.scheduled_at!)}</span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {j.title}
+                  {j.rooms?.display_name ? ` · ${j.rooms.display_name}` : ""}
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </Link>
+            </Peek>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function Connections({ propertyId }: { propertyId: string }) {
+  const q = useConnections(propertyId);
+  const sites = useBookingSites();
+  type C = { id: string; channel: string; site_key?: string | null; listing_name: string | null; sync_status: string; sync_started_at?: string | null; last_error?: string | null; last_synced_at: string | null; rooms: { display_name: string } | null };
+  const links = (q.data?.connections ?? []) as unknown as C[];
+  const states = links.map((c) => linkState(c));
+  const bad = states.filter((s) => s === "error" || s === "warning").length;
+  const tone: Record<string, string> = { ok: "bg-success", syncing: "bg-primary animate-pulse", warning: "bg-accent", error: "bg-destructive", never: "bg-muted-foreground" };
+  return (
+    <Card
+      icon={CalendarSync}
+      title={copy.connectionsTitle}
+      action={links.length ? <Badge variant={bad ? "destructive" : "secondary"}>{bad ? copy.someProblems(bad, links.length) : copy.allWorking(links.length)}</Badge> : null}
+    >
+      {q.isLoading ? <Skeleton className="h-16 rounded-xl" /> : null}
+      {!q.isLoading && links.length === 0 ? <CardLink to="/app/connections">{copy.connect}</CardLink> : null}
+      <ul className="space-y-1">
+        {links.map((c, i) => {
+          const site = sites.find((s) => s.key === platformKey(c as never));
+          const state = states[i]!;
+          return (
+            <li key={c.id}>
+              <Peek
+                className="block"
+                content={
+                  <div>
+                    <p className="font-medium">{c.listing_name ?? site?.label ?? c.channel}</p>
+                    <PeekFact label={copy.room} value={c.rooms?.display_name ?? copy.wholeHouse} />
+                    <PeekFact label={copy.status} value={linkTools.states[state]} />
+                    <PeekFact label={copy.lastChecked} value={c.last_synced_at ? clock(c.last_synced_at) : "—"} />
+                    {state === "error" || state === "warning" ? <p className="mt-2 rounded-lg bg-muted p-2">{explainSyncError(c.last_error)}</p> : null}
+                  </div>
+                }
+              >
+                <Link to="/app/connections" search={{ link: c.id }} className={rowClass}>
+                  <span className={cn("size-2.5 shrink-0 rounded-full", tone[state])} aria-hidden />
+                  <ChannelBadge channel={c.channel as Channel} label={site?.label} />
+                  <span className="min-w-0 flex-1 truncate text-sm">{c.rooms?.display_name ?? c.listing_name ?? ""}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{linkTools.states[state]}</span>
+                </Link>
+              </Peek>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+function GuideCard({ propertyId, arriving }: { propertyId: string; arriving: Stay[] }) {
+  const fn = useServerFn(getGuideEditor);
+  const { canWrite } = useRole();
+  const q = useQuery({ queryKey: ["guide", propertyId], queryFn: () => fn({ data: { propertyId } }) });
+  const keys = SECTIONS.map((s) => s.key);
+  const p = guideProgress(keys, (q.data?.sections ?? []) as Array<{ roomId: string | null; sectionKey: (typeof keys)[number] }>);
+  const title = (k: string) => SECTIONS.find((s) => s.key === k)?.title ?? k;
+  return (
+    <Card icon={BookOpen} title={copy.guideTitle} action={<CardLink to="/app/guides">{copy.editGuide}</CardLink>}>
+      {q.isLoading ? (
+        <Skeleton className="h-16 rounded-xl" />
+      ) : (
+        <Peek
+          className="block"
+          content={
+            p.missing.length ? (
+              <div>
+                <p className="mb-1 font-medium">{copy.guideMissing}</p>
+                <ul className="space-y-0.5">
+                  {p.missing.map((k) => (
+                    <li key={k}>
+                      <Link to="/app/guides" search={{ section: k }} className="hover:underline">
+                        {title(k)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p>{copy.guideComplete}</p>
+            )
+          }
+        >
+          <Link to="/app/guides" search={p.missing[0] ? { section: p.missing[0] } : {}} className={cn(rowClass, "flex-col items-stretch gap-2")}>
+            <span className="text-sm font-medium">{copy.guideProgress(p.done.length, keys.length)}</span>
+            <span className="h-2 overflow-hidden rounded-full bg-muted">
+              <span className="block h-full rounded-full bg-primary" style={{ width: `${(p.done.length / keys.length) * 100}%` }} />
+            </span>
+          </Link>
+        </Peek>
+      )}
+      {canWrite && arriving.length ? (
+        <div className="mt-3 border-t border-border pt-3">
+          <p className="mb-2 text-sm font-medium">{copy.guideToday}</p>
+          <ul className="space-y-1.5">
+            {arriving.slice(0, 6).map((b) => (
+              <li key={b.id} className="flex items-center gap-2">
+                <Link to="/app/bookings" search={{ guest: b.id }} className="min-w-0 flex-1 truncate text-sm hover:underline">
+                  {b.guest_full_name ?? copy.guestNoName}
+                </Link>
+                <GuideLinkButton bookingId={b.id} className="h-8 px-3 text-xs" />
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
-
-      {doubleBooked.length > 0 ? (
-        <div role="alert" className="flex gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
-          <AlertTriangle className="size-5 shrink-0 text-destructive" />
-          <div className="text-sm">
-            <p className="font-medium">{copy.doubleBookedTitle}</p>
-            <p className="text-muted-foreground">{copy.doubleBookedBody}</p>
-            <ul className="mt-2 space-y-1">
-              {doubleBooked.map((b) => (
-                <li key={b.id} className="flex flex-wrap items-center gap-2">
-                  <ChannelBadge channel={b.channel as Channel} />
-                  <span>
-                    {b.guest_full_name ?? b.reservation_code} · {roomName(b.room_id)} ·{" "}
-                    {formatUkDate(b.check_in_date)} → {formatUkDate(b.check_out_date)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
       ) : null}
+    </Card>
+  );
+}
 
-      {windowsToday.length > 0 ? (
-        <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm">
-          <span className="font-medium">{copy.cleaningToday}: </span>
-          {windowsToday
-            .map(
-              (w) =>
-                `${formatUkTime(w.start_time)}–${formatUkTime(w.end_time)} ${
-                  w.reason ?? "Cleaning"
-                }`,
-            )
-            .join(" · ")}
-        </div>
-      ) : null}
+function KioskCard({ property }: { property: { id: string; short_code: string } }) {
+  const tile = "flex items-center gap-2 whitespace-nowrap rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted";
+  return (
+    <Card icon={QrCode} title={copy.kioskTitle} action={<CardLink to="/app/properties" search={{ focus: "checkin" }}>{copy.checkinSettings}</CardLink>}>
+      <p className="mb-3 text-sm text-muted-foreground">{copy.kioskBody}</p>
+      <div className="flex flex-wrap gap-2">
+        <Peek content={<p>{copy.kioskPeek}</p>}>
+          <a href={`/kiosk/${property.short_code}`} target="_blank" rel="noopener noreferrer" className={tile}>
+            <Monitor className="size-4 text-primary" /> {copy.openKiosk} <ExternalLink className="ml-auto size-3.5 text-muted-foreground" />
+          </a>
+        </Peek>
+        <Peek content={<p>{copy.pagePeek(`/p/${property.short_code}`)}</p>}>
+          <a href={`/p/${property.short_code}`} target="_blank" rel="noopener noreferrer" className={tile}>
+            <DoorOpen className="size-4 text-primary" /> {copy.guestPage} <ExternalLink className="ml-auto size-3.5 text-muted-foreground" />
+          </a>
+        </Peek>
+        <Peek content={<p>{copy.qrPeek}</p>}>
+          <Link to="/app/print/$propertyId" params={{ propertyId: property.id }} className={tile}>
+            <Printer className="size-4 text-primary" /> {copy.printQr}
+          </Link>
+        </Peek>
+      </div>
+    </Card>
+  );
+}
 
-      {rooms.length > 0 ? (
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="mr-auto">
-              <h2 className="text-xl">{calCopy.title}</h2>
-              <p className="text-sm text-muted-foreground">{calCopy.subtitle}</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setWeekOffset((o) => o - 1)}>
-              {calCopy.earlier}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setWeekOffset((o) => o + 1)}>
-              {calCopy.later}
-            </Button>
-          </div>
-          <div className="card-soft overflow-x-auto p-0">
-            <StayCalendar
-              rooms={rooms}
-              stays={all}
-              windows={(data?.windows ?? []) as Array<{ room_id: string | null; day_of_week: number | null }>}
-              days={days}
-              today={todayIso}
-              activity={activity}
-              onOpen={setOpenId}
-            />
-          </div>
-        </section>
-      ) : null}
-
-      {needsDetails.length > 0 ? (
-        <section id="needs-details" className="scroll-mt-20 space-y-3">
-          <div>
-            <h2 className="text-xl">{copy.actionRequired}</h2>
-            <p className="text-sm text-muted-foreground">{copy.actionBody}</p>
-          </div>
-          {needsDetails.map(({ b }) => (
-            <NeedsDetailsCard key={b.id} booking={b} roomName={roomName(b.room_id)} />
-          ))}
-        </section>
-      ) : null}
-
-      <section id="arriving" className="scroll-mt-20 space-y-3">
-        <h2 className="text-xl">{copy.arriving}</h2>
-        {arriving.length === 0 ? (
-          <EmptyState icon={DoorOpen} title={copy.noArrivals} />
-        ) : (
-          <ul className="card-soft overflow-hidden p-0">
-            {arriving.map(({ b, state }) => (
-              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} onOpen={setOpenId} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section id="in-stay" className="scroll-mt-20 space-y-3">
-        <h2 className="text-xl">{copy.inStay}</h2>
-        {inStay.length === 0 ? (
-          <EmptyState icon={BedDouble} title={copy.noStays} />
-        ) : (
-          <ul className="card-soft overflow-hidden p-0">
-            {inStay.map(({ b, state }) => (
-              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} onOpen={setOpenId} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section id="departing" className="scroll-mt-20 space-y-3">
-        <h2 className="text-xl">{copy.departing}</h2>
-        {departing.length === 0 ? (
-          <EmptyState icon={CalendarClock} title={copy.noDepartures} />
-        ) : (
-          <ul className="card-soft overflow-hidden p-0">
-            {departing.map(({ b, state }) => (
-              <BookingRow key={b.id} booking={b} roomName={roomName(b.room_id)} state={state} onOpen={setOpenId} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {workspace.data?.hostId ? <GuestReviews hostId={workspace.data.hostId} /> : null}
-
-      <GuestSheet
-        bookingId={openId}
-        today={todayIso}
-        onOpenChange={(o) => (o ? null : setOpenId(null))}
-        onEdit={(id) => void navigate({ to: "/app/bookings", search: { guest: id, edit: true } })}
-      />
-    </div>
+function KeySettings({ isUk }: { isUk: boolean }) {
+  const { isOwner } = useRole();
+  const links: Array<{ key: string; to: string; search?: Record<string, string> }> = [
+    { key: "property", to: "/app/properties", search: { focus: "property" } },
+    { key: "checkin", to: "/app/properties", search: { focus: "checkin" } },
+    { key: "records", to: "/app/properties", search: { focus: "records" } },
+    { key: "rooms", to: "/app/properties", search: { focus: "rooms" } },
+    { key: "cleaning", to: "/app/properties", search: { focus: "cleaning" } },
+    { key: "team", to: "/app/settings", search: { focus: "team" } },
+    ...(isOwner ? [{ key: "payments", to: "/app/settings", search: { focus: "payments" } }] : []),
+    { key: "invoices", to: "/app/settings", search: { focus: "invoices" } },
+    { key: "api", to: "/app/settings", search: { focus: "api" } },
+    ...(isOwner ? [{ key: "billing", to: "/app/billing" }] : []),
+    ...(isUk ? [{ key: "register", to: "/app/register" }] : []),
+  ];
+  return (
+    <Card icon={Settings2} title={copy.settingsTitle}>
+      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {links.map((l) => {
+          const [name, about] = copy.settingsLinks[l.key]!;
+          return (
+            <li key={l.key}>
+              <Peek className="block" content={<p>{about}</p>}>
+                <Link to={l.to as never} search={l.search as never} className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted">
+                  <span className="flex-1">{name}</span>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </Link>
+              </Peek>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }
 
@@ -488,11 +693,14 @@ function AlertsPanel() {
         {items.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface p-3 text-sm">
             <span className="min-w-0 flex-1">
-              {a.message}
-              <span className="block text-xs text-muted-foreground">
-                {formatUkDate(a.created_at.slice(0, 10))},{" "}
-                {new Date(a.created_at).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}
-              </span>
+              {(a as { booking_id?: string | null }).booking_id ? (
+                <Link to="/app/bookings" search={{ guest: (a as { booking_id: string }).booking_id }} className="hover:underline">
+                  {a.message}
+                </Link>
+              ) : (
+                a.message
+              )}
+              <span className="block text-xs text-muted-foreground">{clock(a.created_at)}</span>
             </span>
             <Button
               variant="outline"
@@ -510,3 +718,4 @@ function AlertsPanel() {
     </section>
   );
 }
+

@@ -22,6 +22,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.22",
+    date: "2026-10-14",
+    title: "Today, at a glance",
+    items: [
+      { kind: "improved", area: "Bookings", text: "Today is now a dashboard: guests arriving, staying and leaving, stays needing details, guest requests, cleaning times, maintenance, calendar connections, the guest guide, kiosk and QR, and key settings." },
+      { kind: "new", area: "Bookings", text: "Hover, or press and hold on a phone, any number, name or card on Today to see the details behind it; tap to go straight to it." },
+      { kind: "new", area: "Bookings", text: "Links land on exactly what you tapped: a guest's card, a calendar link, a job, a guide section or a settings section, highlighted when you arrive." },
+      { kind: "improved", area: "Bookings", text: "Stays that need details and possible double bookings now sit at the top of Bookings, with the full list and timeline." },
+    ],
+  },
+  {
     version: "0.21",
     date: "2026-10-14",
     title: "Launch offer: £1 for your first month",

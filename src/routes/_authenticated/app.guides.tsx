@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useLandOn } from "@/hooks/use-land-on";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowDown, ArrowUp, BookOpen, ImagePlus, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
@@ -33,6 +34,8 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/guides")({
+  // ?section=<section key> opens that section of the house guide.
+  validateSearch: (s: Record<string, unknown>): { section?: string } => (typeof s["section"] === "string" ? { section: s["section"] } : {}),
   head: () => ({
     meta: [
       { title: "Stay guides · Latchkey host dashboard" },
@@ -70,6 +73,8 @@ function GuidesPage() {
   const fn = useServerFn(getGuideEditor);
   const q = useQuery({ queryKey: ["guide", selectedId], enabled: Boolean(selectedId), queryFn: () => fn({ data: { propertyId: selectedId! } }) });
   const [scope, setScope] = useState<string>("house");
+  const { section: linkedSection } = Route.useSearch();
+  useLandOn(linkedSection ? `guide-${linkedSection}` : null, !q.isLoading);
   const qc = useQueryClient();
   const starter = useServerFn(addStarterGuide);
   const setMode = useServerFn(setRoomGuideMode);
@@ -170,14 +175,14 @@ function GuidesPage() {
       {q.isLoading ? (
         <Skeleton className="h-96 rounded-2xl" />
       ) : (
-        <Accordion type="single" collapsible className="space-y-3">
+        <Accordion type="single" collapsible className="space-y-3" defaultValue={linkedSection ?? ""}>
           {order.map((key) => {
             const s = SECTIONS.find((x) => x.key === key)!;
             const own = sections.find((x) => x.sectionKey === s.key && x.roomId === roomId) ?? null;
             const house = roomId ? sections.find((x) => x.sectionKey === s.key && x.roomId === null) ?? null : null;
             const Icon = guestGuideIcons[s.key];
             return (
-              <AccordionItem key={`${scope}-${s.key}`} value={s.key} className="card-soft border-0 px-4">
+              <AccordionItem key={`${scope}-${s.key}`} id={`guide-${s.key}`} value={s.key} className="card-soft scroll-mt-24 border-0 px-4">
                 <AccordionTrigger className="min-h-14 hover:no-underline">
                   <span className="flex flex-wrap items-center gap-3 text-left">
                     <Icon className="size-5 text-primary" aria-hidden />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useLandOn } from "@/hooks/use-land-on";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { BedDouble, Home, Loader2, Plus, Trash2 } from "lucide-react";
@@ -43,7 +44,12 @@ import {
   saveUnavailability,
 } from "@/lib/host.functions";
 
+const FOCUS = ["property", "checkin", "records", "rooms", "cleaning"] as const;
+
 export const Route = createFileRoute("/_authenticated/app/properties")({
+  // ?focus=<section> lands on that part of the property (e.g. cleaning times).
+  validateSearch: (s: Record<string, unknown>): { focus?: (typeof FOCUS)[number] } =>
+    typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {},
   head: () => ({
     meta: [
       { title: "Properties · Latchkey host dashboard" },
@@ -633,6 +639,8 @@ function PropertiesPage() {
   const propertyList = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(propertyList);
   const board = usePropertyBoard(selectedId);
+  const { focus } = Route.useSearch();
+  useLandOn(focus ? `property-${focus}` : null, !board.isLoading && !!board.data);
   const removeRoom = useServerFn(deleteRoom);
   const qc = useQueryClient();
 
@@ -698,7 +706,7 @@ function PropertiesPage() {
       />
 
       {property ? (
-        <section className="card-soft p-5">
+        <section id="property-property" className="card-soft scroll-mt-24 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-xl">{property.name}</h2>
@@ -741,13 +749,19 @@ function PropertiesPage() {
       ) : null}
 
       {property ? (
+        <div id="property-checkin" className="scroll-mt-24 rounded-2xl">
         <CheckinSettings
           property={property as unknown as { id: string; short_code: string; checkin_methods: unknown }}
         />
+        </div>
       ) : null}
-      {property ? <GuestRecordsSettings property={property as unknown as { id: string; guest_records?: unknown; country_code?: string | null }} /> : null}
+      {property ? (
+        <div id="property-records" className="scroll-mt-24 rounded-2xl">
+          <GuestRecordsSettings property={property as unknown as { id: string; guest_records?: unknown; country_code?: string | null }} />
+        </div>
+      ) : null}
 
-      <section className="space-y-3">
+      <section id="property-rooms" className="scroll-mt-24 space-y-3 rounded-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-xl">Rooms</h2>
           <Button onClick={() => setRoomDialog({ open: true, room: null })}>
@@ -796,7 +810,9 @@ function PropertiesPage() {
         )}
       </section>
 
-      <WindowEditor propertyId={selectedId} rooms={rooms} windows={windows} />
+      <div id="property-cleaning" className="scroll-mt-24 rounded-2xl">
+        <WindowEditor propertyId={selectedId} rooms={rooms} windows={windows} />
+      </div>
 
       {roomDialog.open ? (
         <RoomDialog

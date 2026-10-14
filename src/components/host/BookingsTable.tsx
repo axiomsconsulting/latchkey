@@ -206,6 +206,7 @@ export function BookingsTable({
             {sections.map(({ b, heading }) => (
               <BookingRowGroup key={b.id} heading={heading} span={COLUMNS.length + (selecting ? 1 : 0)}>
                 <tr
+                  id={`stay-${b.id}`}
                   className={cn("cursor-pointer border-b border-border last:border-0 hover:bg-muted", picked.has(b.id) && "bg-primary/5")}
                   onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
                 >

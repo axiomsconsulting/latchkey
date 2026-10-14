@@ -39,13 +39,22 @@ import { platformKey } from "@/lib/booking-sites";
 import { addDays, formatUkDate } from "@/lib/dates";
 import { archiveBookings, deleteBookings, syncPropertyNow } from "@/lib/guests.functions";
 import { cn } from "@/lib/utils";
+import { todayBoard, type TodayBooking } from "@/lib/today";
+import { useLandOn } from "@/hooks/use-land-on";
+import { NeedsDetailsCard, type NeedsDetailsBooking } from "@/components/host/NeedsDetailsCard";
+import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
+import { AlertTriangle, X } from "lucide-react";
+import { today as todayCopy } from "@/content/copy";
 
 export const Route = createFileRoute("/_authenticated/app/bookings")({
   // ?guest=<booking id> opens that guest's card, e.g. from Today.
   // ?edit=1 also opens the edit form, e.g. from the Edit button on Today.
-  validateSearch: (search: Record<string, unknown>): { guest?: string; edit?: boolean } => ({
+  // ?show=arriving|staying|leaving|needs_details|double_booked lists just those
+  // stays, worked out exactly as Today does, e.g. from a number on Today.
+  validateSearch: (search: Record<string, unknown>): { guest?: string; edit?: boolean; show?: ShowKey } => ({
     ...(typeof search["guest"] === "string" ? { guest: search["guest"] } : {}),
     ...(search["edit"] === true || search["edit"] === "1" || search["edit"] === 1 ? { edit: true } : {}),
+    ...(typeof search["show"] === "string" && (SHOW_KEYS as readonly string[]).includes(search["show"]) ? { show: search["show"] as ShowKey } : {}),
   }),
   head: () => ({
     meta: [
@@ -59,6 +68,9 @@ export const Route = createFileRoute("/_authenticated/app/bookings")({
   }),
   component: BookingsPage,
 });
+
+const SHOW_KEYS = ["arriving", "staying", "leaving", "needs_details", "double_booked"] as const;
+type ShowKey = (typeof SHOW_KEYS)[number];
 
 const FILTERS_KEY = "latchkey.bookingFilters";
 const STATUS_KEYS = [
@@ -77,7 +89,7 @@ function BookingsPage() {
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);
-  const { guest, edit } = Route.useSearch();
+  const { guest, edit, show } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const { canWrite } = useRole();
   const qc = useQueryClient();
@@ -130,8 +142,8 @@ function BookingsPage() {
     if (!b) return;
     setEditing(b);
     setDialogOpen(true);
-    void navigate({ to: "/app/bookings", search: { guest }, replace: true });
-  }, [edit, guest, everything, navigate]);
+    void navigate({ to: "/app/bookings", search: { guest, ...(show ? { show } : {}) }, replace: true });
+  }, [edit, guest, everything, navigate, show]);
   const todayIso = data?.today ?? new Date().toISOString().slice(0, 10);
   const windows = (data?.windows ?? []) as Array<{
     id: string;
@@ -143,13 +155,27 @@ function BookingsPage() {
   }>;
 
   const platformOf = (b: ListBooking) => platformKey(b);
+  // The same lists Today shows, so a number there opens exactly those stays here.
+  const lists = useMemo(() => todayBoard(everything as unknown as TodayBooking[], todayIso), [everything, todayIso]);
+  const focus = show
+    ? new Set(
+        {
+          arriving: lists.arriving,
+          staying: lists.staying,
+          leaving: lists.leaving,
+          needs_details: lists.needsDetails,
+          double_booked: lists.doubleBooked,
+        }[show].map((b) => b.id),
+      )
+    : null;
   const visible = useMemo(
     () =>
-      sortBookings(filterBookings(all, filters, todayIso, platformOf), sort.key, sort.dir, todayIso, {
+      sortBookings(focus ? all.filter((b) => focus.has(b.id)) : filterBookings(all, filters, todayIso, platformOf), sort.key, sort.dir, todayIso, {
         room: (id) => rooms.find((r) => r.id === id)?.display_name ?? "",
         platform: (b) => sites.find((x) => x.key === platformKey(b))?.label ?? b.channel,
       }),
-    [all, filters, sort, todayIso, rooms, sites],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [all, filters, sort, todayIso, rooms, sites, show, lists],
   );
   // The timeline shows its own fortnight, so only room, platform and search apply.
   const filtered = useMemo(
@@ -173,8 +199,9 @@ function BookingsPage() {
   }
 
   function openGuest(id: string | null) {
-    void navigate({ to: "/app/bookings", search: id ? { guest: id } : {}, replace: true });
+    void navigate({ to: "/app/bookings", search: { ...(id ? { guest: id } : {}), ...(show ? { show } : {}) }, replace: true });
   }
+  useLandOn(show ? "bookings-list" : guest ? `stay-${guest}` : null, everything.length > 0);
 
   function toggle(id: string) {
     setPicked((prev) => {
@@ -314,6 +341,55 @@ function BookingsPage() {
         ) : null}
       </div>
 
+      {scope === "active" && lists.doubleBooked.length > 0 ? (
+        <div id="double-booked" role="alert" className="flex scroll-mt-24 gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+          <AlertTriangle className="size-5 shrink-0 text-destructive" />
+          <div className="text-sm">
+            <p className="font-medium">{todayCopy.doubleBookedTitle}</p>
+            <p className="text-muted-foreground">{todayCopy.doubleBookedBody}</p>
+            <ul className="mt-2 space-y-1">
+              {lists.doubleBooked.map((b) => (
+                <li key={b.id}>
+                  <button type="button" className="flex flex-wrap items-center gap-2 text-left hover:underline" onClick={() => openGuest(b.id)}>
+                    <ChannelBadge channel={b.channel as Channel} />
+                    <span>
+                      {b.guest_full_name ?? b.reservation_code} · {rooms.find((r) => r.id === b.room_id)?.display_name ?? "No room"} ·{" "}
+                      {formatUkDate(b.check_in_date)} → {formatUkDate(b.check_out_date)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
+      {scope === "active" && lists.needsDetails.length > 0 && canWrite ? (
+        <section id="needs-details" className="scroll-mt-24 space-y-3">
+          <div>
+            <h2 className="text-xl">{todayCopy.actionRequired}</h2>
+            <p className="text-sm text-muted-foreground">{todayCopy.actionBody}</p>
+          </div>
+          {lists.needsDetails.map((b) => (
+            <NeedsDetailsCard
+              key={b.id}
+              id={`needs-${b.id}`}
+              booking={b as unknown as NeedsDetailsBooking}
+              roomName={rooms.find((r) => r.id === b.room_id)?.display_name ?? "No room allocated"}
+            />
+          ))}
+        </section>
+      ) : null}
+
+      {show ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-secondary px-4 py-3 text-sm">
+          <span className="font-medium">{tools.showing(tools.showLabels[show] ?? show, visible.length)}</span>
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => void navigate({ to: "/app/bookings", search: {}, replace: true })}>
+            <X className="size-4" /> {tools.showEverything}
+          </Button>
+        </div>
+      ) : null}
+
       <BookingFilters
         filters={filters}
         onChange={setFilters}
@@ -358,6 +434,7 @@ function BookingsPage() {
           )}
         />
       ) : view === "list" ? (
+        <div id="bookings-list" className="scroll-mt-24 rounded-2xl">
         <BookingsTable
           rows={visible}
           allRows={everything}
@@ -372,6 +449,7 @@ function BookingsPage() {
           onToggle={toggle}
           onOpen={(id) => openGuest(id)}
         />
+        </div>
       ) : (
         <div className="card-soft overflow-x-auto p-0">
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">

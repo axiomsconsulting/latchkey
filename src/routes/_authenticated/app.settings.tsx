@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useLandOn } from "@/hooks/use-land-on";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CreditCard, History, Loader2, NotebookPen, Plus, ShieldCheck, Sparkles } from "lucide-react";
@@ -31,7 +32,12 @@ import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 
+const FOCUS = ["business", "team", "payments", "invoices", "api", "demo", "privacy"] as const;
+
 export const Route = createFileRoute("/_authenticated/app/settings")({
+  // ?focus=<section> lands on that part of Settings.
+  validateSearch: (s: Record<string, unknown>): { focus?: (typeof FOCUS)[number] } =>
+    typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {},
   head: () => ({
     meta: [
       { title: "Settings · Latchkey host dashboard" },
@@ -55,6 +61,8 @@ type Host = {
 
 function SettingsPage() {
   const workspace = useWorkspace();
+  const { focus } = Route.useSearch();
+  useLandOn(focus ? `settings-${focus}` : null, !workspace.isLoading);
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
   const load = useServerFn(loadDemoData);
@@ -153,7 +161,7 @@ function SettingsPage() {
         }
       />
 
-      <form onSubmit={submit} className="card-soft p-5">
+      <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
         {/* Business details and billing are the owner's; others can read them. */}
         <fieldset disabled={!isOwner} className="grid gap-4 sm:grid-cols-2">
         <h2 className="text-lg sm:col-span-2">{copy.business}</h2>
@@ -218,7 +226,11 @@ function SettingsPage() {
         </fieldset>
       </form>
 
-      {workspace.data ? <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} /> : null}
+      {workspace.data ? (
+        <div id="settings-team" className="scroll-mt-24 rounded-2xl">
+          <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} />
+        </div>
+      ) : null}
       {isOwner ? (
         <Link to="/app/billing" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
           <CreditCard className="size-5 text-primary" />
@@ -257,9 +269,21 @@ function SettingsPage() {
       ) : null}
 
       {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
-      {themedProperty && isOwner ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
-      {workspace.data ? <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}
-      {workspace.data ? <ApiAccessPanel hostId={workspace.data.hostId} canWrite={canWriteHost} /> : null}
+      {themedProperty && isOwner ? (
+        <div id="settings-payments" className="scroll-mt-24 rounded-2xl">
+          <PaymentsPanel propertyId={themedProperty.id} />
+        </div>
+      ) : null}
+      {workspace.data ? (
+        <div id="settings-invoices" className="scroll-mt-24 rounded-2xl">
+          <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} />
+        </div>
+      ) : null}
+      {workspace.data ? (
+        <div id="settings-api" className="scroll-mt-24 rounded-2xl">
+          <ApiAccessPanel hostId={workspace.data.hostId} canWrite={canWriteHost} />
+        </div>
+      ) : null}
       {workspace.data && !workspace.data.support ? (
         <SupportAccess
           hostId={workspace.data.hostId}
@@ -278,7 +302,7 @@ function SettingsPage() {
       {workspace.data && isOwner ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
 
       {isOwner ? (
-      <section className="card-soft p-5">
+      <section id="settings-demo" className="card-soft scroll-mt-24 p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
             <Sparkles className="size-5" />
@@ -307,7 +331,7 @@ function SettingsPage() {
       </section>
       ) : null}
 
-      <section className="card-soft p-5">
+      <section id="settings-privacy" className="card-soft scroll-mt-24 p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
             <ShieldCheck className="size-5" />
