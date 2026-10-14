@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { bookings as bookingCopy, bookingTable as copy } from "@/content/copy";
-import { GROUP_ORDER, nights, stayGroup, type ListBooking, type ListFilters, type SortKey, type StayGroup } from "@/lib/booking-list";
+import { GROUP_ORDER, closedReason, nights, stayGroup, type ListBooking, type ListFilters, type SortKey, type StayGroup } from "@/lib/booking-list";
 import { platformKey, type Site } from "@/lib/booking-sites";
 import { formatUkDate, stayState } from "@/lib/dates";
 import { formatMoney } from "@/lib/invoice";
@@ -129,6 +129,7 @@ const COLUMNS: SortKey[] = ["guest", "room", "checkIn", "checkOut", "nights", "p
  */
 export function BookingsTable({
   rows,
+  allRows,
   today,
   rooms,
   sites,
@@ -141,6 +142,8 @@ export function BookingsTable({
   onOpen,
 }: {
   rows: ListBooking[];
+  /** Every stay, so a closed night can name the booking it mirrors. */
+  allRows?: ListBooking[];
   today: string;
   rooms: Array<{ id: string; display_name: string }>;
   sites: Site[];
@@ -155,7 +158,10 @@ export function BookingsTable({
   if (rows.length === 0) return <div className="card-soft p-8 text-center text-muted-foreground">{copy.nothing}</div>;
   const roomName = (id: string | null) => rooms.find((r) => r.id === id)?.display_name ?? copy.noRoom;
   const site = (b: ListBooking) => sites.find((s) => s.key === platformKey(b));
-  const name = (b: ListBooking) => b.guest_full_name?.trim() || bookingCopy.guestUnknown;
+  const platformLabel = (b: ListBooking) => site(b)?.label ?? b.channel;
+  // Closed nights say why they're closed instead of asking for a guest name.
+  const name = (b: ListBooking) =>
+    stayGroup(b, today) === "closed" ? closedReason(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || bookingCopy.guestUnknown;
   const grouped = sort.key === "smart";
 
   function header(key: SortKey) {

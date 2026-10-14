@@ -44,7 +44,7 @@ export const template = {
   subject: (d: Record<string, any>) => `Join ${String(d['hostName'] ?? 'a host')} on Latchkey`,
   displayName: 'Team invitation',
   previewData: {
-    hostName: 'The Hill Rooms & Suites',
+    hostName: 'The Hill Suites',
     inviter: 'owner@example.com',
     roleLine: 'As a manager you can run rooms, calendars, bookings and guides.',
     url: 'https://latchkey.omsestates.uk/invite/example',

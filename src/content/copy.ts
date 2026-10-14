@@ -401,7 +401,7 @@ export const settings = {
   saved: "Saved",
   demoTitle: "Demo content",
   demoBody:
-    "Load The Hill Rooms & Suites in High Wycombe: three rooms, bookings across four channels, and Tuesday and Thursday cleaning windows.",
+    "Load The Hill Suites in Amersham: three rooms, bookings across four channels, and Tuesday and Thursday cleaning windows.",
   loadDemo: "Load demo rooms",
   resetDemo: "Reset demo dates",
   removeDemo: "Remove demo data",
@@ -506,9 +506,9 @@ export const alerts = {
 };
 
 export const guest = {
-  propertyName: "The Hill Rooms & Suites",
-  location: "High Wycombe",
-  welcome: "Welcome to The Hill Rooms & Suites",
+  propertyName: "The Hill Suites",
+  location: "Amersham",
+  welcome: "Welcome to The Hill Suites",
   welcomeBody:
     "Check yourself in, find your room and ask for anything you need. It takes about a minute and there is nothing to download.",
   startCta: "Start checking in",

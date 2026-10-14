@@ -83,6 +83,18 @@ export const getGuestDetails = createServerFn({ method: "GET" })
     ]);
     const registerAt = new Map((register.data ?? []).map((r) => [r.position, r]));
     const peopleRows = people.data ?? [];
+    // A closed night says why it's closed instead of showing a guest name.
+    let closed: string | null = null;
+    const raw = booking as { mirror_of?: string | null; status: string; notes?: string | null; channel: string };
+    if (raw.mirror_of || raw.status === "blocked") {
+      const { closedReason } = await import("./booking-list");
+      const { channels } = await import("@/content/copy");
+      const label = (x: { channel: string }) => (channels as Record<string, string>)[x.channel] ?? x.channel;
+      const { data: original } = raw.mirror_of
+        ? await sb.from("bookings").select("id, channel, guest_full_name, status, check_in_date, check_out_date, room_id").eq("id", raw.mirror_of).maybeSingle()
+        : { data: null };
+      closed = closedReason(raw as never, original ? [original as never] : [], label as never);
+    }
     const { signGuestPhotos } = await import("./checkin.server");
     const signed = await signGuestPhotos(
       peopleRows.flatMap((p) => [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x)),
@@ -97,6 +109,7 @@ export const getGuestDetails = createServerFn({ method: "GET" })
       booking: {
         id: b.id,
         guestName: b.guest_full_name,
+        closedReason: closed,
         status: b.status,
         channel: b.channel,
         source: b.source,

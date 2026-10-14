@@ -64,3 +64,17 @@ describe("bookings list", () => {
     expect(readFilters("not json")).toEqual(DEFAULT_FILTERS);
   });
 });
+
+import { closedReason } from "../src/lib/booking-list";
+
+describe("closedReason", () => {
+  const original = b("orig", { guest_full_name: "Priya Shah", channel: "airbnb" });
+  const name = (x: ListBooking) => ({ airbnb: "Airbnb", booking_com: "Booking.com" })[x.channel] ?? x.channel;
+  it("says which booking a mirrored night belongs to", () => {
+    expect(closedReason(b("m", { mirror_of: "orig", channel: "booking_com" }), [original], name)).toBe("Booked on Airbnb · Priya Shah");
+  });
+  it("explains a blocked night by its note or platform", () => {
+    expect(closedReason(b("x", { status: "blocked", channel: "booking_com" }), [], name)).toBe("Blocked on Booking.com");
+    expect(closedReason(b("y", { status: "blocked", notes: "Decorating\nback Friday" }), [], name)).toBe("Blocked: Decorating");
+  });
+});

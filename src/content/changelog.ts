@@ -22,6 +22,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.19",
+    date: "2026-10-14",
+    title: "Closed nights explain themselves",
+    items: [
+      { kind: "improved", area: "Bookings", text: "Closed nights show why they're closed (booked on another site, or blocked) instead of asking for a guest name." },
+      { kind: "improved", area: "Demo", text: "The demo property is now The Hill Suites in Amersham." },
+    ],
+  },
+  {
     version: "0.18",
     date: "2026-10-13",
     title: "A clearer bookings list and per-night invoices",
@@ -91,9 +100,9 @@ export const RELEASES: Release[] = [
   {
     version: "0.12",
     date: "2026-10-13",
-    title: "The Hill Rooms & Suites demo",
+    title: "The Hill Suites demo",
     items: [
-      { kind: "improved", area: "Demo", text: "The demo property is now The Hill Rooms & Suites." },
+      { kind: "improved", area: "Demo", text: "The demo property is now The Hill Suites." },
       { kind: "improved", area: "Demo", text: "The demo's guidance banner follows each check-in step, even when steps are skipped or added." },
     ],
   },

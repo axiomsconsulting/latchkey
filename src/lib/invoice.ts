@@ -66,7 +66,7 @@ export function invoiceNumber(prefix: string, n: number): string {
   return `${clean}-${String(n).padStart(4, "0")}`;
 }
 
-/** A sensible starting prefix from the business name: "The Hill Rooms" → "HILL". */
+/** A sensible starting prefix from the business name: "The Hill Suites" → "HILL". */
 export function suggestPrefix(name: string | null | undefined): string {
   const words = (name ?? "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter((w) => w && w !== "THE");
   return (words[0] ?? "INV").slice(0, 8) || "INV";

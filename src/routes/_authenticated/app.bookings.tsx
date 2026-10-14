@@ -360,6 +360,7 @@ function BookingsPage() {
       ) : view === "list" ? (
         <BookingsTable
           rows={visible}
+          allRows={everything}
           today={todayIso}
           rooms={rooms}
           sites={sites}

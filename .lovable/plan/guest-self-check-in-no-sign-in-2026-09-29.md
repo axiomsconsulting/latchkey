@@ -1,9 +1,9 @@
 # Guest self check-in (no sign-in)
 
 ## What guests see
-Ways in: the front-door tablet (kiosk mode), a printable QR code for each property, a short link (`/p/trinity`), or typing the 6-digit property PIN at `/checkin`.
+Ways in: the front-door tablet (kiosk mode), a printable QR code for each property, a short link (`/p/hill`), or typing the 6-digit property PIN at `/checkin`.
 
-1. Welcome: "Welcome to The Trinity Rooms. Let's get you checked in."
+1. Welcome: "Welcome to The Hill Suites. Let's get you checked in."
 2. First letter of their surname (A–Z grid).
 3. Check-out day (7 big day buttons).
 4. The platform they booked on.
@@ -16,12 +16,12 @@ Ways in: the front-door tablet (kiosk mode), a printable QR code for each proper
    - **Self-declaration.** The guest ticks "I confirm I'm the guest on this booking" and sees a friendly note: "Thank you. Your host will say hello and check your ID in person during your stay."
    - Fallback happens automatically if the camera won't start or after 2 failed photo attempts.
    - A mismatch, partial match or self-declaration lets the guest carry on, but flags the booking for the host.
-7. "You're in Room 1, The Trinity — Suite 1" and a "Your stay guide" button.
+7. "You're in Room 1, The Hill — Suite 1" and a "Your stay guide" button.
    - The booking is marked checked in, and an "arrived" entry is logged.
 
 **Basic stay page:** a private link for that stay only. It shows the room, Wi-Fi, check-out time, quiet hours, parking and host contact. The link stops working after check-out.
 
-**Kiosk mode** (`/kiosk/trinity`): full screen, and goes back to the welcome screen after 60 seconds without a tap. To exit, hold the top corner for 3 seconds, then enter the door PIN.
+**Kiosk mode** (`/kiosk/hill`): full screen, and goes back to the welcome screen after 60 seconds without a tap. To exit, hold the top corner for 3 seconds, then enter the door PIN.
 
 ## What the host sees
 - **Properties → Check-in settings:**

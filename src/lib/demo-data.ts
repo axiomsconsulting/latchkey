@@ -1,5 +1,5 @@
 /**
- * Demo content for The Hill Rooms & Suites, High Wycombe. Dates are always relative
+ * Demo content for The Hill Suites, Amersham. Dates are always relative
  * to today so the dashboard looks alive whenever it is opened.
  */
 
@@ -33,15 +33,15 @@ export type DemoBooking = {
 };
 
 export const DEMO_PROPERTY = {
-  name: "The Hill Rooms & Suites",
-  address: "42 Amersham Hill",
-  postcode: "HP13 6NX",
+  name: "The Hill Suites",
+  address: "12 Bellfield Row, Amersham",
+  postcode: "HP7 9QZ",
   short_code: "hill",
   check_in_pin: "409271",
   timezone: "Europe/London",
   parking_notes: "One space on the drive, first come. Free on-street after 18:00.",
-  wifi_name: "HillRooms",
-  wifi_password: "highwycombe42",
+  wifi_name: "HillSuites",
+  wifi_password: "bellfield12",
   host_contact_name: "Swapnil",
   host_contact_phone: "07700 900142",
 };
@@ -195,7 +195,7 @@ export const DEMO_UNAVAILABILITY = [
 
 export const DEMO_CONNECTIONS = [
   { roomKey: "r1", channel: "airbnb" as const, listing_name: "The Hill — Suite 1" },
-  { roomKey: "r2", channel: "booking_com" as const, listing_name: "Garden Room, High Wycombe" },
+  { roomKey: "r2", channel: "booking_com" as const, listing_name: "Garden Room, Amersham" },
   { roomKey: "r3", channel: "homestay" as const, listing_name: "Loft Single" },
 ];
 

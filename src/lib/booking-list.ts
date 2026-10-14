@@ -17,6 +17,7 @@ export type ListBooking = {
   mirror_of?: string | null;
   guest_count?: number | null;
   stay_amount_pence?: number | null;
+  notes?: string | null;
 };
 
 /** Where a stay sits for the host, in the order they care about. */
@@ -118,4 +119,25 @@ export function readFilters(raw: string | null): ListFilters {
   } catch {
     return { ...DEFAULT_FILTERS };
   }
+}
+
+/**
+ * Why a night is closed, in place of a guest name: the stay it mirrors on
+ * another site, or a block from the calendar (with the host's own note).
+ */
+export function closedReason(
+  b: ListBooking,
+  all: ListBooking[],
+  platform: (b: ListBooking) => string,
+): string {
+  if (b.mirror_of) {
+    const original = all.find((x) => x.id === b.mirror_of);
+    if (original) {
+      const who = original.guest_full_name?.trim();
+      return `Booked on ${platform(original)}${who ? ` · ${who}` : ""}`;
+    }
+    return "Booked on another site";
+  }
+  const note = b.notes?.trim();
+  return note ? `Blocked: ${note.split("\n")[0]!.slice(0, 80)}` : `Blocked on ${platform(b)}`;
 }

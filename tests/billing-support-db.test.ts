@@ -130,7 +130,7 @@ describe("stripe connect", () => {
   });
 
   it("keeps the super admin's own business on the platform account", async () => {
-    const id = (await db.as<{ id: string }>("admin", "select create_host_workspace('Trinity', $1) as id", [USERS.admin.email]))[0]!.id;
+    const id = (await db.as<{ id: string }>("admin", "select create_host_workspace('Admin Own', $1) as id", [USERS.admin.email]))[0]!.id;
     // Workspaces made after the migration start unlinked; the server sets it.
     expect(await db.system("select uses_platform_stripe from hosts where id = $1", [id])).toEqual([{ uses_platform_stripe: false }]);
   });

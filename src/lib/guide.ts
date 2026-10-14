@@ -189,7 +189,7 @@ export const DOOR_SECTIONS: SectionKey[] = ["getting_in"];
 
 export { addDays };
 
-/** Starter text for The Hill Rooms & Suites style homes. Marked so hosts replace it. */
+/** Starter text for The Hill Suites style homes. Marked so hosts replace it. */
 export const STARTER: Record<SectionKey, { summary: string; steps: { heading: string; body: string }[] }> = {
   getting_in: {
     summary: "The front door has a keypad lock. Your code is on your check-in screen.",
@@ -203,12 +203,12 @@ export const STARTER: Record<SectionKey, { summary: string; steps: { heading: st
   room: { summary: "Your room door is labelled with its number.", steps: [{ heading: "Heating", body: "The radiator dial goes from 1 (low) to 5 (high)." }, { heading: "Spare bedding", body: "In the top of the wardrobe." }] },
   kitchenette: { summary: "Shared kitchenette on the ground floor: kettle, microwave and fridge.", steps: [{ heading: "Fridge", body: "Label your food with your room number. The top shelf is yours." }, { heading: "Washing up", body: "Please wash, dry and put away anything you use." }] },
   bathroom: { summary: "Hot water takes about a minute to come through.", steps: [{ heading: "Shower", body: "Turn the left dial for power and the right dial for temperature." }] },
-  parking: { summary: "Free on-street parking on Amersham Hill.", steps: [] },
+  parking: { summary: "Free on-street parking on Bellfield Row.", steps: [] },
   taxis: {
     summary: "Local firms are quicker than an app here, especially late at night.",
     steps: [
       { heading: "Booking ahead", body: "For an early train, book the night before. Cars are scarce before 6am." },
-      { heading: "To the station", body: "High Wycombe station is about five minutes by car." },
+      { heading: "To the station", body: "Amersham station is about five minutes by car." },
       { heading: "Replace these details", body: "Add two or three local firms with their phone numbers and the usual fare." },
     ],
   },

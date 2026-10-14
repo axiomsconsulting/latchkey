@@ -126,7 +126,7 @@ export function GuestSheet({
           <>
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2 font-display text-2xl">
-                {b.guestName ?? copy.noName}
+                {b.closedReason ?? b.guestName ?? copy.noName}
                 {b.idCheckStatus === "matched" ? (
                   <BadgeCheck className="size-6 shrink-0 text-success" aria-label={copy.verified} />
                 ) : null}

@@ -232,7 +232,7 @@ function SetupPage() {
                 className="h-12"
                 value={property.name}
                 onChange={(e) => setProperty((p) => ({ ...p, name: e.target.value }))}
-                placeholder="The Hill Rooms & Suites"
+                placeholder="The Hill Suites"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
