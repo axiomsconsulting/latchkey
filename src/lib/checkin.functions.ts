@@ -19,6 +19,7 @@ import {
   last4Matches,
   type MatchableBooking,
   lockedUntil,
+  type CheckinMethod,
   methodSequence,
   normaliseMethods,
   resolveArrival,
@@ -114,6 +115,8 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
     // arrive straight from a link instead of through the demo picker.
     const tour = data.code.toLowerCase() === DEMO_CODE;
     if (tour) {
+      const { jobAllowed } = await import("./usage.server");
+      if (!(await jobAllowed("demo_tour"))) return { found: false as const };
       try {
         const { ensureTour } = await import("./demo.functions");
         await ensureTour(await srvMod.admin());
@@ -454,6 +457,10 @@ async function sessionContext(t: string) {
   const register = registerApplies(p.country_code)
     ? !(await db.from("guest_register").select("id", { head: true }).limit(1)).error
     : false;
+  // AI ID reading can be switched off site-wide; demo mode and the tour never call it.
+  const { hostModes } = await srv();
+  const { jobAllowed } = await import("./usage.server");
+  const aiOff = (await hostModes(p.host_id)).id_check !== "demo" && !isTour(p) && !(await jobAllowed("ai_id_reading"));
   return {
     db,
     session,
@@ -461,6 +468,7 @@ async function sessionContext(t: string) {
     property: p,
     room,
     register,
+    aiOff,
   };
 }
 
@@ -480,11 +488,23 @@ function partyPlan(ctx: Ctx) {
     booked: bookedPartySize(ctx.booking),
     capacity: ctx.room?.max_guests ?? null,
     childrenAllowed: ctx.room?.children_allowed ?? true,
-    everyAdult: rec.checkEveryAdult && !returning,
+    everyAdult: rec.checkEveryAdult && !returning && !ctx.aiOff,
     facePhoto: takesFacePhoto(rec) && !returning,
     keepIdPhoto: keepsIdPhoto(rec),
     keepDays: rec.keepDays,
   };
+}
+
+/**
+ * When the super admin has switched AI ID reading off, the photo step is
+ * left out (demo mode and the public tour never call the AI, so they keep it).
+ */
+async function withoutPhotoIfOff(ctx: Ctx, seq: CheckinMethod[]): Promise<CheckinMethod[]> {
+  if (!seq.includes("photo_id")) return seq;
+  const { hostModes } = await srv();
+  if ((await hostModes(ctx.property.host_id)).id_check === "demo" || isTour(ctx.property)) return seq;
+  const { jobAllowed } = await import("./usage.server");
+  return (await jobAllowed("ai_id_reading")) ? seq : seq.filter((m) => m !== "photo_id");
 }
 
 function last4Kinds(b: { reservation_code: string | null; phone_last4: string | null; guest_email: string | null }) {
@@ -529,7 +549,7 @@ export const confirmBooking = createServerFn({ method: "POST" })
       listFlow: usesListFlow(methods),
       sequence: usesListFlow(methods)
         ? (["self_declare"] as const)
-        : methodSequence(methods, { last4: kinds.length > 0 }),
+        : (await withoutPhotoIfOff(ctx, methodSequence(methods, { last4: kinds.length > 0 }))),
       last4Kinds: kinds,
       party: partyPlan(ctx),
     };
@@ -559,7 +579,7 @@ export const resumeSession = createServerFn({ method: "POST" })
       listFlow: usesListFlow(methods),
       sequence: usesListFlow(methods)
         ? (["self_declare"] as const)
-        : methodSequence(methods, { last4: kinds.length > 0 }),
+        : (await withoutPhotoIfOff(ctx, methodSequence(methods, { last4: kinds.length > 0 }))),
       last4Kinds: kinds,
     };
   });
@@ -654,6 +674,8 @@ async function readId(ctx: Ctx, image: string, position: number): Promise<IdRead
       placeOfIssue: null,
     };
   }
+  const { bumpUsage } = await import("./usage.server");
+  await bumpUsage(ctx.property.host_id, "ai:id_read");
   return readIdDetails(image);
 }
 
@@ -737,7 +759,7 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
     const ctx = await sessionContext(data.token);
     const methods = normaliseMethods(ctx.property.checkin_methods);
     if (!ctx.session.confirmed || !methods.enabled.photo_id) throw new Error("Not available.");
-    if (ctx.session.photo_attempts >= MAX_PHOTO_ATTEMPTS) return { status: "fallback" as const };
+    if (ctx.aiOff || ctx.session.photo_attempts >= MAX_PHOTO_ATTEMPTS) return { status: "fallback" as const };
     if (!(await readsLeftThisHour(ctx))) return { status: "fallback" as const };
 
     await ctx.db

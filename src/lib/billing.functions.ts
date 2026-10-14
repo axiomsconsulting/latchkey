@@ -23,21 +23,106 @@ async function admin() {
 const BILLING_COLUMNS =
   "id, business_name, contact_email, subscription_status, trial_started_at, trial_ends_at, stripe_customer_id, stripe_subscription_id, current_period_end, canceled_at";
 
-/** The plan's monthly price from the host's properties and rooms. */
-async function priceFor(hostId: string): Promise<{ pence: number; currency: string; properties: number; rooms: number }> {
+/**
+ * The host's monthly price. Once the super admin publishes plans in the
+ * pricing studio, it's their plan's base, extra rooms and any API add-on;
+ * until then, the original per-property, per-room pricing.
+ */
+async function priceFor(hostId: string): Promise<{
+  pence: number;
+  currency: string;
+  properties: number;
+  rooms: number;
+  planKey: string | null;
+  planName: string | null;
+  apiAddon: boolean;
+}> {
   const db = await admin();
-  const [{ data: pricing }, { data: props }] = await Promise.all([
+  const [{ data: pricing }, { data: props }, { data: site }, { data: host }] = await Promise.all([
     (db as any).from("platform_pricing").select("base_pence, extra_room_pence, extra_property_pence, trial_days, currency").eq("id", 1).maybeSingle(),
     db.from("properties").select("id, is_demo, rooms(id, active)").eq("host_id", hostId),
+    (db as any).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle(),
+    (db as any).from("hosts").select("plan_key, api_addon").eq("id", hostId).maybeSingle(),
   ]);
-  const cfg = (pricing as PricingConfig | null) ?? DEFAULT_PRICING;
   const real = (props ?? []).filter((p) => !p.is_demo);
   const rooms = real.map((p) => Math.max(1, ((p.rooms as Array<{ active: boolean }> | null) ?? []).filter((r) => r.active).length));
+  const totalRooms = rooms.reduce((n, r) => n + r, 0);
+  const apiAddon = host?.api_addon === true;
+  if (site?.pricing_model) {
+    const { normaliseModel, planFor, monthlyPrice } = await import("./pricing-model");
+    const model = normaliseModel(site.pricing_model);
+    const plan = planFor(model, host?.plan_key);
+    return {
+      pence: monthlyPrice(model, plan, { rooms: Math.max(1, totalRooms), properties: real.length, apiAddon }),
+      currency: model.currency,
+      properties: real.length,
+      rooms: totalRooms,
+      planKey: plan.key,
+      planName: plan.name,
+      apiAddon,
+    };
+  }
+  const cfg = (pricing as PricingConfig | null) ?? DEFAULT_PRICING;
   return {
     pence: monthlyPence(cfg, rooms.length ? rooms : [1]),
     currency: cfg.currency,
     properties: real.length,
-    rooms: rooms.reduce((n, r) => n + r, 0),
+    rooms: totalRooms,
+    planKey: null,
+    planName: null,
+    apiAddon,
+  };
+}
+
+/** Keeps a live Stripe subscription at the host's current price. */
+/** Moves a subscriber to their current price: now (prorated) or from the next bill. */
+export async function updateStripePrice(hostId: string, when: "now" | "next_bill" = "now") {
+  const db = await admin();
+  const { data: h } = await db.from("hosts").select("business_name, stripe_subscription_id, subscription_status").eq("id", hostId).single();
+  if (!h?.stripe_subscription_id || !["active", "past_due"].includes(h.subscription_status)) return;
+  const { stripeCall } = await import("./stripe.server");
+  const sub = await stripeCall<{ items: { data: Array<{ id: string; price: { product: string; currency: string } }> } }>(
+    `/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`,
+  );
+  const item = sub.items.data[0];
+  if (!item) return;
+  const price = await priceFor(hostId);
+  await stripeCall(`/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`, {
+    items: [{ id: item.id, price_data: { currency: item.price.currency, product: item.price.product, unit_amount: price.pence, recurring: { interval: "month" } } }],
+    proration_behavior: when === "now" ? "create_prorations" : "none",
+  });
+}
+
+/** The host picks a plan and whether they want the API add-on. */
+export const changePlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ hostId: uuid, planKey: z.string().regex(/^[a-z0-9_]{2,30}$/), apiAddon: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    await requireOwner(context.supabase, data.hostId);
+    const db = await admin();
+    const { data: site } = await (db as any).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle();
+    if (!site?.pricing_model) throw new Error("Plans aren't available yet.");
+    const { normaliseModel } = await import("./pricing-model");
+    const model = normaliseModel(site.pricing_model);
+    if (!model.plans.some((p) => p.key === data.planKey)) throw new Error("That plan isn't available.");
+    const { error } = await (db as any).from("hosts").update({ plan_key: data.planKey, api_addon: data.apiAddon }).eq("id", data.hostId);
+    if (error) throw new Error(error.message);
+    await updateStripePrice(data.hostId);
+    return { ok: true };
+  });
+
+/** The plans hosts can choose from, once published. */
+async function publishedPlans() {
+  const db = await admin();
+  const { data: site } = await (db as any).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle();
+  if (!site?.pricing_model) return null;
+  const { normaliseModel, FEATURES } = await import("./pricing-model");
+  const model = normaliseModel(site.pricing_model);
+  return {
+    currency: model.currency,
+    apiAddon: model.apiAddon,
+    plans: model.plans.map((p) => ({ ...p, featureLabels: p.features.map((f) => FEATURES[f]) })),
   };
 }
 
@@ -61,6 +146,7 @@ export const getBilling = createServerFn({ method: "GET" })
       hasSubscription: !!h.stripe_subscription_id,
       price,
       stripeReady: stripeReady(),
+      plans: await publishedPlans(),
     };
   });
 

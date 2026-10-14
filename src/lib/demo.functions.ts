@@ -34,12 +34,12 @@ function londonDay(d: Date): string {
  * or has no arrival today, so the guest tour always has someone to check in.
  * Concurrent visitors race for one claim, so only one of them rebuilds.
  */
-export async function freshDemoCode(admin: any, hostId: string): Promise<string> {
+export async function freshDemoCode(admin: any, hostId: string, force = false): Promise<string> {
   const { data: prop } = await admin
     .from("properties").select("id, short_code, created_at")
     .eq("host_id", hostId).eq("is_demo", true).eq("short_code", DEMO_CODE).limit(1).maybeSingle();
   const today = londonDay(new Date());
-  if (prop && londonDay(new Date(prop.created_at)) === today && Date.now() - Date.parse(prop.created_at) < DAY_MS) {
+  if (!force && prop && londonDay(new Date(prop.created_at)) === today && Date.now() - Date.parse(prop.created_at) < DAY_MS) {
     const { count } = await admin.from("bookings").select("id", { count: "exact", head: true })
       .eq("property_id", prop.id).eq("check_in_date", today);
     if (count) return DEMO_CODE;
@@ -52,9 +52,12 @@ export async function freshDemoCode(admin: any, hostId: string): Promise<string>
     if (!claimed?.length) return DEMO_CODE;
   }
   try {
+    const started = Date.now();
     // Undo anything changed on the account before the settings lock existed.
     await admin.from("hosts").update(DEMO_HOST).eq("id", hostId);
     await seedDemo(admin, hostId, DEMO_CODE);
+    const { recordRun } = await import("./usage.server");
+    await recordRun("demo_tour", "Rebuilt", started);
   } catch {
     // Someone else created it first (the code is unique); theirs is fine.
   }
@@ -93,9 +96,9 @@ async function demoHostId(admin: any): Promise<string> {
   return made.id as string;
 }
 
-/** Makes sure today's guest tour exists; used when /p/tour is opened directly. */
-export async function ensureTour(admin: any): Promise<void> {
-  await freshDemoCode(admin, await demoHostId(admin));
+/** Makes sure today's guest tour exists; used when /p/tour is opened directly. `force` rebuilds it anyway. */
+export async function ensureTour(admin: any, force = false): Promise<void> {
+  await freshDemoCode(admin, await demoHostId(admin), force);
 }
 
 export const startDemo = createServerFn({ method: "POST" })
@@ -103,6 +106,9 @@ export const startDemo = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
+    // The super admin can switch the public demo off (Latchkey admin → Routines).
+    const { jobAllowed } = await import("./usage.server");
+    if (!(await jobAllowed("demo_tour"))) throw new Error(UNAVAILABLE);
 
     const hostId = await demoHostId(admin);
     const code = await freshDemoCode(admin, hostId);

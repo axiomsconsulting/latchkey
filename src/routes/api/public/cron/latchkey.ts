@@ -3,10 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { authenticateCronRequest } from "@/integrations/supabase/cron-auth";
 
 /**
- * Scheduled maintenance for Latchkey.
- *  - "sync": pulls every active calendar feed (every 30 minutes)
- *  - "retention": clears guest names, phone digits and notes 90 days after
- *    check-out, keeping the anonymised stay for statistics (daily)
+ * Scheduled maintenance for Latchkey, woken by Lovable's scheduler.
+ *  - "sync": pulls every active calendar feed (woken every 30 minutes)
+ *  - "retention": privacy clean-up (woken daily)
+ * Each run first checks the super admin's switch and minimum interval
+ * (Latchkey admin → Routines); a job that's off or not yet due is skipped
+ * before it does any work.
  */
 export const Route = createFileRoute("/api/public/cron/latchkey")({
   server: {
@@ -24,13 +26,19 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
         }
 
         const { syncAllConnections, runRetentionSweep } = await import("@/lib/ical-sync.server");
+        const { jobAllowed, recordRun } = await import("@/lib/usage.server");
+        const key = task === "retention" ? "retention" : "calendar_sync";
+        if (!(await jobAllowed(key))) return Response.json({ task, skipped: true });
+        const started = Date.now();
 
         if (task === "retention") {
           const anonymised = await runRetentionSweep();
+          await recordRun(key, `Anonymised ${anonymised} stays`, started);
           return Response.json({ task, anonymised });
         }
 
         const result = await syncAllConnections();
+        await recordRun(key, `${result.connections} calendars, ${result.errors} errors`, started);
         return Response.json({ task: "sync", ...result });
       },
     },

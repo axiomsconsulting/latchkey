@@ -319,6 +319,9 @@ export async function runRetentionSweep(): Promise<number> {
   // The team activity history is kept for a year.
   const yearAgo = new Date(Date.now() - 365 * 86_400_000).toISOString();
   await (supabaseAdmin as unknown as { from: (t: string) => any }).from("audit_log").delete().lt("at", yearAgo);
+  // Visitor analytics: 13 months, IP addresses cleared after 90 days.
+  const { pruneAnalytics } = await import("./analytics.server");
+  await pruneAnalytics();
   return data?.length ?? 0;
 }
 

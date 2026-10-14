@@ -22,6 +22,20 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.20",
+    date: "2026-10-14",
+    title: "API, MCP server and plans",
+    items: [
+      { kind: "new", area: "Website", text: "Latchkey's API and MCP server: connect Claude, ChatGPT, Cursor or your own tools to see arrivals, add direct bookings and message guests. One key works for both." },
+      { kind: "new", area: "Website", text: "Developer docs at /developers, generated from the live API so they're always up to date, with copy-paste set-up for each AI assistant." },
+      { kind: "new", area: "Settings", text: "API keys in Settings → API & MCP: read-only or read-and-change, shown once, with this month's usage." },
+      { kind: "new", area: "Settings", text: "Three plans (Start, Grow, Pro) with rooms included and a small charge per extra room, plus an API add-on for Start and Grow." },
+      { kind: "new", area: "Settings", text: "Latchkey admin: a pricing studio with break-even recommendations, projections against real months and calibration from Lovable's usage." },
+      { kind: "new", area: "Settings", text: "Latchkey admin: switches, schedules and run-now for every routine that uses Lovable Run credits." },
+      { kind: "new", area: "Settings", text: "Latchkey admin: visitor analytics with pages, time on site, where visitors are from, devices, bots filtered out, and anonymous visitors matched to their account when they sign in." },
+    ],
+  },
+  {
     version: "0.19",
     date: "2026-10-14",
     title: "Closed nights explain themselves",

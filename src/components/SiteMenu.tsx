@@ -62,6 +62,7 @@ export function SiteMenu() {
                 {siteMenu.guestPin}
               </Link>
               <Link to="/about" className={item} onClick={close}>{siteMenu.about}</Link>
+              <Link to="/developers" className={item} onClick={close}>{siteMenu.developers}</Link>
               {signedIn ? (
                 <>
                   <hr className="my-2 border-border" />

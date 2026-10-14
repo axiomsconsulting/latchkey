@@ -112,8 +112,11 @@ export async function raiseAlert(input: {
       console.info("[demo] host alert email not sent:", input.message);
       return;
     }
+    const { jobAllowed, bumpUsage } = await import("./usage.server");
+    if (!(await jobAllowed("email_alerts"))) return;
     const { sendAlertEmail } = await import("./alert-email.server");
     const sent = await sendAlertEmail(input.hostId, input.message, data?.id);
+    if (sent) await bumpUsage(input.hostId, "email:alert");
     if (sent && data) {
       await db.from("host_alerts").update({ emailed_at: new Date().toISOString() }).eq("id", data.id);
     }

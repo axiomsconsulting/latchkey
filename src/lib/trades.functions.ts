@@ -140,6 +140,9 @@ export const suggestPropertyTrades = createServerFn({ method: "POST" })
       .eq("property_id", property.id)
       .eq("active", true);
 
+    const { jobAllowed, bumpUsage } = await import("./usage.server");
+    if (!(await jobAllowed("ai_trades"))) return { suggestions: [], alreadyDone: false as const, paused: true as const };
+    await bumpUsage(property.host_id ?? null, "ai:trades");
     const { suggestTrades } = await import("./trades-ai.server");
     const suggestions = await suggestTrades({
       propertyName: property.name,

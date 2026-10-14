@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { PricingAdmin } from "@/components/host/PricingAdmin";
+import { PricingStudio } from "@/components/host/PricingStudio";
+import { RoutinesAdmin } from "@/components/host/RoutinesAdmin";
+import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +37,7 @@ import {
   sendAnnouncement,
   setAnnouncementActive,
   setFeedbackStatus,
+  setHostPackage,
   setHostPlan,
   viewAsHost,
   type HostStats,
@@ -75,6 +79,9 @@ function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="feedback" className="h-10 rounded-xl px-4">{copy.tabFeedback}</TabsTrigger>
           <TabsTrigger value="messages" className="h-10 rounded-xl px-4">{copy.tabMessages}</TabsTrigger>
+          <TabsTrigger value="visitors" className="h-10 rounded-xl px-4">{copy.tabVisitors}</TabsTrigger>
+          <TabsTrigger value="pricing" className="h-10 rounded-xl px-4">{copy.tabPricing}</TabsTrigger>
+          <TabsTrigger value="routines" className="h-10 rounded-xl px-4">{copy.tabRoutines}</TabsTrigger>
           <TabsTrigger value="settings" className="h-10 rounded-xl px-4">{copy.tabSettings}</TabsTrigger>
         </TabsList>
 
@@ -92,6 +99,15 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="messages" className="mt-4">
           <Announcements hosts={hosts} />
+        </TabsContent>
+        <TabsContent value="visitors" className="mt-4">
+          <VisitorAnalytics />
+        </TabsContent>
+        <TabsContent value="pricing" className="mt-4">
+          <PricingStudio />
+        </TabsContent>
+        <TabsContent value="routines" className="mt-4">
+          <RoutinesAdmin />
         </TabsContent>
         <TabsContent value="settings" className="mt-4 space-y-6">
           <SiteSettings />
@@ -173,6 +189,8 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
   const plan = useServerFn(setHostPlan);
   const view = useServerFn(viewAsHost);
   const platformStripe = useServerFn(setPlatformStripe);
+  const pkg = useServerFn(setHostPackage);
+  const plans = ["start", "grow", "pro"];
 
   async function act(fn: () => Promise<unknown>, done?: () => Promise<unknown>) {
     try {
@@ -210,6 +228,12 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
               </td>
               <td className="px-4 py-3">
                 {planLabel(h)}
+                {h.plan_key ? (
+                  <span className="block text-xs text-muted-foreground">
+                    {h.plan_key}
+                    {h.api_addon ? " + API" : ""}
+                  </span>
+                ) : null}
                 {h.support_access_until && Date.parse(h.support_access_until) > Date.now() ? (
                   <Badge variant="secondary" className="mt-1 block w-fit">{copy.supportOn}</Badge>
                 ) : null}
@@ -246,6 +270,17 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => void act(() => plan({ data: { hostId: h.host_id, action: "comp" } }))}>
                         {copy.comp}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {plans.map((k) => (
+                        <DropdownMenuItem key={k} onClick={() => void act(() => pkg({ data: { hostId: h.host_id, planKey: k, apiAddon: h.api_addon ?? false } }))}>
+                          {copy.planPackage}: {k[0]!.toUpperCase() + k.slice(1)} {h.plan_key === k ? "✓" : ""}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuItem
+                        onClick={() => void act(() => pkg({ data: { hostId: h.host_id, planKey: h.plan_key ?? "grow", apiAddon: !(h.api_addon ?? false) } }))}
+                      >
+                        {h.api_addon ? copy.apiAddonOff : copy.apiAddonOn}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => void act(() => platformStripe({ data: { hostId: h.host_id, on: true } }))}>

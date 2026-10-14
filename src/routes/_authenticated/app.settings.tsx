@@ -19,6 +19,7 @@ import {
   settings as copy,
 } from "@/content/copy";
 import { SupportAccess } from "@/components/host/SupportAccess";
+import { ApiAccessPanel } from "@/components/host/ApiAccessPanel";
 import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { TeamPanel } from "@/components/host/TeamPanel";
 import { DEMO_EMAIL } from "@/lib/demo-account";
@@ -258,6 +259,7 @@ function SettingsPage() {
       {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
       {themedProperty && isOwner ? <PaymentsPanel propertyId={themedProperty.id} /> : null}
       {workspace.data ? <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}
+      {workspace.data ? <ApiAccessPanel hostId={workspace.data.hostId} canWrite={canWriteHost} /> : null}
       {workspace.data && !workspace.data.support ? (
         <SupportAccess
           hostId={workspace.data.hostId}

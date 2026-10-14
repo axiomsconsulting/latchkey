@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckinRouteImport } from './routes/checkin'
+import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
@@ -36,10 +37,14 @@ import { Route as AuthenticatedAppServicesRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
+import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
+import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
+import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
+import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -71,6 +76,11 @@ const AuthRoute = AuthRouteImport.update({
 const CheckinRoute = CheckinRouteImport.update({
   id: '/checkin',
   path: '/checkin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StartRoute = StartRouteImport.update({
@@ -185,9 +195,19 @@ const AuthenticatedAppTodayRoute = AuthenticatedAppTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const ApiPublicMcpRoute = ApiPublicMcpRouteImport.update({
+  id: '/api/public/mcp',
+  path: '/api/public/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
   id: '/api/public/stripe-webhook',
   path: '/api/public/stripe-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTrackRoute = ApiPublicTrackRouteImport.update({
+  id: '/api/public/track',
+  path: '/api/public/track',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppPrintPropertyIdRoute =
@@ -204,6 +224,16 @@ const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
 const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
   id: '/api/public/cron/latchkey',
   path: '/api/public/cron/latchkey',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMcpKeyRoute = ApiPublicMcpKeyRouteImport.update({
+  id: '/$key',
+  path: '/$key',
+  getParentRoute: () => ApiPublicMcpRoute,
+} as any)
+const ApiPublicV1SplatRoute = ApiPublicV1SplatRouteImport.update({
+  id: '/api/public/v1/$',
+  path: '/api/public/v1/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
@@ -229,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
+  '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
@@ -249,11 +280,15 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
+  '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/track': typeof ApiPublicTrackRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -264,6 +299,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
+  '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
@@ -283,11 +319,15 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
+  '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/track': typeof ApiPublicTrackRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -300,6 +340,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
+  '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/invite/$token': typeof InviteTokenRoute
@@ -320,11 +361,15 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
+  '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
+  '/api/public/track': typeof ApiPublicTrackRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -337,6 +382,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/checkin'
+    | '/developers'
     | '/start'
     | '/app'
     | '/invite/$token'
@@ -357,11 +403,15 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
+    | '/api/public/mcp'
     | '/api/public/stripe-webhook'
+    | '/api/public/track'
     | '/app/'
     | '/app/print/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/mcp/$key'
+    | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -372,6 +422,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/checkin'
+    | '/developers'
     | '/start'
     | '/invite/$token'
     | '/invoice/$token'
@@ -391,11 +442,15 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
+    | '/api/public/mcp'
     | '/api/public/stripe-webhook'
+    | '/api/public/track'
     | '/app'
     | '/app/print/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/mcp/$key'
+    | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -407,6 +462,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/checkin'
+    | '/developers'
     | '/start'
     | '/_authenticated/app'
     | '/invite/$token'
@@ -427,11 +483,15 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup'
     | '/_authenticated/app/today'
+    | '/api/public/mcp'
     | '/api/public/stripe-webhook'
+    | '/api/public/track'
     | '/_authenticated/app/'
     | '/_authenticated/app/print/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/mcp/$key'
+    | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -444,6 +504,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   CheckinRoute: typeof CheckinRoute
+  DevelopersRoute: typeof DevelopersRoute
   StartRoute: typeof StartRoute
   InviteTokenRoute: typeof InviteTokenRoute
   InvoiceTokenRoute: typeof InvoiceTokenRoute
@@ -451,9 +512,12 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   PDemoRoute: typeof PDemoRoute
   StayTokenRoute: typeof StayTokenRoute
+  ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
+  ApiPublicTrackRoute: typeof ApiPublicTrackRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
+  ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -501,6 +565,13 @@ declare module '@tanstack/react-router' {
       path: '/checkin'
       fullPath: '/checkin'
       preLoaderRoute: typeof CheckinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/start': {
@@ -650,11 +721,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppTodayRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/mcp': {
+      id: '/api/public/mcp'
+      path: '/api/public/mcp'
+      fullPath: '/api/public/mcp'
+      preLoaderRoute: typeof ApiPublicMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/stripe-webhook': {
       id: '/api/public/stripe-webhook'
       path: '/api/public/stripe-webhook'
       fullPath: '/api/public/stripe-webhook'
       preLoaderRoute: typeof ApiPublicStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/track': {
+      id: '/api/public/track'
+      path: '/api/public/track'
+      fullPath: '/api/public/track'
+      preLoaderRoute: typeof ApiPublicTrackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/print/$propertyId': {
@@ -676,6 +761,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/latchkey'
       fullPath: '/api/public/cron/latchkey'
       preLoaderRoute: typeof ApiPublicCronLatchkeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mcp/$key': {
+      id: '/api/public/mcp/$key'
+      path: '/$key'
+      fullPath: '/api/public/mcp/$key'
+      preLoaderRoute: typeof ApiPublicMcpKeyRouteImport
+      parentRoute: typeof ApiPublicMcpRoute
+    }
+    '/api/public/v1/$': {
+      id: '/api/public/v1/$'
+      path: '/api/public/v1/$'
+      fullPath: '/api/public/v1/$'
+      preLoaderRoute: typeof ApiPublicV1SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/preview': {
@@ -750,6 +849,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiPublicMcpRouteChildren {
+  ApiPublicMcpKeyRoute: typeof ApiPublicMcpKeyRoute
+}
+
+const ApiPublicMcpRouteChildren: ApiPublicMcpRouteChildren = {
+  ApiPublicMcpKeyRoute: ApiPublicMcpKeyRoute,
+}
+
+const ApiPublicMcpRouteWithChildren = ApiPublicMcpRoute._addFileChildren(
+  ApiPublicMcpRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -757,6 +868,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   CheckinRoute: CheckinRoute,
+  DevelopersRoute: DevelopersRoute,
   StartRoute: StartRoute,
   InviteTokenRoute: InviteTokenRoute,
   InvoiceTokenRoute: InvoiceTokenRoute,
@@ -764,9 +876,12 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   PDemoRoute: PDemoRoute,
   StayTokenRoute: StayTokenRoute,
+  ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
+  ApiPublicTrackRoute: ApiPublicTrackRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
+  ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,

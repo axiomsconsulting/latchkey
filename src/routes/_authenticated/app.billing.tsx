@@ -20,7 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { billingCopy as copy, common } from "@/content/copy";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
-import { cancelSubscription, getBilling, openBillingPortal, startSubscription } from "@/lib/billing.functions";
+import { cancelSubscription, changePlan, getBilling, openBillingPortal, startSubscription } from "@/lib/billing.functions";
+import { monthlyPrice, type Plan } from "@/lib/pricing-model";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { formatUkDate } from "@/lib/dates";
 import { money } from "@/lib/pricing";
 
@@ -129,6 +134,17 @@ function BillingPage() {
         )}
       </section>
 
+      {b.plans ? (
+        <PlanPicker
+          hostId={hostId}
+          plans={b.plans}
+          current={b.price.planKey}
+          apiAddon={b.price.apiAddon}
+          rooms={b.price.rooms}
+          canChange={isOwner}
+        />
+      ) : null}
+
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -144,5 +160,101 @@ function BillingPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+type PlanWithLabels = Plan & { featureLabels: string[] };
+
+/** Three plans side by side; the recommended one stands out. */
+function PlanPicker({
+  hostId,
+  plans,
+  current,
+  apiAddon,
+  rooms,
+  canChange,
+}: {
+  hostId: string;
+  plans: { currency: string; apiAddon: { pricePence: number; includedRequests: number }; plans: PlanWithLabels[] };
+  current: string | null;
+  apiAddon: boolean;
+  rooms: number;
+  canChange: boolean;
+}) {
+  const change = useServerFn(changePlan);
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+  const model = { currency: plans.currency, trialDays: 0, plans: plans.plans, apiAddon: plans.apiAddon };
+  const currentPlan = plans.plans.find((p) => p.key === current);
+
+  async function pick(planKey: string, addon: boolean) {
+    setBusy(planKey);
+    try {
+      await change({ data: { hostId, planKey, apiAddon: addon } });
+      await qc.invalidateQueries({ queryKey: ["billing"] });
+      await qc.invalidateQueries({ queryKey: ["api-access"] });
+      toast.success(copy.planChanged);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="space-y-4">
+      <h2 className="text-xl">{copy.plansTitle}</h2>
+      <div className="grid gap-4 md:grid-cols-3">
+        {plans.plans.map((p) => {
+          const yours = p.key === current;
+          return (
+            <article key={p.key} className={cn("card-soft flex flex-col p-5", p.highlight && "ring-2 ring-primary", yours && "bg-secondary/40")}>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg">{p.name}</h3>
+                {p.highlight ? <Badge>{copy.recommended}</Badge> : null}
+                {yours ? <Badge variant="secondary">{copy.yourPlan}</Badge> : null}
+              </div>
+              <p className="text-sm text-muted-foreground">{p.tagline}</p>
+              <p className="mt-3 text-3xl font-semibold">
+                {money(p.basePence, plans.currency)}
+                <span className="text-base font-normal text-muted-foreground"> {copy.perMonth}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">{copy.planRooms(p.includedRooms, money(p.extraRoomPence, plans.currency), p.maxProperties)}</p>
+              <p className="mt-1 text-sm">{copy.youWouldPay(money(monthlyPrice(model, p, { rooms: Math.max(1, rooms), properties: 1, apiAddon: apiAddon && p.apiRequests === 0 }), plans.currency), rooms)}</p>
+              <ul className="mt-3 flex-1 space-y-1 text-sm">
+                {p.featureLabels.map((f) => (
+                  <li key={f} className="flex gap-2">
+                    <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {f}
+                  </li>
+                ))}
+                {p.apiRequests > 0 ? <li className="text-muted-foreground">{copy.apiIncluded(p.apiRequests)}</li> : null}
+              </ul>
+              {canChange && !yours ? (
+                <Button className="mt-4" variant={p.highlight ? "default" : "outline"} disabled={busy !== null} onClick={() => void pick(p.key, apiAddon)}>
+                  {busy === p.key ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {copy.choosePlan(p.name)}
+                </Button>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
+      {currentPlan && currentPlan.apiRequests === 0 ? (
+        <div className="card-soft flex flex-wrap items-center gap-4 p-5">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium">{copy.apiAddonTitle}</h3>
+            <p className="text-sm text-muted-foreground">
+              {copy.apiAddonBody(money(plans.apiAddon.pricePence, plans.currency), plans.apiAddon.includedRequests)}
+            </p>
+          </div>
+          <Switch
+            checked={apiAddon}
+            disabled={!canChange || busy !== null}
+            onCheckedChange={(on) => void pick(currentPlan.key, on)}
+            aria-label={copy.apiAddonTitle}
+          />
+        </div>
+      ) : null}
+    </section>
   );
 }
