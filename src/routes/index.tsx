@@ -5,7 +5,7 @@ import { ArrowRight, Check, Minus, ScanLine, Sparkles, Layers } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { brand, marketing } from "@/content/copy";
-import { PricingSection } from "@/components/PricingSection";
+import { OfferRibbon, PricingSection } from "@/components/PricingSection";
 import { DemoPicker } from "@/components/DemoPicker";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,6 +86,7 @@ function Landing() {
               <Link to="/start">{marketing.secondaryCta}</Link>
             </Button>
           </div>
+          <OfferRibbon />
           <div className="mt-8 flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">Works alongside</span>
             <ChannelBadge channel="airbnb" />

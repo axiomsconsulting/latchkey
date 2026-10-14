@@ -22,6 +22,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.21",
+    date: "2026-10-14",
+    title: "Launch offer: £1 for your first month",
+    items: [
+      { kind: "new", area: "Website", text: "Launch offer for new hosts who join by 31 December 2026: 30 days free, then £1 for your first month, then the usual price." },
+      { kind: "new", area: "Settings", text: "Your subscription page shows the offer price for your first paid month and what you'll pay after." },
+      { kind: "new", area: "Settings", text: "Latchkey admin: set the offer's price, name, first day and last day to join; accounts keep the offer they joined with." },
+    ],
+  },
+  {
     version: "0.20",
     date: "2026-10-14",
     title: "API, MCP server and plans",

@@ -1184,6 +1184,34 @@ export const pricingCopy = {
   saved: "Pricing saved",
 };
 
+/** Launch offers: free trial, then the offer price for the first paid month, then the usual price. */
+export const offerCopy = {
+  ribbon: (label: string, days: number, price: string, until: string) =>
+    `${label}: ${days} days free, then ${price} for your first month. For new hosts who join by ${until}.`,
+  seePricing: "See pricing",
+  badge: (label: string, until: string) => `${label} · join by ${until}`,
+  firstMonth: "for your first month",
+  thenUsual: (usual: string) => `then ${usual} a month`,
+  journey: (days: number, price: string, usual: string) => [`${days} days free`, `${price} for your first month`, `${usual} a month after that`],
+  newOnly: (until: string) => `For accounts opened by ${until}. The offer is for one month only; after that it's the usual price.`,
+  billing: (label: string, price: string, usual: string) =>
+    `${label}: your first paid month is ${price} instead of ${usual}. After that it's ${usual} a month.`,
+  demo: (price: string, until: string) => `Join by ${until} and your first paid month is just ${price}.`,
+  adminTitle: "Offer for new hosts",
+  adminBody:
+    "New accounts opened between these days (UK time) pay the offer price for their first paid month, after the free trial, then the usual price. Accounts keep the offer they joined with, even if you change or end it later.",
+  enabled: "Offer is on",
+  price: "Offer price for the first month (£)",
+  label: "Name shown to hosts",
+  startsOn: "First day",
+  endsOn: "Last day to join",
+  save: "Save offer",
+  saved: "Offer saved. The home page shows it straight away.",
+  counts: (waiting: number, used: number) => `${waiting} account${waiting === 1 ? "" : "s"} still to use it · ${used} used`,
+  live: "Running today",
+  notLive: "Not running today",
+};
+
 export const team = {
   title: "Team",
   body: "Invite people to help run your rooms. Each person signs in with their own account.",

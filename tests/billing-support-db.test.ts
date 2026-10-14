@@ -144,3 +144,28 @@ describe("super admin list", () => {
     expect(await db.system("select email from super_admins")).toEqual([{ email: "swapnil.kashyap@gmail.com" }]);
   });
 });
+
+describe("launch offer", () => {
+  it("locks the offer into accounts opened while it runs, and owners can't change it", async () => {
+    const today = (await db.system<{ d: string }>("select to_char((now() at time zone 'Europe/London')::date, 'YYYY-MM-DD') as d"))[0]!.d;
+    await db.system(`update site_settings set offer = jsonb_build_object('enabled', true, 'pricePence', 100, 'label', 'Launch offer', 'startsOn', $1::text, 'endsOn', $1::text) where id = 1`, [today]);
+    const [on] = await db.system<{ id: string; offer_pence: number | null }>("insert into hosts (business_name) values ('Offer B&B') returning id, offer_pence");
+    expect(on!.offer_pence).toBe(100);
+
+    await db.system(`update site_settings set offer = offer || '{"enabled": false}'::jsonb where id = 1`);
+    const [off] = await db.system<{ offer_pence: number | null }>("insert into hosts (business_name) values ('Later B&B') returning offer_pence");
+    expect(off!.offer_pence).toBeNull();
+
+    await db.system(`update site_settings set offer = offer || '{"enabled": true, "endsOn": "2000-01-01"}'::jsonb where id = 1`);
+    const [ended] = await db.system<{ offer_pence: number | null }>("insert into hosts (business_name) values ('Too late B&B') returning offer_pence");
+    expect(ended!.offer_pence).toBeNull();
+
+    await db.system("insert into host_members (host_id, user_id, role) values ($1, $2, 'owner')", [on!.id, USERS.outsider.id]);
+    await db.as("outsider", "update hosts set offer_pence = 0, offer_used_at = null where id = $1", [on!.id]);
+    await db.system("update hosts set offer_used_at = now() where id = $1", [on!.id]);
+    await db.as("outsider", "update hosts set offer_used_at = null where id = $1", [on!.id]);
+    const [row] = await db.system<{ offer_pence: number; offer_used_at: string | null }>("select offer_pence, offer_used_at from hosts where id = $1", [on!.id]);
+    expect(row!.offer_pence).toBe(100);
+    expect(row!.offer_used_at).not.toBeNull();
+  });
+});

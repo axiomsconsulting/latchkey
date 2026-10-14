@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
+import { OfferSettings } from "@/components/host/OfferSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -73,6 +74,7 @@ export function PricingStudio() {
     <div className="space-y-6">
       <p className={cn("rounded-2xl p-4", d.published ? "bg-success/10" : "bg-muted")}>{d.published ? copy.published : copy.notPublished}</p>
       {d.migrationPending ? <p className="rounded-2xl bg-destructive/10 p-4">{copy.migration}</p> : null}
+      <OfferSettings />
       <Now model={model} costs={costs} proj={proj} hosts={d.hosts} usage30={d.usage30} />
       <Plans model={model} setModel={setModel} costs={costs} proj={proj} published={d.published} payers={summariseHosts(model, d.hosts).payers} />
       <Costs costs={costs} setCosts={setCosts} hosts={d.hosts} model={model} usage30={d.usage30} />

@@ -36,8 +36,12 @@ async function priceFor(hostId: string): Promise<{
   planKey: string | null;
   planName: string | null;
   apiAddon: boolean;
+  /** The launch-offer price for the first paid month, while still to come. */
+  offerPence: number | null;
+  offerLabel: string | null;
 }> {
   const db = await admin();
+  const offer = await offerOf(hostId);
   const [{ data: pricing }, { data: props }, { data: site }, { data: host }] = await Promise.all([
     (db as any).from("platform_pricing").select("base_pence, extra_room_pence, extra_property_pence, trial_days, currency").eq("id", 1).maybeSingle(),
     db.from("properties").select("id, is_demo, rooms(id, active)").eq("host_id", hostId),
@@ -60,6 +64,7 @@ async function priceFor(hostId: string): Promise<{
       planKey: plan.key,
       planName: plan.name,
       apiAddon,
+      ...offer,
     };
   }
   const cfg = (pricing as PricingConfig | null) ?? DEFAULT_PRICING;
@@ -71,7 +76,18 @@ async function priceFor(hostId: string): Promise<{
     planKey: null,
     planName: null,
     apiAddon,
+    ...offer,
   };
+}
+
+/** A launch offer still to come (read separately so billing works before migration 0029). */
+async function offerOf(hostId: string): Promise<{ offerPence: number | null; offerLabel: string | null }> {
+  const db = await admin();
+  const { data, error } = await (db as any).from("hosts").select("offer_pence, offer_label, offer_used_at").eq("id", hostId).maybeSingle();
+  if (error || !data) return { offerPence: null, offerLabel: null };
+  const { pendingOffer } = await import("./offer");
+  const pending = pendingOffer(data);
+  return { offerPence: pending, offerLabel: pending === null ? null : (data.offer_label ?? "Launch offer") };
 }
 
 /** Keeps a live Stripe subscription at the host's current price. */
@@ -87,8 +103,14 @@ export async function updateStripePrice(hostId: string, when: "now" | "next_bill
   const item = sub.items.data[0];
   if (!item) return;
   const price = await priceFor(hostId);
+  const { nextMonthPence } = await import("./offer");
   await stripeCall(`/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`, {
-    items: [{ id: item.id, price_data: { currency: item.price.currency, product: item.price.product, unit_amount: price.pence, recurring: { interval: "month" } } }],
+    items: [
+      {
+        id: item.id,
+        price_data: { currency: item.price.currency, product: item.price.product, unit_amount: nextMonthPence(price.pence, price.offerPence), recurring: { interval: "month" } },
+      },
+    ],
     proration_behavior: when === "now" ? "create_prorations" : "none",
   });
 }
@@ -165,6 +187,8 @@ export const startSubscription = createServerFn({ method: "POST" })
     }
     const { stripeCall } = await import("./stripe.server");
     const price = await priceFor(data.hostId);
+    // A launch offer makes the first paid month cheaper; the webhook moves it to the standard price after.
+    const { nextMonthPence } = await import("./offer");
     // Only an unused trial carries over; after cancelling, billing starts now.
     const trialEnd = h.subscription_status === "trialing" ? stripeTrialEnd(h.trial_ends_at) : null;
     const email = (context.claims?.email as string | undefined) || h.contact_email || undefined;
@@ -178,7 +202,7 @@ export const startSubscription = createServerFn({ method: "POST" })
           quantity: 1,
           price_data: {
             currency: price.currency.toLowerCase(),
-            unit_amount: price.pence,
+            unit_amount: nextMonthPence(price.pence, price.offerPence),
             recurring: { interval: "month" },
             product_data: { name: `Latchkey for ${h.business_name}` },
           },
@@ -273,4 +297,13 @@ export async function applyStripeSubscription(sub: {
       ...(status === "canceled" ? { canceled_at: new Date().toISOString() } : { canceled_at: null }),
     })
     .eq("id", hostId);
+
+  // Free trial → offer price for the first paid month → standard. Once Stripe
+  // starts that first paid month, the offer is used and the next bill is standard.
+  const { offerPence } = await offerOf(hostId);
+  const { offerNowUsed } = await import("./offer");
+  if (offerNowUsed(offerPence, sub.status)) {
+    await (db as any).from("hosts").update({ offer_used_at: new Date().toISOString() }).eq("id", hostId);
+    await updateStripePrice(hostId, "next_bill");
+  }
 }

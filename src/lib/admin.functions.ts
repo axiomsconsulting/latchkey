@@ -671,3 +671,54 @@ export const runRoutineNow = createServerFn({ method: "POST" })
       throw new Error(status);
     }
   });
+
+/* ------------------------------ launch offer ----------------------------- */
+
+/** For the home page and billing: the campaign running today, if any. Never fails. */
+export const getPublicOffer = createServerFn({ method: "GET" }).handler(async () => {
+  const { normaliseOffer, offerRunning, ukToday } = await import("./offer");
+  try {
+    const db = await admin();
+    const { data, error } = await loose(db).from("site_settings").select("offer").eq("id", 1).maybeSingle();
+    if (error || !data?.offer) return null;
+    const offer = normaliseOffer(data.offer);
+    return offerRunning(offer, ukToday()) ? offer : null;
+  } catch {
+    return null;
+  }
+});
+
+export const getOfferSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { normaliseOffer, DEFAULT_OFFER } = await import("./offer");
+    const db = await admin();
+    const { data, error } = await loose(db).from("site_settings").select("offer").eq("id", 1).maybeSingle();
+    const { count: waiting } = await loose(db).from("hosts").select("id", { count: "exact", head: true }).not("offer_pence", "is", null).is("offer_used_at", null);
+    const { count: used } = await loose(db).from("hosts").select("id", { count: "exact", head: true }).not("offer_used_at", "is", null);
+    return { migrationPending: !!error, offer: data?.offer ? normaliseOffer(data.offer) : DEFAULT_OFFER, waiting: waiting ?? 0, used: used ?? 0 };
+  });
+
+/** Sets the campaign. Accounts already opened keep the offer they joined with. */
+export const saveOffer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        enabled: z.boolean(),
+        pricePence: z.number().int().min(0).max(100_000),
+        label: z.string().trim().min(1).max(60),
+        startsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        endsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    if (data.endsOn < data.startsOn) throw new Error("The offer has to end on or after the day it starts.");
+    const db = await admin();
+    const { error } = await loose(db).from("site_settings").update({ offer: data, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw new Error(error.message.includes("offer") ? "Run migration 0029 first (Lovable applies it on the next sync)." : error.message);
+    return { ok: true };
+  });

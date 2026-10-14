@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { billingCopy as copy, common } from "@/content/copy";
+import { billingCopy as copy, common, offerCopy } from "@/content/copy";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
 import { cancelSubscription, changePlan, getBilling, openBillingPortal, startSubscription } from "@/lib/billing.functions";
 import { monthlyPrice, type Plan } from "@/lib/pricing-model";
@@ -99,6 +99,11 @@ function BillingPage() {
             <p className="text-muted-foreground">{copy.price(money(b.price.pence, b.price.currency), b.price.properties, b.price.rooms)}</p>
           </div>
         </div>
+        {b.price.offerPence !== null && b.price.offerPence < b.price.pence ? (
+          <p className="rounded-xl bg-accent/10 p-3 text-sm font-medium ring-1 ring-accent/30">
+            {offerCopy.billing(b.price.offerLabel ?? "Launch offer", money(b.price.offerPence, b.price.currency), money(b.price.pence, b.price.currency))}
+          </p>
+        ) : null}
 
         {b.phase === "trial" && !subscribed ? (
           <p>
