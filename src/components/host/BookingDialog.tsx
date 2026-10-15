@@ -54,6 +54,7 @@ export type BookingRow = {
   listing_title?: string | null;
   feed_status?: string | null;
   guest_email?: string | null;
+  guest_address?: string | null;
   stay_amount_pence?: number | null;
   stay_amount_includes_tax?: boolean | null;
   id_check_status?: string | null;
@@ -96,6 +97,7 @@ function blank(propertyId: string, roomId: string | null, defaults?: Props["defa
     status: "upcoming",
     notes: "",
     guest_email: "",
+    guest_address: "",
     stay_amount: "",
     stay_amount_includes_tax: true,
   };
@@ -164,6 +166,7 @@ export function BookingDialog({
         status: booking.status,
         notes: booking.notes ?? "",
         guest_email: booking.guest_email ?? "",
+        guest_address: booking.guest_address ?? "",
         stay_amount: booking.stay_amount_pence != null ? (booking.stay_amount_pence / 100).toFixed(2) : "",
         stay_amount_includes_tax: booking.stay_amount_includes_tax ?? true,
       });
@@ -201,6 +204,7 @@ export function BookingDialog({
           status: form.status as (typeof STATUS_KEYS)[number],
           notes: form.notes.trim() || null,
           guest_email: form.guest_email.trim() || null,
+          guest_address: form.guest_address.trim() || null,
           // Only sent when there's an amount to set or clear.
           ...(form.stay_amount.trim() || booking?.stay_amount_pence != null
             ? {
@@ -445,6 +449,18 @@ export function BookingDialog({
               value={form.guest_email}
               onChange={(e) => set("guest_email", e.target.value)}
               placeholder={copy.guestEmailHint}
+            />
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="guest_address">{copy.guestAddress}</Label>
+            <Textarea
+              id="guest_address"
+              rows={2}
+              maxLength={400}
+              value={form.guest_address}
+              onChange={(e) => set("guest_address", e.target.value)}
+              placeholder={copy.guestAddressHint}
             />
           </div>
 

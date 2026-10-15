@@ -21,8 +21,6 @@ export type Region = {
   /** International dialling prefix, used when tidying WhatsApp numbers. */
   dialCode: string;
   currency: string;
-  /** Words that find local tradespeople in this country. */
-  directoryIds: string[];
 };
 
 export const REGIONS: Record<CountryCode, Region> = {
@@ -37,7 +35,6 @@ export const REGIONS: Record<CountryCode, Region> = {
     mobileLabel: "Mobile",
     dialCode: "44",
     currency: "GBP",
-    directoryIds: ["checkatrade", "mybuilder", "rated_people", "bark", "trustatrader", "google_maps"],
   },
   IE: {
     code: "IE",
@@ -50,7 +47,6 @@ export const REGIONS: Record<CountryCode, Region> = {
     mobileLabel: "Mobile",
     dialCode: "353",
     currency: "EUR",
-    directoryIds: ["bark", "google_maps"],
   },
   US: {
     code: "US",
@@ -63,7 +59,6 @@ export const REGIONS: Record<CountryCode, Region> = {
     mobileLabel: "Cell phone",
     dialCode: "1",
     currency: "USD",
-    directoryIds: ["angi", "thumbtack", "yelp", "google_maps"],
   },
   CA: {
     code: "CA",
@@ -76,7 +71,6 @@ export const REGIONS: Record<CountryCode, Region> = {
     mobileLabel: "Cell phone",
     dialCode: "1",
     currency: "CAD",
-    directoryIds: ["homestars", "yelp", "google_maps"],
   },
   AU: {
     code: "AU",
@@ -89,7 +83,6 @@ export const REGIONS: Record<CountryCode, Region> = {
     mobileLabel: "Mobile",
     dialCode: "61",
     currency: "AUD",
-    directoryIds: ["hipages", "airtasker", "google_maps"],
   },
   NZ: {
     code: "NZ",
@@ -102,7 +95,6 @@ export const REGIONS: Record<CountryCode, Region> = {
     mobileLabel: "Mobile",
     dialCode: "64",
     currency: "NZD",
-    directoryIds: ["builderscrack", "google_maps"],
   },
 };
 

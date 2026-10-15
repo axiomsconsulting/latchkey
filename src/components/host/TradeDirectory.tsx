@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, Search } from "lucide-react";
+import { BadgeCheck, ExternalLink, MapPin } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trades as copy } from "@/content/copy";
 import { SERVICE_CATEGORIES } from "@/lib/services";
-import { directoryLinks, tradeTerm } from "@/lib/trades";
+import { localSites, mapsSearch, tradeTerm } from "@/lib/trades";
+import { region } from "@/lib/regions";
 
 /**
  * Searches the local trade directories for the property's own area. The
@@ -38,11 +38,9 @@ export function TradeDirectory({
   }
 
   const effectiveTerm = term.trim() || tradeTerm(category);
-  const links = directoryLinks(category, area, countryCode).map((d) => ({
-    ...d,
-    url: d.search(effectiveTerm, area.trim() || "UK"),
-  }));
   const ready = area.trim().length > 0;
+  const mapsUrl = mapsSearch(effectiveTerm, area);
+  const sites = localSites(countryCode);
 
   return (
     <div className="space-y-4">
@@ -68,38 +66,34 @@ export function TradeDirectory({
           </div>
         </div>
         {ready ? (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <p className="flex items-center gap-2 text-sm">
-              <Search className="size-4 text-primary" /> {copy.searching(effectiveTerm, area)}
-            </p>
-            <Button asChild size="sm">
-              <a href={links[0]!.url} target="_blank" rel="noreferrer">
-                {copy.searchNow(links[0]!.name)} <ExternalLink className="size-4" />
-              </a>
-            </Button>
-          </div>
+          <Button asChild className="mt-3 h-auto min-h-11 whitespace-normal py-2">
+            <a href={mapsUrl} target="_blank" rel="noreferrer">
+              <MapPin className="size-4 shrink-0" /> {copy.mapsSearch(effectiveTerm, area)} <ExternalLink className="size-4 shrink-0" />
+            </a>
+          </Button>
         ) : (
           <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">{copy.needArea}</p>
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {links.map((d) => (
-          <article key={d.id} className="card-soft flex flex-col p-4">
-            <p className="font-medium">{d.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{d.blurb}</p>
-            <Badge variant="secondary" className="mt-2 w-fit">{d.note}</Badge>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button asChild variant="outline" size="touch" className="flex-1" disabled={!ready}>
-                <a href={d.url} target="_blank" rel="noreferrer">{copy.openOn(d.name)} <ExternalLink className="size-4" /></a>
-              </Button>
-              <Button asChild variant="ghost" size="touch">
-                <a href={d.site} target="_blank" rel="noreferrer">{copy.visit(d.name)}</a>
-              </Button>
-            </div>
-          </article>
-        ))}
-      </div>
+      <section className="card-soft p-4">
+        <h3 className="font-medium">{copy.whoTitle(region(countryCode).country)}</h3>
+        <p className="text-sm text-muted-foreground">{copy.whoBody}</p>
+        <ul className="mt-3 divide-y divide-border">
+          {sites.map((site) => (
+            <li key={site.id}>
+              <a href={site.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-1 py-2 text-sm hover:bg-muted">
+                <span className="w-40 shrink-0 font-medium sm:w-48">
+                  {site.name}
+                  {site.official ? <BadgeCheck className="ml-1 inline size-4 text-primary" aria-label={copy.official} /> : null}
+                </span>
+                <span className="min-w-0 flex-1 text-muted-foreground">{site.bestFor}</span>
+                <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <p className="text-sm text-muted-foreground">{copy.legalNote}</p>
     </div>

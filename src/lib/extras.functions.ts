@@ -136,6 +136,25 @@ export const reorderPriceItem = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Saves the whole running order after the host drags an item. */
+export const setPriceOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, keys: z.array(z.string().min(1).max(40)).min(1).max(100) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows } = await context.supabase.from("extras_catalogue").select("item_key").eq("property_id", data.propertyId).is("deleted_at", null);
+    const known = new Set(((rows ?? []) as { item_key: string }[]).map((r) => r.item_key));
+    // Anything not in the new order keeps its place at the end.
+    const order = [...data.keys.filter((k) => known.has(k)), ...[...known].filter((k) => !data.keys.includes(k))];
+    const results = await Promise.all(
+      order.map((key, i) =>
+        context.supabase.from("extras_catalogue").update({ sort_order: (i + 1) * 10 }).eq("property_id", data.propertyId).eq("item_key", key),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw new Error(failed.error.message);
+    return { ok: true };
+  });
+
 export const saveMoneySettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({

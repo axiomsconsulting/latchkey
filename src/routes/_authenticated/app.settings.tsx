@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
+import { CurrencyPicker, PhoneInput, TimeZonePicker } from "@/components/WorldPickers";
+import { checkPhone, splitPhone } from "@/lib/world";
+import { worldCopy } from "@/content/copy";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CreditCard, History, Loader2, NotebookPen, Plus, ShieldCheck, Sparkles } from "lucide-react";
@@ -78,7 +81,9 @@ function SettingsPage() {
     timezone: "Europe/London",
   });
   const [busy, setBusy] = useState(false);
-  const propsList = (workspace.data?.properties ?? []) as Array<{ id: string; name: string; short_code: string; theme_config: unknown }>;
+  const propsList = (workspace.data?.properties ?? []) as Array<{ id: string; name: string; short_code: string; theme_config: unknown; country_code?: string | null }>;
+  const homeCountry = propsList[0]?.country_code ?? "GB";
+  const [phone, setPhone] = useState<{ country: string; national: string; valid: boolean; e164: string | null }>({ country: "GB", national: "", valid: true, e164: null });
   const { selectedId } = useSelectedProperty(propsList);
   const [demoBusy, setDemoBusy] = useState<"load" | "remove" | null>(null);
 
@@ -91,11 +96,19 @@ function SettingsPage() {
       currency: host.currency ?? "GBP",
       timezone: host.timezone ?? "Europe/London",
     });
-  }, [host]);
+    const split = splitPhone(host.contact_phone, homeCountry);
+    const parsed = split.national ? checkPhone(split.national, split.country) : null;
+    setPhone({ ...split, valid: !parsed || parsed.ok, e164: parsed && parsed.ok ? parsed.e164 : null });
+  }, [host, homeCountry]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!host) return;
+    if (!phone.valid) {
+      toast.error(worldCopy.fixPhone);
+      document.getElementById("cp")?.focus();
+      return;
+    }
     setBusy(true);
     try {
       await save({
@@ -103,7 +116,7 @@ function SettingsPage() {
           id: host.id,
           business_name: form.business_name.trim(),
           contact_email: form.contact_email.trim() || null,
-          contact_phone: form.contact_phone.trim() || null,
+          contact_phone: phone.national.trim() ? phone.e164 : null,
           currency: form.currency.toUpperCase(),
           timezone: form.timezone,
         },
@@ -188,31 +201,15 @@ function SettingsPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="cp">{copy.contactPhone}</Label>
-          <Input
-            id="cp"
-            className="h-12"
-            value={form.contact_phone}
-            onChange={(e) => setForm((f) => ({ ...f, contact_phone: e.target.value }))}
-          />
+          <PhoneInput id="cp" country={phone.country} national={phone.national} onChange={setPhone} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="cu">{copy.currency}</Label>
-          <Input
-            id="cu"
-            maxLength={3}
-            className="h-12 uppercase"
-            value={form.currency}
-            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
-          />
+          <CurrencyPicker id="cu" value={form.currency} onChange={(v) => setForm((f) => ({ ...f, currency: v }))} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="tz">{copy.timezone}</Label>
-          <Input
-            id="tz"
-            className="h-12"
-            value={form.timezone}
-            onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
-          />
+          <TimeZonePicker id="tz" value={form.timezone} onChange={(v) => setForm((f) => ({ ...f, timezone: v }))} />
         </div>
 
         {isOwner ? (

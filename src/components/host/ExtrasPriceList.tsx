@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -11,7 +11,14 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { extrasCopy as copy, priceListUi as ui } from "@/content/copy";
 import type { ExtraItem } from "@/lib/extras";
-import { addPriceItem, deletePriceItem, getPriceList, reorderPriceItem, saveMoneySettings, savePriceItem } from "@/lib/extras.functions";
+import { addPriceItem, deletePriceItem, getPriceList, saveMoneySettings, savePriceItem, setPriceOrder } from "@/lib/extras.functions";
+import { moveItem } from "@/lib/reorder";
+import { currencySymbol } from "@/lib/world";
+import { cn } from "@/lib/utils";
+import { GripVertical, Trash2 } from "lucide-react";
+
+/** One line per item: grab bar, name, price, max, auto-approve, offered, delete. */
+const ROW = "grid min-w-[40rem] grid-cols-[1.75rem_minmax(8rem,1fr)_6.5rem_3.75rem_3.25rem_3.25rem_2.25rem] items-center gap-2 px-2";
 
 const UNITS = ["item", "hour", "pack", "bag_day"] as const;
 
@@ -24,10 +31,53 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
   const saveMoney = useServerFn(saveMoneySettings);
   const addItem = useServerFn(addPriceItem);
   const removeItem = useServerFn(deletePriceItem);
-  const moveItem = useServerFn(reorderPriceItem);
+  const saveOrderFn = useServerFn(setPriceOrder);
   const q = useQuery({ queryKey: ["price-list", propertyId], queryFn: () => fn({ data: { propertyId } }) });
   const [money, setMoney] = useState({ registered: false, label: "VAT", rate: "20", pricesInclude: true, bank: "", outUntil: "" });
   const [draft, setDraft] = useState<typeof BLANK | null>(null);
+  // The running order, changed live while dragging and saved on drop.
+  const [order, setOrder] = useState<string[]>([]);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  useEffect(() => {
+    if (q.data && !dragging) setOrder(q.data.items.map((i) => i.key));
+  }, [q.data, dragging]);
+  const symbol = currencySymbol(q.data?.currency ?? "GBP");
+
+  async function saveOrder(keys: string[]) {
+    await run(() => saveOrderFn({ data: { propertyId, keys } }));
+  }
+
+  /** Drag by the grab bar with a mouse, pen or finger; the list reorders as you move. */
+  function startDrag(e: React.PointerEvent<HTMLButtonElement>, key: string) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    setDragging(key);
+    let current = order;
+    const move = (ev: PointerEvent) => {
+      const rows = [...(listRef.current?.querySelectorAll<HTMLLIElement>("li[data-key]") ?? [])];
+      const over = rows.findIndex((r) => {
+        const b = r.getBoundingClientRect();
+        return ev.clientY >= b.top && ev.clientY <= b.bottom;
+      });
+      const from = current.indexOf(key);
+      if (over >= 0 && over !== from) {
+        current = moveItem(current, from, over);
+        setOrder(current);
+      }
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      setDragging(null);
+      if (current.join() !== order.join()) void saveOrder(current);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  }
 
   async function run(work: () => Promise<unknown>, done?: string) {
     try {
@@ -75,45 +125,64 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
       <section className="card-soft p-5">
         <h2 className="text-lg">{copy.priceList}</h2>
         <p className="text-sm text-muted-foreground">{copy.priceListSub}</p>
-        <ul className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
-          {q.data.items.map((it) => (
-            <li key={it.key} className="grid gap-3 p-4 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center">
-              <div>
-                <p className="font-medium">{it.name}</p>
-                <p className="text-xs text-muted-foreground">{copy.units[it.unit]}</p>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                {q.data.currency}
-                <Input
-                  type="number" step="0.5" min="0" disabled={it.isFree} defaultValue={(it.pricePence / 100).toFixed(2)} className="w-24"
-                  aria-label={`${it.name} price`}
-                  onBlur={(e) => { const v = Math.round(Number(e.target.value) * 100); if (v !== it.pricePence) update(it, { pricePence: v }); }}
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                {copy.max}
-                <Input type="number" min="1" max="20" defaultValue={it.maxQty} className="w-16" aria-label={`${it.name} max`}
-                  onBlur={(e) => { const v = Number(e.target.value); if (v !== it.maxQty && v >= 1) update(it, { maxQty: v }); }} />
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch checked={it.autoApprove} onCheckedChange={(v) => update(it, { autoApprove: v })} aria-label={`${it.name} auto-approve`} />
-                {copy.autoApprove}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Switch checked={it.active} onCheckedChange={(v) => update(it, { active: v })} aria-label={`${it.name} offered`} />
-                {it.isFree ? copy.free : copy.active}
-              </label>
-              <div className="flex items-center gap-1 sm:col-span-5">
-                <Button size="sm" variant="ghost" aria-label={`${it.name}: ${ui.moveUp}`} onClick={() => run(() => moveItem({ data: { propertyId, key: it.key, direction: "up" } }))}>↑</Button>
-                <Button size="sm" variant="ghost" aria-label={`${it.name}: ${ui.moveDown}`} onClick={() => run(() => moveItem({ data: { propertyId, key: it.key, direction: "down" } }))}>↓</Button>
-                <Button size="sm" variant="ghost" className="text-destructive"
-                  onClick={() => { if (confirm(ui.removeConfirm)) void run(() => removeItem({ data: { propertyId, key: it.key } }), ui.removed); }}>
-                  {ui.remove}
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-surface">
+          <div className={cn(ROW, "border-b border-border py-2 text-xs font-medium text-muted-foreground")}>
+            <span aria-hidden />
+            <span>{ui.name}</span>
+            <span>{ui.price}</span>
+            <span>{copy.max}</span>
+            <span title={copy.autoApprove}>{ui.auto}</span>
+            <span>{ui.offered}</span>
+            <span aria-hidden />
+          </div>
+          <ul ref={listRef} className="divide-y divide-border">
+            {order.map((key, index) => {
+              const it = q.data.items.find((x) => x.key === key);
+              if (!it) return null;
+              return (
+                <li key={it.key} data-key={it.key} className={cn(ROW, "py-1.5", dragging === it.key && "relative z-10 bg-secondary shadow-soft")}>
+                  <button
+                    type="button"
+                    className="grid h-8 w-6 cursor-grab touch-none place-items-center rounded text-muted-foreground hover:bg-muted active:cursor-grabbing"
+                    aria-label={ui.dragHint(it.name)}
+                    onPointerDown={(e) => startDrag(e, it.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                        e.preventDefault();
+                        const next = moveItem(order, index, index + (e.key === "ArrowUp" ? -1 : 1));
+                        if (next !== order) {
+                          setOrder(next);
+                          void saveOrder(next);
+                        }
+                      }
+                    }}
+                  >
+                    <GripVertical className="size-4" />
+                  </button>
+                  <span className="min-w-0 truncate text-sm font-medium" title={`${it.name} · ${copy.units[it.unit]}`}>
+                    {it.name} <span className="font-normal text-muted-foreground">· {copy.units[it.unit]}</span>
+                  </span>
+                  <label className="flex items-center gap-1 text-sm">
+                    <span className="text-muted-foreground">{symbol}</span>
+                    <Input
+                      type="number" step="0.5" min="0" disabled={it.isFree} defaultValue={(it.pricePence / 100).toFixed(2)} className="h-8 w-20 px-2"
+                      aria-label={`${it.name} price`}
+                      onBlur={(e) => { const v = Math.round(Number(e.target.value) * 100); if (v !== it.pricePence) update(it, { pricePence: v }); }}
+                    />
+                  </label>
+                  <Input type="number" min="1" max="20" defaultValue={it.maxQty} className="h-8 w-14 px-2" aria-label={`${it.name} max`}
+                    onBlur={(e) => { const v = Number(e.target.value); if (v !== it.maxQty && v >= 1) update(it, { maxQty: v }); }} />
+                  <Switch checked={it.autoApprove} onCheckedChange={(v) => update(it, { autoApprove: v })} aria-label={`${it.name}: ${copy.autoApprove}`} />
+                  <Switch checked={it.active} onCheckedChange={(v) => update(it, { active: v })} aria-label={`${it.name}: ${it.isFree ? copy.free : copy.active}`} />
+                  <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label={`${it.name}: ${ui.remove}`}
+                    onClick={() => { if (confirm(ui.removeConfirm)) void run(() => removeItem({ data: { propertyId, key: it.key } }), ui.removed); }}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
         {draft ? (
           <div className="mt-4 grid gap-3 rounded-2xl border border-border p-4 sm:grid-cols-2">

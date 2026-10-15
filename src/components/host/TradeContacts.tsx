@@ -44,7 +44,7 @@ import {
   saveTrade,
   suggestPropertyTrades,
 } from "@/lib/trades.functions";
-import { directoryLinks } from "@/lib/trades";
+import { mapsLink, mapsSearch } from "@/lib/trades";
 
 type Trade = {
   id: string;
@@ -173,7 +173,7 @@ export function TradeContacts({
           <h3 className="text-lg">{copy.suggestions}</h3>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {suggestions.map((s) => {
-              const link = directoryLinks(s.category, postcode, countryCode)[0];
+              const link = mapsLink(s.category, postcode);
               return (
                 <li key={s.role} className="rounded-2xl border p-3">
                   <p className="font-medium">{s.role}</p>
@@ -184,7 +184,7 @@ export function TradeContacts({
                     </Button>
                     {link ? (
                       <Button asChild size="sm" variant="outline">
-                        <a href={link.search(s.searchTerm, postcode || "UK")} target="_blank" rel="noreferrer">
+                        <a href={mapsSearch(s.searchTerm, postcode || "me")} target="_blank" rel="noreferrer">
                           {copy.searchFor(s.role)} <ExternalLink className="size-4" />
                         </a>
                       </Button>

@@ -396,6 +396,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          guest_address: string | null
           anonymised_at: string | null
           archived_at: string | null
           arrived_adults: number | null
@@ -436,6 +437,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          guest_address?: string | null
           anonymised_at?: string | null
           archived_at?: string | null
           arrived_adults?: number | null
@@ -476,6 +478,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          guest_address?: string | null
           anonymised_at?: string | null
           archived_at?: string | null
           arrived_adults?: number | null
@@ -1511,6 +1514,8 @@ export type Database = {
       }
       invoices: {
         Row: {
+          emailed_to: string | null
+          emailed_at: string | null
           access_token: string
           amended_at: string | null
           booking_id: string | null
@@ -1544,6 +1549,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          emailed_to?: string | null
+          emailed_at?: string | null
           access_token: string
           amended_at?: string | null
           booking_id?: string | null
@@ -1577,6 +1584,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          emailed_to?: string | null
+          emailed_at?: string | null
           access_token?: string
           amended_at?: string | null
           booking_id?: string | null

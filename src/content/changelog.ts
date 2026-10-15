@@ -22,6 +22,22 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.23",
+    date: "2026-10-15",
+    title: "Invoices from Today, tidier settings",
+    items: [
+      { kind: "new", area: "Invoices", text: "Guests leaving today show Email invoice and Download, with a tick once emailed and a cross when there's no email to send to." },
+      { kind: "new", area: "Invoices", text: "Add a guest's postal address on the booking; it's printed under their name on the invoice." },
+      { kind: "improved", area: "Calendar", text: "Calendar connections on Today group by room or by platform, with a filter for links that need a look." },
+      { kind: "improved", area: "Settings", text: "Currency, time zone and phone pickers for every country, with symbols, UTC offsets and phone number checks." },
+      { kind: "improved", area: "Services", text: "The price list is one compact line per item: drag to reorder, delete at the end." },
+      { kind: "improved", area: "Services", text: "Local tradespeople: one Google Maps search that works, plus who's best for what in your country, including the official gas and electrical registers." },
+      { kind: "improved", area: "Team", text: "Activity stays within the page; long changes open in a window with wrap and copy." },
+      { kind: "fixed", area: "Bookings", text: "Today only shows alerts for your own business, and Mark as seen now works or says why it can't." },
+      { kind: "fixed", area: "Website", text: "Links from Today land in view once the page has loaded, including API & MCP and Guest payments." },
+    ],
+  },
+  {
     version: "0.22",
     date: "2026-10-14",
     title: "Today, at a glance",

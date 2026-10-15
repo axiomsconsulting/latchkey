@@ -391,6 +391,8 @@ const bookingInput = z.object({
   status: z.enum(["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged", "blocked"]),
   notes: z.string().nullable(),
   guest_email: z.string().trim().email().max(254).nullable().default(null),
+  // Only sent when the form has it, so saving works before migration 0030.
+  guest_address: z.string().trim().max(400).nullable().optional(),
   /** A booking site the host added; the stay is then stored as channel "other". */
   site_key: siteKey,
   /** What the guest paid, for invoices; left out entirely when not given. */
@@ -416,10 +418,11 @@ export const saveBooking = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => bookingInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { id, site_key, stay_amount_pence, stay_amount_includes_tax, ...base } = data;
+    const { id, site_key, stay_amount_pence, stay_amount_includes_tax, guest_address, ...base } = data;
     // The amount is only written when given, so saving works before migration 0023.
     const rest = {
       ...base,
+      ...(guest_address !== undefined ? { guest_address: guest_address || null } : {}),
       ...(stay_amount_pence !== undefined ? { stay_amount_pence } : {}),
       ...(stay_amount_includes_tax !== undefined ? { stay_amount_includes_tax } : {}),
     };
@@ -865,14 +868,22 @@ export const saveHost = createServerFn({ method: "POST" })
         id: uuid,
         business_name: z.string().min(1),
         contact_email: z.string().email().nullable(),
-        contact_phone: z.string().nullable(),
+        contact_phone: z.string().max(30).nullable(),
         currency: z.string().min(3).max(3),
-        timezone: z.string().min(3),
+        timezone: z.string().min(3).max(60),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     await requireOwner(context.supabase, data.id);
+    const { checkPhone, isCurrency, isTimeZone } = await import("./world");
+    if (!isCurrency(data.currency)) throw new Error("Please pick a currency from the list.");
+    if (!isTimeZone(data.timezone)) throw new Error("Please pick a time zone from the list.");
+    if (data.contact_phone) {
+      const p = checkPhone(data.contact_phone, "GB");
+      if (!p.ok) throw new Error("Please check the phone number, with its country code.");
+      data.contact_phone = p.e164;
+    }
     const { id, ...fields } = data;
     const { data: row, error } = await context.supabase
       .from("hosts")
@@ -937,12 +948,15 @@ export const saveGuestRecords = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Unseen alerts for the business being viewed (a super admin can read every business's, so always filter). */
 export const listAlerts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
+  .handler(async ({ data: input, context }) => {
     const { data } = await context.supabase
       .from("host_alerts")
       .select("id, kind, message, booking_id, property_id, created_at, read_at")
+      .eq("host_id", input.hostId)
       .is("read_at", null)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -953,7 +967,13 @@ export const markAlertRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    await context.supabase.from("host_alerts").update({ read_at: new Date().toISOString() }).eq("id", data.id);
+    const { data: rows, error } = await context.supabase
+      .from("host_alerts")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", data.id)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!rows?.length) throw new Error("This alert belongs to a business you can't change.");
     return { ok: true };
   });
 

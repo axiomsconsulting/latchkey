@@ -1,31 +1,16 @@
 /**
  * Finding local tradespeople for property work.
  *
- * Latchkey points the host at the directories where trades in their country
- * are vetted and reviewed, already narrowed to the job and the property's
- * area. Most of these sites have no search link that takes free words and a
- * postcode (some only have per-city pages, others block anything but a
- * browser), so each card opens a web search limited to that site, which
- * always works and always includes the area, plus a link to the site itself.
+ * One search that reliably works everywhere: Google Maps, with the job and
+ * the property's area, showing the nearest firms with hours, reviews and
+ * phone numbers. Alongside it, a short researched list per country of the
+ * sites people there use, with what each is best for, linking to the site
+ * itself. (Site searches on most directories don't take free words and an
+ * area, so Latchkey no longer pretends they do.)
  *
- * None of the directories publish an API, and their terms forbid automated
- * extraction of member listings, so Latchkey links out rather than copying.
+ * None of these sites publish an API, and their terms forbid automated
+ * extraction of listings, so Latchkey links out rather than copying.
  */
-
-import { region as regionFor } from "./regions";
-
-
-export type Directory = {
-  id: string;
-  name: string;
-  blurb: string;
-  /** How the host is charged or contacted. */
-  note: string;
-  /** The site's own page to browse or post a job (checked to load). */
-  site: string;
-  search: (term: string, area: string) => string;
-};
-
 
 /** Plain search words for each service category used across Latchkey. */
 export const TRADE_TERMS: Record<string, string> = {
@@ -55,121 +40,79 @@ export function tradeTerm(category: string): string {
 
 const q = (s: string) => encodeURIComponent(s.trim());
 
-/** A web search limited to one directory, for the job near the area. */
-const onSite = (domain: string) => (term: string, area: string) =>
-  `https://www.google.com/search?q=${q(`${term} ${area} site:${domain}`)}`;
+/** Google Maps, searching for the job near the area. */
+export function mapsSearch(term: string, area: string): string {
+  return `https://www.google.com/maps/search/${q(`${term} near ${area}`)}`;
+}
 
-export const DIRECTORIES: Directory[] = [
-  {
-    id: "checkatrade",
-    name: "Checkatrade",
-    blurb: "Vetted trades with verified reviews. Strongest for gas, electrics and emergencies.",
-    note: "Free to search. Members are background-checked.",
-    site: "https://www.checkatrade.com/",
-    search: onSite("checkatrade.com"),
-  },
-  {
-    id: "mybuilder",
-    name: "MyBuilder",
-    blurb: "Post the job, get quotes back from local tradespeople within hours.",
-    note: "Free to post. Good for small repairs and one-off jobs.",
-    site: "https://www.mybuilder.com/",
-    search: onSite("mybuilder.com"),
-  },
-  {
-    id: "rated_people",
-    name: "Rated People",
-    blurb: "Up to three quotes per job, with ratings from previous customers.",
-    note: "Free to post a job.",
-    site: "https://www.ratedpeople.com/post-a-job",
-    search: onSite("ratedpeople.com"),
-  },
-  {
-    id: "bark",
-    name: "Bark",
-    blurb: "Broadest coverage, including cleaners, laundry, drivers and one-off help.",
-    note: "Free to post; sellers pay to reply, so expect quick contact.",
-    site: "https://www.bark.com/en/gb/",
-    search: onSite("bark.com"),
-  },
-  {
-    id: "trustatrader",
-    name: "TrustATrader",
-    blurb: "Smaller, well-reviewed independents. Useful as a second opinion on price.",
-    note: "Free to search.",
-    site: "https://www.trustatrader.com/",
-    search: (t, p) => `https://www.trustatrader.com/search?trade=${q(t)}&location=${q(p)}`,
-  },
-  {
-    id: "angi",
-    name: "Angi",
-    blurb: "Large US network of reviewed home-service pros.",
-    note: "Free to search and request quotes.",
-    site: "https://www.angi.com/",
-    search: onSite("angi.com"),
-  },
-  {
-    id: "thumbtack",
-    name: "Thumbtack",
-    blurb: "Quick quotes from local US pros, good for cleaning and handyman work.",
-    note: "Free to request quotes.",
-    site: "https://www.thumbtack.com/",
-    search: (t, p) => `https://www.thumbtack.com/search?query=${q(t)}&zip_code=${q(p)}`,
-  },
-  {
-    id: "yelp",
-    name: "Yelp",
-    blurb: "Reviews and phone numbers for nearby businesses across the US and Canada.",
-    note: "Free to search.",
-    site: "https://www.yelp.com/",
-    search: (t, p) => `https://www.yelp.com/search?find_desc=${q(t)}&find_loc=${q(p)}`,
-  },
-  {
-    id: "homestars",
-    name: "HomeStars",
-    blurb: "Canada's reviewed home-improvement and repair directory.",
-    note: "Free to search.",
-    site: "https://www.homestars.com/",
-    search: onSite("homestars.com"),
-  },
-  {
-    id: "hipages",
-    name: "hipages",
-    blurb: "Australia's largest tradie marketplace, with quick job posting.",
-    note: "Free to post a job.",
-    site: "https://hipages.com.au/",
-    search: onSite("hipages.com.au"),
-  },
-  {
-    id: "airtasker",
-    name: "Airtasker",
-    blurb: "Good for one-off Australian jobs: cleaning, moving, small repairs.",
-    note: "Free to post; taskers bid.",
-    site: "https://www.airtasker.com/",
-    search: (t, p) => `https://www.airtasker.com/tasks/?q=${q(t)}&location=${q(p)}`,
-  },
-  {
-    id: "builderscrack",
-    name: "Builders Crack",
-    blurb: "New Zealand trade marketplace covering repairs and maintenance.",
-    note: "Free to post a job.",
-    site: "https://builderscrack.co.nz/",
-    search: onSite("builderscrack.co.nz"),
-  },
-  {
-    id: "google_maps",
-    name: "Google Maps",
-    blurb: "Nearest firms with opening hours and phone numbers, handy late at night.",
-    note: "Free to search. Copying listings into Latchkey is not allowed, so it opens in a new tab.",
-    site: "https://www.google.com/maps",
-    search: (t, p) => `https://www.google.com/maps/search/${q(`${t} near ${p}`)}`,
-  },
-];
+/** The Maps search for a service category (used by suggested trades too). */
+export function mapsLink(category: string, area: string) {
+  return { name: "Google Maps", url: mapsSearch(tradeTerm(category), area.trim() || "me") };
+}
 
-/** Only the directories that actually operate in the property's country. */
-export function directoryLinks(category: string, postcode: string, country = "GB") {
-  const term = tradeTerm(category);
-  const where = postcode.trim() || "UK";
-  const ids = new Set(regionFor(country).directoryIds);
-  return DIRECTORIES.filter((d) => ids.has(d.id)).map((d) => ({ ...d, url: d.search(term, where) }));
+export type LocalSite = {
+  id: string;
+  name: string;
+  /** Who it's best for, in a few words. */
+  bestFor: string;
+  /** The site's own page (home, or its find-a-pro page). */
+  url: string;
+  /** An official register: check anyone doing this work is on it. */
+  official?: boolean;
+};
+
+/**
+ * Researched October 2026: the sites people in each country use to find and
+ * check tradespeople, with what each is best for. Official registers come
+ * first where the law requires registration (gas, electrics).
+ */
+export const LOCAL_SITES: Record<string, LocalSite[]> = {
+  GB: [
+    { id: "gas_safe", name: "Gas Safe Register", bestFor: "Check any gas or boiler engineer is registered (the law requires it)", url: "https://www.gassaferegister.co.uk/", official: true },
+    { id: "niceic", name: "NICEIC", bestFor: "Find or check a certified electrician", url: "https://niceic.com/find-a-tradesperson/", official: true },
+    { id: "checkatrade", name: "Checkatrade", bestFor: "Vetted trades with verified reviews; good for emergencies", url: "https://www.checkatrade.com/" },
+    { id: "which", name: "Which? Trusted Traders", bestFor: "Traders assessed by Which?; the most careful choice", url: "https://trustedtraders.which.co.uk/" },
+    { id: "mybuilder", name: "MyBuilder", bestFor: "Post a job and get quotes, from small repairs to building work", url: "https://www.mybuilder.com/" },
+    { id: "rated_people", name: "Rated People", bestFor: "Up to three quotes per job, with past customers' ratings", url: "https://www.ratedpeople.com/" },
+    { id: "trustatrader", name: "TrustATrader", bestFor: "Well-reviewed local independents; a second price", url: "https://www.trustatrader.com/" },
+    { id: "taskrabbit", name: "Taskrabbit", bestFor: "Quick small jobs: furniture, hanging, odd jobs", url: "https://www.taskrabbit.co.uk/" },
+    { id: "bark", name: "Bark", bestFor: "Cleaners, laundry and services the trade sites don't cover", url: "https://www.bark.com/en/gb/" },
+  ],
+  IE: [
+    { id: "rgi", name: "Register of Gas Installers (RGI)", bestFor: "Check any gas installer is registered (the law requires it)", url: "https://www.rgi.ie/", official: true },
+    { id: "safe_electric", name: "Safe Electric", bestFor: "Find a registered electrical contractor", url: "https://www.safeelectric.ie/", official: true },
+    { id: "goldenpages", name: "Golden Pages", bestFor: "Ireland's business directory, by trade and county", url: "https://www.goldenpages.ie/" },
+    { id: "bark_ie", name: "Bark", bestFor: "Quotes for cleaners, handymen and one-off help", url: "https://www.bark.com/en/ie/" },
+  ],
+  US: [
+    { id: "angi", name: "Angi", bestFor: "Reviewed pros in every trade; bigger repairs and projects", url: "https://www.angi.com/" },
+    { id: "thumbtack", name: "Thumbtack", bestFor: "Compare several quotes: cleaning, painting, handyman", url: "https://www.thumbtack.com/" },
+    { id: "taskrabbit_us", name: "Taskrabbit", bestFor: "Quick, clearly defined small jobs, often same day", url: "https://www.taskrabbit.com/" },
+    { id: "yelp", name: "Yelp", bestFor: "Local reviews and phone numbers for nearby firms", url: "https://www.yelp.com/" },
+    { id: "nextdoor", name: "Nextdoor", bestFor: "Neighbours' recommendations for trusted local trades", url: "https://nextdoor.com/" },
+  ],
+  CA: [
+    { id: "homestars", name: "HomeStars", bestFor: "Canada's reviewed contractors; post a project for replies", url: "https://homestars.com/" },
+    { id: "trustedpros", name: "TrustedPros", bestFor: "Reviewed Canadian trades; a second set of quotes", url: "https://trustedpros.ca/" },
+    { id: "taskrabbit_ca", name: "Taskrabbit", bestFor: "Quick small jobs in larger Canadian cities", url: "https://www.taskrabbit.ca/" },
+    { id: "yelp_ca", name: "Yelp", bestFor: "Local reviews and phone numbers", url: "https://www.yelp.ca/" },
+  ],
+  AU: [
+    { id: "hipages", name: "hipages", bestFor: "Licensed tradies for plumbing, electrics and repairs", url: "https://hipages.com.au/" },
+    { id: "airtasker", name: "Airtasker", bestFor: "Small defined jobs: cleaning, moving, assembly", url: "https://www.airtasker.com/" },
+    { id: "serviceseeking", name: "ServiceSeeking", bestFor: "Free quotes from local businesses across trades", url: "https://www.serviceseeking.com.au/" },
+  ],
+  NZ: [
+    { id: "builderscrack", name: "Builderscrack", bestFor: "New Zealand's largest trade marketplace, with reviews", url: "https://builderscrack.co.nz/" },
+    { id: "nocowboys", name: "NoCowboys", bestFor: "Kiwi ratings of trades from past customers", url: "https://nocowboys.co.nz/" },
+    { id: "trademe", name: "Trade Me Services", bestFor: "Local services listed by area", url: "https://www.trademe.co.nz/a/services" },
+  ],
+};
+
+/** The sites for a country, or a short international list for anywhere else. */
+export function localSites(country: string | null | undefined): LocalSite[] {
+  return LOCAL_SITES[(country ?? "GB").toUpperCase()] ?? [
+    { id: "bark_any", name: "Bark", bestFor: "Quotes from local services in many countries", url: "https://www.bark.com/" },
+    { id: "taskrabbit_any", name: "Taskrabbit", bestFor: "Quick small jobs where it operates", url: "https://www.taskrabbit.com/" },
+  ];
 }

@@ -147,6 +147,7 @@ export function GuestSheet({
               <Fact label={copy.bookedOn} value={b.listingName ?? site?.label ?? b.channel.replace("_", ".")} />
               <Fact label={copy.reference} value={b.reservationCode ?? "—"} />
               {b.email ? <Fact label={copy.email} value={b.email} /> : null}
+              {b.address ? <Fact label={copy.address} value={b.address} wide /> : null}
               {b.phoneLast4 ? <Fact label={copy.phone} value={`•••• ${b.phoneLast4}`} /> : null}
               {b.checkedInAt ? <Fact label={copy.checkedIn} value={when.format(new Date(b.checkedInAt))} /> : null}
               {b.notes ? <Fact label={copy.notes} value={b.notes} wide /> : null}

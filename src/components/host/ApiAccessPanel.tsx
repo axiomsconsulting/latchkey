@@ -29,7 +29,27 @@ export function ApiAccessPanel({ hostId, canWrite }: { hostId: string; canWrite:
   const [busy, setBusy] = useState(false);
 
   const d = q.data;
-  if (!d?.available) return null;
+  // Always shown (with the docs link), so links to this section land somewhere.
+  if (!d?.available)
+    return (
+      <section className="card-soft space-y-4 p-5">
+      <div className="flex items-start gap-3">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
+          <KeyRound className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg">{copy.title}</h2>
+          <p className="text-sm text-muted-foreground">{copy.body}</p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/developers">
+            <BookOpen className="size-4" /> {copy.docs}
+          </Link>
+        </Button>
+      </div>
+        <p className="rounded-xl bg-muted p-3 text-sm">{q.isLoading ? copy.loading : copy.unavailable}</p>
+      </section>
+    );
   const live = d.keys.filter((k) => !k.revoked_at);
 
   async function submit(e: React.FormEvent) {

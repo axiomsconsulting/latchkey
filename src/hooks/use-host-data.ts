@@ -99,9 +99,11 @@ export function useConnections(propertyId: string | null) {
 
 export function useAlerts() {
   const fn = useServerFn(listAlerts);
+  const hostId = useWorkspace().data?.hostId ?? null;
   return useQuery({
-    queryKey: ["alerts"],
-    queryFn: () => fn(),
+    queryKey: ["alerts", hostId],
+    enabled: Boolean(hostId),
+    queryFn: () => fn({ data: { hostId: hostId! } }),
     refetchInterval: 60_000,
   });
 }

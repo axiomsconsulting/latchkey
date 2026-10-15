@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -11,7 +11,13 @@ import {
   CalendarSync,
   ChevronRight,
   DoorOpen,
+  Check,
+  Download,
   ExternalLink,
+  Loader2,
+  Mail,
+  X,
+  Filter,
   Inbox,
   LogOut,
   Monitor,
@@ -33,6 +39,8 @@ import { Peek, PeekFact } from "@/components/host/Peek";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { alerts as alertCopy, common, extrasCopy, linkTools, today as oldCopy, todayDash as copy } from "@/content/copy";
 import { useAlerts, useBookingSites, useConnections, usePropertyBoard, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
@@ -41,6 +49,7 @@ import { formatUkDate, formatUkTime, nightsBetween } from "@/lib/dates";
 import { decideExtrasRequest, listExtrasRequests } from "@/lib/extras.functions";
 import { SECTIONS } from "@/lib/guide";
 import { getGuideEditor } from "@/lib/guide.functions";
+import { emailBookingInvoice, ensureBookingInvoice, getInvoiceStatuses } from "@/lib/invoice.functions";
 import { markAlertRead } from "@/lib/host.functions";
 import { formatPence } from "@/lib/services";
 import { listJobs } from "@/lib/services.functions";
@@ -152,6 +161,7 @@ function TodayPage() {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {lists.leaving.length ? <LeavingInvoices leaving={lists.leaving} roomName={roomName} /> : null}
         <WaitingOnYou propertyId={selectedId} />
         <CleaningToday windows={(data?.windows ?? []) as never} lists={lists} todayIso={todayIso} roomName={roomName} />
         <MaintenanceAhead propertyId={selectedId} />
@@ -302,6 +312,114 @@ function CardLink({ to, search, children }: { to: string; search?: Record<string
 }
 
 const rowClass = "flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 hover:bg-muted";
+
+/** Invoices for guests leaving today: email (✓ once sent, ✗ with no email) and download. */
+function LeavingInvoices({ leaving, roomName }: { leaving: Stay[]; roomName: (id: string | null) => string }) {
+  const statusFn = useServerFn(getInvoiceStatuses);
+  const ensure = useServerFn(ensureBookingInvoice);
+  const emailFn = useServerFn(emailBookingInvoice);
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { canWrite } = useRole();
+  const ids = leaving.map((b) => b.id);
+  const q = useQuery({ queryKey: ["invoice-status", ids], queryFn: () => statusFn({ data: { bookingIds: ids } }) });
+  const [busy, setBusy] = useState<string | null>(null);
+  const status = (id: string) => q.data?.find((x) => x.bookingId === id);
+  const fixEmail = (id: string) => void navigate({ to: "/app/bookings", search: { guest: id, edit: true } });
+
+  async function email(id: string) {
+    setBusy(`e-${id}`);
+    try {
+      const r = await emailFn({ data: { bookingId: id, origin: window.location.origin } });
+      if (r.sent) toast.success(copy.invoiceSent);
+      else if (r.reason === "no_email") {
+        toast.error(copy.invoiceNoEmail);
+        fixEmail(id);
+      } else if (r.reason === "demo") toast.info(copy.invoiceDemo);
+      else toast.error(copy.invoiceFailed);
+      await qc.invalidateQueries({ queryKey: ["invoice-status"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function download(id: string, token: string | null) {
+    // Open the tab now (before waiting) so the browser doesn't block it.
+    const tab = window.open("", "_blank");
+    setBusy(`d-${id}`);
+    try {
+      const t = token ?? (await ensure({ data: { bookingId: id } })).token;
+      if (tab) tab.location.href = `/invoice/${t}`;
+      else window.location.href = `/invoice/${t}`;
+      await qc.invalidateQueries({ queryKey: ["invoice-status"] });
+    } catch (e) {
+      tab?.close();
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card icon={LogOut} title={copy.leavingTitle}>
+      <ul className="space-y-1">
+        {leaving.map((b) => {
+          const st = status(b.id);
+          return (
+            <li key={b.id} className="flex flex-wrap items-center gap-2">
+              <Peek className="min-w-0 flex-1" content={<GuestPeek b={b} roomName={roomName} />}>
+                <Link to="/app/bookings" search={{ guest: b.id }} className={rowClass}>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{b.guest_full_name ?? copy.guestNoName}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {roomName(b.room_id)} · {formatUkTime(b.check_out_time ?? "11:00")}
+                  </span>
+                </Link>
+              </Peek>
+              {q.isLoading ? (
+                <Skeleton className="h-8 w-40 rounded-lg" />
+              ) : !st?.offered ? (
+                <span className="text-xs text-muted-foreground">{copy.invoiceByPlatform}</span>
+              ) : canWrite ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="relative">
+                    <Button size="sm" variant="outline" className="h-8" disabled={busy !== null} onClick={() => (st.email ? void email(b.id) : fixEmail(b.id))}>
+                      {busy === `e-${b.id}` ? <Loader2 className="size-3.5 animate-spin" /> : <Mail className="size-3.5" />} {copy.emailInvoice}
+                    </Button>
+                    {st.emailedAt ? (
+                      <span
+                        className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-success text-success-foreground"
+                        title={copy.emailedOn(clock(st.emailedAt))}
+                        aria-label={copy.emailedOn(clock(st.emailedAt))}
+                      >
+                        <Check className="size-3" />
+                      </span>
+                    ) : !st.email ? (
+                      <button
+                        type="button"
+                        onClick={() => fixEmail(b.id)}
+                        className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-destructive text-destructive-foreground"
+                        title={copy.noEmailFix}
+                        aria-label={copy.noEmailFix}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    ) : null}
+                  </span>
+                  <Button size="sm" variant="ghost" className="h-8" disabled={busy !== null} onClick={() => void download(b.id, st.token)} aria-label={copy.downloadInvoice}>
+                    {busy === `d-${b.id}` ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                    <span className="sr-only sm:not-sr-only">{copy.downloadInvoice}</span>
+                  </Button>
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
 
 function WaitingOnYou({ propertyId }: { propertyId: string }) {
   const jobsFn = useServerFn(listJobs);
@@ -507,51 +625,149 @@ function MaintenanceAhead({ propertyId }: { propertyId: string }) {
   );
 }
 
+type LinkStateKey = ReturnType<typeof linkState>;
+const STATE_ORDER: LinkStateKey[] = ["error", "warning", "syncing", "never", "ok"];
+const CONN_PREFS = "latchkey.todayConnections";
+
+function readPrefs(): { group: "room" | "platform"; hidden: LinkStateKey[] } {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(CONN_PREFS) ?? "{}") as { group?: string; hidden?: string[] };
+    return {
+      group: v.group === "platform" ? "platform" : "room",
+      hidden: (v.hidden ?? []).filter((x): x is LinkStateKey => (STATE_ORDER as string[]).includes(x)),
+    };
+  } catch {
+    return { group: "room", hidden: [] };
+  }
+}
+
 function Connections({ propertyId }: { propertyId: string }) {
   const q = useConnections(propertyId);
   const sites = useBookingSites();
+  const [prefs, setPrefsState] = useState<{ group: "room" | "platform"; hidden: LinkStateKey[] }>({ group: "room", hidden: [] });
+  useEffect(() => setPrefsState(readPrefs()), []);
+  const setPrefs = (p: typeof prefs) => {
+    setPrefsState(p);
+    try {
+      window.localStorage.setItem(CONN_PREFS, JSON.stringify(p));
+    } catch {
+      // Not remembered this time.
+    }
+  };
   type C = { id: string; channel: string; site_key?: string | null; listing_name: string | null; sync_status: string; sync_started_at?: string | null; last_error?: string | null; last_synced_at: string | null; rooms: { display_name: string } | null };
-  const links = (q.data?.connections ?? []) as unknown as C[];
-  const states = links.map((c) => linkState(c));
-  const bad = states.filter((s) => s === "error" || s === "warning").length;
-  const tone: Record<string, string> = { ok: "bg-success", syncing: "bg-primary animate-pulse", warning: "bg-accent", error: "bg-destructive", never: "bg-muted-foreground" };
+  const links = ((q.data?.connections ?? []) as unknown as C[]).map((c) => ({ c, state: linkState(c), site: sites.find((x) => x.key === platformKey(c as never)) }));
+  const count = (st: LinkStateKey) => links.filter((l) => l.state === st).length;
+  const bad = count("error") + count("warning");
+  const shown = links.filter((l) => !prefs.hidden.includes(l.state));
+  const tone: Record<LinkStateKey, string> = { ok: "bg-success", syncing: "bg-primary animate-pulse", warning: "bg-accent", error: "bg-destructive", never: "bg-muted-foreground" };
+
+  // Grouped by room (every platform for that room) or by platform (every room on it).
+  const groups = new Map<string, { label: ReactNode; items: typeof shown }>();
+  for (const l of shown) {
+    const key = prefs.group === "room" ? l.c.rooms?.display_name ?? copy.wholeHouse : platformKey(l.c as never);
+    const label = prefs.group === "room" ? key : <ChannelBadge channel={l.c.channel as Channel} label={l.site?.label} />;
+    if (!groups.has(key)) groups.set(key, { label, items: [] });
+    groups.get(key)!.items.push(l);
+  }
+  const ordered = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "en-GB", { numeric: true }));
+
+  const summary = !links.length
+    ? null
+    : bad
+      ? copy.someProblems(bad, links.length)
+      : count("ok") === links.length
+        ? copy.allWorking(links.length)
+        : copy.mixed(count("ok"), count("never") + count("syncing"));
+
   return (
     <Card
       icon={CalendarSync}
       title={copy.connectionsTitle}
-      action={links.length ? <Badge variant={bad ? "destructive" : "secondary"}>{bad ? copy.someProblems(bad, links.length) : copy.allWorking(links.length)}</Badge> : null}
+      action={summary ? <Badge variant={bad ? "destructive" : "secondary"}>{summary}</Badge> : null}
     >
       {q.isLoading ? <Skeleton className="h-16 rounded-xl" /> : null}
       {!q.isLoading && links.length === 0 ? <CardLink to="/app/connections">{copy.connect}</CardLink> : null}
-      <ul className="space-y-1">
-        {links.map((c, i) => {
-          const site = sites.find((s) => s.key === platformKey(c as never));
-          const state = states[i]!;
-          return (
-            <li key={c.id}>
-              <Peek
-                className="block"
-                content={
-                  <div>
-                    <p className="font-medium">{c.listing_name ?? site?.label ?? c.channel}</p>
-                    <PeekFact label={copy.room} value={c.rooms?.display_name ?? copy.wholeHouse} />
-                    <PeekFact label={copy.status} value={linkTools.states[state]} />
-                    <PeekFact label={copy.lastChecked} value={c.last_synced_at ? clock(c.last_synced_at) : "—"} />
-                    {state === "error" || state === "warning" ? <p className="mt-2 rounded-lg bg-muted p-2">{explainSyncError(c.last_error)}</p> : null}
-                  </div>
-                }
+      {links.length ? (
+        <div className="mb-2 flex items-center gap-2">
+          <div className="inline-flex rounded-lg border border-border p-0.5 text-xs" role="radiogroup" aria-label={copy.groupBy}>
+            {(["room", "platform"] as const).map((g) => (
+              <button
+                key={g}
+                type="button"
+                role="radio"
+                aria-checked={prefs.group === g}
+                onClick={() => setPrefs({ ...prefs, group: g })}
+                className={cn("rounded-md px-2.5 py-1 font-medium", prefs.group === g ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
               >
-                <Link to="/app/connections" search={{ link: c.id }} className={rowClass}>
-                  <span className={cn("size-2.5 shrink-0 rounded-full", tone[state])} aria-hidden />
-                  <ChannelBadge channel={c.channel as Channel} label={site?.label} />
-                  <span className="min-w-0 flex-1 truncate text-sm">{c.rooms?.display_name ?? c.listing_name ?? ""}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{linkTools.states[state]}</span>
-                </Link>
-              </Peek>
-            </li>
-          );
-        })}
-      </ul>
+                {g === "room" ? copy.byRoom : copy.byPlatform}
+              </button>
+            ))}
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative ml-auto size-8" aria-label={copy.filterStates}>
+                <Filter className="size-4" />
+                {prefs.hidden.length ? <span className="absolute right-1 top-1 size-2 rounded-full bg-accent" /> : null}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-60 rounded-2xl p-3">
+              <p className="mb-2 text-sm font-medium">{copy.filterStates}</p>
+              <ul className="space-y-1.5">
+                {STATE_ORDER.map((st) => (
+                  <li key={st}>
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={!prefs.hidden.includes(st)}
+                        onCheckedChange={(on) => setPrefs({ ...prefs, hidden: on ? prefs.hidden.filter((x) => x !== st) : [...prefs.hidden, st] })}
+                      />
+                      <span className={cn("size-2 rounded-full", tone[st])} aria-hidden />
+                      <span className="flex-1">{linkTools.states[st]}</span>
+                      <span className="tabular-nums text-muted-foreground">{count(st)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </PopoverContent>
+          </Popover>
+        </div>
+      ) : null}
+      {links.length && !shown.length ? <p className="text-sm text-muted-foreground">{copy.noneMatch}</p> : null}
+      <div className="space-y-3">
+        {ordered.map(([key, g]) => (
+          <div key={key}>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.label}</p>
+            <ul className="space-y-0.5">
+              {g.items.map(({ c, state, site }) => (
+                <li key={c.id}>
+                  <Peek
+                    className="block"
+                    content={
+                      <div>
+                        <p className="font-medium">{c.listing_name ?? site?.label ?? c.channel}</p>
+                        <PeekFact label={copy.room} value={c.rooms?.display_name ?? copy.wholeHouse} />
+                        <PeekFact label={copy.status} value={linkTools.states[state]} />
+                        <PeekFact label={copy.lastChecked} value={c.last_synced_at ? clock(c.last_synced_at) : "—"} />
+                        {state === "error" || state === "warning" ? <p className="mt-2 rounded-lg bg-muted p-2">{explainSyncError(c.last_error)}</p> : null}
+                      </div>
+                    }
+                  >
+                    <Link to="/app/connections" search={{ link: c.id }} className={rowClass}>
+                      <span className={cn("size-2.5 shrink-0 rounded-full", tone[state])} aria-hidden />
+                      {prefs.group === "room" ? (
+                        <ChannelBadge channel={c.channel as Channel} label={site?.label} />
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate text-sm">{c.rooms?.display_name ?? copy.wholeHouse}</span>
+                      )}
+                      {prefs.group === "room" ? <span className="flex-1" /> : null}
+                      <span className="shrink-0 text-xs text-muted-foreground">{linkTools.states[state]}</span>
+                    </Link>
+                  </Peek>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -654,6 +870,7 @@ function KeySettings({ isUk }: { isUk: boolean }) {
     ...(isOwner ? [{ key: "payments", to: "/app/settings", search: { focus: "payments" } }] : []),
     { key: "invoices", to: "/app/settings", search: { focus: "invoices" } },
     { key: "api", to: "/app/settings", search: { focus: "api" } },
+    { key: "apiGuide", to: "/developers" },
     ...(isOwner ? [{ key: "billing", to: "/app/billing" }] : []),
     ...(isUk ? [{ key: "register", to: "/app/register" }] : []),
   ];
@@ -706,8 +923,12 @@ function AlertsPanel() {
               variant="outline"
               size="sm"
               onClick={async () => {
-                await mark({ data: { id: a.id } });
-                await qc.invalidateQueries({ queryKey: ["alerts"] });
+                try {
+                  await mark({ data: { id: a.id } });
+                  await qc.invalidateQueries({ queryKey: ["alerts"] });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : common.errorBody);
+                }
               }}
             >
               {alertCopy.dismiss}

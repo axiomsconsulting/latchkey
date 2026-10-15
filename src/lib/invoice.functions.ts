@@ -48,6 +48,7 @@ type Draft = {
   rateBp: number;
   buyerName: string;
   buyerEmail: string | null;
+  buyerAddress: string | null;
   description: string;
   checkIn: string;
   checkOut: string;
@@ -63,8 +64,9 @@ async function draftFor(bookingId: string): Promise<Draft | null> {
   const db = await admin();
   const { data: b } = await db
     .from("bookings")
+    // "*" so the guest address is picked up once migration 0030 adds it.
     .select(
-      "id, channel, guest_full_name, guest_email, check_in_date, check_out_date, stay_amount_pence, stay_amount_includes_tax, property_id, rooms(display_name, public_title), properties(id, name, address, postcode, country_code, host_id, hosts(business_name, currency, tax_registered, tax_label, tax_rate_bp, prices_include_tax, tax_number, invoice_prefix, invoices_enabled))",
+      "*, rooms(display_name, public_title), properties(id, name, address, postcode, country_code, host_id, hosts(business_name, currency, tax_registered, tax_label, tax_rate_bp, prices_include_tax, tax_number, invoice_prefix, invoices_enabled))",
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -113,6 +115,7 @@ async function draftFor(bookingId: string): Promise<Draft | null> {
     rateBp: h?.tax_rate_bp ?? 0,
     buyerName: b.guest_full_name?.trim() || "Guest",
     buyerEmail: b.guest_email ?? null,
+    buyerAddress: ((b as { guest_address?: string | null }).guest_address ?? null) || null,
     description: stayDescription(
       roomName,
       nightsBetween(b.check_in_date, b.check_out_date),
@@ -168,7 +171,7 @@ function fieldsFrom(d: Draft, e: Edits) {
     seller_tax_number: d.taxNumber,
     buyer_name: (e.buyerName ?? d.buyerName).trim().slice(0, 200) || "Guest",
     buyer_email: (e.buyerEmail === undefined ? d.buyerEmail : e.buyerEmail)?.trim() || null,
-    buyer_address: e.buyerAddress?.trim() || null,
+    buyer_address: (e.buyerAddress === undefined ? d.buyerAddress : e.buyerAddress)?.trim().slice(0, 400) || null,
     description: (e.description ?? d.description).trim().slice(0, 300),
     check_in_date: d.checkIn,
     check_out_date: d.checkOut,
@@ -282,7 +285,7 @@ export const createStayInvoice = createServerFn({ method: "POST" })
     const { data: existing } = await db.from("invoices").select("access_token").eq("booking_id", bookingId).maybeSingle();
     // Once made, it's locked to the guest; the host can still change it.
     if (existing) return { token: existing.access_token };
-    const clean = cleanGuestDetails({ email: data.email ?? d.buyerEmail, address: data.address ?? null });
+    const clean = cleanGuestDetails({ email: data.email ?? d.buyerEmail, address: data.address ?? d.buyerAddress });
     if (!clean.ok) throw new Error(clean.problem === "email" ? "Please check the email address." : "That address is too long.");
     return { token: await createInvoice(d, { buyerEmail: clean.email, buyerAddress: clean.address }, "guest") };
   });
@@ -411,4 +414,110 @@ export const getInvoiceSettings = createServerFn({ method: "GET" })
       pricesInclude: h.prices_include_tax,
       terms: taxTerms(p?.country_code),
     };
+  });
+
+/* ------------------------- leaving guests (Today) ------------------------ */
+
+export type InvoiceStatus = {
+  bookingId: string;
+  /** Direct stay with a price, and invoices switched on. */
+  offered: boolean;
+  email: string | null;
+  token: string | null;
+  emailedAt: string | null;
+};
+
+/** Invoice state for a few stays at once: whether one is offered, made and emailed. */
+export const getInvoiceStatuses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ bookingIds: z.array(uuid).max(50) }).parse(d))
+  .handler(async ({ data, context }): Promise<InvoiceStatus[]> => {
+    if (!data.bookingIds.length) return [];
+    // RLS: only stays the caller can see.
+    const { data: visible } = await context.supabase.from("bookings").select("id").in("id", data.bookingIds);
+    const ids = (visible ?? []).map((b) => b.id);
+    const db = await admin();
+    const { data: invs, error } = await (db as unknown as { from: (t: string) => any })
+      .from("invoices")
+      .select("booking_id, access_token, buyer_email, emailed_at")
+      .in("booking_id", ids);
+    const byBooking = new Map(((error ? [] : invs) ?? []).map((i: { booking_id: string }) => [i.booking_id, i]));
+    const out: InvoiceStatus[] = [];
+    for (const id of ids) {
+      const d = await draftFor(id);
+      const inv = byBooking.get(id) as { access_token: string; buyer_email: string | null; emailed_at?: string | null } | undefined;
+      out.push({
+        bookingId: id,
+        offered: !!d?.offered || !!inv,
+        email: inv?.buyer_email ?? d?.buyerEmail ?? null,
+        token: inv?.access_token ?? null,
+        emailedAt: inv?.emailed_at ?? null,
+      });
+    }
+    return out;
+  });
+
+/** Makes the stay's invoice if there isn't one yet; returns its link token. */
+export const ensureBookingInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ bookingId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    const { data: b } = await context.supabase.from("bookings").select("property_id").eq("id", data.bookingId).maybeSingle();
+    if (!b) throw new Error("We couldn't find that stay.");
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, b.property_id));
+    const db = await admin();
+    const { data: existing } = await db.from("invoices").select("access_token").eq("booking_id", data.bookingId).maybeSingle();
+    if (existing) return { token: existing.access_token };
+    const d = await draftFor(data.bookingId);
+    if (!d?.offered) throw new Error("Invoices are for direct stays with a price. Add the price on the booking first.");
+    return { token: await createInvoice(d, {}, "host") };
+  });
+
+/**
+ * Emails the guest a link to their invoice (made first if needed). Only to
+ * the address on the invoice or stay; in demo mode nothing is sent.
+ */
+export const emailBookingInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ bookingId: uuid, origin: z.string().url() }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    const { data: b } = await context.supabase.from("bookings").select("property_id").eq("id", data.bookingId).maybeSingle();
+    if (!b) throw new Error("We couldn't find that stay.");
+    const hostId = await hostOfProperty(context.supabase, b.property_id);
+    await requireWrite(context.supabase, hostId);
+    const d = await draftFor(data.bookingId);
+    const db = await admin();
+    const { data: existing } = await db
+      .from("invoices")
+      .select("id, access_token, number, buyer_email, total_pence, currency, seller_name")
+      .eq("booking_id", data.bookingId)
+      .maybeSingle();
+    if (!existing && !d?.offered) throw new Error("Invoices are for direct stays with a price. Add the price on the booking first.");
+    const to = existing?.buyer_email ?? d?.buyerEmail ?? null;
+    if (!to) return { sent: false as const, reason: "no_email" as const };
+
+    const { hostModes } = await import("./checkin.server");
+    if ((await hostModes(hostId)).guest_messages !== "live") return { sent: false as const, reason: "demo" as const };
+
+    const token = existing?.access_token ?? (await createInvoice(d!, {}, "host"));
+    const { data: inv } = await db.from("invoices").select("id, number, total_pence, currency, seller_name").eq("access_token", token).single();
+    if (!inv) throw new Error("We couldn't find the invoice.");
+    const link = `${new URL(data.origin).origin}/invoice/${token}`;
+    const total = new Intl.NumberFormat("en-GB", { style: "currency", currency: inv.currency }).format(inv.total_pence / 100);
+    const { sendGuestEmail } = await import("./alert-email.server");
+    const sent = await sendGuestEmail({
+      to,
+      subject: `Your invoice ${inv.number} from ${inv.seller_name}`,
+      body: `Thank you for staying with us.\n\nYour invoice ${inv.number} for ${total} is here:\n${link}\n\nOpen it to print or save it as a PDF.`,
+      from: inv.seller_name,
+      key: `invoice-${inv.id}-${Date.now()}`,
+    });
+    if (!sent) return { sent: false as const, reason: "failed" as const };
+    await (db as unknown as { from: (t: string) => any })
+      .from("invoices")
+      .update({ emailed_at: new Date().toISOString(), emailed_to: to })
+      .eq("id", inv.id);
+    return { sent: true as const, reason: null };
   });
