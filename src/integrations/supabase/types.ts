@@ -10,18 +10,396 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
+      analytics_identities: {
+        Row: {
+          created_at: string
+          kind: string
+          profile_id: string
+          value_hash: string
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          profile_id: string
+          value_hash: string
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          profile_id?: string
+          value_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_identities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_profiles: {
+        Row: {
+          email: string | null
+          first_seen: string
+          host_id: string | null
+          id: string
+          known_at: string | null
+          last_seen: string
+          user_id: string | null
+        }
+        Insert: {
+          email?: string | null
+          first_seen?: string
+          host_id?: string | null
+          id?: string
+          known_at?: string | null
+          last_seen?: string
+          user_id?: string | null
+        }
+        Update: {
+          email?: string | null
+          first_seen?: string
+          host_id?: string | null
+          id?: string
+          known_at?: string | null
+          last_seen?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_profiles_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_views: {
+        Row: {
+          at: string
+          duration_ms: number
+          id: string
+          path: string
+          title: string | null
+          visit_id: string
+          visitor_id: string
+        }
+        Insert: {
+          at?: string
+          duration_ms?: number
+          id: string
+          path: string
+          title?: string | null
+          visit_id: string
+          visitor_id: string
+        }
+        Update: {
+          at?: string
+          duration_ms?: number
+          id?: string
+          path?: string
+          title?: string | null
+          visit_id?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_views_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_views_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_visitors: {
+        Row: {
+          bot_reason: string | null
+          browser: string | null
+          device: string | null
+          first_path: string | null
+          first_referrer: string | null
+          first_seen: string
+          id: string
+          is_bot: boolean
+          language: string | null
+          last_seen: string
+          os: string | null
+          profile_id: string | null
+          timezone: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          bot_reason?: string | null
+          browser?: string | null
+          device?: string | null
+          first_path?: string | null
+          first_referrer?: string | null
+          first_seen?: string
+          id: string
+          is_bot?: boolean
+          language?: string | null
+          last_seen?: string
+          os?: string | null
+          profile_id?: string | null
+          timezone?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          bot_reason?: string | null
+          browser?: string | null
+          device?: string | null
+          first_path?: string | null
+          first_referrer?: string | null
+          first_seen?: string
+          id?: string
+          is_bot?: boolean
+          language?: string | null
+          last_seen?: string
+          os?: string | null
+          profile_id?: string | null
+          timezone?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_visitors_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_visits: {
+        Row: {
+          city: string | null
+          country: string | null
+          duration_ms: number
+          entry_path: string | null
+          exit_path: string | null
+          id: string
+          ip: string | null
+          is_bot: boolean
+          last_at: string
+          pages: number
+          referrer: string | null
+          region: string | null
+          started_at: string
+          utm_source: string | null
+          visitor_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          duration_ms?: number
+          entry_path?: string | null
+          exit_path?: string | null
+          id?: string
+          ip?: string | null
+          is_bot?: boolean
+          last_at?: string
+          pages?: number
+          referrer?: string | null
+          region?: string | null
+          started_at?: string
+          utm_source?: string | null
+          visitor_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          duration_ms?: number
+          entry_path?: string | null
+          exit_path?: string | null
+          id?: string
+          ip?: string | null
+          is_bot?: boolean
+          last_at?: string
+          pages?: number
+          referrer?: string | null
+          region?: string | null
+          started_at?: string
+          utm_source?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_visits_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcement_dismissals: {
+        Row: {
+          announcement_id: string
+          dismissed_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          dismissed_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          dismissed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_dismissals_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          active: boolean
+          body: string
+          created_at: string
+          expires_at: string | null
+          host_id: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          created_at?: string
+          expires_at?: string | null
+          host_id?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          created_at?: string
+          expires_at?: string | null
+          host_id?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          host_id: string
+          id: string
+          key_hash: string
+          last_used_at: string | null
+          name: string
+          prefix: string
+          revoked_at: string | null
+          scopes: string[]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          host_id: string
+          id?: string
+          key_hash: string
+          last_used_at?: string | null
+          name: string
+          prefix: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          host_id?: string
+          id?: string
+          key_hash?: string
+          last_used_at?: string | null
+          name?: string
+          prefix?: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          at: string
+          changed: Json | null
+          host_id: string | null
+          id: number
+          row_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          at?: string
+          changed?: Json | null
+          host_id?: string | null
+          id?: number
+          row_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          at?: string
+          changed?: Json | null
+          host_id?: string | null
+          id?: number
+          row_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
-          stay_amount_pence: number | null
-          stay_amount_includes_tax: boolean | null
+          anonymised_at: string | null
+          archived_at: string | null
           arrived_adults: number | null
           arrived_children: number | null
-          site_key: string | null
-          anonymised_at: string | null
           booking_url: string | null
           channel: Database["public"]["Enums"]["booking_channel"]
           check_in_date: string
@@ -50,17 +428,18 @@ export type Database = {
           property_id: string
           reservation_code: string | null
           room_id: string | null
+          site_key: string | null
           source: Database["public"]["Enums"]["booking_source"]
           status: Database["public"]["Enums"]["booking_status"]
+          stay_amount_includes_tax: boolean | null
+          stay_amount_pence: number | null
           updated_at: string
         }
         Insert: {
-          stay_amount_pence?: number | null
-          stay_amount_includes_tax?: boolean | null
+          anonymised_at?: string | null
+          archived_at?: string | null
           arrived_adults?: number | null
           arrived_children?: number | null
-          site_key?: string | null
-          anonymised_at?: string | null
           booking_url?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
           check_in_date: string
@@ -89,17 +468,18 @@ export type Database = {
           property_id: string
           reservation_code?: string | null
           room_id?: string | null
+          site_key?: string | null
           source?: Database["public"]["Enums"]["booking_source"]
           status?: Database["public"]["Enums"]["booking_status"]
+          stay_amount_includes_tax?: boolean | null
+          stay_amount_pence?: number | null
           updated_at?: string
         }
         Update: {
-          stay_amount_pence?: number | null
-          stay_amount_includes_tax?: boolean | null
+          anonymised_at?: string | null
+          archived_at?: string | null
           arrived_adults?: number | null
           arrived_children?: number | null
-          site_key?: string | null
-          anonymised_at?: string | null
           booking_url?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
           check_in_date?: string
@@ -128,8 +508,11 @@ export type Database = {
           property_id?: string
           reservation_code?: string | null
           room_id?: string | null
+          site_key?: string | null
           source?: Database["public"]["Enums"]["booking_source"]
           status?: Database["public"]["Enums"]["booking_status"]
+          stay_amount_includes_tax?: boolean | null
+          stay_amount_pence?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -179,7 +562,6 @@ export type Database = {
       }
       channel_connections: {
         Row: {
-          site_key: string | null
           channel: Database["public"]["Enums"]["booking_channel"]
           created_at: string
           id: string
@@ -191,11 +573,12 @@ export type Database = {
           masked_url: string | null
           property_id: string
           room_id: string | null
+          site_key: string | null
+          sync_started_at: string | null
           sync_status: Database["public"]["Enums"]["sync_status"]
           url_fingerprint: string | null
         }
         Insert: {
-          site_key?: string | null
           channel: Database["public"]["Enums"]["booking_channel"]
           created_at?: string
           id?: string
@@ -207,11 +590,12 @@ export type Database = {
           masked_url?: string | null
           property_id: string
           room_id?: string | null
+          site_key?: string | null
+          sync_started_at?: string | null
           sync_status?: Database["public"]["Enums"]["sync_status"]
           url_fingerprint?: string | null
         }
         Update: {
-          site_key?: string | null
           channel?: Database["public"]["Enums"]["booking_channel"]
           created_at?: string
           id?: string
@@ -223,6 +607,8 @@ export type Database = {
           masked_url?: string | null
           property_id?: string
           room_id?: string | null
+          site_key?: string | null
+          sync_started_at?: string | null
           sync_status?: Database["public"]["Enums"]["sync_status"]
           url_fingerprint?: string | null
         }
@@ -304,9 +690,9 @@ export type Database = {
       checkin_sessions: {
         Row: {
           adults: number | null
+          booking_id: string
           children: number | null
           companion_attempts: number
-          booking_id: string
           completed_at: string | null
           confirmed: boolean
           created_at: string
@@ -320,9 +706,9 @@ export type Database = {
         }
         Insert: {
           adults?: number | null
+          booking_id: string
           children?: number | null
           companion_attempts?: number
-          booking_id: string
           completed_at?: string | null
           confirmed?: boolean
           created_at?: string
@@ -336,9 +722,9 @@ export type Database = {
         }
         Update: {
           adults?: number | null
+          booking_id?: string
           children?: number | null
           companion_attempts?: number
-          booking_id?: string
           completed_at?: string | null
           confirmed?: boolean
           created_at?: string
@@ -483,6 +869,77 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          host_id: string | null
+          id: string
+          kind: string
+          message: string | null
+          page: string | null
+          property_id: string | null
+          rating: number | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          host_id?: string | null
+          id?: string
+          kind: string
+          message?: string | null
+          page?: string | null
+          property_id?: string | null
+          rating?: number | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          host_id?: string | null
+          id?: string
+          kind?: string
+          message?: string | null
+          page?: string | null
+          property_id?: string | null
+          rating?: number | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "feedback_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_ids: {
         Row: {
           age: number | null
@@ -554,6 +1011,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_ids_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "guest_ids_property_id_fkey"
@@ -638,6 +1102,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_register_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
           },
           {
             foreignKeyName: "guest_register_host_id_fkey"
@@ -821,26 +1292,82 @@ export type Database = {
           },
         ]
       }
+      host_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          host_id: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          role: Database["public"]["Enums"]["host_role"]
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          host_id: string
+          id?: string
+          invited_by: string
+          revoked_at?: string | null
+          role: Database["public"]["Enums"]["host_role"]
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          host_id?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          role?: Database["public"]["Enums"]["host_role"]
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_invitations_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       host_members: {
         Row: {
           created_at: string
           host_id: string
           id: string
+          invited_by: string | null
           role: Database["public"]["Enums"]["host_role"]
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           host_id: string
           id?: string
+          invited_by?: string | null
           role?: Database["public"]["Enums"]["host_role"]
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           host_id?: string
           id?: string
+          invited_by?: string | null
           role?: Database["public"]["Enums"]["host_role"]
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -855,123 +1382,141 @@ export type Database = {
       }
       hosts: {
         Row: {
-          stripe_account_id: string | null
-          stripe_account_ready: boolean
-          stripe_account_checked_at: string | null
-          uses_platform_stripe: boolean
-          subscription_status: string
-          trial_started_at: string
-          trial_ends_at: string | null
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
-          current_period_end: string | null
-          canceled_at: string | null
-          support_access_until: string | null
-          invoices_enabled: boolean
-          tax_number: string | null
-          invoice_prefix: string
-          invoice_counter: number
-          booking_sites: Json
+          api_addon: boolean
           bank_details: string | null
+          booking_sites: Json
           business_name: string
+          canceled_at: string | null
           channel_labels: Json
           contact_email: string | null
           contact_phone: string | null
           created_at: string
           currency: string
+          current_period_end: string | null
           id: string
           integration_modes: Json
+          invoice_counter: number
+          invoice_prefix: string
+          invoices_enabled: boolean
+          offer_label: string | null
+          offer_pence: number | null
+          offer_used_at: string | null
           out_until: string | null
+          plan_key: string
           prices_include_tax: boolean
+          stripe_account_checked_at: string | null
+          stripe_account_id: string | null
           stripe_account_label: string | null
+          stripe_account_ready: boolean
           stripe_checked_at: string | null
+          stripe_customer_id: string | null
           stripe_mode: string
+          stripe_subscription_id: string | null
+          subscription_status: string
+          support_access_until: string | null
           tax_label: string
+          tax_number: string | null
           tax_rate_bp: number
           tax_registered: boolean
           timezone: string
+          trial_ends_at: string | null
+          trial_started_at: string
+          uses_platform_stripe: boolean
         }
         Insert: {
-          stripe_account_id?: string | null
-          stripe_account_ready?: boolean
-          stripe_account_checked_at?: string | null
-          uses_platform_stripe?: boolean
-          subscription_status?: string
-          trial_started_at?: string
-          trial_ends_at?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          current_period_end?: string | null
-          canceled_at?: string | null
-          support_access_until?: string | null
-          invoices_enabled?: boolean
-          tax_number?: string | null
-          invoice_prefix?: string
-          invoice_counter?: number
-          booking_sites?: Json
+          api_addon?: boolean
           bank_details?: string | null
+          booking_sites?: Json
           business_name: string
+          canceled_at?: string | null
           channel_labels?: Json
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
           currency?: string
+          current_period_end?: string | null
           id?: string
           integration_modes?: Json
+          invoice_counter?: number
+          invoice_prefix?: string
+          invoices_enabled?: boolean
+          offer_label?: string | null
+          offer_pence?: number | null
+          offer_used_at?: string | null
           out_until?: string | null
+          plan_key?: string
           prices_include_tax?: boolean
+          stripe_account_checked_at?: string | null
+          stripe_account_id?: string | null
           stripe_account_label?: string | null
+          stripe_account_ready?: boolean
           stripe_checked_at?: string | null
+          stripe_customer_id?: string | null
           stripe_mode?: string
+          stripe_subscription_id?: string | null
+          subscription_status?: string
+          support_access_until?: string | null
           tax_label?: string
+          tax_number?: string | null
           tax_rate_bp?: number
           tax_registered?: boolean
           timezone?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string
+          uses_platform_stripe?: boolean
         }
         Update: {
-          stripe_account_id?: string | null
-          stripe_account_ready?: boolean
-          stripe_account_checked_at?: string | null
-          uses_platform_stripe?: boolean
-          subscription_status?: string
-          trial_started_at?: string
-          trial_ends_at?: string | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          current_period_end?: string | null
-          canceled_at?: string | null
-          support_access_until?: string | null
-          invoices_enabled?: boolean
-          tax_number?: string | null
-          invoice_prefix?: string
-          invoice_counter?: number
-          booking_sites?: Json
+          api_addon?: boolean
           bank_details?: string | null
+          booking_sites?: Json
           business_name?: string
+          canceled_at?: string | null
           channel_labels?: Json
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
           currency?: string
+          current_period_end?: string | null
           id?: string
           integration_modes?: Json
+          invoice_counter?: number
+          invoice_prefix?: string
+          invoices_enabled?: boolean
+          offer_label?: string | null
+          offer_pence?: number | null
+          offer_used_at?: string | null
           out_until?: string | null
+          plan_key?: string
           prices_include_tax?: boolean
+          stripe_account_checked_at?: string | null
+          stripe_account_id?: string | null
           stripe_account_label?: string | null
+          stripe_account_ready?: boolean
           stripe_checked_at?: string | null
+          stripe_customer_id?: string | null
           stripe_mode?: string
+          stripe_subscription_id?: string | null
+          subscription_status?: string
+          support_access_until?: string | null
           tax_label?: string
+          tax_number?: string | null
           tax_rate_bp?: number
           tax_registered?: boolean
           timezone?: string
+          trial_ends_at?: string | null
+          trial_started_at?: string
+          uses_platform_stripe?: boolean
         }
         Relationships: []
       }
       invoices: {
         Row: {
-          lines: Json | null
           access_token: string
+          amended_at: string | null
           booking_id: string | null
+          buyer_address: string | null
+          buyer_email: string | null
+          buyer_name: string
           check_in_date: string | null
           check_out_date: string | null
           created_at: string
@@ -979,10 +1524,10 @@ export type Database = {
           currency: string
           description: string
           guest_locked_at: string | null
-          amended_at: string | null
           host_id: string
           id: string
           issued_on: string
+          lines: Json | null
           net_pence: number
           number: string
           property_id: string | null
@@ -991,9 +1536,6 @@ export type Database = {
           seller_room: string | null
           seller_tax_label: string | null
           seller_tax_number: string | null
-          buyer_address: string | null
-          buyer_email: string | null
-          buyer_name: string
           tax_name: string | null
           tax_pence: number
           tax_rate_bp: number
@@ -1002,9 +1544,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          lines?: Json | null
           access_token: string
+          amended_at?: string | null
           booking_id?: string | null
+          buyer_address?: string | null
+          buyer_email?: string | null
+          buyer_name: string
           check_in_date?: string | null
           check_out_date?: string | null
           created_at?: string
@@ -1012,10 +1557,10 @@ export type Database = {
           currency: string
           description: string
           guest_locked_at?: string | null
-          amended_at?: string | null
           host_id: string
           id?: string
           issued_on: string
+          lines?: Json | null
           net_pence: number
           number: string
           property_id?: string | null
@@ -1024,9 +1569,6 @@ export type Database = {
           seller_room?: string | null
           seller_tax_label?: string | null
           seller_tax_number?: string | null
-          buyer_address?: string | null
-          buyer_email?: string | null
-          buyer_name: string
           tax_name?: string | null
           tax_pence: number
           tax_rate_bp?: number
@@ -1035,9 +1577,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          lines?: Json | null
           access_token?: string
+          amended_at?: string | null
           booking_id?: string | null
+          buyer_address?: string | null
+          buyer_email?: string | null
+          buyer_name?: string
           check_in_date?: string | null
           check_out_date?: string | null
           created_at?: string
@@ -1045,10 +1590,10 @@ export type Database = {
           currency?: string
           description?: string
           guest_locked_at?: string | null
-          amended_at?: string | null
           host_id?: string
           id?: string
           issued_on?: string
+          lines?: Json | null
           net_pence?: number
           number?: string
           property_id?: string | null
@@ -1057,14 +1602,70 @@ export type Database = {
           seller_room?: string | null
           seller_tax_label?: string | null
           seller_tax_number?: string | null
-          buyer_address?: string | null
-          buyer_email?: string | null
-          buyer_name?: string
           tax_name?: string | null
           tax_pence?: number
           tax_rate_bp?: number
           title?: string
           total_pence?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "invoices_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_settings: {
+        Row: {
+          enabled: boolean
+          every_minutes: number | null
+          key: string
+          last_duration_ms: number | null
+          last_run_at: string | null
+          last_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          every_minutes?: number | null
+          key: string
+          last_duration_ms?: number | null
+          last_run_at?: string | null
+          last_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          every_minutes?: number | null
+          key?: string
+          last_duration_ms?: number | null
+          last_run_at?: string | null
+          last_status?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1259,7 +1860,6 @@ export type Database = {
       }
       properties: {
         Row: {
-          guest_records: Json
           active: boolean
           address: string | null
           check_in_pin: string | null
@@ -1268,6 +1868,7 @@ export type Database = {
           created_at: string
           default_check_in_time: string
           default_check_out_time: string
+          guest_records: Json
           host_contact_name: string | null
           host_contact_phone: string | null
           host_id: string
@@ -1286,7 +1887,6 @@ export type Database = {
           wifi_password: string | null
         }
         Insert: {
-          guest_records?: Json
           active?: boolean
           address?: string | null
           check_in_pin?: string | null
@@ -1295,6 +1895,7 @@ export type Database = {
           created_at?: string
           default_check_in_time?: string
           default_check_out_time?: string
+          guest_records?: Json
           host_contact_name?: string | null
           host_contact_phone?: string | null
           host_id: string
@@ -1313,7 +1914,6 @@ export type Database = {
           wifi_password?: string | null
         }
         Update: {
-          guest_records?: Json
           active?: boolean
           address?: string | null
           check_in_pin?: string | null
@@ -1322,6 +1922,7 @@ export type Database = {
           created_at?: string
           default_check_in_time?: string
           default_check_out_time?: string
+          guest_records?: Json
           host_contact_name?: string | null
           host_contact_phone?: string | null
           host_id?: string
@@ -1351,7 +1952,6 @@ export type Database = {
       }
       requests: {
         Row: {
-          stripe_account_id: string | null
           booking_id: string
           created_at: string
           early_from: string | null
@@ -1369,6 +1969,7 @@ export type Database = {
           receipt_number: string | null
           resolved_at: string | null
           status: string
+          stripe_account_id: string | null
           stripe_payment_intent: string | null
           stripe_session_id: string | null
           suggested_window: string | null
@@ -1377,7 +1978,6 @@ export type Database = {
           total_pence: number
         }
         Insert: {
-          stripe_account_id?: string | null
           booking_id: string
           created_at?: string
           early_from?: string | null
@@ -1395,6 +1995,7 @@ export type Database = {
           receipt_number?: string | null
           resolved_at?: string | null
           status?: string
+          stripe_account_id?: string | null
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
           suggested_window?: string | null
@@ -1403,7 +2004,6 @@ export type Database = {
           total_pence?: number
         }
         Update: {
-          stripe_account_id?: string | null
           booking_id?: string
           created_at?: string
           early_from?: string | null
@@ -1421,6 +2021,7 @@ export type Database = {
           receipt_number?: string | null
           resolved_at?: string | null
           status?: string
+          stripe_account_id?: string | null
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
           suggested_window?: string | null
@@ -1499,9 +2100,9 @@ export type Database = {
       }
       rooms: {
         Row: {
-          children_allowed: boolean
           active: boolean
           amenities: Json
+          children_allowed: boolean
           created_at: string
           description: string | null
           display_name: string
@@ -1519,9 +2120,9 @@ export type Database = {
           sort_order: number
         }
         Insert: {
-          children_allowed?: boolean
           active?: boolean
           amenities?: Json
+          children_allowed?: boolean
           created_at?: string
           description?: string | null
           display_name: string
@@ -1539,9 +2140,9 @@ export type Database = {
           sort_order?: number
         }
         Update: {
-          children_allowed?: boolean
           active?: boolean
           amenities?: Json
+          children_allowed?: boolean
           created_at?: string
           description?: string | null
           display_name?: string
@@ -1571,6 +2172,7 @@ export type Database = {
       service_jobs: {
         Row: {
           acknowledged_at: string | null
+          archived_at: string | null
           booking_id: string | null
           category: string
           completed_at: string | null
@@ -1596,6 +2198,7 @@ export type Database = {
         }
         Insert: {
           acknowledged_at?: string | null
+          archived_at?: string | null
           booking_id?: string | null
           category: string
           completed_at?: string | null
@@ -1621,6 +2224,7 @@ export type Database = {
         }
         Update: {
           acknowledged_at?: string | null
+          archived_at?: string | null
           booking_id?: string | null
           category?: string
           completed_at?: string | null
@@ -1682,6 +2286,45 @@ export type Database = {
           },
         ]
       }
+      site_settings: {
+        Row: {
+          cost_model: Json | null
+          id: number
+          invoice_nightly_lines: boolean
+          notice: string | null
+          offer: Json | null
+          pricing_model: Json | null
+          projection: Json | null
+          signups_open: boolean
+          support_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          cost_model?: Json | null
+          id?: number
+          invoice_nightly_lines?: boolean
+          notice?: string | null
+          offer?: Json | null
+          pricing_model?: Json | null
+          projection?: Json | null
+          signups_open?: boolean
+          support_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cost_model?: Json | null
+          id?: number
+          invoice_nightly_lines?: boolean
+          notice?: string | null
+          offer?: Json | null
+          pricing_model?: Json | null
+          projection?: Json | null
+          signups_open?: boolean
+          support_email?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stay_tokens: {
         Row: {
           booking_id: string
@@ -1723,6 +2366,24 @@ export type Database = {
             referencedColumns: ["booking_id"]
           },
         ]
+      }
+      super_admins: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          email: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          email: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          email?: string
+        }
+        Relationships: []
       }
       sync_runs: {
         Row: {
@@ -1855,6 +2516,54 @@ export type Database = {
           },
         ]
       }
+      trial_flags: {
+        Row: {
+          created_at: string
+          detail: string
+          host_id: string
+          id: string
+          matched_host_id: string | null
+          reason: string
+          resolution: string | null
+          resolved_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail: string
+          host_id: string
+          id?: string
+          matched_host_id?: string | null
+          reason: string
+          resolution?: string | null
+          resolved_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: string
+          host_id?: string
+          id?: string
+          matched_host_id?: string | null
+          reason?: string
+          resolution?: string | null
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_flags_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trial_flags_matched_host_id_fkey"
+            columns: ["matched_host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unavailability_windows: {
         Row: {
           created_at: string
@@ -1911,6 +2620,92 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      usage_daily: {
+        Row: {
+          count: number
+          day: string
+          host_id: string | null
+          metric: string
+        }
+        Insert: {
+          count?: number
+          day?: string
+          host_id?: string | null
+          metric: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          host_id?: string | null
+          metric?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_daily_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_prefs: {
+        Row: {
+          last_host_id: string | null
+          support_host_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_host_id?: string | null
+          support_host_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_host_id?: string | null
+          support_host_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_prefs_last_host_id_fkey"
+            columns: ["last_host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_prefs_support_host_id_fkey"
+            columns: ["support_host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          avatar_path: string | null
+          display_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_path?: string | null
+          display_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_path?: string | null
+          display_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -2009,14 +2804,63 @@ export type Database = {
       }
     }
     Functions: {
-      claim_invoice_number: {
-        Args: { _host_id: string }
-        Returns: number
+      accept_host_invitation: { Args: { _token: string }; Returns: string }
+      address_key: {
+        Args: { _address: string; _postcode: string }
+        Returns: string
       }
+      admin_host_stats: {
+        Args: never
+        Returns: {
+          bookings_30d: number
+          bookings_total: number
+          business_name: string
+          channels: Json
+          checkins_30d: number
+          created_at: string
+          current_period_end: string
+          host_id: string
+          is_demo: boolean
+          last_sign_in_at: string
+          owner_email: string
+          properties: number
+          rooms_per_property: number[]
+          subscription_status: string
+          support_access_until: string
+          trial_ends_at: string
+        }[]
+      }
+      analytics_identify: {
+        Args: {
+          _email: string
+          _email_hash: string
+          _host_id: string
+          _user_hash: string
+          _user_id: string
+          _visitor: string
+        }
+        Returns: string
+      }
+      analytics_leave: {
+        Args: { _ms: number; _view: string; _visitor: string }
+        Returns: undefined
+      }
+      audit_noise: { Args: { _key: string }; Returns: boolean }
+      audit_redacted: { Args: { _key: string }; Returns: boolean }
+      bump_usage: {
+        Args: { _host_id: string; _metric: string; _n?: number }
+        Returns: undefined
+      }
+      can_read_host: { Args: { _host_id: string }; Returns: boolean }
+      can_read_private: { Args: { _host_id: string }; Returns: boolean }
+      can_write_host: { Args: { _host_id: string }; Returns: boolean }
+      claim_invoice_number: { Args: { _host_id: string }; Returns: number }
       create_host_workspace: {
         Args: { _business_name: string; _contact_email: string }
         Returns: string
       }
+      current_offer: { Args: never; Returns: Json }
+      delete_bookings: { Args: { _ids: string[] }; Returns: number }
       has_host_role: {
         Args: {
           _host_id: string
@@ -2024,6 +2868,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_pending_invite: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2031,10 +2876,48 @@ export type Database = {
         }
         Returns: boolean
       }
+      host_has_access: { Args: { _host_id: string }; Returns: boolean }
+      host_team: {
+        Args: { _host_id: string }
+        Returns: {
+          avatar_path: string
+          created_at: string
+          display_name: string
+          email: string
+          last_sign_in_at: string
+          role: string
+          user_id: string
+        }[]
+      }
+      host_writer: { Args: { _host_id: string }; Returns: boolean }
+      invitation_hash: { Args: { _token: string }; Returns: string }
       is_host_member: { Args: { _host_id: string }; Returns: boolean }
+      is_host_owner: { Args: { _host_id: string }; Returns: boolean }
       is_host_staff: { Args: { _host_id: string }; Returns: boolean }
       is_shared_demo_user: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
+      member_role: { Args: { _host_id: string }; Returns: string }
+      peek_invitation: {
+        Args: { _token: string }
+        Returns: {
+          business_name: string
+          email_masked: string
+          role: string
+          status: string
+        }[]
+      }
+      platform_trial_days: { Args: never; Returns: number }
       property_host_id: { Args: { _property_id: string }; Returns: string }
+      row_host_id: { Args: { _table: string; r: Json }; Returns: string }
+      support_can_write: { Args: { _host_id: string }; Returns: boolean }
+      update_host_ops: {
+        Args: { _channel_labels: Json; _host_id: string }
+        Returns: undefined
+      }
+      update_host_sites: {
+        Args: { _booking_sites: Json; _channel_labels: Json; _host_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
@@ -2055,7 +2938,7 @@ export type Database = {
         | "cancelled"
         | "flagged"
         | "blocked"
-      host_role: "owner" | "co_host" | "cleaner"
+      host_role: "owner" | "co_host" | "cleaner" | "manager" | "viewer"
       presence_event: "arrived" | "left" | "returned" | "checked_out"
       sync_status: "never" | "ok" | "warning" | "error"
     }
@@ -2205,7 +3088,7 @@ export const Constants = {
         "flagged",
         "blocked",
       ],
-      host_role: ["owner", "co_host", "cleaner"],
+      host_role: ["owner", "co_host", "cleaner", "manager", "viewer"],
       presence_event: ["arrived", "left", "returned", "checked_out"],
       sync_status: ["never", "ok", "warning", "error"],
     },
