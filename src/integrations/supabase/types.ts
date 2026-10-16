@@ -411,6 +411,7 @@ export type Database = {
           created_at: string
           external_uid: string | null
           feed_status: string | null
+          guest_address: string | null
           guest_count: number
           guest_email: string | null
           guest_full_name: string | null
@@ -451,6 +452,7 @@ export type Database = {
           created_at?: string
           external_uid?: string | null
           feed_status?: string | null
+          guest_address?: string | null
           guest_count?: number
           guest_email?: string | null
           guest_full_name?: string | null
@@ -491,6 +493,7 @@ export type Database = {
           created_at?: string
           external_uid?: string | null
           feed_status?: string | null
+          guest_address?: string | null
           guest_count?: number
           guest_email?: string | null
           guest_full_name?: string | null
@@ -1523,6 +1526,8 @@ export type Database = {
           created_by: string
           currency: string
           description: string
+          emailed_at: string | null
+          emailed_to: string | null
           guest_locked_at: string | null
           host_id: string
           id: string
@@ -1556,6 +1561,8 @@ export type Database = {
           created_by: string
           currency: string
           description: string
+          emailed_at?: string | null
+          emailed_to?: string | null
           guest_locked_at?: string | null
           host_id: string
           id?: string
@@ -1589,6 +1596,8 @@ export type Database = {
           created_by?: string
           currency?: string
           description?: string
+          emailed_at?: string | null
+          emailed_to?: string | null
           guest_locked_at?: string | null
           host_id?: string
           id?: string
@@ -2108,6 +2117,7 @@ export type Database = {
           display_name: string
           export_feed_enabled: boolean
           feed_token: string | null
+          guide_code: string | null
           guide_mode: string
           has_ensuite: boolean
           id: string
@@ -2128,6 +2138,7 @@ export type Database = {
           display_name: string
           export_feed_enabled?: boolean
           feed_token?: string | null
+          guide_code?: string | null
           guide_mode?: string
           has_ensuite?: boolean
           id?: string
@@ -2148,6 +2159,7 @@ export type Database = {
           display_name?: string
           export_feed_enabled?: boolean
           feed_token?: string | null
+          guide_code?: string | null
           guide_mode?: string
           has_ensuite?: boolean
           id?: string
