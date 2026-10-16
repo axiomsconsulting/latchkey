@@ -284,3 +284,42 @@ describe("room reconciliation across platforms", () => {
     ).toEqual([]);
   });
 });
+
+describe("hidden stays and closed nights across syncs", () => {
+  const feed = (over: Partial<import("../src/lib/ical").ParsedBooking> = {}) => ({
+    externalUid: "uid-1",
+    reservationCode: null,
+    guestFullName: null,
+    phoneLast4: null,
+    guestCount: null,
+    checkInDate: "2026-04-01",
+    checkOutDate: "2026-04-03",
+    checkInTime: "15:00",
+    checkOutTime: "11:00",
+    status: "blocked" as const,
+    externalListingTitle: null,
+    ...over,
+  });
+  const hiddenBlock = { ...baseExisting, status: "blocked", guest_full_name: null, archived_at: "2026-03-01T00:00:00Z" };
+
+  it("keeps a hidden closed night hidden while the platform still shows it the same", async () => {
+    const { shouldUnhide } = await import("../src/lib/sync-logic");
+    expect(shouldUnhide(hiddenBlock, feed())).toBe(false);
+    expect(shouldUnhide({ ...hiddenBlock, archived_at: null }, feed({ checkOutDate: "2026-04-09" }))).toBe(false);
+  });
+
+  it("shows it again when the platform changes it", async () => {
+    const { shouldUnhide } = await import("../src/lib/sync-logic");
+    expect(shouldUnhide(hiddenBlock, feed({ checkOutDate: "2026-04-05" }))).toBe(true);
+    expect(shouldUnhide(hiddenBlock, feed({ status: "upcoming", guestFullName: "Sam Lee" }))).toBe(true);
+    expect(shouldUnhide({ ...hiddenBlock, status: "cancelled" }, feed())).toBe(true);
+    // Dates the host changed by hand don't count as the platform changing them.
+    expect(shouldUnhide({ ...hiddenBlock, manual_fields: ["check_out_date"], check_out_date: "2026-04-02" }, feed())).toBe(false);
+  });
+
+  it("lets a named guest from the platform replace nights the host marked as not a booking", () => {
+    const marked = { ...baseExisting, status: "blocked", guest_full_name: null, manual_fields: ["status"] };
+    expect(buildPatch(marked, feed()).status).toBeUndefined();
+    expect(buildPatch(marked, feed({ status: "upcoming", guestFullName: "Sam Lee" })).status).toBe("upcoming");
+  });
+});

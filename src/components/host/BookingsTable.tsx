@@ -140,7 +140,10 @@ export function BookingsTable({
   picked,
   onToggle,
   onOpen,
+  rowActions,
 }: {
+  /** Quick icons at the end of a row (e.g. add name, not a booking, hide). */
+  rowActions?: (b: ListBooking) => React.ReactNode;
   rows: ListBooking[];
   /** Every stay, so a closed night can name the booking it mirrors. */
   allRows?: ListBooking[];
@@ -161,7 +164,8 @@ export function BookingsTable({
   const platformLabel = (b: ListBooking) => site(b)?.label ?? b.channel;
   // Closed nights say why they're closed instead of asking for a guest name.
   const name = (b: ListBooking) =>
-    stayGroup(b, today) === "closed" ? closedReason(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || bookingCopy.guestUnknown;
+    stayGroup(b, today) === "closed" ? closedReason(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || copy.toConfirm;
+  const unnamed = (b: ListBooking) => stayGroup(b, today) !== "closed" && !b.guest_full_name?.trim();
   const grouped = sort.key === "smart";
 
   function header(key: SortKey) {
@@ -200,11 +204,12 @@ export function BookingsTable({
             <tr>
               {selecting ? <th className="w-10 px-3" /> : null}
               {COLUMNS.map(header)}
+              {rowActions ? <th className="w-px px-3" aria-label={copy.actions} /> : null}
             </tr>
           </thead>
           <tbody>
             {sections.map(({ b, heading }) => (
-              <BookingRowGroup key={b.id} heading={heading} span={COLUMNS.length + (selecting ? 1 : 0)}>
+              <BookingRowGroup key={b.id} heading={heading} span={COLUMNS.length + (selecting ? 1 : 0) + (rowActions ? 1 : 0)}>
                 <tr
                   id={`stay-${b.id}`}
                   className={cn("cursor-pointer border-b border-border last:border-0 hover:bg-muted", picked.has(b.id) && "bg-primary/5")}
@@ -215,7 +220,9 @@ export function BookingsTable({
                       <Checkbox checked={picked.has(b.id)} onCheckedChange={() => onToggle(b.id)} aria-label={name(b)} />
                     </td>
                   ) : null}
-                  <td className="px-3 py-3 font-medium">{name(b)}</td>
+                  <td className={cn("px-3 py-3 font-medium", unnamed(b) && "italic text-accent")} title={unnamed(b) ? bookingCopy.guestUnknown : undefined}>
+                    {name(b)}
+                  </td>
                   <td className="px-3 py-3">{roomName(b.room_id)}</td>
                   <td className="whitespace-nowrap px-3 py-3">{formatUkDate(b.check_in_date)}</td>
                   <td className="whitespace-nowrap px-3 py-3">{formatUkDate(b.check_out_date)}</td>
@@ -232,6 +239,11 @@ export function BookingsTable({
                   <td className="px-3 py-3 text-right tabular-nums">
                     {b.stay_amount_pence != null ? formatMoney(b.stay_amount_pence, currency) : "—"}
                   </td>
+                  {rowActions ? (
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                      <span className="flex justify-end gap-0.5">{selecting ? null : rowActions(b)}</span>
+                    </td>
+                  ) : null}
                 </tr>
               </BookingRowGroup>
             ))}
@@ -244,22 +256,27 @@ export function BookingsTable({
         {sections.map(({ b, heading }) => (
           <li key={b.id}>
             {heading ? <p className="mb-1 mt-3 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{copy.groups[heading]}</p> : null}
+            <div className={cn("card-soft flex items-center gap-1 pr-2", picked.has(b.id) && "ring-2 ring-primary")}>
             <button
               type="button"
               onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
-              className={cn("card-soft flex w-full items-center gap-3 p-4 text-left", picked.has(b.id) && "ring-2 ring-primary")}
+              className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left"
             >
               {selecting ? <Checkbox checked={picked.has(b.id)} tabIndex={-1} aria-hidden /> : null}
               <ChannelIcon channel={b.channel} iconUrl={site(b)?.iconUrl ?? null} label={site(b)?.label ?? b.channel} size={32} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{name(b)}</span>
+                <span className={cn("block truncate font-medium", unnamed(b) && "italic text-accent")}>{name(b)}</span>
                 <span className="block text-sm text-muted-foreground">
                   {roomName(b.room_id)} · {formatUkDate(b.check_in_date)} → {formatUkDate(b.check_out_date)} · {nights(b)}{" "}
                   {nights(b) === 1 ? bookingCopy.night : bookingCopy.nights}
                 </span>
+                <span className="mt-1.5 block">
+                  <StatusBadge state={stayState(b, today)} />
+                </span>
               </span>
-              <StatusBadge state={stayState(b, today)} />
             </button>
+            {rowActions && !selecting ? <span className="flex shrink-0 flex-col gap-0.5">{rowActions(b)}</span> : null}
+            </div>
           </li>
         ))}
       </ul>

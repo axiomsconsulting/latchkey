@@ -4,7 +4,7 @@
  */
 
 import { mapEventsToBookings, parseIcs, type Channel } from "./ical";
-import { bookingsToCancel, buildPatch, detectRoomClashes, type ExistingBooking } from "./sync-logic";
+import { bookingsToCancel, buildPatch, detectRoomClashes, shouldUnhide, type ExistingBooking } from "./sync-logic";
 import { todayInZone } from "./dates";
 import { reconcileRoom, type RoomBooking } from "./room-reconcile";
 
@@ -145,19 +145,20 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       today,
     });
 
-    const { data: existingRows } = await supabaseAdmin
-      .from("bookings")
-      .select(
-        "id, external_uid, connection_id, room_id, status, check_in_date, check_out_date, manual_fields, guest_full_name, phone_last4, guest_count, check_in_time, check_out_time, reservation_code",
-      )
-      .eq("property_id", conn.property_id)
-      .eq("channel", conn.channel);
+    const cols =
+      "id, external_uid, connection_id, room_id, status, check_in_date, check_out_date, manual_fields, guest_full_name, phone_last4, guest_count, check_in_time, check_out_time, reservation_code";
+    const { withLegacy } = await import("./checkin.server");
+    const { data: existingRows } = await withLegacy(
+      () => supabaseAdmin.from("bookings").select(`${cols}, archived_at`).eq("property_id", conn.property_id).eq("channel", conn.channel),
+      () => supabaseAdmin.from("bookings").select(cols).eq("property_id", conn.property_id).eq("channel", conn.channel),
+    );
 
     const existing = (existingRows ?? []) as unknown as ExistingBooking[];
     warnings.push(...detectRoomClashes(existing, incoming, conn.room_id));
 
     const byUid = new Map(existing.filter((b) => b.external_uid).map((b) => [b.external_uid!, b]));
     const seen = new Set<string>();
+    let unhidden = 0;
 
     for (const b of incoming) {
       seen.add(b.externalUid);
@@ -173,6 +174,11 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
           listing_title: b.externalListingTitle,
         };
         if (!prior.connection_id) Object.assign(payload, { connection_id: conn.id });
+        // Hidden stays stay hidden, unless the platform has changed them.
+        if (shouldUnhide(prior, b)) {
+          Object.assign(payload, { archived_at: null });
+          unhidden += 1;
+        }
         await supabaseAdmin.from("bookings").update(payload as never).eq("id", prior.id);
         if (Object.keys(patch).length > 0) updated += 1;
       } else {
@@ -209,6 +215,7 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       cancelled = toCancel.length;
     }
 
+    if (unhidden) warnings.push(`${unhidden} hidden ${unhidden === 1 ? "stay was" : "stays were"} shown again because the platform changed ${unhidden === 1 ? "it" : "them"}.`);
     if (conn.room_id) warnings.push(...(await reconcileRoomById(conn.room_id)));
 
     const status = warnings.length > 0 ? "warning" : "ok";

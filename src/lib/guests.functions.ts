@@ -203,6 +203,26 @@ export const archiveBookings = createServerFn({ method: "POST" })
     return { count: data.ids.length };
   });
 
+/**
+ * The quick choices on a stay without a guest name: "not a booking" closes
+ * the nights; "it's a booking" (unblock) puts it back to needing a name.
+ * Recorded as the host's own choice, so the feed doesn't flip it back.
+ */
+export const setBookingStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["blocked", "needs_details"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireWriteForBookings(context.supabase, [data.id]);
+    const { data: b, error: readErr } = await context.supabase.from("bookings").select("id, status, mirror_of, manual_fields").eq("id", data.id).maybeSingle();
+    if (readErr || !b) throw new Error("That stay no longer exists. Refresh and try again.");
+    if (b.mirror_of) throw new Error("These nights mirror a booking on another site. They open again when that booking changes.");
+    if (!["blocked", "needs_details", "upcoming"].includes(b.status)) throw new Error("This stay has moved on (checked in, out or cancelled), so it can't be changed here.");
+    const manual = Array.from(new Set([...(b.manual_fields ?? []), "status"]));
+    const { error } = await context.supabase.from("bookings").update({ status: data.status, manual_fields: manual }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /** Removes stays with their messages, requests, service jobs and alerts. */
 export const deleteBookings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

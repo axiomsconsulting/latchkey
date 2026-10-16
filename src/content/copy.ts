@@ -1552,7 +1552,7 @@ export const activity = {
 
 export const guestCard = {
   noName: "Guest name to confirm",
-  archived: "Archived",
+  archived: "Hidden",
   room: "Room",
   noRoom: "No room allocated",
   arrives: "Arrives",
@@ -1566,9 +1566,9 @@ export const guestCard = {
   phone: "Phone",
   checkedIn: "Checked in",
   notes: "Notes",
-  archive: "Archive",
-  restore: "Restore",
-  archivedToast: "Moved to the archive",
+  archive: "Hide",
+  restore: "Show again",
+  archivedToast: "Hidden. It stays hidden on later syncs unless the platform changes it.",
   restored: "Back in your bookings",
   messages: "Messages",
   noMessages: "No messages yet.",
@@ -1585,7 +1585,7 @@ export const guestCard = {
   activity: "Arrivals and departures",
   presence: { arrived: "Arrived", left: "Left", returned: "Came back", checked_out: "Checked out" } as Record<string, string>,
   deleteTitle: (name: string) => `Remove ${name}?`,
-  deleteBody: "This deletes the stay with its messages, requests and alerts. It can't be undone. Archive it instead if you might need it later. Guest register entries are kept for 12 months, as UK law requires.",
+  deleteBody: "This deletes the stay with its messages, requests and alerts. It can't be undone. Hide it instead if you might need it later. Guest register entries are kept for 12 months, as UK law requires.",
   deleteSynced: "It came from a calendar link, so it will come back on the next sync if the platform still lists it.",
   deleted: "Stay removed",
   whoStaying: "Who's staying",
@@ -1634,25 +1634,33 @@ export const bookingTools = {
   } as Record<string, string>,
   showEverything: "Show everything",
   active: "Bookings",
-  archive: "Archive",
+  archive: "Hidden",
   select: "Select",
   done: "Done",
   selected: (n: number) => `${n} selected`,
   selectAll: "Select all",
-  archiveSelected: "Archive",
-  restoreSelected: "Restore",
+  archiveSelected: "Hide",
+  restoreSelected: "Show again",
   deleteSelected: "Delete",
   deleteTitle: (n: number) => `Delete ${n} ${n === 1 ? "stay" : "stays"}?`,
   deleteBody:
-    "This deletes them with their messages, requests and alerts, and can't be undone. Stays from a calendar link come back on the next sync if the platform still lists them; archive those to keep them out of sight.",
-  archivedToast: (n: number) => `${n} moved to the archive`,
+    "This deletes them with their messages, requests and alerts, and can't be undone. Stays from a calendar link come back on the next sync if the platform still lists them; hide those instead to keep them out of sight.",
+  archivedToast: (n: number) => `${n} hidden`,
   restoredToast: (n: number) => `${n} back in your bookings`,
   deletedToast: (n: number) => `${n} removed`,
   syncAll: "Sync calendars",
   syncedToast: (created: number, updated: number) => `Calendars synced · ${created} new, ${updated} updated`,
   noLinks: "This property has no calendar links yet.",
-  archiveEmpty: "Nothing in the archive.",
-  archiveHint: "Archived stays are hidden from Today and Bookings. Guests can still use their links.",
+  archiveEmpty: "Nothing hidden.",
+  archiveHint: "Hidden stays are left out of Today and Bookings, and stay hidden on later calendar syncs unless the platform changes them (new dates, a guest books, or it's reopened). Guests can still use their links.",
+  rowAddName: "Add the guest's name",
+  rowNotBooking: "Not a booking: close these nights",
+  rowUnblock: "It's a booking: reopen to add the guest",
+  rowHide: "Hide",
+  rowShow: "Show again",
+  rowOpenOriginal: "Open the booking these nights mirror",
+  closedToast: "Closed. Moved to closed nights.",
+  reopenedToast: "Reopened. Add the guest's name when you have it.",
 };
 
 export const stayCalendar = {
@@ -1697,10 +1705,10 @@ export const linkTools = {
   removeTitle: "Remove this calendar link?",
   removeBody: "Latchkey stops reading this calendar. Bookings it brought in stay unless you tick the box.",
   withStays: "Also remove the stays this link brought in",
-  withStaysHint: "Their messages and requests go too. Any with payments are archived instead.",
+  withStaysHint: "Their messages and requests go too. Any with payments are hidden instead.",
   removed: "Calendar link removed",
   removedWithStays: (removed: number, archived: number) =>
-    `Calendar link removed with ${removed} ${removed === 1 ? "stay" : "stays"}${archived ? `; ${archived} with payments archived` : ""}`,
+    `Calendar link removed with ${removed} ${removed === 1 ? "stay" : "stays"}${archived ? `; ${archived} with payments hidden` : ""}`,
   states: { syncing: "Syncing…", ok: "Working", warning: "Needs a look", error: "Not working", never: "Not checked yet" },
 };
 
@@ -2187,6 +2195,8 @@ export const routinesCopy = {
 
 /** The bookings table and its filters. */
 export const bookingTable = {
+  toConfirm: "To confirm",
+  actions: "Quick actions",
   search: "Search guest or reference",
   status: "Stays",
   rooms: "Rooms",

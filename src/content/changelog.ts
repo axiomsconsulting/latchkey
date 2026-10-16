@@ -22,6 +22,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.25",
+    date: "2026-10-16",
+    title: "Quicker tidying on Bookings",
+    items: [
+      { kind: "improved", area: "Bookings", text: "Stays without a guest name show “To confirm” with quick icons: add the name, not a booking (close the nights) or hide." },
+      { kind: "improved", area: "Bookings", text: "Closed nights have quick icons to reopen or hide; nights mirroring another site's booking open that booking." },
+      { kind: "improved", area: "Bookings", text: "“Archive” is now called Hide. Hidden stays stay hidden on later calendar syncs unless the platform changes them: new dates, a guest books, or it's reopened." },
+      { kind: "fixed", area: "Calendar", text: "A named guest booked on the platform now replaces nights you'd marked as not a booking." },
+    ],
+  },
+  {
     version: "0.24",
     date: "2026-10-16",
     title: "In-room guides and guest messages at a glance",

@@ -34,16 +34,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { bookingTools as tools, bookings as copy, channels, common, statuses } from "@/content/copy";
 import { useBookingSites, usePropertyBoard, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
-import { DEFAULT_FILTERS, filterBookings, readFilters, sortBookings, type ListBooking, type ListFilters, type SortKey } from "@/lib/booking-list";
+import { DEFAULT_FILTERS, filterBookings, readFilters, sortBookings, stayGroup, type ListBooking, type ListFilters, type SortKey } from "@/lib/booking-list";
 import { platformKey } from "@/lib/booking-sites";
 import { addDays, formatUkDate } from "@/lib/dates";
-import { archiveBookings, deleteBookings, syncPropertyNow } from "@/lib/guests.functions";
+import { archiveBookings, deleteBookings, setBookingStatus, syncPropertyNow } from "@/lib/guests.functions";
 import { cn } from "@/lib/utils";
 import { todayBoard, type TodayBooking } from "@/lib/today";
 import { useLandOn } from "@/hooks/use-land-on";
 import { NeedsDetailsCard, type NeedsDetailsBooking } from "@/components/host/NeedsDetailsCard";
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Ban, Eye, EyeOff, LockOpen, PencilLine, X } from "lucide-react";
 import { today as todayCopy } from "@/content/copy";
 
 export const Route = createFileRoute("/_authenticated/app/bookings")({
@@ -96,6 +96,7 @@ function BookingsPage() {
   const archiveFn = useServerFn(archiveBookings);
   const deleteFn = useServerFn(deleteBookings);
   const syncFn = useServerFn(syncPropertyNow);
+  const statusFn = useServerFn(setBookingStatus);
 
   const [scope, setScope] = useState<"active" | "archive">("active");
   const [selecting, setSelecting] = useState(false);
@@ -223,6 +224,55 @@ function BookingsPage() {
     } finally {
       setBusy(null);
     }
+  }
+
+  /** The icons each kind of stay needs, at the end of its row. */
+  function rowActions(b: ListBooking) {
+    if (!canWrite) return null;
+    const full = everything.find((x) => x.id === b.id);
+    const icon = (key: string, label: string, Icon: typeof Eye, onClick: () => void, tone?: string) => (
+      <Button
+        key={key}
+        size="icon"
+        variant="ghost"
+        className={cn("size-8", tone)}
+        title={label}
+        aria-label={`${label}: ${b.guest_full_name ?? formatUkDate(b.check_in_date)}`}
+        disabled={busy !== null}
+        onClick={onClick}
+      >
+        <Icon className="size-4" />
+      </Button>
+    );
+    const hide = (on: boolean) =>
+      icon(on ? "hide" : "show", on ? tools.rowHide : tools.rowShow, on ? EyeOff : Eye, () =>
+        void run(`row-${b.id}`, async () => {
+          const res = await archiveFn({ data: { ids: [b.id], archived: on } });
+          return on ? tools.archivedToast(res.count) : tools.restoredToast(res.count);
+        }),
+      );
+    if (scope === "archive") return hide(false);
+    const group = stayGroup(b, todayIso);
+    if (group === "closed") {
+      if (b.mirror_of) return [icon("orig", tools.rowOpenOriginal, ArrowUpRight, () => openGuest(b.mirror_of!)), hide(true)];
+      return [
+        icon("unblock", tools.rowUnblock, LockOpen, () =>
+          void run(`row-${b.id}`, async () => (await statusFn({ data: { id: b.id, status: "needs_details" } }), tools.reopenedToast)),
+        ),
+        hide(true),
+      ];
+    }
+    if (group === "cancelled" || group === "past") return hide(true);
+    if (!b.guest_full_name?.trim()) {
+      return [
+        icon("name", tools.rowAddName, PencilLine, () => (full ? openEdit(full) : openGuest(b.id)), "text-primary"),
+        icon("block", tools.rowNotBooking, Ban, () =>
+          void run(`row-${b.id}`, async () => (await statusFn({ data: { id: b.id, status: "blocked" } }), tools.closedToast)),
+        ),
+        hide(true),
+      ];
+    }
+    return null;
   }
 
   const ids = [...picked];
@@ -448,6 +498,7 @@ function BookingsPage() {
           picked={picked}
           onToggle={toggle}
           onOpen={(id) => openGuest(id)}
+          rowActions={rowActions}
         />
         </div>
       ) : (

@@ -20,6 +20,8 @@ export type ExistingBooking = {
   check_in_time: string | null;
   check_out_time: string | null;
   reservation_code: string | null;
+  /** Hidden by the host (shown as "Hide"); stays hidden unless the platform changes it. */
+  archived_at?: string | null;
 };
 
 /** Fields the sync is allowed to write, in database column names. */
@@ -67,9 +69,13 @@ export function buildPatch(existing: ExistingBooking, incoming: ParsedBooking): 
     candidate.status = "blocked";
   }
 
+  // A named guest arriving from the platform is a real booking, even where
+  // the host had marked those nights "not a booking".
+  const realGuestNow = incoming.status === "upcoming" && (existing.status === "blocked" || existing.status === "needs_details");
+
   const patch: BookingPatch = {};
   for (const key of SYNCABLE_FIELDS) {
-    if (manual.has(key)) continue;
+    if (manual.has(key) && !(key === "status" && realGuestNow)) continue;
     if (!(key in candidate)) continue;
     const next = candidate[key];
     if (next === undefined) continue;
@@ -78,6 +84,23 @@ export function buildPatch(existing: ExistingBooking, incoming: ParsedBooking): 
     }
   }
   return patch;
+}
+
+/**
+ * Whether a hidden stay should come back into view: only when the platform
+ * has changed it. It reappeared after being cancelled, it became a real
+ * booking with a guest, or its dates moved. Otherwise hidden stays hidden.
+ */
+export function shouldUnhide(existing: ExistingBooking, incoming: ParsedBooking): boolean {
+  if (!existing.archived_at) return false;
+  if (existing.status === "cancelled") return true;
+  if (incoming.status === "upcoming" && (existing.status === "blocked" || existing.status === "needs_details")) return true;
+  // Dates the host set by hand always differ from the feed, so they don't count.
+  const manual = new Set(existing.manual_fields ?? []);
+  const moved =
+    (!manual.has("check_in_date") && incoming.checkInDate !== existing.check_in_date) ||
+    (!manual.has("check_out_date") && incoming.checkOutDate !== existing.check_out_date);
+  return moved;
 }
 
 /**
