@@ -10,6 +10,8 @@ import { hostInbox as copy } from "@/content/copy";
 import { getHostThread, listHostThreads, markHostRead, sendHostMessage } from "@/lib/messages.functions";
 import { cn } from "@/lib/utils";
 
+const PLATFORM_NAME: Record<string, string> = { airbnb: "Airbnb", booking_com: "Booking.com", vrbo: "Vrbo", expedia: "Expedia", other: "a booking site" };
+
 function when(iso: string) {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London",
@@ -62,6 +64,8 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
   });
 
   const unread = threads.data?.unread ?? 0;
+  // The newest booking-site message with a reply address: replies by email reach the guest there.
+  const lastPlatform = [...(thread.data ?? [])].reverse().find((m) => m.platform && !m.fromHost && m.replyTo) ?? null;
 
   // The inbox is in the page twice (desktop and phone headers): only the one on screen answers.
   useEffect(() => {
@@ -158,6 +162,7 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
                       m.fromHost ? "ml-auto bg-primary text-primary-foreground" : "bg-secondary",
                     )}
                   >
+                    {m.platform ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.via(PLATFORM_NAME[m.platform] ?? m.platform)}</p> : null}
                     <p className="whitespace-pre-wrap">{m.body}</p>
                     <p className={cn("mt-1 text-xs", m.fromHost ? "opacity-80" : "text-muted-foreground")}>
                       {when(m.createdAt)}
@@ -166,6 +171,14 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
                 ))
               )}
             </div>
+            {lastPlatform?.replyTo ? (
+              <div className="flex flex-wrap items-center gap-2 border-t bg-secondary/40 px-4 py-2 text-xs">
+                <span className="min-w-0 flex-1">{copy.platformReplyHint(PLATFORM_NAME[lastPlatform.platform ?? "other"] ?? "the booking site")}</span>
+                <Button asChild size="sm" variant="outline">
+                  <a href={`mailto:${lastPlatform.replyTo}?body=${encodeURIComponent(draft)}`}>{copy.replyByEmail}</a>
+                </Button>
+              </div>
+            ) : null}
             <form
               className="flex items-end gap-2 border-t p-4"
               onSubmit={(e) => {

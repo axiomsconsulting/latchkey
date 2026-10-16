@@ -722,3 +722,89 @@ export const saveOffer = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message.includes("offer") ? "Run migration 0029 first (Lovable applies it on the next sync)." : error.message);
     return { ok: true };
   });
+
+/* ------------------------------ integrations ----------------------------- */
+
+/** Which Latchkey-wide integrations are set up, without ever returning a secret. */
+export const getIntegrationStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const i = await import("./integrations.server");
+    const settings = await i.integrationSettings();
+    let bot: string | null = null;
+    let webhook: string | null = null;
+    if (i.telegramToken()) {
+      const me = await i.telegramCall<{ username: string }>("getMe", {});
+      bot = me.ok ? (me.result?.username ?? null) : null;
+      const info = await i.telegramCall<{ url: string }>("getWebhookInfo", {});
+      webhook = info.ok ? (info.result?.url || null) : null;
+    }
+    const origin = i.publicOrigin();
+    const secret = i.inboundSecret();
+    return {
+      origin,
+      push: { ready: !!i.pushKeys() },
+      telegram: { tokenSet: !!i.telegramToken(), bot, webhookSet: !!webhook && webhook.startsWith(origin) },
+      sms: { ready: !!i.twilio() },
+      inbound: {
+        secretSet: !!secret,
+        address: settings.inboundAddress,
+        // Only the end of the secret, so the super admin can match it up.
+        webhookUrl: secret ? `${origin}/api/public/inbound-email/${secret.slice(0, 4)}…` : null,
+      },
+    };
+  });
+
+export const saveIntegrationSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ inboundAddress: z.string().trim().max(200).refine((v) => v === "" || (v.includes("{code}") && /@/.test(v)), "Include {code} and an @") }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const db = await admin();
+    const { error } = await loose(db)
+      .from("site_settings")
+      .update({ integrations: { inboundAddress: data.inboundAddress || null }, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) throw new Error(error.message.includes("integrations") ? "Run migration 0032 first (Lovable applies it on the next sync)." : error.message);
+    return { ok: true };
+  });
+
+/** Points the Telegram bot at Latchkey, so "/start" links reach us. */
+export const connectTelegramWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const i = await import("./integrations.server");
+    const secret = await i.telegramSecret();
+    if (!secret) throw new Error("Add TELEGRAM_BOT_TOKEN in Lovable Cloud secrets first.");
+    const r = await i.telegramCall("setWebhook", {
+      url: `${i.publicOrigin()}/api/public/telegram/${secret}`,
+      secret_token: secret,
+      allowed_updates: ["message"],
+    });
+    if (!r.ok) throw new Error(r.description ?? "Telegram refused the webhook.");
+    return { ok: true };
+  });
+
+/** A fresh VAPID key pair for push alerts, to paste into Lovable Cloud secrets once. */
+export const makeVapidKeys = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { newVapidKeys } = await import("./webpush");
+    return newVapidKeys();
+  });
+
+export const sendTestSms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ to: z.string().regex(/^\+[1-9]\d{6,14}$/) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { sendSms } = await import("./integrations.server");
+    const ok = await sendSms(data.to, "Latchkey test: SMS alerts are working.");
+    if (!ok) throw new Error("Twilio didn't send it. Check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM.");
+    return { ok: true };
+  });

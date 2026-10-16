@@ -11,6 +11,7 @@ import { PricingAdmin } from "@/components/host/PricingAdmin";
 import { PricingStudio } from "@/components/host/PricingStudio";
 import { RoutinesAdmin } from "@/components/host/RoutinesAdmin";
 import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
+import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ function AdminPage() {
           <TabsTrigger value="visitors" className="h-10 rounded-xl px-4">{copy.tabVisitors}</TabsTrigger>
           <TabsTrigger value="pricing" className="h-10 rounded-xl px-4">{copy.tabPricing}</TabsTrigger>
           <TabsTrigger value="routines" className="h-10 rounded-xl px-4">{copy.tabRoutines}</TabsTrigger>
+          <TabsTrigger value="integrations" className="h-10 rounded-xl px-4">{copy.tabIntegrations}</TabsTrigger>
           <TabsTrigger value="settings" className="h-10 rounded-xl px-4">{copy.tabSettings}</TabsTrigger>
         </TabsList>
 
@@ -108,6 +110,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="routines" className="mt-4">
           <RoutinesAdmin />
+        </TabsContent>
+        <TabsContent value="integrations" className="mt-4">
+          <IntegrationsAdmin />
         </TabsContent>
         <TabsContent value="settings" className="mt-4 space-y-6">
           <SiteSettings />

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#194129" />
+<title>Reconnecting… — Latchkey</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #FBF9F5; color: #1d2b22; font: 18px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  @media (prefers-color-scheme: dark) { body { background: #16241c; color: #eef2ec; } }
+  main { max-width: 28rem; padding: 2rem; text-align: center; }
+  h1 { font-family: Georgia, serif; font-size: 2rem; margin: 0 0 .5rem; }
+  p { opacity: .8; }
+  .dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; background: #c8693e; margin-right: .5rem; animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  button { margin-top: 1rem; font: inherit; padding: .8rem 1.4rem; border-radius: 999px; border: 0; background: #194129; color: #fff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Reconnecting…</h1>
+  <p><span class="dot"></span>The Wi-Fi dropped for a moment. This page will come back by itself as soon as it's connected.</p>
+  <p>Guests: if it doesn't come back in a minute or two, please call your host.</p>
+  <button onclick="location.reload()">Try again</button>
+</main>
+<script>
+  // Try again every 10 seconds, and straight away when the connection returns.
+  setInterval(() => { if (navigator.onLine) location.reload(); }, 10000);
+  addEventListener("online", () => location.reload());
+</script>
+</body>
+</html>

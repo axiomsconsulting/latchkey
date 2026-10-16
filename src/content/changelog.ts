@@ -22,6 +22,18 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.26",
+    date: "2026-10-16",
+    title: "Install Latchkey, and alerts wherever you are",
+    items: [
+      { kind: "new", area: "Website", text: "Install Latchkey as an app on phones, tablets and computers. It keeps working through patchy Wi-Fi and shows a friendly reconnecting page." },
+      { kind: "new", area: "Check-in", text: "Install the kiosk on the front-door tablet as its own full-screen app for that property." },
+      { kind: "new", area: "Settings", text: "Alerts by push to your devices, Telegram, email or text: choose any mix, with texts for urgent alerts only by default, and a test button." },
+      { kind: "new", area: "Bookings", text: "Forward Airbnb and Booking.com message emails to your private address and each message lands in that guest's conversation; reply by email from your own mailbox." },
+      { kind: "new", area: "Settings", text: "Latchkey admin: an Integrations page for email, push, Telegram, SMS and inbound email, with each channel switchable in Routines." },
+    ],
+  },
+  {
     version: "0.25",
     date: "2026-10-16",
     title: "Quicker tidying on Bookings",

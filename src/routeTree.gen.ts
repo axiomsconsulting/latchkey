@@ -45,11 +45,15 @@ import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_a
 import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_authenticated/app.room-qr.$propertyId'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
+import { Route as ApiPublicInboundEmailSecretRouteImport } from './routes/api/public/inbound-email.$secret'
 import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
+import { Route as ApiPublicPushLatestRouteImport } from './routes/api/public/push/latest'
+import { Route as ApiPublicTelegramSecretRouteImport } from './routes/api/public/telegram.$secret'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as ApiPublicManifestKioskCodeRouteImport } from './routes/api/public/manifest/kiosk.$code'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -239,10 +243,26 @@ const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
   path: '/api/public/cron/latchkey',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInboundEmailSecretRoute =
+  ApiPublicInboundEmailSecretRouteImport.update({
+    id: '/api/public/inbound-email/$secret',
+    path: '/api/public/inbound-email/$secret',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMcpKeyRoute = ApiPublicMcpKeyRouteImport.update({
   id: '/$key',
   path: '/$key',
   getParentRoute: () => ApiPublicMcpRoute,
+} as any)
+const ApiPublicPushLatestRoute = ApiPublicPushLatestRouteImport.update({
+  id: '/api/public/push/latest',
+  path: '/api/public/push/latest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTelegramSecretRoute = ApiPublicTelegramSecretRouteImport.update({
+  id: '/api/public/telegram/$secret',
+  path: '/api/public/telegram/$secret',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicV1SplatRoute = ApiPublicV1SplatRouteImport.update({
   id: '/api/public/v1/$',
@@ -263,6 +283,12 @@ const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
     path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicManifestKioskCodeRoute =
+  ApiPublicManifestKioskCodeRouteImport.update({
+    id: '/api/public/manifest/kiosk/$code',
+    path: '/api/public/manifest/kiosk/$code',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -302,11 +328,15 @@ export interface FileRoutesByFullPath {
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/push/latest': typeof ApiPublicPushLatestRoute
+  '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/api/public/manifest/kiosk/$code': typeof ApiPublicManifestKioskCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -343,11 +373,15 @@ export interface FileRoutesByTo {
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/push/latest': typeof ApiPublicPushLatestRoute
+  '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/api/public/manifest/kiosk/$code': typeof ApiPublicManifestKioskCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -387,11 +421,15 @@ export interface FileRoutesById {
   '/_authenticated/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/push/latest': typeof ApiPublicPushLatestRoute
+  '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/api/public/manifest/kiosk/$code': typeof ApiPublicManifestKioskCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -431,11 +469,15 @@ export interface FileRouteTypes {
     | '/app/room-qr/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/inbound-email/$secret'
     | '/api/public/mcp/$key'
+    | '/api/public/push/latest'
+    | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
+    | '/api/public/manifest/kiosk/$code'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -472,11 +514,15 @@ export interface FileRouteTypes {
     | '/app/room-qr/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/inbound-email/$secret'
     | '/api/public/mcp/$key'
+    | '/api/public/push/latest'
+    | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
+    | '/api/public/manifest/kiosk/$code'
   id:
     | '__root__'
     | '/'
@@ -515,11 +561,15 @@ export interface FileRouteTypes {
     | '/_authenticated/app/room-qr/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/inbound-email/$secret'
     | '/api/public/mcp/$key'
+    | '/api/public/push/latest'
+    | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
+    | '/api/public/manifest/kiosk/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -543,10 +593,14 @@ export interface RootRouteChildren {
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
+  ApiPublicInboundEmailSecretRoute: typeof ApiPublicInboundEmailSecretRoute
+  ApiPublicPushLatestRoute: typeof ApiPublicPushLatestRoute
+  ApiPublicTelegramSecretRoute: typeof ApiPublicTelegramSecretRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
+  ApiPublicManifestKioskCodeRoute: typeof ApiPublicManifestKioskCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -803,12 +857,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronLatchkeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/inbound-email/$secret': {
+      id: '/api/public/inbound-email/$secret'
+      path: '/api/public/inbound-email/$secret'
+      fullPath: '/api/public/inbound-email/$secret'
+      preLoaderRoute: typeof ApiPublicInboundEmailSecretRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mcp/$key': {
       id: '/api/public/mcp/$key'
       path: '/$key'
       fullPath: '/api/public/mcp/$key'
       preLoaderRoute: typeof ApiPublicMcpKeyRouteImport
       parentRoute: typeof ApiPublicMcpRoute
+    }
+    '/api/public/push/latest': {
+      id: '/api/public/push/latest'
+      path: '/api/public/push/latest'
+      fullPath: '/api/public/push/latest'
+      preLoaderRoute: typeof ApiPublicPushLatestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/telegram/$secret': {
+      id: '/api/public/telegram/$secret'
+      path: '/api/public/telegram/$secret'
+      fullPath: '/api/public/telegram/$secret'
+      preLoaderRoute: typeof ApiPublicTelegramSecretRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/v1/$': {
       id: '/api/public/v1/$'
@@ -836,6 +911,13 @@ declare module '@tanstack/react-router' {
       path: '/lovable/email/transactional/preview'
       fullPath: '/lovable/email/transactional/preview'
       preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/manifest/kiosk/$code': {
+      id: '/api/public/manifest/kiosk/$code'
+      path: '/api/public/manifest/kiosk/$code'
+      fullPath: '/api/public/manifest/kiosk/$code'
+      preLoaderRoute: typeof ApiPublicManifestKioskCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -924,10 +1006,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTrackRoute: ApiPublicTrackRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
+  ApiPublicInboundEmailSecretRoute: ApiPublicInboundEmailSecretRoute,
+  ApiPublicPushLatestRoute: ApiPublicPushLatestRoute,
+  ApiPublicTelegramSecretRoute: ApiPublicTelegramSecretRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
+  ApiPublicManifestKioskCodeRoute: ApiPublicManifestKioskCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

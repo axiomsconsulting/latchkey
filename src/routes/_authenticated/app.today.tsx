@@ -984,6 +984,8 @@ function KeySettings({ isUk }: { isUk: boolean }) {
     { key: "records", to: "/app/properties", search: { focus: "records" } },
     { key: "rooms", to: "/app/properties", search: { focus: "rooms" } },
     { key: "cleaning", to: "/app/properties", search: { focus: "cleaning" } },
+    { key: "alerts", to: "/app/settings", search: { focus: "alerts" } },
+    { key: "platformMessages", to: "/app/settings", search: { focus: "messages" } },
     { key: "team", to: "/app/settings", search: { focus: "team" } },
     ...(isOwner ? [{ key: "payments", to: "/app/settings", search: { focus: "payments" } }] : []),
     { key: "invoices", to: "/app/settings", search: { focus: "invoices" } },

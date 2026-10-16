@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PinPad } from "@/components/guest/PinPad";
+import { InstallApp } from "@/components/InstallApp";
 import { guest as copy } from "@/content/copy";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 
@@ -53,6 +54,16 @@ export const Route = createFileRoute("/kiosk/$code")({
 
 function Kiosk() {
   const p = Route.useLoaderData();
+  // Installing from here installs this property's kiosk, not the host app.
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (!link) return;
+    const before = link.href;
+    link.href = `/api/public/manifest/kiosk/${p.code}`;
+    return () => {
+      link.href = before;
+    };
+  }, [p.code]);
   const navigate = useNavigate();
   const unlock = useServerFn(kioskUnlock);
   const [session, setSession] = useState(0);
@@ -135,6 +146,9 @@ function Kiosk() {
               {copy.kioskExitCta}
             </Button>
           </form>
+          <div className="flex justify-center border-t border-border pt-3">
+            <InstallApp kiosk size="sm" />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

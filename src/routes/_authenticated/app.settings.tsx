@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
 import { CurrencyPicker, PhoneInput, TimeZonePicker } from "@/components/WorldPickers";
+import { AlertSettings } from "@/components/host/AlertSettings";
+import { PlatformMessagesSettings } from "@/components/host/PlatformMessagesSettings";
 import { checkPhone, splitPhone } from "@/lib/world";
 import { worldCopy } from "@/content/copy";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,7 +37,7 @@ import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 
-const FOCUS = ["business", "team", "payments", "invoices", "api", "demo", "privacy"] as const;
+const FOCUS = ["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy"] as const;
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   // ?focus=<section> lands on that part of Settings.
@@ -223,6 +225,16 @@ function SettingsPage() {
         </fieldset>
       </form>
 
+      {workspace.data ? (
+        <div id="settings-alerts" className="scroll-mt-24 rounded-2xl">
+          <AlertSettings hostId={workspace.data.hostId} canWrite={canWriteHost} />
+        </div>
+      ) : null}
+      {workspace.data ? (
+        <div id="settings-messages" className="scroll-mt-24 rounded-2xl">
+          <PlatformMessagesSettings hostId={workspace.data.hostId} isOwner={isOwner} />
+        </div>
+      ) : null}
       {workspace.data ? (
         <div id="settings-team" className="scroll-mt-24 rounded-2xl">
           <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} />

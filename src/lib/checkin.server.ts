@@ -93,6 +93,8 @@ export async function raiseAlert(input: {
   bookingId?: string | null;
   kind: "lockout" | "id_mismatch" | "id_partial" | "self_declared" | "service_request" | "party" | "handover";
   message: string;
+  /** Channels not to use for this one (e.g. email, when the platform already emailed). */
+  skip?: Array<"email" | "push" | "telegram" | "sms">;
 }) {
   const db = await admin();
   const { data } = await db
@@ -106,23 +108,9 @@ export async function raiseAlert(input: {
     })
     .select("id")
     .single();
-  try {
-    const modes = await hostModes(input.hostId);
-    if (modes.host_email === "demo") {
-      console.info("[demo] host alert email not sent:", input.message);
-      return;
-    }
-    const { jobAllowed, bumpUsage } = await import("./usage.server");
-    if (!(await jobAllowed("email_alerts"))) return;
-    const { sendAlertEmail } = await import("./alert-email.server");
-    const sent = await sendAlertEmail(input.hostId, input.message, data?.id);
-    if (sent) await bumpUsage(input.hostId, "email:alert");
-    if (sent && data) {
-      await db.from("host_alerts").update({ emailed_at: new Date().toISOString() }).eq("id", data.id);
-    }
-  } catch (err) {
-    console.error("Alert email failed", err);
-  }
+  // Push, Telegram, email and SMS, as the business has chosen (never throws).
+  const { notifyHost } = await import("./notify.server");
+  await notifyHost({ hostId: input.hostId, kind: input.kind, message: input.message, bookingId: input.bookingId ?? null, alertId: data?.id ?? null, skip: input.skip ?? [] });
 }
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";

@@ -6,7 +6,7 @@
 
 ## Guest self check-in (done)
 - [x] Schema, logic + tests, server functions, guest screens, host settings, QR card
-- [ ] Email alerts (needs sender email domain)
+- [ ] Email alerts: built; needs the sender domain verified (docs/go-live.md §1)
 
 ## Contra services, theming, iOS menu (in progress)
 - [x] Schema: theme_config, integration modes per host, service_jobs, branding storage
@@ -35,6 +35,16 @@
 - [ ] A: "Local taxis" guide section
 - [ ] B: room schedule extension + cleaning-gap warning; expire unpaid after 2h (cron)
 - [ ] C: Stripe live webhook (STRIPE_WEBHOOK_SECRET) — test payments work; live key on request
-- [ ] D: live messaging delivery (outbound email/SMS) — needs sender domain
+- [x] D: alerts by push, Telegram, email and SMS (keys and DNS in docs/go-live.md)
 - [ ] E: who's in card, automatic reminders, 30-day message deletion
 - [ ] Live Contra mode: needs Contra API key/endpoint from the user
+
+## Apps, alerts and booking-site messages (built 2026-10-16)
+- [x] Installable app (PWA): manifest, icons, offline shell, reconnecting page, install prompts
+- [x] Kiosk installs as its own full-screen landscape app per property
+- [x] Alerts by push (free), Telegram (free), email, SMS (Twilio, pay as you go)
+- [x] Airbnb / Booking.com messages by forwarded email into the guest's conversation; reply by email
+- [x] Latchkey admin → Integrations; each channel switchable in Routines
+- [ ] Go live: DNS for email, secrets for push/Telegram/SMS/inbound (docs/go-live.md)
+- [ ] Optional: Play Store / App Store packages via PWABuilder; assetlinks.json for Android
+- [ ] Later: WhatsApp alerts (needs Meta-approved templates); channel-manager aggregator for live two-way OTA chat

@@ -159,7 +159,7 @@ export const listHostThreads = createServerFn({ method: "GET" })
       .from("messages")
       .select("id, booking_id, body, direction, created_at, read_by_host_at")
       .in("booking_id", ids)
-      .eq("channel", "stay_page")
+      .in("channel", ["stay_page", "platform"])
       .order("created_at", { ascending: false })
       .limit(400);
 
@@ -187,19 +187,28 @@ export const getHostThread = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ bookingId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: msgs, error } = await context.supabase
-      .from("messages")
-      .select("id, body, direction, created_at")
-      .eq("booking_id", data.bookingId)
-      .eq("channel", "stay_page")
-      .order("created_at", { ascending: true })
-      .limit(200);
+    // Booking-site messages (forwarded emails) sit in the same thread, labelled.
+    const { withLegacy } = await import("./checkin.server");
+    const sb = context.supabase as unknown as { from: (t: string) => any };
+    const { data: msgs, error } = await withLegacy(
+      () =>
+        sb
+          .from("messages")
+          .select("id, body, direction, created_at, channel, platform, reply_to")
+          .eq("booking_id", data.bookingId)
+          .in("channel", ["stay_page", "platform"])
+          .order("created_at", { ascending: true })
+          .limit(200),
+      () => sb.from("messages").select("id, body, direction, created_at, channel").eq("booking_id", data.bookingId).eq("channel", "stay_page").order("created_at", { ascending: true }).limit(200),
+    );
     if (error) throw new Error(error.message);
-    return (msgs ?? []).map((m) => ({
+    return ((msgs ?? []) as Array<{ id: string; body: string | null; direction: string; created_at: string; channel: string; platform?: string | null; reply_to?: string | null }>).map((m) => ({
       id: m.id,
       body: m.body ?? "",
       fromHost: m.direction === "outbound",
       createdAt: m.created_at,
+      platform: m.channel === "platform" ? (m.platform ?? "other") : null,
+      replyTo: m.reply_to ?? null,
     }));
   });
 
@@ -270,7 +279,7 @@ export const listStayConversations = createServerFn({ method: "GET" })
     if (!ids.length) return { today, stays: [] };
 
     const [{ data: msgs }, { data: reqs }, { data: jobs }] = await Promise.all([
-      sb.from("messages").select("booking_id, direction, created_at, read_by_host_at, read_by_guest_at, body").in("booking_id", ids).eq("channel", "stay_page").order("created_at", { ascending: true }).limit(2000),
+      sb.from("messages").select("booking_id, direction, created_at, read_by_host_at, read_by_guest_at, body").in("booking_id", ids).in("channel", ["stay_page", "platform"]).order("created_at", { ascending: true }).limit(2000),
       sb.from("requests").select("id, booking_id, status, total_pence, items, created_at").in("booking_id", ids).limit(1000),
       sb.from("service_jobs").select("id, booking_id, status, title, created_at, source").in("booking_id", ids).eq("source", "guest").limit(1000),
     ]);

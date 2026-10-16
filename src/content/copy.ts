@@ -303,6 +303,124 @@ export const today = {
   cleaningToday: "Cleaning window today",
 };
 
+/** Installing Latchkey as an app. */
+export const pwaCopy = {
+  offline: "You're offline. Latchkey reconnects by itself as soon as the Wi-Fi is back.",
+  installApp: "Install the Latchkey app",
+  installKiosk: "Install the kiosk on this tablet",
+  installed: "Installed on this device",
+  iosStep1: "Tap the Share button at the bottom (or top) of Safari.",
+  iosStep2: "Choose “Add to Home Screen”, then Add.",
+  iosStep3: "Open Latchkey from your home screen. Alerts on iPhone and iPad need it opened this way.",
+  iosKiosk: "Open the check-in icon from the home screen: it runs full screen. Turn on Guided Access (Settings → Accessibility) to keep it on the kiosk.",
+  menuInstall: "Open your browser's menu and choose “Install app” or “Add to Home screen”.",
+};
+
+/** Settings: where the host's alerts go. */
+export const notifyCopy = {
+  title: "App and alerts",
+  body: "Get alerts the moment a guest is locked out, asks for something or messages you. Pick as many ways as you like; they're all free except texts.",
+  install: "Install Latchkey on your phone or tablet for one-tap access and alerts on the lock screen.",
+  channels: {
+    push: ["Alerts on this device", "Free. Shows on your lock screen, like a text."],
+    telegram: ["Telegram", "Free. Alerts from the Latchkey bot, with a button to open the stay."],
+    email: ["Email", "To your business email address."],
+    sms: ["Text messages (SMS)", "About 4p a text. Urgent alerts only, unless you choose all."],
+  } as Record<string, [string, string]>,
+  smsUrgentOnly: "Only urgent alerts by text (locked out, wants you to check them in, more guests than booked)",
+  thisDevice: "This device",
+  turnOn: "Turn on here",
+  turnOff: "Turn off here",
+  on: "On",
+  pushNeedsApp: "Open Latchkey in its own tab or as an installed app to turn on alerts here.",
+  pushBlocked: "Alerts are blocked for Latchkey in this browser's settings. Allow notifications, then try again.",
+  pushIos: "On iPhone and iPad, install Latchkey to your home screen first, then turn alerts on from there.",
+  pushOn: "Alerts turned on for this device.",
+  pushOff: "Alerts turned off for this device.",
+  devices: (n: number) => `${n} device${n === 1 ? "" : "s"} getting alerts`,
+  removeDevice: "Remove",
+  connectTelegram: "Connect Telegram",
+  telegramOpened: "Telegram opened: tap Start in the chat to finish.",
+  telegramLinked: (n: number) => `${n} chat${n === 1 ? "" : "s"} linked`,
+  unlink: "Unlink",
+  notReady: "Not available yet: Latchkey's team is setting this up.",
+  emailDemo: "Email alerts are in demo mode for this business. Switch host email to live to receive them.",
+  noEmail: "Add a business email above first.",
+  noPhone: "Add a mobile number above (with its country) to get texts.",
+  test: "Send a test alert",
+  testResult: (parts: string[]) => (parts.length ? `Test sent by ${parts.join(", ")}.` : "Nothing was sent: switch on at least one way above."),
+  saved: "Saved",
+};
+
+/** Settings: booking-site messages forwarded by email. */
+export const platformMsgCopy = {
+  title: "Airbnb and Booking.com messages",
+  body:
+    "Booking sites don't let other apps read your guest chats, but they email you each message. Forward those emails to Latchkey and each message lands in that guest's conversation here, next to their requests and payments. Free.",
+  address: "Your private forwarding address",
+  copy: "Copy",
+  copied: "Copied",
+  make: "Create my forwarding address",
+  notReady: "Not available yet: Latchkey's team is setting up inbound email.",
+  stepsTitle: "Set up in two minutes",
+  gmail: [
+    "In Gmail on a computer: Settings (cog) → See all settings → Forwarding and POP/IMAP → Add a forwarding address. Paste the address above.",
+    "Gmail sends a confirmation code. It appears below within a minute: copy it into Gmail, or open the link.",
+    "Create a filter: in the search box type from:(airbnb.com OR booking.com OR vrbo.com OR expedia.com), then Create filter → Forward it to → your Latchkey address.",
+  ],
+  outlook: "Outlook: Settings → Mail → Rules → Add new rule: when the sender address includes airbnb.com or booking.com, forward to your Latchkey address.",
+  reply: "To reply, use the Reply by email button in the conversation: it opens your own email with the platform's reply address, so the guest gets it on Airbnb or Booking.com.",
+  privacy: "Only emails you forward reach Latchkey. Messages are kept with the stay and follow its privacy rules.",
+  confirm: "Gmail asked you to confirm forwarding",
+  confirmOpen: "Open Gmail's confirmation",
+  recent: "Recently received",
+  matched: "Added to the stay",
+  unmatched: "Not matched to a stay",
+  none: "Nothing received yet.",
+};
+
+/** Latchkey admin: platform-wide integrations. */
+export const integrationsCopy = {
+  title: "Integrations",
+  body: "Keys live in Lovable Cloud → Secrets, never here. This shows what's set up and the one-time steps left. Each paid or free channel can also be switched off in Routines.",
+  ready: "Set up",
+  missing: "Not set up",
+  email: {
+    title: "Sending email (receipts, alerts, invites)",
+    body: "Lovable's managed email sends from your verified domain. Add the DNS records Lovable gives you (Cloud → Emails) at your domain provider; nothing to set here.",
+  },
+  push: {
+    title: "Push alerts (free)",
+    body: "Web Push to hosts' phones, tablets and computers. Make a key pair once, then add both as secrets: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY (optionally VAPID_SUBJECT, e.g. mailto:you@domain).",
+    make: "Make a key pair",
+    warn: "Copy these into Lovable Cloud secrets now; the private key isn't shown again. Changing keys later means hosts turn alerts on again.",
+  },
+  telegram: {
+    title: "Telegram alerts (free)",
+    body: "In Telegram, message @BotFather → /newbot, name it (e.g. Latchkey Alerts) and copy the token into the secret TELEGRAM_BOT_TOKEN. Then connect the webhook here.",
+    connect: "Connect webhook",
+    connected: (bot: string) => `Webhook connected to @${bot}`,
+    bot: (bot: string) => `Bot: @${bot}`,
+  },
+  sms: {
+    title: "SMS alerts (Twilio, pay as you go)",
+    body: "Create a Twilio account, top up £10, buy a UK number (or use a Messaging Service), then add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM (the number, a sender name, or the MG… service id). About 4p per UK text.",
+    test: "Send a test text",
+    to: "Your mobile, with country code",
+    sent: "Test text sent.",
+  },
+  inbound: {
+    title: "Booking-site messages by email (free)",
+    body:
+      "Easiest: a free Postmark account → Servers → Inbound stream. Postmark gives you an address like abc123@inbound.postmarkapp.com: enter it below with +{code} before the @. Set the inbound webhook to the URL below (with your secret), and add the secret INBOUND_EMAIL_SECRET (any long random text). Or use Cloudflare Email Routing with the worker in docs/inbound-email-worker.js.",
+    address: "Forwarding address pattern",
+    placeholder: "abc123+{code}@inbound.postmarkapp.com",
+    webhook: "Webhook URL (add your secret at the end)",
+    save: "Save",
+    saved: "Saved",
+  },
+};
+
 /** Today: the in-house conversation with every guest. */
 export const guestMessagesCopy = {
   title: "Guest messages",
@@ -467,6 +585,8 @@ export const todayDash = {
     payments: ["Guest payments", "Your Stripe account for extras and direct stays."],
     invoices: ["Invoices", "Your business details and tax on invoices for direct stays."],
     api: ["API & MCP keys", "Make keys to connect AI assistants and other apps."],
+    alerts: ["App and alerts", "Install the app; get alerts by push, Telegram, email or text."],
+    platformMessages: ["Airbnb and Booking.com messages", "Forward their message emails so each lands in the guest's conversation."],
     apiGuide: ["API & MCP guide", "Step-by-step set-up for Claude, ChatGPT, Cursor and your own tools, with every action explained."],
     billing: ["Subscription", "Your plan, card and invoices from Latchkey."],
     register: ["Guest register", "The UK record of every guest aged 16 or over."],
@@ -1325,6 +1445,9 @@ export const trades = {
 };
 
 export const hostInbox = {
+  via: (platform: string) => `From ${platform}`,
+  platformReplyHint: (platform: string) => `Replying here sends it in Latchkey. To answer on ${platform}, reply by email from your own mailbox.`,
+  replyByEmail: "Reply by email",
   title: "Guest messages",
   open: "Open guest messages",
   empty: "No guest messages yet. Anything a guest sends from their stay page lands here.",
@@ -1943,6 +2066,7 @@ export const adminCopy = {
   tabSettings: "Site settings",
   tabPricing: "Pricing studio",
   tabRoutines: "Routines",
+  tabIntegrations: "Integrations",
   tabVisitors: "Visitors",
   planPackage: "Plan",
   apiAddonOn: "API add-on: on",
