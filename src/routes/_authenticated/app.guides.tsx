@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowDown, ArrowUp, BookOpen, ImagePlus, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Check, ExternalLink, ImagePlus, Loader2, Plus, Printer, QrCode, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { guestGuideIcons } from "@/components/guest/guide-icons";
@@ -18,11 +18,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { common, guideCopy as copy } from "@/content/copy";
+import { common, guideCopy as copy, inRoomCopy as roomCopy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { GuideOrderPanel } from "@/components/host/GuideOrderPanel";
 import { RoomAmenities } from "@/components/host/RoomAmenities";
 import { SECTIONS, type SectionKey } from "@/lib/guide";
+import { getRoomGuideCodes } from "@/lib/guide.functions";
 import {
   addStarterGuide,
   getGuideEditor,
@@ -34,8 +35,11 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/guides")({
-  // ?section=<section key> opens that section of the house guide.
-  validateSearch: (s: Record<string, unknown>): { section?: string } => (typeof s["section"] === "string" ? { section: s["section"] } : {}),
+  // ?section=<section key> opens that section; ?room=<room id> opens that room's guide.
+  validateSearch: (s: Record<string, unknown>): { section?: string; room?: string } => ({
+    ...(typeof s["section"] === "string" ? { section: s["section"] } : {}),
+    ...(typeof s["room"] === "string" ? { room: s["room"] } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Stay guides · Latchkey host dashboard" },
@@ -72,8 +76,11 @@ function GuidesPage() {
   const { selectedId, select } = useSelectedProperty(properties);
   const fn = useServerFn(getGuideEditor);
   const q = useQuery({ queryKey: ["guide", selectedId], enabled: Boolean(selectedId), queryFn: () => fn({ data: { propertyId: selectedId! } }) });
-  const [scope, setScope] = useState<string>("house");
-  const { section: linkedSection } = Route.useSearch();
+  const { section: linkedSection, room: linkedRoom } = Route.useSearch();
+  const [scope, setScope] = useState<string>(linkedRoom ?? "house");
+  useEffect(() => {
+    if (linkedRoom) setScope(linkedRoom);
+  }, [linkedRoom]);
   useLandOn(linkedSection ? `guide-${linkedSection}` : null, !q.isLoading);
   const qc = useQueryClient();
   const starter = useServerFn(addStarterGuide);
@@ -132,6 +139,8 @@ function GuidesPage() {
           </div>
         }
       />
+
+      <InRoomGuides propertyId={selectedId} />
 
       <div className="card-soft flex flex-wrap items-end gap-4 p-4">
         <div className="space-y-1">
@@ -359,4 +368,68 @@ function shrink(file: File): Promise<string> {
     img.onerror = () => reject(new Error("That photo couldn't be read."));
     img.src = URL.createObjectURL(file);
   });
+}
+
+/**
+ * The nudge and the tools for in-room guides: a QR code in each room that
+ * opens how that room works, with a way to message the host.
+ */
+function InRoomGuides({ propertyId }: { propertyId: string }) {
+  const codesFn = useServerFn(getRoomGuideCodes);
+  const q = useQuery({ queryKey: ["room-guide-codes", propertyId], queryFn: () => codesFn({ data: { propertyId } }) });
+  const rooms = q.data?.rooms ?? [];
+  return (
+    <section className="rounded-3xl border-2 border-primary/30 bg-primary/5 p-5">
+      <div className="flex flex-wrap items-start gap-4">
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
+          <QrCode className="size-6" />
+        </span>
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className="text-xl">{roomCopy.title}</h2>
+          <p className="text-muted-foreground">{roomCopy.body}</p>
+          <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+            {roomCopy.points.map((pt) => (
+              <li key={pt} className="flex gap-2">
+                <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {pt}
+              </li>
+            ))}
+          </ul>
+        </div>
+        {rooms.length > 1 ? (
+          <Button asChild variant="outline">
+            <Link to="/app/room-qr/$propertyId" params={{ propertyId }}>
+              <Printer className="size-4" /> {roomCopy.printAll(rooms.length)}
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+      {q.isLoading ? <Skeleton className="mt-4 h-16 rounded-xl" /> : null}
+      {q.data && !q.data.available ? <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{roomCopy.notReady}</p> : null}
+      {rooms.length ? (
+        <ul className="mt-4 divide-y divide-border rounded-2xl border border-border bg-surface">
+          {rooms.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
+              {r.code ? (
+                <>
+                  <Button asChild size="sm" variant="ghost">
+                    <a href={`/room/${r.code}`} target="_blank" rel="noreferrer">
+                      <ExternalLink className="size-4" /> {roomCopy.preview}
+                    </a>
+                  </Button>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/app/room-qr/$propertyId" params={{ propertyId }} search={{ room: r.id }}>
+                      <Printer className="size-4" /> {roomCopy.printQr}
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground">{roomCopy.askOwner}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
 }

@@ -420,9 +420,10 @@ export const saveBooking = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { id, site_key, stay_amount_pence, stay_amount_includes_tax, guest_address, ...base } = data;
     // The amount is only written when given, so saving works before migration 0023.
+    // The address is added separately below, so saving works before migration 0031.
+    const address = guest_address !== undefined ? { guest_address: guest_address || null } : {};
     const rest = {
       ...base,
-      ...(guest_address !== undefined ? { guest_address: guest_address || null } : {}),
       ...(stay_amount_pence !== undefined ? { stay_amount_pence } : {}),
       ...(stay_amount_includes_tax !== undefined ? { stay_amount_includes_tax } : {}),
     };
@@ -433,11 +434,11 @@ export const saveBooking = createServerFn({ method: "POST" })
       : rest;
 
     if (!id) {
-      const { data: row, error } = await supabase
-        .from("bookings")
-        .insert({ ...fields, source: "manual" })
-        .select("*")
-        .single();
+      const { withLegacy } = await import("./checkin.server");
+      const { data: row, error } = await withLegacy(
+        () => supabase.from("bookings").insert({ ...fields, ...address, source: "manual" } as typeof fields & { source: "manual" }).select("*").single(),
+        () => supabase.from("bookings").insert({ ...fields, source: "manual" }).select("*").single(),
+      );
       if (error) throw new Error(error.message);
       return row;
     }
@@ -462,12 +463,17 @@ export const saveBooking = createServerFn({ method: "POST" })
       if (!same && cameFromFeed) manual.add(key);
     }
 
-    const { data: row, error } = await supabase
-      .from("bookings")
-      .update({ ...fields, manual_fields: Array.from(manual) })
-      .eq("id", id)
-      .select("*")
-      .single();
+    const { withLegacy } = await import("./checkin.server");
+    const { data: row, error } = await withLegacy(
+      () =>
+        supabase
+          .from("bookings")
+          .update({ ...fields, ...address, manual_fields: Array.from(manual) } as typeof fields & { manual_fields: string[] })
+          .eq("id", id)
+          .select("*")
+          .single(),
+      () => supabase.from("bookings").update({ ...fields, manual_fields: Array.from(manual) }).eq("id", id).select("*").single(),
+    );
     if (error) throw new Error(error.message);
     return row;
   });

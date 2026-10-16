@@ -374,6 +374,9 @@ export async function withLegacy<T>(
   legacy: () => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>,
 ): Promise<{ data: T; error: { code?: string; message: string } | null }> {
   const res = await latest();
-  const missing = res.error && (res.error.code === "42703" || /column .* does not exist/i.test(res.error.message));
+  // Postgres says "column … does not exist"; the API layer says it "could not find the '…' column".
+  const missing =
+    res.error &&
+    (res.error.code === "42703" || res.error.code === "PGRST204" || /column .* does not exist|could not find the '.*' column/i.test(res.error.message));
   return missing ? ((await legacy()) as { data: T; error: { code?: string; message: string } | null }) : res;
 }

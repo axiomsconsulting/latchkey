@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { rememberStay } from "@/lib/stay-link";
 import { CalendarX, Check, Wifi } from "lucide-react";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
@@ -43,6 +45,9 @@ function forgetIcon(key: string) {
 function Stay() {
   const s = Route.useLoaderData();
   const { token } = Route.useParams();
+  useEffect(() => {
+    if (s.found) rememberStay(s.propertyId, token, s.checkOutDate);
+  }, [s, token]);
   if (!s.found) {
     const opens = "opensAt" in s && s.opensAt
       ? new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(new Date(s.opensAt))

@@ -10,6 +10,9 @@ import {
 
   CalendarSync,
   ChevronRight,
+  CircleCheck,
+  CircleX,
+  TriangleAlert,
   DoorOpen,
   Check,
   Download,
@@ -33,6 +36,8 @@ import { toast } from "sonner";
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { GuestReviews } from "@/components/host/GuestReviews";
+import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
+import { GuestMessages } from "@/components/host/GuestMessages";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 import { PageHeader } from "@/components/host/PageHeader";
 import { Peek, PeekFact } from "@/components/host/Peek";
@@ -48,7 +53,7 @@ import { platformKey } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime, nightsBetween } from "@/lib/dates";
 import { decideExtrasRequest, listExtrasRequests } from "@/lib/extras.functions";
 import { SECTIONS } from "@/lib/guide";
-import { getGuideEditor } from "@/lib/guide.functions";
+import { getGuideEditor, getRoomGuideCodes } from "@/lib/guide.functions";
 import { emailBookingInvoice, ensureBookingInvoice, getInvoiceStatuses } from "@/lib/invoice.functions";
 import { markAlertRead } from "@/lib/host.functions";
 import { formatPence } from "@/lib/services";
@@ -123,56 +128,60 @@ function TodayPage() {
 
       <AlertsPanel />
 
-      <section aria-labelledby="guests-today" className="space-y-3">
-        <h2 id="guests-today" className="sr-only">
-          {copy.guestsTitle}
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <GuestTile icon={DoorOpen} label={copy.arriving} show="arriving" stays={lists.arriving} empty={copy.noneArriving} roomName={roomName} time="in" />
-          <GuestTile icon={BedDouble} label={copy.staying} show="staying" stays={lists.staying} empty={copy.noneStaying} roomName={roomName} time="out" />
-          <GuestTile icon={LogOut} label={copy.leaving} show="leaving" stays={lists.leaving} empty={copy.noneLeaving} roomName={roomName} time="out" />
-          <GuestTile
-            icon={Sparkles}
-            label={copy.needsDetails}
-            show="needs_details"
-            stays={lists.needsDetails}
-            empty={copy.noneNeeds}
-            roomName={roomName}
-            time="in"
-            tone={lists.needsDetails.length ? "attention" : undefined}
-          />
-        </div>
-        {lists.doubleBooked.length ? (
-          <Link
-            to="/app/bookings"
-            search={{ show: "double_booked" }}
-            className="flex items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm hover:bg-destructive/15"
-          >
-            <AlertTriangle className="size-5 shrink-0 text-destructive" />
-            <span className="flex-1">
-              <span className="font-medium">
-                {lists.doubleBooked.length} · {oldCopy.doubleBookedTitle}
-              </span>
-              <span className="block text-muted-foreground">{oldCopy.doubleBookedBody}</span>
-            </span>
-            <ChevronRight className="size-4" />
-          </Link>
-        ) : null}
-      </section>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {lists.leaving.length ? <LeavingInvoices leaving={lists.leaving} roomName={roomName} /> : null}
-        <WaitingOnYou propertyId={selectedId} />
-        <CleaningToday windows={(data?.windows ?? []) as never} lists={lists} todayIso={todayIso} roomName={roomName} />
-        <MaintenanceAhead propertyId={selectedId} />
-        <Connections propertyId={selectedId} />
-        <GuideCard propertyId={selectedId} arriving={lists.arriving} />
-        {property ? <KioskCard property={property} /> : null}
-      </div>
-
-      <KeySettings isUk={(property?.country_code ?? "GB") === "GB"} />
-
-      {workspace.data?.hostId ? <GuestReviews hostId={workspace.data.hostId} /> : null}
+      <DashboardSections
+        storageKey="latchkey.todayLayout"
+        items={[
+          {
+            id: "guests",
+            wide: true,
+            node: (
+              <Card id="guests" icon={DoorOpen} title={copy.guestsTitle}>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <GuestTile icon={DoorOpen} label={copy.arriving} show="arriving" stays={lists.arriving} empty={copy.noneArriving} roomName={roomName} time="in" />
+                  <GuestTile icon={BedDouble} label={copy.staying} show="staying" stays={lists.staying} empty={copy.noneStaying} roomName={roomName} time="out" />
+                  <GuestTile icon={LogOut} label={copy.leaving} show="leaving" stays={lists.leaving} empty={copy.noneLeaving} roomName={roomName} time="out" />
+                  <GuestTile
+                    icon={Sparkles}
+                    label={copy.needsDetails}
+                    show="needs_details"
+                    stays={lists.needsDetails}
+                    empty={copy.noneNeeds}
+                    roomName={roomName}
+                    time="in"
+                    tone={lists.needsDetails.length ? "attention" : undefined}
+                  />
+                </div>
+                {lists.doubleBooked.length ? (
+                  <Link
+                    to="/app/bookings"
+                    search={{ show: "double_booked" }}
+                    className="mt-3 flex items-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm hover:bg-destructive/15"
+                  >
+                    <AlertTriangle className="size-5 shrink-0 text-destructive" />
+                    <span className="flex-1">
+                      <span className="font-medium">
+                        {lists.doubleBooked.length} · {oldCopy.doubleBookedTitle}
+                      </span>
+                      <span className="block text-muted-foreground">{oldCopy.doubleBookedBody}</span>
+                    </span>
+                    <ChevronRight className="size-4" />
+                  </Link>
+                ) : null}
+              </Card>
+            ),
+          },
+          { id: "messages", wide: true, node: <GuestMessages propertyId={selectedId} /> },
+          { id: "leaving", node: lists.leaving.length ? <LeavingInvoices leaving={lists.leaving} roomName={roomName} /> : null },
+          { id: "requests", node: <WaitingOnYou propertyId={selectedId} /> },
+          { id: "cleaning", node: <CleaningToday windows={(data?.windows ?? []) as never} lists={lists} todayIso={todayIso} roomName={roomName} /> },
+          { id: "maintenance", node: <MaintenanceAhead propertyId={selectedId} /> },
+          { id: "connections", node: <Connections propertyId={selectedId} rooms={rooms} /> },
+          { id: "guide", node: <GuideCard propertyId={selectedId} arriving={lists.arriving} rooms={rooms} /> },
+          { id: "kiosk", node: property ? <KioskCard property={property} /> : null },
+          { id: "settings", wide: true, node: <KeySettings isUk={(property?.country_code ?? "GB") === "GB"} /> },
+          { id: "reviews", wide: true, node: workspace.data?.hostId ? <GuestReviews hostId={workspace.data.hostId} /> : null },
+        ]}
+      />
     </div>
   );
 }
@@ -290,16 +299,12 @@ function GuestTile({
 
 /* ------------------------------- cards ---------------------------------- */
 
-function Card({ icon: Icon, title, action, children, id }: { icon: typeof DoorOpen; title: string; action?: ReactNode; children: ReactNode; id?: string }) {
+/** Every Today card is a section the host can move and fold (see DashboardSections). */
+function Card({ id, icon, title, action, children }: { id: string; icon: typeof DoorOpen; title: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section id={id} className="card-soft flex flex-col p-5">
-      <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Icon className="size-5 shrink-0 text-primary" />
-        <h2 className="mr-auto text-lg">{title}</h2>
-        <span className="text-sm">{action}</span>
-      </div>
+    <DashSection id={id} icon={icon} title={title} action={action}>
       {children}
-    </section>
+    </DashSection>
   );
 }
 
@@ -363,7 +368,7 @@ function LeavingInvoices({ leaving, roomName }: { leaving: Stay[]; roomName: (id
   }
 
   return (
-    <Card icon={LogOut} title={copy.leavingTitle}>
+    <Card id="leaving" icon={LogOut} title={copy.leavingTitle}>
       <ul className="space-y-1">
         {leaving.map((b) => {
           const st = status(b.id);
@@ -445,7 +450,7 @@ function WaitingOnYou({ propertyId }: { propertyId: string }) {
 
   const count = open.length + waitingExtras.length;
   return (
-    <Card icon={Inbox} title={copy.waitingTitle} action={count ? <Badge>{count}</Badge> : null}>
+    <Card id="requests" icon={Inbox} title={copy.waitingTitle} action={count ? <Badge>{count}</Badge> : null}>
       {jobs.isLoading || extras.isLoading ? <Skeleton className="h-20 rounded-xl" /> : null}
       {!jobs.isLoading && !extras.isLoading && count === 0 ? <p className="text-sm text-muted-foreground">{copy.waitingEmpty}</p> : null}
       <ul className="space-y-1">
@@ -539,7 +544,7 @@ function CleaningToday({
   const tight = tightTurnarounds(lists);
   const stay = (id: string) => [...lists.arriving, ...lists.leaving].find((b) => b.id === id);
   return (
-    <Card icon={SprayCan} title={copy.cleaningTitle} action={<CardLink to="/app/properties" search={{ focus: "cleaning" }}>{copy.setTimes}</CardLink>}>
+    <Card id="cleaning" icon={SprayCan} title={copy.cleaningTitle} action={<CardLink to="/app/properties" search={{ focus: "cleaning" }}>{copy.setTimes}</CardLink>}>
       {today.length === 0 && tight.length === 0 ? <p className="text-sm text-muted-foreground">{copy.cleaningEmpty}</p> : null}
       <ul className="space-y-1">
         {tight.map((t) => {
@@ -589,7 +594,7 @@ function MaintenanceAhead({ propertyId }: { propertyId: string }) {
   type J = { id: string; source: string; status: string; category: string; title: string; note: string | null; scheduled_at: string | null; created_at: string; archived_at?: string | null; rooms: { display_name: string } | null; provider: { name: string } | null };
   const ahead = maintenanceAhead((jobs.data?.jobs ?? []) as unknown as J[], new Date());
   return (
-    <Card icon={Wrench} title={copy.maintenanceTitle} action={<CardLink to="/app/services" search={{ tab: "planned" }}>{copy.bookMaintenance}</CardLink>}>
+    <Card id="maintenance" icon={Wrench} title={copy.maintenanceTitle} action={<CardLink to="/app/services" search={{ tab: "planned" }}>{copy.bookMaintenance}</CardLink>}>
       {jobs.isLoading ? <Skeleton className="h-16 rounded-xl" /> : ahead.length === 0 ? <p className="text-sm text-muted-foreground">{copy.maintenanceEmpty}</p> : null}
       <ul className="space-y-1">
         {ahead.map((j) => (
@@ -628,25 +633,51 @@ function MaintenanceAhead({ propertyId }: { propertyId: string }) {
 type LinkStateKey = ReturnType<typeof linkState>;
 const STATE_ORDER: LinkStateKey[] = ["error", "warning", "syncing", "never", "ok"];
 const CONN_PREFS = "latchkey.todayConnections";
+type ConnPrefs = { group: "room" | "platform"; hidden: LinkStateKey[]; open: string[] };
 
-function readPrefs(): { group: "room" | "platform"; hidden: LinkStateKey[] } {
+function readPrefs(): ConnPrefs {
   try {
-    const v = JSON.parse(window.localStorage.getItem(CONN_PREFS) ?? "{}") as { group?: string; hidden?: string[] };
+    const v = JSON.parse(window.localStorage.getItem(CONN_PREFS) ?? "{}") as { group?: string; hidden?: string[]; open?: string[] };
     return {
-      group: v.group === "platform" ? "platform" : "room",
+      // By platform is the usual view.
+      group: v.group === "room" ? "room" : "platform",
       hidden: (v.hidden ?? []).filter((x): x is LinkStateKey => (STATE_ORDER as string[]).includes(x)),
+      open: (v.open ?? []).filter((x) => typeof x === "string").slice(0, 50),
     };
   } catch {
-    return { group: "room", hidden: [] };
+    return { group: "platform", hidden: [], open: [] };
   }
 }
 
-function Connections({ propertyId }: { propertyId: string }) {
+/** Working, waiting (not checked yet, needs a look, or not set up) and broken, for a group header. */
+function StatusCounts({ ok, waiting, broken }: { ok: number; waiting: number; broken: number }) {
+  return (
+    <span className="flex items-center gap-2 text-xs tabular-nums">
+      {ok ? (
+        <span className="flex items-center gap-0.5 text-success" title={copy.countOk(ok)} aria-label={copy.countOk(ok)}>
+          <CircleCheck className="size-4" /> {ok}
+        </span>
+      ) : null}
+      {waiting ? (
+        <span className="flex items-center gap-0.5 text-accent" title={copy.countWaiting(waiting)} aria-label={copy.countWaiting(waiting)}>
+          <TriangleAlert className="size-4" /> {waiting}
+        </span>
+      ) : null}
+      {broken ? (
+        <span className="flex items-center gap-0.5 text-destructive" title={copy.countBroken(broken)} aria-label={copy.countBroken(broken)}>
+          <CircleX className="size-4" /> {broken}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function Connections({ propertyId, rooms }: { propertyId: string; rooms: Room[] }) {
   const q = useConnections(propertyId);
   const sites = useBookingSites();
-  const [prefs, setPrefsState] = useState<{ group: "room" | "platform"; hidden: LinkStateKey[] }>({ group: "room", hidden: [] });
+  const [prefs, setPrefsState] = useState<ConnPrefs>({ group: "platform", hidden: [], open: [] });
   useEffect(() => setPrefsState(readPrefs()), []);
-  const setPrefs = (p: typeof prefs) => {
+  const setPrefs = (p: ConnPrefs) => {
     setPrefsState(p);
     try {
       window.localStorage.setItem(CONN_PREFS, JSON.stringify(p));
@@ -654,22 +685,37 @@ function Connections({ propertyId }: { propertyId: string }) {
       // Not remembered this time.
     }
   };
-  type C = { id: string; channel: string; site_key?: string | null; listing_name: string | null; sync_status: string; sync_started_at?: string | null; last_error?: string | null; last_synced_at: string | null; rooms: { display_name: string } | null };
-  const links = ((q.data?.connections ?? []) as unknown as C[]).map((c) => ({ c, state: linkState(c), site: sites.find((x) => x.key === platformKey(c as never)) }));
+  type C = { id: string; channel: string; room_id: string | null; site_key?: string | null; listing_name: string | null; sync_status: string; sync_started_at?: string | null; last_error?: string | null; last_synced_at: string | null; rooms: { display_name: string } | null };
+  const links = ((q.data?.connections ?? []) as unknown as C[]).map((c) => ({ c, state: linkState(c), site: sites.find((x) => x.key === platformKey(c as never)), platform: platformKey(c as never) }));
   const count = (st: LinkStateKey) => links.filter((l) => l.state === st).length;
   const bad = count("error") + count("warning");
-  const shown = links.filter((l) => !prefs.hidden.includes(l.state));
   const tone: Record<LinkStateKey, string> = { ok: "bg-success", syncing: "bg-primary animate-pulse", warning: "bg-accent", error: "bg-destructive", never: "bg-muted-foreground" };
+  const roomLabel = (id: string | null) => rooms.find((r) => r.id === id)?.display_name ?? copy.wholeHouse;
 
-  // Grouped by room (every platform for that room) or by platform (every room on it).
-  const groups = new Map<string, { label: ReactNode; items: typeof shown }>();
-  for (const l of shown) {
-    const key = prefs.group === "room" ? l.c.rooms?.display_name ?? copy.wholeHouse : platformKey(l.c as never);
-    const label = prefs.group === "room" ? key : <ChannelBadge channel={l.c.channel as Channel} label={l.site?.label} />;
-    if (!groups.has(key)) groups.set(key, { label, items: [] });
-    groups.get(key)!.items.push(l);
-  }
-  const ordered = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "en-GB", { numeric: true }));
+  // Every platform this property uses, and every room: so a room missing a platform shows as "not set up".
+  const platforms = [...new Map(links.map((l) => [l.platform, l])).values()];
+  const roomIds = rooms.length ? rooms.map((r) => r.id) : [...new Set(links.map((l) => l.c.room_id))];
+  type Entry = { key: string; link: (typeof links)[number] | null; label: ReactNode; text: string };
+  const groups = (prefs.group === "platform"
+    ? platforms.map((p) => ({
+        key: `p:${p.platform}`,
+        header: <ChannelBadge channel={p.c.channel as Channel} label={p.site?.label} />,
+        sortBy: p.site?.label ?? p.platform,
+        entries: roomIds.map((rid): Entry => {
+          const link = links.find((l) => l.platform === p.platform && l.c.room_id === rid) ?? null;
+          return { key: `${p.platform}-${rid}`, link, label: roomLabel(rid), text: roomLabel(rid) };
+        }),
+      }))
+    : roomIds.map((rid) => ({
+        key: `r:${rid}`,
+        header: <span className="font-medium">{roomLabel(rid)}</span>,
+        sortBy: roomLabel(rid),
+        entries: platforms.map((p): Entry => {
+          const link = links.find((l) => l.platform === p.platform && l.c.room_id === rid) ?? null;
+          return { key: `${rid}-${p.platform}`, link, label: <ChannelBadge channel={p.c.channel as Channel} label={p.site?.label} />, text: p.site?.label ?? p.platform };
+        }),
+      }))
+  ).sort((a, b) => a.sortBy.localeCompare(b.sortBy, "en-GB", { numeric: true }));
 
   const summary = !links.length
     ? null
@@ -678,9 +724,12 @@ function Connections({ propertyId }: { propertyId: string }) {
       : count("ok") === links.length
         ? copy.allWorking(links.length)
         : copy.mixed(count("ok"), count("never") + count("syncing"));
+  const shown = (e: Entry) => (e.link ? !prefs.hidden.includes(e.link.state) : !prefs.hidden.includes("never"));
+  const toggleGroup = (key: string) => setPrefs({ ...prefs, open: prefs.open.includes(key) ? prefs.open.filter((k) => k !== key) : [...prefs.open, key] });
 
   return (
     <Card
+      id="connections"
       icon={CalendarSync}
       title={copy.connectionsTitle}
       action={summary ? <Badge variant={bad ? "destructive" : "secondary"}>{summary}</Badge> : null}
@@ -690,7 +739,7 @@ function Connections({ propertyId }: { propertyId: string }) {
       {links.length ? (
         <div className="mb-2 flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-border p-0.5 text-xs" role="radiogroup" aria-label={copy.groupBy}>
-            {(["room", "platform"] as const).map((g) => (
+            {(["platform", "room"] as const).map((g) => (
               <button
                 key={g}
                 type="button"
@@ -721,7 +770,7 @@ function Connections({ propertyId }: { propertyId: string }) {
                         onCheckedChange={(on) => setPrefs({ ...prefs, hidden: on ? prefs.hidden.filter((x) => x !== st) : [...prefs.hidden, st] })}
                       />
                       <span className={cn("size-2 rounded-full", tone[st])} aria-hidden />
-                      <span className="flex-1">{linkTools.states[st]}</span>
+                      <span className="flex-1">{st === "never" ? copy.notCheckedOrSetUp : linkTools.states[st]}</span>
                       <span className="tabular-nums text-muted-foreground">{count(st)}</span>
                     </label>
                   </li>
@@ -731,88 +780,157 @@ function Connections({ propertyId }: { propertyId: string }) {
           </Popover>
         </div>
       ) : null}
-      {links.length && !shown.length ? <p className="text-sm text-muted-foreground">{copy.noneMatch}</p> : null}
-      <div className="space-y-3">
-        {ordered.map(([key, g]) => (
-          <div key={key}>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.label}</p>
-            <ul className="space-y-0.5">
-              {g.items.map(({ c, state, site }) => (
-                <li key={c.id}>
-                  <Peek
-                    className="block"
-                    content={
-                      <div>
-                        <p className="font-medium">{c.listing_name ?? site?.label ?? c.channel}</p>
-                        <PeekFact label={copy.room} value={c.rooms?.display_name ?? copy.wholeHouse} />
-                        <PeekFact label={copy.status} value={linkTools.states[state]} />
-                        <PeekFact label={copy.lastChecked} value={c.last_synced_at ? clock(c.last_synced_at) : "—"} />
-                        {state === "error" || state === "warning" ? <p className="mt-2 rounded-lg bg-muted p-2">{explainSyncError(c.last_error)}</p> : null}
-                      </div>
-                    }
-                  >
-                    <Link to="/app/connections" search={{ link: c.id }} className={rowClass}>
-                      <span className={cn("size-2.5 shrink-0 rounded-full", tone[state])} aria-hidden />
-                      {prefs.group === "room" ? (
-                        <ChannelBadge channel={c.channel as Channel} label={site?.label} />
-                      ) : (
-                        <span className="min-w-0 flex-1 truncate text-sm">{c.rooms?.display_name ?? copy.wholeHouse}</span>
-                      )}
-                      {prefs.group === "room" ? <span className="flex-1" /> : null}
-                      <span className="shrink-0 text-xs text-muted-foreground">{linkTools.states[state]}</span>
-                    </Link>
-                  </Peek>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+      <ul className="divide-y divide-border">
+        {groups.map((g) => {
+          const ok = g.entries.filter((e) => e.link?.state === "ok").length;
+          const broken = g.entries.filter((e) => e.link?.state === "error").length;
+          const waiting = g.entries.length - ok - broken;
+          const isOpen = prefs.open.includes(g.key);
+          const visible = g.entries.filter(shown);
+          return (
+            <li key={g.key}>
+              <button type="button" onClick={() => toggleGroup(g.key)} aria-expanded={isOpen} className={cn(rowClass, "w-full py-2.5")}>
+                <ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-90")} />
+                <span className="min-w-0 flex-1 truncate text-left">{g.header}</span>
+                <StatusCounts ok={ok} waiting={waiting} broken={broken} />
+              </button>
+              {isOpen ? (
+                <ul className="mb-2 ml-6 space-y-0.5">
+                  {visible.length === 0 ? <li className="px-2 py-1 text-xs text-muted-foreground">{copy.noneMatch}</li> : null}
+                  {visible.map((e) =>
+                    e.link ? (
+                      <li key={e.key}>
+                        <Peek
+                          className="block"
+                          content={
+                            <div>
+                              <p className="font-medium">{e.link.c.listing_name ?? e.link.site?.label ?? e.link.c.channel}</p>
+                              <PeekFact label={copy.room} value={roomLabel(e.link.c.room_id)} />
+                              <PeekFact label={copy.status} value={linkTools.states[e.link.state]} />
+                              <PeekFact label={copy.lastChecked} value={e.link.c.last_synced_at ? clock(e.link.c.last_synced_at) : "—"} />
+                              {e.link.state === "error" || e.link.state === "warning" ? <p className="mt-2 rounded-lg bg-muted p-2">{explainSyncError(e.link.c.last_error)}</p> : null}
+                            </div>
+                          }
+                        >
+                          <Link to="/app/connections" search={{ link: e.link.c.id }} className={rowClass}>
+                            <LinkIcon state={e.link.state} />
+                            <span className="min-w-0 flex-1 truncate text-sm">{e.label}</span>
+                            <span className="shrink-0 text-xs text-muted-foreground">{linkTools.states[e.link.state]}</span>
+                          </Link>
+                        </Peek>
+                      </li>
+                    ) : (
+                      <li key={e.key}>
+                        <Link to="/app/connections" className={cn(rowClass, "text-muted-foreground")}>
+                          <TriangleAlert className="size-4 shrink-0 text-accent" />
+                          <span className="min-w-0 flex-1 truncate text-sm">{e.label}</span>
+                          <span className="shrink-0 text-xs">{copy.notSetUp}</span>
+                        </Link>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
     </Card>
   );
 }
 
-function GuideCard({ propertyId, arriving }: { propertyId: string; arriving: Stay[] }) {
+function LinkIcon({ state }: { state: LinkStateKey }) {
+  if (state === "ok") return <CircleCheck className="size-4 shrink-0 text-success" />;
+  if (state === "error") return <CircleX className="size-4 shrink-0 text-destructive" />;
+  if (state === "syncing") return <Loader2 className="size-4 shrink-0 animate-spin text-primary" />;
+  return <TriangleAlert className="size-4 shrink-0 text-accent" />;
+}
+
+function GuideCard({ propertyId, arriving, rooms }: { propertyId: string; arriving: Stay[]; rooms: Room[] }) {
   const fn = useServerFn(getGuideEditor);
+  const codesFn = useServerFn(getRoomGuideCodes);
   const { canWrite } = useRole();
   const q = useQuery({ queryKey: ["guide", propertyId], queryFn: () => fn({ data: { propertyId } }) });
+  const codes = useQuery({ queryKey: ["room-guide-codes", propertyId], queryFn: () => codesFn({ data: { propertyId } }) });
   const keys = SECTIONS.map((s) => s.key);
-  const p = guideProgress(keys, (q.data?.sections ?? []) as Array<{ roomId: string | null; sectionKey: (typeof keys)[number] }>);
+  const written = (q.data?.sections ?? []) as Array<{ roomId: string | null; sectionKey: (typeof keys)[number] }>;
+  const p = guideProgress(keys, written);
   const title = (k: string) => SECTIONS.find((s) => s.key === k)?.title ?? k;
+  const roomOwn = (id: string) => written.filter((w) => w.roomId === id).length;
+  const codeOf = (id: string) => codes.data?.rooms.find((r) => r.id === id)?.code ?? null;
   return (
-    <Card icon={BookOpen} title={copy.guideTitle} action={<CardLink to="/app/guides">{copy.editGuide}</CardLink>}>
+    <Card id="guide" icon={BookOpen} title={copy.guideTitle} action={<CardLink to="/app/guides">{copy.editGuide}</CardLink>}>
       {q.isLoading ? (
         <Skeleton className="h-16 rounded-xl" />
       ) : (
-        <Peek
-          className="block"
-          content={
-            p.missing.length ? (
-              <div>
-                <p className="mb-1 font-medium">{copy.guideMissing}</p>
-                <ul className="space-y-0.5">
-                  {p.missing.map((k) => (
-                    <li key={k}>
-                      <Link to="/app/guides" search={{ section: k }} className="hover:underline">
-                        {title(k)}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p>{copy.guideComplete}</p>
-            )
-          }
-        >
-          <Link to="/app/guides" search={p.missing[0] ? { section: p.missing[0] } : {}} className={cn(rowClass, "flex-col items-stretch gap-2")}>
-            <span className="text-sm font-medium">{copy.guideProgress(p.done.length, keys.length)}</span>
-            <span className="h-2 overflow-hidden rounded-full bg-muted">
-              <span className="block h-full rounded-full bg-primary" style={{ width: `${(p.done.length / keys.length) * 100}%` }} />
-            </span>
-          </Link>
-        </Peek>
+        <ul className="space-y-0.5">
+          <li>
+            <Peek
+              className="block"
+              content={
+                p.missing.length ? (
+                  <div>
+                    <p className="mb-1 font-medium">{copy.guideMissing}</p>
+                    <ul className="space-y-0.5">
+                      {p.missing.map((k) => (
+                        <li key={k}>
+                          <Link to="/app/guides" search={{ section: k }} className="hover:underline">
+                            {title(k)}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p>{copy.guideComplete}</p>
+                )
+              }
+            >
+              <Link to="/app/guides" search={p.missing[0] ? { section: p.missing[0] } : {}} className={cn(rowClass, "flex-wrap")}>
+                <span className="min-w-0 flex-1 text-sm font-medium">{copy.wholeProperty}</span>
+                <span className="text-xs text-muted-foreground">{copy.guideProgress(p.done.length, keys.length)}</span>
+                <span className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <span className="block h-full rounded-full bg-primary" style={{ width: `${(p.done.length / keys.length) * 100}%` }} />
+                </span>
+              </Link>
+            </Peek>
+          </li>
+          {rooms.map((r) => {
+            const code = codeOf(r.id);
+            return (
+              <li key={r.id} className="flex items-center gap-1">
+                <Peek className="min-w-0 flex-1" content={<p>{roomOwn(r.id) ? copy.roomOwnSections(roomOwn(r.id)) : copy.roomUsesHouse}</p>}>
+                  <Link to="/app/guides" search={{ room: r.id }} className={rowClass}>
+                    <span className="min-w-0 flex-1 truncate text-sm">{r.display_name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{roomOwn(r.id) ? copy.roomOwnShort(roomOwn(r.id)) : copy.roomHouseShort}</span>
+                  </Link>
+                </Peek>
+                {code ? (
+                  <Peek content={<p>{copy.roomQrPeek}</p>}>
+                    <Link
+                      to="/app/room-qr/$propertyId"
+                      params={{ propertyId }}
+                      search={{ room: r.id }}
+                      className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-primary"
+                      aria-label={copy.roomQrLabel(r.display_name)}
+                    >
+                      <QrCode className="size-4" />
+                    </Link>
+                  </Peek>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
       )}
+      {rooms.length && codes.data?.available ? (
+        <p className="mt-2 rounded-xl bg-primary/5 px-3 py-2 text-xs">
+          {copy.roomQrNudge}{" "}
+          <Link to="/app/room-qr/$propertyId" params={{ propertyId }} className="font-medium text-primary hover:underline">
+            {copy.printRoomQrs}
+          </Link>
+        </p>
+      ) : null}
       {canWrite && arriving.length ? (
         <div className="mt-3 border-t border-border pt-3">
           <p className="mb-2 text-sm font-medium">{copy.guideToday}</p>
@@ -835,7 +953,7 @@ function GuideCard({ propertyId, arriving }: { propertyId: string; arriving: Sta
 function KioskCard({ property }: { property: { id: string; short_code: string } }) {
   const tile = "flex items-center gap-2 whitespace-nowrap rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted";
   return (
-    <Card icon={QrCode} title={copy.kioskTitle} action={<CardLink to="/app/properties" search={{ focus: "checkin" }}>{copy.checkinSettings}</CardLink>}>
+    <Card id="kiosk" icon={QrCode} title={copy.kioskTitle} action={<CardLink to="/app/properties" search={{ focus: "checkin" }}>{copy.checkinSettings}</CardLink>}>
       <p className="mb-3 text-sm text-muted-foreground">{copy.kioskBody}</p>
       <div className="flex flex-wrap gap-2">
         <Peek content={<p>{copy.kioskPeek}</p>}>
@@ -875,7 +993,7 @@ function KeySettings({ isUk }: { isUk: boolean }) {
     ...(isUk ? [{ key: "register", to: "/app/register" }] : []),
   ];
   return (
-    <Card icon={Settings2} title={copy.settingsTitle}>
+    <Card id="settings" icon={Settings2} title={copy.settingsTitle}>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {links.map((l) => {
           const [name, about] = copy.settingsLinks[l.key]!;

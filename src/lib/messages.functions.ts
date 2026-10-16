@@ -230,3 +230,72 @@ export const markHostRead = createServerFn({ method: "POST" })
       .is("read_by_host_at", null);
     return { ok: true };
   });
+
+/* --------------------------- Today's summary ----------------------------- */
+
+/**
+ * Every stay's conversation for Today: messages, extras (approve, pay,
+ * deliver) and service requests, with what each is waiting on. "now" is
+ * everyone staying today; "upcoming" the next 30 days; "past" the last 30.
+ */
+export const listStayConversations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, scope: z.enum(["now", "upcoming", "past"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const { data: prop } = await sb.from("properties").select("timezone").eq("id", data.propertyId).maybeSingle();
+    const tz = prop?.timezone ?? "Europe/London";
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+    const shift = (days: number) => {
+      const d = new Date(`${today}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + days);
+      return d.toISOString().slice(0, 10);
+    };
+    let q = sb
+      .from("bookings")
+      .select("id, guest_full_name, check_in_date, check_out_date, status, channel, mirror_of, archived_at, rooms(display_name)")
+      .eq("property_id", data.propertyId)
+      .not("status", "in", "(cancelled,blocked)")
+      .is("mirror_of", null)
+      .is("archived_at", null);
+    q =
+      data.scope === "now"
+        ? q.lte("check_in_date", today).gte("check_out_date", today)
+        : data.scope === "upcoming"
+          ? q.gt("check_in_date", today).lte("check_in_date", shift(30))
+          : q.lt("check_out_date", today).gte("check_out_date", shift(-30));
+    const { data: bookings, error } = await q.order("check_in_date", { ascending: data.scope !== "past" }).limit(80);
+    if (error) throw new Error(error.message);
+    const ids = (bookings ?? []).map((b) => b.id);
+    if (!ids.length) return { today, stays: [] };
+
+    const [{ data: msgs }, { data: reqs }, { data: jobs }] = await Promise.all([
+      sb.from("messages").select("booking_id, direction, created_at, read_by_host_at, read_by_guest_at, body").in("booking_id", ids).eq("channel", "stay_page").order("created_at", { ascending: true }).limit(2000),
+      sb.from("requests").select("id, booking_id, status, total_pence, items, created_at").in("booking_id", ids).limit(1000),
+      sb.from("service_jobs").select("id, booking_id, status, title, created_at, source").in("booking_id", ids).eq("source", "guest").limit(1000),
+    ]);
+    const { summarise, byAttention } = await import("./conversations");
+    const stays = (bookings ?? []).map((b) => {
+      const mine = <T extends { booking_id: string | null }>(rows: T[] | null) => (rows ?? []).filter((r) => r.booking_id === b.id);
+      const r = mine(reqs as Array<{ id: string; booking_id: string; status: string; total_pence: number; items: unknown; created_at: string }> | null);
+      const j = mine(jobs as Array<{ id: string; booking_id: string; status: string; title: string; created_at: string }> | null);
+      return {
+        bookingId: b.id,
+        guest: b.guest_full_name,
+        room: (b.rooms as { display_name?: string } | null)?.display_name ?? null,
+        checkIn: b.check_in_date,
+        checkOut: b.check_out_date,
+        status: b.status,
+        channel: b.channel,
+        requests: r.map((x) => ({
+          id: x.id,
+          status: x.status,
+          totalPence: x.total_pence,
+          label: (Array.isArray(x.items) ? (x.items as Array<{ name?: string; qty?: number }>) : []).map((i) => `${i.qty ?? 1}× ${i.name ?? "Item"}`).join(", "),
+        })),
+        jobs: j.map((x) => ({ id: x.id, status: x.status, title: x.title })),
+        conversation: summarise(mine(msgs as Array<{ booking_id: string; direction: string; created_at: string; read_by_host_at: string | null; read_by_guest_at: string | null; body: string | null }> | null), r, j),
+      };
+    });
+    return { today, stays: byAttention(stays) };
+  });

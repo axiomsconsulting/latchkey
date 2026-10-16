@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Bell, Loader2, Send } from "lucide-react";
@@ -21,8 +21,14 @@ function when(iso: string) {
   }).format(new Date(iso));
 }
 
+/** Opens a guest's conversation in the inbox from anywhere (e.g. Today). */
+export function openGuestThread(bookingId: string) {
+  window.dispatchEvent(new CustomEvent("latchkey:open-thread", { detail: bookingId }));
+}
+
 export function HostInbox({ propertyId, className }: { propertyId: string | null; className?: string }) {
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const qc = useQueryClient();
@@ -57,6 +63,19 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
 
   const unread = threads.data?.unread ?? 0;
 
+  // The inbox is in the page twice (desktop and phone headers): only the one on screen answers.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (!id || !trigger.current || trigger.current.offsetParent === null) return;
+      setOpen(true);
+      void openThread(id);
+    };
+    window.addEventListener("latchkey:open-thread", onOpen);
+    return () => window.removeEventListener("latchkey:open-thread", onOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertyId]);
+
   async function openThread(id: string) {
     setBookingId(id);
     await readFn({ data: { bookingId: id } });
@@ -67,6 +86,7 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
+          ref={trigger}
           type="button"
           aria-label={unread > 0 ? (unread === 1 ? copy.unreadOne : copy.unreadMany(unread)) : copy.open}
           className={cn("relative grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground", className)}

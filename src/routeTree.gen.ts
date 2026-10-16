@@ -23,6 +23,7 @@ import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as PDemoRouteImport } from './routes/p.demo'
+import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppActivityRouteImport } from './routes/_authenticated/app.activity'
@@ -41,6 +42,7 @@ import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
+import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_authenticated/app.room-qr.$propertyId'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
@@ -116,6 +118,11 @@ const PCodeRoute = PCodeRouteImport.update({
 const PDemoRoute = PDemoRouteImport.update({
   id: '/p/demo',
   path: '/p/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomCodeRoute = RoomCodeRouteImport.update({
+  id: '/room/$code',
+  path: '/room/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StayTokenRoute = StayTokenRouteImport.update({
@@ -216,6 +223,12 @@ const AuthenticatedAppPrintPropertyIdRoute =
     path: '/print/$propertyId',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppRoomQrPropertyIdRoute =
+  AuthenticatedAppRoomQrPropertyIdRouteImport.update({
+    id: '/room-qr/$propertyId',
+    path: '/room-qr/$propertyId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
   id: '/api/public/calendar/$token',
   path: '/api/public/calendar/$token',
@@ -267,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
+  '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
@@ -285,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/api/public/track': typeof ApiPublicTrackRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
+  '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
@@ -306,6 +321,7 @@ export interface FileRoutesByTo {
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
+  '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
@@ -324,6 +340,7 @@ export interface FileRoutesByTo {
   '/api/public/track': typeof ApiPublicTrackRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
+  '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
@@ -348,6 +365,7 @@ export interface FileRoutesById {
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
   '/p/demo': typeof PDemoRoute
+  '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/_authenticated/app/activity': typeof AuthenticatedAppActivityRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
@@ -366,6 +384,7 @@ export interface FileRoutesById {
   '/api/public/track': typeof ApiPublicTrackRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
+  '/_authenticated/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
@@ -390,6 +409,7 @@ export interface FileRouteTypes {
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
+    | '/room/$code'
     | '/stay/$token'
     | '/app/activity'
     | '/app/admin'
@@ -408,6 +428,7 @@ export interface FileRouteTypes {
     | '/api/public/track'
     | '/app/'
     | '/app/print/$propertyId'
+    | '/app/room-qr/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/mcp/$key'
@@ -429,6 +450,7 @@ export interface FileRouteTypes {
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
+    | '/room/$code'
     | '/stay/$token'
     | '/app/activity'
     | '/app/admin'
@@ -447,6 +469,7 @@ export interface FileRouteTypes {
     | '/api/public/track'
     | '/app'
     | '/app/print/$propertyId'
+    | '/app/room-qr/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/mcp/$key'
@@ -470,6 +493,7 @@ export interface FileRouteTypes {
     | '/kiosk/$code'
     | '/p/$code'
     | '/p/demo'
+    | '/room/$code'
     | '/stay/$token'
     | '/_authenticated/app/activity'
     | '/_authenticated/app/admin'
@@ -488,6 +512,7 @@ export interface FileRouteTypes {
     | '/api/public/track'
     | '/_authenticated/app/'
     | '/_authenticated/app/print/$propertyId'
+    | '/_authenticated/app/room-qr/$propertyId'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/mcp/$key'
@@ -511,6 +536,7 @@ export interface RootRouteChildren {
   KioskCodeRoute: typeof KioskCodeRoute
   PCodeRoute: typeof PCodeRoute
   PDemoRoute: typeof PDemoRoute
+  RoomCodeRoute: typeof RoomCodeRoute
   StayTokenRoute: typeof StayTokenRoute
   ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
@@ -621,6 +647,13 @@ declare module '@tanstack/react-router' {
       path: '/p/demo'
       fullPath: '/p/demo'
       preLoaderRoute: typeof PDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/room/$code': {
+      id: '/room/$code'
+      path: '/room/$code'
+      fullPath: '/room/$code'
+      preLoaderRoute: typeof RoomCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stay/$token': {
@@ -749,6 +782,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppPrintPropertyIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/room-qr/$propertyId': {
+      id: '/_authenticated/app/room-qr/$propertyId'
+      path: '/room-qr/$propertyId'
+      fullPath: '/app/room-qr/$propertyId'
+      preLoaderRoute: typeof AuthenticatedAppRoomQrPropertyIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/api/public/calendar/$token': {
       id: '/api/public/calendar/$token'
       path: '/api/public/calendar/$token'
@@ -816,6 +856,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppTodayRoute: typeof AuthenticatedAppTodayRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppPrintPropertyIdRoute: typeof AuthenticatedAppPrintPropertyIdRoute
+  AuthenticatedAppRoomQrPropertyIdRoute: typeof AuthenticatedAppRoomQrPropertyIdRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -833,6 +874,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppTodayRoute: AuthenticatedAppTodayRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppPrintPropertyIdRoute: AuthenticatedAppPrintPropertyIdRoute,
+  AuthenticatedAppRoomQrPropertyIdRoute: AuthenticatedAppRoomQrPropertyIdRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
@@ -875,6 +917,7 @@ const rootRouteChildren: RootRouteChildren = {
   KioskCodeRoute: KioskCodeRoute,
   PCodeRoute: PCodeRoute,
   PDemoRoute: PDemoRoute,
+  RoomCodeRoute: RoomCodeRoute,
   StayTokenRoute: StayTokenRoute,
   ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,

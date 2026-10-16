@@ -1223,6 +1223,7 @@ export const getStay = createServerFn({ method: "GET" })
 
     return {
       found: true as const,
+      propertyId: b.property_id,
       firstName: firstName(b.guest_full_name),
       checkOutDate: b.check_out_date,
       checkOutTime,

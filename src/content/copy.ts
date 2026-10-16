@@ -303,6 +303,61 @@ export const today = {
   cleaningToday: "Cleaning window today",
 };
 
+/** Today: the in-house conversation with every guest. */
+export const guestMessagesCopy = {
+  title: "Guest messages",
+  usp: "Only in Latchkey: one recorded conversation per stay. Messages, extras, charges and requests sit together with the booking, so there's always a record of what was asked, agreed and paid, whichever site the guest booked on.",
+  showLabel: "Show",
+  scopes: { now: "Staying now", upcoming: "Arriving soon", past: "Past 30 days" } as Record<string, string>,
+  onlyWaiting: "Only what's waiting on me",
+  empty: {
+    now: "Nobody is staying today.",
+    upcoming: "No arrivals in the next 30 days.",
+    past: "No stays in the last 30 days.",
+  } as Record<string, string>,
+  nothingWaiting: "Nothing is waiting on you.",
+  newCount: (n: number) => `${n} new`,
+  waitingCount: (n: number) => `${n} waiting`,
+  guest: "Guest",
+  stay: "Stay",
+  messages: "Messages",
+  unpaid: "Unpaid",
+  extras: "Extras",
+  them: "Guest",
+  you: "You",
+  noMessages: "No messages yet. Tap to write to them.",
+  chips: {
+    unread: (n: number) => `${n} new`,
+    reply: () => "Awaiting your reply",
+    approve: (n: number) => `${n} to approve`,
+    unpaid: (n: number) => `${n} unpaid`,
+    deliver: (n: number) => `${n} to deliver`,
+    jobs: (n: number) => `${n} request${n === 1 ? "" : "s"} open`,
+    unseen: () => "Not seen by guest",
+    sorted: () => "All sorted",
+  } as Record<string, (n: number) => string>,
+  requestStatus: {
+    requested: "To approve",
+    suggested: "Time suggested",
+    approved: "Approved",
+    awaiting_payment: "Unpaid",
+    confirmed: "Paid",
+    delivered: "Delivered",
+    declined: "Declined",
+    cancelled: "Cancelled",
+  } as Record<string, string>,
+  jobStatus: { new: "New", acknowledged: "Seen", booked: "Booked", in_progress: "In progress", done: "Done", declined: "Declined", cancelled: "Cancelled" } as Record<string, string>,
+};
+
+/** Moving and folding Today's sections. */
+export const dashboardCopy = {
+  grab: (title: string, folded: boolean) => `${title}: drag to move, tap to ${folded ? "unfold" : "fold"}. Arrow keys move it, Enter ${folded ? "unfolds" : "folds"} it.`,
+  grabHint: "Drag to move · tap to fold",
+  fold: (title: string) => `Fold ${title}`,
+  unfold: (title: string) => `Unfold ${title}`,
+  reset: "Put Today's sections back in their usual order",
+};
+
 /** The Today dashboard: everything at a glance, each item a link to where it lives. */
 export const todayDash = {
   subtitle: "Everything at a glance. Tap anything to go straight to it.",
@@ -371,12 +426,26 @@ export const todayDash = {
   byPlatform: "By platform",
   filterStates: "Show links that are",
   noneMatch: "No links match the filter.",
+  countOk: (n: number) => `${n} working`,
+  countWaiting: (n: number) => `${n} not checked yet or not set up`,
+  countBroken: (n: number) => `${n} not working`,
+  notSetUp: "Not set up",
+  notCheckedOrSetUp: "Not checked yet or not set up",
   someProblems: (bad: number, n: number) => `${bad} of ${n} need a look`,
   guideTitle: "Guest guide",
   guideProgress: (done: number, all: number) => `${done} of ${all} sections written`,
   guideMissing: "Still to write",
   guideComplete: "Every section is written.",
   guideToday: "Send today's arrivals their guide",
+  wholeProperty: "Whole property",
+  roomOwnSections: (n: number) => `${n} section${n === 1 ? "" : "s"} written just for this room; the rest come from the whole-property guide.`,
+  roomUsesHouse: "Uses the whole-property guide. Add this room's own heating, shower or layout notes.",
+  roomOwnShort: (n: number) => `${n} own`,
+  roomHouseShort: "house guide",
+  roomQrPeek: "Print this room's QR code: guests scan it in the room for how everything works.",
+  roomQrLabel: (room: string) => `Print the QR code for ${room}`,
+  roomQrNudge: "Put each room's QR code by the bed or on the door: the guide guests use without asking.",
+  printRoomQrs: "Print room QR codes",
   editGuide: "Edit guide",
   kioskTitle: "Kiosk and QR code",
   kioskBody: "Guests check themselves in on a tablet by the door, or by scanning the QR code with their phone.",
@@ -939,6 +1008,48 @@ export const integrations = {
     guest_messages: { name: "Guest updates", demo: "Updates show on the guest's stay page.", live: "Stay page plus email to the guest when a sender address is set up." },
   },
   saved: "Switches saved",
+};
+
+/** Guides page: the in-room guide nudge. */
+export const inRoomCopy = {
+  title: "Put a QR code in every room",
+  body:
+    "Booking sites keep their guidebooks inside their own app, and only for that booking. Latchkey's in-room guide is on the wall of the room itself: one scan shows how that room works and lets the guest reach you, whichever site they booked on.",
+  points: [
+    "This room's own heating, shower and wifi, not the whole house",
+    "Today's cleaning and closed times, kept up to date",
+    "Message you, ask for extras and pay, all recorded with the stay",
+    "No app or login; door codes are never shown",
+  ],
+  preview: "Preview",
+  printQr: "Print QR",
+  printAll: (n: number) => `Print all ${n} rooms`,
+  askOwner: "An owner or manager makes this room's code",
+  notReady: "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
+};
+
+/** Printing each room's QR code. */
+export const roomQrCopy = {
+  back: "Back to guides",
+  print: "Print",
+  printAll: (n: number) => `Print all ${n}`,
+  headline: "Scan for your room guide",
+  covers: "Wifi, heating, shower, quiet hours, check-out, and a way to message your host. No app needed.",
+  qrAlt: (room: string) => `QR code for the ${room} guide`,
+  notReady: "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
+  none: "No rooms yet. Add rooms to this property first.",
+};
+
+/** The guide behind a room's own QR code (/room/<code>). */
+export const roomGuideCopy = {
+  eyebrow: "Your room guide",
+  subtitle: (place: string) => `How everything in this room works at ${place}. No app, no login.`,
+  yourStay: "Message your host, order extras or see your stay details.",
+  needSomething: "Staying here? Check in or open your stay to message your host and order extras.",
+  openStay: "Open your stay",
+  checkIn: "Check in or find your stay",
+  gone: "This room guide isn't available any more. Please ask your host.",
+  footer: "This guide is for this room. Your host keeps it up to date.",
 };
 
 export const guideCopy = {

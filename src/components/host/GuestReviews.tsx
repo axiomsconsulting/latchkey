@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
+import { Star } from "lucide-react";
+
+import { DashSection } from "@/components/host/DashboardSections";
 import { Stars } from "@/components/host/ShellExtras";
 import { feedbackCopy as copy } from "@/content/copy";
 import { formatUkDate } from "@/lib/dates";
@@ -15,19 +18,22 @@ export function GuestReviews({ hostId }: { hostId: string }) {
   const avg = rated.length ? rated.reduce((n, r) => n + (r.rating ?? 0), 0) / rated.length : null;
 
   return (
-    <section className="card-soft p-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg">{copy.reviewsTitle}</h2>
-        {avg !== null ? (
-          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+    <DashSection
+      id="reviews"
+      icon={Star}
+      title={copy.reviewsTitle}
+      action={
+        avg !== null ? (
+          <span className="flex items-center gap-2 text-muted-foreground">
             <Stars value={Math.round(avg)} size="size-4" /> {copy.reviewsAverage(avg.toFixed(1), rated.length)}
           </span>
-        ) : null}
-      </div>
+        ) : null
+      }
+    >
       {rows.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">{copy.reviewsEmpty}</p>
+        <p className="text-sm text-muted-foreground">{copy.reviewsEmpty}</p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="space-y-3">
           {rows.slice(0, 10).map((r) => (
             <li key={r.id} className="rounded-xl border border-border p-3">
               <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -43,6 +49,6 @@ export function GuestReviews({ hostId }: { hostId: string }) {
           ))}
         </ul>
       )}
-    </section>
+    </DashSection>
   );
 }

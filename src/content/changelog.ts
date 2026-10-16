@@ -22,6 +22,18 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.24",
+    date: "2026-10-16",
+    title: "In-room guides and guest messages at a glance",
+    items: [
+      { kind: "new", area: "Guest guide", text: "In-room guides: print a QR code for each room. Guests scan it in the room for how that room works, wifi, today's closed times and a way to reach you. Door codes are never shown." },
+      { kind: "new", area: "Bookings", text: "Guest messages on Today: every stay's conversation, extras and requests, with what's new, awaiting your reply, to approve, unpaid or to deliver. Filter staying now, arriving soon or past." },
+      { kind: "improved", area: "Bookings", text: "Move and fold Today's sections with the same grab bar as the menu: drag to move, tap to fold. Remembered on this device." },
+      { kind: "improved", area: "Calendar", text: "Calendar connections on Today group by platform first, folded, with ticks, warnings and crosses counting what works, what isn't set up and what's broken." },
+      { kind: "improved", area: "Guest guide", text: "The guide card on Today links to the whole-property guide and each room's guide, with each room's QR code." },
+    ],
+  },
+  {
     version: "0.23",
     date: "2026-10-15",
     title: "Invoices from Today, tidier settings",

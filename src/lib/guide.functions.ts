@@ -274,3 +274,130 @@ export const saveRoomAmenities = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ---------------------------- in-room guides ----------------------------- */
+
+const roomCode = z.string().regex(/^[a-z0-9]{10,24}$/);
+
+function newRoomCode(): string {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  return [...bytes].map((b) => alphabet[b % alphabet.length]).join("");
+}
+
+/**
+ * Each room's own QR code. Codes are made the first time the host asks, and
+ * then stay the same, so a printed sign keeps working.
+ */
+export const getRoomGuideCodes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rooms, error } = await (context.supabase as any)
+      .from("rooms")
+      .select("id, display_name, public_title, guide_code, active")
+      .eq("property_id", data.propertyId)
+      .order("sort_order");
+    if (error) return { available: false as const, rooms: [] as Array<{ id: string; name: string; code: string | null }> };
+    const list = (rooms ?? []) as Array<{ id: string; display_name: string; public_title: string | null; guide_code: string | null; active: boolean }>;
+    const missing = list.filter((r) => !r.guide_code);
+    if (missing.length) {
+      // Only people who can change the property make codes; viewers just see what's there.
+      try {
+        await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+        for (const r of missing) {
+          const code = newRoomCode();
+          const { error: e } = await (context.supabase as any).from("rooms").update({ guide_code: code }).eq("id", r.id).is("guide_code", null);
+          if (!e) r.guide_code = code;
+        }
+      } catch {
+        // Read-only: leave them for someone who can.
+      }
+    }
+    return {
+      available: true as const,
+      rooms: list.filter((r) => r.active !== false).map((r) => ({ id: r.id, name: r.display_name, code: r.guide_code })),
+    };
+  });
+
+/**
+ * The guide behind a room's QR code: that room's sections (its own, or the
+ * house's), wifi, today's closed times and the reminder card. Never the door
+ * instructions: the code is printed in the room, so anyone could photograph it.
+ */
+export const getRoomGuide = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ code: roomCode }).parse(d))
+  .handler(async ({ data }) => {
+    const { admin } = await import("./checkin.server");
+    const db = (await admin()) as any;
+    const { data: room, error } = await db
+      .from("rooms")
+      .select("id, property_id, display_name, public_title, guide_mode, amenities, active")
+      .eq("guide_code", data.code)
+      .maybeSingle();
+    if (error || !room || room.active === false) return { found: false as const };
+    const [{ data: p }, { data: guides }, { data: windows }] = await Promise.all([
+      db
+        .from("properties")
+        .select("id, name, short_code, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, active")
+        .eq("id", room.property_id)
+        .single(),
+      db
+        .from("guides")
+        .select("room_id, section_key, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)")
+        .eq("property_id", room.property_id)
+        .eq("published", true)
+        .not("section_key", "is", null),
+      db.from("unavailability_windows").select("room_id, reason, starts_at, ends_at, day_of_week, start_time, end_time").eq("property_id", room.property_id),
+    ]);
+    if (!p || p.active === false) return { found: false as const };
+
+    const { buildGuide, forgetCard, weeklyLines, windowsOn, DOOR_SECTIONS } = await import("./guide");
+    const { normaliseTheme } = await import("./theme");
+    const tz = p.timezone ?? "Europe/London";
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+    const mode = (room.guide_mode === "basic" ? "basic" : "detailed") as "basic" | "detailed";
+    const paths =
+      mode === "detailed"
+        ? ((guides ?? []) as any[]).flatMap((g) => (g.guide_steps ?? []).map((s: any) => s.image_url).filter((x: string | null): x is string => !!x))
+        : [];
+    const signed = await signPaths(paths);
+    const stored = ((guides ?? []) as any[]).map((g) => ({
+      roomId: g.room_id,
+      sectionKey: g.section_key as SectionKey,
+      summary: g.summary,
+      pinned: g.pinned === true,
+      sortOrder: g.sort_order ?? 0,
+      steps: [...(g.guide_steps ?? [])]
+        .sort((a: any, c: any) => a.sort_order - c.sort_order)
+        .map((s: any) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
+    }));
+    const facts = {
+      wifiName: p.wifi_name ?? null,
+      wifiPassword: p.wifi_password ?? null,
+      quietStart: (p.quiet_hours_start ?? "22:00").slice(0, 5),
+      quietEnd: (p.quiet_hours_end ?? "07:00").slice(0, 5),
+      checkOutTime: (p.default_check_out_time ?? "11:00").slice(0, 5),
+      checkOutDateLabel: "your last day",
+      parkingNotes: p.parking_notes ?? null,
+      hostName: p.host_contact_name ?? null,
+      hostPhone: p.host_contact_phone ?? null,
+      roomName: room.display_name ?? null,
+      unavailableLines: weeklyLines(windows ?? [], room.id),
+    };
+    const sections = buildGuide(stored, room.id, mode, facts).filter((sec) => !DOOR_SECTIONS.includes(sec.key));
+    const forget = forgetCard(sections, windowsOn(windows ?? [], room.id, today, tz));
+    const reminded = new Set(forget.map((i) => i.key));
+    return {
+      found: true as const,
+      propertyId: p.id as string,
+      propertyName: p.name as string,
+      shortCode: p.short_code as string,
+      room: { name: room.display_name as string, title: (room.public_title as string | null) ?? null },
+      wifi: p.wifi_name ? { name: p.wifi_name as string, password: (p.wifi_password as string | null) ?? null } : null,
+      amenities: Array.isArray(room.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [],
+      theme: normaliseTheme(p.theme_config),
+      forget,
+      guide: sections.filter((sec) => !reminded.has(sec.key)),
+    };
+  });
