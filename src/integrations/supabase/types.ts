@@ -1397,10 +1397,12 @@ export type Database = {
           currency: string
           current_period_end: string | null
           id: string
+          inbound_code: string | null
           integration_modes: Json
           invoice_counter: number
           invoice_prefix: string
           invoices_enabled: boolean
+          notify_prefs: Json
           offer_label: string | null
           offer_pence: number | null
           offer_used_at: string | null
@@ -1439,10 +1441,12 @@ export type Database = {
           currency?: string
           current_period_end?: string | null
           id?: string
+          inbound_code?: string | null
           integration_modes?: Json
           invoice_counter?: number
           invoice_prefix?: string
           invoices_enabled?: boolean
+          notify_prefs?: Json
           offer_label?: string | null
           offer_pence?: number | null
           offer_used_at?: string | null
@@ -1481,10 +1485,12 @@ export type Database = {
           currency?: string
           current_period_end?: string | null
           id?: string
+          inbound_code?: string | null
           integration_modes?: Json
           invoice_counter?: number
           invoice_prefix?: string
           invoices_enabled?: boolean
+          notify_prefs?: Json
           offer_label?: string | null
           offer_pence?: number | null
           offer_used_at?: string | null
@@ -1511,6 +1517,73 @@ export type Database = {
           uses_platform_stripe?: boolean
         }
         Relationships: []
+      }
+      inbound_emails: {
+        Row: {
+          body: string | null
+          booking_id: string | null
+          from_addr: string | null
+          guest_name: string | null
+          host_id: string
+          id: string
+          message_id: string | null
+          platform: string | null
+          received_at: string
+          reply_to: string | null
+          reservation_code: string | null
+          subject: string | null
+        }
+        Insert: {
+          body?: string | null
+          booking_id?: string | null
+          from_addr?: string | null
+          guest_name?: string | null
+          host_id: string
+          id?: string
+          message_id?: string | null
+          platform?: string | null
+          received_at?: string
+          reply_to?: string | null
+          reservation_code?: string | null
+          subject?: string | null
+        }
+        Update: {
+          body?: string | null
+          booking_id?: string | null
+          from_addr?: string | null
+          guest_name?: string | null
+          host_id?: string
+          id?: string
+          message_id?: string | null
+          platform?: string | null
+          received_at?: string
+          reply_to?: string | null
+          reservation_code?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_emails_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_emails_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "inbound_emails_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
@@ -1686,10 +1759,13 @@ export type Database = {
           channel: string
           created_at: string
           direction: string
+          external_id: string | null
           id: string
           job_id: string | null
+          platform: string | null
           read_by_guest_at: string | null
           read_by_host_at: string | null
+          reply_to: string | null
           sent_at: string | null
         }
         Insert: {
@@ -1698,10 +1774,13 @@ export type Database = {
           channel?: string
           created_at?: string
           direction?: string
+          external_id?: string | null
           id?: string
           job_id?: string | null
+          platform?: string | null
           read_by_guest_at?: string | null
           read_by_host_at?: string | null
+          reply_to?: string | null
           sent_at?: string | null
         }
         Update: {
@@ -1710,10 +1789,13 @@ export type Database = {
           channel?: string
           created_at?: string
           direction?: string
+          external_id?: string | null
           id?: string
           job_id?: string | null
+          platform?: string | null
           read_by_guest_at?: string | null
           read_by_host_at?: string | null
+          reply_to?: string | null
           sent_at?: string | null
         }
         Relationships: [
@@ -1952,6 +2034,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "properties_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          device: string | null
+          endpoint: string
+          failed_at: string | null
+          host_id: string
+          id: string
+          last_sent_at: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          endpoint: string
+          failed_at?: string | null
+          host_id: string
+          id?: string
+          last_sent_at?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          endpoint?: string
+          failed_at?: string | null
+          host_id?: string
+          id?: string
+          last_sent_at?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_host_id_fkey"
             columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "hosts"
@@ -2302,6 +2428,7 @@ export type Database = {
         Row: {
           cost_model: Json | null
           id: number
+          integrations: Json
           invoice_nightly_lines: boolean
           notice: string | null
           offer: Json | null
@@ -2314,6 +2441,7 @@ export type Database = {
         Insert: {
           cost_model?: Json | null
           id?: number
+          integrations?: Json
           invoice_nightly_lines?: boolean
           notice?: string | null
           offer?: Json | null
@@ -2326,6 +2454,7 @@ export type Database = {
         Update: {
           cost_model?: Json | null
           id?: number
+          integrations?: Json
           invoice_nightly_lines?: boolean
           notice?: string | null
           offer?: Json | null
@@ -2443,6 +2572,70 @@ export type Database = {
             columns: ["connection_id"]
             isOneToOne: false
             referencedRelation: "channel_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_link_codes: {
+        Row: {
+          code: string
+          expires_at: string
+          host_id: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          expires_at: string
+          host_id: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          expires_at?: string
+          host_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_link_codes_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_links: {
+        Row: {
+          chat_id: number
+          host_id: string
+          id: string
+          linked_at: string
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          chat_id: number
+          host_id: string
+          id?: string
+          linked_at?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          chat_id?: number
+          host_id?: string
+          id?: string
+          linked_at?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_links_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
             referencedColumns: ["id"]
           },
         ]
