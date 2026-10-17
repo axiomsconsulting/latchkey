@@ -1,6 +1,6 @@
 /**
  * The one shared public demo: a host account every visitor signs in as, and
- * its guest tour at /p/tour. Hosts' own sample data (is_demo, other codes) is
+ * its guest tour at /kiosk/tour. Hosts' own sample data (is_demo, other codes) is
  * not this, and keeps every real-guest protection.
  */
 

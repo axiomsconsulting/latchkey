@@ -22,6 +22,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.31",
+    date: "2026-10-17",
+    title: "One check-in screen",
+    items: [
+      { kind: "improved", area: "Check-in", text: "Guests checking in on their own phone now get the new check-in screen, the same as the front-door tablet, without the tablet's screensaver or time-outs." },
+      { kind: "improved", area: "Check-in", text: "Old check-in links and printed QR codes still work: they open the new screen." },
+    ],
+  },
+  {
     version: "0.30",
     date: "2026-10-17",
     title: "Welcome guests by name on the kiosk",

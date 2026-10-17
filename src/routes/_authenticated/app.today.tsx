@@ -966,8 +966,8 @@ function KioskCard({ property, arriving }: { property: { id: string; short_code:
             <Monitor className="size-4 text-primary" /> {copy.openKiosk} <ExternalLink className="ml-auto size-3.5 text-muted-foreground" />
           </a>
         </Peek>
-        <Peek content={<p>{copy.pagePeek(`/p/${property.short_code}`)}</p>}>
-          <a href={`/p/${property.short_code}`} target="_blank" rel="noopener noreferrer" className={tile}>
+        <Peek content={<p>{copy.pagePeek(`/kiosk/${property.short_code}`)}</p>}>
+          <a href={`/kiosk/${property.short_code}?guest=1`} target="_blank" rel="noopener noreferrer" className={tile}>
             <DoorOpen className="size-4 text-primary" /> {copy.guestPage} <ExternalLink className="ml-auto size-3.5 text-muted-foreground" />
           </a>
         </Peek>

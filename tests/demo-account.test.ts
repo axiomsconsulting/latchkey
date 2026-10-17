@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DEMO_EMAIL, DEMO_LOCKED, assertNotSharedDemo, isTour } from "../src/lib/demo-account";
 
 describe("isTour", () => {
-  it("is only the shared demo property at /p/tour", () => {
+  it("is only the shared demo property at /kiosk/tour", () => {
     expect(isTour({ is_demo: true, short_code: "tour" })).toBe(true);
   });
 

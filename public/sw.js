@@ -6,7 +6,7 @@
  * - Shows push alerts: pushes arrive without content, so the worker asks
  *   Latchkey for the newest alert for this device and shows that.
  */
-const VERSION = "lk-v1";
+const VERSION = "lk-v2";
 const SHELL = `${VERSION}-shell`;
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
@@ -27,7 +27,7 @@ self.addEventListener("activate", (event) => {
 });
 
 /** Pages worth keeping a copy of: the ones a tablet or guest phone shows. */
-const KEEP_PAGE = /^\/(kiosk|p|room|checkin|stay)(\/|$)/;
+const KEEP_PAGE = /^\/(kiosk|room|checkin|stay)(\/|$)/;
 /** Never touched: data, server functions, auth and tracking. */
 const NEVER = /^\/(api|_serverFn|_server|auth)(\/|$)|\/__/;
 

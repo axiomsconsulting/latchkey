@@ -12,7 +12,7 @@ type Welcome = { headline: string; body: string | null; version: number };
  * The host's welcome for an arriving guest, kept up to date on the kiosk:
  * read on start, every minute, and the moment the host changes it.
  */
-export function useKioskWelcome(code: string) {
+export function useKioskWelcome(code: string, enabled = true) {
   const fetchFn = useServerFn(kioskWelcome);
   const dismissFn = useServerFn(dismissKioskWelcome);
   const [message, setMessage] = useState<Welcome | null>(null);
@@ -25,6 +25,8 @@ export function useKioskWelcome(code: string) {
   }, [code, fetchFn]);
 
   useEffect(() => {
+    // Only the shared door screen shows welcomes; a guest's own phone doesn't listen.
+    if (!enabled) return;
     load();
     const id = window.setInterval(load, 60_000);
     const stop = onKioskPing(code, load);
@@ -32,7 +34,7 @@ export function useKioskWelcome(code: string) {
       window.clearInterval(id);
       stop();
     };
-  }, [code, load]);
+  }, [code, load, enabled]);
 
   const dismiss = () => {
     if (!message) return;

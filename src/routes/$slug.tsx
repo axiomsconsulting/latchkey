@@ -50,7 +50,7 @@ function PropertyHome() {
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Button asChild size="touch-xl" className="justify-between">
-            <Link to="/p/$code" params={{ code: p.code }}>
+            <Link to="/kiosk/$code" params={{ code: p.code }} search={{ guest: true }}>
               <span className="flex items-center gap-2"><KeyRound className="size-6" /> {copy.startCta}</span>
               <ArrowRight className="size-6" />
             </Link>

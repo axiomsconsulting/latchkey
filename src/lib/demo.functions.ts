@@ -96,7 +96,7 @@ async function demoHostId(admin: any): Promise<string> {
   return made.id as string;
 }
 
-/** Makes sure today's guest tour exists; used when /p/tour is opened directly. `force` rebuilds it anyway. */
+/** Makes sure today's guest tour exists; used when /kiosk/tour is opened directly. `force` rebuilds it anyway. */
 export async function ensureTour(admin: any, force = false): Promise<void> {
   await freshDemoCode(admin, await demoHostId(admin), force);
 }

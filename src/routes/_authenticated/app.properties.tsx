@@ -716,7 +716,7 @@ function PropertiesPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">/p/{property.short_code}</Badge>
+              <Badge variant="secondary">/kiosk/{property.short_code}</Badge>
               {property.check_in_pin ? (
                 <Badge variant="outline">
                   {copy.doorPin} {property.check_in_pin}

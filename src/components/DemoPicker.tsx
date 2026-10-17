@@ -21,7 +21,7 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
     try {
       const res = await run({ data: { as } });
       if (as === "guest") {
-        await navigate({ to: "/p/$code", params: { code: res.code } });
+        await navigate({ to: "/kiosk/$code", params: { code: res.code }, search: { guest: true } });
         return;
       }
       // Local only: a global sign-out here would end every other demo visitor's session.

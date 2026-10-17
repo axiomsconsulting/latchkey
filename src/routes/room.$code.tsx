@@ -65,7 +65,7 @@ function RoomGuide() {
           <MessageCircle className="size-6 shrink-0 text-primary" aria-hidden />
           <p className="min-w-0 flex-1 text-lg">{stay ? rcopy.yourStay : rcopy.needSomething}</p>
           <Button asChild size="lg" className="h-12">
-            <a href={stay ? `/stay/${stay}` : `/p/${g.shortCode}`}>{stay ? rcopy.openStay : rcopy.checkIn}</a>
+            <a href={stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`}>{stay ? rcopy.openStay : rcopy.checkIn}</a>
           </Button>
         </section>
 

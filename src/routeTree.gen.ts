@@ -22,7 +22,6 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
-import { Route as PDemoRouteImport } from './routes/p.demo'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
@@ -117,11 +116,6 @@ const KioskCodeRoute = KioskCodeRouteImport.update({
 const PCodeRoute = PCodeRouteImport.update({
   id: '/p/$code',
   path: '/p/$code',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PDemoRoute = PDemoRouteImport.update({
-  id: '/p/demo',
-  path: '/p/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoomCodeRoute = RoomCodeRouteImport.update({
@@ -305,7 +299,6 @@ export interface FileRoutesByFullPath {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
-  '/p/demo': typeof PDemoRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
@@ -350,7 +343,6 @@ export interface FileRoutesByTo {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
-  '/p/demo': typeof PDemoRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
@@ -398,7 +390,6 @@ export interface FileRoutesById {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
-  '/p/demo': typeof PDemoRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/_authenticated/app/activity': typeof AuthenticatedAppActivityRoute
@@ -446,7 +437,6 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
-    | '/p/demo'
     | '/room/$code'
     | '/stay/$token'
     | '/app/activity'
@@ -491,7 +481,6 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
-    | '/p/demo'
     | '/room/$code'
     | '/stay/$token'
     | '/app/activity'
@@ -538,7 +527,6 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
-    | '/p/demo'
     | '/room/$code'
     | '/stay/$token'
     | '/_authenticated/app/activity'
@@ -585,7 +573,6 @@ export interface RootRouteChildren {
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
   PCodeRoute: typeof PCodeRoute
-  PDemoRoute: typeof PDemoRoute
   RoomCodeRoute: typeof RoomCodeRoute
   StayTokenRoute: typeof StayTokenRoute
   ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
@@ -694,13 +681,6 @@ declare module '@tanstack/react-router' {
       path: '/p/$code'
       fullPath: '/p/$code'
       preLoaderRoute: typeof PCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/p/demo': {
-      id: '/p/demo'
-      path: '/p/demo'
-      fullPath: '/p/demo'
-      preLoaderRoute: typeof PDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/room/$code': {
@@ -998,7 +978,6 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
   PCodeRoute: PCodeRoute,
-  PDemoRoute: PDemoRoute,
   RoomCodeRoute: RoomCodeRoute,
   StayTokenRoute: StayTokenRoute,
   ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,

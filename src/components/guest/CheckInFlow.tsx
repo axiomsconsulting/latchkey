@@ -142,7 +142,7 @@ export function CheckInFlow({
   property: CheckinProperty;
   hostPhone?: string | null;
   kiosk?: boolean;
-  onActivity?: () => void;
+  onActivity?: (() => void) | undefined;
   /** Present when the guest scanned the square on another device. */
   resumeToken?: string | null;
 }) {
@@ -463,7 +463,7 @@ export function CheckInFlow({
   // Landscape (wider than tall) counts, whatever width the browser reports.
   const landscape = useLandscape();
   const kioskWide = kiosk && (landscape || !onPhone);
-  const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/p/${property.code}`;
+  const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
 
   // The square only means something once there is a stay to carry across.
   const handoffUrl =
@@ -472,7 +472,7 @@ export function CheckInFlow({
       : step.name === "done"
         ? null // The guest guide link and its QR sit on the done screen itself.
         : token
-          ? `${window.location.origin}/p/${property.code}?resume=${encodeURIComponent(token)}`
+          ? `${window.location.origin}/kiosk/${property.code}?resume=${encodeURIComponent(token)}`
           : null;
 
   return (

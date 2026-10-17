@@ -37,7 +37,7 @@ function PinEntry() {
     try {
       const res = await resolve({ data: { pin: value } });
       if (res.code) {
-        await navigate({ to: "/p/$code", params: { code: res.code } });
+        await navigate({ to: "/kiosk/$code", params: { code: res.code }, search: { guest: true } });
       } else {
         setError(copy.pinWrong);
         setPin("");

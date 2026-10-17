@@ -27,6 +27,12 @@ import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 const HOLD_MS = 3_000;
 
 export const Route = createFileRoute("/kiosk/$code")({
+  // ?guest=1: a guest's own phone (from a QR code or link), not the shared door tablet.
+  // ?resume=<token>: carry on a check-in started on the door tablet.
+  validateSearch: (search: Record<string, unknown>): { guest?: boolean; resume?: string } => ({
+    ...(search["guest"] === true || search["guest"] === "1" || search["guest"] === 1 ? { guest: true } : {}),
+    ...(typeof search["resume"] === "string" ? { resume: search["resume"] } : {}),
+  }),
   loader: async ({ params }) => {
     const p = await getCheckinProperty({ data: { code: params.code } });
     if (!p.found) throw notFound({ data: { paused: "paused" in p && p.paused === true } });
@@ -35,9 +41,9 @@ export const Route = createFileRoute("/kiosk/$code")({
   head: ({ loaderData }) => ({
     meta: [
       { title: `Checking in — ${loaderData?.name ?? "Latchkey"}` },
-      { name: "description", content: "Front-door tablet for guest self check-in." },
-      { property: "og:title", content: "Checking in" },
-      { property: "og:description", content: "Front-door tablet for guest self check-in." },
+      { name: "description", content: `Check yourself in at ${loaderData?.name ?? "your stay"}. No app, no sign-up, about a minute.` },
+      { property: "og:title", content: `Checking in — ${loaderData?.name ?? "Latchkey"}` },
+      { property: "og:description", content: `Check yourself in at ${loaderData?.name ?? "your stay"}.` },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -56,10 +62,28 @@ export const Route = createFileRoute("/kiosk/$code")({
   component: Kiosk,
 });
 
+/** A phone held upright is someone's own device; anything wider is a shared screen. */
+function usePortraitPhone() {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const update = () => setPhone(window.innerWidth < 768 && window.innerHeight >= window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return phone;
+}
+
 function Kiosk() {
   const p = Route.useLoaderData();
+  const { guest, resume } = Route.useSearch();
+  // On a guest's own phone: the same screen, without the shared-tablet extras
+  // (idle reset, screensaver, welcome overlay, hidden exit, kiosk install).
+  const personal = guest === true || !!resume || usePortraitPhone();
+  const shared = !personal;
   // Installing from here installs this property's kiosk, not the host app.
   useEffect(() => {
+    if (!shared) return;
     const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
     if (!link) return;
     const before = link.href;
@@ -67,7 +91,7 @@ function Kiosk() {
     return () => {
       link.href = before;
     };
-  }, [p.code]);
+  }, [p.code, shared]);
   const navigate = useNavigate();
   const unlock = useServerFn(kioskUnlock);
   const [session, setSession] = useState(0);
@@ -78,7 +102,7 @@ function Kiosk() {
   const saverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saver, setSaver] = useState(false);
   const [atWelcome, setAtWelcome] = useState(true);
-  const { welcome, dismiss } = useKioskWelcome(p.code);
+  const { welcome, dismiss } = useKioskWelcome(p.code, shared);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bump = useCallback(() => {
@@ -93,6 +117,8 @@ function Kiosk() {
   }, []);
 
   useEffect(() => {
+    // A guest's own phone keeps their place however long they take.
+    if (!shared) return;
     bump();
     const events = ["pointerdown", "keydown", "touchstart"] as const;
     const onAny = () => bump();
@@ -102,9 +128,10 @@ function Kiosk() {
       if (idleTimer.current) clearTimeout(idleTimer.current);
       if (saverTimer.current) clearTimeout(saverTimer.current);
     };
-  }, [bump]);
+  }, [bump, shared]);
 
   function goFullscreen() {
+    if (!shared) return;
     if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
   }
 
@@ -135,6 +162,7 @@ function Kiosk() {
         <span className="font-display text-lg">{p.name}</span>
         <KioskClock tz={p.timezone ?? "Europe/London"} />
       </header>
+      {shared ? (
       <button
         type="button"
         aria-label={copy.kioskExitTitle}
@@ -144,10 +172,19 @@ function Kiosk() {
         onPointerLeave={endHold}
         onContextMenu={(e) => e.preventDefault()}
       />
-      <CheckInFlow key={session} property={p} hostPhone={p.hostPhone} kiosk onActivity={bump} onWelcome={setAtWelcome} />
+      ) : null}
+      <CheckInFlow
+        key={session}
+        property={p}
+        hostPhone={p.hostPhone}
+        kiosk={shared}
+        resumeToken={personal ? (resume ?? null) : null}
+        onActivity={shared ? bump : undefined}
+        onWelcome={setAtWelcome}
+      />
 
       {/* Only on the welcome: rest the screen by hand. */}
-      {atWelcome && !saver ? (
+      {shared && atWelcome && !saver ? (
         <button
           type="button"
           onClick={() => setSaver(true)}
@@ -160,7 +197,7 @@ function Kiosk() {
       ) : null}
 
       {/* The host's welcome for an arriving guest: over everything, wakes the screen. */}
-      {welcome ? (
+      {shared && welcome ? (
         <KioskWelcomeOverlay
           welcome={welcome}
           onDismiss={() => {
@@ -172,7 +209,7 @@ function Kiosk() {
         />
       ) : null}
 
-      {saver ? (
+      {shared && saver ? (
         <KioskScreensaver
           name={p.name}
           tz={p.timezone ?? "Europe/London"}

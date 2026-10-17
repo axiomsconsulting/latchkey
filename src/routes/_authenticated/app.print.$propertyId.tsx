@@ -21,7 +21,7 @@ function PrintCard() {
     | null
     | undefined;
   const [qr, setQr] = useState<string | null>(null);
-  const url = property ? `${window.location.origin}/p/${property.short_code}` : "";
+  const url = property ? `${window.location.origin}/kiosk/${property.short_code}?guest=1` : "";
 
   useEffect(() => {
     if (!url) return;

@@ -220,7 +220,7 @@ function SetupPage() {
                 placeholder={slugify(property.name)}
               />
               <p className="text-xs text-muted-foreground">
-                Guests will reach you at /p/{property.short_code.trim() || slugify(property.name)}
+                Guests will reach you at /kiosk/{property.short_code.trim() || slugify(property.name)}
               </p>
             </div>
           </>
