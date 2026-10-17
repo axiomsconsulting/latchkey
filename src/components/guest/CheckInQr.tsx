@@ -154,3 +154,50 @@ export function GuideLink({ url, kiosk = false }: { url: string; kiosk?: boolean
     </div>
   );
 }
+
+/**
+ * The front-door tablet's "use your phone instead" square. Large beside the
+ * welcome; once a guest starts here, a small button in the bottom-right
+ * corner that opens it again. When a stay has been found, the square
+ * carries that check-in over to the phone.
+ */
+export function KioskQr({ url, large, carryOn }: { url: string; large: boolean; carryOn: boolean }) {
+  const src = useQrImage(url);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (large) setOpen(false);
+  }, [large]);
+  if (!src) return null;
+  if (large) {
+    return (
+      <aside className="rounded-3xl border bg-card p-6 text-center shadow-soft">
+        <Smartphone className="mx-auto mb-2 size-7 text-primary" aria-hidden />
+        <h2 className="font-display text-2xl">{copy.kioskQrTitle}</h2>
+        <img src={src} alt={copy.qrAlt} className="mx-auto my-4 w-full max-w-[15rem] rounded-2xl" />
+        <p className="text-muted-foreground">{copy.kioskQrBody}</p>
+      </aside>
+    );
+  }
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => setOpen(true)}
+        aria-label={carryOn ? copy.qrOpen : copy.kioskQrTitle}
+        className="fixed bottom-5 right-5 z-40 size-14 rounded-full shadow-lifted"
+      >
+        <QrCode className="size-6" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{carryOn ? copy.qrHeading : copy.kioskQrTitle}</DialogTitle>
+          </DialogHeader>
+          <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[18rem] rounded-2xl" />
+          <p className="text-center text-sm text-muted-foreground">{carryOn ? copy.qrBlurb : copy.kioskQrBody}</p>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

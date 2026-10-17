@@ -16,10 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { PinPad } from "@/components/guest/PinPad";
 import { InstallApp } from "@/components/InstallApp";
+import { KioskClock, KioskScreensaver } from "@/components/guest/KioskClocks";
+import { KIOSK_RESET_MS, KIOSK_SAVER_MS } from "@/lib/kiosk-clock";
 import { guest as copy } from "@/content/copy";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 
-const IDLE_MS = 60_000;
+// No tap for 5 minutes: cancel the check-in on this tablet; 5 more: screensaver.
 const HOLD_MS = 3_000;
 
 export const Route = createFileRoute("/kiosk/$code")({
@@ -71,14 +73,19 @@ function Kiosk() {
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saver, setSaver] = useState(false);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bump = useCallback(() => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
+    if (saverTimer.current) clearTimeout(saverTimer.current);
     idleTimer.current = setTimeout(() => {
+      // Nobody's here: start again for the next guest, then rest the screen.
       setExitOpen(false);
       setSession((s) => s + 1);
-    }, IDLE_MS);
+      saverTimer.current = setTimeout(() => setSaver(true), KIOSK_SAVER_MS);
+    }, KIOSK_RESET_MS);
   }, []);
 
   useEffect(() => {
@@ -89,6 +96,7 @@ function Kiosk() {
     return () => {
       events.forEach((e) => window.removeEventListener(e, onAny));
       if (idleTimer.current) clearTimeout(idleTimer.current);
+      if (saverTimer.current) clearTimeout(saverTimer.current);
     };
   }, [bump]);
 
@@ -121,6 +129,7 @@ function Kiosk() {
       <header className="mx-auto flex max-w-4xl items-center gap-3 pt-6">
         <LogoMark theme={p.theme} name={p.name} />
         <span className="font-display text-lg">{p.name}</span>
+        <KioskClock tz={p.timezone ?? "Europe/London"} />
       </header>
       <button
         type="button"
@@ -132,6 +141,17 @@ function Kiosk() {
         onContextMenu={(e) => e.preventDefault()}
       />
       <CheckInFlow key={session} property={p} hostPhone={p.hostPhone} kiosk onActivity={bump} />
+
+      {saver ? (
+        <KioskScreensaver
+          name={p.name}
+          tz={p.timezone ?? "Europe/London"}
+          onWake={() => {
+            setSaver(false);
+            bump();
+          }}
+        />
+      ) : null}
 
       <Dialog open={exitOpen} onOpenChange={setExitOpen}>
         <DialogContent>

@@ -5,7 +5,7 @@ import { ArrowLeft, BookOpen, CheckCircle2, CircleHelp, HandHeart, Loader2, Minu
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
-import { CheckInQr, GuideLink } from "@/components/guest/CheckInQr";
+import { CheckInQr, KioskQr, GuideLink } from "@/components/guest/CheckInQr";
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
@@ -439,6 +439,10 @@ export function CheckInFlow({
     setStep({ name: "handover", back });
   }
 
+  // On a tablet or computer at the door, guests can use their own phone instead.
+  const kioskWide = kiosk && !onPhone;
+  const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/p/${property.code}`;
+
   // The square only means something once there is a stay to carry across.
   const handoffUrl =
     typeof window === "undefined"
@@ -473,7 +477,11 @@ export function CheckInFlow({
       <div
         className={cn(
           "grid gap-6",
-          handoffUrl && !onPhone ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start" : "",
+          kioskWide && step.name === "welcome"
+            ? "md:grid-cols-[minmax(0,1fr)_20rem] md:items-center"
+            : handoffUrl && !onPhone && !kiosk
+              ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
+              : "",
         )}
       >
 
@@ -861,7 +869,11 @@ export function CheckInFlow({
         ) : null}
         </main>
 
-        {handoffUrl ? (
+        {/* Front-door tablet: the phone square sits beside the welcome, then in the corner. */}
+        {kioskWide && step.name !== "done" ? (
+          <KioskQr url={handoffUrl ?? phoneUrl} large={step.name === "welcome"} carryOn={!!handoffUrl} />
+        ) : null}
+        {handoffUrl && !kiosk ? (
           <CheckInQr
             url={handoffUrl}
             heading={step.name === "done" ? copy.qrDoneHeading : copy.qrHeading}

@@ -826,6 +826,12 @@ export const alerts = {
 };
 
 export const guest = {
+  tomorrow: "tomorrow",
+  yesterday: "yesterday",
+  saverWake: "Touch to start checking in",
+  saverTouch: "Touch the screen to check in",
+  kioskQrTitle: "Check in on your phone",
+  kioskQrBody: "Scan with your phone's camera to check in there instead. Your details stay on your phone.",
   propertyName: "The Hill Suites",
   location: "Amersham",
   welcome: "Welcome to The Hill Suites",

@@ -143,6 +143,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       found: true as const,
       name: p.name,
       code: p.short_code,
+      timezone: tz,
       today,
       checkoutChoices: checkoutChoices(today, hourIn(tz)),
       listFlow: usesListFlow(methods),

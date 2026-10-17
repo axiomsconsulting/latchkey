@@ -22,6 +22,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.29",
+    date: "2026-10-17",
+    title: "A front-door kiosk that rests well",
+    items: [
+      { kind: "new", area: "Check-in", text: "On a tablet or computer, the kiosk shows a QR code beside the welcome so guests can check in on their own phone; once someone starts, it tucks into a corner button." },
+      { kind: "new", area: "Check-in", text: "Today's date and time at the top of the kiosk, in the property's time zone." },
+      { kind: "improved", area: "Check-in", text: "After 5 minutes with no taps, the kiosk cancels any check-in in progress and goes back to the welcome." },
+      { kind: "new", area: "Check-in", text: "After 5 more minutes, a dim black screensaver with world clocks (New York, London, New Delhi, Singapore, Tokyo) that drifts slowly to prevent screen burn. Touch to wake." },
+    ],
+  },
+  {
     version: "0.28",
     date: "2026-10-17",
     title: "Sign in with Google or Apple; a trial that starts with your property",
