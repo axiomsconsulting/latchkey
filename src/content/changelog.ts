@@ -29,6 +29,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.33.1",
+    date: "2026-10-17",
+    title: "Check-in screen fixes",
+    items: [
+      { kind: "fixed", area: "Check-in", text: "Old check-in links (/p/…) open the full check-in screen again, with the phone QR code beside the welcome." },
+      { kind: "fixed", area: "Check-in", text: "The moon button that rests the screen now sits at the bottom right of the welcome screen." },
+    ],
+  },
+  {
     version: "0.33.0",
     date: "2026-10-17",
     title: "What's new, in Latchkey",

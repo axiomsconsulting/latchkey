@@ -190,7 +190,7 @@ function Kiosk() {
           onClick={() => setSaver(true)}
           aria-label={copy.saverStart}
           title={copy.saverStart}
-          className="fixed bottom-5 left-5 z-30 grid size-11 place-items-center rounded-full text-muted-foreground/60 hover:bg-muted hover:text-foreground"
+          className="fixed bottom-5 right-5 z-30 grid size-11 place-items-center rounded-full text-muted-foreground/60 hover:bg-muted hover:text-foreground"
         >
           <Moon className="size-5" />
         </button>
