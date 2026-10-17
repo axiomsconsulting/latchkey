@@ -30,6 +30,7 @@ import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
+import { rememberHost } from "@/lib/last-host";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,14 @@ export function HostShell() {
   const theme = normaliseTheme(property?.theme_config);
   const host = data?.host as { business_name?: string } | null | undefined;
   const title = property?.name ?? host?.business_name ?? brand.name;
+  // Remembered for the sign-in page ("welcome back" with their own logo); never a support view or the demo.
+  useEffect(() => {
+    const support = (data as { support?: unknown } | undefined)?.support;
+    const email = (host as { contact_email?: string } | null | undefined)?.contact_email;
+    if (!data || support || email === DEMO_EMAIL || !host?.business_name) return;
+    rememberHost(title, theme);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, title, property?.id]);
 
   const [navMode, setNavMode] = useState<NavMode>("full");
   // A per-browser preference, so it's read after the first render.

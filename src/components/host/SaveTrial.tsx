@@ -83,7 +83,7 @@ export function SaveTrial({ next = "/app/today", onLater }: { next?: string; onL
         <Input id="save-name" className="h-12" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
       </div>
       <div onClickCapture={() => void keepName()}>
-        <SocialButtons next={next} />
+        <SocialButtons next={next} signUp />
       </div>
       <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
         <span className="h-px flex-1 bg-border" />

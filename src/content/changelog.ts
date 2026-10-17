@@ -22,6 +22,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.32",
+    date: "2026-10-17",
+    title: "A simpler sign-in",
+    items: [
+      { kind: "improved", area: "Settings", text: "Sign in with Google, Apple or email: the email and password boxes only open when you choose email. “Email me a magic link” signs you in without a password." },
+      { kind: "improved", area: "Settings", text: "Creating an account says “Sign up with Google / Apple / email”." },
+      { kind: "improved", area: "Settings", text: "Returning on the same device? The sign-in page shows your business's own logo and name." },
+    ],
+  },
+  {
     version: "0.31",
     date: "2026-10-17",
     title: "One check-in screen",

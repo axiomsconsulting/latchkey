@@ -38,7 +38,7 @@ export function LastUsed({ method, current }: { method: SignInMethod; current: S
  * Continue with Google / Apple. From a free trial, the trial's business goes
  * with the account they sign in with.
  */
-export function SocialButtons({ next, className }: { next?: string; className?: string }) {
+export function SocialButtons({ next, className, signUp = false }: { next?: string; className?: string; signUp?: boolean }) {
   const claim = useServerFn(startTrialClaim);
   const [busy, setBusy] = useState<"google" | "apple" | null>(null);
   const [last, setLast] = useState<SignInMethod | null>(null);
@@ -68,7 +68,7 @@ export function SocialButtons({ next, className }: { next?: string; className?: 
             onClick={() => void go(p)}
           >
             {busy === p ? <Loader2 className="size-5 animate-spin" /> : p === "google" ? <GoogleMark /> : <AppleMark />}
-            {p === "google" ? copy.google : copy.apple}
+            {p === "google" ? (signUp ? copy.googleSignUp : copy.google) : signUp ? copy.appleSignUp : copy.apple}
           </Button>
           <LastUsed method={p} current={last} />
         </div>

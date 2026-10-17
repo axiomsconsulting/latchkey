@@ -111,8 +111,8 @@ export const auth = {
   checkInbox: "Check your inbox to confirm your email address, then sign in.",
   genericError: "Something went wrong. Please try again.",
   signOut: "Sign out",
-  magicCta: "Email me a sign-in link",
-  magicSent: (email: string) => `We've sent a sign-in link to ${email}. Open it on this device to sign in.`,
+  magicCta: "Email me a magic link",
+  magicSent: (email: string) => `We've sent a magic link to ${email}. Open it on this device to sign in.`,
   magicNeedsEmail: "Type your email address first.",
   orPassword: "or sign in with your password",
 };
@@ -122,6 +122,11 @@ export const auth = {
 export const authExtraCopy = {
   google: "Continue with Google",
   apple: "Continue with Apple",
+  googleSignUp: "Sign up with Google",
+  appleSignUp: "Sign up with Apple",
+  email: "Continue with email",
+  emailSignUp: "Sign up with email",
+  magicNoPassword: "No password needed: we email you a link that signs you in.",
   orEmail: "or with email",
   lastUsed: "Last used",
   socialFailed: "Signing in didn't finish. Please try again.",

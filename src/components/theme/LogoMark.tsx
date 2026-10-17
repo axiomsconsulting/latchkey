@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { LogoPreset, ThemeConfig } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -58,8 +60,9 @@ export function LogoMark({
   name: string;
   className?: string;
 }) {
-  if (theme.logoUrl) {
-    return <img src={theme.logoUrl} alt={`${name} logo`} className={cn("size-10 rounded-xl object-contain", className)} />;
+  const [broken, setBroken] = useState(false);
+  if (theme.logoUrl && !broken) {
+    return <img src={theme.logoUrl} alt={`${name} logo`} onError={() => setBroken(true)} className={cn("size-10 rounded-xl object-contain", className)} />;
   }
   if (theme.logoPreset === "monogram") {
     const initials = name.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w) && w.toLowerCase() !== "the").slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "L";

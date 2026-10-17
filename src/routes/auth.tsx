@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
 import { LastUsed, SocialButtons } from "@/components/SocialButtons";
 import { authExtraCopy as extra } from "@/content/copy";
 import { lastSignIn, signInIntent, type SignInMethod } from "@/lib/social-auth";
+import { lastHost } from "@/lib/last-host";
+import { LogoMark } from "@/components/theme/LogoMark";
+import { ThemeScope } from "@/components/theme/ThemeScope";
 
 /** Only same-site paths, so a crafted link can't send people elsewhere. */
 function safeNext(value: unknown): string | undefined {
@@ -59,9 +62,14 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   // How this device signed in last time: badge it, and fill in the email.
   const [last, setLast] = useState<SignInMethod | null>(null);
+  // Folded until chosen; open straight away when a link brought their email.
+  const [emailOpen, setEmailOpen] = useState(!!search.email);
+  // Someone who has signed in on this device before: show their business's own logo.
+  const [known, setKnown] = useState<ReturnType<typeof lastHost>>(null);
   useEffect(() => {
     const l = lastSignIn();
     setLast(l?.method ?? null);
+    if (l) setKnown(lastHost());
     if (l?.email && !search.email) setEmail((e) => e || l.email!);
   }, [search.email]);
 
@@ -137,10 +145,20 @@ function AuthPage() {
     <main className="grid min-h-screen place-items-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-6 flex items-center justify-center gap-3">
-          <span className="grid size-10 place-items-center rounded-2xl bg-primary font-display text-lg text-primary-foreground">
-            L
-          </span>
-          <span className="font-display text-xl">{brand.name}</span>
+          {known ? (
+            // A returning host on this device: their own logo and name.
+            <ThemeScope theme={known.theme} className="bg-transparent">
+              <span className="flex items-center gap-3">
+                <LogoMark theme={known.theme} name={known.name} />
+                <span className="font-display text-xl">{known.name}</span>
+              </span>
+            </ThemeScope>
+          ) : (
+            <>
+              <img src="/icons/icon-192.png" alt="" className="size-11 rounded-xl" />
+              <span className="font-display text-xl">{brand.name}</span>
+            </>
+          )}
         </Link>
 
         <Card className="card-soft">
@@ -153,55 +171,72 @@ function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SocialButtons next={next} />
-            <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              {extra.orEmail}
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">{copy.emailLabel}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{copy.passwordLabel}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-              <div className="relative">
-                <Button type="submit" className="w-full" size="lg" disabled={busy}>
-                  {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {mode === "sign_in" ? copy.signInCta : copy.signUpCta}
-                </Button>
-                {mode === "sign_in" ? <LastUsed method="password" current={last} /> : null}
-              </div>
-            </form>
+            <SocialButtons next={next} signUp={mode === "sign_up"} />
 
-            {mode === "sign_in" ? (
-              <div className="relative mt-3">
-                <Button type="button" variant="outline" className="w-full" size="lg" disabled={busy} onClick={() => void sendLink()}>
-                  {copy.magicCta}
+            {/* Email is one more option, folded until chosen. */}
+            {!emailOpen ? (
+              <div className="relative mt-2">
+                <Button type="button" variant="outline" size="lg" className="h-12 w-full gap-3 text-base" onClick={() => setEmailOpen(true)}>
+                  <Mail className="size-5" /> {mode === "sign_in" ? extra.email : extra.emailSignUp}
                 </Button>
-                <LastUsed method="email_link" current={last} />
+                {mode === "sign_in" && (last === "password" || last === "email_link") ? <LastUsed method={last} current={last} /> : null}
               </div>
-            ) : null}
+            ) : (
+              <>
+                <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  {extra.orEmail}
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                <form onSubmit={onSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">{copy.emailLabel}</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      autoFocus
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">{copy.passwordLabel}</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
+                      required
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Button type="submit" className="w-full" size="lg" disabled={busy}>
+                      {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+                      {mode === "sign_in" ? copy.signInCta : copy.signUpCta}
+                    </Button>
+                    {mode === "sign_in" ? <LastUsed method="password" current={last} /> : null}
+                  </div>
+                </form>
+
+                {mode === "sign_in" ? (
+                  <>
+                    <div className="relative mt-3">
+                      <Button type="button" variant="outline" className="w-full" size="lg" disabled={busy} onClick={() => void sendLink()}>
+                        <Sparkles className="size-4" /> {copy.magicCta}
+                      </Button>
+                      <LastUsed method="email_link" current={last} />
+                    </div>
+                    <p className="mt-2 text-center text-xs text-muted-foreground">{extra.magicNoPassword}</p>
+                  </>
+                ) : null}
+              </>
+            )}
 
             <button
               type="button"
