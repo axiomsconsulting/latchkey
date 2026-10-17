@@ -78,3 +78,20 @@ describe("reception clocks around the property's own time", () => {
     expect(utcOffset(oct, "Asia/Kolkata")).toBe(330);
   });
 });
+
+describe("quiet hours on the kiosk", () => {
+  const at = (iso: string) => new Date(iso);
+  it("knows overnight quiet hours in the property's time zone", async () => {
+    const { quietNow } = await import("../src/lib/kiosk-clock");
+    // 22:30 and 06:59 London (BST) are quiet; 07:00 and 21:59 aren't.
+    expect(quietNow(at("2026-10-17T21:30:00Z"), "Europe/London", "22:00", "07:00")).toEqual({ active: true, until: "07:00" });
+    expect(quietNow(at("2026-10-18T05:59:00Z"), "Europe/London", "22:00", "07:00").active).toBe(true);
+    expect(quietNow(at("2026-10-18T06:00:00Z"), "Europe/London", "22:00", "07:00").active).toBe(false);
+    expect(quietNow(at("2026-10-17T20:59:00Z"), "Europe/London", "22:00", "07:00").active).toBe(false);
+  });
+  it("handles daytime spans and no quiet hours", async () => {
+    const { quietNow } = await import("../src/lib/kiosk-clock");
+    expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "14:00", "16:00").active).toBe(true);
+    expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "07:00", "07:00").active).toBe(false);
+  });
+});

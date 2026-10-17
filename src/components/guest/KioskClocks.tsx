@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 
 import { guest as copy } from "@/content/copy";
-import { burnDrift, clockHands, kioskNow, worldClocksFor } from "@/lib/kiosk-clock";
+import { Moon } from "lucide-react";
+
+import { burnDrift, clockHands, kioskNow, quietNow, worldClocksFor } from "@/lib/kiosk-clock";
 import { zoneCity } from "@/lib/world";
 
 /** Ticks on the minute (and when the tab comes back), so the clocks never lag. */
@@ -75,11 +77,12 @@ function Dial({ city, tz, home, now, here }: { city: string; tz: string; home: s
  * clocks. The whole display wanders a little, slowly, so nothing burns into
  * the screen; it never scales or stretches. Any touch wakes it.
  */
-export function KioskScreensaver({ name, tz, onWake }: { name: string; tz: string; onWake: () => void }) {
+export function KioskScreensaver({ name, tz, onWake, quiet }: { name: string; tz: string; onWake: () => void; quiet?: { start: string; end: string } | undefined }) {
   const now = useNow(20_000);
   const [started] = useState(() => Date.now());
   const drift = burnDrift(now.getTime() - started + 1);
   const local = kioskNow(now, tz);
+  const q = quiet ? quietNow(now, tz, quiet.start, quiet.end) : null;
   return (
     <div
       role="button"
@@ -108,6 +111,14 @@ export function KioskScreensaver({ name, tz, onWake }: { name: string; tz: strin
           <p className="mt-2 text-sm tracking-[0.2em] text-white/25">
             {local.date} · {local.time}
           </p>
+          {q?.active ? (
+            <div className="mx-auto mt-8 max-w-xl">
+              <p className="flex items-center justify-center gap-2 text-base tracking-wide text-white/40">
+                <Moon className="size-4" aria-hidden /> {copy.quietTitle(q.until)}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-white/30">{copy.quietBody}</p>
+            </div>
+          ) : null}
           <p className="mt-8 text-xs uppercase tracking-[0.3em] text-white/20">{copy.saverTouch}</p>
         </div>
       </div>

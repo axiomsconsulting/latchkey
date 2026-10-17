@@ -101,3 +101,20 @@ export function burnDrift(ms: number): { x: number; y: number } {
   const t = ms / 60_000;
   return { x: Math.round(48 * Math.sin(t / 3.1)), y: Math.round(28 * Math.sin(t / 4.7 + 1)) };
 }
+
+/**
+ * Whether quiet hours are on now in the property's time zone, and when they
+ * end ("07:00"). Handles the usual overnight span (22:00 → 07:00).
+ */
+export function quietNow(at: Date, tz: string, start: string, end: string): { active: boolean; until: string } {
+  const p = parts(at, tz);
+  const mins = p.h * 60 + p.min;
+  const toMin = (t: string) => {
+    const [h = "0", m = "0"] = t.slice(0, 5).split(":");
+    return Number(h) * 60 + Number(m);
+  };
+  const s = toMin(start);
+  const e = toMin(end);
+  const active = s === e ? false : s < e ? mins >= s && mins < e : mins >= s || mins < e;
+  return { active, until: end.slice(0, 5) };
+}

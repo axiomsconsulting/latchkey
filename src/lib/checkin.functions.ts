@@ -144,6 +144,8 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       name: p.name,
       code: p.short_code,
       timezone: tz,
+      quietStart: (p.quiet_hours_start ?? "22:00").slice(0, 5),
+      quietEnd: (p.quiet_hours_end ?? "07:00").slice(0, 5),
       today,
       checkoutChoices: checkoutChoices(today, hourIn(tz)),
       listFlow: usesListFlow(methods),

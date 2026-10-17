@@ -134,8 +134,11 @@ export function CheckInFlow({
   hostPhone,
   kiosk = false,
   onActivity,
+  onWelcome,
   resumeToken,
 }: {
+  /** Tells the kiosk whether the welcome (first) screen is showing. */
+  onWelcome?: (atWelcome: boolean) => void;
   property: CheckinProperty;
   hostPhone?: string | null;
   kiosk?: boolean;
@@ -183,7 +186,8 @@ export function CheckInFlow({
   useEffect(() => {
     onActivity?.();
     setMessage(null);
-  }, [step, onActivity]);
+    onWelcome?.(step.name === "welcome");
+  }, [step, onActivity, onWelcome]);
 
   // Scanned square: rejoin the same check-in rather than starting over.
   useEffect(() => {

@@ -22,6 +22,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.30",
+    date: "2026-10-17",
+    title: "Welcome guests by name on the kiosk",
+    items: [
+      { kind: "new", area: "Check-in", text: "From Today, put a full-screen welcome on the front-door kiosk for an arriving guest (“Welcome, Priya!”). Change every word, see when they tap it, update or remove it any time." },
+      { kind: "new", area: "Check-in", text: "During quiet hours the kiosk's screensaver asks guests, kindly, to keep noise and movement down, and says when quiet hours end." },
+      { kind: "new", area: "Check-in", text: "A small moon on the kiosk's welcome screen rests the screen straight away." },
+    ],
+  },
+  {
     version: "0.29",
     date: "2026-10-17",
     title: "A front-door kiosk that rests well",

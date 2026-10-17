@@ -17,6 +17,8 @@ import {
 import { PinPad } from "@/components/guest/PinPad";
 import { InstallApp } from "@/components/InstallApp";
 import { KioskClock, KioskScreensaver } from "@/components/guest/KioskClocks";
+import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
+import { Moon } from "lucide-react";
 import { KIOSK_RESET_MS, KIOSK_SAVER_MS } from "@/lib/kiosk-clock";
 import { guest as copy } from "@/content/copy";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
@@ -75,6 +77,8 @@ function Kiosk() {
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saver, setSaver] = useState(false);
+  const [atWelcome, setAtWelcome] = useState(true);
+  const { welcome, dismiss } = useKioskWelcome(p.code);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bump = useCallback(() => {
@@ -140,12 +144,39 @@ function Kiosk() {
         onPointerLeave={endHold}
         onContextMenu={(e) => e.preventDefault()}
       />
-      <CheckInFlow key={session} property={p} hostPhone={p.hostPhone} kiosk onActivity={bump} />
+      <CheckInFlow key={session} property={p} hostPhone={p.hostPhone} kiosk onActivity={bump} onWelcome={setAtWelcome} />
+
+      {/* Only on the welcome: rest the screen by hand. */}
+      {atWelcome && !saver ? (
+        <button
+          type="button"
+          onClick={() => setSaver(true)}
+          aria-label={copy.saverStart}
+          title={copy.saverStart}
+          className="fixed bottom-5 left-5 z-30 grid size-11 place-items-center rounded-full text-muted-foreground/60 hover:bg-muted hover:text-foreground"
+        >
+          <Moon className="size-5" />
+        </button>
+      ) : null}
+
+      {/* The host's welcome for an arriving guest: over everything, wakes the screen. */}
+      {welcome ? (
+        <KioskWelcomeOverlay
+          welcome={welcome}
+          onDismiss={() => {
+            dismiss();
+            setSaver(false);
+            setSession((s) => s + 1);
+            bump();
+          }}
+        />
+      ) : null}
 
       {saver ? (
         <KioskScreensaver
           name={p.name}
           tz={p.timezone ?? "Europe/London"}
+          quiet={{ start: p.quietStart, end: p.quietEnd }}
           onWake={() => {
             setSaver(false);
             bump();

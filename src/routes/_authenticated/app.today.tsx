@@ -37,6 +37,7 @@ import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { GuestReviews } from "@/components/host/GuestReviews";
 import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
+import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
 import { GuestMessages } from "@/components/host/GuestMessages";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 import { PageHeader } from "@/components/host/PageHeader";
@@ -177,7 +178,7 @@ function TodayPage() {
           { id: "maintenance", node: <MaintenanceAhead propertyId={selectedId} /> },
           { id: "connections", node: <Connections propertyId={selectedId} rooms={rooms} /> },
           { id: "guide", node: <GuideCard propertyId={selectedId} arriving={lists.arriving} rooms={rooms} /> },
-          { id: "kiosk", node: property ? <KioskCard property={property} /> : null },
+          { id: "kiosk", node: property ? <KioskCard property={property} arriving={lists.arriving} /> : null },
           { id: "settings", wide: true, node: <KeySettings isUk={(property?.country_code ?? "GB") === "GB"} /> },
           { id: "reviews", wide: true, node: workspace.data?.hostId ? <GuestReviews hostId={workspace.data.hostId} /> : null },
         ]}
@@ -953,7 +954,8 @@ function GuideCard({ propertyId, arriving, rooms }: { propertyId: string; arrivi
   );
 }
 
-function KioskCard({ property }: { property: { id: string; short_code: string } }) {
+function KioskCard({ property, arriving }: { property: { id: string; short_code: string }; arriving: Stay[] }) {
+  const { canWrite } = useRole();
   const tile = "flex items-center gap-2 whitespace-nowrap rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted";
   return (
     <Card id="kiosk" icon={QrCode} title={copy.kioskTitle} action={<CardLink to="/app/properties" search={{ focus: "checkin" }}>{copy.checkinSettings}</CardLink>}>
@@ -975,6 +977,7 @@ function KioskCard({ property }: { property: { id: string; short_code: string } 
           </Link>
         </Peek>
       </div>
+      {canWrite ? <KioskWelcomePanel propertyId={property.id} shortCode={property.short_code} arriving={arriving} /> : null}
     </Card>
   );
 }

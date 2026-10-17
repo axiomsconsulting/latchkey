@@ -494,6 +494,29 @@ export const guestMessagesCopy = {
   jobStatus: { new: "New", acknowledged: "Seen", booked: "Booked", in_progress: "In progress", done: "Done", declined: "Declined", cancelled: "Cancelled" } as Record<string, string>,
 };
 
+/** Today: a welcome on the front-door kiosk for an arriving guest. */
+export const kioskWelcomeCopy = {
+  title: "Welcome a guest on the kiosk",
+  forGuest: "For",
+  anyone: "Anyone arriving",
+  headline: "Big words",
+  body: "Smaller words (optional)",
+  for: "Show for",
+  defaultHeadline: (first: string) => (first ? `Welcome, ${first}!` : "Welcome!"),
+  defaultBody: "We're so glad you're here. Tap anywhere to check in and we'll get you to your room.",
+  durations: { "30": "30 minutes", "60": "1 hour", "120": "2 hours", "240": "4 hours", "480": "8 hours" } as Record<string, string>,
+  show: "Show on the kiosk",
+  update: "Update the kiosk",
+  shown: "Showing on the kiosk now.",
+  updated: "Updated on the kiosk.",
+  showing: (since: string, until: string) => `On the kiosk since ${since}, until ${until} unless the guest taps it.`,
+  tapped: (at: string) => `The guest tapped it at ${at} and went on to check in.`,
+  edit: "Change it",
+  remove: "Remove",
+  removed: "Taken off the kiosk.",
+  notReady: "Kiosk welcomes need the latest update (migration 0034).",
+};
+
 /** Moving and folding Today's sections. */
 export const dashboardCopy = {
   grab: (title: string, folded: boolean) => `${title}: drag to move, tap to ${folded ? "unfold" : "fold"}. Arrow keys move it, Enter ${folded ? "unfolds" : "folds"} it.`,
@@ -826,6 +849,11 @@ export const alerts = {
 };
 
 export const guest = {
+  welcomeDismiss: "Touch to check in",
+  welcomeTap: "Tap anywhere to check in",
+  saverStart: "Rest the screen",
+  quietTitle: (until: string) => `Quiet hours until ${until}`,
+  quietBody: "Other guests are sleeping. Please keep noise and movement to a minimum, close doors gently and keep voices low. Thank you.",
   saverHere: "Here",
   tomorrow: "tomorrow",
   yesterday: "yesterday",
