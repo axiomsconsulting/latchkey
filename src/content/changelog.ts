@@ -29,7 +29,8 @@ export const RELEASES: Release[] = [
       { kind: "new", area: "Check-in", text: "On a tablet or computer, the kiosk shows a QR code beside the welcome so guests can check in on their own phone; once someone starts, it tucks into a corner button." },
       { kind: "new", area: "Check-in", text: "Today's date and time at the top of the kiosk, in the property's time zone." },
       { kind: "improved", area: "Check-in", text: "After 5 minutes with no taps, the kiosk cancels any check-in in progress and goes back to the welcome." },
-      { kind: "new", area: "Check-in", text: "After 5 more minutes, a dim black screensaver with world clocks (New York, London, New Delhi, Singapore, Tokyo) that drifts slowly to prevent screen burn. Touch to wake." },
+      { kind: "new", area: "Check-in", text: "After 5 more minutes, a dim black screensaver with five world clocks: your own time in the middle, two cities behind on the left and two ahead on the right. It drifts slowly to prevent screen burn. Touch to wake." },
+      { kind: "fixed", area: "Check-in", text: "Tablets on their side always show the phone QR code, whatever size the browser reports." },
     ],
   },
   {

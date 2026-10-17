@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { guest as copy } from "@/content/copy";
-import { WORLD_CLOCKS, burnDrift, clockHands, kioskNow } from "@/lib/kiosk-clock";
+import { burnDrift, clockHands, kioskNow, worldClocksFor } from "@/lib/kiosk-clock";
+import { zoneCity } from "@/lib/world";
 
 /** Ticks on the minute (and when the tab comes back), so the clocks never lag. */
 function useNow(stepMs = 15_000) {
@@ -34,11 +35,11 @@ export function KioskClock({ tz }: { tz: string }) {
   );
 }
 
-function Dial({ city, tz, home, now }: { city: string; tz: string; home: string; now: Date }) {
+function Dial({ city, tz, home, now, here }: { city: string; tz: string; home: string; now: Date; here: boolean }) {
   const h = clockHands(now, tz, home);
   return (
-    <figure className="flex flex-col items-center gap-3">
-      <svg viewBox="0 0 100 100" className="size-28 sm:size-36 lg:size-40" aria-hidden>
+    <figure className={`flex flex-col items-center gap-3 ${here ? "opacity-100" : "opacity-80"}`}>
+      <svg viewBox="0 0 100 100" className={here ? "size-32 sm:size-44 lg:size-52" : "size-24 sm:size-32 lg:size-36"} aria-hidden>
         <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth="0.8" />
         {Array.from({ length: 12 }, (_, i) => (
           <line
@@ -59,6 +60,7 @@ function Dial({ city, tz, home, now }: { city: string; tz: string; home: string;
       </svg>
       <figcaption className="text-center">
         <span className="block text-[0.7rem] font-medium uppercase tracking-[0.3em] opacity-70">{city}</span>
+        {here ? <span className="block text-[0.6rem] uppercase tracking-[0.3em] opacity-40">{copy.saverHere}</span> : null}
         <span className="mt-1 block text-xs tabular-nums opacity-45">
           {h.time}
           {h.dayShift === 1 ? ` · ${copy.tomorrow}` : h.dayShift === -1 ? ` · ${copy.yesterday}` : ""}
@@ -95,9 +97,10 @@ export function KioskScreensaver({ name, tz, onWake }: { name: string; tz: strin
         className="flex flex-col items-center gap-12 text-white/40 transition-transform duration-[19000ms] ease-in-out"
         style={{ transform: `translate(${drift.x}px, ${drift.y}px)` }}
       >
-        <div className="grid grid-cols-3 gap-x-10 gap-y-10 sm:grid-cols-5 sm:gap-x-12 lg:gap-x-16">
-          {WORLD_CLOCKS.map((c) => (
-            <Dial key={c.city} city={c.city} tz={c.tz} home={tz} now={now} />
+        {/* Here in the middle; two cities behind on the left, two ahead on the right. */}
+        <div className="flex items-center justify-center gap-6 sm:gap-10 lg:gap-14">
+          {worldClocksFor(tz, zoneCity(tz), now).map((c) => (
+            <Dial key={c.city} city={c.city} tz={c.tz} home={tz} now={now} here={c.home} />
           ))}
         </div>
         <div className="text-center">

@@ -170,11 +170,12 @@ export function KioskQr({ url, large, carryOn }: { url: string; large: boolean; 
   if (!src) return null;
   if (large) {
     return (
-      <aside className="rounded-3xl border bg-card p-6 text-center shadow-soft">
-        <Smartphone className="mx-auto mb-2 size-7 text-primary" aria-hidden />
-        <h2 className="font-display text-2xl">{copy.kioskQrTitle}</h2>
-        <img src={src} alt={copy.qrAlt} className="mx-auto my-4 w-full max-w-[15rem] rounded-2xl" />
-        <p className="text-muted-foreground">{copy.kioskQrBody}</p>
+      <aside className="rounded-3xl border bg-card p-4 text-center shadow-soft sm:p-6">
+        <Smartphone className="mx-auto mb-2 size-7 text-primary [@media(max-height:560px)]:hidden" aria-hidden />
+        <h2 className="font-display text-xl sm:text-2xl">{copy.kioskQrTitle}</h2>
+        {/* Sized by the screen's height too, so it fits a small tablet on its side. */}
+        <img src={src} alt={copy.qrAlt} className="mx-auto my-3 aspect-square w-full max-h-[42vh] max-w-[15rem] rounded-2xl object-contain" />
+        <p className="text-sm text-muted-foreground sm:text-base">{copy.kioskQrBody}</p>
       </aside>
     );
   }

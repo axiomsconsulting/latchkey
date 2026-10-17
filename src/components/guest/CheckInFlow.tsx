@@ -113,6 +113,22 @@ export type CheckinProperty = {
   sites?: GuestSite[];
 };
 
+/** Wider than tall: a tablet on its side or a computer screen. */
+function useLandscape() {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const update = () => setWide(window.innerWidth > window.innerHeight);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+  return wide;
+}
+
 export function CheckInFlow({
   property,
   hostPhone,
@@ -440,7 +456,9 @@ export function CheckInFlow({
   }
 
   // On a tablet or computer at the door, guests can use their own phone instead.
-  const kioskWide = kiosk && !onPhone;
+  // Landscape (wider than tall) counts, whatever width the browser reports.
+  const landscape = useLandscape();
+  const kioskWide = kiosk && (landscape || !onPhone);
   const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/p/${property.code}`;
 
   // The square only means something once there is a stay to carry across.
@@ -478,7 +496,7 @@ export function CheckInFlow({
         className={cn(
           "grid gap-6",
           kioskWide && step.name === "welcome"
-            ? "md:grid-cols-[minmax(0,1fr)_20rem] md:items-center"
+            ? "grid-cols-[minmax(0,1fr)_minmax(13rem,20rem)] items-center"
             : handoffUrl && !onPhone && !kiosk
               ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
               : "",

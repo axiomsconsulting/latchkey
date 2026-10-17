@@ -826,6 +826,7 @@ export const alerts = {
 };
 
 export const guest = {
+  saverHere: "Here",
   tomorrow: "tomorrow",
   yesterday: "yesterday",
   saverWake: "Touch to start checking in",
