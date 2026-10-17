@@ -6,14 +6,14 @@ import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
+import { SaveTrial } from "@/components/host/SaveTrial";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { common, onboarding as copy, trial as trialCopy } from "@/content/copy";
+import { authExtraCopy as extraCopy, common, onboarding as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/use-host-data";
 import { loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
-import { saveTrialDetails } from "@/lib/team.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/setup")({
@@ -49,33 +49,12 @@ function SetupPage() {
 
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
-  // Free trial: who they are comes first, in place of a sign-up form.
+  // Free trial: the property comes first; saving the account is the last step.
   const [trialUser, setTrialUser] = useState(false);
-  const [about, setAbout] = useState({ name: "", email: "", done: false });
-  const saveAbout = useServerFn(saveTrialDetails);
+  const [saving, setSaving] = useState(false);
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => setTrialUser(!!data.user?.is_anonymous));
   }, []);
-  const askAbout = trialUser && !about.done;
-
-  async function submitAbout(e: React.FormEvent) {
-    e.preventDefault();
-    if (!workspace.data) return;
-    const name = about.name.trim();
-    const email = about.email.trim();
-    if (!name) return void toast.error(trialCopy.needName);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return void toast.error(trialCopy.needEmail);
-    setBusy(true);
-    try {
-      await saveAbout({ data: { hostId: workspace.data.hostId, name, email } });
-      await qc.invalidateQueries({ queryKey: ["workspace"] });
-      setAbout((a) => ({ ...a, done: true }));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : common.errorBody);
-    } finally {
-      setBusy(false);
-    }
-  }
   const [property, setProperty] = useState({
     name: "",
     address: "",
@@ -92,7 +71,7 @@ function SetupPage() {
     pin: "",
   });
 
-  const steps = [copy.step1, copy.step2, copy.step3];
+  const steps = trialUser ? [copy.step1, copy.step2, copy.step3, extraCopy.saveTitle] : [copy.step1, copy.step2, copy.step3];
 
   async function finish() {
     if (!workspace.data) return;
@@ -135,7 +114,12 @@ function SetupPage() {
       }
 
       await qc.invalidateQueries();
-      toast.success(trialUser ? trialCopy.setupDone : "Your rooms are set up");
+      if (trialUser) {
+        // Hooked: their property is real. Now (and only now) ask them to save it.
+        setSaving(true);
+        return;
+      }
+      toast.success("Your rooms are set up");
       await navigate({ to: "/app/today" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -161,43 +145,14 @@ function SetupPage() {
   const canContinue =
     step === 0 ? property.name.trim().length > 1 : step === 1 ? rooms.some((r) => r.trim()) : true;
 
-  if (askAbout) {
+  // Last step of a free trial: everything is set up, now save it to an account.
+  if (saving) {
     return (
-      <div className="mx-auto w-full max-w-2xl space-y-6">
-        <PageHeader title={copy.title} subtitle={copy.subtitle} />
-        <form onSubmit={submitAbout} className="card-soft grid gap-4 p-5">
-          <div>
-            <h2 className="text-xl">{trialCopy.aboutTitle}</h2>
-            <p className="text-sm text-muted-foreground">{trialCopy.aboutBody}</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="about-name">{trialCopy.name}</Label>
-            <Input
-              id="about-name"
-              className="h-12"
-              autoComplete="name"
-              autoFocus
-              value={about.name}
-              onChange={(e) => setAbout((a) => ({ ...a, name: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="about-email">{trialCopy.email}</Label>
-            <Input
-              id="about-email"
-              type="email"
-              className="h-12"
-              autoComplete="email"
-              value={about.email}
-              onChange={(e) => setAbout((a) => ({ ...a, email: e.target.value }))}
-            />
-            <p className="text-xs text-muted-foreground">{trialCopy.emailHint}</p>
-          </div>
-          <Button type="submit" size="lg" disabled={busy}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {trialCopy.next}
-          </Button>
-        </form>
+      <div className="mx-auto w-full max-w-xl space-y-6">
+        <PageHeader title={extraCopy.saveTitle} subtitle={extraCopy.saveBody} />
+        <div className="card-soft p-5">
+          <SaveTrial onLater={() => void navigate({ to: "/app/today" })} />
+        </div>
       </div>
     );
   }

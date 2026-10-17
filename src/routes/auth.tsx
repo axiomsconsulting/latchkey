@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { auth as copy, brand } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
+import { LastUsed, SocialButtons } from "@/components/SocialButtons";
+import { authExtraCopy as extra } from "@/content/copy";
+import { lastSignIn, signInIntent, type SignInMethod } from "@/lib/social-auth";
 
 /** Only same-site paths, so a crafted link can't send people elsewhere. */
 function safeNext(value: unknown): string | undefined {
@@ -54,6 +57,13 @@ function AuthPage() {
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  // How this device signed in last time: badge it, and fill in the email.
+  const [last, setLast] = useState<SignInMethod | null>(null);
+  useEffect(() => {
+    const l = lastSignIn();
+    setLast(l?.method ?? null);
+    if (l?.email && !search.email) setEmail((e) => e || l.email!);
+  }, [search.email]);
 
   useEffect(() => {
     void supabase.auth.getSession().then(async ({ data }) => {
@@ -86,6 +96,7 @@ function AuthPage() {
           return;
         }
       } else {
+        signInIntent("password");
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
@@ -107,6 +118,7 @@ function AuthPage() {
     setBusy(true);
     try {
       // Existing accounts only: new hosts start from the free trial instead.
+      signInIntent("email_link");
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}${next}` },
@@ -141,6 +153,12 @@ function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <SocialButtons next={next} />
+            <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              {extra.orEmail}
+              <span className="h-px flex-1 bg-border" />
+            </div>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">{copy.emailLabel}</Label>
@@ -167,22 +185,30 @@ function AuthPage() {
                   className="h-12"
                 />
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={busy}>
-                {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                {mode === "sign_in" ? copy.signInCta : copy.signUpCta}
-              </Button>
+              <div className="relative">
+                <Button type="submit" className="w-full" size="lg" disabled={busy}>
+                  {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {mode === "sign_in" ? copy.signInCta : copy.signUpCta}
+                </Button>
+                {mode === "sign_in" ? <LastUsed method="password" current={last} /> : null}
+              </div>
             </form>
 
             {mode === "sign_in" ? (
-              <Button type="button" variant="outline" className="mt-3 w-full" size="lg" disabled={busy} onClick={() => void sendLink()}>
-                {copy.magicCta}
-              </Button>
+              <div className="relative mt-3">
+                <Button type="button" variant="outline" className="w-full" size="lg" disabled={busy} onClick={() => void sendLink()}>
+                  {copy.magicCta}
+                </Button>
+                <LastUsed method="email_link" current={last} />
+              </div>
             ) : null}
 
             <button
               type="button"
               className="mt-5 w-full text-sm text-muted-foreground underline-offset-4 hover:underline"
-              onClick={() => setMode(mode === "sign_in" ? "sign_up" : "sign_in")}
+              // New hosts go straight into the guided trial (no form, no password);
+              // the sign-up form is only the fallback when trials can't start anonymously.
+              onClick={() => (mode === "sign_in" ? void navigate({ to: "/start" }) : setMode("sign_in"))}
             >
               {mode === "sign_in" ? copy.switchToSignUp : copy.switchToSignIn}
             </button>

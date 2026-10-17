@@ -118,6 +118,33 @@ export const auth = {
 };
 
 /** The free trial: straight into setting up, account saved at the end. */
+/** Google / Apple sign-in, last used, saving a trial, setting a password. */
+export const authExtraCopy = {
+  google: "Continue with Google",
+  apple: "Continue with Apple",
+  orEmail: "or with email",
+  lastUsed: "Last used",
+  socialFailed: "Signing in didn't finish. Please try again.",
+  trialSaved: "Your trial is saved to your account. Everything you set up is here.",
+  saveTitle: "Save your trial",
+  saveBody: "Your property is set up. Save it to your account so you can come back to it on any device. No password needed.",
+  yourName: "Your name",
+  emailTitle: "Or use your email",
+  emailHint: "We'll send a link to confirm it. You can choose a password afterwards.",
+  sendLink: "Email me a link",
+  linkSent: (email: string) => `Check ${email} and open the link. Everything you've set up stays as it is.`,
+  later: "Skip for now",
+  passwordTitle: "Choose a password",
+  passwordBody: "Your email is confirmed. Add a password to sign in quickly next time, or keep using email links.",
+  password: "Password",
+  passwordConfirm: "Type it again",
+  passwordMismatch: "The two passwords don't match.",
+  passwordShort: "Use at least 8 characters.",
+  passwordSave: "Save password",
+  passwordSaved: "Password saved.",
+  useLinks: "Keep using email links",
+};
+
 export const trial = {
   starting: "Setting up your free trial…",
   closed: "New free trials are paused for the moment. Please check back soon.",

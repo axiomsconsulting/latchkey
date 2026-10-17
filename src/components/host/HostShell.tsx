@@ -26,6 +26,7 @@ import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { AccessGate, AnnouncementPopup, FeedbackButton, ShellBanners } from "@/components/host/ShellExtras";
+import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
@@ -175,6 +176,7 @@ export function HostShell() {
       >
         <ShellBanners />
         <TrialBanner />
+        <SetPasswordPrompt />
         <AccessGate>
           <Outlet />
         </AccessGate>

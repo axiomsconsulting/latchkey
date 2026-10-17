@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth as authCopy, trial as copy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
+import { SaveTrial } from "@/components/host/SaveTrial";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -83,26 +84,9 @@ export function TrialBanner() {
             ) : null}
           </div>
           {open ? (
-            <form onSubmit={send} className="mt-3 flex flex-wrap items-end gap-2">
-              <div className="min-w-56 flex-1 space-y-1">
-                <Label htmlFor="trial-email">{copy.bannerEmail}</Label>
-                <Input
-                  id="trial-email"
-                  type="email"
-                  autoComplete="email"
-                  className="h-11"
-                  value={value}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <Button type="submit" disabled={busy} className="h-11">
-                {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                {copy.bannerSend}
-              </Button>
-              <Button type="button" variant="ghost" className="h-11" onClick={() => setOpen(false)}>
-                {copy.bannerLater}
-              </Button>
-            </form>
+            <div className="mt-4 max-w-xl">
+              <SaveTrial onLater={() => setOpen(false)} />
+            </div>
           ) : null}
           {error ? (
             <p role="alert" className="mt-2 text-sm text-destructive">

@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { Toaster } from "../components/ui/sonner";
 import { VisitTracker } from "../components/VisitTracker";
 import { PwaSetup } from "../components/PwaSetup";
+import { AuthSession } from "../components/AuthSession";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -141,6 +142,7 @@ function RootComponent() {
       <Toaster position="top-center" richColors />
       <VisitTracker />
       <PwaSetup />
+      <AuthSession />
     </QueryClientProvider>
   );
 }

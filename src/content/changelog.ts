@@ -22,6 +22,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.28",
+    date: "2026-10-17",
+    title: "Sign in with Google or Apple; a trial that starts with your property",
+    items: [
+      { kind: "new", area: "Settings", text: "Sign in or save your trial with Google or Apple. The way you signed in last time is marked “Last used”, and your email is filled in." },
+      { kind: "improved", area: "Settings", text: "The free trial starts with your property, rooms and arrival times; only then do you save it, with Google, Apple or an email link. No password needed." },
+      { kind: "new", area: "Settings", text: "Saved your trial by email? Once you've confirmed it, choose a password, or keep using email links." },
+    ],
+  },
+  {
     version: "0.27",
     date: "2026-10-17",
     title: "One guide list, a cleaner bookings table",
