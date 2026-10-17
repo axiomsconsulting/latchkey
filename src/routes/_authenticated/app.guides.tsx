@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowDown, ArrowUp, BookOpen, Check, ExternalLink, ImagePlus, Loader2, Plus, Printer, QrCode, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { guestGuideIcons } from "@/components/guest/guide-icons";
+import { sectionIcon } from "@/components/guest/guide-icons";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
@@ -20,10 +20,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { common, guideCopy as copy, inRoomCopy as roomCopy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
-import { GuideOrderPanel } from "@/components/host/GuideOrderPanel";
+import { GuideSectionList } from "@/components/host/GuideSectionList";
 import { RoomAmenities } from "@/components/host/RoomAmenities";
-import { SECTIONS, type SectionKey } from "@/lib/guide";
-import { getRoomGuideCodes } from "@/lib/guide.functions";
+import { SECTIONS, editorSections, type SectionKey } from "@/lib/guide";
+import { getRoomGuideCodes, renameGuideSection } from "@/lib/guide.functions";
 import {
   addStarterGuide,
   getGuideEditor,
@@ -57,18 +57,10 @@ type Section = {
   isStarter: boolean;
   pinned: boolean;
   sortOrder: number;
+  title?: string;
+  published?: boolean;
   steps: Step[];
 };
-
-/** The host's running order, with anything unordered keeping its usual place. */
-function orderedKeys(sections: Section[]): SectionKey[] {
-  return SECTIONS.map((s, i) => {
-    const house = sections.find((x) => x.roomId === null && x.sectionKey === s.key);
-    return { key: s.key, order: house?.sortOrder && house.sortOrder > 0 ? house.sortOrder : 100 + i };
-  })
-    .sort((a, b) => a.order - b.order)
-    .map((x) => x.key);
-}
 
 function GuidesPage() {
   const ws = useWorkspace();
@@ -95,7 +87,7 @@ function GuidesPage() {
   const roomId = scope === "house" ? null : scope;
   const room = rooms.find((r) => r.id === roomId);
   const houseCount = sections.filter((s) => s.roomId === null).length;
-  const order = orderedKeys(sections);
+  const { shown, removed } = editorSections(sections);
   const pinned = new Set(sections.filter((s) => s.roomId === null && s.pinned).map((s) => s.sectionKey));
   const roomAmenities = Array.isArray(room?.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [];
 
@@ -175,46 +167,55 @@ function GuidesPage() {
         <p className="basis-full text-sm text-muted-foreground">{room ? copy.basicHelp : copy.scopeHelp}</p>
       </div>
 
-      {q.isLoading ? null : room ? (
-        <RoomAmenities propertyId={selectedId} roomId={room.id} amenities={roomAmenities} />
-      ) : (
-        <GuideOrderPanel propertyId={selectedId} order={order} pinned={pinned} />
-      )}
+      {q.isLoading ? null : room ? <RoomAmenities propertyId={selectedId} roomId={room.id} amenities={roomAmenities} /> : null}
 
       {q.isLoading ? (
         <Skeleton className="h-96 rounded-2xl" />
       ) : (
-        <Accordion type="single" collapsible className="space-y-3" defaultValue={linkedSection ?? ""}>
-          {order.map((key) => {
-            const s = SECTIONS.find((x) => x.key === key)!;
-            const own = sections.find((x) => x.sectionKey === s.key && x.roomId === roomId) ?? null;
-            const house = roomId ? sections.find((x) => x.sectionKey === s.key && x.roomId === null) ?? null : null;
-            const Icon = guestGuideIcons[s.key];
-            return (
-              <AccordionItem key={`${scope}-${s.key}`} id={`guide-${s.key}`} value={s.key} className="card-soft scroll-mt-24 border-0 px-4">
-                <AccordionTrigger className="min-h-14 hover:no-underline">
-                  <span className="flex flex-wrap items-center gap-3 text-left">
-                    <Icon className="size-5 text-primary" aria-hidden />
-                    <span className="font-display text-lg">{s.title}</span>
-                    {own?.isStarter ? <Badge variant="secondary">{copy.starterBadge}</Badge> : null}
-                    {roomId && own ? <Badge>{copy.roomOwn}</Badge> : null}
-                    {!own && !house ? <span className="text-xs font-normal text-muted-foreground">Empty</span> : null}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent>
+        <>
+          <p className="text-sm text-muted-foreground">{roomId ? copy.listHelpRoom : copy.listHelp}</p>
+          <GuideSectionList
+            propertyId={selectedId}
+            shown={shown}
+            removed={removed}
+            pinned={pinned}
+            manage={!roomId}
+            openKey={linkedSection ?? null}
+            badges={(sec) => {
+              const own = sections.find((x) => x.sectionKey === sec.key && x.roomId === roomId) ?? null;
+              const house = roomId ? sections.find((x) => x.sectionKey === sec.key && x.roomId === null) ?? null : null;
+              return (
+                <>
+                  {own?.isStarter ? <Badge variant="secondary">{copy.starterBadge}</Badge> : null}
+                  {roomId && own ? <Badge>{copy.roomOwn}</Badge> : null}
+                  {sec.custom ? <Badge variant="outline">{copy.yourSection}</Badge> : null}
+                  {!own?.summary && !own?.steps.length && !house?.summary && !house?.steps.length ? (
+                    <span className="text-xs font-normal text-muted-foreground">{copy.emptyBadge}</span>
+                  ) : null}
+                </>
+              );
+            }}
+          >
+            {(sec) => {
+              const own = sections.find((x) => x.sectionKey === sec.key && x.roomId === roomId) ?? null;
+              const house = roomId ? sections.find((x) => x.sectionKey === sec.key && x.roomId === null) ?? null : null;
+              return (
+                <div className="space-y-4">
+                  {sec.custom && !roomId ? <RenameSection propertyId={selectedId} sectionKey={sec.key} title={sec.title} /> : null}
                   <SectionEditor
+                    key={`${scope}-${sec.key}`}
                     propertyId={selectedId}
                     roomId={roomId}
-                    sectionKey={s.key}
-                    hint={s.hint}
+                    sectionKey={sec.key}
+                    hint={sec.hint}
                     own={own}
                     inherited={house}
                   />
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
-        </Accordion>
+                </div>
+              );
+            }}
+          </GuideSectionList>
+        </>
       )}
     </div>
   );
@@ -431,5 +432,33 @@ function InRoomGuides({ propertyId }: { propertyId: string }) {
         </ul>
       ) : null}
     </section>
+  );
+}
+
+/** The host's own section: change its name. */
+function RenameSection({ propertyId, sectionKey, title }: { propertyId: string; sectionKey: SectionKey; title: string }) {
+  const rename = useServerFn(renameGuideSection);
+  const qc = useQueryClient();
+  const [value, setValue] = useState(title);
+  useEffect(() => setValue(title), [title]);
+  return (
+    <form
+      className="flex flex-wrap items-end gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void rename({ data: { propertyId, sectionKey, title: value } })
+          .then(() => qc.invalidateQueries({ queryKey: ["guide", propertyId] }))
+          .then(() => toast.success(copy.renamed))
+          .catch((err: unknown) => toast.error(err instanceof Error ? err.message : common.errorBody));
+      }}
+    >
+      <div className="min-w-56 flex-1 space-y-1">
+        <Label htmlFor={`title-${sectionKey}`}>{copy.sectionName}</Label>
+        <Input id={`title-${sectionKey}`} value={value} maxLength={80} onChange={(e) => setValue(e.target.value)} />
+      </div>
+      <Button type="submit" variant="outline" disabled={!value.trim() || value.trim() === title}>
+        {common.save}
+      </Button>
+    </form>
   );
 }

@@ -78,3 +78,22 @@ describe("closedReason", () => {
     expect(closedReason(b("y", { status: "blocked", notes: "Decorating\nback Friday" }), [], name)).toBe("Blocked: Decorating");
   });
 });
+
+describe("compact stay lines", () => {
+  it("shows arrival and departure together, the year only when needed", async () => {
+    const { stayDates } = await import("../src/lib/booking-list");
+    expect(stayDates("2026-10-14", "2026-10-18", "2026-10-17")).toBe("Wed 14 – Sun 18 Oct");
+    expect(stayDates("2026-10-28", "2026-11-02", "2026-10-17")).toBe("Wed 28 Oct – Mon 2 Nov");
+    expect(stayDates("2026-12-30", "2027-01-02", "2026-10-17")).toBe("Wed 30 Dec 2026 – Sat 2 Jan 2027");
+    expect(stayDates("2027-03-05", "2027-03-07", "2026-10-17")).toBe("Fri 5 – Sun 7 Mar 2027");
+  });
+
+  it("keeps the closed-night note short", async () => {
+    const { closedNote } = await import("../src/lib/booking-list");
+    const base = { status: "blocked", check_in_date: "2026-10-20", check_out_date: "2026-10-22", room_id: "r1", channel: "booking_com" } as const;
+    const original = { ...base, id: "o", status: "upcoming", guest_full_name: "Jane Brown", channel: "airbnb" };
+    expect(closedNote({ ...base, id: "a", guest_full_name: null, notes: "Decorating\\nsecond line" }, [], () => "x")).toBe("Decorating\\nsecond line".split("\n")[0]);
+    expect(closedNote({ ...base, id: "b", guest_full_name: null }, [], () => "x")).toBe("");
+    expect(closedNote({ ...base, id: "c", guest_full_name: null, mirror_of: "o" }, [original], () => "Airbnb")).toBe("Jane Brown");
+  });
+});

@@ -4,7 +4,7 @@ import { CalendarX, Check, MessageCircle, Wifi } from "lucide-react";
 
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
-import { guestGuideIcons } from "@/components/guest/guide-icons";
+import { sectionIcon } from "@/components/guest/guide-icons";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { guideCopy as gcopy, guest as copy, roomGuideCopy as rcopy } from "@/content/copy";
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/room/$code")({
 });
 
 function forgetIcon(key: string) {
-  return key === "today" ? CalendarX : (guestGuideIcons[key as keyof typeof guestGuideIcons] ?? CalendarX);
+  return key === "today" ? CalendarX : sectionIcon(key);
 }
 
 function RoomGuide() {
@@ -116,7 +116,7 @@ function RoomGuide() {
 
         <Accordion type="multiple" defaultValue={[g.guide[0]?.key ?? ""]} className="space-y-3">
           {g.guide.map((sec) => {
-            const Icon = guestGuideIcons[sec.key];
+            const Icon = sectionIcon(sec.key);
             return (
               <AccordionItem key={sec.key} value={sec.key} className="card-soft border-0 px-5">
                 <AccordionTrigger className="min-h-16 text-left font-display text-xl hover:no-underline">

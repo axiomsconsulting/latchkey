@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { GuestSheet } from "@/components/host/GuestSheet";
 import { StayCalendar, type Activity } from "@/components/host/StayCalendar";
-import { BookingFilters, BookingsTable } from "@/components/host/BookingsTable";
+import { BookingFilters, BookingsTable, Tip } from "@/components/host/BookingsTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -231,18 +231,18 @@ function BookingsPage() {
     if (!canWrite) return null;
     const full = everything.find((x) => x.id === b.id);
     const icon = (key: string, label: string, Icon: typeof Eye, onClick: () => void, tone?: string) => (
-      <Button
-        key={key}
-        size="icon"
-        variant="ghost"
-        className={cn("size-8", tone)}
-        title={label}
-        aria-label={`${label}: ${b.guest_full_name ?? formatUkDate(b.check_in_date)}`}
-        disabled={busy !== null}
-        onClick={onClick}
-      >
-        <Icon className="size-4" />
-      </Button>
+      <Tip key={key} label={label}>
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn("size-8", tone)}
+          aria-label={`${label}: ${b.guest_full_name ?? formatUkDate(b.check_in_date)}`}
+          disabled={busy !== null}
+          onClick={onClick}
+        >
+          <Icon className="size-4" />
+        </Button>
+      </Tip>
     );
     const hide = (on: boolean) =>
       icon(on ? "hide" : "show", on ? tools.rowHide : tools.rowShow, on ? EyeOff : Eye, () =>

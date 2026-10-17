@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowUp, ChevronDown, Search } from "lucide-react";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
-import { StatusBadge } from "@/components/host/StatusBadge";
+import { StatusIcon } from "@/components/host/StatusBadge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -15,13 +16,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { bookings as bookingCopy, bookingTable as copy } from "@/content/copy";
-import { GROUP_ORDER, closedReason, nights, stayGroup, type ListBooking, type ListFilters, type SortKey, type StayGroup } from "@/lib/booking-list";
+import { GROUP_ORDER, closedNote, closedReason, nights, stayDates, stayGroup, type ListBooking, type ListFilters, type SortKey, type StayGroup } from "@/lib/booking-list";
 import { platformKey, type Site } from "@/lib/booking-sites";
 import { formatUkDate, stayState } from "@/lib/dates";
 import { formatMoney } from "@/lib/invoice";
 import { cn } from "@/lib/utils";
 
 type Option = { key: string; label: string };
+
+/** A short label on hover, long-press or keyboard focus. */
+export function Tip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 /** A dropdown of tickboxes: ticked means shown. */
 function ShowHide({
@@ -121,7 +132,8 @@ export function BookingFilters({
   );
 }
 
-const COLUMNS: SortKey[] = ["guest", "room", "checkIn", "checkOut", "nights", "platform", "status", "amount"];
+// Arrival, departure and nights share one column; the site and status are icons.
+const COLUMNS: SortKey[] = ["guest", "room", "checkIn", "platform", "status", "amount"];
 
 /**
  * Stays as a table on wider screens and as cards on phones, in the order
@@ -163,9 +175,26 @@ export function BookingsTable({
   const site = (b: ListBooking) => sites.find((s) => s.key === platformKey(b));
   const platformLabel = (b: ListBooking) => site(b)?.label ?? b.channel;
   // Closed nights say why they're closed instead of asking for a guest name.
-  const name = (b: ListBooking) =>
-    stayGroup(b, today) === "closed" ? closedReason(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || copy.toConfirm;
-  const unnamed = (b: ListBooking) => stayGroup(b, today) !== "closed" && !b.guest_full_name?.trim();
+  // Closed nights and stays without a name get their icons here instead of a
+  // label: the status icon and the group heading already say what they are.
+  const closed = (b: ListBooking) => stayGroup(b, today) === "closed";
+  const name = (b: ListBooking) => (closed(b) ? closedReason(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || bookingCopy.guestUnknown);
+  const shownText = (b: ListBooking) =>
+    closed(b) ? closedNote(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || b.reservation_code || "";
+  const unnamed = (b: ListBooking) => !closed(b) && !b.guest_full_name?.trim();
+  const statusOf = (b: ListBooking) => (b.mirror_of ? "mirror" : stayState(b, today));
+  // Mirrors say whose booking they follow; blocks show the host's note, if any.
+  const statusDetail = (b: ListBooking) =>
+    b.mirror_of ? closedReason(b, allRows ?? rows, platformLabel) : closed(b) ? closedNote(b, allRows ?? rows, platformLabel) || null : null;
+  const nightsText = (b: ListBooking) => `${nights(b)} ${nights(b) === 1 ? bookingCopy.night : bookingCopy.nights}`;
+  const guestCell = (b: ListBooking) => (
+    <span className="flex min-w-0 items-center gap-1">
+      {rowActions && !selecting ? <span className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>{rowActions(b)}</span> : null}
+      <span className={cn("min-w-0 truncate", closed(b) || unnamed(b) ? "text-sm text-muted-foreground" : "font-medium")} title={name(b)}>
+        {shownText(b)}
+      </span>
+    </span>
+  );
   const grouped = sort.key === "smart";
 
   function header(key: SortKey) {
@@ -196,7 +225,7 @@ export function BookingsTable({
   });
 
   return (
-    <>
+    <TooltipProvider delayDuration={250}>
       {/* Wider screens: a sortable table. */}
       <div className="card-soft hidden overflow-x-auto p-0 md:block">
         <table className="w-full text-left text-sm">
@@ -204,12 +233,11 @@ export function BookingsTable({
             <tr>
               {selecting ? <th className="w-10 px-3" /> : null}
               {COLUMNS.map(header)}
-              {rowActions ? <th className="w-px px-3" aria-label={copy.actions} /> : null}
             </tr>
           </thead>
           <tbody>
             {sections.map(({ b, heading }) => (
-              <BookingRowGroup key={b.id} heading={heading} span={COLUMNS.length + (selecting ? 1 : 0) + (rowActions ? 1 : 0)}>
+              <BookingRowGroup key={b.id} heading={heading} span={COLUMNS.length + (selecting ? 1 : 0)}>
                 <tr
                   id={`stay-${b.id}`}
                   className={cn("cursor-pointer border-b border-border last:border-0 hover:bg-muted", picked.has(b.id) && "bg-primary/5")}
@@ -220,30 +248,25 @@ export function BookingsTable({
                       <Checkbox checked={picked.has(b.id)} onCheckedChange={() => onToggle(b.id)} aria-label={name(b)} />
                     </td>
                   ) : null}
-                  <td className={cn("px-3 py-3 font-medium", unnamed(b) && "italic text-accent")} title={unnamed(b) ? bookingCopy.guestUnknown : undefined}>
-                    {name(b)}
+                  <td className="w-[34%] min-w-[13rem] max-w-0 px-2 py-2">{guestCell(b)}</td>
+                  <td className="px-3 py-2">{roomName(b.room_id)}</td>
+                  <td className="whitespace-nowrap px-3 py-2">
+                    {stayDates(b.check_in_date, b.check_out_date, today)}
+                    <span className="ml-1.5 text-xs text-muted-foreground">· {nightsText(b)}</span>
                   </td>
-                  <td className="px-3 py-3">{roomName(b.room_id)}</td>
-                  <td className="whitespace-nowrap px-3 py-3">{formatUkDate(b.check_in_date)}</td>
-                  <td className="whitespace-nowrap px-3 py-3">{formatUkDate(b.check_out_date)}</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{nights(b)}</td>
-                  <td className="px-3 py-3">
-                    <span className="flex items-center gap-2">
-                      <ChannelIcon channel={b.channel} iconUrl={site(b)?.iconUrl ?? null} label={site(b)?.label ?? b.channel} size="1.25rem" />
-                      {site(b)?.label ?? b.channel}
-                    </span>
+                  <td className="px-3 py-2">
+                    <Tip label={site(b)?.label ?? b.channel}>
+                      <span tabIndex={0} className="inline-flex" aria-label={site(b)?.label ?? b.channel}>
+                        <ChannelIcon channel={b.channel} iconUrl={site(b)?.iconUrl ?? null} label={site(b)?.label ?? b.channel} size="1.25rem" />
+                      </span>
+                    </Tip>
                   </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge state={stayState(b, today)} />
+                  <td className="px-3 py-2">
+                    <StatusIcon state={statusOf(b)} detail={statusDetail(b)} />
                   </td>
-                  <td className="px-3 py-3 text-right tabular-nums">
+                  <td className="px-3 py-2 text-right tabular-nums">
                     {b.stay_amount_pence != null ? formatMoney(b.stay_amount_pence, currency) : "—"}
                   </td>
-                  {rowActions ? (
-                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
-                      <span className="flex justify-end gap-0.5">{selecting ? null : rowActions(b)}</span>
-                    </td>
-                  ) : null}
                 </tr>
               </BookingRowGroup>
             ))}
@@ -256,31 +279,28 @@ export function BookingsTable({
         {sections.map(({ b, heading }) => (
           <li key={b.id}>
             {heading ? <p className="mb-1 mt-3 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{copy.groups[heading]}</p> : null}
-            <div className={cn("card-soft flex items-center gap-1 pr-2", picked.has(b.id) && "ring-2 ring-primary")}>
-            <button
-              type="button"
-              onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
-              className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left"
-            >
-              {selecting ? <Checkbox checked={picked.has(b.id)} tabIndex={-1} aria-hidden /> : null}
-              <ChannelIcon channel={b.channel} iconUrl={site(b)?.iconUrl ?? null} label={site(b)?.label ?? b.channel} size={32} />
-              <span className="min-w-0 flex-1">
-                <span className={cn("block truncate font-medium", unnamed(b) && "italic text-accent")}>{name(b)}</span>
-                <span className="block text-sm text-muted-foreground">
-                  {roomName(b.room_id)} · {formatUkDate(b.check_in_date)} → {formatUkDate(b.check_out_date)} · {nights(b)}{" "}
-                  {nights(b) === 1 ? bookingCopy.night : bookingCopy.nights}
-                </span>
-                <span className="mt-1.5 block">
-                  <StatusBadge state={stayState(b, today)} />
-                </span>
-              </span>
-            </button>
-            {rowActions && !selecting ? <span className="flex shrink-0 flex-col gap-0.5">{rowActions(b)}</span> : null}
+            <div className={cn("card-soft flex items-center gap-3 p-3", picked.has(b.id) && "ring-2 ring-primary")}>
+              {selecting ? <Checkbox checked={picked.has(b.id)} onCheckedChange={() => onToggle(b.id)} aria-label={name(b)} /> : null}
+              <ChannelIcon channel={b.channel} iconUrl={site(b)?.iconUrl ?? null} label={site(b)?.label ?? b.channel} size={28} />
+              <div className="min-w-0 flex-1">
+                {guestCell(b)}
+                <button
+                  type="button"
+                  onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
+                  className="block w-full truncate text-left text-sm text-muted-foreground"
+                  aria-label={`${name(b)}: ${stayDates(b.check_in_date, b.check_out_date, today)}`}
+                >
+                  {roomName(b.room_id)} · {stayDates(b.check_in_date, b.check_out_date, today)} · {nightsText(b)}
+                </button>
+              </div>
+              <button type="button" onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))} className="shrink-0" aria-label={name(b)}>
+                <StatusIcon state={statusOf(b)} detail={statusDetail(b)} />
+              </button>
             </div>
           </li>
         ))}
       </ul>
-    </>
+    </TooltipProvider>
   );
 }
 

@@ -52,7 +52,7 @@ import { useAlerts, useBookingSites, useConnections, usePropertyBoard, useRole, 
 import { platformKey } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime, nightsBetween } from "@/lib/dates";
 import { decideExtrasRequest, listExtrasRequests } from "@/lib/extras.functions";
-import { SECTIONS } from "@/lib/guide";
+import { editorSections, type SectionKey, type StoredSection } from "@/lib/guide";
 import { getGuideEditor, getRoomGuideCodes } from "@/lib/guide.functions";
 import { emailBookingInvoice, ensureBookingInvoice, getInvoiceStatuses } from "@/lib/invoice.functions";
 import { markAlertRead } from "@/lib/host.functions";
@@ -852,10 +852,13 @@ function GuideCard({ propertyId, arriving, rooms }: { propertyId: string; arrivi
   const { canWrite } = useRole();
   const q = useQuery({ queryKey: ["guide", propertyId], queryFn: () => fn({ data: { propertyId } }) });
   const codes = useQuery({ queryKey: ["room-guide-codes", propertyId], queryFn: () => codesFn({ data: { propertyId } }) });
-  const keys = SECTIONS.map((s) => s.key);
-  const written = (q.data?.sections ?? []) as Array<{ roomId: string | null; sectionKey: (typeof keys)[number] }>;
+  const stored = (q.data?.sections ?? []) as unknown as StoredSection[];
+  // The sections in this guide: the host's own included, removed ones left out.
+  const listed = editorSections(stored).shown;
+  const keys = listed.map((s) => s.key);
+  const written = stored.filter((x) => x.summary?.trim() || x.steps?.length) as Array<{ roomId: string | null; sectionKey: SectionKey }>;
   const p = guideProgress(keys, written);
-  const title = (k: string) => SECTIONS.find((s) => s.key === k)?.title ?? k;
+  const title = (k: string) => listed.find((s) => s.key === k)?.title ?? k;
   const roomOwn = (id: string) => written.filter((w) => w.roomId === id).length;
   const codeOf = (id: string) => codes.data?.rooms.find((r) => r.id === id)?.code ?? null;
   return (

@@ -141,3 +141,37 @@ export function closedReason(
   const note = b.notes?.trim();
   return note ? `Blocked: ${note.split("\n")[0]!.slice(0, 80)}` : `Blocked on ${platform(b)}`;
 }
+
+/**
+ * The short line beside a closed night's icons: the host's own note, or who
+ * the nights belong to on the other site. Empty when there's nothing to add
+ * (the status icon already says it's closed, and the platform icon where).
+ */
+export function closedNote(b: ListBooking, all: ListBooking[], platform: (b: ListBooking) => string): string {
+  if (b.mirror_of) {
+    const original = all.find((x) => x.id === b.mirror_of);
+    return original?.guest_full_name?.trim() || (original ? platform(original) : "");
+  }
+  return b.notes?.trim().split("\n")[0]!.slice(0, 80) ?? "";
+}
+
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Arrival and departure in one short line: "Wed 14 – Sun 18 Oct",
+ * "Wed 28 Oct – Mon 2 Nov", with the year only when it isn't this year.
+ */
+export function stayDates(checkIn: string, checkOut: string, today: string): string {
+  const parts = (iso: string) => {
+    const d = new Date(`${iso}T12:00:00Z`);
+    return { y: d.getUTCFullYear(), m: d.getUTCMonth(), day: d.getUTCDate(), dow: DAY[d.getUTCDay()]! };
+  };
+  const a = parts(checkIn);
+  const b = parts(checkOut);
+  const thisYear = Number(today.slice(0, 4));
+  const yearB = b.y !== thisYear || a.y !== b.y ? ` ${b.y}` : "";
+  const yearA = a.y !== b.y ? ` ${a.y}` : "";
+  if (a.y === b.y && a.m === b.m) return `${a.dow} ${a.day} – ${b.dow} ${b.day} ${MONTH[b.m]}${yearB}`;
+  return `${a.dow} ${a.day} ${MONTH[a.m]}${yearA} – ${b.dow} ${b.day} ${MONTH[b.m]}${yearB}`;
+}

@@ -9,10 +9,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
-import { SECTIONS, STARTER, guideWindow, type SectionKey } from "./guide";
+import { SECTIONS, STARTER, guideWindow, isCustom, type SectionKey } from "./guide";
 
 const uuid = z.string().uuid();
-const sectionKey = z.enum(SECTIONS.map((s) => s.key) as [SectionKey, ...SectionKey[]]);
+// Built-in sections, or the host's own (custom_ + a random id).
+const sectionKey = z
+  .string()
+  .refine((k) => SECTIONS.some((s) => s.key === k) || isCustom(k), "Unknown section")
+  .transform((k) => k as SectionKey);
 
 async function signPaths(paths: string[]): Promise<Record<string, string>> {
   if (paths.length === 0) return {};
@@ -32,7 +36,7 @@ export const getGuideEditor = createServerFn({ method: "GET" })
       supabase.from("rooms").select("id, display_name, guide_mode, amenities").eq("property_id", data.propertyId).order("sort_order"),
       supabase
         .from("guides")
-        .select("id, room_id, section_key, summary, is_starter, pinned, sort_order, guide_steps(id, heading, body, image_url, sort_order)")
+        .select("id, room_id, section_key, title, published, summary, is_starter, pinned, sort_order, guide_steps(id, heading, body, image_url, sort_order)")
         .eq("property_id", data.propertyId)
         .not("section_key", "is", null),
     ]);
@@ -43,6 +47,8 @@ export const getGuideEditor = createServerFn({ method: "GET" })
       sections: (guides ?? []).map((g) => ({
         roomId: g.room_id,
         sectionKey: g.section_key as SectionKey,
+        title: g.title as string,
+        published: g.published !== false,
         summary: g.summary,
         isStarter: g.is_starter,
         pinned: g.pinned === true,
@@ -67,7 +73,9 @@ async function houseRow(supabase: any, propertyId: string, key: SectionKey): Pro
     .is("room_id", null)
     .maybeSingle();
   if (existing?.id) return existing.id as string;
-  const title = SECTIONS.find((s) => s.key === key)!.title;
+  const builtIn = SECTIONS.find((s) => s.key === key);
+  if (!builtIn) throw new Error("That section no longer exists. Refresh and try again.");
+  const title = builtIn.title;
   const { data: row, error } = await supabase
     .from("guides")
     .insert({ property_id: propertyId, room_id: null, section_key: key, title, published: true })
@@ -118,7 +126,13 @@ export const saveGuideSection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const title = SECTIONS.find((s) => s.key === data.sectionKey)!.title;
+    let title = SECTIONS.find((s) => s.key === data.sectionKey)?.title ?? "";
+    if (!title) {
+      // The host's own section: its title lives on the whole-property row.
+      const { data: houseRowData } = await supabase.from("guides").select("title").eq("property_id", data.propertyId).eq("section_key", data.sectionKey).is("room_id", null).maybeSingle();
+      if (!houseRowData) throw new Error("That section no longer exists. Refresh and try again.");
+      title = houseRowData.title;
+    }
     // Only allow photo paths inside this property's folder.
     for (const s of data.steps) if (s.imagePath && !s.imagePath.startsWith(`${data.propertyId}/`)) throw new Error("Invalid photo.");
 
@@ -344,9 +358,9 @@ export const getRoomGuide = createServerFn({ method: "GET" })
         .single(),
       db
         .from("guides")
-        .select("room_id, section_key, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)")
+        .select("room_id, section_key, title, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)")
         .eq("property_id", room.property_id)
-        .eq("published", true)
+        // Removed sections come too, so they stay out even where Latchkey could fill them in.
         .not("section_key", "is", null),
       db.from("unavailability_windows").select("room_id, reason, starts_at, ends_at, day_of_week, start_time, end_time").eq("property_id", room.property_id),
     ]);
@@ -368,6 +382,8 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       summary: g.summary,
       pinned: g.pinned === true,
       sortOrder: g.sort_order ?? 0,
+      title: g.title,
+      published: g.published !== false,
       steps: [...(g.guide_steps ?? [])]
         .sort((a: any, c: any) => a.sort_order - c.sort_order)
         .map((s: any) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
@@ -400,4 +416,69 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       forget,
       guide: sections.filter((sec) => !reminded.has(sec.key)),
     };
+  });
+
+/* ------------------------- adding and removing ------------------------- */
+
+/**
+ * Adds a section to the guide: one of Latchkey's that was removed (back
+ * where it was), or the host's own, at the end, with their title.
+ */
+export const addGuideSection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({ propertyId: uuid, sectionKey: sectionKey.optional(), title: z.string().trim().min(1).max(80).optional() })
+      .refine((v) => v.sectionKey || v.title, "Choose a section or give yours a name")
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const sb = context.supabase as any;
+    if (data.sectionKey && !isCustom(data.sectionKey)) {
+      const id = await houseRow(sb, data.propertyId, data.sectionKey);
+      const { error } = await sb.from("guides").update({ published: true }).eq("id", id);
+      if (error) throw new Error(error.message);
+      return { key: data.sectionKey };
+    }
+    const { data: last } = await sb.from("guides").select("sort_order").eq("property_id", data.propertyId).is("room_id", null).order("sort_order", { ascending: false }).limit(1).maybeSingle();
+    const key = `custom_${[...crypto.getRandomValues(new Uint8Array(8))].map((b) => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("")}`;
+    const { error } = await sb
+      .from("guides")
+      .insert({ property_id: data.propertyId, room_id: null, section_key: key, title: data.title, published: true, sort_order: Math.max(100 + SECTIONS.length, (last?.sort_order ?? 0) + 1) });
+    if (error) throw new Error(error.message);
+    return { key };
+  });
+
+/**
+ * Takes a section out of the guide. Latchkey's own sections are hidden (and
+ * can be added back); the host's own sections are deleted with their steps.
+ */
+export const removeGuideSection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, sectionKey }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const sb = context.supabase as any;
+    if (isCustom(data.sectionKey)) {
+      const { error } = await sb.from("guides").delete().eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
+      if (error) throw new Error(error.message);
+      return { deleted: true };
+    }
+    const id = await houseRow(sb, data.propertyId, data.sectionKey);
+    const { error } = await sb.from("guides").update({ published: false, pinned: false }).eq("id", id);
+    if (error) throw new Error(error.message);
+    return { deleted: false };
+  });
+
+/** Renames one of the host's own sections. */
+export const renameGuideSection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, sectionKey, title: z.string().trim().min(1).max(80) }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!isCustom(data.sectionKey)) throw new Error("Latchkey's own sections keep their names.");
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const { error } = await (context.supabase as any).from("guides").update({ title: data.title }).eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

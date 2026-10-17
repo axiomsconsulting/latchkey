@@ -22,6 +22,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.27",
+    date: "2026-10-17",
+    title: "One guide list, a cleaner bookings table",
+    items: [
+      { kind: "improved", area: "Guest guide", text: "The guide is one list in the order guests read it: drag the grip to move a section (mouse, touch or arrow keys), and sections stay folded until you open them." },
+      { kind: "new", area: "Guest guide", text: "Add your own sections, rename them, remove any section (Latchkey's can be added back), and pin sections to the reminder card from the same list." },
+      { kind: "improved", area: "Bookings", text: "A roomier bookings table: one Stay column with both dates and nights, platform and status as icons with tooltips, and quick icons beside the guest instead of repeated labels." },
+    ],
+  },
+  {
     version: "0.26",
     date: "2026-10-16",
     title: "Install Latchkey, and alerts wherever you are",

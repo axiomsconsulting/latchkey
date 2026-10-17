@@ -5,11 +5,15 @@
 
 import { addDays, dayOfWeek, zonedParts } from "./dates";
 
-export type SectionKey =
+export type BuiltInKey =
   | "getting_in" | "shoes" | "room" | "kitchenette" | "bathroom" | "parking"
   | "taxis" | "rules" | "quiet" | "unavailable" | "checkout" | "contact";
+/** Built-in sections, or the host's own ("custom_" + a random id, titled by the host). */
+export type SectionKey = BuiltInKey | `custom_${string}`;
 
-export const SECTIONS: { key: SectionKey; title: string; hint: string }[] = [
+export const isCustom = (key: string): key is `custom_${string}` => /^custom_[a-z0-9]{6,20}$/.test(key);
+
+export const SECTIONS: { key: BuiltInKey; title: string; hint: string }[] = [
   { key: "getting_in", title: "Getting in", hint: "How to open the front door and use the lock. Add photos of the keypad." },
   { key: "shoes", title: "Shoes and entry", hint: "Where to leave shoes and bags when you come in." },
   { key: "room", title: "Your room", hint: "Which door, lights, heating controls, where spare bedding is." },
@@ -34,6 +38,10 @@ export type StoredSection = {
   pinned?: boolean;
   /** Host's own ordering; lower shows first. */
   sortOrder?: number;
+  /** The section's title (the host's own words for their own sections). */
+  title?: string | null;
+  /** False when the host removed the section from the guide. */
+  published?: boolean;
 };
 
 export type GuideFacts = {
@@ -76,21 +84,57 @@ export function autoSummary(key: SectionKey, f: GuideFacts): string | null {
  */
 export function buildGuide(stored: StoredSection[], roomId: string | null, mode: "basic" | "detailed", facts: GuideFacts): GuideSection[] {
   const out: (GuideSection & { order: number })[] = [];
-  SECTIONS.forEach((s, i) => {
-    const room = roomId ? stored.find((x) => x.roomId === roomId && x.sectionKey === s.key) : undefined;
-    const house = stored.find((x) => x.roomId === null && x.sectionKey === s.key);
+  const add = (key: SectionKey, title: string, i: number) => {
+    const room = roomId ? stored.find((x) => x.roomId === roomId && x.sectionKey === key) : undefined;
+    const house = stored.find((x) => x.roomId === null && x.sectionKey === key);
+    // Removed by the host: left out, even where Latchkey could fill it in.
+    if (house?.published === false) return;
     const src = room ?? house;
-    const summary = src?.summary?.trim() || autoSummary(s.key, facts);
+    const summary = src?.summary?.trim() || (isCustom(key) ? null : autoSummary(key, facts));
     const steps = mode === "detailed" ? (src?.steps ?? []).filter((st) => st.heading.trim() || st.body?.trim()) : [];
     if (!summary && steps.length === 0) return;
     // Pinning and ordering are set once for the whole house, so a room's own
     // wording doesn't quietly unpin a reminder.
     const meta = house ?? room;
     const order = meta?.sortOrder && meta.sortOrder > 0 ? meta.sortOrder : 100 + i;
-    out.push({ key: s.key, title: s.title, summary, steps, pinned: meta?.pinned === true, order });
-  });
+    out.push({ key, title, summary, steps, pinned: meta?.pinned === true, order });
+  };
+  SECTIONS.forEach((s, i) => add(s.key, s.title, i));
+  // The host's own sections, titled in their words.
+  stored
+    .filter((x) => x.roomId === null && isCustom(x.sectionKey))
+    .forEach((x, i) => add(x.sectionKey, x.title?.trim() || "More information", SECTIONS.length + i));
   out.sort((a, b) => a.order - b.order);
   return out.map(({ order: _order, ...rest }) => rest);
+}
+
+export type EditorSection = {
+  key: SectionKey;
+  title: string;
+  hint: string;
+  custom: boolean;
+  /** Removed from the guide (built-ins can be added back). */
+  removed: boolean;
+};
+
+/**
+ * The editor's list: every section in the host's running order, their own
+ * sections included, with removed ones set apart so they can be added back.
+ */
+export function editorSections(stored: StoredSection[]): { shown: EditorSection[]; removed: EditorSection[] } {
+  const house = (key: string) => stored.find((x) => x.roomId === null && x.sectionKey === key);
+  const all = [
+    ...SECTIONS.map((s, i) => ({ key: s.key as SectionKey, title: s.title, hint: s.hint, custom: false, i })),
+    ...stored
+      .filter((x) => x.roomId === null && isCustom(x.sectionKey))
+      .map((x, i) => ({ key: x.sectionKey, title: x.title?.trim() || "More information", hint: "", custom: true, i: SECTIONS.length + i })),
+  ].map((s) => {
+    const h = house(s.key);
+    return { ...s, removed: h?.published === false, order: h?.sortOrder && h.sortOrder > 0 ? h.sortOrder : 100 + s.i };
+  });
+  all.sort((a, b) => a.order - b.order);
+  const strip = ({ i: _i, order: _o, ...rest }: (typeof all)[number]) => rest;
+  return { shown: all.filter((s) => !s.removed).map(strip), removed: all.filter((s) => s.removed).map(strip) };
 }
 
 export type Window = {
@@ -190,7 +234,7 @@ export const DOOR_SECTIONS: SectionKey[] = ["getting_in"];
 export { addDays };
 
 /** Starter text for The Hill Suites style homes. Marked so hosts replace it. */
-export const STARTER: Record<SectionKey, { summary: string; steps: { heading: string; body: string }[] }> = {
+export const STARTER: Record<BuiltInKey, { summary: string; steps: { heading: string; body: string }[] }> = {
   getting_in: {
     summary: "The front door has a keypad lock. Your code is on your check-in screen.",
     steps: [

@@ -1161,9 +1161,9 @@ export const getStay = createServerFn({ method: "GET" })
         : Promise.resolve({ data: null }),
       db
         .from("guides")
-        .select("room_id, section_key, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)")
+        .select("room_id, section_key, title, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)")
         .eq("property_id", b.property_id)
-        .eq("published", true)
+        // Removed sections come too, so they stay out even where Latchkey could fill them in.
         .not("section_key", "is", null),
       db
         .from("unavailability_windows")
@@ -1208,6 +1208,8 @@ export const getStay = createServerFn({ method: "GET" })
       summary: g.summary,
       pinned: g.pinned === true,
       sortOrder: g.sort_order ?? 0,
+      title: g.title,
+      published: g.published !== false,
       steps: [...(g.guide_steps ?? [])]
         .sort((a, c) => a.sort_order - c.sort_order)
         .map((s) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),

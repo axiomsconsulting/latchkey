@@ -12,7 +12,7 @@ import { StayReview } from "@/components/guest/StayReview";
 import { StayServices } from "@/components/guest/StayServices";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { guestGuideIcons } from "@/components/guest/guide-icons";
+import { sectionIcon } from "@/components/guest/guide-icons";
 import { guideCopy as gcopy, guest as copy } from "@/content/copy";
 import { getStay } from "@/lib/checkin.functions";
 
@@ -39,7 +39,7 @@ export const Route = createFileRoute("/stay/$token")({
 
 /** Reminder rows reuse the section's own icon; "today" is a one-off closure. */
 function forgetIcon(key: string) {
-  return key === "today" ? CalendarX : (guestGuideIcons[key as keyof typeof guestGuideIcons] ?? CalendarX);
+  return key === "today" ? CalendarX : sectionIcon(key);
 }
 
 function Stay() {
@@ -119,7 +119,7 @@ function Stay() {
 
         <Accordion type="multiple" defaultValue={[s.guide[0]?.key ?? ""]} className="space-y-3">
           {s.guide.map((sec) => {
-            const Icon = guestGuideIcons[sec.key];
+            const Icon = sectionIcon(sec.key);
             return (
               <AccordionItem key={sec.key} value={sec.key} className="card-soft border-0 px-5">
                 <AccordionTrigger className="min-h-16 text-left font-display text-xl hover:no-underline">

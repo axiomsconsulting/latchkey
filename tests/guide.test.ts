@@ -84,3 +84,45 @@ describe("guideWindow", () => {
     expect(w.readOnlyAt.toISOString()).toBe("2026-12-02T11:00:00.000Z");
   });
 });
+
+describe("adding and removing guide sections", () => {
+  const facts2 = {
+    wifiName: "HillSuites", wifiPassword: "bellfield12", quietStart: "22:00", quietEnd: "07:00", checkOutTime: "11:00",
+    checkOutDateLabel: "Sun 18 Oct", parkingNotes: null, hostName: null, hostPhone: null, roomName: "Room 1", unavailableLines: [],
+  };
+  it("keeps a removed section out, even one Latchkey would fill in itself", async () => {
+    const { buildGuide } = await import("../src/lib/guide");
+    const withQuiet = buildGuide([], null, "detailed", facts2).map((s) => s.key);
+    expect(withQuiet).toContain("quiet");
+    const removed = buildGuide([{ roomId: null, sectionKey: "quiet", summary: null, steps: [], published: false }], null, "detailed", facts2).map((s) => s.key);
+    expect(removed).not.toContain("quiet");
+  });
+
+  it("shows the host's own sections with their title, in the running order", async () => {
+    const { buildGuide } = await import("../src/lib/guide");
+    const g = buildGuide(
+      [
+        { roomId: null, sectionKey: "custom_abc123de", title: "Bins and recycling", summary: "Blue bin on Tuesdays.", steps: [], sortOrder: 1 },
+        { roomId: null, sectionKey: "custom_zzz999yy", title: "Empty one", summary: null, steps: [] },
+      ],
+      null,
+      "detailed",
+      facts2,
+    );
+    expect(g[0]).toMatchObject({ key: "custom_abc123de", title: "Bins and recycling" });
+    expect(g.some((s) => s.key === "custom_zzz999yy")).toBe(false);
+  });
+
+  it("lists every section for the editor, removed ones apart", async () => {
+    const { editorSections, SECTIONS } = await import("../src/lib/guide");
+    const e = editorSections([
+      { roomId: null, sectionKey: "parking", summary: null, steps: [], published: false },
+      { roomId: null, sectionKey: "custom_abc123de", title: "Bins", summary: null, steps: [], sortOrder: 2 },
+      { roomId: null, sectionKey: "rules", summary: null, steps: [], sortOrder: 1 },
+    ]);
+    expect(e.shown.slice(0, 2).map((s) => s.key)).toEqual(["rules", "custom_abc123de"]);
+    expect(e.shown.find((s) => s.key === "custom_abc123de")).toMatchObject({ title: "Bins", custom: true });
+    expect(e.removed.map((s) => s.key)).toEqual(["parking"]);
+    expect(e.shown.length).toBe(SECTIONS.length);
+  });
+});
