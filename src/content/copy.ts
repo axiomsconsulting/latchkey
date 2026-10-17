@@ -522,6 +522,20 @@ export const kioskWelcomeCopy = {
   notReady: "Kiosk welcomes need the latest update (migration 0034).",
 };
 
+/** What's new: Latchkey's own updates, for hosts. */
+export const whatsNewCopy = {
+  navLabel: "What's new",
+  title: "What's new",
+  subtitle: "Every Latchkey update, newest first.",
+  popupTitle: "What's new in Latchkey",
+  popupBody: "Here's what changed since you last looked.",
+  gotIt: "Got it",
+  seeAll: "See every update",
+  levels: { major: "Major update", minor: "New features", fix: "Fixes" } as Record<string, string>,
+  kinds: { new: "New", improved: "Better", fixed: "Fixed" } as Record<string, string>,
+  versionLine: (version: string, date: string) => `Version ${version} · ${date}`,
+};
+
 /** Moving and folding Today's sections. */
 export const dashboardCopy = {
   grab: (title: string, folded: boolean) => `${title}: drag to move, tap to ${folded ? "unfold" : "fold"}. Arrow keys move it, Enter ${folded ? "unfolds" : "folds"} it.`,

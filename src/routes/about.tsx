@@ -4,7 +4,10 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { about as copy } from "@/content/copy";
-import { RELEASES, featuresByArea, type ChangeKind } from "@/content/changelog";
+import { featuresByArea, releasesFor, type ChangeKind } from "@/content/changelog";
+
+// The public page never shows Latchkey's own super-admin tools.
+const PUBLIC = releasesFor({ admin: false });
 import { formatUkDate } from "@/lib/dates";
 
 export const Route = createFileRoute("/about")({
@@ -25,7 +28,7 @@ const kindStyle: Record<ChangeKind, string> = {
 
 /** The change log and the features it adds up to, from src/content/changelog.ts. */
 function AboutPage() {
-  const groups = featuresByArea();
+  const groups = featuresByArea(PUBLIC);
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
@@ -45,7 +48,7 @@ function AboutPage() {
 
           <TabsContent value="changes" className="mt-6">
             <ol className="space-y-6">
-              {RELEASES.map((r) => (
+              {PUBLIC.map((r) => (
                 <li key={r.version} className="card-soft p-5">
                   <p className="text-sm text-muted-foreground">
                     {copy.version(r.version)} · {formatUkDate(r.date, { withYear: true })}

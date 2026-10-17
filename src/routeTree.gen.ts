@@ -37,6 +37,7 @@ import { Route as AuthenticatedAppServicesRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
+import { Route as AuthenticatedAppWhatsNewRouteImport } from './routes/_authenticated/app.whats-new'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
@@ -200,6 +201,12 @@ const AuthenticatedAppTodayRoute = AuthenticatedAppTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppWhatsNewRoute =
+  AuthenticatedAppWhatsNewRouteImport.update({
+    id: '/whats-new',
+    path: '/whats-new',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const ApiPublicMcpRoute = ApiPublicMcpRouteImport.update({
   id: '/api/public/mcp',
   path: '/api/public/mcp',
@@ -313,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
+  '/app/whats-new': typeof AuthenticatedAppWhatsNewRoute
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
@@ -357,6 +365,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
+  '/app/whats-new': typeof AuthenticatedAppWhatsNewRoute
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
@@ -404,6 +413,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
+  '/_authenticated/app/whats-new': typeof AuthenticatedAppWhatsNewRoute
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
@@ -451,6 +461,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
+    | '/app/whats-new'
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
@@ -495,6 +506,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup'
     | '/app/today'
+    | '/app/whats-new'
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
@@ -541,6 +553,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup'
     | '/_authenticated/app/today'
+    | '/_authenticated/app/whats-new'
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
@@ -788,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppTodayRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/whats-new': {
+      id: '/_authenticated/app/whats-new'
+      path: '/whats-new'
+      fullPath: '/app/whats-new'
+      preLoaderRoute: typeof AuthenticatedAppWhatsNewRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/api/public/mcp': {
       id: '/api/public/mcp'
       path: '/api/public/mcp'
@@ -916,6 +936,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetupRoute: typeof AuthenticatedAppSetupRoute
   AuthenticatedAppTodayRoute: typeof AuthenticatedAppTodayRoute
+  AuthenticatedAppWhatsNewRoute: typeof AuthenticatedAppWhatsNewRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppPrintPropertyIdRoute: typeof AuthenticatedAppPrintPropertyIdRoute
   AuthenticatedAppRoomQrPropertyIdRoute: typeof AuthenticatedAppRoomQrPropertyIdRoute
@@ -934,6 +955,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetupRoute: AuthenticatedAppSetupRoute,
   AuthenticatedAppTodayRoute: AuthenticatedAppTodayRoute,
+  AuthenticatedAppWhatsNewRoute: AuthenticatedAppWhatsNewRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppPrintPropertyIdRoute: AuthenticatedAppPrintPropertyIdRoute,
   AuthenticatedAppRoomQrPropertyIdRoute: AuthenticatedAppRoomQrPropertyIdRoute,

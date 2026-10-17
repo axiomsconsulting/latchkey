@@ -20,6 +20,7 @@ import {
   Sun,
   Wrench,
   type LucideIcon,
+  Sparkles,
 } from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
@@ -27,6 +28,8 @@ import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { AccessGate, AnnouncementPopup, FeedbackButton, ShellBanners } from "@/components/host/ShellExtras";
 import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
+import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
+import { whatsNewCopy } from "@/content/copy";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
@@ -158,6 +161,9 @@ export function HostShell() {
         <LogoMark theme={theme} name={title} className="size-9" />
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
         <HostInbox propertyId={selectedId ?? null} />
+        <Link to="/app/whats-new" aria-label={whatsNewCopy.navLabel} className="grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-secondary">
+          <Sparkles className="size-5" />
+        </Link>
         <FeedbackButton compact className="px-2.5" />
         <UserChip compact className="px-1.5" />
         <button
@@ -190,6 +196,10 @@ export function HostShell() {
           <Outlet />
         </AccessGate>
         <AnnouncementPopup />
+        <WhatsNewPopup
+          admin={data?.isSuperAdmin === true}
+          skip={!data || (host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL}
+        />
       </main>
 
 
@@ -403,6 +413,16 @@ function DesktopNav({
             <span className={narrow || top ? "sr-only" : "truncate"}>{hostNav.activity}</span>
           </Link>
         ) : null}
+        <Link
+          to="/app/whats-new"
+          onClick={haptic}
+          title={whatsNewCopy.navLabel}
+          className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
+          activeProps={active}
+        >
+          <Sparkles className="size-5 shrink-0" />
+          <span className={narrow || top ? "sr-only" : "truncate"}>{whatsNewCopy.navLabel}</span>
+        </Link>
         {isOwner ? (
           <Link
             to="/app/billing"

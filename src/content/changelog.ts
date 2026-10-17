@@ -2,11 +2,18 @@
  * What changed in Latchkey, newest first. Add an entry with every change
  * (see AGENTS.md): "new" items also make up the features log on the About
  * page, so there is one list to keep up to date.
+ *
+ * Versions are major.minor.fix: bump the first for a big change in how
+ * Latchkey works, the second for new features or improvements, the last
+ * for fixes only. Hosts see each release once in a "What's new" pop-up and
+ * always on the What's new page; items marked admin are for super admins only.
  */
 
 export type ChangeKind = "new" | "improved" | "fixed";
 
 export type ChangeItem = {
+  /** Only for Latchkey's super admins (their own tools); hosts never see it. */
+  admin?: true;
   kind: ChangeKind;
   /** Which part of Latchkey: shown as a tag and used to group features. */
   area: "Check-in" | "Guest guide" | "Bookings" | "Calendar" | "Services" | "Team" | "Settings" | "Invoices" | "Guest register" | "Demo" | "Website" | "Security";
@@ -22,7 +29,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
-    version: "0.32",
+    version: "0.33.0",
+    date: "2026-10-17",
+    title: "What's new, in Latchkey",
+    items: [
+      { kind: "new", area: "Settings", text: "A What's new page in Latchkey with every update, newest first, marked as a major update, new features or fixes." },
+      { kind: "new", area: "Settings", text: "After each update, a short “What's new” note shows once when you open Latchkey." },
+    ],
+  },
+  {
+    version: "0.32.0",
     date: "2026-10-17",
     title: "A simpler sign-in",
     items: [
@@ -32,7 +48,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.31",
+    version: "0.31.0",
     date: "2026-10-17",
     title: "One check-in screen",
     items: [
@@ -41,7 +57,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.30",
+    version: "0.30.0",
     date: "2026-10-17",
     title: "Welcome guests by name on the kiosk",
     items: [
@@ -51,7 +67,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.29",
+    version: "0.29.0",
     date: "2026-10-17",
     title: "A front-door kiosk that rests well",
     items: [
@@ -63,7 +79,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.28",
+    version: "0.28.0",
     date: "2026-10-17",
     title: "Sign in with Google or Apple; a trial that starts with your property",
     items: [
@@ -73,7 +89,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.27",
+    version: "0.27.0",
     date: "2026-10-17",
     title: "One guide list, a cleaner bookings table",
     items: [
@@ -83,7 +99,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.26",
+    version: "0.26.0",
     date: "2026-10-16",
     title: "Install Latchkey, and alerts wherever you are",
     items: [
@@ -91,11 +107,11 @@ export const RELEASES: Release[] = [
       { kind: "new", area: "Check-in", text: "Install the kiosk on the front-door tablet as its own full-screen app for that property." },
       { kind: "new", area: "Settings", text: "Alerts by push to your devices, Telegram, email or text: choose any mix, with texts for urgent alerts only by default, and a test button." },
       { kind: "new", area: "Bookings", text: "Forward Airbnb and Booking.com message emails to your private address and each message lands in that guest's conversation; reply by email from your own mailbox." },
-      { kind: "new", area: "Settings", text: "Latchkey admin: an Integrations page for email, push, Telegram, SMS and inbound email, with each channel switchable in Routines." },
+      { admin: true, kind: "new", area: "Settings", text: "Latchkey admin: an Integrations page for email, push, Telegram, SMS and inbound email, with each channel switchable in Routines." },
     ],
   },
   {
-    version: "0.25",
+    version: "0.25.0",
     date: "2026-10-16",
     title: "Quicker tidying on Bookings",
     items: [
@@ -106,7 +122,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.24",
+    version: "0.24.0",
     date: "2026-10-16",
     title: "In-room guides and guest messages at a glance",
     items: [
@@ -118,7 +134,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.23",
+    version: "0.23.0",
     date: "2026-10-15",
     title: "Invoices from Today, tidier settings",
     items: [
@@ -134,7 +150,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.22",
+    version: "0.22.0",
     date: "2026-10-14",
     title: "Today, at a glance",
     items: [
@@ -145,17 +161,17 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.21",
+    version: "0.21.0",
     date: "2026-10-14",
     title: "Launch offer: £1 for your first month",
     items: [
       { kind: "new", area: "Website", text: "Launch offer for new hosts who join by 31 December 2026: 30 days free, then £1 for your first month, then the usual price." },
       { kind: "new", area: "Settings", text: "Your subscription page shows the offer price for your first paid month and what you'll pay after." },
-      { kind: "new", area: "Settings", text: "Latchkey admin: set the offer's price, name, first day and last day to join; accounts keep the offer they joined with." },
+      { admin: true, kind: "new", area: "Settings", text: "Latchkey admin: set the offer's price, name, first day and last day to join; accounts keep the offer they joined with." },
     ],
   },
   {
-    version: "0.20",
+    version: "0.20.0",
     date: "2026-10-14",
     title: "API, MCP server and plans",
     items: [
@@ -163,13 +179,13 @@ export const RELEASES: Release[] = [
       { kind: "new", area: "Website", text: "Developer docs at /developers, generated from the live API so they're always up to date, with copy-paste set-up for each AI assistant." },
       { kind: "new", area: "Settings", text: "API keys in Settings → API & MCP: read-only or read-and-change, shown once, with this month's usage." },
       { kind: "new", area: "Settings", text: "Three plans (Start, Grow, Pro) with rooms included and a small charge per extra room, plus an API add-on for Start and Grow." },
-      { kind: "new", area: "Settings", text: "Latchkey admin: a pricing studio with break-even recommendations, projections against real months and calibration from Lovable's usage." },
-      { kind: "new", area: "Settings", text: "Latchkey admin: switches, schedules and run-now for every routine that uses Lovable Run credits." },
-      { kind: "new", area: "Settings", text: "Latchkey admin: visitor analytics with pages, time on site, where visitors are from, devices, bots filtered out, and anonymous visitors matched to their account when they sign in." },
+      { admin: true, kind: "new", area: "Settings", text: "Latchkey admin: a pricing studio with break-even recommendations, projections against real months and calibration from Lovable's usage." },
+      { admin: true, kind: "new", area: "Settings", text: "Latchkey admin: switches, schedules and run-now for every routine that uses Lovable Run credits." },
+      { admin: true, kind: "new", area: "Settings", text: "Latchkey admin: visitor analytics with pages, time on site, where visitors are from, devices, bots filtered out, and anonymous visitors matched to their account when they sign in." },
     ],
   },
   {
-    version: "0.19",
+    version: "0.19.0",
     date: "2026-10-14",
     title: "Closed nights explain themselves",
     items: [
@@ -178,7 +194,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.18",
+    version: "0.18.0",
     date: "2026-10-13",
     title: "A clearer bookings list and per-night invoices",
     items: [
@@ -186,11 +202,11 @@ export const RELEASES: Release[] = [
       { kind: "improved", area: "Bookings", text: "A host-friendly order: staying now, arriving and leaving today, coming up, then past stays." },
       { kind: "new", area: "Invoices", text: "Invoices list each night on its own line with its share of the price, then the total (can be switched off site-wide)." },
       { kind: "fixed", area: "Invoices", text: "An invoice picks up the price as soon as you change it on the booking." },
-      { kind: "new", area: "Settings", text: "Latchkey admin sits under Settings for super admins, with all of Latchkey's own settings, and super admins can add more super admins." },
+      { admin: true, kind: "new", area: "Settings", text: "Latchkey admin sits under Settings for super admins, with all of Latchkey's own settings, and super admins can add more super admins." },
     ],
   },
   {
-    version: "0.17",
+    version: "0.17.0",
     date: "2026-10-13",
     title: "Your own Stripe account",
     items: [
@@ -199,7 +215,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.16",
+    version: "0.16.0",
     date: "2026-10-13",
     title: "Subscriptions, support and feedback",
     items: [
@@ -212,7 +228,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.15",
+    version: "0.15.0",
     date: "2026-10-13",
     title: "Start a free trial without signing up",
     items: [
@@ -222,7 +238,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.14",
+    version: "0.14.0",
     date: "2026-10-13",
     title: "Menus, About page and switching property",
     items: [
@@ -233,7 +249,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.13",
+    version: "0.13.0",
     date: "2026-10-13",
     title: "Invoices for direct stays",
     items: [
@@ -245,7 +261,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.12",
+    version: "0.12.0",
     date: "2026-10-13",
     title: "The Hill Suites demo",
     items: [
@@ -254,7 +270,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.11",
+    version: "0.11.0",
     date: "2026-10-12",
     title: "Friendlier checking in",
     items: [
@@ -266,7 +282,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.10",
+    version: "0.10.0",
     date: "2026-10-12",
     title: "Calendar in room colours",
     items: [
@@ -276,7 +292,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.9",
+    version: "0.9.0",
     date: "2026-10-12",
     title: "Guest register and menu layouts",
     items: [
@@ -286,7 +302,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.8",
+    version: "0.8.0",
     date: "2026-10-12",
     title: "Who's staying and booking sites",
     items: [
@@ -298,7 +314,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.7",
+    version: "0.7.0",
     date: "2026-10-11",
     title: "Teams",
     items: [
@@ -311,7 +327,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.6",
+    version: "0.6.0",
     date: "2026-10-10",
     title: "A safer demo",
     items: [
@@ -320,7 +336,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.5",
+    version: "0.5.0",
     date: "2026-10-02",
     title: "Pricing, email and security",
     items: [
@@ -330,7 +346,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.4",
+    version: "0.4.0",
     date: "2026-09-29",
     title: "Guest guides, extras and payments",
     items: [
@@ -342,7 +358,7 @@ export const RELEASES: Release[] = [
     ],
   },
   {
-    version: "0.3",
+    version: "0.3.0",
     date: "2026-09-28",
     title: "All your bookings in one place",
     items: [
@@ -367,4 +383,47 @@ export function featuresByArea(releases: Release[] = RELEASES): Array<{ area: Ch
     }
   }
   return [...map.entries()].map(([area, features]) => ({ area, features }));
+}
+
+/* ------------------------------ versions -------------------------------- */
+
+export type Level = "major" | "minor" | "fix";
+
+const parts = (v: string) => v.split(".").map((n) => Number(n) || 0).concat([0, 0, 0]).slice(0, 3) as [number, number, number];
+
+/** -1, 0 or 1, comparing major.minor.fix. */
+export function compareVersions(a: string, b: string): number {
+  const x = parts(a);
+  const y = parts(b);
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i]! < y[i]! ? -1 : 1;
+  return 0;
+}
+
+/** A release's kind, from how its number moved on from the one before. */
+export function releaseLevel(version: string, previous: string | null): Level {
+  if (!previous) return "minor";
+  const [a, b] = [parts(version), parts(previous)];
+  if (a[0] !== b[0]) return "major";
+  if (a[1] !== b[1]) return "minor";
+  return "fix";
+}
+
+export type HostRelease = Release & { level: Level };
+
+/**
+ * The releases a host sees: super-admin items left out (and releases left
+ * empty by that), each with its level. Super admins see everything.
+ */
+export function releasesFor(opts: { admin: boolean }, releases: Release[] = RELEASES): HostRelease[] {
+  return releases
+    .map((r, i) => ({ ...r, level: releaseLevel(r.version, releases[i + 1]?.version ?? null), items: r.items.filter((it) => opts.admin || !it.admin) }))
+    .filter((r) => r.items.length > 0);
+}
+
+export const LATEST_VERSION = RELEASES[0]!.version;
+
+/** What's new since the version someone last saw (nothing if they're new: they've seen it all). */
+export function unseen(seen: string | null, releases: HostRelease[]): HostRelease[] {
+  if (!seen) return [];
+  return releases.filter((r) => compareVersions(r.version, seen) > 0);
 }
