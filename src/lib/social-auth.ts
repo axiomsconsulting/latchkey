@@ -3,8 +3,7 @@
  * sign-in method remembered on this device, and handing a free trial over
  * when its visitor signs in with Google or Apple. Browser only.
  */
-import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
-
+import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 
 export type SignInMethod = "google" | "apple" | "password" | "email_link";
@@ -68,8 +67,6 @@ export function clearTrialClaim() {
   write(CLAIM, null);
 }
 
-const lovable = typeof window !== "undefined" ? createLovableAuth() : null;
-
 /**
  * "Continue with Google / Apple". From a free trial, it first makes a claim
  * so the account that comes back takes the trial's business with it.
@@ -80,18 +77,17 @@ export async function continueWith(
   provider: "google" | "apple",
   opts: { next?: string | undefined; makeClaim?: () => Promise<{ code: string | null }> } = {},
 ): Promise<"redirected" | "signed_in"> {
-  if (!lovable) throw new Error("Sign-in isn't available here.");
+  if (typeof window === "undefined") throw new Error("Sign-in isn't available here.");
   const { data } = await supabase.auth.getSession();
   if (data.session?.user.is_anonymous && opts.makeClaim) {
     const { code } = await opts.makeClaim();
     if (code) write(CLAIM, code);
   }
   signInIntent(provider);
-  const result = await lovable.signInWithOAuth(provider, { redirect_uri: `${window.location.origin}${opts.next ?? "/app/today"}` });
-  if (result.redirected) return "redirected";
+  // Lovable's own sign-in (src/integrations/lovable): sets the session itself when it can.
+  const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: `${window.location.origin}${opts.next ?? "/app/today"}` });
+  if ("redirected" in result && result.redirected) return "redirected";
   if (result.error) throw result.error;
-  const { error } = await supabase.auth.setSession(result.tokens);
-  if (error) throw error;
   return "signed_in";
 }
 
