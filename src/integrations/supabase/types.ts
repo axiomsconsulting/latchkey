@@ -690,6 +690,44 @@ export type Database = {
           },
         ]
       }
+      checkin_joins: {
+        Row: {
+          claimed_at: string
+          done_at: string | null
+          id: string
+          kind: string
+          position: number
+          session_id: string
+          token_hash: string
+        }
+        Insert: {
+          claimed_at?: string
+          done_at?: string | null
+          id?: string
+          kind: string
+          position: number
+          session_id: string
+          token_hash: string
+        }
+        Update: {
+          claimed_at?: string
+          done_at?: string | null
+          id?: string
+          kind?: string
+          position?: number
+          session_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_joins_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "checkin_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkin_sessions: {
         Row: {
           adults: number | null
@@ -704,6 +742,7 @@ export type Database = {
           last4_attempts: number
           photo_attempts: number
           property_id: string
+          share_hash: string | null
           token_hash: string
           verified_method: string | null
         }
@@ -720,6 +759,7 @@ export type Database = {
           last4_attempts?: number
           photo_attempts?: number
           property_id: string
+          share_hash?: string | null
           token_hash: string
           verified_method?: string | null
         }
@@ -736,6 +776,7 @@ export type Database = {
           last4_attempts?: number
           photo_attempts?: number
           property_id?: string
+          share_hash?: string | null
           token_hash?: string
           verified_method?: string | null
         }
@@ -1295,6 +1336,51 @@ export type Database = {
           },
         ]
       }
+      host_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          host_id: string
+          live_at: string | null
+          property_id: string | null
+          verified_at: string | null
+          verify_token: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          host_id: string
+          live_at?: string | null
+          property_id?: string | null
+          verified_at?: string | null
+          verify_token: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          host_id?: string
+          live_at?: string | null
+          property_id?: string | null
+          verified_at?: string | null
+          verify_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_domains_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_domains_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       host_invitations: {
         Row: {
           accepted_at: string | null
@@ -1751,6 +1837,99 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      kiosk_looks: {
+        Row: {
+          brightness: number | null
+          host_id: string
+          size: number | null
+          updated_at: string
+        }
+        Insert: {
+          brightness?: number | null
+          host_id: string
+          size?: number | null
+          updated_at?: string
+        }
+        Update: {
+          brightness?: number | null
+          host_id?: string
+          size?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_looks_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: true
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kiosk_messages: {
+        Row: {
+          body: string | null
+          booking_id: string | null
+          cleared_at: string | null
+          created_by: string | null
+          dismissed_at: string | null
+          dismissed_version: number | null
+          expires_at: string
+          headline: string
+          property_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          body?: string | null
+          booking_id?: string | null
+          cleared_at?: string | null
+          created_by?: string | null
+          dismissed_at?: string | null
+          dismissed_version?: number | null
+          expires_at: string
+          headline: string
+          property_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          body?: string | null
+          booking_id?: string | null
+          cleared_at?: string | null
+          created_by?: string | null
+          dismissed_at?: string | null
+          dismissed_version?: number | null
+          expires_at?: string
+          headline?: string
+          property_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "cleaner_schedule"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "kiosk_messages_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: true
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -2426,10 +2605,12 @@ export type Database = {
       }
       site_settings: {
         Row: {
+          brand: Json
           cost_model: Json | null
           id: number
           integrations: Json
           invoice_nightly_lines: boolean
+          kiosk_saver: Json
           notice: string | null
           offer: Json | null
           pricing_model: Json | null
@@ -2439,10 +2620,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand?: Json
           cost_model?: Json | null
           id?: number
           integrations?: Json
           invoice_nightly_lines?: boolean
+          kiosk_saver?: Json
           notice?: string | null
           offer?: Json | null
           pricing_model?: Json | null
@@ -2452,10 +2635,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand?: Json
           cost_model?: Json | null
           id?: number
           integrations?: Json
           invoice_nightly_lines?: boolean
+          kiosk_saver?: Json
           notice?: string | null
           offer?: Json | null
           pricing_model?: Json | null
@@ -2721,6 +2906,30 @@ export type Database = {
           },
         ]
       }
+      trial_claims: {
+        Row: {
+          anon_user_id: string
+          code_hash: string
+          expires_at: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          anon_user_id: string
+          code_hash: string
+          expires_at: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          anon_user_id?: string
+          code_hash?: string
+          expires_at?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       trial_flags: {
         Row: {
           created_at: string
@@ -2858,18 +3067,21 @@ export type Database = {
       user_prefs: {
         Row: {
           last_host_id: string | null
+          seen_release: string | null
           support_host_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           last_host_id?: string | null
+          seen_release?: string | null
           support_host_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           last_host_id?: string | null
+          seen_release?: string | null
           support_host_id?: string | null
           updated_at?: string
           user_id?: string
