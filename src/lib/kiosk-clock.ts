@@ -113,3 +113,70 @@ export function quietNow(at: Date, tz: string, start: string, end: string): { ac
   const active = s === e ? false : s < e ? mins >= s && mins < e : mins >= s || mins < e;
   return { active, until: end.slice(0, 5) };
 }
+
+/* ------------------------------ day progress ------------------------------ */
+
+export type DayPhase = "night" | "dawn" | "morning" | "midday" | "afternoon" | "dusk" | "evening";
+
+/** Rough latitude for a time zone (no location needed): the main city, else the region. */
+const ZONE_LATITUDE: Record<string, number> = {
+  "Europe/London": 51.5, "Europe/Dublin": 53.3, "Europe/Lisbon": 38.7, "Europe/Madrid": 40.4, "Europe/Paris": 48.9, "Europe/Rome": 41.9,
+  "Europe/Berlin": 52.5, "Europe/Amsterdam": 52.4, "Europe/Stockholm": 59.3, "Europe/Oslo": 59.9, "Europe/Helsinki": 60.2, "Europe/Athens": 38,
+  "Europe/Istanbul": 41, "Europe/Moscow": 55.8, "Atlantic/Reykjavik": 64.1, "Africa/Cairo": 30, "Africa/Lagos": 6.5, "Africa/Nairobi": -1.3,
+  "Africa/Johannesburg": -26.2, "Asia/Dubai": 25.2, "Asia/Kolkata": 22.6, "Asia/Singapore": 1.3, "Asia/Bangkok": 13.8, "Asia/Hong_Kong": 22.3,
+  "Asia/Shanghai": 31.2, "Asia/Tokyo": 35.7, "Asia/Seoul": 37.6, "Australia/Sydney": -33.9, "Australia/Melbourne": -37.8, "Australia/Perth": -32,
+  "Australia/Brisbane": -27.5, "Pacific/Auckland": -36.8, "America/New_York": 40.7, "America/Chicago": 41.9, "America/Denver": 39.7,
+  "America/Los_Angeles": 34, "America/Toronto": 43.7, "America/Vancouver": 49.3, "America/Mexico_City": 19.4, "America/Sao_Paulo": -23.6,
+  "America/Argentina/Buenos_Aires": -34.6, "America/Santiago": -33.4, "America/Lima": -12, "America/Bogota": 4.7,
+};
+const REGION_LATITUDE: Record<string, number> = { Europe: 50, Africa: 0, Asia: 30, Australia: -33, Pacific: -20, America: 35, Atlantic: 40, Indian: -10, Antarctica: -75 };
+
+export function zoneLatitude(tz: string): number {
+  return ZONE_LATITUDE[tz] ?? REGION_LATITUDE[tz.split("/")[0] ?? ""] ?? 45;
+}
+
+/**
+ * Sunrise and sunset in local clock hours for a zone on a day, from the
+ * standard daylight formula (the sun's declination and a rough latitude for
+ * the zone), with noon at 12:00 standard time, an hour later in summer time.
+ * Close enough to say dawn from morning; no location or service needed.
+ */
+export function sunTimes(at: Date, tz: string): { sunrise: number; sunset: number; noon: number } {
+  const p = parts(at, tz);
+  const dayOfYear = Math.round((Date.UTC(p.y, p.m - 1, p.d) - Date.UTC(p.y, 0, 0)) / 86_400_000);
+  const lat = (zoneLatitude(tz) * Math.PI) / 180;
+  const decl = ((23.44 * Math.PI) / 180) * Math.sin((2 * Math.PI * (284 + dayOfYear)) / 365);
+  const cosH = Math.max(-1, Math.min(1, -Math.tan(lat) * Math.tan(decl)));
+  const dayHours = (2 * ((Math.acos(cosH) * 180) / Math.PI)) / 15;
+  const standard = Math.min(utcOffset(new Date(Date.UTC(p.y, 0, 15)), tz), utcOffset(new Date(Date.UTC(p.y, 6, 15)), tz));
+  const noon = 12 + (utcOffset(at, tz) - standard) / 60;
+  return { sunrise: noon - dayHours / 2, sunset: noon + dayHours / 2, noon };
+}
+
+/**
+ * Where the day is at a property: its phase, and how far the sun is across
+ * the sky (0 at sunrise, 1 at sunset) or the moon across the night.
+ */
+export function dayProgress(at: Date, tz: string): { phase: DayPhase; sun: number | null; moon: number | null } {
+  const p = parts(at, tz);
+  const h = p.h + p.min / 60;
+  const { sunrise, sunset, noon } = sunTimes(at, tz);
+  const phase: DayPhase =
+    h >= sunrise - 0.75 && h < sunrise + 0.75
+      ? "dawn"
+      : h >= sunrise + 0.75 && h < noon - 1.5
+        ? "morning"
+        : h >= noon - 1.5 && h < noon + 1.5
+          ? "midday"
+          : h >= noon + 1.5 && h < sunset - 1
+            ? "afternoon"
+            : h >= sunset - 1 && h < sunset + 0.75
+              ? "dusk"
+              : h >= sunset + 0.75 && h < Math.max(23, sunset + 1.5)
+                ? "evening"
+                : "night";
+  if (h >= sunrise && h <= sunset) return { phase, sun: (h - sunrise) / (sunset - sunrise), moon: null };
+  const nightLength = 24 - (sunset - sunrise);
+  const since = h > sunset ? h - sunset : h + 24 - sunset;
+  return { phase, sun: null, moon: Math.min(1, Math.max(0, since / nightLength)) };
+}

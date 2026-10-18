@@ -878,6 +878,7 @@ export const guest = {
   yesterday: "yesterday",
   saverWake: "Touch to start checking in",
   saverTouch: "Touch the screen to check in",
+  dayPhases: { night: "Night", dawn: "Dawn", morning: "Morning", midday: "Midday", afternoon: "Afternoon", dusk: "Dusk", evening: "Evening" } as Record<string, string>,
   saverBrightness: "Brightness",
   saverSize: "Clock size",
   saverBandHint: "Slide up or down",
@@ -2534,4 +2535,26 @@ export const apiCopy = {
   revoked: "Revoked",
   revokedToast: "Key revoked. Anything using it stops working straight away.",
   docs: "How to connect",
+};
+
+export const propertyCodesCopy = {
+  checking: "Checking…",
+  linkFree: "Available",
+  linkTaken: "Already used by another property",
+  linkTry: "Try one of these:",
+  linkAskMore: "Or add another word, the town or a number to make it yours.",
+  linkProblems: {
+    too_short: "Use at least 3 letters or numbers.",
+    too_long: "Keep it to 40 characters or fewer.",
+    characters: "Use letters, numbers and single hyphens only.",
+    reserved: "That one is used by Latchkey itself.",
+  } as Record<string, string>,
+  linkAuto: "Made from your property's name. Change it if you like.",
+  linkPreview: (code: string) => `Guests will reach you at /kiosk/${code}`,
+  pinFree: "Available",
+  pinTaken: "Already used by another property. Choose another, or make a new one.",
+  pinWeak: "Easy to guess. A random one is safer.",
+  pinNeeds: "Six digits.",
+  pinNew: "New PIN",
+  pinAuto: "Made for you, and not used by any other property. Change it if you like.",
 };

@@ -246,7 +246,8 @@ const propertyInput = z.object({
   address: z.string().nullable().default(null),
   postcode: z.string().nullable().default(null),
   country_code: z.string().length(2).transform((v) => v.toUpperCase()),
-  short_code: z.string().min(2).regex(/^[a-z0-9-]+$/),
+  // Empty on a new property: a free one is made from its name (property-codes.ts).
+  short_code: z.string().regex(/^([a-z0-9-]{2,})?$/).default(""),
   check_in_pin: z.string().regex(/^\d{6}$/).nullable().default(null),
   timezone: z.string().nullable().default(null),
   default_check_in_time: z.string(),
@@ -270,6 +271,22 @@ export const saveProperty = createServerFn({ method: "POST" })
         ? await context.supabase.from("properties").select("short_code").eq("id", id).maybeSingle()
         : { data: null };
       if (current?.short_code !== fields.short_code) throw new Error("That short link is reserved. Try another.");
+    }
+    // Guest links and door PINs are unique across every host: fill in free ones
+    // for a new property, and say plainly (with free alternatives) when one is taken.
+    const codes = await import("./property-codes.server");
+    const { linkAlternatives } = await import("./property-codes");
+    const ctx = { name: fields.name, address: fields.address, postcode: fields.postcode };
+    if (!fields.short_code) fields.short_code = await codes.freeGuestLink(ctx, id);
+    else if ((await codes.takenAmong("short_code", [fields.short_code], id)).size) {
+      const pool = linkAlternatives(fields.short_code, ctx, () => true, 40);
+      const used = await codes.takenAmong("short_code", pool, id);
+      const free = linkAlternatives(fields.short_code, ctx, (c) => !used.has(c));
+      throw new Error(`The guest link "${fields.short_code}" is already used by another property.${free.length ? ` Free ones: ${free.join(", ")}.` : ""}`);
+    }
+    if (!fields.check_in_pin && !id) fields.check_in_pin = await codes.freeDoorPin();
+    else if (fields.check_in_pin && (await codes.takenAmong("check_in_pin", [fields.check_in_pin], id)).size) {
+      throw new Error("That door PIN is already used by another property. Choose another, or make a new one.");
     }
     const payload = { ...fields, host_id: hostId };
     const q = id

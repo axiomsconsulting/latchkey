@@ -36,6 +36,7 @@ import { common, properties as copy } from "@/content/copy";
 import { COUNTRY_CHOICES, region } from "@/lib/regions";
 import { usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { formatUkTime } from "@/lib/dates";
+import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
 import {
   deleteRoom,
   deleteUnavailability,
@@ -278,6 +279,8 @@ function PropertyDialog({
   });
 
   const workspace = useWorkspace();
+  const [linkOk, setLinkOk] = useState(true);
+  const [pinOk, setPinOk] = useState(true);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -371,28 +374,23 @@ function PropertyDialog({
               onChange={(e) => setForm((f) => ({ ...f, postcode: e.target.value }))}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="sc">{copy.guestLink}</Label>
-            <Input
-              id="sc"
-              className="h-12"
-              value={form.short_code}
-              onChange={(e) => setForm((f) => ({ ...f, short_code: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pin">{copy.doorPin}</Label>
-            <Input
-              id="pin"
-              inputMode="numeric"
-              maxLength={6}
-              className="h-12"
-              value={form.check_in_pin}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, check_in_pin: e.target.value.replace(/\D/g, "") }))
-              }
-            />
-          </div>
+          <GuestLinkField
+            id="sc"
+            label={copy.guestLink}
+            value={form.short_code}
+            onChange={(v) => setForm((f) => ({ ...f, short_code: v }))}
+            propertyId={property.id}
+            context={{ name: form.name, address: form.address, postcode: form.postcode }}
+            onValid={setLinkOk}
+          />
+          <DoorPinField
+            id="pin"
+            label={copy.doorPin}
+            value={form.check_in_pin}
+            onChange={(v) => setForm((f) => ({ ...f, check_in_pin: v }))}
+            propertyId={property.id}
+            onValid={setPinOk}
+          />
           <div className="space-y-2">
             <Label htmlFor="ci">Check-in from</Label>
             <Input
@@ -464,7 +462,7 @@ function PropertyDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {common.cancel}
             </Button>
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy || !linkOk || !pinOk}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : null}
               {common.save}
             </Button>

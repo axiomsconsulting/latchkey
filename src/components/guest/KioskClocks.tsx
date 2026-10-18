@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { guest as copy } from "@/content/copy";
 import { Moon, Sun, Type } from "lucide-react";
 
-import { burnDrift, clockHands, kioskNow, quietNow, worldClocksFor } from "@/lib/kiosk-clock";
+import { burnDrift, clockHands, dayProgress, kioskNow, quietNow, worldClocksFor } from "@/lib/kiosk-clock";
 import { zoneCity } from "@/lib/world";
 import { kioskSaverLook, saveKioskSaverLook } from "@/lib/kiosk.functions";
 import {
@@ -48,6 +48,60 @@ export function KioskClock({ tz }: { tz: string }) {
       <span className="block text-lg tabular-nums">{time}</span>
       <span className="block text-sm text-muted-foreground">{date}</span>
     </p>
+  );
+}
+
+/** The square button beside the clock: as tall as its two rows, and see-through. */
+export const headerIconClass =
+  "grid size-12 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * How far through the day it is at the property, drawn: the sun along its
+ * arc over the horizon by day (low and half set at dawn and dusk), the moon
+ * and a few stars by night. Worked out from the time zone, no service.
+ */
+export function DayIcon({ tz, className }: { tz: string; className?: string }) {
+  const now = useNow(60_000);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <span className={className} />;
+  const d = dayProgress(now, tz);
+  const t = d.sun ?? d.moon ?? 0.5;
+  // Along a half circle over the horizon, left (rising) to right (setting).
+  const x = 24 - 17 * Math.cos(Math.PI * t);
+  const y = 33 - 17 * Math.sin(Math.PI * t);
+  const night = d.sun === null;
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden fill="none" stroke="currentColor" strokeLinecap="round">
+      <path d="M7 33 A17 17 0 0 1 41 33" strokeWidth="1" strokeDasharray="1.5 3" opacity="0.55" />
+      <line x1="4" y1="33" x2="44" y2="33" strokeWidth="1.6" />
+      {night ? (
+        <>
+          <path d={`M${x + 2.6} ${y - 4.6} A5.2 5.2 0 1 0 ${x + 2.6} ${y + 4.6} A4 4 0 1 1 ${x + 2.6} ${y - 4.6} Z`} fill="currentColor" stroke="none" />
+          {[
+            [12, 12],
+            [33, 9],
+            [39, 20],
+          ].map(([sx, sy]) => (
+            <circle key={`${sx}-${sy}`} cx={sx} cy={sy} r="0.9" fill="currentColor" stroke="none" opacity="0.8" />
+          ))}
+        </>
+      ) : (
+        <>
+          <clipPath id="day-sky">
+            <rect x="0" y="0" width="48" height="33" />
+          </clipPath>
+          <g clipPath="url(#day-sky)">
+            <circle cx={x} cy={y} r="4.2" fill="currentColor" stroke="none" />
+            {Array.from({ length: 8 }, (_, i) => {
+              const a = (i * Math.PI) / 4;
+              return <line key={i} x1={x + Math.cos(a) * 6.2} y1={y + Math.sin(a) * 6.2} x2={x + Math.cos(a) * 8.2} y2={y + Math.sin(a) * 8.2} strokeWidth="1.3" />;
+            })}
+          </g>
+        </>
+      )}
+      <path d="M10 39 H38 M15 43.5 H33" strokeWidth="1.2" opacity="0.4" />
+    </svg>
   );
 }
 

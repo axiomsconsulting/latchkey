@@ -16,11 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { PinPad } from "@/components/guest/PinPad";
 import { InstallApp } from "@/components/InstallApp";
-import { KioskClock, KioskScreensaver, useSaverLook } from "@/components/guest/KioskClocks";
+import { DayIcon, KioskClock, KioskScreensaver, headerIconClass, useSaverLook } from "@/components/guest/KioskClocks";
 import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
-import { Moon } from "lucide-react";
 import { guest as copy } from "@/content/copy";
 import { FIT, fitFontSize, fitted, widthCap } from "@/lib/kiosk-fit";
+import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 
 // Press and hold the top-right corner this long for the host's exit.
@@ -235,6 +235,20 @@ function Kiosk() {
         <LogoMark theme={p.theme} name={p.name} />
         <span className="font-display text-lg">{p.name}</span>
         <KioskClock tz={p.timezone ?? "Europe/London"} />
+        {/* Beside the time: the day's progress on the welcome (tap to rest the screen); later, the phone QR (CheckInFlow puts it here). */}
+        <div id="kiosk-header-action" className="flex shrink-0 items-center empty:hidden">
+          {shared && atWelcome && !saver ? (
+            <button
+              type="button"
+              onClick={() => setSaver(true)}
+              aria-label={`${copy.dayPhases[dayProgress(new Date(), p.timezone ?? "Europe/London").phase] ?? ""} · ${copy.saverStart}`}
+              title={copy.saverStart}
+              className={headerIconClass}
+            >
+              <DayIcon tz={p.timezone ?? "Europe/London"} className="size-11" />
+            </button>
+          ) : null}
+        </div>
       </header>
       {shared ? (
       <button
@@ -258,18 +272,6 @@ function Kiosk() {
       />
       </div>
 
-      {/* Only on the welcome: rest the screen by hand. */}
-      {shared && atWelcome && !saver ? (
-        <button
-          type="button"
-          onClick={() => setSaver(true)}
-          aria-label={copy.saverStart}
-          title={copy.saverStart}
-          className="fixed bottom-5 right-5 z-30 grid size-11 place-items-center rounded-full text-muted-foreground/60 hover:bg-muted hover:text-foreground"
-        >
-          <Moon className="size-5" />
-        </button>
-      ) : null}
 
       {/* The host's welcome for an arriving guest: over everything, wakes the screen. */}
       {shared && welcome ? (

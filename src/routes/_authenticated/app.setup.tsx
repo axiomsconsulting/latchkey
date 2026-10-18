@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/use-host-data";
 import { loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
 import { cn } from "@/lib/utils";
+import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
 
 export const Route = createFileRoute("/_authenticated/app/setup")({
   head: () => ({
@@ -28,16 +29,6 @@ export const Route = createFileRoute("/_authenticated/app/setup")({
   }),
   component: SetupPage,
 });
-
-function slugify(value: string) {
-  return (
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 24) || "rooms"
-  );
-}
 
 function SetupPage() {
   const navigate = useNavigate();
@@ -71,6 +62,10 @@ function SetupPage() {
     pin: "",
   });
 
+  // Free (or left for the server to fill in) guest link and door PIN.
+  const [linkOk, setLinkOk] = useState(true);
+  const [pinOk, setPinOk] = useState(true);
+
   const steps = trialUser ? [copy.step1, copy.step2, copy.step3, extraCopy.saveTitle] : [copy.step1, copy.step2, copy.step3];
 
   async function finish() {
@@ -83,7 +78,8 @@ function SetupPage() {
           name: property.name.trim(),
           address: property.address.trim() || null,
           postcode: property.postcode.trim() || null,
-          short_code: (property.short_code.trim() || slugify(property.name)).toLowerCase(),
+          // Empty: the server makes a free one from the name.
+          short_code: property.short_code.trim().toLowerCase(),
           check_in_pin: /^\d{6}$/.test(times.pin) ? times.pin : null,
           timezone: "Europe/London",
           default_check_in_time: times.check_in,
@@ -143,7 +139,7 @@ function SetupPage() {
   }
 
   const canContinue =
-    step === 0 ? property.name.trim().length > 1 : step === 1 ? rooms.some((r) => r.trim()) : true;
+    step === 0 ? property.name.trim().length > 1 && linkOk : step === 1 ? rooms.some((r) => r.trim()) : true;
 
   // Last step of a free trial: everything is set up, now save it to an account.
   if (saving) {
@@ -210,19 +206,15 @@ function SetupPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="slug">Short guest link</Label>
-              <Input
-                id="slug"
-                className="h-12"
-                value={property.short_code}
-                onChange={(e) => setProperty((p) => ({ ...p, short_code: e.target.value }))}
-                placeholder={slugify(property.name)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Guests will reach you at /kiosk/{property.short_code.trim() || slugify(property.name)}
-              </p>
-            </div>
+            <GuestLinkField
+              id="slug"
+              label="Short guest link"
+              value={property.short_code}
+              onChange={(v) => setProperty((p) => ({ ...p, short_code: v }))}
+              context={{ name: property.name, address: property.address, postcode: property.postcode }}
+              auto
+              onValid={setLinkOk}
+            />
           </>
         ) : null}
 
@@ -320,15 +312,14 @@ function SetupPage() {
                 onChange={(e) => setTimes((t) => ({ ...t, quiet_end: e.target.value }))}
               />
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="pin">Door PIN guests use (6 digits, optional)</Label>
-              <Input
+            <div className="sm:col-span-2">
+              <DoorPinField
                 id="pin"
-                inputMode="numeric"
-                maxLength={6}
-                className="h-12"
+                label="Door PIN guests use (6 digits)"
                 value={times.pin}
-                onChange={(e) => setTimes((t) => ({ ...t, pin: e.target.value.replace(/\D/g, "") }))}
+                onChange={(v) => setTimes((t) => ({ ...t, pin: v }))}
+                auto
+                onValid={setPinOk}
               />
             </div>
           </div>
@@ -345,7 +336,7 @@ function SetupPage() {
               {copy.next}
             </Button>
           ) : (
-            <Button onClick={finish} disabled={busy}>
+            <Button onClick={finish} disabled={busy || !linkOk || !pinOk}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : null}
               {copy.finish}
             </Button>

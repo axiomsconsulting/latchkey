@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { burnDrift, clockHands, kioskNow } from "../src/lib/kiosk-clock";
+import { burnDrift, clockHands, dayProgress, kioskNow, sunTimes } from "../src/lib/kiosk-clock";
 
 describe("kiosk clocks", () => {
   const at = new Date("2026-10-17T13:30:00Z"); // 14:30 in London (BST)
@@ -93,5 +93,42 @@ describe("quiet hours on the kiosk", () => {
     const { quietNow } = await import("../src/lib/kiosk-clock");
     expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "14:00", "16:00").active).toBe(true);
     expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "07:00", "07:00").active).toBe(false);
+  });
+});
+
+describe("day progress", () => {
+  it("puts sunrise and sunset about right for London in autumn and summer", () => {
+    const oct = sunTimes(new Date("2026-10-18T12:00:00Z"), "Europe/London");
+    expect(oct.sunrise).toBeGreaterThan(7.3);
+    expect(oct.sunrise).toBeLessThan(8.2);
+    expect(oct.sunset).toBeGreaterThan(17.7);
+    expect(oct.sunset).toBeLessThan(18.6);
+    const june = sunTimes(new Date("2026-06-21T12:00:00Z"), "Europe/London");
+    expect(june.sunset - june.sunrise).toBeGreaterThan(16);
+  });
+
+  it("names the part of the day", () => {
+    const at = (iso: string) => dayProgress(new Date(iso), "Europe/London").phase;
+    expect(at("2026-10-18T02:00:00Z")).toBe("night");
+    expect(at("2026-10-18T06:45:00Z")).toBe("dawn");
+    expect(at("2026-10-18T08:30:00Z")).toBe("morning");
+    expect(at("2026-10-18T12:00:00Z")).toBe("midday");
+    expect(at("2026-10-18T14:30:00Z")).toBe("afternoon");
+    expect(at("2026-10-18T17:00:00Z")).toBe("dusk");
+    expect(at("2026-10-18T19:00:00Z")).toBe("evening");
+  });
+
+  it("moves the sun across the day and the moon across the night", () => {
+    const noon = dayProgress(new Date("2026-10-18T12:00:00Z"), "Europe/London");
+    expect(noon.sun).toBeGreaterThan(0.4);
+    expect(noon.sun).toBeLessThan(0.6);
+    const late = dayProgress(new Date("2026-10-18T23:30:00Z"), "Europe/London");
+    expect(late.sun).toBeNull();
+    expect(late.moon).toBeGreaterThan(0.3);
+  });
+
+  it("knows the seasons are the other way round in Sydney", () => {
+    const dec = sunTimes(new Date("2026-12-21T02:00:00Z"), "Australia/Sydney");
+    expect(dec.sunset - dec.sunrise).toBeGreaterThan(14);
   });
 });

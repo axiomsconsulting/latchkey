@@ -29,6 +29,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.36.0",
+    date: "2026-10-18",
+    title: "Unique guest links and door PINs, and a tidier kiosk top bar",
+    items: [
+      { kind: "new", area: "Settings", text: "New properties get a guest link made from the property's own name (without words like “hotel” or “guest house”) and a random door PIN, both unique on Latchkey." },
+      { kind: "new", area: "Settings", text: "Change either one and Latchkey checks straight away whether it's free. If a guest link is taken, you get up to three free ones like it." },
+      { kind: "improved", area: "Check-in", text: "The kiosk's rest-screen button now sits beside the time and shows how far through the day it is, from dawn to night. Tap it to rest the screen." },
+      { kind: "improved", area: "Check-in", text: "The “use your phone” QR button sits in the same place beside the time once check-in starts." },
+    ],
+  },
+  {
     version: "0.35.0",
     date: "2026-10-18",
     title: "Kiosk fits every screen, and ID photos in the register",

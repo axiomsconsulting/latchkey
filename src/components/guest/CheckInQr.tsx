@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import { Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
 
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { guest as copy } from "@/content/copy";
 import { cn } from "@/lib/utils";
+import { headerIconClass } from "@/components/guest/KioskClocks";
 
 /** Draws the QR once per URL; the image is small enough to keep in state. */
 function useQrImage(url: string | null) {
@@ -164,8 +166,10 @@ export function GuideLink({ url, kiosk = false }: { url: string; kiosk?: boolean
 export function KioskQr({ url, large, carryOn }: { url: string; large: boolean; carryOn: boolean }) {
   const src = useQrImage(url);
   const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState<HTMLElement | null>(null);
   useEffect(() => {
     if (large) setOpen(false);
+    setTarget(document.getElementById("kiosk-header-action"));
   }, [large]);
   if (!src) return null;
   if (large) {
@@ -179,17 +183,21 @@ export function KioskQr({ url, large, carryOn }: { url: string; large: boolean; 
       </aside>
     );
   }
+  const button = (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-label={carryOn ? copy.qrOpen : copy.kioskQrTitle}
+      title={carryOn ? copy.qrOpen : copy.kioskQrTitle}
+      className={target ? headerIconClass : `${headerIconClass} fixed bottom-5 right-5 z-40`}
+    >
+      <QrCode className="size-9" strokeWidth={1.5} />
+    </button>
+  );
   return (
     <>
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setOpen(true)}
-        aria-label={carryOn ? copy.qrOpen : copy.kioskQrTitle}
-        className="fixed bottom-5 right-5 z-40 size-14 rounded-full shadow-lifted"
-      >
-        <QrCode className="size-6" />
-      </Button>
+      {/* Beside the time and date at the top of the kiosk, where the day icon sits on the welcome. */}
+      {target ? createPortal(button, target) : button}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
