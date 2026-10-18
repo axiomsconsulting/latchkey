@@ -16,14 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { PinPad } from "@/components/guest/PinPad";
 import { InstallApp } from "@/components/InstallApp";
-import { KioskClock, KioskScreensaver } from "@/components/guest/KioskClocks";
+import { KioskClock, KioskScreensaver, useSaverLook } from "@/components/guest/KioskClocks";
 import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
 import { Moon } from "lucide-react";
-import { KIOSK_RESET_MS, KIOSK_SAVER_MS } from "@/lib/kiosk-clock";
 import { guest as copy } from "@/content/copy";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 
-// No tap for 5 minutes: cancel the check-in on this tablet; 5 more: screensaver.
+// Press and hold the top-right corner this long for the host's exit.
 const HOLD_MS = 3_000;
 
 export const Route = createFileRoute("/kiosk/$code")({
@@ -102,19 +101,23 @@ function Kiosk() {
   const saverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saver, setSaver] = useState(false);
   const [atWelcome, setAtWelcome] = useState(true);
-  const { welcome, dismiss } = useKioskWelcome(p.code, shared);
+  // Brightness, clock size and timings: the host's own where set, else Latchkey's (super admin).
+  const saverLook = useSaverLook(p.code);
+  const { resetMinutes, saverMinutes, welcomeMinutes } = saverLook.defaults;
+  const { welcome, dismiss } = useKioskWelcome(p.code, shared, welcomeMinutes);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // No touch for resetMinutes: an unfinished check-in starts again for the next
+  // guest; no touch for saverMinutes (from the same last touch): rest the screen.
   const bump = useCallback(() => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
     if (saverTimer.current) clearTimeout(saverTimer.current);
     idleTimer.current = setTimeout(() => {
-      // Nobody's here: start again for the next guest, then rest the screen.
       setExitOpen(false);
       setSession((s) => s + 1);
-      saverTimer.current = setTimeout(() => setSaver(true), KIOSK_SAVER_MS);
-    }, KIOSK_RESET_MS);
-  }, []);
+    }, resetMinutes * 60_000);
+    saverTimer.current = setTimeout(() => setSaver(true), saverMinutes * 60_000);
+  }, [resetMinutes, saverMinutes]);
 
   useEffect(() => {
     // A guest's own phone keeps their place however long they take.
@@ -212,6 +215,7 @@ function Kiosk() {
       {shared && saver ? (
         <KioskScreensaver
           name={p.name}
+          saver={saverLook}
           tz={p.timezone ?? "Europe/London"}
           quiet={{ start: p.quietStart, end: p.quietEnd }}
           onWake={() => {

@@ -58,11 +58,6 @@ export function worldClocksFor(homeTz: string, homeCity: string, at: Date): Arra
   return [...behind.map(strip), { city: homeCity, tz: homeTz, home: true }, ...ahead.map(strip)];
 }
 
-/** No tap for this long: the check-in on this tablet is cancelled and the welcome shows again. */
-export const KIOSK_RESET_MS = 5 * 60_000;
-/** And this much longer: the screensaver comes on. */
-export const KIOSK_SAVER_MS = 5 * 60_000;
-
 function parts(at: Date, tz: string) {
   const f = new Intl.DateTimeFormat("en-GB", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const get = (t: string) => Number(f.formatToParts(at).find((p) => p.type === t)?.value ?? 0);

@@ -132,3 +132,45 @@ export const dismissKioskWelcome = createServerFn({ method: "POST" })
     await db.from("kiosk_messages").update({ dismissed_at: new Date().toISOString(), dismissed_version: data.version }).eq("property_id", id).eq("version", data.version);
     return { ok: true };
   });
+
+/* ---------------------------- screensaver look ---------------------------- */
+
+async function saverDefaults(db: Loose) {
+  const { normaliseDefaults } = await import("./kiosk-saver");
+  const { data, error } = await db.from("site_settings").select("kiosk_saver").eq("id", 1).maybeSingle();
+  return normaliseDefaults(error ? null : data?.kiosk_saver);
+}
+
+async function hostByCode(db: Loose, code: string) {
+  const { data } = await db.from("properties").select("host_id, is_demo").eq("short_code", code.toLowerCase()).maybeSingle();
+  return data ? { hostId: data.host_id as string, demo: data.is_demo === true } : null;
+}
+
+/** The kiosk's screensaver brightness and clock size: the host's own, or Latchkey's starting point. */
+export const kioskSaverLook = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ code }).parse(d))
+  .handler(async ({ data }) => {
+    const { admin } = await import("./checkin.server");
+    const { lookFor } = await import("./kiosk-saver");
+    const db = (await admin()) as unknown as Loose;
+    const defaults = await saverDefaults(db);
+    const host = await hostByCode(db, data.code);
+    const { data: own, error } = host ? await db.from("kiosk_looks").select("brightness, size").eq("host_id", host.hostId).maybeSingle() : { data: null, error: null };
+    const row = error || !own ? null : { brightness: own.brightness === null ? undefined : Number(own.brightness), size: own.size === null ? undefined : Number(own.size) };
+    return { defaults, look: lookFor(defaults, row) };
+  });
+
+/** Changed on the screensaver's bands: kept for every kiosk of this host, inside the limits. */
+export const saveKioskSaverLook = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code, brightness: z.number().finite(), size: z.number().finite() }).parse(d))
+  .handler(async ({ data }) => {
+    const { admin } = await import("./checkin.server");
+    const { lookFor } = await import("./kiosk-saver");
+    const db = (await admin()) as unknown as Loose;
+    const host = await hostByCode(db, data.code);
+    const look = lookFor(await saverDefaults(db), data);
+    // The shared demo and tour kiosks keep Latchkey's look for every visitor.
+    if (!host || host.demo) return { ok: false, look };
+    const { error } = await db.from("kiosk_looks").upsert({ host_id: host.hostId, ...look, updated_at: new Date().toISOString() }, { onConflict: "host_id" });
+    return { ok: !error, look };
+  });

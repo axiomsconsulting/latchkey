@@ -29,6 +29,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.34.0",
+    date: "2026-10-18",
+    title: "A brighter, adjustable screensaver",
+    items: [
+      { kind: "improved", area: "Check-in", text: "The kiosk screensaver is brighter, so the clocks are easy to read." },
+      { kind: "new", area: "Check-in", text: "On the screensaver, touch and slide the left edge to change brightness, or the right edge to make the clocks and text bigger or smaller. Your choice is kept for all your kiosks." },
+      { kind: "new", area: "Check-in", text: "A welcome you put on the kiosk now closes by itself if nobody taps it." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: set every kiosk's starting brightness and clock size, the smallest and largest size hosts can choose, and when the check-in resets, the screensaver starts and a welcome closes." },
+    ],
+  },
+  {
     version: "0.33.1",
     date: "2026-10-17",
     title: "Check-in screen fixes",

@@ -12,6 +12,7 @@ import { PricingStudio } from "@/components/host/PricingStudio";
 import { RoutinesAdmin } from "@/components/host/RoutinesAdmin";
 import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
+import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,7 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="settings" className="mt-4 space-y-6">
           <SiteSettings />
+          <KioskSaverAdmin />
           <PricingAdmin />
           <SuperAdmins />
         </TabsContent>

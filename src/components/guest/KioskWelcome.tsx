@@ -12,7 +12,7 @@ type Welcome = { headline: string; body: string | null; version: number };
  * The host's welcome for an arriving guest, kept up to date on the kiosk:
  * read on start, every minute, and the moment the host changes it.
  */
-export function useKioskWelcome(code: string, enabled = true) {
+export function useKioskWelcome(code: string, enabled = true, closeAfterMinutes = 0) {
   const fetchFn = useServerFn(kioskWelcome);
   const dismissFn = useServerFn(dismissKioskWelcome);
   const [message, setMessage] = useState<Welcome | null>(null);
@@ -35,6 +35,14 @@ export function useKioskWelcome(code: string, enabled = true) {
       stop();
     };
   }, [code, load, enabled]);
+
+  // Left untouched on screen this long, it closes by itself (not counted as the guest's tap).
+  const shown = message && tapped !== message.version ? message.version : null;
+  useEffect(() => {
+    if (shown === null || closeAfterMinutes <= 0) return;
+    const id = window.setTimeout(() => setTapped(shown), closeAfterMinutes * 60_000);
+    return () => window.clearTimeout(id);
+  }, [shown, closeAfterMinutes]);
 
   const dismiss = () => {
     if (!message) return;

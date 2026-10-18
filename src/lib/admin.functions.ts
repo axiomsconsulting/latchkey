@@ -294,6 +294,42 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* --------------------------- kiosk screensaver ---------------------------- */
+
+/** Every kiosk's starting brightness and the clock size limits hosts can choose between. */
+export const getKioskSaverDefaults = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { normaliseDefaults } = await import("./kiosk-saver");
+    const { data, error } = await loose(await admin()).from("site_settings").select("kiosk_saver").eq("id", 1).maybeSingle();
+    return { available: !error, defaults: normaliseDefaults(error ? null : data?.kiosk_saver) };
+  });
+
+export const saveKioskSaverDefaults = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        brightness: z.number().finite(),
+        size: z.number().finite(),
+        sizeMin: z.number().finite(),
+        sizeMax: z.number().finite(),
+        resetMinutes: z.number().finite(),
+        saverMinutes: z.number().finite(),
+        welcomeMinutes: z.number().finite(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { normaliseDefaults } = await import("./kiosk-saver");
+    const kiosk_saver = normaliseDefaults(data);
+    const { error } = await loose(context.supabase).from("site_settings").update({ kiosk_saver, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw new Error(error.message);
+    return { ok: true, defaults: kiosk_saver };
+  });
+
 /* ----------------------------- support access ----------------------------- */
 
 /** The owner lets Latchkey support make changes for 30 days, or stops it now. */
