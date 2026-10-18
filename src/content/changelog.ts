@@ -29,6 +29,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.38.1",
+    date: "2026-10-18",
+    title: "Typing on the kiosk",
+    items: [
+      { kind: "fixed", area: "Check-in", text: "On a tablet, opening the keyboard to type a name no longer shrinks the check-in screen. The box you're typing in moves into view, and the screen goes back to full size when you're done." },
+    ],
+  },
+  {
     version: "0.38.0",
     date: "2026-10-18",
     title: "Simpler kiosk icons",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FIT, fitFontSize, fitted, widthCap } from "../src/lib/kiosk-fit";
+import { FIT, displayChanged, fitFontSize, fitted, widthCap } from "../src/lib/kiosk-fit";
 
 describe("kiosk fit to screen", () => {
   it("shrinks the page on a phone on its side", () => {
@@ -25,5 +25,22 @@ describe("kiosk fit to screen", () => {
   it("leaves a near fit alone", () => {
     expect(fitted(805, 820)).toBe(true);
     expect(fitted(700, 820)).toBe(false);
+  });
+});
+
+describe("is the display really different?", () => {
+  const tablet = { w: 820, h: 1180, orientation: "portrait" as const };
+  it("ignores the on-screen keyboard while typing", () => {
+    expect(displayChanged(tablet, { ...tablet, h: 780 }, true)).toBe(false);
+  });
+  it("ignores a phone's address bar", () => {
+    expect(displayChanged(tablet, { ...tablet, h: 1120 }, false)).toBe(false);
+  });
+  it("fits again when the device turns or the width changes", () => {
+    expect(displayChanged(tablet, { w: 1180, h: 820, orientation: "landscape" }, true)).toBe(true);
+    expect(displayChanged(tablet, { ...tablet, w: 700 }, false)).toBe(true);
+  });
+  it("fits again when a desktop window is made much shorter", () => {
+    expect(displayChanged({ w: 1400, h: 900, orientation: "landscape" }, { w: 1400, h: 600, orientation: "landscape" }, false)).toBe(true);
   });
 });

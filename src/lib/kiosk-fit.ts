@@ -26,3 +26,22 @@ export const fitted = (contentPx: number, viewportPx: number) => Math.abs(conten
 /** Wider rem layouts wrap and grow taller instead of filling the screen, so growth also stops at the width. */
 export const FIT_WIDTH_REM = 60;
 export const widthCap = (viewportWidthPx: number) => viewportWidthPx / FIT_WIDTH_REM;
+
+export type Orientation = "portrait" | "landscape";
+export type Display = { w: number; h: number; orientation: Orientation };
+
+/**
+ * When the browser says its size changed, is the display really different?
+ * - The device turned, or the width changed (a desktop window, a foldable
+ *   opening): yes, fit again.
+ * - Only the height changed while a text box has focus: that's the on-screen
+ *   keyboard; the display hasn't changed.
+ * - A small height change: a phone's address bar; ignore.
+ * - A big height change with nothing being typed: a desktop window; fit again.
+ */
+export function displayChanged(was: Display, now: Display, typing: boolean): boolean {
+  if (now.orientation !== was.orientation) return true;
+  if (Math.abs(now.w - was.w) > 1) return true;
+  if (typing) return false;
+  return Math.abs(now.h - was.h) > 150;
+}
