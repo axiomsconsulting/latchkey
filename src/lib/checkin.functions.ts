@@ -156,6 +156,8 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       sites: await guestSites(p.host_id),
       theme: normaliseTheme(p.theme_config),
       demoHint: isTour(p) ? await demoHint(p.id, today) : null,
+      /** The public guest tour: the same kiosk, with a few demo hooks (kiosk.$code.tsx). */
+      tour: isTour(p),
     };
   });
 

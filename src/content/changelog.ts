@@ -29,6 +29,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.37.2",
+    date: "2026-10-18",
+    title: "The guest tour is the real kiosk",
+    items: [
+      { kind: "fixed", area: "Demo", text: "The guest tour now shows exactly what guests see: on a tablet or computer, the door-tablet screen with the phone square, the day icon, the screensaver and the fitted screens; on a phone, the phone version." },
+    ],
+  },
+  {
     version: "0.37.1",
     date: "2026-10-18",
     title: "Steadier check-in screens",

@@ -21,7 +21,8 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
     try {
       const res = await run({ data: { as } });
       if (as === "guest") {
-        await navigate({ to: "/kiosk/$code", params: { code: res.code }, search: { guest: true } });
+        // The real kiosk screen: a phone gets the phone version, a tablet or computer the door-tablet one.
+        await navigate({ to: "/kiosk/$code", params: { code: res.code } });
         return;
       }
       // Local only: a global sign-out here would end every other demo visitor's session.

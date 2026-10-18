@@ -192,9 +192,13 @@ function Kiosk() {
   // (idle reset, screensaver, welcome overlay, hidden exit, kiosk install).
   const personal = guest === true || !!resume || !!join || usePortraitPhone();
   const shared = !personal;
+  // The public guest tour is this same screen. Its only differences are hooks here
+  // (and isTour() on the server): it never takes over the visitor's browser,
+  // and the hidden host corner just leaves the tour.
+  const tour = p.tour === true;
   // Installing from here installs this property's kiosk, not the host app.
   useEffect(() => {
-    if (!shared) return;
+    if (!shared || tour) return;
     const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
     if (!link) return;
     const before = link.href;
@@ -202,7 +206,7 @@ function Kiosk() {
     return () => {
       link.href = before;
     };
-  }, [p.code, shared]);
+  }, [p.code, shared, tour]);
   const navigate = useNavigate();
   const unlock = useServerFn(kioskUnlock);
   const [session, setSession] = useState(0);
@@ -249,12 +253,14 @@ function Kiosk() {
   }, [bump, shared]);
 
   function goFullscreen() {
-    if (!shared) return;
+    if (!shared || tour) return;
     if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
   }
 
   function startHold() {
     holdTimer.current = setTimeout(() => {
+      // Tour: there's no host PIN; the corner just leaves the tour.
+      if (tour) return void navigate({ to: "/", search: { home: true } });
       setPin("");
       setPinError(false);
       setExitOpen(true);
