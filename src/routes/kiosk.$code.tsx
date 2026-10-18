@@ -324,7 +324,9 @@ function Kiosk() {
 
   function goFullscreen() {
     if (!shared || tour) return;
-    if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
+    // navigationUI "hide": Android browsers that honour it also hide the bottom navigation bar.
+    // Browsers that ignore full screen (some bundled ones) need the kiosk installed as an app instead.
+    if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
   }
 
   function startHold() {

@@ -79,6 +79,64 @@ export const marketing = {
       body: "Late check-out, fresh towels, early arrival. Guests request and pay; you approve with one tap or let it run itself.",
     },
   ],
+  /** Where the booking sites stop and Latchkey takes over. */
+  gap: {
+    eyebrow: "Why Latchkey",
+    title: "Booking sites bring the guest. The rest has always been on you.",
+    body: "Airbnb, Booking.com and the others take the booking and the payment. Once the guest is at your door, their part is done: who walks in, what the law asks you to keep, and everything during the stay is yours. Latchkey takes over exactly there, whichever site they booked on, and works alongside all of them.",
+    theyLabel: "The booking site",
+    youLabel: "Left to you",
+    usLabel: "With Latchkey",
+    rows: [
+      {
+        topic: "Who actually arrives",
+        they: "Checks the ID of the person who booked.",
+        you: "Partners, friends and family walk in unchecked.",
+        us: "Every adult photographs their ID at check-in, matched to the booking name, on the tablet or on their own phones at the same time. Children just give their age.",
+      },
+      {
+        topic: "The guest register",
+        they: "Nothing. It isn't their duty.",
+        you: "UK law asks you to record every guest's name and nationality, more for overseas guests, keep it 12 months and show it on request.",
+        us: "The register fills itself in as guests check in, is kept for 12 months, then removed, and is ready to print or download for an inspection.",
+      },
+      {
+        topic: "Calendars",
+        they: "Each site has its own; calendar links share dates only, often hours late.",
+        you: "Double bookings, and no single view of who's arriving where.",
+        us: "Every site's calendar in one list, the same stay recognised across sites, clashes flagged, and a calendar link you can share with your cleaner or team.",
+      },
+      {
+        topic: "Arrival",
+        they: "Check-in notes sit in their app, which few guests open at the door.",
+        you: "Late-night calls, handing over keys, guests waiting outside.",
+        us: "Guests check themselves in at the door or on their phone. The door code, Wi-Fi, parking and house rules then appear on their phone, only from the day they arrive.",
+      },
+      {
+        topic: "During the stay",
+        they: "A message thread.",
+        you: "Towels at 11pm, a dripping tap, “can we check out late?”",
+        us: "Requests, paid extras and repairs in one inbox, paid straight into your own Stripe account. Booking-site messages join the same conversation.",
+      },
+      {
+        topic: "Guests who come back",
+        they: "Take commission on every stay, even the regulars.",
+        you: "Returning guests still book through them.",
+        us: "Take direct bookings with numbered invoices, and keep the commission.",
+      },
+    ],
+  },
+  developers: {
+    eyebrow: "For developers",
+    title: "An open API, and a server for AI assistants",
+    body: "Connect Latchkey to your own tools, or let an AI assistant work with your arrivals. Both use the same keys, which you make and revoke in Settings.",
+    points: [
+      { title: "REST API", body: "Properties, rooms, bookings, today's arrivals, guest requests and messages. Documented with OpenAPI, with examples for every call." },
+      { title: "MCP server", body: "Plug Latchkey into Claude, ChatGPT or any assistant that speaks the Model Context Protocol: “Who's arriving today?” just works." },
+      { title: "Your keys, your rules", body: "Read-only or read-and-write keys, per business. Every call is counted, and a key can be revoked at any time." },
+    ],
+    cta: "See the developer docs",
+  },
   beforeAfter: {
     beforeTitle: (day: string) => `A ${day} before Latchkey`,
     before: [
@@ -346,6 +404,8 @@ export const pwaCopy = {
   iosStep3: "Open Latchkey from your home screen. Alerts on iPhone and iPad need it opened this way.",
   iosKiosk: "Open the check-in icon from the home screen: it runs full screen. Turn on Guided Access (Settings → Accessibility) to keep it on the kiosk.",
   menuInstall: "Open your browser's menu and choose “Install app” or “Add to Home screen”.",
+  androidKiosk:
+    "Then open the check-in icon from the home screen: it runs full screen, without the bottom navigation bar. If your tablet's own browser can't install apps, use Chrome. To keep the tablet on the kiosk, turn on screen pinning (Settings → Security → App pinning) and pin it.",
 };
 
 /** Settings: where the host's alerts go. */

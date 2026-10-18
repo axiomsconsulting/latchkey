@@ -53,7 +53,10 @@ export function InstallApp({ kiosk = false, size = "default", className }: { kio
             <li className="text-muted-foreground">{kiosk ? copy.iosKiosk : copy.iosStep3}</li>
           </ol>
         ) : (
-          <p>{copy.menuInstall}</p>
+          <div className="space-y-2">
+            <p>{copy.menuInstall}</p>
+            {kiosk ? <p className="text-muted-foreground">{copy.androidKiosk}</p> : null}
+          </div>
         )}
       </PopoverContent>
     </Popover>

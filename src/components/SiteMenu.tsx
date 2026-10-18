@@ -41,7 +41,7 @@ export function SiteMenu() {
       <div className="relative">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" aria-label={siteMenu.open} className="relative z-10 size-11">
+            <Button variant="outline" size="icon" aria-label={siteMenu.open} className="relative z-10 size-11 pointer-coarse:size-12 pointer-coarse:[&_svg]:size-5">
               <Menu />
             </Button>
           </SheetTrigger>
@@ -140,10 +140,11 @@ function Shortcuts({
     );
   }
   // Larger screens: two separate bubbles just below the menu button.
+  // On a touch screen (a tablet, a touch laptop) they're finger-sized, whatever the screen's width.
   const bubble =
-    "spring flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-soft hover:-translate-y-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+    "spring flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-soft hover:-translate-y-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-12 pointer-coarse:gap-2 pointer-coarse:px-5 pointer-coarse:text-base pointer-coarse:[&_svg]:size-5";
   return (
-    <nav aria-label={siteMenu.shortcuts} className={cn("flex gap-2", className)}>
+    <nav aria-label={siteMenu.shortcuts} className={cn("flex gap-2 pointer-coarse:gap-3", className)}>
       <Link to={host} className={bubble} title={siteMenu.hostHint}>
         <LayoutDashboard className="size-3.5" /> {siteMenu.host}
       </Link>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Check, Minus, ScanLine, Sparkles, Layers } from "lucide-react";
+import { ArrowRight, Bot, Braces, Check, Code2, KeyRound, Minus, ScanLine, Sparkles, Layers } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ChannelBadge } from "@/components/ChannelBadge";
@@ -100,7 +100,33 @@ function Landing() {
           </div>
         </section>
 
-        <PricingSection />
+        {/* Where the booking sites stop, Latchkey takes over. */}
+        <section className="mb-16" aria-labelledby="gap-title">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">{marketing.gap.eyebrow}</p>
+          <h2 id="gap-title" className="mt-3 max-w-3xl text-3xl leading-tight sm:text-4xl">{marketing.gap.title}</h2>
+          <p className="mt-4 max-w-3xl text-lg leading-relaxed text-muted-foreground">{marketing.gap.body}</p>
+          <div className="mt-8 grid gap-4">
+            {marketing.gap.rows.map((r) => (
+              <article key={r.topic} className="card-soft grid gap-4 p-5 sm:p-6 lg:grid-cols-[12rem_1fr_1fr_1.4fr] lg:items-start">
+                <h3 className="font-display text-lg">{r.topic}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{marketing.gap.theyLabel}</span>
+                  {r.they}
+                </p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{marketing.gap.youLabel}</span>
+                  {r.you}
+                </p>
+                <p className="rounded-2xl bg-primary/5 p-3 text-sm leading-relaxed">
+                  <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+                    <Check className="size-3.5" /> {marketing.gap.usLabel}
+                  </span>
+                  {r.us}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section className="grid gap-5 sm:grid-cols-3">
           {marketing.benefits.map((benefit, i) => {
@@ -116,6 +142,36 @@ function Landing() {
             );
           })}
         </section>
+
+        {/* For developers: the API and the MCP server. */}
+        <section className="mt-16 rounded-3xl border border-border bg-muted p-6 sm:p-10" aria-labelledby="dev-title">
+          <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+            <Code2 className="size-4" /> {marketing.developers.eyebrow}
+          </p>
+          <h2 id="dev-title" className="mt-3 text-2xl sm:text-3xl">{marketing.developers.title}</h2>
+          <p className="mt-3 max-w-3xl leading-relaxed text-muted-foreground">{marketing.developers.body}</p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {marketing.developers.points.map((d, i) => {
+              const Icon = [Braces, Bot, KeyRound][i] ?? Braces;
+              return (
+                <article key={d.title} className="rounded-2xl bg-card p-5 shadow-soft">
+                  <Icon className="size-6 text-primary" />
+                  <h3 className="mt-3 font-display text-lg">{d.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{d.body}</p>
+                </article>
+              );
+            })}
+          </div>
+          <Button asChild variant="outline" size="lg" className="mt-6">
+            <Link to="/developers">
+              {marketing.developers.cta} <ArrowRight />
+            </Link>
+          </Button>
+        </section>
+
+        <div className="mt-16">
+          <PricingSection />
+        </div>
 
         <section className="mt-16 grid gap-5 md:grid-cols-2">
           <article className="rounded-3xl border border-border bg-muted p-6 sm:p-8">

@@ -29,6 +29,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.39.0",
+    date: "2026-10-18",
+    title: "Full screen on Android, and a clearer home page",
+    items: [
+      { kind: "improved", area: "Check-in", text: "On Android tablets, the kiosk's full screen also hides the bottom navigation bar where the browser allows it, and the install tips explain how to run it as its own full-screen app." },
+      { kind: "improved", area: "Website", text: "On tablets and other touch screens, the Host and Guest buttons at the top of the home page are bigger and easier to tap." },
+      { kind: "new", area: "Website", text: "The home page shows where Latchkey takes over from the booking sites, and what Latchkey offers developers: an open API and a server for AI assistants." },
+    ],
+  },
+  {
     version: "0.38.1",
     date: "2026-10-18",
     title: "Typing on the kiosk",
