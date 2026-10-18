@@ -29,6 +29,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.37.1",
+    date: "2026-10-18",
+    title: "Steadier check-in screens",
+    items: [
+      { kind: "fixed", area: "Check-in", text: "On phones, the screen no longer shakes while choosing the first letter of your surname." },
+      { kind: "fixed", area: "Check-in", text: "The top bar (logo, name, time and date, and the icon beside them) now stays in exactly the same place on every check-in screen." },
+    ],
+  },
+  {
     version: "0.37.0",
     date: "2026-10-18",
     title: "Everyone checks in together, and every screen fits",

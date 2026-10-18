@@ -201,13 +201,13 @@ export function KioskQr({
       onClick={() => setOpen(true)}
       aria-label={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
       title={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
-      className={cn("relative flex flex-col items-center gap-0.5 rounded-xl px-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", !target && "fixed bottom-5 right-5 z-40")}
+      className={cn("relative flex flex-col items-center gap-[0.125em] rounded-xl px-[0.25em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", !target && "fixed bottom-5 right-5 z-40")}
     >
-      <span className="relative grid size-12 place-items-center">
-        <QrCode className="size-9" strokeWidth={1.5} />
-        <ArrowUpRight className={cn("absolute -right-0.5 -top-0.5 size-4", others && "text-primary")} strokeWidth={2.25} />
+      <span className="relative grid size-[2.75em] place-items-center">
+        <QrCode className="size-[2.25em]" strokeWidth={1.5} />
+        <ArrowUpRight className={cn("absolute -right-[0.125em] -top-[0.125em] size-[1em]", others && "text-primary")} strokeWidth={2.25} />
       </span>
-      <span className={cn("max-w-[7.5rem] text-center text-[0.65rem] font-medium leading-tight", others && "text-primary")}>{caption}</span>
+      <span className={cn("max-w-[7.5em] text-center text-[0.65em] font-medium leading-tight", others && "text-primary")}>{caption}</span>
     </button>
   );
   return (

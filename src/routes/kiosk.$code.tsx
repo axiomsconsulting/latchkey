@@ -77,81 +77,109 @@ function usePortraitPhone() {
 }
 
 /**
- * Every check-in screen fits the display, so nothing runs past the bottom.
- * Wider than tall, the welcome sets the scale: the base font size is chosen
- * so it just fills the height (every size here is in rem, so it all scales
- * together). Each later screen uses that scale, or shrinks until it fits
- * if it would run past the bottom. Upright (phones, tablets held tall), the
- * page is as designed and only ever shrinks to fit.
+ * Every check-in screen fits the display, so nothing runs past the bottom,
+ * and nothing shakes. Everything below the header is in rem, so the page's
+ * base font size scales it all together.
+ *
+ * - Wider than tall, the welcome sets the scale: it grows or shrinks to just
+ *   fill the height. Upright, the scale is the page as designed (16px).
+ * - Each new screen starts at that scale and then only ever shrinks, until
+ *   it fits. Never growing back is what keeps it steady: text that unwraps
+ *   as it shrinks can't push it into growing and overflowing again.
+ * - The header (--kiosk-header) is sized once per display, from the scale,
+ *   so it stays exactly where it is from screen to screen.
+ * - A phone's address bar showing or hiding only re-checks; turning the
+ *   screen or a real resize starts again.
  */
 function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome: boolean, stepKey: string) {
   const welcome = useRef(atWelcome);
   welcome.current = atWelcome;
-  const refit = useRef<{ schedule: () => void; reset: () => void }>({ schedule: () => {}, reset: () => {} });
+  const refit = useRef<{ reset: () => void }>({ reset: () => {} });
   useEffect(() => {
     const html = document.documentElement;
     const before = html.style.fontSize;
     // Font size per pixel of screen height, from the last landscape welcome.
     let ratio: number | null = null;
-    // A size that turned out too tall (text wrapped): never grow back past it on this screen.
-    let ceiling: number = FIT.max;
+    // Since the last reset: may this screen still grow (only the landscape welcome, until it first shrinks)?
+    let mayGrow = false;
     let frame = 0;
-    const set = (px: number) => {
-      html.style.fontSize = px === FIT.base && ratio === null ? before : `${px}px`;
+    let lastW = window.innerWidth;
+    let lastH = window.innerHeight;
+    const px = () => Number.parseFloat(window.getComputedStyle(html).fontSize) || FIT.base;
+    const set = (v: number) => {
+      html.style.fontSize = v === FIT.base ? before : `${v}px`;
     };
-    const apply = () => {
+    const scale = () => {
+      const h = window.innerHeight;
+      if (window.innerWidth <= h) return FIT.base;
+      return ratio !== null ? Math.min(FIT.max, Math.max(FIT.min, ratio * h)) : FIT.base;
+    };
+    const header = (v: number) => html.style.setProperty("--kiosk-header", `${v}px`);
+
+    const check = () => {
       const el = content.current;
       if (!el) return;
       const h = window.innerHeight;
       const landscape = window.innerWidth > h;
-      const current = Number.parseFloat(window.getComputedStyle(html).fontSize) || FIT.base;
+      const current = px();
       const tall = el.offsetHeight;
-      if (tall > h && !fitted(tall, h)) ceiling = Math.min(ceiling, current);
-      if (landscape && welcome.current) {
-        const max = Math.min(ceiling, widthCap(window.innerWidth));
-        // Never past the bottom; a near fit with room to spare is left alone.
-        const next = tall <= h && fitted(tall, h) && current <= max ? current : fitFontSize(current, tall, tall > h ? h * 0.99 : h, { min: FIT.min, max });
-        ratio = next / h;
-        if (next !== current) set(next);
-        return;
-      }
-      if (!landscape) ratio = null;
-      // The screen's own scale: the welcome's in landscape, the page's own upright.
-      const base = ratio !== null ? Math.min(FIT.max, Math.max(FIT.min, ratio * h)) : FIT.base;
-      const max = Math.min(base, ceiling);
       const min = landscape ? FIT.min : FIT.min_upright;
-      const fits = tall <= h;
-      // Too tall: shrink until it fits (a hair under, so rounding never leaves it over). Room to spare below its scale: grow back, never past it.
-      let next = current;
-      if (!fits) next = fitFontSize(current, tall, h * 0.99, { min, max });
-      else if (current < max && !fitted(tall, h)) next = fitFontSize(current, tall, h * 0.99, { min, max });
-      else if (current > max) next = max;
-      if (Math.abs(next - current) > 0.05) set(next);
+      if (tall > h) {
+        // Too tall: shrink until it fits, a hair under so rounding never leaves it over.
+        mayGrow = false;
+        const next = fitFontSize(current, tall, h * 0.99, { min, max: current });
+        if (next < current - 0.05) set(next);
+      } else if (mayGrow && !fitted(tall, h)) {
+        const next = fitFontSize(current, tall, h * 0.99, { min, max: Math.min(FIT.max, widthCap(window.innerWidth)) });
+        if (next > current + 0.05) set(next);
+        else mayGrow = false;
+      } else {
+        mayGrow = false;
+      }
+      if (landscape && welcome.current) {
+        ratio = px() / h;
+        header(px());
+      }
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(apply);
+      frame = requestAnimationFrame(check);
     };
     const reset = () => {
-      ceiling = FIT.max;
+      const landscape = window.innerWidth > window.innerHeight;
+      if (!landscape) ratio = null;
+      const start = scale();
+      set(start);
+      header(start);
+      mayGrow = landscape && welcome.current;
       schedule();
     };
-    refit.current = { schedule, reset };
-    schedule();
-    // Content that changes size (a new screen, images loading, the font applied) settles the fit in a step or two.
+    const resized = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const real = w !== lastW || Math.abs(h - lastH) > 150;
+      lastW = w;
+      lastH = h;
+      if (real) reset();
+      else schedule();
+    };
+    refit.current = { reset };
+    reset();
+    // A screen that changes size (a message, images loading) is checked again; it can only shrink.
     const observer = new ResizeObserver(schedule);
     if (content.current) observer.observe(content.current);
-    window.addEventListener("resize", reset);
+    window.addEventListener("resize", resized);
     window.addEventListener("orientationchange", reset);
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener("resize", reset);
+      window.removeEventListener("resize", resized);
       window.removeEventListener("orientationchange", reset);
       html.style.fontSize = before;
+      html.style.removeProperty("--kiosk-header");
     };
   }, [content]);
-  // A new screen starts from its scale again.
+  // A new screen starts from the scale again.
   useEffect(() => {
     refit.current.reset();
   }, [atWelcome, stepKey]);
@@ -247,15 +275,17 @@ function Kiosk() {
   return (
     <ThemeScope theme={p.theme} global>
     {/* Inputs stay at 16px or more however small the page is fitted, so phones don't zoom in on them. */}
-    <div className="relative min-h-screen select-none bg-background px-4 sm:px-8 [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]" onPointerDown={goFullscreen}>
+    <div className="relative min-h-screen select-none bg-background px-[var(--kiosk-header,16px)] sm:px-[calc(var(--kiosk-header,16px)*2)] [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]" onPointerDown={goFullscreen}>
       {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}
       <div ref={content}>
-      <header className="mx-auto flex max-w-4xl items-center gap-3 pt-6">
-        <LogoMark theme={p.theme} name={p.name} />
-        <span className="min-w-0 truncate font-display text-lg">{p.name}</span>
+      {/* Sized once per display (--kiosk-header, in em below), so it never moves between screens. */}
+      <header className="mx-auto flex max-w-[56em] items-center gap-[0.75em] pt-[1.5em]" style={{ fontSize: "var(--kiosk-header, 16px)" }}>
+        <LogoMark theme={p.theme} name={p.name} className="size-[2.5em] shrink-0 text-[1.125em]" />
+        <span className="min-w-0 flex-1 truncate font-display text-[1.125em]">{p.name}</span>
         <KioskClock tz={p.timezone ?? "Europe/London"} longName={p.name.length > 14} />
         {/* Beside the time: the day's progress on the welcome (tap to rest the screen); later, the phone QR (CheckInFlow puts it here). */}
-        <div id="kiosk-header-action" className="flex shrink-0 items-center empty:hidden">
+        {/* Always the same box, whichever icon is in it (or none), so nothing beside it shifts. */}
+        <div id="kiosk-header-action" className={shared ? "flex h-[4.25em] w-[7.5em] shrink-0 items-center justify-center" : "hidden"}>
           {shared && atWelcome && !saver ? (
             <button
               type="button"
@@ -264,7 +294,7 @@ function Kiosk() {
               title={copy.saverStart}
               className={headerIconClass}
             >
-              <DayIcon tz={p.timezone ?? "Europe/London"} className="size-11" />
+              <DayIcon tz={p.timezone ?? "Europe/London"} className="size-[2.75em]" />
             </button>
           ) : null}
         </div>

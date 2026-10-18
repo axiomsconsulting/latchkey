@@ -41,18 +41,18 @@ export function KioskClock({ tz, longName = false }: { tz: string; /** The prope
   // Shown once running in the browser, so the server's time never mismatches the tablet's.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <span className="ml-auto" />;
+  if (!mounted) return <span className="shrink-0" />;
   const { date, shortDate, time } = kioskNow(now, tz);
   return (
-    <p className="ml-auto shrink-0 text-right font-display leading-tight" aria-live="off">
-      <span className="block text-lg tabular-nums">{time}</span>
+    <p className="shrink-0 text-right font-display leading-tight" aria-live="off">
+      <span className="block text-[1.125em] tabular-nums">{time}</span>
       {longName ? (
-        <span className="block whitespace-nowrap text-sm text-muted-foreground">
+        <span className="block whitespace-nowrap text-[0.875em] text-muted-foreground">
           <span className="sm:hidden">{shortDate}</span>
           <span className="hidden sm:inline">{date}</span>
         </span>
       ) : (
-        <span className="block whitespace-nowrap text-sm text-muted-foreground">{date}</span>
+        <span className="block whitespace-nowrap text-[0.875em] text-muted-foreground">{date}</span>
       )}
     </p>
   );
@@ -60,7 +60,7 @@ export function KioskClock({ tz, longName = false }: { tz: string; /** The prope
 
 /** The square button beside the clock: as tall as its two rows, and see-through. */
 export const headerIconClass =
-  "grid size-12 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "grid size-[3em] shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /**
  * How far through the day it is at the property, drawn: the sun along its
