@@ -35,13 +35,13 @@ export type GuestPerson = {
   } | null;
 };
 
-function title(p: GuestPerson) {
+export function personTitle(p: GuestPerson) {
   if (p.kind === "child") return p.register ? `${p.register.fullName} (${p.age})` : copy.child(p.age);
   return p.fullName ?? p.register?.fullName ?? (p.position === 0 ? copy.leadGuest : copy.adult(p.position + 1));
 }
 
 /** The tick a host looks for: the photo ID matches the name on the booking. */
-function IdBadge({ p }: { p: GuestPerson }) {
+export function IdBadge({ p }: { p: GuestPerson }) {
   if (p.kind === "child") return null;
   if (p.nameMatch === "matched") {
     return (
@@ -116,7 +116,7 @@ export function GuestPeople({
               <>
                 <Face p={p} size="size-11" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{title(p)}</span>
+                  <span className="block truncate font-medium">{personTitle(p)}</span>
                   <span className="block text-xs text-muted-foreground">
                     {p.kind === "adult" && p.position === 0 ? copy.leadGuest : null}
                     {p.kind === "adult" && p.documentType ? `${p.position === 0 ? " · " : ""}${copy.docType[p.documentType] ?? p.documentType}` : null}
@@ -132,7 +132,7 @@ export function GuestPeople({
                   <button
                     type="button"
                     className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left hover:bg-secondary"
-                    aria-label={copy.viewId(title(p))}
+                    aria-label={copy.viewId(personTitle(p))}
                     onClick={() => setOpen(p)}
                   >
                     {row}
@@ -152,7 +152,7 @@ export function GuestPeople({
             <>
               <DialogHeader>
                 <DialogTitle className="flex flex-wrap items-center gap-2 font-display text-xl">
-                  {copy.idDialogTitle(title(open))} <IdBadge p={open} />
+                  {copy.idDialogTitle(personTitle(open))} <IdBadge p={open} />
                 </DialogTitle>
                 <DialogDescription>{copy.deletedOn(formatUkDate(open.deleteAfter, { withYear: true }))}</DialogDescription>
               </DialogHeader>

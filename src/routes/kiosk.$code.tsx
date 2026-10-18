@@ -20,6 +20,7 @@ import { KioskClock, KioskScreensaver, useSaverLook } from "@/components/guest/K
 import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
 import { Moon } from "lucide-react";
 import { guest as copy } from "@/content/copy";
+import { FIT, fitFontSize, fitted, widthCap } from "@/lib/kiosk-fit";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 
 // Press and hold the top-right corner this long for the host's exit.
@@ -73,6 +74,72 @@ function usePortraitPhone() {
   return phone;
 }
 
+/**
+ * Wider than tall: size the whole page to the screen. On the welcome, the
+ * base font size is set so the content just fills the height (everything is
+ * in rem, so it all scales together); later steps keep that scale, following
+ * the height if the screen turns or resizes. Upright: the page as designed.
+ */
+function useLandscapeFit(content: React.RefObject<HTMLDivElement | null>, atWelcome: boolean) {
+  const welcome = useRef(atWelcome);
+  welcome.current = atWelcome;
+  const refit = useRef<() => void>(() => {});
+  useEffect(() => {
+    const html = document.documentElement;
+    const before = html.style.fontSize;
+    // Font size per pixel of screen height, from the last welcome fit.
+    let ratio: number | null = null;
+    // A size that turned out too tall (text wrapped): never grow back past it until the screen changes.
+    let ceiling: number = FIT.max;
+    let frame = 0;
+    const apply = () => {
+      const el = content.current;
+      const h = window.innerHeight;
+      if (!el || window.innerWidth <= h) {
+        html.style.fontSize = before;
+        ratio = null;
+        return;
+      }
+      const current = Number.parseFloat(window.getComputedStyle(html).fontSize) || FIT.base;
+      if (welcome.current) {
+        const tall = el.offsetHeight;
+        if (tall > h && !fitted(tall, h)) ceiling = Math.min(ceiling, current);
+        const max = Math.min(ceiling, widthCap(window.innerWidth));
+        const next = fitted(tall, h) && current <= max ? current : fitFontSize(current, tall, h, { min: FIT.min, max });
+        if (next !== current) html.style.fontSize = `${next}px`;
+        ratio = next / h;
+      } else if (ratio !== null) {
+        html.style.fontSize = `${Math.min(FIT.max, Math.max(FIT.min, Math.round(ratio * h * 100) / 100))}px`;
+      }
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(apply);
+    };
+    const resized = () => {
+      ceiling = FIT.max;
+      schedule();
+    };
+    refit.current = schedule;
+    schedule();
+    // Content that changes size (images loading, the font applied) settles the fit in a step or two.
+    const observer = new ResizeObserver(schedule);
+    if (content.current) observer.observe(content.current);
+    window.addEventListener("resize", resized);
+    window.addEventListener("orientationchange", resized);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", resized);
+      window.removeEventListener("orientationchange", resized);
+      html.style.fontSize = before;
+    };
+  }, [content]);
+  useEffect(() => {
+    if (atWelcome) refit.current();
+  }, [atWelcome]);
+}
+
 function Kiosk() {
   const p = Route.useLoaderData();
   const { guest, resume } = Route.useSearch();
@@ -106,6 +173,8 @@ function Kiosk() {
   const { resetMinutes, saverMinutes, welcomeMinutes } = saverLook.defaults;
   const { welcome, dismiss } = useKioskWelcome(p.code, shared, welcomeMinutes);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const content = useRef<HTMLDivElement | null>(null);
+  useLandscapeFit(content, atWelcome);
 
   // No touch for resetMinutes: an unfinished check-in starts again for the next
   // guest; no touch for saverMinutes (from the same last touch): rest the screen.
@@ -160,6 +229,8 @@ function Kiosk() {
   return (
     <ThemeScope theme={p.theme} global>
     <div className="relative min-h-screen select-none bg-background px-4 sm:px-8" onPointerDown={goFullscreen}>
+      {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}
+      <div ref={content}>
       <header className="mx-auto flex max-w-4xl items-center gap-3 pt-6">
         <LogoMark theme={p.theme} name={p.name} />
         <span className="font-display text-lg">{p.name}</span>
@@ -185,6 +256,7 @@ function Kiosk() {
         onActivity={shared ? bump : undefined}
         onWelcome={setAtWelcome}
       />
+      </div>
 
       {/* Only on the welcome: rest the screen by hand. */}
       {shared && atWelcome && !saver ? (

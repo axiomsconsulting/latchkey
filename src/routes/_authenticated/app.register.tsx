@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, Loader2, NotebookPen, Plus, Printer } from "lucide-react";
+import { ChevronDown, Download, IdCard, Loader2, NotebookPen, Plus, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
+import { RegisterStayDetails } from "@/components/host/RegisterStayDetails";
 import { PageHeader } from "@/components/host/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,6 +43,15 @@ function RegisterPage() {
   const [to, setTo] = useState(today);
   const [editing, setEditing] = useState<RegisterRow | "new" | null>(null);
   const [downloading, setDownloading] = useState(false);
+  // Stays whose ID photos and check-in details are open under their entries.
+  const [openStays, setOpenStays] = useState<Set<string>>(() => new Set());
+  const toggleStay = (id: string) =>
+    setOpenStays((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   const range = { hostId, from, to, propertyId: propertyId === "all" ? null : propertyId };
   const rows = useQuery({
@@ -147,8 +157,9 @@ function RegisterPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {data.map((r) => (
-                <tr key={r.id} className="align-top">
+              {data.map((r, i) => (
+                <Fragment key={r.id}>
+                <tr className="align-top">
                   <td className="whitespace-nowrap px-4 py-3">{formatUkDate(r.arrival_date, { withYear: true })}</td>
                   <td className="px-4 py-3 font-medium">
                     {r.full_name}
@@ -179,6 +190,23 @@ function RegisterPage() {
                     </Button>
                   </td>
                 </tr>
+                {/* After a stay's last entry: its ID photos and everything captured at check-in. */}
+                {r.booking_id && data[i + 1]?.booking_id !== r.booking_id ? (
+                  <tr className="print:hidden">
+                    <td colSpan={7} className="px-4 pb-3 pt-0">
+                      <Button variant="link" size="sm" className="h-8 gap-1.5 px-0" aria-expanded={openStays.has(r.booking_id)} onClick={() => toggleStay(r.booking_id!)}>
+                        <IdCard className="size-4" /> {openStays.has(r.booking_id) ? copy.hideDetails : copy.stayDetails}
+                        <ChevronDown className={`size-4 transition-transform ${openStays.has(r.booking_id) ? "rotate-180" : ""}`} />
+                      </Button>
+                      {openStays.has(r.booking_id) ? (
+                        <div className="mt-2 rounded-xl border border-border bg-muted/30 p-4">
+                          <RegisterStayDetails bookingId={r.booking_id} />
+                        </div>
+                      ) : null}
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>

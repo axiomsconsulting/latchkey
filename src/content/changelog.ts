@@ -29,6 +29,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.35.0",
+    date: "2026-10-18",
+    title: "Kiosk fits every screen, and ID photos in the register",
+    items: [
+      { kind: "improved", area: "Check-in", text: "On its side, the check-in screen sizes itself to fit: smaller on a phone, larger on a tablet, with nothing cut off." },
+      { kind: "new", area: "Guest register", text: "Under each stay in the guest register, open “ID photos and check-in details” to preview or download each guest's ID photographs and see everything they gave at check-in." },
+    ],
+  },
+  {
     version: "0.34.0",
     date: "2026-10-18",
     title: "A brighter, adjustable screensaver",
