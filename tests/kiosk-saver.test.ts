@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SAVER, bandFraction, bandValue, glow, lookFor, normaliseDefaults } from "../src/lib/kiosk-saver";
+import { DEFAULT_SAVER, bandFraction, bandValue, glow, idleActions, lookFor, normaliseDefaults } from "../src/lib/kiosk-saver";
 
 describe("kiosk screensaver look", () => {
   it("falls back to Latchkey's defaults for anything missing or broken", () => {
@@ -44,5 +44,26 @@ describe("kiosk screensaver look", () => {
   it("never shows a mark brighter than full white", () => {
     expect(glow(0.4, 1)).toBe(0.4);
     expect(glow(0.4, 3)).toBe(1);
+  });
+});
+
+describe("idle kiosk", () => {
+  const t = { resetMinutes: 5, saverMinutes: 10 };
+  const min = 60_000;
+  it("does nothing while someone is using it", () => {
+    expect(idleActions(2 * min, t, { atWelcome: false, resetDone: false, saver: false })).toEqual({ reset: false, saver: false });
+  });
+  it("goes back to the welcome after the reset time, once", () => {
+    expect(idleActions(5 * min, t, { atWelcome: false, resetDone: false, saver: false }).reset).toBe(true);
+    expect(idleActions(6 * min, t, { atWelcome: false, resetDone: true, saver: false }).reset).toBe(false);
+    expect(idleActions(6 * min, t, { atWelcome: true, resetDone: false, saver: false }).reset).toBe(false);
+  });
+  it("starts the screensaver after its time from the last touch, even after a reset", () => {
+    expect(idleActions(9 * min, t, { atWelcome: true, resetDone: true, saver: false }).saver).toBe(false);
+    expect(idleActions(10 * min, t, { atWelcome: true, resetDone: true, saver: false }).saver).toBe(true);
+    expect(idleActions(11 * min, t, { atWelcome: true, resetDone: true, saver: true }).saver).toBe(false);
+  });
+  it("catches up at once after the tablet slept", () => {
+    expect(idleActions(3 * 60 * min, t, { atWelcome: false, resetDone: false, saver: false })).toEqual({ reset: true, saver: true });
   });
 });

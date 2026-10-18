@@ -18,6 +18,7 @@ import { PinPad } from "@/components/guest/PinPad";
 import { InstallApp } from "@/components/InstallApp";
 import { DayIcon, KioskClock, KioskScreensaver, headerIconClass, useSaverLook } from "@/components/guest/KioskClocks";
 import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
+import { idleActions } from "@/lib/kiosk-saver";
 import { guest as copy } from "@/content/copy";
 import { FIT, displayChanged, fitFontSize, fitted, widthCap, type Display, type Orientation } from "@/lib/kiosk-fit";
 import { dayProgress } from "@/lib/kiosk-clock";
@@ -256,6 +257,57 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
   }, [atWelcome, stepKey]);
 }
 
+/**
+ * Idle kiosk, worked out from the clock (idleActions, tested), not chained
+ * timers: only a real touch, tap, key or scroll counts as someone using it.
+ * A reset or a new screen doesn't, so the screensaver still comes on after its
+ * time; a tablet that slept or throttled its timers catches up as soon as it
+ * wakes; and the timings follow Latchkey admin as they change. Returns the
+ * function that marks someone using it now.
+ */
+function useKioskIdle(o: {
+  enabled: boolean;
+  atWelcome: boolean;
+  saver: boolean;
+  resetMinutes: number;
+  saverMinutes: number;
+  onReset: () => void;
+  onSaver: () => void;
+}) {
+  const lastTouch = useRef(Date.now());
+  const resetDone = useRef(false);
+  const live = useRef(o);
+  live.current = o;
+  const bump = useCallback(() => {
+    lastTouch.current = Date.now();
+    resetDone.current = false;
+  }, []);
+  useEffect(() => {
+    // A guest's own phone keeps their place however long they take.
+    if (!o.enabled) return;
+    bump();
+    const events = ["pointerdown", "keydown", "touchstart", "wheel"] as const;
+    events.forEach((e) => window.addEventListener(e, bump, { passive: true }));
+    const check = () => {
+      const now = live.current;
+      const todo = idleActions(Date.now() - lastTouch.current, now, { atWelcome: now.atWelcome, resetDone: resetDone.current, saver: now.saver });
+      if (todo.reset) {
+        resetDone.current = true;
+        now.onReset();
+      }
+      if (todo.saver) now.onSaver();
+    };
+    const id = window.setInterval(check, 5_000);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, bump));
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [bump, o.enabled]);
+  return bump;
+}
+
 function Kiosk() {
   const p = Route.useLoaderData();
   const { guest, resume, join } = Route.useSearch();
@@ -284,8 +336,6 @@ function Kiosk() {
   const [exitOpen, setExitOpen] = useState(false);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const saverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saver, setSaver] = useState(false);
   const [atWelcome, setAtWelcome] = useState(true);
   // Brightness, clock size and timings: the host's own where set, else Latchkey's (super admin).
@@ -297,31 +347,18 @@ function Kiosk() {
   const [stepKey, setStepKey] = useState("welcome:");
   useScreenFit(content, atWelcome, stepKey);
 
-  // No touch for resetMinutes: an unfinished check-in starts again for the next
-  // guest; no touch for saverMinutes (from the same last touch): rest the screen.
-  const bump = useCallback(() => {
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    if (saverTimer.current) clearTimeout(saverTimer.current);
-    idleTimer.current = setTimeout(() => {
+  const bump = useKioskIdle({
+    enabled: shared,
+    atWelcome,
+    saver,
+    resetMinutes,
+    saverMinutes,
+    onReset: () => {
       setExitOpen(false);
-      setSession((s) => s + 1);
-    }, resetMinutes * 60_000);
-    saverTimer.current = setTimeout(() => setSaver(true), saverMinutes * 60_000);
-  }, [resetMinutes, saverMinutes]);
-
-  useEffect(() => {
-    // A guest's own phone keeps their place however long they take.
-    if (!shared) return;
-    bump();
-    const events = ["pointerdown", "keydown", "touchstart"] as const;
-    const onAny = () => bump();
-    events.forEach((e) => window.addEventListener(e, onAny, { passive: true }));
-    return () => {
-      events.forEach((e) => window.removeEventListener(e, onAny));
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-      if (saverTimer.current) clearTimeout(saverTimer.current);
-    };
-  }, [bump, shared]);
+      setSession((n) => n + 1);
+    },
+    onSaver: () => setSaver(true),
+  });
 
   function goFullscreen() {
     if (!shared || tour) return;
@@ -398,7 +435,6 @@ function Kiosk() {
           hostPhone={p.hostPhone}
           kiosk={shared}
           resumeToken={personal ? (resume ?? null) : null}
-          onActivity={shared ? bump : undefined}
           onWelcome={setAtWelcome}
           onStep={setStepKey}
           qrPanel={saverLook.defaults.qrStyle === "panel"}

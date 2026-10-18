@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.40.1",
+    date: "2026-10-18",
+    title: "Kiosk timers fixed",
+    items: [
+      { kind: "fixed", area: "Check-in", text: "An unused kiosk now goes back to its welcome screen, and then to the screensaver, at the times set, even if the tablet dimmed or slept in between." },
+      { kind: "fixed", area: "Check-in", text: "Changes to the kiosk timings reach kiosks that are already running, within two minutes." },
+    ],
+  },
+  {
     version: "0.40.0",
     date: "2026-10-18",
     title: "Your own web address",

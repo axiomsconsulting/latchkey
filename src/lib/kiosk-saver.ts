@@ -80,3 +80,21 @@ export function bandFraction(value: number, lo: number, hi: number): number {
 
 /** How strongly a white mark shows (its base strength times brightness), never past full white. */
 export const glow = (base: number, brightness: number) => Math.min(1, base * brightness);
+
+/**
+ * What an idle kiosk should do now, from how long since the last real touch.
+ * Worked out from the clock (not chained timers), so a tablet that slept or
+ * throttled its timers catches up as soon as it checks.
+ * - After resetMinutes: an unfinished check-in goes back to the welcome, once per idle spell.
+ * - After saverMinutes (from the same last touch): the screensaver.
+ */
+export function idleActions(
+  idleMs: number,
+  t: { resetMinutes: number; saverMinutes: number },
+  state: { atWelcome: boolean; resetDone: boolean; saver: boolean },
+): { reset: boolean; saver: boolean } {
+  return {
+    reset: !state.atWelcome && !state.resetDone && idleMs >= t.resetMinutes * 60_000,
+    saver: !state.saver && idleMs >= Math.max(t.saverMinutes, t.resetMinutes) * 60_000,
+  };
+}

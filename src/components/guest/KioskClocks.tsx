@@ -275,6 +275,7 @@ export function useSaverLook(code: string) {
   const [look, setLook] = useState<SaverLook>({ brightness: DEFAULT_SAVER.brightness, size: DEFAULT_SAVER.size });
   const current = useRef(look);
   current.current = look;
+  const sliding = useRef(false);
   useEffect(() => {
     try {
       const kept = JSON.parse(window.localStorage.getItem(lookKey(code)) ?? "null") as { defaults?: unknown; look?: unknown } | null;
@@ -286,19 +287,26 @@ export function useSaverLook(code: string) {
     } catch {
       // Nothing kept on this tablet yet.
     }
-    void fetchLook({ data: { code } })
-      .then((r) => {
-        setDefaults(r.defaults);
-        setLook(r.look);
-        try {
-          window.localStorage.setItem(lookKey(code), JSON.stringify(r));
-        } catch {
-          // Private mode: fine, the server has it.
-        }
-      })
-      .catch(() => {});
+    const load = () =>
+      void fetchLook({ data: { code } })
+        .then((r) => {
+          setDefaults(r.defaults);
+          // Never undo a slide the host is making right now.
+          if (!sliding.current) setLook(r.look);
+          try {
+            window.localStorage.setItem(lookKey(code), JSON.stringify(r));
+          } catch {
+            // Private mode: fine, the server has it.
+          }
+        })
+        .catch(() => {});
+    load();
+    // Latchkey admin's timings and the host's look reach a running kiosk within two minutes.
+    const id = window.setInterval(load, 120_000);
+    return () => window.clearInterval(id);
   }, [code, fetchLook]);
   const commit = useCallback(() => {
+    sliding.current = false;
     const l = current.current;
     try {
       window.localStorage.setItem(lookKey(code), JSON.stringify({ defaults, look: l }));
@@ -307,7 +315,11 @@ export function useSaverLook(code: string) {
     }
     void saveLook({ data: { code, ...l } }).catch(() => {});
   }, [code, defaults, saveLook]);
-  return { defaults, look, setLook, commit };
+  const change = useCallback((next: SaverLook | ((l: SaverLook) => SaverLook)) => {
+    sliding.current = true;
+    setLook(next);
+  }, []);
+  return { defaults, look, setLook: change, commit };
 }
 
 /**
