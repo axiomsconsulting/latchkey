@@ -1,12 +1,27 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { ArrowUpRight, Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
+import { Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { guest as copy } from "@/content/copy";
 import { cn } from "@/lib/utils";
+import { headerIconClass } from "@/components/guest/KioskClocks";
+
+/** A phone outline with a small QR square on its screen. */
+export function PhoneQrIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="5.5" y="2" width="13" height="20" rx="2.5" />
+      <path d="M10.5 19h3" />
+      <rect x="8" y="6" width="3" height="3" rx="0.4" />
+      <rect x="13" y="6" width="3" height="3" rx="0.4" />
+      <rect x="8" y="11" width="3" height="3" rx="0.4" />
+      <path d="M13 11h1.2M15.6 11h.4M13 13h.4M14.6 12.4v1.6M16 13.2v.8" />
+    </svg>
+  );
+}
 
 /** Draws the QR once per URL; the image is small enough to keep in state. */
 function useQrImage(url: string | null) {
@@ -57,7 +72,7 @@ export function CheckInQr({
           aria-label={copy.qrOpen}
           className="fixed bottom-4 left-4 z-40 h-14 gap-2 rounded-full px-4 shadow-soft"
         >
-          <QrCode className="size-5" />
+          <PhoneQrIcon className="size-6" />
           <span className="text-sm">{copy.qrSwitch}</span>
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -193,21 +208,16 @@ export function KioskQr({
       </aside>
     );
   }
-  const caption = others ? copy.othersCaption : copy.carryOnCaption;
-  // The square with a small arrow (off to a phone), and a word under it saying what it's for.
+  // A phone with a square on its screen: "scan this with your phone".
   const button = (
     <button
       type="button"
       onClick={() => setOpen(true)}
       aria-label={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
       title={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
-      className={cn("relative flex flex-col items-center gap-[0.125em] rounded-xl px-[0.25em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", !target && "fixed bottom-5 right-5 z-40")}
+      className={cn(headerIconClass, others && "text-primary hover:text-primary", !target && "fixed bottom-5 right-5 z-40")}
     >
-      <span className="relative grid size-[2.75em] place-items-center">
-        <QrCode className="size-[2.25em]" strokeWidth={1.5} />
-        <ArrowUpRight className={cn("absolute -right-[0.125em] -top-[0.125em] size-[1em]", others && "text-primary")} strokeWidth={2.25} />
-      </span>
-      <span className={cn("max-w-[7.5em] text-center text-[0.65em] font-medium leading-tight", others && "text-primary")}>{caption}</span>
+      <PhoneQrIcon className="size-[2.5em]" />
     </button>
   );
   return (

@@ -1050,8 +1050,6 @@ export const guest = {
   // Everyone else's ID
   companionTitle: (n: number, total: number) => `Now adult ${n} of ${total}`,
   // Other guests on their own phones
-  carryOnCaption: "Carry on on your phone",
-  othersCaption: "Others: use your own phone",
   othersHeading: "Others can use their own phone",
   othersBlurb: "Everyone else on this booking can scan this square and fill in their own details at the same time. No need to pass this phone around.",
   onTheirPhone: (who: string) => `${who} is filling this in on their own phone.`,
@@ -2294,6 +2292,12 @@ export const adminCopy = {
   kioskSaverSizeMin: "Smallest clock size hosts can choose",
   kioskSaverSizeMax: "Largest clock size hosts can choose",
   kioskTimingsTitle: "Kiosk timings",
+  kioskQrTitle: "Check in on a phone instead",
+  kioskQrHelp: "How door tablets offer guests the square to scan with their own phone on the welcome screen. After the welcome it's always the small icon at the top.",
+  kioskQrStyles: {
+    panel: { label: "Full panel on the right", help: "A large square beside the welcome, with a short explanation." },
+    icon: { label: "Small icon at the top", help: "A phone icon beside the time; tapping it opens the square." },
+  },
   kioskResetMinutes: "Unfinished check-in goes back to the start after (minutes with no touch)",
   kioskSaverMinutes: "Screensaver starts after (minutes with no touch)",
   kioskSaverMinutesHelp: "Counted from the last touch, so never sooner than the check-in reset.",

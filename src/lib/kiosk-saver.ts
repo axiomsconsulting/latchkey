@@ -30,10 +30,12 @@ export type SaverDefaults = {
   saverMinutes: number;
   /** A host's welcome closes by itself after this long on screen; 0 = only at its end time. */
   welcomeMinutes: number;
+  /** On a door tablet's welcome: the full "check in on your phone" panel on the right, or just the small icon at the top. */
+  qrStyle: "panel" | "icon";
 };
 export type SaverLook = { brightness: number; size: number };
 
-export const DEFAULT_SAVER: SaverDefaults = { brightness: 1.6, sizeMin: 0.8, sizeMax: 1.8, size: 1, resetMinutes: 5, saverMinutes: 10, welcomeMinutes: 15 };
+export const DEFAULT_SAVER: SaverDefaults = { brightness: 1.6, sizeMin: 0.8, sizeMax: 1.8, size: 1, resetMinutes: 5, saverMinutes: 10, welcomeMinutes: 15, qrStyle: "panel" };
 
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -52,7 +54,8 @@ export function normaliseDefaults(raw: unknown): SaverDefaults {
   const resetMinutes = whole(r["resetMinutes"], DEFAULT_SAVER.resetMinutes, TIMING.reset.min, TIMING.reset.max);
   const saverMinutes = whole(r["saverMinutes"], DEFAULT_SAVER.saverMinutes, Math.max(TIMING.saver.min, resetMinutes), TIMING.saver.max);
   const welcomeMinutes = whole(r["welcomeMinutes"], DEFAULT_SAVER.welcomeMinutes, TIMING.welcome.min, TIMING.welcome.max);
-  return { brightness, sizeMin, sizeMax, size, resetMinutes, saverMinutes, welcomeMinutes };
+  const qrStyle = r["qrStyle"] === "icon" ? "icon" : "panel";
+  return { brightness, sizeMin, sizeMax, size, resetMinutes, saverMinutes, welcomeMinutes, qrStyle };
 }
 
 /** What a kiosk shows: the host's own choice where they made one, kept inside today's limits. */

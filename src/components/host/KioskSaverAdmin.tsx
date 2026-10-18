@@ -109,6 +109,25 @@ export function KioskSaverAdmin() {
         {minutes("ks-saver", copy.kioskSaverMinutes, "saverMinutes", form.resetMinutes, TIMING.saver.max, copy.kioskSaverMinutesHelp)}
         {minutes("ks-welcome", copy.kioskWelcomeMinutes, "welcomeMinutes", TIMING.welcome.min, TIMING.welcome.max, copy.kioskWelcomeMinutesHelp)}
       </div>
+      <div className="space-y-2 border-t border-border pt-4">
+        <h3 className="font-medium">{copy.kioskQrTitle}</h3>
+        <p className="text-sm text-muted-foreground">{copy.kioskQrHelp}</p>
+        <div role="radiogroup" aria-label={copy.kioskQrTitle} className="grid gap-2 sm:grid-cols-2">
+          {(["panel", "icon"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="radio"
+              aria-checked={form.qrStyle === v}
+              onClick={() => setForm((f) => ({ ...f, qrStyle: v }))}
+              className={`rounded-xl border p-3 text-left text-sm transition-colors ${form.qrStyle === v ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary"}`}
+            >
+              <span className="block font-medium">{copy.kioskQrStyles[v].label}</span>
+              <span className="block text-muted-foreground">{copy.kioskQrStyles[v].help}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <Button onClick={() => void save()} disabled={busy || !q.data?.available}>
         {busy ? <Loader2 className="size-4 animate-spin" /> : null} {common.save}
       </Button>

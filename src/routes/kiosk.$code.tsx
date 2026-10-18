@@ -291,7 +291,7 @@ function Kiosk() {
         <KioskClock tz={p.timezone ?? "Europe/London"} longName={p.name.length > 14} />
         {/* Beside the time: the day's progress on the welcome (tap to rest the screen); later, the phone QR (CheckInFlow puts it here). */}
         {/* Always the same box, whichever icon is in it (or none), so nothing beside it shifts. */}
-        <div id="kiosk-header-action" className={shared ? "flex h-[4.25em] w-[7.5em] shrink-0 items-center justify-center" : "hidden"}>
+        <div id="kiosk-header-action" className={shared ? "flex h-[3.5em] w-[6.75em] shrink-0 items-center justify-end gap-[0.5em]" : "hidden"}>
           {shared && atWelcome && !saver ? (
             <button
               type="button"
@@ -300,7 +300,7 @@ function Kiosk() {
               title={copy.saverStart}
               className={headerIconClass}
             >
-              <DayIcon tz={p.timezone ?? "Europe/London"} className="size-[2.75em]" />
+              <DayIcon tz={p.timezone ?? "Europe/London"} className="size-[2.25em]" />
             </button>
           ) : null}
         </div>
@@ -328,6 +328,7 @@ function Kiosk() {
           onActivity={shared ? bump : undefined}
           onWelcome={setAtWelcome}
           onStep={setStepKey}
+          qrPanel={saverLook.defaults.qrStyle === "panel"}
         />
       )}
       </div>

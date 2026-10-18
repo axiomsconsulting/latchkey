@@ -144,8 +144,11 @@ export function CheckInFlow({
   onActivity,
   onWelcome,
   onStep,
+  qrPanel = true,
   resumeToken,
 }: {
+  /** Door tablet welcome: the full phone panel on the right (Latchkey admin setting), else only the icon at the top. */
+  qrPanel?: boolean;
   /** Tells the kiosk whether the welcome (first) screen is showing. */
   onWelcome?: (atWelcome: boolean) => void;
   /** Each new screen (and which guest it's for), so the kiosk can fit it to the display. */
@@ -567,7 +570,7 @@ export function CheckInFlow({
       <div
         className={cn(
           "grid gap-6",
-          kioskWide && step.name === "welcome"
+          kioskWide && step.name === "welcome" && qrPanel
             ? "grid-cols-[minmax(0,1fr)_minmax(13rem,20rem)] items-center"
             : handoffUrl && !onPhone && !kiosk
               ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
@@ -985,7 +988,7 @@ export function CheckInFlow({
         {kioskWide && step.name !== "done" ? (
           <KioskQr
             url={othersNow ? joinUrl! : (handoffUrl ?? phoneUrl)}
-            large={step.name === "welcome"}
+            large={step.name === "welcome" && qrPanel}
             carryOn={!othersNow && !!handoffUrl}
             others={othersNow}
           />

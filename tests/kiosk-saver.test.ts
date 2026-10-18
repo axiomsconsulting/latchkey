@@ -19,6 +19,12 @@ describe("kiosk screensaver look", () => {
     expect(normaliseDefaults({ resetMinutes: 2.6, saverMinutes: "7", welcomeMinutes: 0 })).toMatchObject({ resetMinutes: 3, saverMinutes: 7, welcomeMinutes: 0 });
   });
 
+  it("shows the full phone panel unless the admin chose the small icon", () => {
+    expect(normaliseDefaults({}).qrStyle).toBe("panel");
+    expect(normaliseDefaults({ qrStyle: "icon" }).qrStyle).toBe("icon");
+    expect(normaliseDefaults({ qrStyle: "huge" }).qrStyle).toBe("panel");
+  });
+
   it("uses the host's own choice, but never past today's limits", () => {
     const d = normaliseDefaults({ brightness: 1.4, sizeMin: 0.9, sizeMax: 1.5 });
     expect(lookFor(d, null)).toEqual({ brightness: 1.4, size: 1 });

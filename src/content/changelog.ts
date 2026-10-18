@@ -29,6 +29,16 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.38.0",
+    date: "2026-10-18",
+    title: "Simpler kiosk icons",
+    items: [
+      { kind: "improved", area: "Check-in", text: "The kiosk's phone icon is now a phone with a QR code on it, without the words underneath." },
+      { kind: "improved", area: "Check-in", text: "The time-of-day icon is now a simple sunrise, sun, sunset or moon." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: choose whether door tablets show the full “check in on your phone” panel beside the welcome, or just the small phone icon at the top." },
+    ],
+  },
+  {
     version: "0.37.2",
     date: "2026-10-18",
     title: "The guest tour is the real kiosk",
