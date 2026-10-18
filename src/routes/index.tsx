@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkspace } from "@/lib/host.functions";
 import { canWrite } from "@/lib/roles";
+import { HOME_REDIRECT_SCRIPT, rememberDashboard } from "@/lib/home-redirect";
 
 export const Route = createFileRoute("/")({
   // ?home=1 shows this page even to a signed-in host (the logo and "Home" link use it).
@@ -25,6 +26,8 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    // A host signed in on this device goes to the dashboard before this page paints.
+    scripts: [{ children: HOME_REDIRECT_SCRIPT }],
   }),
   component: Landing,
 });
@@ -51,6 +54,7 @@ function Landing() {
       if (!data.session || !live) return;
       try {
         const ws = await getWorkspace();
+        rememberDashboard(canWrite(ws.role));
         if (live && canWrite(ws.role)) await navigate({ to: "/app/today", replace: true });
       } catch {
         // Not a host after all, or offline: stay on the home page.

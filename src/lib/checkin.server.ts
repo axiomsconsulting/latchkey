@@ -68,6 +68,20 @@ export type Session = {
 };
 
 export async function loadSession(token: string): Promise<Session> {
+  return loadSessionWhere("token_hash", sha256(token));
+}
+
+/** The same check-in, found by its id (for a guest's phone that joined it). */
+export async function loadSessionById(id: string): Promise<Session> {
+  return loadSessionWhere("id", id);
+}
+
+/** The check-in whose square (share code) a guest scanned to join it. */
+export async function loadSessionByShare(share: string): Promise<Session> {
+  return loadSessionWhere("share_hash", sha256(share));
+}
+
+async function loadSessionWhere(column: "token_hash" | "id" | "share_hash", value: string): Promise<Session> {
   const db = await admin();
   const legacy = "id, property_id, booking_id, confirmed, verified_method, photo_attempts, last4_attempts, completed_at, expires_at";
   const { data } = await withLegacy(
@@ -75,15 +89,26 @@ export async function loadSession(token: string): Promise<Session> {
       db
         .from("checkin_sessions")
         .select(`${legacy}, adults, children, companion_attempts`)
-        .eq("token_hash", sha256(token))
+        // share_hash is from migration 0037, newer than the generated types.
+        .eq(column as "id", value)
         .maybeSingle(),
-    () => db.from("checkin_sessions").select(legacy).eq("token_hash", sha256(token)).maybeSingle(),
+    () => db.from("checkin_sessions").select(legacy).eq(column as "id", value).maybeSingle(),
   );
   if (!data || Date.parse(data.expires_at) < Date.now()) {
     throw new Error("This check-in has timed out. Please start again.");
   }
   const row = data as Partial<Session>;
   return { ...row, adults: row.adults ?? null, children: row.children ?? null, companion_attempts: row.companion_attempts ?? 0 } as Session;
+}
+
+export type JoinClaim = { id: string; session_id: string; position: number; kind: "adult" | "child"; done_at: string | null };
+
+/** A guest's phone that joined a check-in: the one guest it may fill in. */
+export async function loadJoin(token: string): Promise<JoinClaim> {
+  const db = (await admin()) as unknown as { from: (t: string) => any };
+  const { data } = await db.from("checkin_joins").select("id, session_id, position, kind, done_at").eq("token_hash", sha256(token)).maybeSingle();
+  if (!data) throw new Error("This check-in has timed out. Please start again.");
+  return data as JoinClaim;
 }
 
 /** Records an alert for the host and emails it when email is set up. */

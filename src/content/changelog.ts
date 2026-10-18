@@ -29,6 +29,19 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.37.0",
+    date: "2026-10-18",
+    title: "Everyone checks in together, and every screen fits",
+    items: [
+      { kind: "new", area: "Check-in", text: "When the check-in reaches the other guests, they can scan a square and fill in their own details on their own phones at the same time. Each picks adult or child, and the check-in waits until everyone's done." },
+      { kind: "improved", area: "Check-in", text: "Every check-in screen now fits the display, on a tablet or a phone, either way up, with nothing below the bottom edge." },
+      { kind: "improved", area: "Check-in", text: "When it's time to photograph an ID, a faint outline of a driving licence and then a passport shows for a moment, so guests know what to hold up." },
+      { kind: "improved", area: "Check-in", text: "The phone square sits beside the time, with a few words saying what it's for. On phones, the date is shortened when the property's name is long." },
+      { kind: "fixed", area: "Settings", text: "Tapping the logo in your dashboard opens the home page and stays there." },
+      { kind: "improved", area: "Settings", text: "Signed in on this device, Latchkey goes straight to your dashboard without showing the home page first." },
+    ],
+  },
+  {
     version: "0.36.0",
     date: "2026-10-18",
     title: "Unique guest links and door PINs, and a tidier kiosk top bar",

@@ -19,7 +19,7 @@ describe("kiosk clocks", () => {
   });
 
   it("shows the date and time in the property's zone", () => {
-    expect(kioskNow(at, "Europe/London")).toEqual({ date: "Saturday 17 October", time: "14:30" });
+    expect(kioskNow(at, "Europe/London")).toEqual({ date: "Saturday 17 October", shortDate: "Sat 17 Oct", time: "14:30" });
   });
 
   it("drifts slowly within a small box, never jumping", () => {

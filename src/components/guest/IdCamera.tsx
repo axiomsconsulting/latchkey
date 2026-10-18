@@ -47,6 +47,60 @@ async function openCamera(facing: "environment" | "user"): Promise<MediaStream> 
   throw last ?? new Error("no camera");
 }
 
+/** A grey outline of a driving licence: photo on the left, lines of text on the right. */
+function LicenceOutline() {
+  return (
+    <svg viewBox="0 0 172 108" className="h-auto w-[62%]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+      <rect x="2" y="2" width="168" height="104" rx="10" />
+      <rect x="14" y="22" width="44" height="56" rx="5" />
+      <circle cx="36" cy="42" r="9" />
+      <path d="M22 72c3-10 9-14 14-14s11 4 14 14" />
+      <path d="M72 26h80M72 42h62M72 56h72M72 70h50M14 92h140" />
+    </svg>
+  );
+}
+
+/** A grey outline of a passport's photo page, held open. */
+function PassportOutline() {
+  return (
+    <svg viewBox="0 0 172 124" className="h-auto w-[62%]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+      <rect x="2" y="2" width="168" height="120" rx="8" />
+      <path d="M2 58h168" strokeDasharray="4 5" />
+      <rect x="14" y="66" width="34" height="44" rx="3" />
+      <circle cx="31" cy="81" r="6.5" />
+      <path d="M20 106c2-7 6-10 11-10s9 3 11 10" />
+      <path d="M58 72h60M58 84h90M58 96h50M14 18h70M14 32h110M14 44h56" />
+    </svg>
+  );
+}
+
+/**
+ * Shown once as the camera opens: a driving licence, then a passport, a
+ * second each in dim grey, so guests know to photograph their ID (not
+ * themselves). Then out of the way.
+ */
+function IdHint() {
+  const [stage, setStage] = useState<0 | 1 | 2>(0);
+  useEffect(() => {
+    const a = window.setTimeout(() => setStage(1), 1000);
+    const b = window.setTimeout(() => setStage(2), 2000);
+    return () => {
+      window.clearTimeout(a);
+      window.clearTimeout(b);
+    };
+  }, []);
+  return (
+    <div className="pointer-events-none absolute inset-0 grid place-items-center text-neutral-300/70" aria-hidden>
+      <div className={`col-start-1 row-start-1 grid w-full place-items-center transition-opacity duration-300 ${stage === 0 ? "opacity-100" : "opacity-0"}`}>
+        <LicenceOutline />
+      </div>
+      <div className={`col-start-1 row-start-1 grid w-full place-items-center transition-opacity duration-300 ${stage === 1 ? "opacity-100" : "opacity-0"}`}>
+        <PassportOutline />
+      </div>
+    </div>
+  );
+}
+
 /** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
 const SMALL = { environment: { max: 1024, quality: 0.62 }, user: { max: 480, quality: 0.6 } } as const;
 
@@ -120,8 +174,10 @@ export function IdCamera({
           ref={videoRef}
           playsInline
           muted
-          className={facing === "user" ? "aspect-[4/3] w-full -scale-x-100 object-cover" : "aspect-[4/3] w-full object-cover"}
+          // Never taller than about half the screen, so the button below stays in view.
+          className={facing === "user" ? "aspect-[4/3] max-h-[46dvh] w-full -scale-x-100 object-cover" : "aspect-[4/3] max-h-[46dvh] w-full object-cover"}
         />
+        {ready && facing === "environment" ? <IdHint /> : null}
         {!ready ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />

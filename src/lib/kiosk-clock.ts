@@ -81,10 +81,12 @@ export function clockHands(at: Date, tz: string, homeTz: string): Hands {
 }
 
 /** "Saturday 17 October" and "14:32", in the property's time zone. */
-export function kioskNow(at: Date, tz: string): { date: string; time: string } {
+export function kioskNow(at: Date, tz: string): { date: string; time: string; shortDate: string } {
   const date = new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "long", day: "numeric", month: "long" }).format(at);
+  // "Sat 17 Oct": for phones when the property's name needs the room.
+  const shortDate = new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", day: "numeric", month: "short" }).format(at).replace(/,/g, "");
   const p = parts(at, tz);
-  return { date, time: `${String(p.h).padStart(2, "0")}:${String(p.min).padStart(2, "0")}` };
+  return { date, shortDate, time: `${String(p.h).padStart(2, "0")}:${String(p.min).padStart(2, "0")}` };
 }
 
 /**

@@ -433,9 +433,26 @@ export const setGuestName = createServerFn({ method: "POST" })
 
 /* ------------------------------ identity -------------------------------- */
 
-async function sessionContext(t: string) {
-  const { admin, loadSession } = await srv();
-  const session = await loadSession(t);
+/**
+ * Everything a check-in step needs. A guest's phone that joined the check-in
+ * (checkin_joins) is only let in where `join` is allowed, and only for its
+ * own guest; everywhere else its token is refused.
+ */
+async function sessionContext(t: string, opts: { join?: boolean; share?: boolean } = {}) {
+  const { admin, loadSession, loadSessionById, loadSessionByShare, loadJoin } = await srv();
+  let session: Awaited<ReturnType<typeof loadSession>>;
+  let join: Awaited<ReturnType<typeof loadJoin>> | null = null;
+  if (opts.share) {
+    session = await loadSessionByShare(t);
+  } else {
+    try {
+      session = await loadSession(t);
+    } catch (err) {
+      if (!opts.join) throw err;
+      join = await loadJoin(t);
+      session = await loadSessionById(join.session_id);
+    }
+  }
   const db = await admin();
   const { withLegacy } = await srv();
   const bookingCols =
@@ -472,19 +489,27 @@ async function sessionContext(t: string) {
     room,
     register,
     aiOff,
+    join,
   };
 }
 
 type Ctx = Awaited<ReturnType<typeof sessionContext>>;
+
+/** A joined phone may only fill in the guest it picked. */
+function ownSlot(ctx: Ctx, position: number) {
+  if (ctx.join && ctx.join.position !== position) throw new Error("Not available.");
+}
 
 /** What the guest is asked about who's staying, given the host's settings. */
 function partyPlan(ctx: Ctx) {
   const rec = normaliseRecords(ctx.property.guest_records);
   // Someone popping back to reread the rules isn't asked again, and nothing
   // new is asked until the database has the columns to keep the answers.
-  const returning = ctx.booking.status === "checked_in" || ctx.property.guest_records === undefined;
+  // A guest's own phone that joined is still filling in, even once the lead has finished.
+  const finished = ctx.booking.status === "checked_in" && !ctx.join;
+  const returning = finished || ctx.property.guest_records === undefined;
   // The register needs to know who's here, so it always asks in the UK.
-  const register = ctx.register && ctx.booking.status !== "checked_in";
+  const register = ctx.register && !finished;
   return {
     ask: (rec.askWhoIsStaying || register) && !returning,
     register,
@@ -698,6 +723,8 @@ async function savePerson(
     skipped?: boolean;
     idPhoto?: string | null;
     facePhoto?: string | null;
+    /** Typed by the guest (a joined phone with no ID to read, or a child's name). */
+    fullName?: string | null;
   },
 ) {
   const { storeGuestPhoto, removeGuestPhotos } = await srv();
@@ -729,6 +756,8 @@ async function savePerson(
       document_expiry: r.expiryDate,
       document_last4: r.numberLast4,
     });
+  } else if (fields.fullName) {
+    row["full_name"] = fields.fullName;
   } else if (position === 0 && !prev) {
     row["full_name"] = ctx.booking.guest_full_name;
   }
@@ -888,7 +917,8 @@ export const checkCompanionId = createServerFn({ method: "POST" })
     z.object({ token, position: z.number().int().min(1).max(29), image: jpeg, small: smallJpeg.optional() }).parse(d),
   )
   .handler(async ({ data }) => {
-    const ctx = await sessionContext(data.token);
+    const ctx = await sessionContext(data.token, { join: true });
+    ownSlot(ctx, data.position);
     const plan = partyPlan(ctx);
     const adults = ctx.session.adults ?? 1;
     if (!ctx.session.confirmed || !plan.everyAdult || data.position >= adults) throw new Error("Not available.");
@@ -931,7 +961,8 @@ export const checkCompanionId = createServerFn({ method: "POST" })
 export const skipCompanionId = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token, position: z.number().int().min(1).max(29) }).parse(d))
   .handler(async ({ data }) => {
-    const ctx = await sessionContext(data.token);
+    const ctx = await sessionContext(data.token, { join: true });
+    ownSlot(ctx, data.position);
     if (!ctx.session.confirmed || data.position >= (ctx.session.adults ?? 1)) throw new Error("Not available.");
     await savePerson(ctx, data.position, { kind: "adult", idChecked: false, skipped: true });
     const { raiseAlert } = await srv();
@@ -966,7 +997,8 @@ export const saveRegister = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const ctx = await sessionContext(data.token);
+    const ctx = await sessionContext(data.token, { join: true });
+    ownSlot(ctx, data.position);
     if (!ctx.session.confirmed || !partyPlan(ctx).register) throw new Error("Not available.");
     const adults = Math.max(1, ctx.session.adults ?? 1);
     if (data.position >= adults) {
@@ -1027,10 +1059,154 @@ export const saveRegister = createServerFn({ method: "POST" })
 export const addFacePhoto = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token, position: z.number().int().min(0).max(29), image: smallJpeg }).parse(d))
   .handler(async ({ data }) => {
-    const ctx = await sessionContext(data.token);
+    const ctx = await sessionContext(data.token, { join: true });
+    ownSlot(ctx, data.position);
     if (!ctx.session.confirmed || data.position >= Math.max(1, ctx.session.adults ?? 1)) throw new Error("Not available.");
     if (!partyPlan(ctx).facePhoto) return { ok: true as const };
     await savePerson(ctx, data.position, { kind: "adult", facePhoto: data.image });
+    return { ok: true as const };
+  });
+
+/* ------------------------- other guests' own phones ------------------------ */
+
+const STALE_CLAIM_MS = 20 * 60_000;
+/** checkin_joins and share_hash are from migration 0037, newer than the generated types. */
+type Loose = { from: (t: string) => any };
+
+type SlotState = "open" | "phone" | "done";
+type Slot = { position: number; kind: "adult" | "child"; age: number | null; state: SlotState };
+
+/**
+ * Every guest after the lead booker, and whether each is still to fill in,
+ * being filled in on someone's phone, or done (on a phone or this screen).
+ */
+async function slotsFor(ctx: Ctx): Promise<Slot[]> {
+  const plan = partyPlan(ctx);
+  const adults = Math.max(1, ctx.session.adults ?? 1);
+  const children = ctx.session.children ?? 0;
+  const [{ data: people }, { data: entries }, { data: claims }] = await Promise.all([
+    ctx.db.from("guest_ids").select("position, kind, age, full_name, id_checked, skipped, face_photo_path").eq("booking_id", ctx.booking.id),
+    ctx.register ? ctx.db.from("guest_register").select("position").eq("booking_id", ctx.booking.id) : Promise.resolve({ data: [] as Array<{ position: number | null }> }),
+    (ctx.db as unknown as Loose).from("checkin_joins").select("position, claimed_at, done_at").eq("session_id", ctx.session.id),
+  ]);
+  const person = new Map(((people ?? []) as Array<Record<string, any>>).map((r) => [r["position"] as number, r]));
+  const registered = new Set(((entries ?? []) as Array<{ position: number | null }>).map((r) => r.position));
+  const claim = new Map(((claims ?? []) as Array<{ position: number; claimed_at: string; done_at: string | null }>).map((c) => [c.position, c]));
+  const out: Slot[] = [];
+  for (let position = 1; position < adults + children; position++) {
+    const kind = position < adults ? "adult" : "child";
+    const p = person.get(position);
+    const age = kind === "child" ? ((p?.["age"] as number | null) ?? null) : null;
+    const c = claim.get(position);
+    const filled =
+      kind === "adult"
+        ? (!plan.everyAdult || !!p?.["id_checked"] || !!p?.["skipped"]) &&
+          (!plan.register || registered.has(position)) &&
+          (plan.everyAdult || plan.register || !!p?.["full_name"])
+        : !!p?.["full_name"] && (!plan.register || (age ?? 0) < REGISTER_AGE || registered.has(position));
+    const state: SlotState = c?.done_at || filled ? "done" : c && Date.now() - Date.parse(c.claimed_at) < STALE_CLAIM_MS ? "phone" : "open";
+    out.push({ position, kind, age, state });
+  }
+  return out;
+}
+
+/** The square other guests scan: a fresh share code for this check-in (the lead's screen only). */
+export const shareCheckIn = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const ctx = await sessionContext(data.token);
+    if (!ctx.session.confirmed) throw new Error("Not available.");
+    const { newToken } = await srv();
+    const share = newToken();
+    await (ctx.db as unknown as Loose).from("checkin_sessions").update({ share_hash: share.hash }).eq("id", ctx.session.id);
+    return { share: share.token };
+  });
+
+/** For the lead's screen: who is filling in on their own phone, and who's done. */
+export const checkInProgress = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const ctx = await sessionContext(data.token);
+    return { slots: await slotsFor(ctx) };
+  });
+
+/** A guest's phone opened the square: whose check-in it is, and which kinds of guest are still to fill in. */
+export const joinInfo = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ share: token }).parse(d))
+  .handler(async ({ data }) => {
+    const ctx = await sessionContext(data.share, { share: true });
+    if (!ctx.session.confirmed) throw new Error("Not available.");
+    const slots = await slotsFor(ctx);
+    return {
+      leadFirstName: firstName(ctx.booking.guest_full_name) || null,
+      propertyName: ctx.property.name,
+      openAdults: slots.filter((x) => x.kind === "adult" && x.state === "open").length,
+      openChildren: slots.filter((x) => x.kind === "child" && x.state === "open").length,
+    };
+  });
+
+/**
+ * A guest's phone picks "adult" or "child": it gets the next guest of that
+ * kind still to fill in, and its own token for just that guest. Several
+ * phones can do this at once; each gets a different guest.
+ */
+export const joinCheckIn = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ share: token, kind: z.enum(["adult", "child"]) }).parse(d))
+  .handler(async ({ data }) => {
+    const ctx = await sessionContext(data.share, { share: true });
+    if (!ctx.session.confirmed) throw new Error("Not available.");
+    // Phones that picked a guest and went quiet free that guest again.
+    await (ctx.db as unknown as Loose)
+      .from("checkin_joins")
+      .delete()
+      .eq("session_id", ctx.session.id)
+      .is("done_at", null)
+      .lt("claimed_at", new Date(Date.now() - STALE_CLAIM_MS).toISOString());
+    const { newToken } = await srv();
+    for (const slot of (await slotsFor(ctx)).filter((x) => x.kind === data.kind && x.state === "open")) {
+      const mine = newToken();
+      const { error } = await (ctx.db as unknown as Loose)
+        .from("checkin_joins")
+        .insert({ session_id: ctx.session.id, position: slot.position, kind: slot.kind, token_hash: mine.hash });
+      // Another phone took this one a moment ago: try the next.
+      if (error) continue;
+      const plan = partyPlan({ ...ctx, join: { id: "", session_id: ctx.session.id, position: slot.position, kind: slot.kind, done_at: null } });
+      return {
+        status: "joined" as const,
+        token: mine.token,
+        position: slot.position,
+        kind: slot.kind,
+        age: slot.age,
+        number: slot.position + 1,
+        plan: { everyAdult: plan.everyAdult, register: plan.register, facePhoto: plan.facePhoto, keepIdPhoto: plan.keepIdPhoto, keepDays: plan.keepDays },
+      };
+    }
+    return { status: "full" as const };
+  });
+
+/** A joined phone's guest gives their name (and a child's age), when there's no ID to read it from. */
+export const joinPerson = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z.object({ token, fullName: z.string().trim().min(1).max(200), age: z.number().int().min(0).max(ADULT_AGE - 1).nullish() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const ctx = await sessionContext(data.token, { join: true });
+    if (!ctx.join) throw new Error("Not available.");
+    if (ctx.join.kind === "child") {
+      await savePerson(ctx, ctx.join.position, { kind: "child", age: data.age ?? null, fullName: data.fullName });
+    } else {
+      await savePerson(ctx, ctx.join.position, { kind: "adult", fullName: data.fullName });
+    }
+    return { ok: true as const };
+  });
+
+/** A joined phone has finished its guest. */
+export const joinDone = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const ctx = await sessionContext(data.token, { join: true });
+    if (!ctx.join) throw new Error("Not available.");
+    await (ctx.db as unknown as Loose).from("checkin_joins").update({ done_at: new Date().toISOString() }).eq("id", ctx.join.id);
     return { ok: true as const };
   });
 

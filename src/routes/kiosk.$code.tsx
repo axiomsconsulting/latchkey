@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import { CheckInFlow } from "@/components/guest/CheckInFlow";
+import { CheckInFlow, JoinCheckIn } from "@/components/guest/CheckInFlow";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
@@ -29,7 +29,9 @@ const HOLD_MS = 3_000;
 export const Route = createFileRoute("/kiosk/$code")({
   // ?guest=1: a guest's own phone (from a QR code or link), not the shared door tablet.
   // ?resume=<token>: carry on a check-in started on the door tablet.
-  validateSearch: (search: Record<string, unknown>): { guest?: boolean; resume?: string } => ({
+  // ?join=<share>: another guest on the same booking fills in their own details.
+  validateSearch: (search: Record<string, unknown>): { guest?: boolean; resume?: string; join?: string } => ({
+    ...(typeof search["join"] === "string" ? { join: search["join"] } : {}),
     ...(search["guest"] === true || search["guest"] === "1" || search["guest"] === 1 ? { guest: true } : {}),
     ...(typeof search["resume"] === "string" ? { resume: search["resume"] } : {}),
   }),
@@ -75,77 +77,92 @@ function usePortraitPhone() {
 }
 
 /**
- * Wider than tall: size the whole page to the screen. On the welcome, the
- * base font size is set so the content just fills the height (everything is
- * in rem, so it all scales together); later steps keep that scale, following
- * the height if the screen turns or resizes. Upright: the page as designed.
+ * Every check-in screen fits the display, so nothing runs past the bottom.
+ * Wider than tall, the welcome sets the scale: the base font size is chosen
+ * so it just fills the height (every size here is in rem, so it all scales
+ * together). Each later screen uses that scale, or shrinks until it fits
+ * if it would run past the bottom. Upright (phones, tablets held tall), the
+ * page is as designed and only ever shrinks to fit.
  */
-function useLandscapeFit(content: React.RefObject<HTMLDivElement | null>, atWelcome: boolean) {
+function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome: boolean, stepKey: string) {
   const welcome = useRef(atWelcome);
   welcome.current = atWelcome;
-  const refit = useRef<() => void>(() => {});
+  const refit = useRef<{ schedule: () => void; reset: () => void }>({ schedule: () => {}, reset: () => {} });
   useEffect(() => {
     const html = document.documentElement;
     const before = html.style.fontSize;
-    // Font size per pixel of screen height, from the last welcome fit.
+    // Font size per pixel of screen height, from the last landscape welcome.
     let ratio: number | null = null;
-    // A size that turned out too tall (text wrapped): never grow back past it until the screen changes.
+    // A size that turned out too tall (text wrapped): never grow back past it on this screen.
     let ceiling: number = FIT.max;
     let frame = 0;
+    const set = (px: number) => {
+      html.style.fontSize = px === FIT.base && ratio === null ? before : `${px}px`;
+    };
     const apply = () => {
       const el = content.current;
+      if (!el) return;
       const h = window.innerHeight;
-      if (!el || window.innerWidth <= h) {
-        html.style.fontSize = before;
-        ratio = null;
+      const landscape = window.innerWidth > h;
+      const current = Number.parseFloat(window.getComputedStyle(html).fontSize) || FIT.base;
+      const tall = el.offsetHeight;
+      if (tall > h && !fitted(tall, h)) ceiling = Math.min(ceiling, current);
+      if (landscape && welcome.current) {
+        const max = Math.min(ceiling, widthCap(window.innerWidth));
+        // Never past the bottom; a near fit with room to spare is left alone.
+        const next = tall <= h && fitted(tall, h) && current <= max ? current : fitFontSize(current, tall, tall > h ? h * 0.99 : h, { min: FIT.min, max });
+        ratio = next / h;
+        if (next !== current) set(next);
         return;
       }
-      const current = Number.parseFloat(window.getComputedStyle(html).fontSize) || FIT.base;
-      if (welcome.current) {
-        const tall = el.offsetHeight;
-        if (tall > h && !fitted(tall, h)) ceiling = Math.min(ceiling, current);
-        const max = Math.min(ceiling, widthCap(window.innerWidth));
-        const next = fitted(tall, h) && current <= max ? current : fitFontSize(current, tall, h, { min: FIT.min, max });
-        if (next !== current) html.style.fontSize = `${next}px`;
-        ratio = next / h;
-      } else if (ratio !== null) {
-        html.style.fontSize = `${Math.min(FIT.max, Math.max(FIT.min, Math.round(ratio * h * 100) / 100))}px`;
-      }
+      if (!landscape) ratio = null;
+      // The screen's own scale: the welcome's in landscape, the page's own upright.
+      const base = ratio !== null ? Math.min(FIT.max, Math.max(FIT.min, ratio * h)) : FIT.base;
+      const max = Math.min(base, ceiling);
+      const min = landscape ? FIT.min : FIT.min_upright;
+      const fits = tall <= h;
+      // Too tall: shrink until it fits (a hair under, so rounding never leaves it over). Room to spare below its scale: grow back, never past it.
+      let next = current;
+      if (!fits) next = fitFontSize(current, tall, h * 0.99, { min, max });
+      else if (current < max && !fitted(tall, h)) next = fitFontSize(current, tall, h * 0.99, { min, max });
+      else if (current > max) next = max;
+      if (Math.abs(next - current) > 0.05) set(next);
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(apply);
     };
-    const resized = () => {
+    const reset = () => {
       ceiling = FIT.max;
       schedule();
     };
-    refit.current = schedule;
+    refit.current = { schedule, reset };
     schedule();
-    // Content that changes size (images loading, the font applied) settles the fit in a step or two.
+    // Content that changes size (a new screen, images loading, the font applied) settles the fit in a step or two.
     const observer = new ResizeObserver(schedule);
     if (content.current) observer.observe(content.current);
-    window.addEventListener("resize", resized);
-    window.addEventListener("orientationchange", resized);
+    window.addEventListener("resize", reset);
+    window.addEventListener("orientationchange", reset);
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener("resize", resized);
-      window.removeEventListener("orientationchange", resized);
+      window.removeEventListener("resize", reset);
+      window.removeEventListener("orientationchange", reset);
       html.style.fontSize = before;
     };
   }, [content]);
+  // A new screen starts from its scale again.
   useEffect(() => {
-    if (atWelcome) refit.current();
-  }, [atWelcome]);
+    refit.current.reset();
+  }, [atWelcome, stepKey]);
 }
 
 function Kiosk() {
   const p = Route.useLoaderData();
-  const { guest, resume } = Route.useSearch();
+  const { guest, resume, join } = Route.useSearch();
   // On a guest's own phone: the same screen, without the shared-tablet extras
   // (idle reset, screensaver, welcome overlay, hidden exit, kiosk install).
-  const personal = guest === true || !!resume || usePortraitPhone();
+  const personal = guest === true || !!resume || !!join || usePortraitPhone();
   const shared = !personal;
   // Installing from here installs this property's kiosk, not the host app.
   useEffect(() => {
@@ -174,7 +191,8 @@ function Kiosk() {
   const { welcome, dismiss } = useKioskWelcome(p.code, shared, welcomeMinutes);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const content = useRef<HTMLDivElement | null>(null);
-  useLandscapeFit(content, atWelcome);
+  const [stepKey, setStepKey] = useState("welcome:");
+  useScreenFit(content, atWelcome, stepKey);
 
   // No touch for resetMinutes: an unfinished check-in starts again for the next
   // guest; no touch for saverMinutes (from the same last touch): rest the screen.
@@ -228,13 +246,14 @@ function Kiosk() {
 
   return (
     <ThemeScope theme={p.theme} global>
-    <div className="relative min-h-screen select-none bg-background px-4 sm:px-8" onPointerDown={goFullscreen}>
+    {/* Inputs stay at 16px or more however small the page is fitted, so phones don't zoom in on them. */}
+    <div className="relative min-h-screen select-none bg-background px-4 sm:px-8 [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]" onPointerDown={goFullscreen}>
       {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}
       <div ref={content}>
       <header className="mx-auto flex max-w-4xl items-center gap-3 pt-6">
         <LogoMark theme={p.theme} name={p.name} />
-        <span className="font-display text-lg">{p.name}</span>
-        <KioskClock tz={p.timezone ?? "Europe/London"} />
+        <span className="min-w-0 truncate font-display text-lg">{p.name}</span>
+        <KioskClock tz={p.timezone ?? "Europe/London"} longName={p.name.length > 14} />
         {/* Beside the time: the day's progress on the welcome (tap to rest the screen); later, the phone QR (CheckInFlow puts it here). */}
         <div id="kiosk-header-action" className="flex shrink-0 items-center empty:hidden">
           {shared && atWelcome && !saver ? (
@@ -261,15 +280,20 @@ function Kiosk() {
         onContextMenu={(e) => e.preventDefault()}
       />
       ) : null}
-      <CheckInFlow
-        key={session}
-        property={p}
-        hostPhone={p.hostPhone}
-        kiosk={shared}
-        resumeToken={personal ? (resume ?? null) : null}
-        onActivity={shared ? bump : undefined}
-        onWelcome={setAtWelcome}
-      />
+      {join ? (
+        <JoinCheckIn share={join} />
+      ) : (
+        <CheckInFlow
+          key={session}
+          property={p}
+          hostPhone={p.hostPhone}
+          kiosk={shared}
+          resumeToken={personal ? (resume ?? null) : null}
+          onActivity={shared ? bump : undefined}
+          onWelcome={setAtWelcome}
+          onStep={setStepKey}
+        />
+      )}
       </div>
 
 

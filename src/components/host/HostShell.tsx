@@ -33,6 +33,7 @@ import { whatsNewCopy } from "@/content/copy";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
+import { rememberDashboard } from "@/lib/home-redirect";
 import { rememberHost } from "@/lib/last-host";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
@@ -76,6 +77,10 @@ export function HostShell() {
   const { data } = useWorkspace();
   const { canWrite, isOwner } = useRole();
   useAccessWatch();
+  // Next time "/" opens on this device, go straight to the dashboard (not the shared demo).
+  useEffect(() => {
+    if (data) rememberDashboard(canWrite && (data.host as { contact_email?: string } | null)?.contact_email !== DEMO_EMAIL);
+  }, [data, canWrite]);
   const properties = (data?.properties ?? []) as Array<{ id: string; name: string; theme_config: unknown }>;
   const { selectedId, select } = useSelectedProperty(properties);
   const switcher = (className: string) => (
@@ -158,7 +163,9 @@ export function HostShell() {
 
       {/* Phone/tablet portrait: compact glass header */}
       <header className="glass sticky top-2 z-10 mx-3 mt-2 flex items-center gap-1 rounded-2xl px-3 py-2 md:hidden print:hidden">
-        <LogoMark theme={theme} name={title} className="size-9" />
+        <Link to="/" search={{ home: true }} aria-label={brand.name} className="shrink-0 rounded-xl">
+          <LogoMark theme={theme} name={title} className="size-9" />
+        </Link>
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
         <HostInbox propertyId={selectedId ?? null} />
         <Link to="/app/whats-new" aria-label={whatsNewCopy.navLabel} className="grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-secondary">
@@ -323,7 +330,7 @@ function DesktopNav({
         top ? "flex-row items-center gap-2 rounded-[1.75rem]" : "flex-col rounded-[2rem]",
       )}
     >
-      <Link to="/" className="flex shrink-0 items-center gap-3 rounded-2xl px-2 py-2" title={title}>
+      <Link to="/" search={{ home: true }} className="flex shrink-0 items-center gap-3 rounded-2xl px-2 py-2" title={title}>
         <LogoMark theme={theme} name={title} />
         <span className={cn("min-w-0", narrow ? "sr-only" : top ? "hidden @[84rem]:block" : "", fade)}>
           <span className="block truncate font-display text-lg leading-tight">{title}</span>

@@ -36,17 +36,24 @@ function useNow(stepMs = 15_000) {
 }
 
 /** Today's date and time at the top of the kiosk, in the property's time zone. */
-export function KioskClock({ tz }: { tz: string }) {
+export function KioskClock({ tz, longName = false }: { tz: string; /** The property's name is long: on phones, "Sat 17 Oct" instead. */ longName?: boolean }) {
   const now = useNow();
   // Shown once running in the browser, so the server's time never mismatches the tablet's.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return <span className="ml-auto" />;
-  const { date, time } = kioskNow(now, tz);
+  const { date, shortDate, time } = kioskNow(now, tz);
   return (
-    <p className="ml-auto text-right font-display leading-tight" aria-live="off">
+    <p className="ml-auto shrink-0 text-right font-display leading-tight" aria-live="off">
       <span className="block text-lg tabular-nums">{time}</span>
-      <span className="block text-sm text-muted-foreground">{date}</span>
+      {longName ? (
+        <span className="block whitespace-nowrap text-sm text-muted-foreground">
+          <span className="sm:hidden">{shortDate}</span>
+          <span className="hidden sm:inline">{date}</span>
+        </span>
+      ) : (
+        <span className="block whitespace-nowrap text-sm text-muted-foreground">{date}</span>
+      )}
     </p>
   );
 }

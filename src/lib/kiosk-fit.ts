@@ -6,7 +6,8 @@
  * kiosk measures and applies it.
  */
 
-export const FIT = { min: 8, max: 26, base: 16 } as const;
+/** min: on a screen wider than tall; min_upright: the smallest text a phone held upright gets. */
+export const FIT = { min: 8, min_upright: 12, max: 26, base: 16 } as const;
 
 /**
  * The base font size (px) at which content now `contentPx` tall at `currentPx`

@@ -18,6 +18,12 @@ import {
   addFacePhoto,
   askHostToCheckIn,
   checkCompanionId,
+  checkInProgress,
+  joinCheckIn,
+  joinDone,
+  joinInfo,
+  joinPerson,
+  shareCheckIn,
   completeCheckIn,
   confirmBooking,
   listArrivals,
@@ -88,6 +94,8 @@ type Step =
   | { name: "register"; position: number; child: boolean }
   /** The guest asked the host to check them in; `back` resumes where they were. */
   | { name: "handover"; back: Step }
+  /** Everyone left is filling in on their own phone. */
+  | { name: "waiting" }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
   | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
 
@@ -135,10 +143,13 @@ export function CheckInFlow({
   kiosk = false,
   onActivity,
   onWelcome,
+  onStep,
   resumeToken,
 }: {
   /** Tells the kiosk whether the welcome (first) screen is showing. */
   onWelcome?: (atWelcome: boolean) => void;
+  /** Each new screen (and which guest it's for), so the kiosk can fit it to the display. */
+  onStep?: ((key: string) => void) | undefined;
   property: CheckinProperty;
   hostPhone?: string | null;
   kiosk?: boolean;
@@ -181,13 +192,27 @@ export function CheckInFlow({
   const face = useServerFn(addFacePhoto);
   const register = useServerFn(saveRegister);
   const handover = useServerFn(askHostToCheckIn);
+  const shareFn = useServerFn(shareCheckIn);
+  const progressFn = useServerFn(checkInProgress);
   const [fullName, setFullName] = useState("");
+  // Other guests filling in on their own phones: the square they scan, and who's where.
+  const [share, setShare] = useState<string | null>(null);
+  type Slot = Awaited<ReturnType<typeof checkInProgress>>["slots"][number];
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const slotsRef = useRef<Slot[]>([]);
+  slotsRef.current = slots;
+  const takenElsewhere = (position: number) => position > 0 && slotsRef.current.some((x) => x.position === position && x.state !== "open");
+  const otherGuestStep =
+    step.name === "waiting" ||
+    step.name === "companion" ||
+    ((step.name === "register" || step.name === "face") && step.position > 0);
 
   useEffect(() => {
     onActivity?.();
     setMessage(null);
     onWelcome?.(step.name === "welcome");
-  }, [step, onActivity, onWelcome]);
+    onStep?.(`${step.name}:${"position" in step ? step.position : ""}`);
+  }, [step, onActivity, onWelcome, onStep]);
 
   // Scanned square: rejoin the same check-in rather than starting over.
   useEffect(() => {
@@ -314,6 +339,43 @@ export function CheckInFlow({
     setStep({ name: "confirm", firstName: res.firstName });
   }
 
+  // The square for others appears with the first other-guest screen.
+  useEffect(() => {
+    if (!otherGuestStep || share || !token) return;
+    void shareFn({ data: { token } })
+      .then((r) => setShare(r.share))
+      .catch(() => {});
+  }, [otherGuestStep, share, token, shareFn]);
+
+  // Who's filling in where, every few seconds while others might be.
+  useEffect(() => {
+    if (!share || !token || step.name === "done") return;
+    let live = true;
+    const load = () =>
+      void progressFn({ data: { token } })
+        .then((r) => live && setSlots(r.slots))
+        .catch(() => {});
+    load();
+    const id = window.setInterval(load, 3_000);
+    return () => {
+      live = false;
+      window.clearInterval(id);
+    };
+  }, [share, token, step.name, progressFn]);
+
+  // Someone picked up the guest on screen with their own phone: move on; when the last one finishes, finish.
+  useEffect(() => {
+    if (step.name === "waiting") {
+      if (!slots.some((x) => x.state === "phone")) void finish();
+      return;
+    }
+    if ((step.name === "companion" || step.name === "register" || step.name === "face") && takenElsewhere(step.position)) {
+      const slot = slots.find((x) => x.position === step.position);
+      void advance(queue, slot?.state === "phone" ? copy.onTheirPhone(copy.guestLabel(slot.kind, slot.position + 1)) : undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots]);
+
   async function finish() {
     const res = await run(() => complete({ data: { token } }));
     if (res) setStep({ name: "done", ...res });
@@ -373,11 +435,14 @@ export function CheckInFlow({
     void advance(steps);
   }
 
-  async function advance(steps: After[], note?: string) {
+  async function advance(all: After[], note?: string) {
+    // Guests filling in (or done) on their own phones are left to them.
+    const steps = all.filter((x) => !takenElsewhere(x.position));
     const [next, ...rest] = steps;
     setQueue(rest);
     if (!next) {
-      await finish();
+      if (slotsRef.current.some((x) => x.state === "phone")) setStep({ name: "waiting" });
+      else await finish();
     } else if (next.kind === "face") {
       setStep({ name: "face", position: next.position });
     } else if (next.kind === "register") {
@@ -464,6 +529,9 @@ export function CheckInFlow({
   const landscape = useLandscape();
   const kioskWide = kiosk && (landscape || !onPhone);
   const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
+  // While other guests are being filled in: the square lets each use their own phone at once.
+  const joinUrl = typeof window === "undefined" || !share ? null : `${window.location.origin}/kiosk/${property.code}?join=${encodeURIComponent(share)}`;
+  const othersNow = otherGuestStep && !!joinUrl;
 
   // The square only means something once there is a stay to carry across.
   const handoffUrl =
@@ -844,6 +912,28 @@ export function CheckInFlow({
           </section>
         ) : null}
 
+        {step.name === "waiting" ? (
+          <section className="mx-auto max-w-xl text-center">
+            <Loader2 className="mx-auto size-10 animate-spin text-primary" />
+            <h1 className="mt-4 text-2xl sm:text-4xl">{copy.waitingTitle}</h1>
+            <p className="mt-3 text-lg text-muted-foreground">{copy.waitingBody}</p>
+            <ul className="mx-auto mt-6 max-w-sm space-y-2 text-left">
+              {slots.map((x) => (
+                <li key={x.position} className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
+                  <span className="font-medium">{copy.guestLabel(x.kind, x.position + 1)}</span>
+                  <span className={cn("flex items-center gap-1.5 text-sm", x.state === "done" ? "text-success" : "text-muted-foreground")}>
+                    {x.state === "done" ? <CheckCircle2 className="size-4" /> : x.state === "phone" ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {x.state === "done" ? copy.slotDone : x.state === "phone" ? copy.slotPhone : copy.slotOpen}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Button size="touch" variant="ghost" className="mt-6" disabled={busy} onClick={() => void finish()}>
+              {copy.waitingSkip}
+            </Button>
+          </section>
+        ) : null}
+
         {step.name === "handover" ? (
           <section className="py-4 text-center">
             <HandHeart className="mx-auto size-14 text-primary" />
@@ -893,16 +983,15 @@ export function CheckInFlow({
 
         {/* Front-door tablet: the phone square sits beside the welcome, then in the corner. */}
         {kioskWide && step.name !== "done" ? (
-          <KioskQr url={handoffUrl ?? phoneUrl} large={step.name === "welcome"} carryOn={!!handoffUrl} />
-        ) : null}
-        {handoffUrl && !kiosk ? (
-          <CheckInQr
-            url={handoffUrl}
-            heading={step.name === "done" ? copy.qrDoneHeading : copy.qrHeading}
-            blurb={step.name === "done" ? copy.qrDoneBlurb : copy.qrBlurb}
-            compact={onPhone}
+          <KioskQr
+            url={othersNow ? joinUrl! : (handoffUrl ?? phoneUrl)}
+            large={step.name === "welcome"}
+            carryOn={!othersNow && !!handoffUrl}
+            others={othersNow}
           />
         ) : null}
+        {/* On a phone, only while others are filled in: they can use their own phones instead of this one. */}
+        {othersNow && !kiosk ? <CheckInQr url={joinUrl!} heading={copy.othersHeading} blurb={copy.othersBlurb} compact={onPhone} /> : null}
       </div>
     </div>
 
@@ -1330,6 +1419,261 @@ function WhyAsk({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+type JoinStage =
+  | { name: "intro" }
+  | { name: "full" }
+  | { name: "id"; ready: boolean }
+  | { name: "person" }
+  | { name: "register" }
+  | { name: "face" }
+  | { name: "done" };
+
+/**
+ * A guest's own phone, from the square on the lead guest's screen: picks
+ * "me, an adult" or "a child with me", gets the next guest of that kind
+ * still to fill in, and fills in just that one (ID, name and age, register
+ * entry and face photo, as the host asks). Others can do the same at the
+ * same moment on their own phones.
+ */
+export function JoinCheckIn({ share }: { share: string }) {
+  const info = useServerFn(joinInfo);
+  const claim = useServerFn(joinCheckIn);
+  const companionId = useServerFn(checkCompanionId);
+  const skipCompanion = useServerFn(skipCompanionId);
+  const register = useServerFn(saveRegister);
+  const face = useServerFn(addFacePhoto);
+  const person = useServerFn(joinPerson);
+  const done = useServerFn(joinDone);
+  const [about, setAbout] = useState<Awaited<ReturnType<typeof joinInfo>> | null>(null);
+  const [me, setMe] = useState<Extract<Awaited<ReturnType<typeof joinCheckIn>>, { status: "joined" }> | null>(null);
+  const [stage, setStage] = useState<JoinStage>({ name: "intro" });
+  const [queue, setQueue] = useState<JoinStage[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [prefill, setPrefill] = useState<Prefill | null>(null);
+  const [name, setName] = useState("");
+  const [age, setAge] = useState(8);
+
+  const load = () =>
+    void info({ data: { share } })
+      .then(setAbout)
+      .catch(() => setMessage(copy.error));
+  useEffect(load, [share]);
+
+  async function run<T>(fn: () => Promise<T>): Promise<T | null> {
+    setBusy(true);
+    setMessage(null);
+    try {
+      return await fn();
+    } catch (err) {
+      setMessage(err instanceof Error && err.message.length < 120 ? err.message : copy.error);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function next(rest: JoinStage[], token: string) {
+    const [n, ...more] = rest;
+    setQueue(more);
+    if (n) return setStage(n);
+    await run(() => done({ data: { token } }));
+    setStage({ name: "done" });
+  }
+
+  async function pick(kind: "adult" | "child") {
+    const res = await run(() => claim({ data: { share, kind } }));
+    if (!res) return;
+    if (res.status === "full") return setStage({ name: "full" });
+    setMe(res);
+    setPrefill(null);
+    setName("");
+    if (res.age !== null) setAge(res.age);
+    const plan = res.plan;
+    const steps: JoinStage[] =
+      res.kind === "child"
+        ? [{ name: "person" }]
+        : [
+            plan.everyAdult ? { name: "id", ready: false } : !plan.register ? { name: "person" } : null,
+            plan.register ? { name: "register" } : null,
+            plan.facePhoto ? { name: "face" } : null,
+          ].filter((x): x is JoinStage => x !== null);
+    await next(steps, res.token);
+  }
+
+  const t = me?.token ?? "";
+  const pos = me?.position ?? 1;
+
+  return (
+    <div className="mx-auto w-full max-w-xl py-6">
+      <main className="card-soft p-6 sm:p-10" aria-live="polite">
+        {stage.name === "intro" ? (
+          about ? (
+            <section className="text-center">
+              <h1 className="text-2xl leading-tight sm:text-4xl">{copy.joinTitle(about.leadFirstName, about.propertyName)}</h1>
+              <p className="mt-3 text-lg text-muted-foreground">{copy.joinBody}</p>
+              <div className="mt-8 grid gap-3">
+                <Button size="touch-xl" disabled={busy || about.openAdults === 0} onClick={() => void pick("adult")}>
+                  {copy.joinAdult}
+                </Button>
+                {about.openAdults ? <p className="-mt-1 text-sm text-muted-foreground">{copy.joinLeft(about.openAdults)}</p> : null}
+                <Button size="touch" variant="outline" disabled={busy || about.openChildren === 0} onClick={() => void pick("child")}>
+                  {copy.joinChild}
+                </Button>
+                {about.openChildren ? <p className="-mt-1 text-sm text-muted-foreground">{copy.joinLeft(about.openChildren)}</p> : null}
+              </div>
+              {about.openAdults + about.openChildren === 0 ? <p className="mt-6 text-muted-foreground">{copy.joinFull}</p> : null}
+            </section>
+          ) : (
+            <Loader2 className="mx-auto size-8 animate-spin text-muted-foreground" />
+          )
+        ) : null}
+
+        {stage.name === "full" ? <p className="text-center text-lg">{copy.joinFull}</p> : null}
+
+        {stage.name === "id" && me ? (
+          <section>
+            <h1 className="text-2xl sm:text-4xl">{copy.companionTitle(me.number, me.number)}</h1>
+            {!stage.ready ? (
+              <>
+                <p className="mt-4 text-lg">{copy.companionBody}</p>
+                <WhyAsk>{me.plan.keepIdPhoto ? copy.idConsentPhoto(me.plan.keepDays) : copy.idConsentDetails(me.plan.keepDays)}</WhyAsk>
+                <div className="mt-8 grid gap-3">
+                  <Button size="touch-xl" onClick={() => setStage({ name: "id", ready: true })}>
+                    {copy.companionReady}
+                  </Button>
+                  <Button
+                    size="touch"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(() => skipCompanion({ data: { token: t, position: pos } })).then((ok) => {
+                        // No ID: at least their name, unless the register asks for it anyway.
+                        if (ok) void next(me.plan.register ? queue : [{ name: "person" }, ...queue], t);
+                      })
+                    }
+                  >
+                    {copy.joinNoId}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="mt-6">
+                <IdCamera
+                  busy={busy}
+                  onCapture={(full, small) =>
+                    void run(() => companionId({ data: { token: t, position: pos, image: full, ...(me.plan.keepIdPhoto ? { small } : {}) } })).then(async (res) => {
+                      if (!res) return;
+                      if (res.status === "retry") return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
+                      if (res.status === "skip") {
+                        await run(() => skipCompanion({ data: { token: t, position: pos } }));
+                        return void next(me.plan.register ? queue : [{ name: "person" }, ...queue], t);
+                      }
+                      setPrefill(res.prefill);
+                      await next(queue, t);
+                    })
+                  }
+                  onFail={() => setStage({ name: "id", ready: false })}
+                />
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {stage.name === "person" && me ? (
+          <form
+            className="space-y-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void run(() => person({ data: { token: t, fullName: name.trim(), ...(me.kind === "child" ? { age } : {}) } })).then((ok) => {
+                if (!ok) return;
+                // A 16 or 17 year old is in the register too.
+                const more: JoinStage[] = me.kind === "child" && me.plan.register && age >= REGISTER_AGE ? [{ name: "register" }, ...queue] : queue;
+                if (me.kind === "child") setPrefill({ fullName: name.trim(), nationality: null, documentNumber: null, placeOfIssue: null });
+                void next(more, t);
+              });
+            }}
+          >
+            <h1 className="text-2xl sm:text-4xl">{me.kind === "child" ? copy.joinChildTitle : copy.joinNameTitle(me.number)}</h1>
+            <div className="space-y-2">
+              <label htmlFor="join-name" className="text-base font-medium">
+                {me.kind === "child" ? copy.joinChildName : copy.joinName}
+              </label>
+              <Input id="join-name" className="h-14 text-lg" autoComplete={me.kind === "child" ? "off" : "name"} required value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            {me.kind === "child" ? <Counter label={copy.joinChildAge} hint="" value={age} min={0} max={17} onChange={setAge} /> : null}
+            <Button type="submit" size="touch-xl" className="w-full" disabled={busy || !name.trim()}>
+              {busy ? <Loader2 className="size-6 animate-spin" /> : null} {copy.joinNext}
+            </Button>
+          </form>
+        ) : null}
+
+        {stage.name === "register" && me ? (
+          <RegisterStep
+            title={me.kind === "child" ? copy.registerTitleChild : copy.registerTitleAdult(me.number)}
+            lead={copy.registerLeadOther}
+            prefill={prefill}
+            busy={busy}
+            onSubmit={(entry) =>
+              void run(() => register({ data: { token: t, position: pos, ...entry } })).then((res) => {
+                if (!res) return;
+                if (!res.ok) return setMessage(res.missing.map((m) => copy.registerMissing[m]).join(" "));
+                void next(queue, t);
+              })
+            }
+          />
+        ) : null}
+
+        {stage.name === "face" && me ? (
+          <section>
+            <h1 className="text-2xl sm:text-4xl">{copy.faceTitleOther(me.number)}</h1>
+            <div className="mt-6">
+              <IdCamera
+                facing="user"
+                busy={busy}
+                help={copy.faceBody}
+                cta={copy.faceTake}
+                busyLabel={copy.faceSaving}
+                onCapture={(_full, small) => void run(() => face({ data: { token: t, position: pos, image: small } })).then((ok) => ok && void next(queue, t))}
+                onFail={() => void next(queue, t)}
+              />
+              <Button variant="ghost" size="lg" className="mt-3 w-full" disabled={busy} onClick={() => void next(queue, t)}>
+                {copy.faceSkip}
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
+        {stage.name === "done" ? (
+          <section className="py-4 text-center">
+            <CheckCircle2 className="mx-auto size-14 text-success" />
+            <h1 className="mt-4 text-2xl sm:text-4xl">{copy.joinDoneTitle}</h1>
+            <p className="mt-3 text-lg text-muted-foreground">{copy.joinDoneBody}</p>
+            <Button
+              size="touch"
+              variant="outline"
+              className="mt-8"
+              onClick={() => {
+                setMe(null);
+                setStage({ name: "intro" });
+                load();
+              }}
+            >
+              {copy.joinAnother}
+            </Button>
+          </section>
+        ) : null}
+
+        {message ? (
+          <p role="alert" className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground">
+            {message}
+          </p>
+        ) : null}
+      </main>
     </div>
   );
 }

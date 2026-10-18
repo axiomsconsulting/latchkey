@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { guest as copy } from "@/content/copy";
 import { cn } from "@/lib/utils";
-import { headerIconClass } from "@/components/guest/KioskClocks";
 
 /** Draws the QR once per URL; the image is small enough to keep in state. */
 function useQrImage(url: string | null) {
@@ -163,7 +162,18 @@ export function GuideLink({ url, kiosk = false }: { url: string; kiosk?: boolean
  * corner that opens it again. When a stay has been found, the square
  * carries that check-in over to the phone.
  */
-export function KioskQr({ url, large, carryOn }: { url: string; large: boolean; carryOn: boolean }) {
+export function KioskQr({
+  url,
+  large,
+  carryOn,
+  others = false,
+}: {
+  url: string;
+  large: boolean;
+  carryOn: boolean;
+  /** Other guests are being filled in: the square lets them use their own phones. */
+  others?: boolean;
+}) {
   const src = useQrImage(url);
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<HTMLElement | null>(null);
@@ -183,15 +193,21 @@ export function KioskQr({ url, large, carryOn }: { url: string; large: boolean; 
       </aside>
     );
   }
+  const caption = others ? copy.othersCaption : copy.carryOnCaption;
+  // The square with a small arrow (off to a phone), and a word under it saying what it's for.
   const button = (
     <button
       type="button"
       onClick={() => setOpen(true)}
-      aria-label={carryOn ? copy.qrOpen : copy.kioskQrTitle}
-      title={carryOn ? copy.qrOpen : copy.kioskQrTitle}
-      className={target ? headerIconClass : `${headerIconClass} fixed bottom-5 right-5 z-40`}
+      aria-label={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
+      title={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
+      className={cn("relative flex flex-col items-center gap-0.5 rounded-xl px-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", !target && "fixed bottom-5 right-5 z-40")}
     >
-      <QrCode className="size-9" strokeWidth={1.5} />
+      <span className="relative grid size-12 place-items-center">
+        <QrCode className="size-9" strokeWidth={1.5} />
+        <ArrowUpRight className={cn("absolute -right-0.5 -top-0.5 size-4", others && "text-primary")} strokeWidth={2.25} />
+      </span>
+      <span className={cn("max-w-[7.5rem] text-center text-[0.65rem] font-medium leading-tight", others && "text-primary")}>{caption}</span>
     </button>
   );
   return (
@@ -201,10 +217,10 @@ export function KioskQr({ url, large, carryOn }: { url: string; large: boolean; 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{carryOn ? copy.qrHeading : copy.kioskQrTitle}</DialogTitle>
+            <DialogTitle>{others ? copy.othersHeading : carryOn ? copy.qrHeading : copy.kioskQrTitle}</DialogTitle>
           </DialogHeader>
           <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[18rem] rounded-2xl" />
-          <p className="text-center text-sm text-muted-foreground">{carryOn ? copy.qrBlurb : copy.kioskQrBody}</p>
+          <p className="text-center text-sm text-muted-foreground">{others ? copy.othersBlurb : carryOn ? copy.qrBlurb : copy.kioskQrBody}</p>
         </DialogContent>
       </Dialog>
     </>

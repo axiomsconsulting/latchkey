@@ -20,7 +20,7 @@ export type DemoHint = {
 /** The parts of a check-in screen the banner needs to know about. */
 export type DemoStep =
   | { name: "welcome" | "letter" | "checkout" | "platform" | "no_match" | "guestName" | "confirm" | "party" }
-  | { name: "register" | "face" | "handover" | "done" | "locked" }
+  | { name: "register" | "face" | "handover" | "done" | "locked" | "waiting" }
   | { name: "pick"; items: Array<{ label: string }> }
   | { name: "identity"; method: "photo_id" | "last4" | "self_declare"; consented: boolean }
   | { name: "companion"; ready: boolean };

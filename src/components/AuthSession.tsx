@@ -7,6 +7,7 @@ import { authExtraCopy as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { clearTrialClaim, confirmSignIn, pendingTrialClaim, takeTokensFromUrl } from "@/lib/social-auth";
 import { completeTrialClaim } from "@/lib/trial.functions";
+import { rememberDashboard } from "@/lib/home-redirect";
 
 /**
  * On every page: remembers how this device signed in (the "Last used"
@@ -39,6 +40,8 @@ export function AuthSession() {
     void takeTokensFromUrl().then(() => supabase.auth.getSession().then(({ data }) => onSession(data.session?.user)));
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "USER_UPDATED") void onSession(session?.user);
+      // Signed out: "/" shows the home page again on this device.
+      if (event === "SIGNED_OUT") rememberDashboard(false);
     });
     return () => data.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
