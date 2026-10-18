@@ -5,6 +5,7 @@
  * Never throws: an alert is always saved on Today whatever happens here.
  */
 import { CHANNELS, alertPath, alertTitle, channelsFor, normalisePrefs, smsText, type AlertKind, type Available, type Channel } from "./notify";
+import { rebrand } from "@/lib/brand";
 
 async function db() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -73,7 +74,7 @@ export async function notifyHost(input: {
           chat_id: c.chat_id,
           text: `🔔 ${title}\n${input.message}`,
           disable_web_page_preview: true,
-          reply_markup: { inline_keyboard: [[{ text: "Open in Latchkey", url: link }]] },
+          reply_markup: { inline_keyboard: [[{ text: rebrand("Open in Latchkey"), url: link }]] },
         });
         if (r.ok) ok++;
         // The host blocked the bot or left the chat: forget it.
@@ -120,7 +121,7 @@ export async function latestForDevice(token: string): Promise<{ title: string; b
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!alert) return { title: "Latchkey", body: "Open Today to see what's new.", url: "/app/today", tag: "latchkey" };
+  if (!alert) return { title: rebrand("Latchkey"), body: "Open Today to see what's new.", url: "/app/today", tag: "latchkey" };
   return { title: alertTitle(alert.kind), body: alert.message, url: alertPath(alert.kind, alert.booking_id), tag: `alert-${alert.id}` };
 }
 

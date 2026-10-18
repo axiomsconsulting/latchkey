@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { rebrand } from "@/lib/brand";
 
 /** Escape text for an iCalendar property value. */
 function esc(v: string) {
@@ -45,9 +46,9 @@ export const Route = createFileRoute("/api/public/calendar/$token")({
         const lines = [
           "BEGIN:VCALENDAR",
           "VERSION:2.0",
-          "PRODID:-//Latchkey//EN",
+          rebrand("PRODID:-//Latchkey//EN"),
           "CALSCALE:GREGORIAN",
-          `X-WR-CALNAME:${esc(`${(room as any).properties?.name ?? "Latchkey"} · ${room.display_name}`)}`,
+          `X-WR-CALNAME:${esc(`${(room as any).properties?.name ?? rebrand("Latchkey")} · ${room.display_name}`)}`,
         ];
         for (const b of rows ?? []) {
           lines.push(

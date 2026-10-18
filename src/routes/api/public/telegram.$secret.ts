@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { rebrand } from "@/lib/brand";
 
 /**
  * Telegram tells Latchkey when someone talks to the bot. "/start <code>"
@@ -20,14 +21,14 @@ export const Route = createFileRoute("/api/public/telegram/$secret")({
           if (!chatId) return Response.json({ ok: true });
           const code = /^\/start\s+([a-z0-9]{12,32})$/.exec(text)?.[1];
           if (!code) {
-            await telegramCall("sendMessage", { chat_id: chatId, text: "Hello from Latchkey. To get alerts here, open Latchkey → Settings → Notifications and tap Connect Telegram." });
+            await telegramCall("sendMessage", { chat_id: chatId, text: rebrand("Hello from Latchkey. To get alerts here, open Latchkey → Settings → Notifications and tap Connect Telegram.") });
             return Response.json({ ok: true });
           }
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const db = supabaseAdmin as unknown as { from: (t: string) => any };
           const { data: link } = await db.from("telegram_link_codes").select("host_id, user_id, expires_at").eq("code", code).maybeSingle();
           if (!link || Date.parse(link.expires_at) < Date.now()) {
-            await telegramCall("sendMessage", { chat_id: chatId, text: "That link has expired. Tap Connect Telegram in Latchkey again." });
+            await telegramCall("sendMessage", { chat_id: chatId, text: rebrand("That link has expired. Tap Connect Telegram in Latchkey again.") });
             return Response.json({ ok: true });
           }
           await db.from("telegram_link_codes").delete().eq("code", code);

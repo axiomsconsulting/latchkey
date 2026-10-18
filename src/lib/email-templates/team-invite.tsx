@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Body, Button, Container, Head, Heading, Html, Preview, Text } from '@react-email/components'
 import type { TemplateEntry } from './registry'
+import { rebrand } from "@/lib/brand";
 
 interface TeamInviteProps {
   hostName?: string
@@ -14,7 +15,7 @@ function TeamInvite({ hostName = 'a host', inviter = 'Someone', roleLine = '', u
   return (
     <Html lang="en">
       <Head />
-      <Preview>{`Join ${hostName} on Latchkey`}</Preview>
+      <Preview>{rebrand(`Join ${hostName} on Latchkey`)}</Preview>
       <Body style={{ backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif', color: '#2c2a26' }}>
         <Container style={{ padding: '32px 24px', maxWidth: '560px' }}>
           <Heading style={{ fontFamily: 'Fraunces, Georgia, serif', color: '#1f4d3a', fontSize: '24px' }}>
@@ -41,7 +42,7 @@ function TeamInvite({ hostName = 'a host', inviter = 'Someone', roleLine = '', u
 
 export const template = {
   component: TeamInvite,
-  subject: (d: Record<string, any>) => `Join ${String(d['hostName'] ?? 'a host')} on Latchkey`,
+  subject: (d: Record<string, any>) => rebrand(`Join ${String(d['hostName'] ?? 'a host')} on Latchkey`),
   displayName: 'Team invitation',
   previewData: {
     hostName: 'The Hill Suites',

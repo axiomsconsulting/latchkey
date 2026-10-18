@@ -1,3 +1,5 @@
+import { branded } from "@/lib/brand";
+
 /**
  * What changed in Latchkey, newest first. Add an entry with every change
  * (see AGENTS.md): "new" items also make up the features log on the About
@@ -27,7 +29,19 @@ export type Release = {
   items: ChangeItem[];
 };
 
-export const RELEASES: Release[] = [
+// Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
+export const RELEASES: Release[] = branded([
+  {
+    version: "0.40.0",
+    date: "2026-10-18",
+    title: "Your own web address",
+    items: [
+      { kind: "new", area: "Settings", text: "Give your guests your own web address, like stay.yourhotel.co.uk. Check-in, guest guides and every page there carry your name." },
+      { kind: "improved", area: "Website", text: "A shorter, clearer home page." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: one brand setting for the product's name, tagline and footer, used on every page, email, alert and the installed app." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: see hosts' own web addresses and switch each on once it's connected on the hosting." },
+    ],
+  },
   {
     version: "0.39.0",
     date: "2026-10-18",
@@ -465,7 +479,7 @@ export const RELEASES: Release[] = [
       { kind: "new", area: "Website", text: "Home page." },
     ],
   },
-];
+]);
 
 export type Feature = ChangeItem & { version: string; date: string };
 

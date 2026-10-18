@@ -1,3 +1,4 @@
+import { rebrand } from "@/lib/brand";
 /**
  * Where a host's alerts go: email, push to their devices, Telegram and SMS.
  * Each business chooses (hosts.notify_prefs); Latchkey's super admin decides
@@ -57,7 +58,7 @@ const TITLES: Record<AlertKind, string> = {
 };
 
 export function alertTitle(kind: string): string {
-  return TITLES[kind as AlertKind] ?? "Latchkey";
+  return TITLES[kind as AlertKind] ?? rebrand("Latchkey");
 }
 
 /** Where tapping the alert should land. */
@@ -68,7 +69,7 @@ export function alertPath(kind: string, bookingId: string | null): string {
 
 /** A text message: short, with the link, under one SMS where possible. */
 export function smsText(kind: string, message: string, link: string): string {
-  const head = `Latchkey: ${alertTitle(kind)}. `;
+  const head = rebrand(`Latchkey: ${alertTitle(kind)}. `);
   const room = 160 - head.length - link.length - 1;
   const body = message.length > room ? `${message.slice(0, Math.max(0, room - 1))}…` : message;
   return `${head}${body} ${link}`;

@@ -28,10 +28,11 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatUkDate } from "@/lib/dates";
 import { money } from "@/lib/pricing";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
   validateSearch: (s: Record<string, unknown>): { done?: boolean } => (s["done"] ? { done: true } : {}),
-  head: () => ({ meta: [{ title: "Subscription · Latchkey host dashboard" }] }),
+  head: () => ({ meta: [{ title: rebrand("Subscription · Latchkey host dashboard") }] }),
   component: BillingPage,
 });
 

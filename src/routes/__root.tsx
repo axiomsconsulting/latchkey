@@ -3,6 +3,7 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  redirect,
   useRouter,
   HeadContent,
   Scripts,
@@ -15,6 +16,11 @@ import { VisitTracker } from "../components/VisitTracker";
 import { PwaSetup } from "../components/PwaSetup";
 import { AuthSession } from "../components/AuthSession";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { rebrand, setBrand } from "@/lib/brand";
+import { loadSite } from "@/lib/site-client";
+
+// On a host's own domain, the platform's own pages (home, pricing, trial, PIN entry) open their property instead.
+const PLATFORM_ONLY = /^\/(about|start|developers|checkin)?\/?$/;
 
 function NotFoundComponent() {
   return (
@@ -77,15 +83,22 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: async ({ location }) => {
+    const site = await loadSite().catch(() => null);
+    if (site) setBrand(site.brand);
+    const code = site?.tenant?.shortCode;
+    if (code && PLATFORM_ONLY.test(location.pathname)) throw redirect({ to: "/$slug", params: { slug: code } });
+    return { site };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Latchkey — self-service arrivals for small hosts" },
+      { title: rebrand("Latchkey — self-service arrivals for small hosts") },
       {
         name: "description",
         content:
-          "Latchkey handles guest arrivals, house rules and extras for hosts letting rooms across Airbnb, Booking.com, Homestay.com and direct.",
+          rebrand("Latchkey handles guest arrivals, house rules and extras for hosts letting rooms across Airbnb, Booking.com, Homestay.com and direct."),
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -93,7 +106,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#194129" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "Latchkey" },
+      { name: "apple-mobile-web-app-title", content: rebrand("Latchkey") },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
     ],
     links: [
@@ -108,7 +121,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
+      // Made per site, so the installed app carries the brand's name.
+      { rel: "manifest", href: "/api/public/manifest/app" },
       { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
     ],
   }),

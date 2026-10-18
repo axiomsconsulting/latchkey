@@ -13,6 +13,7 @@ import { RoutinesAdmin } from "@/components/host/RoutinesAdmin";
 import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
+import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,9 +48,10 @@ import {
 import { formatUkDate } from "@/lib/dates";
 import { setPlatformStripe } from "@/lib/payments.functions";
 import { DEFAULT_PRICING, monthlyPence, money, type PricingConfig } from "@/lib/pricing";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
-  head: () => ({ meta: [{ title: "Admin · Latchkey" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: rebrand("Admin · Latchkey") }, { name: "robots", content: "noindex" }] }),
   component: AdminPage,
 });
 
@@ -116,7 +118,9 @@ function AdminPage() {
           <IntegrationsAdmin />
         </TabsContent>
         <TabsContent value="settings" className="mt-4 space-y-6">
+          <BrandAdmin />
           <SiteSettings />
+          <DomainsAdmin />
           <KioskSaverAdmin />
           <PricingAdmin />
           <SuperAdmins />

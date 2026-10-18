@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CustomDomainSettings } from "@/components/host/CustomDomainSettings";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
 import { CurrencyPicker, PhoneInput, TimeZonePicker } from "@/components/WorldPickers";
@@ -36,6 +37,7 @@ import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
+import { rebrand } from "@/lib/brand";
 
 const FOCUS = ["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy"] as const;
 
@@ -45,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/app/settings")({
     typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {},
   head: () => ({
     meta: [
-      { title: "Settings · Latchkey host dashboard" },
+      { title: rebrand("Settings · Latchkey host dashboard") },
       {
         name: "description",
         content: "Your business details, demo content and guest data retention.",
@@ -286,6 +288,15 @@ function SettingsPage() {
       {workspace.data ? (
         <div id="settings-invoices" className="scroll-mt-24 rounded-2xl">
           <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} />
+        </div>
+      ) : null}
+      {workspace.data ? (
+        <div id="settings-domain" className="scroll-mt-24 rounded-2xl">
+          <CustomDomainSettings
+            hostId={workspace.data.hostId}
+            isOwner={isOwner}
+            properties={(workspace.data.properties ?? []) as Array<{ id: string; name: string }>}
+          />
         </div>
       ) : null}
       {workspace.data ? (

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { roomQrCopy as copy } from "@/content/copy";
 import { usePropertyBoard } from "@/hooks/use-host-data";
 import { getRoomGuideCodes } from "@/lib/guide.functions";
+import { rebrand } from "@/lib/brand";
 
 /**
  * A card for each room, with the QR code for that room's own guide, to
@@ -17,7 +18,7 @@ import { getRoomGuideCodes } from "@/lib/guide.functions";
  */
 export const Route = createFileRoute("/_authenticated/app/room-qr/$propertyId")({
   validateSearch: (s: Record<string, unknown>): { room?: string } => (typeof s["room"] === "string" ? { room: s["room"] } : {}),
-  head: () => ({ meta: [{ title: "Print room QR codes — Latchkey" }] }),
+  head: () => ({ meta: [{ title: rebrand("Print room QR codes — Latchkey") }] }),
   component: RoomQrCards,
 });
 

@@ -1,14 +1,21 @@
+import { branded, currentBrand } from "@/lib/brand";
+
 /**
  * All user-facing copy lives here so it can be reviewed and later translated.
  * UK English throughout.
  */
 
+/** The product's name and tagline: the super admin's white label (src/lib/brand.ts). */
 export const brand = {
-  name: "Latchkey",
-  tagline: "Self-service arrivals for small hosts",
+  get name() {
+    return currentBrand().name;
+  },
+  get tagline() {
+    return currentBrand().tagline;
+  },
 };
 
-export const demoCopy = {
+export const demoCopy = branded({
   cta: "Try the demo",
   title: "Try Latchkey",
   body: "No sign-up or PIN needed. Pick a side to explore.",
@@ -18,9 +25,9 @@ export const demoCopy = {
   hostBody: "See arrivals, bookings, calendars and requests.",
   resetNote: "Demo data is shared and resets every day.",
   error: "The demo couldn't start just now. Please try again.",
-};
+});
 
-export const siteMenu = {
+export const siteMenu = branded({
   open: "Open menu",
   title: "Menu",
   demo: "Try the demo",
@@ -45,9 +52,9 @@ export const siteMenu = {
   guestHint: "Check in with a PIN",
   demoShort: "Demo",
   trialShort: "Free trial",
-};
+});
 
-export const about = {
+export const about = branded({
   title: "About Latchkey",
   intro:
     "Latchkey lets guests check themselves in, read their guest guide and ask for what they need, while hosts keep every booking, request and record in one place.",
@@ -56,106 +63,60 @@ export const about = {
   kinds: { new: "New", improved: "Improved", fixed: "Fixed" } as Record<string, string>,
   version: (v: string) => `Version ${v}`,
   since: (v: string) => `since ${v}`,
-};
+});
 
-export const marketing = {
-  headline: "Your guests let themselves in, calmly, while you get on with your day.",
-  subhead:
-    "Latchkey handles arrivals, house rules and extras for hosts who let a few rooms across Airbnb, Booking.com, Homestay.com and direct bookings.",
+export const marketing = branded({
+  headline: "Every guest checked in. Without you at the door.",
+  subhead: "ID checks, the guest register and every booking site, in one place. Guests check themselves in; you get your evenings back.",
   primaryCta: "Try the demo",
   secondaryCta: "Start free trial",
-  footer: "© 2026 Latchkey. Self-service arrivals and stay companion for hospitality hosts.",
+  trust: "Free for 30 days · No app for guests · Works alongside",
+  footer: "© 2026 Latchkey. Self check-in and stay companion for hosts.",
   benefits: [
-    {
-      title: "Check-in without you",
-      body: "A QR code, short link or PIN at the door. No app, no sign-up, no waiting on the doorstep at 11pm.",
-    },
-    {
-      title: "Every booking in one list",
-      body: "Airbnb, Booking.com, Homestay.com and direct bookings side by side, so you always know who is arriving.",
-    },
-    {
-      title: "Extras that pay for themselves",
-      body: "Late check-out, fresh towels, early arrival. Guests request and pay; you approve with one tap or let it run itself.",
-    },
+    { title: "Every adult, ID-checked", body: "Not just the person who booked. Guests check in at the door or on their own phones, in about a minute." },
+    { title: "The guest register, done", body: "Names and nationalities recorded as guests arrive, kept 12 months, ready if the police ask." },
+    { title: "All your bookings, one list", body: "Airbnb, Booking.com and direct stays side by side, with double bookings flagged before they happen." },
   ],
-  /** Where the booking sites stop and Latchkey takes over. */
+  beforeAfter: {
+    beforeTitle: (day: string) => `${day}, before`,
+    before: [
+      "Waiting up for a late arrival",
+      "Three apps to find who's coming",
+      "A paper register nobody fills in",
+      "Towels requested at 11pm, seen at 7am",
+    ],
+    afterTitle: (day: string) => `${day}, with Latchkey`,
+    after: [
+      "Guests let themselves in, any hour",
+      "One arrivals list for every site",
+      "The register fills itself in",
+      "Requests and extras land in one inbox",
+    ],
+  },
+  /** Further down: where the booking sites stop and Latchkey takes over. */
   gap: {
     eyebrow: "Why Latchkey",
-    title: "Booking sites bring the guest. The rest has always been on you.",
-    body: "Airbnb, Booking.com and the others take the booking and the payment. Once the guest is at your door, their part is done: who walks in, what the law asks you to keep, and everything during the stay is yours. Latchkey takes over exactly there, whichever site they booked on, and works alongside all of them.",
-    theyLabel: "The booking site",
-    youLabel: "Left to you",
-    usLabel: "With Latchkey",
+    title: "Booking sites stop at the booking. Latchkey takes it from the door.",
+    theyLabel: "Booking sites",
+    usLabel: "Latchkey",
     rows: [
-      {
-        topic: "Who actually arrives",
-        they: "Checks the ID of the person who booked.",
-        you: "Partners, friends and family walk in unchecked.",
-        us: "Every adult photographs their ID at check-in, matched to the booking name, on the tablet or on their own phones at the same time. Children just give their age.",
-      },
-      {
-        topic: "The guest register",
-        they: "Nothing. It isn't their duty.",
-        you: "UK law asks you to record every guest's name and nationality, more for overseas guests, keep it 12 months and show it on request.",
-        us: "The register fills itself in as guests check in, is kept for 12 months, then removed, and is ready to print or download for an inspection.",
-      },
-      {
-        topic: "Calendars",
-        they: "Each site has its own; calendar links share dates only, often hours late.",
-        you: "Double bookings, and no single view of who's arriving where.",
-        us: "Every site's calendar in one list, the same stay recognised across sites, clashes flagged, and a calendar link you can share with your cleaner or team.",
-      },
-      {
-        topic: "Arrival",
-        they: "Check-in notes sit in their app, which few guests open at the door.",
-        you: "Late-night calls, handing over keys, guests waiting outside.",
-        us: "Guests check themselves in at the door or on their phone. The door code, Wi-Fi, parking and house rules then appear on their phone, only from the day they arrive.",
-      },
-      {
-        topic: "During the stay",
-        they: "A message thread.",
-        you: "Towels at 11pm, a dripping tap, “can we check out late?”",
-        us: "Requests, paid extras and repairs in one inbox, paid straight into your own Stripe account. Booking-site messages join the same conversation.",
-      },
-      {
-        topic: "Guests who come back",
-        they: "Take commission on every stay, even the regulars.",
-        you: "Returning guests still book through them.",
-        us: "Take direct bookings with numbered invoices, and keep the commission.",
-      },
+      { topic: "Identity", they: "Check the person who booked", us: "Checks every adult who arrives" },
+      { topic: "Guest register", they: "Not their job", us: "Kept for you, 12 months, ready to inspect" },
+      { topic: "Calendars", they: "One each, dates only", us: "One list, same stay matched across sites" },
+      { topic: "Arrival", they: "Notes buried in their app", us: "Door code and house rules on the guest's phone, from arrival day" },
+      { topic: "During the stay", they: "A message thread", us: "Requests, paid extras and repairs in one inbox" },
+      { topic: "Returning guests", they: "Commission every time", us: "Direct bookings and invoices, no commission" },
     ],
   },
   developers: {
     eyebrow: "For developers",
-    title: "An open API, and a server for AI assistants",
-    body: "Connect Latchkey to your own tools, or let an AI assistant work with your arrivals. Both use the same keys, which you make and revoke in Settings.",
-    points: [
-      { title: "REST API", body: "Properties, rooms, bookings, today's arrivals, guest requests and messages. Documented with OpenAPI, with examples for every call." },
-      { title: "MCP server", body: "Plug Latchkey into Claude, ChatGPT or any assistant that speaks the Model Context Protocol: “Who's arriving today?” just works." },
-      { title: "Your keys, your rules", body: "Read-only or read-and-write keys, per business. Every call is counted, and a key can be revoked at any time." },
-    ],
-    cta: "See the developer docs",
+    title: "Open API. MCP server for AI assistants.",
+    body: "Connect your own tools, or ask Claude or ChatGPT who's arriving today. Read-only or full keys, revoke any time.",
+    cta: "Developer docs",
   },
-  beforeAfter: {
-    beforeTitle: (day: string) => `A ${day} before Latchkey`,
-    before: [
-      "Three inboxes, three sets of arrival times",
-      "Leaving a client call to hand over a key",
-      "A towel request at 11pm you see at 7am",
-      "Late check-out agreed, cleaner turns up anyway",
-    ],
-    afterTitle: (day: string) => `A ${day} with Latchkey`,
-    after: [
-      "One arrivals list for all channels",
-      "Guest checks in at the door on the tablet",
-      "Requests land in Today, approved in a tap",
-      "Late check-out only offered when the room is free",
-    ],
-  },
-};
+});
 
-export const auth = {
+export const auth = branded({
   signInTitle: "Welcome back",
   signInBody: "Sign in to see today's arrivals and keep your calendars in step.",
   signUpTitle: "Set up your rooms",
@@ -173,11 +134,11 @@ export const auth = {
   magicSent: (email: string) => `We've sent a magic link to ${email}. Open it on this device to sign in.`,
   magicNeedsEmail: "Type your email address first.",
   orPassword: "or sign in with your password",
-};
+});
 
 /** The free trial: straight into setting up, account saved at the end. */
 /** Google / Apple sign-in, last used, saving a trial, setting a password. */
-export const authExtraCopy = {
+export const authExtraCopy = branded({
   google: "Continue with Google",
   apple: "Continue with Apple",
   googleSignUp: "Sign up with Google",
@@ -206,9 +167,9 @@ export const authExtraCopy = {
   passwordSave: "Save password",
   passwordSaved: "Password saved.",
   useLinks: "Keep using email links",
-};
+});
 
-export const trial = {
+export const trial = branded({
   starting: "Setting up your free trial…",
   closed: "New free trials are paused for the moment. Please check back soon.",
   aboutTitle: "About you",
@@ -231,9 +192,9 @@ export const trial = {
   bannerLater: "Later",
   setupDone: "Your property is ready. Save your account any time from the bar at the top.",
   next: "Next: your property",
-};
+});
 
-export const hostNav = {
+export const hostNav = branded({
   today: "Today",
   bookings: "Bookings",
   properties: "Properties",
@@ -257,9 +218,9 @@ export const hostNav = {
   menuGrab: "Menu size: drag, or use the arrow keys",
   menuModes: { full: "Full menu", rail: "Icons only", top: "Menu along the top" } as Record<string, string>,
   menuToSide: "Show the menu down the side",
-};
+});
 
-export const statuses = {
+export const statuses = branded({
   needs_details: "Needs details",
   upcoming: "Upcoming",
   checked_in: "In stay",
@@ -272,9 +233,9 @@ export const statuses = {
   in_stay: "In stay",
   departing_today: "Departing today",
   past: "Past",
-};
+});
 
-export const channels = {
+export const channels = branded({
   airbnb: "Airbnb",
   booking_com: "Booking.com",
   homestay: "Homestay.com",
@@ -282,7 +243,7 @@ export const channels = {
   agoda: "Agoda",
   direct: "Direct",
   other: "Other website (.ics link)",
-};
+});
 
 /**
  * Where a host finds the calendar export link on each platform.
@@ -292,7 +253,7 @@ export const channels = {
 export const calendarGuides: Record<
   string,
   { title: string; steps: string[]; helpUrl: string | null; helpLabel: string; note?: string; screenshot: string | null }
-> = {
+> = branded({
   airbnb: {
     title: "Where do I find my Airbnb calendar link?",
     steps: [
@@ -371,9 +332,9 @@ export const calendarGuides: Record<
     helpLabel: "",
     screenshot: null,
   },
-};
+});
 
-export const today = {
+export const today = branded({
   title: "Today",
   subtitle: "Arrivals, departures and anything waiting on you.",
   arriving: "Arriving today",
@@ -391,10 +352,10 @@ export const today = {
   maybeBlock: "Dates you closed yourself?",
   markBlocked: "Not a booking, mark as blocked",
   cleaningToday: "Cleaning window today",
-};
+});
 
 /** Installing Latchkey as an app. */
-export const pwaCopy = {
+export const pwaCopy = branded({
   offline: "You're offline. Latchkey reconnects by itself as soon as the Wi-Fi is back.",
   installApp: "Install the Latchkey app",
   installKiosk: "Install the kiosk on this tablet",
@@ -406,10 +367,10 @@ export const pwaCopy = {
   menuInstall: "Open your browser's menu and choose “Install app” or “Add to Home screen”.",
   androidKiosk:
     "Then open the check-in icon from the home screen: it runs full screen, without the bottom navigation bar. If your tablet's own browser can't install apps, use Chrome. To keep the tablet on the kiosk, turn on screen pinning (Settings → Security → App pinning) and pin it.",
-};
+});
 
 /** Settings: where the host's alerts go. */
-export const notifyCopy = {
+export const notifyCopy = branded({
   title: "App and alerts",
   body: "Get alerts the moment a guest is locked out, asks for something or messages you. Pick as many ways as you like; they're all free except texts.",
   install: "Install Latchkey on your phone or tablet for one-tap access and alerts on the lock screen.",
@@ -442,10 +403,10 @@ export const notifyCopy = {
   test: "Send a test alert",
   testResult: (parts: string[]) => (parts.length ? `Test sent by ${parts.join(", ")}.` : "Nothing was sent: switch on at least one way above."),
   saved: "Saved",
-};
+});
 
 /** Settings: booking-site messages forwarded by email. */
-export const platformMsgCopy = {
+export const platformMsgCopy = branded({
   title: "Airbnb and Booking.com messages",
   body:
     "Booking sites don't let other apps read your guest chats, but they email you each message. Forward those emails to Latchkey and each message lands in that guest's conversation here, next to their requests and payments. Free.",
@@ -469,10 +430,10 @@ export const platformMsgCopy = {
   matched: "Added to the stay",
   unmatched: "Not matched to a stay",
   none: "Nothing received yet.",
-};
+});
 
 /** Latchkey admin: platform-wide integrations. */
-export const integrationsCopy = {
+export const integrationsCopy = branded({
   title: "Integrations",
   body: "Keys live in Lovable Cloud → Secrets, never here. This shows what's set up and the one-time steps left. Each paid or free channel can also be switched off in Routines.",
   ready: "Set up",
@@ -511,10 +472,10 @@ export const integrationsCopy = {
     save: "Save",
     saved: "Saved",
   },
-};
+});
 
 /** Today: the in-house conversation with every guest. */
-export const guestMessagesCopy = {
+export const guestMessagesCopy = branded({
   title: "Guest messages",
   usp: "Only in Latchkey: one recorded conversation per stay. Messages, extras, charges and requests sit together with the booking, so there's always a record of what was asked, agreed and paid, whichever site the guest booked on.",
   showLabel: "Show",
@@ -557,10 +518,10 @@ export const guestMessagesCopy = {
     cancelled: "Cancelled",
   } as Record<string, string>,
   jobStatus: { new: "New", acknowledged: "Seen", booked: "Booked", in_progress: "In progress", done: "Done", declined: "Declined", cancelled: "Cancelled" } as Record<string, string>,
-};
+});
 
 /** Today: a welcome on the front-door kiosk for an arriving guest. */
-export const kioskWelcomeCopy = {
+export const kioskWelcomeCopy = branded({
   title: "Welcome a guest on the kiosk",
   forGuest: "For",
   anyone: "Anyone arriving",
@@ -580,10 +541,10 @@ export const kioskWelcomeCopy = {
   remove: "Remove",
   removed: "Taken off the kiosk.",
   notReady: "Kiosk welcomes need the latest update (migration 0034).",
-};
+});
 
 /** What's new: Latchkey's own updates, for hosts. */
-export const whatsNewCopy = {
+export const whatsNewCopy = branded({
   navLabel: "What's new",
   title: "What's new",
   subtitle: "Every Latchkey update, newest first.",
@@ -594,19 +555,19 @@ export const whatsNewCopy = {
   levels: { major: "Major update", minor: "New features", fix: "Fixes" } as Record<string, string>,
   kinds: { new: "New", improved: "Better", fixed: "Fixed" } as Record<string, string>,
   versionLine: (version: string, date: string) => `Version ${version} · ${date}`,
-};
+});
 
 /** Moving and folding Today's sections. */
-export const dashboardCopy = {
+export const dashboardCopy = branded({
   grab: (title: string, folded: boolean) => `${title}: drag to move, tap to ${folded ? "unfold" : "fold"}. Arrow keys move it, Enter ${folded ? "unfolds" : "folds"} it.`,
   grabHint: "Drag to move · tap to fold",
   fold: (title: string) => `Fold ${title}`,
   unfold: (title: string) => `Unfold ${title}`,
   reset: "Put Today's sections back in their usual order",
-};
+});
 
 /** The Today dashboard: everything at a glance, each item a link to where it lives. */
-export const todayDash = {
+export const todayDash = branded({
   subtitle: "Everything at a glance. Tap anything to go straight to it.",
   hint: "Hover, or press and hold, for details.",
   guestsTitle: "Guests today",
@@ -720,9 +681,9 @@ export const todayDash = {
     billing: ["Subscription", "Your plan, card and invoices from Latchkey."],
     register: ["Guest register", "The UK record of every guest aged 16 or over."],
   } as Record<string, [string, string]>,
-};
+});
 
-export const bookings = {
+export const bookings = branded({
   title: "Bookings",
   subtitle: "Every stay across your channels, in one place.",
   guestEmail: "Guest email (optional)",
@@ -761,9 +722,9 @@ export const bookings = {
   importChoose: "Choose CSV file",
   importConfirm: "Import bookings",
   importedToast: "bookings imported",
-};
+});
 
-export const properties = {
+export const properties = branded({
   title: "Properties",
   subtitle: "Your rooms, door details and cleaning windows.",
   addProperty: "Add property",
@@ -780,9 +741,9 @@ export const properties = {
   wholeHouse: "Whole house",
   weekly: "Every",
   noWindows: "No cleaning windows set.",
-};
+});
 
-export const connections = {
+export const connections = branded({
   title: "Connections",
   subtitle: "Calendar links that keep your bookings in step.",
   byRoomTitle: "Each room across platforms",
@@ -808,9 +769,9 @@ export const connections = {
   conflictTitle: "Something needs your eye",
   syncedToast: "Calendar checked",
   removeConfirm: "Remove this calendar link? Bookings already imported are kept.",
-};
+});
 
-export const settings = {
+export const settings = branded({
   title: "Settings",
   subtitle: "Your business details and demo content.",
   business: "Your business",
@@ -846,9 +807,9 @@ export const settings = {
   privacyTitle: "Privacy and retention",
   privacyBody:
     "Guest names, phone digits and notes are cleared 90 days after check-out. Anonymous stay records are kept for your statistics.",
-};
+});
 
-export const onboarding = {
+export const onboarding = branded({
   title: "Let's set up your rooms",
   subtitle: "Three short steps. You can change anything later.",
   step1: "Property",
@@ -858,9 +819,9 @@ export const onboarding = {
   back: "Back",
   finish: "Finish setup",
   orDemo: "Or explore with demo rooms first",
-};
+});
 
-export const common = {
+export const common = branded({
   save: "Save",
   cancel: "Cancel",
   remove: "Remove",
@@ -871,9 +832,9 @@ export const common = {
   errorBody: "We could not load this just now. Try again in a moment.",
   notFound: "We could not find that page.",
   retry: "Try again",
-};
+});
 
-export const checkinSettings = {
+export const checkinSettings = branded({
   title: "Guest check-in",
   body: "Choose how guests confirm who they are when they check themselves in.",
   printQr: "Print QR card",
@@ -920,14 +881,14 @@ export const checkinSettings = {
   cardOrVisit: "Or visit",
   cardPin: "Property PIN",
   qrAlt: "QR code for guest check-in",
-};
+});
 
-export const alerts = {
+export const alerts = branded({
   title: "Needs your attention",
   dismiss: "Mark as seen",
-};
+});
 
-export const guest = {
+export const guest = branded({
   welcomeDismiss: "Touch to check in",
   welcomeTap: "Tap anywhere to check in",
   saverStart: "Rest the screen",
@@ -1213,14 +1174,14 @@ export const guest = {
   inboxHistoryEmpty: "Nothing yet.",
   inboxYou: "You",
   inboxHost: "Your host",
-};
+});
 
 
-export const hostPlaceholders = {
+export const hostPlaceholders = branded({
   comingSoon: "Coming in a later stage",
-};
+});
 
-export const services = {
+export const services = branded({
   title: "Services",
   subtitle: "Guest requests, problems and maintenance, and where to find someone to do the work.",
   tabInbox: "Requests",
@@ -1244,9 +1205,9 @@ export const services = {
     new: "New", acknowledged: "Acknowledged", booked: "Booked", in_progress: "In progress",
     done: "Done", declined: "Declined", cancelled: "Cancelled",
   } as Record<string, string>,
-};
+});
 
-export const stayServices = {
+export const stayServices = branded({
   title: "Need something?",
   subtitle: "Tap what you need. Your host will confirm and tell you when it's coming.",
   issues: "Report a problem",
@@ -1260,9 +1221,9 @@ export const stayServices = {
   expected: (t: string) => `Expected ${t}`,
   price: (p: string) => `${p}, paid to your host`,
   priceOnRequest: "Price confirmed by your host",
-};
+});
 
-export const themeStudio = {
+export const themeStudio = branded({
   title: "Look and feel",
   subtitle: "Brand your guest pages, kiosk and dashboard. Changes preview instantly.",
   presets: "Ready-made styles",
@@ -1285,9 +1246,9 @@ export const themeStudio = {
   preview: "Preview",
   save: "Save look",
   saved: "Look saved",
-};
+});
 
-export const integrations = {
+export const integrations = branded({
   title: "Integrations: demo or live",
   subtitle: "Test each connection safely in demo mode, then switch it live when you're ready.",
   demo: "Demo",
@@ -1300,10 +1261,10 @@ export const integrations = {
     guest_messages: { name: "Guest updates", demo: "Updates show on the guest's stay page.", live: "Stay page plus email to the guest when a sender address is set up." },
   },
   saved: "Switches saved",
-};
+});
 
 /** Guides page: the in-room guide nudge. */
-export const inRoomCopy = {
+export const inRoomCopy = branded({
   title: "Put a QR code in every room",
   body:
     "Booking sites keep their guidebooks inside their own app, and only for that booking. Latchkey's in-room guide is on the wall of the room itself: one scan shows how that room works and lets the guest reach you, whichever site they booked on.",
@@ -1318,10 +1279,10 @@ export const inRoomCopy = {
   printAll: (n: number) => `Print all ${n} rooms`,
   askOwner: "An owner or manager makes this room's code",
   notReady: "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
-};
+});
 
 /** Printing each room's QR code. */
-export const roomQrCopy = {
+export const roomQrCopy = branded({
   back: "Back to guides",
   print: "Print",
   printAll: (n: number) => `Print all ${n}`,
@@ -1330,10 +1291,10 @@ export const roomQrCopy = {
   qrAlt: (room: string) => `QR code for the ${room} guide`,
   notReady: "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
   none: "No rooms yet. Add rooms to this property first.",
-};
+});
 
 /** The guide behind a room's own QR code (/room/<code>). */
-export const roomGuideCopy = {
+export const roomGuideCopy = branded({
   eyebrow: "Your room guide",
   subtitle: (place: string) => `How everything in this room works at ${place}. No app, no login.`,
   yourStay: "Message your host, order extras or see your stay details.",
@@ -1342,9 +1303,9 @@ export const roomGuideCopy = {
   checkIn: "Check in or find your stay",
   gone: "This room guide isn't available any more. Please ask your host.",
   footer: "This guide is for this room. Your host keeps it up to date.",
-};
+});
 
-export const guideCopy = {
+export const guideCopy = branded({
   listHelp: "Guests read these in this order. Drag the grip to move a section; open one to write it. The pin puts it on the reminder card at the top of their guide.",
   listHelpRoom: "This room uses the whole-property guide unless you write its own version of a section. The order is the same for every room.",
   dragTip: "Drag to move (or use the arrow keys)",
@@ -1417,9 +1378,9 @@ export const guideCopy = {
   orderSaved: "Order saved",
   amenitiesLabel: "What's already in this room",
   amenitiesHelp: "One per line, for example: Kettle, Hair dryer, Iron and board, Fresh towels.",
-};
+});
 
-export const extrasCopy = {
+export const extrasCopy = branded({
   guestTitle: "Request extras",
   guestSubtitle: "Towels, late check-out, luggage storage and more. Free items cost nothing.",
   free: "Free",
@@ -1508,10 +1469,10 @@ export const extrasCopy = {
   markPaid: "Payment received",
   payingBank: "Guest is paying by bank transfer",
   payingCash: "Guest is paying cash",
-};
+});
 
 /** Calendar connection help, validation messages and the outbound feed. */
-export const calendarUi = {
+export const calendarUi = branded({
   stepsChecked: "Steps last checked: Sep 2026",
   openHelp: "Open the platform's help page",
   howItWorks:
@@ -1526,9 +1487,9 @@ export const calendarUi = {
     notCalendar: "This link looks like a web page, not a calendar.",
     noEvents: "The link returned no events. Check you copied the export link, not the import box.",
   },
-};
+});
 
-export const feedCopy = {
+export const feedCopy = branded({
   title: "Share this room's Latchkey calendar",
   body:
     "Only needed if you take direct bookings in Latchkey. If your platforms already sync with each other, leave this off.",
@@ -1539,10 +1500,10 @@ export const feedCopy = {
   copied: "Feed link copied",
   regenerate: "Make a new link",
   regenerated: "New feed link created. Update it anywhere you pasted the old one.",
-};
+});
 
 /** One-tap notes the host can send with a decision. */
-export const responseNotes = {
+export const responseNotes = branded({
   label: "Add a note for the guest",
   custom: "Write your own note",
   approve: ["Left outside your door", "Will bring it at 18:30", "Ready to collect from the hallway"],
@@ -1550,19 +1511,19 @@ export const responseNotes = {
   suggest: ["This is the earliest I can manage", "Cleaner is in the house until then"],
   fromHost: (note: string) => `Note from your host: ${note}`,
   send: "Send",
-};
+});
 
 /** Guest requests waiting on the host, shown on Today. */
-export const todayRequests = {
+export const todayRequests = branded({
   title: "Guest requests",
   empty: "No requests waiting.",
   viewAll: "See all requests",
   tightTurnaround: (mins: number) =>
     `Tight turnaround: only ${mins} minutes between check-out and the next arrival.`,
-};
+});
 
 /** Adding and editing price list items. */
-export const priceListUi = {
+export const priceListUi = branded({
   addItem: "Add an item",
   editItem: "Edit item",
   name: "Name",
@@ -1580,10 +1541,10 @@ export const priceListUi = {
   removeConfirm: "Remove this item? Past requests keep their details.",
   removed: "Item removed",
   added: "Item added",
-};
+});
 
 /** Card payments through Stripe. */
-export const payments = {
+export const payments = branded({
   title: "Card payments (Stripe)",
   body: "Guests pay for approved extras by card on their stay page, straight into your own Stripe account. Latchkey never holds your money.",
   notConnected: "Not connected",
@@ -1619,10 +1580,10 @@ export const payments = {
   payNow: "Pay now",
   payFailed: "We couldn't open the payment page. Please try again.",
   paidToast: "Thank you, that's paid and confirmed.",
-};
+});
 
 /** Finding tradespeople for property work. */
-export const trades = {
+export const trades = branded({
   tabLabel: "Local tradespeople",
   intro:
     "Pick what needs doing and search Google Maps for the nearest firms, with reviews, opening hours and phone numbers. Below, the sites people in your country use, and what each is best for.",
@@ -1640,9 +1601,9 @@ export const trades = {
   visit: (name: string) => `Go to ${name}`,
   legalNote:
     "These sites don't offer a way to pull their listings into other apps, and copying them automatically isn't allowed, so Latchkey links out instead. Once you've found someone you like, add them to a job so their details stay with the property.",
-};
+});
 
-export const hostInbox = {
+export const hostInbox = branded({
   via: (platform: string) => `From ${platform}`,
   platformReplyHint: (platform: string) => `Replying here sends it in Latchkey. To answer on ${platform}, reply by email from your own mailbox.`,
   replyByEmail: "Reply by email",
@@ -1655,9 +1616,9 @@ export const hostInbox = {
   send: "Send reply",
   unreadOne: "1 unread message",
   unreadMany: (n: number) => `${n} unread messages`,
-};
+});
 
-export const tradesCopy = {
+export const tradesCopy = branded({
   title: "Your trades and helpers",
   blurb:
     "Your own list of people you actually call. One tap to ring, text, WhatsApp or email them from this device.",
@@ -1704,9 +1665,9 @@ export const tradesCopy = {
   save: "Save contact",
   cancel: "Cancel",
   remove: "Remove",
-};
+});
 
-export const pricingCopy = {
+export const pricingCopy = branded({
   eyebrow: "Pricing",
   title: (days: number) => `Free for ${days} days, then pennies a month`,
   base: (v: string) => `${v} a month for your first property and room`,
@@ -1724,20 +1685,20 @@ export const pricingCopy = {
   adminTitle: "Subscription pricing (super admin)",
   adminBody: "Amounts in pence. Changes show on the home page straight away.",
   saved: "Pricing saved",
-};
+});
 
 /** Currency, time zone and phone pickers. */
-export const worldCopy = {
+export const worldCopy = branded({
   nothing: "Nothing matches.",
   findCurrency: "Search currencies (name, code or symbol)",
   findZone: "Search time zones (city or region)",
   findCountry: "Search countries or codes",
   badPhone: (country: string, example: string) => `That doesn't look like a ${country} number${example ? `, e.g. ${example}` : ""}.`,
   fixPhone: "Please check the phone number first.",
-};
+});
 
 /** Launch offers: free trial, then the offer price for the first paid month, then the usual price. */
-export const offerCopy = {
+export const offerCopy = branded({
   ribbon: (label: string, days: number, price: string, until: string) =>
     `${label}: ${days} days free, then ${price} for your first month. For new hosts who join by ${until}.`,
   seePricing: "See pricing",
@@ -1762,9 +1723,9 @@ export const offerCopy = {
   counts: (waiting: number, used: number) => `${waiting} account${waiting === 1 ? "" : "s"} still to use it · ${used} used`,
   live: "Running today",
   notLive: "Not running today",
-};
+});
 
-export const team = {
+export const team = branded({
   title: "Team",
   body: "Invite people to help run your rooms. Each person signs in with their own account.",
   roles: {
@@ -1819,9 +1780,9 @@ export const team = {
   emailHint: "We'll email a confirmation link to the new address; the change happens when you open it.",
   emailCheck: (email: string) => `Check ${email} for a link to confirm the change.`,
   accessRemoved: (host: string) => `Your access to ${host} was removed.`,
-};
+});
 
-export const invite = {
+export const invite = branded({
   title: (host: string) => `Join ${host} on Latchkey`,
   as: (role: string) => `You've been invited as a ${role.toLowerCase()}.`,
   signInFirst: (email: string) => `Sign in or create your account with ${email} to accept.`,
@@ -1837,9 +1798,9 @@ export const invite = {
   pendingTitle: "You've been invited",
   pendingBody: "Someone has invited this email address to their team. Open the link in your invitation email to join.",
   pendingOwn: "Start my own workspace instead",
-};
+});
 
-export const activity = {
+export const activity = branded({
   title: "Activity",
   subtitle: "Who changed what. Kept for a year.",
   empty: "Nothing has changed yet.",
@@ -1869,9 +1830,9 @@ export const activity = {
     unavailability_windows: "unavailable time",
     trades: "trade contact",
   } as Record<string, string>,
-};
+});
 
-export const guestCard = {
+export const guestCard = branded({
   noName: "Guest name to confirm",
   archived: "Hidden",
   room: "Room",
@@ -1942,9 +1903,9 @@ export const guestCard = {
   registerPlace: "Place of issue",
   registerNext: "Next destination",
   registerAddress: "Address there",
-};
+});
 
-export const bookingTools = {
+export const bookingTools = branded({
   showing: (what: string, n: number) => `Showing ${what.toLowerCase()}: ${n} ${n === 1 ? "stay" : "stays"}`,
   showLabels: {
     arriving: "Arriving today",
@@ -1982,9 +1943,9 @@ export const bookingTools = {
   rowOpenOriginal: "Open the booking these nights mirror",
   closedToast: "Closed. Moved to closed nights.",
   reopenedToast: "Reopened. Add the guest's name when you have it.",
-};
+});
 
-export const stayCalendar = {
+export const stayCalendar = branded({
   title: "Next two weeks",
   subtitle: "Who is where, what is blocked, and who is waiting on you. Tap a stay for the guest's details.",
   room: "Room",
@@ -1997,9 +1958,9 @@ export const stayCalendar = {
   stayDates: (from: string, to: string) => `${from} to ${to}`,
   continues: "Continues",
   continued: "Continued",
-};
+});
 
-export const jobTools = {
+export const jobTools = branded({
   archiveTab: "Archive",
   archiveEmpty: "Nothing in the archive.",
   archive: "Archive",
@@ -2009,9 +1970,9 @@ export const jobTools = {
   deleteTitle: (title: string) => `Delete "${title}"?`,
   deleteBody: "This removes the job for good. Archive it instead if you might want to look it up later.",
   deleted: "Job deleted",
-};
+});
 
-export const linkTools = {
+export const linkTools = branded({
   subtitle: "Every room's calendar links in one place, with how each one is doing.",
   addLink: "Add link",
   unlinked: "Not linked to a room",
@@ -2031,10 +1992,10 @@ export const linkTools = {
   removedWithStays: (removed: number, archived: number) =>
     `Calendar link removed with ${removed} ${removed === 1 ? "stay" : "stays"}${archived ? `; ${archived} with payments hidden` : ""}`,
   states: { syncing: "Syncing…", ok: "Working", warning: "Needs a look", error: "Not working", never: "Not checked yet" },
-};
+});
 
 /** The UK guest register (Immigration (Hotel Records) Order 1972). */
-export const registerPage = {
+export const registerPage = branded({
   stayDetails: "ID photos and check-in details",
   hideDetails: "Hide ID photos and details",
   photosTitle: "ID photographs",
@@ -2098,10 +2059,10 @@ export const registerPage = {
   room: "Room (optional)",
   saved: "Register updated",
   keptUntil: (date: string) => `Kept until ${date}`,
-};
+});
 
 /** Invoices for direct stays: guest guide, the invoice page, and the host's tools. */
-export const invoiceCopy = {
+export const invoiceCopy = branded({
   // Guest guide
   cardTitle: "Your invoice",
   cardBody: "Need an invoice for your stay? It's made for you when you ask.",
@@ -2182,10 +2143,10 @@ export const invoiceCopy = {
   stayAmount: (currency: string) => `Amount the guest paid (${currency})`,
   stayAmountHint: "Used for the invoice on direct bookings.",
   stayIncludesTax: (tax: string) => `Includes ${tax}`,
-};
+});
 
 /** Latchkey's own subscription, as the host sees it. */
-export const billingCopy = {
+export const billingCopy = branded({
   navLabel: "Billing",
   title: "Subscription",
   subtitle: "Your Latchkey plan, card and invoices.",
@@ -2237,10 +2198,10 @@ export const billingCopy = {
   bannerTrial: (days: number) => `${days} ${days === 1 ? "day" : "days"} left of your free trial.`,
   bannerPastDue: "Your last payment didn't go through. Update your card to keep Latchkey running.",
   bannerCta: "Billing",
-};
+});
 
 /** Letting Latchkey support help, and what support sees. */
-export const supportCopy = {
+export const supportCopy = branded({
   title: "Support access",
   body: "Let Latchkey support look into problems and make changes for you. It lasts 30 days, and you can stop it at any time. Support can always see your dashboard to help, but can't change anything, or see guests' ID details, unless this is on.",
   allow: "Allow support to make changes for 30 days",
@@ -2251,10 +2212,10 @@ export const supportCopy = {
   bannerReadOnly: (name: string) => `Support view of ${name}: read-only. The host hasn't allowed changes.`,
   bannerWritable: (name: string, date: string) => `Support view of ${name}: changes allowed until ${date}.`,
   exit: "Back to admin",
-};
+});
 
 /** Ratings, ideas and bug reports. */
-export const feedbackCopy = {
+export const feedbackCopy = branded({
   button: "Feedback",
   title: "Tell us what you think",
   tabRate: "Rate Latchkey",
@@ -2279,10 +2240,10 @@ export const feedbackCopy = {
   reviewsTitle: "What guests said",
   reviewsEmpty: "No guest feedback yet. Guests can rate their stay from their guest guide.",
   reviewsAverage: (avg: string, n: number) => `${avg} average from ${n} ${n === 1 ? "guest" : "guests"}`,
-};
+});
 
 /** The super admin's area. */
-export const adminCopy = {
+export const adminCopy = branded({
   navLabel: "Latchkey admin",
   title: "Latchkey admin",
   subtitle: "Every business, billing, trial checks, feedback, announcements and site settings.",
@@ -2380,10 +2341,10 @@ export const adminCopy = {
   removeAdmin: "Remove",
   removed: "Removed.",
   notAdmin: "This page is for the Latchkey super admin.",
-};
+});
 
 /** Super admin: plans, costs, recommendations and projections. */
-export const studioCopy = {
+export const studioCopy = branded({
   published: "Published: hosts see these plans on Billing.",
   notPublished: "Not published yet: hosts pay the original per-room price. Publish when you're happy.",
   migration: "Run migration 0027 first (Lovable applies it on the next sync); until then nothing here can be saved.",
@@ -2462,10 +2423,10 @@ export const studioCopy = {
   colMargin: "Margin",
   colActual: "Actual",
   saved: "Saved",
-};
+});
 
 /** Super admin: visitor and user analytics. */
-export const visitorsCopy = {
+export const visitorsCopy = branded({
   range: "Period",
   day1: "Last 24 hours",
   days7: "Last 7 days",
@@ -2531,10 +2492,10 @@ export const visitorsCopy = {
   more: (n: number) => `${n} more not shown; narrow the period or search.`,
   privacy:
     "Kept 13 months; IP addresses are cleared after 90 days. Browsers that send Global Privacy Control or Do Not Track aren't counted, and anyone can opt out with a link ending ?notrack=1.",
-};
+});
 
 /** Super admin: every routine that spends Lovable Run credits. */
-export const routinesCopy = {
+export const routinesCopy = branded({
   title: "Routines that use Run credits",
   body:
     "Everything Latchkey runs on Lovable's servers. Scheduled ones are woken by Lovable's scheduler (set in Lovable under Cloud → Cron); when one is off or not due, the wake-up stops before any real work. Switching off a feature that runs when used turns that feature off for every host.",
@@ -2562,10 +2523,10 @@ export const routinesCopy = {
     10080: "Once a week",
   } as Record<number, string>,
   saved: "Saved",
-};
+});
 
 /** The bookings table and its filters. */
-export const bookingTable = {
+export const bookingTable = branded({
   toConfirm: "To confirm",
   actions: "Quick actions",
   search: "Search guest or reference",
@@ -2599,10 +2560,10 @@ export const bookingTable = {
   sortBy: (col: string) => `Sort by ${col}`,
   defaultOrder: "Default order",
   nothing: "No stays match these filters.",
-};
+});
 
 /** Settings → API & MCP, and the developer docs. */
-export const apiCopy = {
+export const apiCopy = branded({
   title: "API & MCP",
   loading: "Loading your keys…",
   unavailable: "API keys aren't available for this business yet. Read the guide to see what you can connect.",
@@ -2628,9 +2589,9 @@ export const apiCopy = {
   revoked: "Revoked",
   revokedToast: "Key revoked. Anything using it stops working straight away.",
   docs: "How to connect",
-};
+});
 
-export const propertyCodesCopy = {
+export const propertyCodesCopy = branded({
   checking: "Checking…",
   linkFree: "Available",
   linkTaken: "Already used by another property",
@@ -2650,4 +2611,50 @@ export const propertyCodesCopy = {
   pinNeeds: "Six digits.",
   pinNew: "New PIN",
   pinAuto: "Made for you, and not used by any other property. Change it if you like.",
-};
+});
+
+export const brandAdminCopy = branded({
+  title: "Brand",
+  help: "The product's name everywhere: every page, email, alert, the installed app and the API. Changes show within a minute.",
+  name: "Product name",
+  tagline: "Tagline (under the name on the home page)",
+  footer: "Home page footer",
+  footerHint: "Leave empty for “© year and the product name”.",
+  preview: (name: string) => `Pages will say “${name}”.`,
+  saved: "Brand saved. Pages pick it up within a minute.",
+  notReady: "Brand settings appear once the latest database update is applied.",
+  domainsTitle: "Hosts' own web addresses",
+  domainsHelp: "When a host proves an address is theirs, add it to the hosting (in Lovable: Project settings → Domains), then switch it on here. Guests there see the host's name.",
+  domainsEmpty: "No host has added an address yet.",
+  verified: "Proved",
+  waiting: "Waiting for DNS proof",
+  live: "Live",
+});
+
+export const domainCopy = branded({
+  title: "Your own web address",
+  help: "Let guests check in and read their guide at your own address, like stay.yourhotel.co.uk, with your name on every page.",
+  add: "Add address",
+  placeholder: "stay.yourhotel.co.uk",
+  opens: "Its home page opens",
+  firstProperty: "Your first property",
+  step1: "At your domain's DNS provider, add these two records:",
+  type: "Type",
+  host: "Name",
+  value: "Value",
+  step2: "Then tap Check. DNS changes can take up to an hour to show.",
+  check: "Check",
+  checking: "Checking…",
+  notYet: "Not found yet. DNS changes can take up to an hour; try again soon.",
+  proved: "Proved. We'll connect it and let you know when it's live.",
+  live: "Live",
+  waitingLive: "Proved, being connected",
+  waitingProof: "Waiting for the DNS records",
+  remove: "Remove",
+  removed: "Address removed",
+  added: "Address added. Now add the DNS records below.",
+  ownerOnly: "Only the owner can add a web address.",
+  notReady: "Your own web address can be set up once the latest database update is applied.",
+  copy: "Copy",
+  copied: "Copied",
+});

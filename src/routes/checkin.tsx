@@ -8,13 +8,14 @@ import { GuestFrame } from "@/components/guest/GuestFrame";
 import { PinPad } from "@/components/guest/PinPad";
 import { guest as copy } from "@/content/copy";
 import { resolvePin } from "@/lib/checkin.functions";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/checkin")({
   head: () => ({
     meta: [
-      { title: "Checking in — Latchkey" },
+      { title: rebrand("Checking in — Latchkey") },
       { name: "description", content: "Enter your property's 6-digit PIN to check yourself in." },
-      { property: "og:title", content: "Checking in — Latchkey" },
+      { property: "og:title", content: rebrand("Checking in — Latchkey") },
       { property: "og:description", content: "Enter your property's PIN to check yourself in." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

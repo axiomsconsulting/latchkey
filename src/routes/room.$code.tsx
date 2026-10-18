@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { guideCopy as gcopy, guest as copy, roomGuideCopy as rcopy } from "@/content/copy";
 import { getRoomGuide } from "@/lib/guide.functions";
 import { rememberedStay } from "@/lib/stay-link";
+import { rebrand } from "@/lib/brand";
 
 /**
  * The guide behind the QR code in a room: how this room works, wifi, today's
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/room/$code")({
   loader: ({ params }) => getRoomGuide({ data: { code: params.code } }),
   head: () => ({
     meta: [
-      { title: "Your room guide — Latchkey" },
+      { title: rebrand("Your room guide — Latchkey") },
       { name: "description", content: "How this room works: wifi, heating, shower, quiet hours and check-out." },
       { name: "robots", content: "noindex" },
     ],

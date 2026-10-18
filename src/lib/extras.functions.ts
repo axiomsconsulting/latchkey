@@ -10,6 +10,7 @@ import {
   DEFAULT_EXTRAS, availableWindows, basketAutoApproves, earlyCheckinOptions, lateCheckoutOptions, priceBasket,
   type ExtraItem, type ExtraUnit, type WindowKey,
 } from "./extras";
+import { rebrand } from "@/lib/brand";
 
 const uuid = z.string().uuid();
 const token = z.string().min(20).max(80);
@@ -437,7 +438,7 @@ export const emailReceipt = createServerFn({ method: "POST" })
       to,
       subject: `Receipt ${number} · ${b.properties.name ?? "your stay"}`,
       body: `Receipt ${number}\n\n${lines}\n\nTotal: ${(r.total_pence / 100).toFixed(2)} ${b.properties.hosts?.currency ?? "GBP"}\nPaid by: ${r.payment_method ?? "card"}`,
-      from: b.properties.name ?? "Latchkey",
+      from: b.properties.name ?? rebrand("Latchkey"),
       key: `receipt-${r.id}`,
     });
     if (sent) await db.from("requests").update({ receipt_number: number, receipt_emailed_at: new Date().toISOString() }).eq("id", r.id);

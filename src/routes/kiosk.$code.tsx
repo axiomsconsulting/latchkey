@@ -22,6 +22,7 @@ import { guest as copy } from "@/content/copy";
 import { FIT, displayChanged, fitFontSize, fitted, widthCap, type Display, type Orientation } from "@/lib/kiosk-fit";
 import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
+import { rebrand } from "@/lib/brand";
 
 // Press and hold the top-right corner this long for the host's exit.
 const HOLD_MS = 3_000;
@@ -42,9 +43,9 @@ export const Route = createFileRoute("/kiosk/$code")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: `Checking in — ${loaderData?.name ?? "Latchkey"}` },
+      { title: rebrand(`Checking in — ${loaderData?.name ?? "Latchkey"}`) },
       { name: "description", content: `Check yourself in at ${loaderData?.name ?? "your stay"}. No app, no sign-up, about a minute.` },
-      { property: "og:title", content: `Checking in — ${loaderData?.name ?? "Latchkey"}` },
+      { property: "og:title", content: rebrand(`Checking in — ${loaderData?.name ?? "Latchkey"}`) },
       { property: "og:description", content: `Check yourself in at ${loaderData?.name ?? "your stay"}.` },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

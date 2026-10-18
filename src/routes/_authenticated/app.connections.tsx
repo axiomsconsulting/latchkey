@@ -66,13 +66,14 @@ import {
   testFeed,
 } from "@/lib/host.functions";
 import { explainSyncError, linkState } from "@/lib/sync-status";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/connections")({
   // ?link=<connection id> lands on that calendar link.
   validateSearch: (s: Record<string, unknown>): { link?: string } => (typeof s["link"] === "string" ? { link: s["link"] } : {}),
   head: () => ({
     meta: [
-      { title: "Connections · Latchkey host dashboard" },
+      { title: rebrand("Connections · Latchkey host dashboard") },
       {
         name: "description",
         content: "Connect channel calendars so every booking lands in one place automatically.",

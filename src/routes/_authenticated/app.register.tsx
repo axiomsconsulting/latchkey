@@ -19,9 +19,10 @@ import { useRole, useWorkspace } from "@/hooks/use-host-data";
 import { addDays, formatUkDate } from "@/lib/dates";
 import { cleanRegisterEntry, isAlien, nationalityName, nationalityOptions, registerApplies } from "@/lib/hotel-register";
 import { exportRegister, listRegister, saveRegisterEntry, type RegisterRow } from "@/lib/register.functions";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/register")({
-  head: () => ({ meta: [{ title: "Guest register · Latchkey host dashboard" }] }),
+  head: () => ({ meta: [{ title: rebrand("Guest register · Latchkey host dashboard") }] }),
   component: RegisterPage,
 });
 

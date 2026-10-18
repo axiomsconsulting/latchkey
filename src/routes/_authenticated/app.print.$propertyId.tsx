@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { checkinSettings as copy } from "@/content/copy";
 import { usePropertyBoard } from "@/hooks/use-host-data";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/print/$propertyId")({
-  head: () => ({ meta: [{ title: "Print check-in card — Latchkey" }] }),
+  head: () => ({ meta: [{ title: rebrand("Print check-in card — Latchkey") }] }),
   component: PrintCard,
 });
 

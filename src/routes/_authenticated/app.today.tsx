@@ -62,11 +62,12 @@ import { listJobs } from "@/lib/services.functions";
 import { explainSyncError, linkState } from "@/lib/sync-status";
 import { guideProgress, maintenanceAhead, openGuestRequests, tightTurnarounds, todayBoard, windowsToday, type TodayBooking } from "@/lib/today";
 import { cn } from "@/lib/utils";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/today")({
   head: () => ({
     meta: [
-      { title: "Today · Latchkey host dashboard" },
+      { title: rebrand("Today · Latchkey host dashboard") },
       { name: "description", content: "Today at a glance: guests, requests, cleaning, maintenance, connections and check-in." },
     ],
   }),

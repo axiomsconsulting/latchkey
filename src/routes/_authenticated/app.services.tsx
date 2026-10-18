@@ -43,6 +43,7 @@ import {
   listJobs,
   setJobStatus,
 } from "@/lib/services.functions";
+import { rebrand } from "@/lib/brand";
 
 const TABS = ["inbox", "planned", "trades", "archive"] as const;
 
@@ -55,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/app/services")({
   }),
   head: () => ({
     meta: [
-      { title: "Services · Latchkey host dashboard" },
+      { title: rebrand("Services · Latchkey host dashboard") },
       { name: "description", content: "Approve guest requests and find local tradespeople for the work." },
     ],
   }),

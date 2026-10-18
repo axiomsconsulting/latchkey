@@ -15,14 +15,15 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { sectionIcon } from "@/components/guest/guide-icons";
 import { guideCopy as gcopy, guest as copy } from "@/content/copy";
 import { getStay } from "@/lib/checkin.functions";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/stay/$token")({
   loader: ({ params }) => getStay({ data: { token: params.token } }),
   head: () => ({
     meta: [
-      { title: "Your guest guide — Latchkey" },
+      { title: rebrand("Your guest guide — Latchkey") },
       { name: "description", content: "Your private step-by-step guide for your stay." },
-      { property: "og:title", content: "Your guest guide — Latchkey" },
+      { property: "og:title", content: rebrand("Your guest guide — Latchkey") },
       { property: "og:description", content: "Your private step-by-step guide for your stay." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

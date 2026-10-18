@@ -10,6 +10,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
 import { SECTIONS, STARTER, guideWindow, isCustom, type SectionKey } from "./guide";
+import { rebrand } from "@/lib/brand";
 
 const uuid = z.string().uuid();
 // Built-in sections, or the host's own (custom_ + a random id).
@@ -476,7 +477,7 @@ export const renameGuideSection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid, sectionKey, title: z.string().trim().min(1).max(80) }).parse(d))
   .handler(async ({ data, context }) => {
-    if (!isCustom(data.sectionKey)) throw new Error("Latchkey's own sections keep their names.");
+    if (!isCustom(data.sectionKey)) throw new Error(rebrand("Latchkey's own sections keep their names."));
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const { error } = await (context.supabase as any).from("guides").update({ title: data.title }).eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
     if (error) throw new Error(error.message);

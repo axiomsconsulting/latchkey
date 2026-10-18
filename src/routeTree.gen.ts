@@ -46,6 +46,7 @@ import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 import { Route as ApiPublicInboundEmailSecretRouteImport } from './routes/api/public/inbound-email.$secret'
+import { Route as ApiPublicManifestAppRouteImport } from './routes/api/public/manifest/app'
 import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
 import { Route as ApiPublicPushLatestRouteImport } from './routes/api/public/push/latest'
 import { Route as ApiPublicTelegramSecretRouteImport } from './routes/api/public/telegram.$secret'
@@ -250,6 +251,11 @@ const ApiPublicInboundEmailSecretRoute =
     path: '/api/public/inbound-email/$secret',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicManifestAppRoute = ApiPublicManifestAppRouteImport.update({
+  id: '/api/public/manifest/app',
+  path: '/api/public/manifest/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMcpKeyRoute = ApiPublicMcpKeyRouteImport.update({
   id: '/$key',
   path: '/$key',
@@ -330,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
+  '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
@@ -375,6 +382,7 @@ export interface FileRoutesByTo {
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
+  '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
@@ -423,6 +431,7 @@ export interface FileRoutesById {
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
+  '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
@@ -471,6 +480,7 @@ export interface FileRouteTypes {
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/inbound-email/$secret'
+    | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
     | '/api/public/push/latest'
     | '/api/public/telegram/$secret'
@@ -516,6 +526,7 @@ export interface FileRouteTypes {
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/inbound-email/$secret'
+    | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
     | '/api/public/push/latest'
     | '/api/public/telegram/$secret'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/inbound-email/$secret'
+    | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
     | '/api/public/push/latest'
     | '/api/public/telegram/$secret'
@@ -594,6 +606,7 @@ export interface RootRouteChildren {
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
   ApiPublicInboundEmailSecretRoute: typeof ApiPublicInboundEmailSecretRoute
+  ApiPublicManifestAppRoute: typeof ApiPublicManifestAppRoute
   ApiPublicPushLatestRoute: typeof ApiPublicPushLatestRoute
   ApiPublicTelegramSecretRoute: typeof ApiPublicTelegramSecretRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
@@ -864,6 +877,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInboundEmailSecretRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/manifest/app': {
+      id: '/api/public/manifest/app'
+      path: '/api/public/manifest/app'
+      fullPath: '/api/public/manifest/app'
+      preLoaderRoute: typeof ApiPublicManifestAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mcp/$key': {
       id: '/api/public/mcp/$key'
       path: '/$key'
@@ -1008,6 +1028,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
   ApiPublicInboundEmailSecretRoute: ApiPublicInboundEmailSecretRoute,
+  ApiPublicManifestAppRoute: ApiPublicManifestAppRoute,
   ApiPublicPushLatestRoute: ApiPublicPushLatestRoute,
   ApiPublicTelegramSecretRoute: ApiPublicTelegramSecretRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,

@@ -1,3 +1,4 @@
+import { rebrand } from "@/lib/brand";
 /**
  * What a calendar link's state means to a host, in plain words. Pure, so
  * the wording and the "is it still syncing?" rule are tested.
@@ -25,8 +26,8 @@ export function explainSyncError(message: string | null | undefined): string {
     return "The platform no longer recognises this link. It was probably reset or the listing was removed. Copy a fresh calendar link from the platform and paste it in with Edit.";
   if (status === "401" || status === "403")
     return "The platform refused the request. The link may have been made private or reset. Copy a fresh calendar link from the platform and paste it in with Edit.";
-  if (status === "429") return "The platform asked us to slow down. Latchkey will try again on the next sync.";
-  if (status && status.startsWith("5")) return "The platform's calendar service had a problem at its end. Latchkey will try again on the next sync.";
+  if (status === "429") return rebrand("The platform asked us to slow down. Latchkey will try again on the next sync.");
+  if (status && status.startsWith("5")) return rebrand("The platform's calendar service had a problem at its end. Latchkey will try again on the next sync.");
   if (m.includes("did not respond in time") || m.includes("could not reach"))
     return "The platform didn't answer. This is usually temporary; try Sync now in a few minutes.";
   if (m.includes("did not return a calendar"))
@@ -34,7 +35,7 @@ export function explainSyncError(message: string | null | undefined): string {
   if (m.includes("too large")) return "That calendar file is unusually large. Check it's the calendar for this one listing.";
   if (m.includes("redirects too many times")) return "The link keeps forwarding somewhere else. Copy the calendar link again from the platform.";
   if (m.includes("https://") || m.includes("web address") || m.includes("not reachable from the internet"))
-    return "That isn't a calendar link Latchkey can use. Copy the 'Export calendar' (iCal) link from the platform.";
+    return rebrand("That isn't a calendar link Latchkey can use. Copy the 'Export calendar' (iCal) link from the platform.");
   if (m.includes("no calendar link saved")) return "This connection has lost its link. Paste the calendar link again with Edit.";
   if (m.includes("double") || m.includes("overlap"))
     return "Two platforms show different guests in the same room on the same nights. Check both and cancel one.";

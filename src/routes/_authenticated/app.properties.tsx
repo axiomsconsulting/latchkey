@@ -44,6 +44,7 @@ import {
   saveRoom,
   saveUnavailability,
 } from "@/lib/host.functions";
+import { rebrand } from "@/lib/brand";
 
 const FOCUS = ["property", "checkin", "records", "rooms", "cleaning"] as const;
 
@@ -53,7 +54,7 @@ export const Route = createFileRoute("/_authenticated/app/properties")({
     typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {},
   head: () => ({
     meta: [
-      { title: "Properties · Latchkey host dashboard" },
+      { title: rebrand("Properties · Latchkey host dashboard") },
       {
         name: "description",
         content: "Manage your rooms, door details, house rules and cleaning windows.",

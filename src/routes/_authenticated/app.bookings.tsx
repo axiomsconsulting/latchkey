@@ -45,6 +45,7 @@ import { NeedsDetailsCard, type NeedsDetailsBooking } from "@/components/host/Ne
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { AlertTriangle, ArrowUpRight, Ban, Eye, EyeOff, LockOpen, PencilLine, X } from "lucide-react";
 import { today as todayCopy } from "@/content/copy";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/bookings")({
   // ?guest=<booking id> opens that guest's card, e.g. from Today.
@@ -58,7 +59,7 @@ export const Route = createFileRoute("/_authenticated/app/bookings")({
   }),
   head: () => ({
     meta: [
-      { title: "Bookings · Latchkey host dashboard" },
+      { title: rebrand("Bookings · Latchkey host dashboard") },
       {
         name: "description",
         content:

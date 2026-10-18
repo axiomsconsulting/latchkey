@@ -7,14 +7,16 @@ import { about as copy } from "@/content/copy";
 import { featuresByArea, releasesFor, type ChangeKind } from "@/content/changelog";
 
 // The public page never shows Latchkey's own super-admin tools.
-const PUBLIC = releasesFor({ admin: false });
+// Read when shown, so the release notes carry the current brand name.
+const publicReleases = () => releasesFor({ admin: false });
 import { formatUkDate } from "@/lib/dates";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About and what's new — Latchkey" },
-      { name: "description", content: "Every change to Latchkey, and every feature it has." },
+      { title: rebrand("About and what's new — Latchkey") },
+      { name: "description", content: rebrand("Every change to Latchkey, and every feature it has.") },
     ],
   }),
   component: AboutPage,
@@ -28,6 +30,7 @@ const kindStyle: Record<ChangeKind, string> = {
 
 /** The change log and the features it adds up to, from src/content/changelog.ts. */
 function AboutPage() {
+  const PUBLIC = publicReleases();
   const groups = featuresByArea(PUBLIC);
   return (
     <div className="min-h-screen bg-background">

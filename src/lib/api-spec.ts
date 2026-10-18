@@ -1,3 +1,4 @@
+import { branded, rebrand } from "@/lib/brand";
 /**
  * The one definition of Latchkey's API. The REST endpoints, the MCP tools,
  * the OpenAPI document and the /developers page are all generated from this
@@ -38,7 +39,7 @@ export const API_VERSION = "2026-10-14";
 export const REST_BASE = "/api/public/v1";
 export const MCP_PATH = "/api/public/mcp";
 
-export const OPERATIONS: Operation[] = [
+export const OPERATIONS: Operation[] = branded([
   {
     id: "list_properties",
     method: "GET",
@@ -203,7 +204,7 @@ export const OPERATIONS: Operation[] = [
     params: [],
     example: { data: { month: "2026-10", requests: 1240, included: 10000 } },
   },
-];
+]);
 
 /** JSON Schema for an operation's inputs (MCP tools and OpenAPI bodies). */
 export function inputSchema(op: Operation, where?: Array<Param["in"]>) {
@@ -260,7 +261,7 @@ export function parseInput(op: Operation, raw: Record<string, unknown>): { ok: t
         out[p.name] = s;
         break;
       case "uuid":
-        if (!/^[0-9a-f-]{36}$/i.test(s)) return { ok: false, problem: `${p.name} must be an id from Latchkey.` };
+        if (!/^[0-9a-f-]{36}$/i.test(s)) return { ok: false, problem: rebrand(`${p.name} must be an id from Latchkey.`) };
         out[p.name] = s;
         break;
       default:
@@ -321,9 +322,9 @@ export function openApi(origin: string) {
   }
   return {
     openapi: "3.1.0",
-    info: { title: "Latchkey API", version: API_VERSION, description: "Bookings, arrivals, guest requests and messages for your Latchkey properties." },
+    info: { title: rebrand("Latchkey API"), version: API_VERSION, description: rebrand("Bookings, arrivals, guest requests and messages for your Latchkey properties.") },
     servers: [{ url: `${origin}${REST_BASE}` }],
-    components: { securitySchemes: { bearer: { type: "http", scheme: "bearer", description: "A Latchkey API key (lk_…), from Settings → API & MCP." } } },
+    components: { securitySchemes: { bearer: { type: "http", scheme: "bearer", description: rebrand("A Latchkey API key (lk_…), from Settings → API & MCP.") } } },
     paths,
   };
 }

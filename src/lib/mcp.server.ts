@@ -6,11 +6,13 @@
  */
 import { API_VERSION, OPERATIONS, inputSchema, parseInput } from "./api-spec";
 import { ApiError, authenticate, runOperation } from "./api-handlers.server";
+import { rebrand } from "@/lib/brand";
 
 type RpcRequest = { jsonrpc: "2.0"; id?: string | number | null; method: string; params?: any };
 
-const INSTRUCTIONS =
-  "Latchkey runs small hotels, B&Bs and short lets: bookings from every booking site, guest self check-in, guest requests and messages. " +
+// Read when a client connects, so it carries the current brand name.
+const instructions = () =>
+  rebrand("Latchkey runs small hotels, B&Bs and short lets: bookings from every booking site, guest self check-in, guest requests and messages. ") +
   "Use list_properties first to get property ids. Dates are YYYY-MM-DD in the property's time zone. Ask before changing bookings or messaging guests.";
 
 function reply(id: RpcRequest["id"], result: unknown) {
@@ -52,8 +54,8 @@ async function handleOne(call: RpcRequest, key: string | null): Promise<unknown 
       return reply(call.id, {
         protocolVersion: typeof call.params?.protocolVersion === "string" ? call.params.protocolVersion : "2025-06-18",
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "latchkey", title: "Latchkey", version: API_VERSION },
-        instructions: INSTRUCTIONS,
+        serverInfo: { name: "latchkey", title: rebrand("Latchkey"), version: API_VERSION },
+        instructions: instructions(),
       });
     case "ping":
       return reply(call.id, {});

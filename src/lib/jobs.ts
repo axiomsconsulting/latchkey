@@ -1,3 +1,4 @@
+import { branded } from "@/lib/brand";
 /**
  * Every routine that spends Lovable Run credits: scheduled jobs (woken by
  * Lovable's scheduler through /api/public/cron/latchkey) and features that
@@ -22,7 +23,7 @@ export type Job = {
   runnable: boolean;
 };
 
-export const JOBS: Job[] = [
+export const JOBS: Job[] = branded([
   {
     key: "calendar_sync",
     name: "Calendar sync",
@@ -123,7 +124,7 @@ export const JOBS: Job[] = [
     metric: "api:request",
     runnable: false,
   },
-];
+]);
 
 export type JobSetting = { key: string; enabled: boolean; every_minutes: number | null; last_run_at: string | null };
 

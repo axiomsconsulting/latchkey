@@ -16,6 +16,7 @@ import { lastSignIn, signInIntent, type SignInMethod } from "@/lib/social-auth";
 import { lastHost } from "@/lib/last-host";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
+import { rebrand } from "@/lib/brand";
 
 /** Only same-site paths, so a crafted link can't send people elsewhere. */
 function safeNext(value: unknown): string | undefined {
@@ -34,15 +35,15 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "Host sign in — Latchkey" },
+      { title: rebrand("Host sign in — Latchkey") },
       {
         name: "description",
-        content: "Sign in to manage arrivals, rooms and booking calendars in Latchkey.",
+        content: rebrand("Sign in to manage arrivals, rooms and booking calendars in Latchkey."),
       },
-      { property: "og:title", content: "Host sign in — Latchkey" },
+      { property: "og:title", content: rebrand("Host sign in — Latchkey") },
       {
         property: "og:description",
-        content: "Sign in to manage arrivals, rooms and booking calendars in Latchkey.",
+        content: rebrand("Sign in to manage arrivals, rooms and booking calendars in Latchkey."),
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

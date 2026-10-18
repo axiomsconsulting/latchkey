@@ -11,12 +11,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { DEMO_EMAIL } from "@/lib/demo-account";
 import { maskEmail } from "@/lib/roles";
 import { acceptInvite, peekInvite } from "@/lib/team.functions";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/invite/$token")({
   loader: ({ params }) => peekInvite({ data: { token: params.token } }),
   head: () => ({
     meta: [
-      { title: "Team invitation — Latchkey" },
+      { title: rebrand("Team invitation — Latchkey") },
       { name: "robots", content: "noindex" },
     ],
   }),

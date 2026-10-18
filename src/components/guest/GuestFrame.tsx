@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { brandName } from "@/lib/brand";
 import { Link } from "@tanstack/react-router";
 import { KeyRound, Repeat } from "lucide-react";
 
@@ -29,7 +30,7 @@ export function GuestFrame({
           </>
         ) : (
           <>
-            <KeyRound className="size-4 text-primary" /> Latchkey
+            <KeyRound className="size-4 text-primary" /> {brandName()}
           </>
         )}
         {switchable ? (

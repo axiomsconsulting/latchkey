@@ -16,11 +16,12 @@ import { useWorkspace } from "@/hooks/use-host-data";
 import { loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
 import { cn } from "@/lib/utils";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/setup")({
   head: () => ({
     meta: [
-      { title: "Set up your rooms · Latchkey" },
+      { title: rebrand("Set up your rooms · Latchkey") },
       {
         name: "description",
         content: "Three short steps to add your property, rooms and arrival times.",

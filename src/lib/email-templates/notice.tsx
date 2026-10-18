@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Body, Container, Head, Heading, Html, Preview, Text } from '@react-email/components'
 import type { TemplateEntry } from './registry'
+import { rebrand } from "@/lib/brand";
 
 interface NoticeProps {
   title?: string
@@ -9,7 +10,7 @@ interface NoticeProps {
 }
 
 /** Plain, warm notice used for guest receipts and host alerts. */
-function Notice({ title = 'A note from Latchkey', body = '', from = 'Latchkey' }: NoticeProps) {
+function Notice({ title = rebrand('A note from Latchkey'), body = '', from = rebrand('Latchkey') }: NoticeProps) {
   return (
     <Html lang="en">
       <Head />
@@ -29,7 +30,7 @@ function Notice({ title = 'A note from Latchkey', body = '', from = 'Latchkey' }
 
 export const template = {
   component: Notice,
-  subject: (d: Record<string, any>) => String(d['title'] ?? 'A note from Latchkey'),
+  subject: (d: Record<string, any>) => String(d['title'] ?? rebrand('A note from Latchkey')),
   displayName: 'Receipt / alert notice',
   previewData: { title: 'Receipt R-1042 · The Hill Suites', body: '2 × Fresh towels\n1 × Late check-out\n\nTotal: £10.00\nPaid by: card', from: 'The Hill Suites' },
 } satisfies TemplateEntry

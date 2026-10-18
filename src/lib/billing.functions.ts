@@ -12,6 +12,7 @@ import { assertNotSharedDemo } from "@/lib/demo-account";
 import { billingPhase, fromStripeStatus, hasAccess, stripeTrialEnd, trialDaysLeft } from "@/lib/billing";
 import { DEFAULT_PRICING, monthlyPence, type PricingConfig } from "@/lib/pricing";
 import { requireOwner } from "@/lib/roles";
+import { rebrand } from "@/lib/brand";
 
 const uuid = z.string().uuid();
 
@@ -204,7 +205,7 @@ export const startSubscription = createServerFn({ method: "POST" })
             currency: price.currency.toLowerCase(),
             unit_amount: nextMonthPence(price.pence, price.offerPence),
             recurring: { interval: "month" },
-            product_data: { name: `Latchkey for ${h.business_name}` },
+            product_data: { name: rebrand(`Latchkey for ${h.business_name}`) },
           },
         },
       ],
@@ -237,7 +238,7 @@ export const openBillingPortal = createServerFn({ method: "POST" })
       });
       return { url: portal.url };
     } catch {
-      throw new Error("Card changes aren't set up yet. Please contact Latchkey support.");
+      throw new Error(rebrand("Card changes aren't set up yet. Please contact Latchkey support."));
     }
   });
 

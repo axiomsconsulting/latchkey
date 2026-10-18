@@ -14,9 +14,10 @@ import { activity as copy } from "@/content/copy";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
 import { fieldChanges, rowName } from "@/lib/activity";
 import { listActivity, type ActivityRow } from "@/lib/team.functions";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/activity")({
-  head: () => ({ meta: [{ title: "Activity · Latchkey host dashboard" }] }),
+  head: () => ({ meta: [{ title: rebrand("Activity · Latchkey host dashboard") }] }),
   component: ActivityPage,
 });
 

@@ -6,10 +6,11 @@ import { trial as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { getSiteSettings } from "@/lib/admin.functions";
 import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/start")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Start your free trial — Latchkey" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: rebrand("Start your free trial — Latchkey") }, { name: "robots", content: "noindex" }] }),
   component: StartTrial,
 });
 

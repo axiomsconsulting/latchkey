@@ -4,6 +4,7 @@
  * never pretend a message was sent.
  */
 import { sendTemplateEmail } from "./email-templates/send-email";
+import { rebrand } from "@/lib/brand";
 
 async function send(to: string, title: string, body: string, from: string, key: string): Promise<boolean> {
   try {
@@ -20,9 +21,9 @@ export async function sendAlertEmail(hostId: string, message: string, alertId?: 
   const db = await admin();
   const { data } = await db.from("hosts").select("contact_email, business_name").eq("id", hostId).maybeSingle();
   if (!data?.contact_email) return false;
-  return send(data.contact_email, "Latchkey alert", message, data.business_name ?? "Latchkey", `alert-${alertId ?? crypto.randomUUID()}`);
+  return send(data.contact_email, rebrand("Latchkey alert"), message, data.business_name ?? rebrand("Latchkey"), `alert-${alertId ?? crypto.randomUUID()}`);
 }
 
 export async function sendGuestEmail(args: { to: string; subject: string; body: string; from?: string; key?: string }): Promise<boolean> {
-  return send(args.to, args.subject, args.body, args.from ?? "Latchkey", args.key ?? `guest-${crypto.randomUUID()}`);
+  return send(args.to, args.subject, args.body, args.from ?? rebrand("Latchkey"), args.key ?? `guest-${crypto.randomUUID()}`);
 }

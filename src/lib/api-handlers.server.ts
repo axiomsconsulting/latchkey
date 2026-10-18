@@ -10,6 +10,7 @@ import { OPERATIONS, type Operation, type ParsedInput } from "./api-spec";
 import { todayInZone } from "./dates";
 import { apiAllowance, normaliseModel, planFor } from "./pricing-model";
 import { bumpUsage, jobAllowed } from "./usage.server";
+import { rebrand } from "@/lib/brand";
 
 export class ApiError extends Error {
   constructor(
@@ -41,16 +42,16 @@ function monthStart(): string {
 
 /** Who is calling, and whether they may. Throws ApiError with a plain reason. */
 export async function authenticate(key: string | null): Promise<ApiCaller> {
-  if (!(await jobAllowed("api"))) throw new ApiError(503, "api_paused", "The Latchkey API is paused for maintenance. Please try again later.");
+  if (!(await jobAllowed("api"))) throw new ApiError(503, "api_paused", rebrand("The Latchkey API is paused for maintenance. Please try again later."));
   if (!key || !/^lk_[A-Za-z0-9_]{20,80}$/.test(key)) {
-    throw new ApiError(401, "missing_key", "Send your Latchkey API key as: Authorization: Bearer lk_…");
+    throw new ApiError(401, "missing_key", rebrand("Send your Latchkey API key as: Authorization: Bearer lk_…"));
   }
   const db = await admin();
   const { data: k } = await db.from("api_keys").select("id, host_id, scopes, revoked_at, last_used_at").eq("key_hash", hashKey(key)).maybeSingle();
   if (!k || k.revoked_at) throw new ApiError(401, "bad_key", "That API key isn't valid. It may have been revoked; make a new one in Settings → API & MCP.");
 
   const { data: access } = await db.rpc("host_has_access", { _host_id: k.host_id });
-  if (access === false) throw new ApiError(403, "subscription_ended", "This Latchkey account's trial or subscription has ended.");
+  if (access === false) throw new ApiError(403, "subscription_ended", rebrand("This Latchkey account's trial or subscription has ended."));
 
   const [{ data: host }, { data: site }, { data: usage }] = await Promise.all([
     db.from("hosts").select("plan_key, api_addon").eq("id", k.host_id).maybeSingle(),

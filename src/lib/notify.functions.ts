@@ -9,6 +9,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { requireOwner, requireWrite } from "@/lib/roles";
+import { rebrand } from "@/lib/brand";
 
 const uuid = z.string().uuid();
 type Loose = { from: (t: string) => any };
@@ -120,7 +121,7 @@ export const createTelegramLink = createServerFn({ method: "POST" })
     await requireWrite(context.supabase, data.hostId);
     const { telegramCall } = await import("./integrations.server");
     const me = await telegramCall<{ username: string }>("getMe", {});
-    if (!me.ok || !me.result?.username) throw new Error("Telegram alerts aren't set up for Latchkey yet.");
+    if (!me.ok || !me.result?.username) throw new Error(rebrand("Telegram alerts aren't set up for Latchkey yet."));
     const code = randomCode(20);
     const db = await admin();
     const { error } = await db
@@ -149,11 +150,11 @@ export const sendTestAlert = createServerFn({ method: "POST" })
     const db = await admin();
     const { data: alert } = await db
       .from("host_alerts")
-      .insert({ host_id: data.hostId, kind: "service_request", message: "This is a test alert from Latchkey. You can mark it as seen." })
+      .insert({ host_id: data.hostId, kind: "service_request", message: rebrand("This is a test alert from Latchkey. You can mark it as seen.") })
       .select("id")
       .maybeSingle();
     const { notifyHost } = await import("./notify.server");
-    return notifyHost({ hostId: data.hostId, kind: "test", message: "This is a test alert from Latchkey.", alertId: alert?.id ?? null });
+    return notifyHost({ hostId: data.hostId, kind: "test", message: rebrand("This is a test alert from Latchkey."), alertId: alert?.id ?? null });
   });
 
 /** The business's forwarding address for booking-site emails (made the first time). */

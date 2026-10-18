@@ -5,9 +5,10 @@ import { ReleaseList } from "@/components/host/ReleaseList";
 import { releasesFor } from "@/content/changelog";
 import { whatsNewCopy as copy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/whats-new")({
-  head: () => ({ meta: [{ title: "What's new · Latchkey" }] }),
+  head: () => ({ meta: [{ title: rebrand("What's new · Latchkey") }] }),
   component: WhatsNewPage,
 });
 

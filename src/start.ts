@@ -19,6 +19,13 @@ const errorMiddleware = createMiddleware().server(async ({ request, next }) => {
   }
 });
 
+// White label and hosts' own domains: every request (pages, server functions,
+// API routes, routines) runs under its own brand (src/lib/brand.server.ts).
+const brandMiddleware = createMiddleware().server(async ({ request, next }) => {
+  const { withSiteBrand } = await import("./lib/brand.server");
+  return withSiteBrand(request, async () => next());
+});
+
 // Start installs this automatically when src/start.ts is absent; defining the
 // file opts out, so re-add it explicitly to keep server functions protected
 // from cross-site requests.
@@ -28,5 +35,5 @@ const csrfMiddleware = createCsrfMiddleware({
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [errorMiddleware, csrfMiddleware],
+  requestMiddleware: [errorMiddleware, brandMiddleware, csrfMiddleware],
 }));

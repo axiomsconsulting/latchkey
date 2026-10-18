@@ -12,6 +12,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireOwner } from "@/lib/roles";
+import { rebrand } from "@/lib/brand";
 
 const uuid = z.string().uuid();
 const token = z.string().min(20).max(80);
@@ -108,7 +109,7 @@ export const connectStripe = createServerFn({ method: "POST" })
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
     const { stripeCall, stripeReady } = await import("./stripe.server");
-    if (!stripeReady()) throw new Error("Card payments aren't available yet. Please contact Latchkey support.");
+    if (!stripeReady()) throw new Error(rebrand("Card payments aren't available yet. Please contact Latchkey support."));
     const db = await admin();
     const { data: h } = await db.from("hosts").select("id, business_name, contact_email, stripe_account_id").eq("id", data.hostId).single();
     if (!h) throw new Error("Business not found.");

@@ -139,3 +139,11 @@ The guest's stay link (`/stay/…`) and in-room QR guides (`/room/…`) are the
 recorded conversation Latchkey owns: messages, extras, charges and requests
 with the stay. Every new guest message now also reaches hosts by push,
 Telegram, email or text as they've chosen.
+
+## White label and hosts' own web addresses
+
+- **Brand:** Latchkey admin → Site settings → Brand. The product name you set replaces "Latchkey" on every page, email, alert, the installed app's name and the API docs, within a minute. Needs migration 0038.
+- **A host's own address** (e.g. `stay.hillsuites.co.uk`):
+  1. The owner adds it in Settings → Your own web address and adds the two DNS records shown (a CNAME to this app's address, and a TXT record that proves it's theirs), then taps Check.
+  2. Once it shows as proved in Latchkey admin → Site settings → Hosts' own web addresses, add the same address to the hosting: in Lovable, Project settings → Domains → Connect domain. Wait until the hosting shows it as active (it issues the HTTPS certificate).
+  3. Switch it Live in Latchkey admin. From then on, guests there see the host's name on every page, and the address's home page opens the host's property (the platform's home, pricing and trial pages aren't shown there).

@@ -33,6 +33,7 @@ import {
   uploadGuidePhoto,
 } from "@/lib/guide.functions";
 import { cn } from "@/lib/utils";
+import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/guides")({
   // ?section=<section key> opens that section; ?room=<room id> opens that room's guide.
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/app/guides")({
   }),
   head: () => ({
     meta: [
-      { title: "Stay guides · Latchkey host dashboard" },
+      { title: rebrand("Stay guides · Latchkey host dashboard") },
       { name: "description", content: "Edit the step-by-step stay guide for each room." },
     ],
   }),

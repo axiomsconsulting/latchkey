@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { guest as copy } from "@/content/copy";
 import { getCheckinProperty } from "@/lib/checkin.functions";
 import { RESERVED_SLUGS } from "@/lib/theme";
+import { rebrand } from "@/lib/brand";
 
 /** Branded home for one property, e.g. /hill. Guests and the host can bookmark it. */
 export const Route = createFileRoute("/$slug")({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/$slug")({
     return p;
   },
   head: ({ loaderData }) => {
-    const name = loaderData?.name ?? "Latchkey";
+    const name = loaderData?.name ?? rebrand("Latchkey");
     return {
       meta: [
         { title: `${name} — welcome` },

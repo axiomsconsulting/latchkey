@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireOwner } from "@/lib/roles";
+import { rebrand } from "@/lib/brand";
 
 const uuid = z.string().uuid();
 
@@ -392,7 +393,7 @@ export const removeSuperAdmin = createServerFn({ method: "POST" })
     await requireSuperAdmin(context.supabase);
     const db = await admin();
     const { count } = await loose(db).from("super_admins").select("email", { count: "exact", head: true });
-    if ((count ?? 0) <= 1) throw new Error("Latchkey needs at least one super admin.");
+    if ((count ?? 0) <= 1) throw new Error(rebrand("Latchkey needs at least one super admin."));
     const { error } = await loose(db).from("super_admins").delete().eq("email", data.email);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -841,7 +842,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const { sendSms } = await import("./integrations.server");
-    const ok = await sendSms(data.to, "Latchkey test: SMS alerts are working.");
+    const ok = await sendSms(data.to, rebrand("Latchkey test: SMS alerts are working."));
     if (!ok) throw new Error("Twilio didn't send it. Check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM.");
     return { ok: true };
   });

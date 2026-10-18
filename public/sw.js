@@ -6,7 +6,7 @@
  * - Shows push alerts: pushes arrive without content, so the worker asks
  *   Latchkey for the newest alert for this device and shows that.
  */
-const VERSION = "lk-v2";
+const VERSION = "lk-v3";
 const SHELL = `${VERSION}-shell`;
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
@@ -87,7 +87,7 @@ self.addEventListener("message", (event) => {
 self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
-      let alert = { title: "Latchkey", body: "Something needs you. Tap to open Today.", url: "/app/today", tag: "latchkey" };
+      let alert = { title: "New alert", body: "Something needs you. Tap to open Today.", url: "/app/today", tag: "latchkey" };
       try {
         const token = await deviceToken();
         if (token) {

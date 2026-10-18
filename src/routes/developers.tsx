@@ -9,15 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPublicApiPlans } from "@/lib/admin.functions";
 import { API_VERSION, MCP_PATH, OPERATIONS, REST_BASE, type Operation } from "@/lib/api-spec";
 import { money } from "@/lib/pricing";
+import { brandName, rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/developers")({
   loader: () => getPublicApiPlans(),
   head: () => ({
     meta: [
-      { title: "Latchkey API & MCP — connect your rooms to anything" },
+      { title: rebrand("Latchkey API & MCP — connect your rooms to anything") },
       {
         name: "description",
-        content: "Connect Latchkey to Claude, ChatGPT, Cursor and your own tools. Bookings, arrivals, guest requests and messages over MCP and a simple REST API.",
+        content: rebrand("Connect Latchkey to Claude, ChatGPT, Cursor and your own tools. Bookings, arrivals, guest requests and messages over MCP and a simple REST API."),
       },
     ],
   }),
@@ -95,7 +96,7 @@ function Developers() {
 
           <Section id="assistants" title="Connect an AI assistant" icon={Bot}>
             <p className="text-muted-foreground">
-              Latchkey's MCP server works with any app that supports remote MCP servers over HTTP. Replace <Code>lk_…</Code> with your key.
+              {brandName()}'s MCP server works with any app that supports remote MCP servers over HTTP. Replace <Code>lk_…</Code> with your key.
             </p>
             <Tabs defaultValue="claude-code" className="mt-4">
               <TabsList className="h-auto flex-wrap rounded-2xl p-1">
@@ -110,7 +111,7 @@ function Developers() {
               </TabsContent>
               <TabsContent value="claude-desktop" className="mt-4 space-y-2">
                 <p>
-                  In Claude Desktop, open Settings → Developer → Edit config, and add Latchkey to <Code>mcpServers</Code>:
+                  In Claude Desktop, open Settings → Developer → Edit config, and add {brandName()} to <Code>mcpServers</Code>:
                 </p>
                 <CodeBlock
                   code={JSON.stringify(
