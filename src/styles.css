@@ -274,3 +274,12 @@
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* Scrolls, without a scrollbar: menu strips show arrow buttons instead (MenuStrip). */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

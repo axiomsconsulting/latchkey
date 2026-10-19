@@ -195,6 +195,8 @@ export const trial = branded({
 });
 
 export const hostNav = branded({
+  menuDrawer: "Menu",
+  moreDrawer: "More",
   today: "Today",
   bookings: "Bookings",
   properties: "Properties",

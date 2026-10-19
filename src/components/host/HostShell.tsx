@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles } from "lucide-react";
+import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MoreHorizontal } from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
@@ -15,6 +15,8 @@ import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { NavIcon } from "@/components/NavIcon";
+import { MenuStrip } from "@/components/host/MenuStrip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useUi } from "@/hooks/use-site";
 import { resolveNav, type NavItemResolved } from "@/lib/ui-config";
 import { rememberDashboard } from "@/lib/home-redirect";
@@ -250,6 +252,36 @@ export function HostShell() {
  * rail, or (dragged right in) a bar along the top. The logo keeps its spot
  * through every change; the rest fades while the frame reshapes.
  */
+/** Whether a media query matches (false on the server and until mounted). */
+function useMedia(query: string): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const update = () => setOn(m.matches);
+    update();
+    m.addEventListener("change", update);
+    return () => m.removeEventListener("change", update);
+  }, [query]);
+  return on;
+}
+
+/** A group of menu items folded behind one button, for when there's hardly any room. */
+function MenuDrawer({ label, icon: Icon, top, narrow, linkBase, children }: { label: string; icon: typeof LayoutGrid; top: boolean; narrow: boolean; linkBase: string; children: ReactNode }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" title={label} aria-label={label} className={cn(linkBase, "shrink-0", top || narrow ? "justify-center p-2.5" : "px-3 py-2")}>
+          <Icon className="size-5 shrink-0" />
+          <span className={top || narrow ? "sr-only" : "truncate"}>{label}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side={top ? "bottom" : "right"} align="start" className="glass max-h-[80vh] w-64 overflow-y-auto rounded-2xl p-2">
+        <div className="flex flex-col gap-1">{children}</div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function DesktopNav({
   mode,
   onMode,
@@ -326,6 +358,58 @@ function DesktopNav({
   // Labels show when there is room for them: always in the full sidebar,
   // never on the rail, and along the top once the bar is wide enough.
   const labelClass = narrow ? "sr-only" : top ? "sr-only @6xl:not-sr-only @6xl:truncate" : "truncate";
+  // Less height (side menu) or width (top bar): tighter rows first, then two drawers.
+  const dense = useMedia(top ? "(max-width: 1280px)" : "(max-height: 860px)");
+  const drawers = useMedia(top ? "(max-width: 860px)" : "(max-height: 600px)");
+  const pad = top ? (dense ? "shrink-0 px-2.5 py-2" : "shrink-0 px-3 py-2.5") : narrow ? cn("justify-center px-3", dense ? "py-2" : "py-3") : cn("px-3", dense ? "py-2" : "py-3");
+  const pinned = menu.find((i) => i.id === "today") ?? menu[0];
+  const rest = menu.filter((i) => i !== pinned);
+
+  // A menu item; in a drawer, always with its label.
+  const menuLink = (it: NavItemResolved, inDrawer = false) => (
+    <MenuLink
+      key={it.id}
+      item={it}
+      onClick={haptic}
+      title={it.label}
+      className={cn(linkBase, inDrawer ? "w-full px-3 py-2.5" : pad)}
+      activeProps={active}
+    >
+      <span className="relative">
+        <NavIcon icon={it.icon} iconUrl={it.iconUrl} iconColour={it.iconColour} />
+        {it.id === "today" && alertCount > 0 && (narrow || top) && !inDrawer ? (
+          <span className="absolute -right-1.5 -top-1 size-2.5 rounded-full bg-destructive ring-2 ring-surface" />
+        ) : null}
+      </span>
+      <span className={inDrawer ? "truncate" : labelClass}>{it.label}</span>
+      {it.id === "today" && alertCount > 0 && !narrow && !top ? (
+        <span className="ml-auto rounded-full bg-destructive px-2 text-xs text-destructive-foreground" aria-label={`${alertCount} alerts`}>
+          {alertCount}
+        </span>
+      ) : null}
+    </MenuLink>
+  );
+
+  // Guest register to feedback: the second group.
+  const extras = (inDrawer: boolean) => {
+    const cls = cn(linkBase, inDrawer ? "w-full px-3 py-2.5" : narrow || top ? cn("justify-center", dense ? "p-2" : "p-3") : pad);
+    const text = inDrawer ? "truncate" : narrow || top ? "sr-only" : "truncate";
+    const one = (to: string, label: string, Icon: typeof NotebookPen) => (
+      <Link key={to} to={to as never} onClick={haptic} title={label} className={cls} activeProps={active}>
+        <Icon className="size-5 shrink-0" />
+        <span className={text}>{label}</span>
+      </Link>
+    );
+    return (
+      <>
+        {canWrite ? one("/app/register", hostNav.register, NotebookPen) : null}
+        {isOwner ? one("/app/activity", hostNav.activity, History) : null}
+        {one("/app/whats-new", whatsNewCopy.navLabel, Sparkles)}
+        {isOwner ? one("/app/billing", billingCopy.navLabel, CreditCard) : null}
+        <FeedbackButton compact={!inDrawer && (narrow || top)} {...(inDrawer ? { className: "w-full" } : {})} />
+      </>
+    );
+  };
 
   return (
     <aside
@@ -352,97 +436,50 @@ function DesktopNav({
         </div>
       ) : null}
 
+      {/* Today stays put; the rest of the menu and the extras scroll (arrows, no scrollbars) or fold into drawers. */}
       <nav
-        className={cn(
-          "flex gap-1",
-          top ? "min-w-0 flex-1 flex-row overflow-x-auto" : "mt-6 flex-col",
-          fade,
-        )}
+        className={cn("flex min-h-0 min-w-0 gap-1", top ? "flex-1 flex-row items-center" : cn("flex-1 flex-col", dense ? "mt-3" : "mt-6"), fade)}
         aria-label="Main"
       >
-        {menu.map((it) => (
-          <MenuLink
-            key={it.id}
-            item={it}
-            onClick={haptic}
-            title={it.label}
-            className={cn(linkBase, top ? "shrink-0 px-3 py-2.5" : narrow ? "justify-center px-3 py-3" : "px-3 py-3")}
-            activeProps={active}
-          >
-            <span className="relative">
-              <NavIcon icon={it.icon} iconUrl={it.iconUrl} iconColour={it.iconColour} />
-              {it.id === "today" && alertCount > 0 && (narrow || top) ? (
-                <span className="absolute -right-1.5 -top-1 size-2.5 rounded-full bg-destructive ring-2 ring-surface" />
-              ) : null}
-            </span>
-            <span className={labelClass}>{it.label}</span>
-            {it.id === "today" && alertCount > 0 && !narrow && !top ? (
-              <span className="ml-auto rounded-full bg-destructive px-2 text-xs text-destructive-foreground" aria-label={`${alertCount} alerts`}>
-                {alertCount}
-              </span>
-            ) : null}
-          </MenuLink>
-        ))}
+        {pinned ? menuLink(pinned) : null}
+        {drawers ? (
+          <>
+            <MenuDrawer label={hostNav.menuDrawer} icon={LayoutGrid} top={top} narrow={narrow} linkBase={linkBase}>
+              {rest.map((it) => menuLink(it, true))}
+            </MenuDrawer>
+            <MenuDrawer label={hostNav.moreDrawer} icon={MoreHorizontal} top={top} narrow={narrow} linkBase={linkBase}>
+              {extras(true)}
+            </MenuDrawer>
+            {top ? null : <span className="flex-1" />}
+          </>
+        ) : (
+          <>
+            <MenuStrip direction={top ? "horizontal" : "vertical"} label={hostNav.menuDrawer} className={top ? "flex-1" : "flex-[1_1_auto]"}>
+              {rest.map((it) => menuLink(it))}
+            </MenuStrip>
+            <MenuStrip
+              direction={top ? "horizontal" : "vertical"}
+              label={hostNav.moreDrawer}
+              className={top ? "max-w-[40%] shrink" : cn("flex-[0_1_auto] border-t border-border", dense ? "mt-1 pt-1" : "mt-2 pt-2")}
+            >
+              {extras(false)}
+            </MenuStrip>
+          </>
+        )}
       </nav>
 
-      <div className={cn("flex gap-1", top ? "shrink-0 flex-row items-center" : "mt-auto flex-col", fade)}>
+      {/* Your profile and signing out stay at the end, always in view. */}
+      <div className={cn("flex shrink-0 gap-1", top ? "flex-row items-center" : "flex-col", fade)}>
         {top ? <HostSwitcher className="hidden h-10 w-44 rounded-2xl @[84rem]:flex" /> : null}
         {top ? switcher("hidden h-10 w-44 rounded-2xl @[72rem]:flex") : null}
-        {canWrite ? (
-          <Link
-            to="/app/register"
-            onClick={haptic}
-            title={hostNav.register}
-            className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
-            activeProps={active}
-          >
-            <NotebookPen className="size-5 shrink-0" />
-            <span className={narrow || top ? "sr-only" : "truncate"}>{hostNav.register}</span>
-          </Link>
-        ) : null}
-        {isOwner ? (
-          <Link
-            to="/app/activity"
-            onClick={haptic}
-            title={hostNav.activity}
-            className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
-            activeProps={active}
-          >
-            <History className="size-5 shrink-0" />
-            <span className={narrow || top ? "sr-only" : "truncate"}>{hostNav.activity}</span>
-          </Link>
-        ) : null}
-        <Link
-          to="/app/whats-new"
-          onClick={haptic}
-          title={whatsNewCopy.navLabel}
-          className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
-          activeProps={active}
-        >
-          <Sparkles className="size-5 shrink-0" />
-          <span className={narrow || top ? "sr-only" : "truncate"}>{whatsNewCopy.navLabel}</span>
-        </Link>
-        {isOwner ? (
-          <Link
-            to="/app/billing"
-            onClick={haptic}
-            title={billingCopy.navLabel}
-            className={cn(linkBase, narrow || top ? "justify-center p-3" : "px-3 py-3")}
-            activeProps={active}
-          >
-            <CreditCard className="size-5 shrink-0" />
-            <span className={narrow || top ? "sr-only" : "truncate"}>{billingCopy.navLabel}</span>
-          </Link>
-        ) : null}
-        <FeedbackButton compact={narrow || top} />
-        <div className={cn("flex items-center gap-1", narrow ? "flex-col" : "", top ? "" : "mt-2 border-t border-border pt-2")}>
+        <div className={cn("flex items-center gap-1", narrow ? "flex-col" : "", top ? "" : cn("border-t border-border", dense ? "mt-1 pt-1" : "mt-2 pt-2"))}>
           <UserChip compact={narrow || top} className={narrow || top ? "justify-center" : "flex-1"} />
           <button
             type="button"
             onClick={onSignOut}
             title={auth.signOut}
             aria-label={auth.signOut}
-            className={cn(linkBase, "justify-center p-3")}
+            className={cn(linkBase, "justify-center", dense ? "p-2" : "p-3")}
           >
             <LogOut className="size-5" />
           </button>
