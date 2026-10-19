@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
 import { CalendarX, Check, Wifi } from "lucide-react";
@@ -144,6 +145,7 @@ function Stay() {
                             {st.imageUrl ? (
                               <img src={st.imageUrl} alt={gcopy.photoAlt(st.heading || sec.title)} loading="lazy" className="max-h-80 w-full rounded-2xl object-cover" />
                             ) : null}
+                  <GuideAttachments items={(sec as { attachments?: Attachment[] }).attachments} />
                           </div>
                         </li>
                       ))}

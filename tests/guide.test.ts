@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGuide, forgetCard, guideWindow, windowsOn, type GuideFacts, type StoredSection } from "../src/lib/guide";
+import { SECTIONS, buildGuide, editorSections, forgetCard, guideWindow, normaliseStarters, startersOffFor, type GuideFacts, type StoredSection, windowsOn } from "../src/lib/guide";
 
 const facts: GuideFacts = {
   wifiName: null, wifiPassword: null, quietStart: "22:00", quietEnd: "07:00", checkOutTime: "11:00",
@@ -124,5 +124,28 @@ describe("adding and removing guide sections", () => {
     expect(e.shown.find((s) => s.key === "custom_abc123de")).toMatchObject({ title: "Bins", custom: true });
     expect(e.removed.map((s) => s.key)).toEqual(["parking"]);
     expect(e.shown.length).toBe(SECTIONS.length);
+  });
+});
+
+describe("starter sections for new hosts", () => {
+  it("only leaves a starter out for hosts who signed up after the super admin took it out", () => {
+    const removed = { taxis: "2026-10-19T10:00:00Z" };
+    expect(startersOffFor(removed, "2026-10-20T09:00:00Z")).toEqual(["taxis"]);
+    expect(startersOffFor(removed, "2026-01-01T09:00:00Z")).toEqual([]);
+    expect(startersOffFor(null, "2026-10-20T09:00:00Z")).toEqual([]);
+  });
+
+  it("never takes every starter away", () => {
+    const all = Object.fromEntries(SECTIONS.map((s) => [s.key, "2026-10-19T10:00:00Z"]));
+    expect(Object.keys(normaliseStarters({ removed: all }).removed)).toHaveLength(SECTIONS.length - 1);
+    expect(normaliseStarters({ removed: { nonsense: "x", taxis: "not a date" } }).removed).toEqual({});
+  });
+
+  it("puts a starter the host never had with the removed ones, until they add it", () => {
+    const { shown, removed } = editorSections([], ["taxis"]);
+    expect(shown.some((s) => s.key === "taxis")).toBe(false);
+    expect(removed.some((s) => s.key === "taxis")).toBe(true);
+    const added = editorSections([{ roomId: null, sectionKey: "taxis", summary: null, pinned: false, sortOrder: 0, title: "Local taxis", published: true, steps: [] }], ["taxis"]);
+    expect(added.shown.some((s) => s.key === "taxis")).toBe(true);
   });
 });

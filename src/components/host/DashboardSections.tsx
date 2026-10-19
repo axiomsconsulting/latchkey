@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useUi } from "@/hooks/use-site";
+import { arrange } from "@/lib/ui-config";
 import { ChevronDown } from "lucide-react";
 
 import { dashboardCopy as copy } from "@/content/copy";
@@ -22,11 +24,17 @@ const SectionsContext = createContext<Ctx | null>(null);
  */
 export function DashboardSections({
   storageKey,
-  items,
+  items: all,
+  page,
 }: {
   storageKey: string;
   items: Array<{ id: string; wide?: boolean; node: ReactNode }>;
+  /** The super admin's layout for this page (src/lib/ui-config.ts): their order is the starting order, hidden sections never show. */
+  page?: string;
 }) {
+  const ui = useUi();
+  const allowed = page ? arrange(ui.pages[page], all.map((i) => i.id)) : all.map((i) => i.id);
+  const items = allowed.map((id) => all.find((i) => i.id === id)!).filter(Boolean);
   const defaults = items.map((i) => i.id);
   const [layout, setLayoutState] = useState<Layout>({ order: defaults, collapsed: [] });
   const [dragging, setDragging] = useState<string | null>(null);

@@ -1396,8 +1396,13 @@ export const getStay = createServerFn({ method: "GET" })
         .map((s) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
     }));
 
-    const sections = buildGuide(stored, b.room_id, mode, facts).map((sec) =>
-      doorLocked && DOOR_SECTIONS.includes(sec.key) ? { ...sec, summary: "DOOR_LOCKED", steps: [] } : sec,
+    const { startersOffForProperty } = await import("./guide-starters.server");
+    const { attachmentsFor } = await import("./attachments.server");
+    const [off, files] = await Promise.all([startersOffForProperty(b.property_id), attachmentsFor(b.property_id).catch(() => ({}) as Record<string, never>)]);
+    const sections = buildGuide(stored, b.room_id, mode, facts, off, Object.keys(files)).map((sec) =>
+      doorLocked && DOOR_SECTIONS.includes(sec.key)
+        ? { ...sec, summary: "DOOR_LOCKED", steps: [], attachments: [] }
+        : { ...sec, attachments: (files as Record<string, import("./attachments.server").GuestAttachment[]>)[sec.key] ?? [] },
     );
     const forget = forgetCard(sections, windowsOn(windows ?? [], b.room_id, today, tz));
     // Anything on the reminder card is left out of the list below, so guests

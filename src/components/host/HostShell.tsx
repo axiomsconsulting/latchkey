@@ -1,27 +1,8 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  BookOpen,
-  CalendarDays,
-  Eye,
-  History,
-  Home,
-  Loader2,
-  LogOut,
-  Mail,
-  CreditCard,
-  NotebookPen,
-  ShieldCheck,
-  PanelLeftOpen,
-  Plug,
-  Settings,
-  Sun,
-  Wrench,
-  type LucideIcon,
-  Sparkles,
-} from "lucide-react";
+import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles } from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
@@ -33,6 +14,9 @@ import { whatsNewCopy } from "@/content/copy";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
+import { NavIcon } from "@/components/NavIcon";
+import { useUi } from "@/hooks/use-site";
+import { resolveNav, type NavItemResolved } from "@/lib/ui-config";
 import { rememberDashboard } from "@/lib/home-redirect";
 import { rememberHost } from "@/lib/last-host";
 
@@ -46,24 +30,42 @@ import { NAV_WIDTH, cycleMode, modeForWidth, readNavMode, stepMode, type NavMode
 import { normaliseTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-type NavItem = { to: string; label: string; short: string; icon: LucideIcon };
+/**
+ * The menu, as the super admin set it for every host (Latchkey admin → Menu
+ * and pages): order, which items show, their own items and icons. Latchkey
+ * admin is always there for super admins.
+ */
+function useMenu(superAdmin: boolean): NavItemResolved[] {
+  const ui = useUi();
+  const labels: Record<string, string> = { ...(hostNav as unknown as Record<string, string>), admin: adminCopy.navLabel };
+  return resolveNav(ui.nav, labels, { superAdmin });
+}
 
-const item = (to: string, key: keyof typeof hostNav & string, icon: LucideIcon): NavItem => ({
-  to,
-  label: hostNav[key] as string,
-  short: hostNav.short[key] ?? (hostNav[key] as string),
-  icon,
-});
+const shortLabel = (item: NavItemResolved) => (item.builtIn ? ((hostNav.short as Record<string, string>)[item.id] ?? item.label) : item.label);
 
-const navItems: NavItem[] = [
-  item("/app/today", "today", Sun),
-  item("/app/bookings", "bookings", CalendarDays),
-  item("/app/services", "services", Wrench),
-  item("/app/guides", "guides", BookOpen),
-  item("/app/properties", "properties", Home),
-  item("/app/connections", "connections", Plug),
-  item("/app/settings", "settings", Settings),
-];
+/** A menu link: a page in the app, or another site in a new tab. */
+function MenuLink({ item, className, activeProps, onClick, title, ariaLabel, children }: {
+  item: NavItemResolved;
+  className: string;
+  activeProps?: Record<string, unknown>;
+  onClick?: () => void;
+  title?: string;
+  ariaLabel?: string;
+  children: ReactNode;
+}) {
+  if (item.external) {
+    return (
+      <a href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClick} title={title} aria-label={ariaLabel} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link to={item.href as never} onClick={onClick} title={title} aria-label={ariaLabel} className={className} activeProps={activeProps as never}>
+      {children}
+    </Link>
+  );
+}
 
 const NAV_KEY = "latchkey.nav";
 
@@ -76,6 +78,8 @@ export function HostShell() {
   const alertCount = useAlerts().data?.alerts.length ?? 0;
   const { data } = useWorkspace();
   const { canWrite, isOwner } = useRole();
+  // The phone dock: the same menu, without Latchkey admin (reached from Settings there).
+  const dock = useMenu(data?.isSuperAdmin === true).filter((i) => i.id !== "admin").slice(0, 7);
   useAccessWatch();
   // Next time "/" opens on this device, go straight to the dashboard (not the shared demo).
   useEffect(() => {
@@ -213,27 +217,28 @@ export function HostShell() {
       {/* Floating pill dock */}
       <nav
         aria-label="Main"
-        className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 mx-auto grid max-w-2xl grid-cols-7 gap-1 rounded-[1.75rem] p-1.5 md:hidden print:hidden"
+        className="glass fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 mx-auto grid max-w-2xl gap-1 rounded-[1.75rem] p-1.5 md:hidden print:hidden"
+        style={{ gridTemplateColumns: `repeat(${Math.max(1, dock.length)}, minmax(0, 1fr))` }}
       >
-        {navItems.map(({ to, label, short, icon: Icon }) => (
-          <Link
-            key={to}
-            to={to}
+        {dock.map((it) => (
+          <MenuLink
+            key={it.id}
+            item={it}
             onClick={haptic}
-            aria-label={label}
+            ariaLabel={it.label}
             className="spring flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 text-[10px] font-medium text-muted-foreground @container active:scale-90"
             activeProps={{ className: "bg-primary !text-primary-foreground shadow-soft", "aria-current": "page" }}
           >
             <span className="relative">
-              <Icon className="size-5" />
-              {to === "/app/today" && alertCount > 0 ? (
+              <NavIcon icon={it.icon} iconUrl={it.iconUrl} iconColour={it.iconColour} />
+              {it.id === "today" && alertCount > 0 ? (
                 <span className="absolute -right-2 -top-1 size-2.5 rounded-full bg-destructive ring-2 ring-surface" aria-label={`${alertCount} alerts`} />
               ) : null}
             </span>
             {/* Narrow tabs use the short form, like "Props" for Properties. */}
-            <span aria-hidden className="hidden max-w-full truncate @[4.25rem]:block">{label}</span>
-            <span aria-hidden className="block max-w-full truncate @[4.25rem]:hidden">{short}</span>
-          </Link>
+            <span aria-hidden className="hidden max-w-full truncate @[4.25rem]:block">{it.label}</span>
+            <span aria-hidden className="block max-w-full truncate @[4.25rem]:hidden">{shortLabel(it)}</span>
+          </MenuLink>
         ))}
       </nav>
     </ThemeScope>
@@ -270,6 +275,7 @@ function DesktopNav({
   onSignOut: () => void;
 }) {
   const isSuperAdmin = useWorkspace().data?.isSuperAdmin === true;
+  const menu = useMenu(isSuperAdmin);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const [settling, setSettling] = useState(false);
   const drag = useRef<{ x: number; y: number; width: number; moved: boolean } | null>(null);
@@ -354,42 +360,28 @@ function DesktopNav({
         )}
         aria-label="Main"
       >
-        {navItems.map(({ to, label, icon: Icon }) => (
-          <Fragment key={to}>
-          <Link
-            to={to}
+        {menu.map((it) => (
+          <MenuLink
+            key={it.id}
+            item={it}
             onClick={haptic}
-            title={label}
+            title={it.label}
             className={cn(linkBase, top ? "shrink-0 px-3 py-2.5" : narrow ? "justify-center px-3 py-3" : "px-3 py-3")}
             activeProps={active}
           >
             <span className="relative">
-              <Icon className="size-5 shrink-0" />
-              {to === "/app/today" && alertCount > 0 && (narrow || top) ? (
+              <NavIcon icon={it.icon} iconUrl={it.iconUrl} iconColour={it.iconColour} />
+              {it.id === "today" && alertCount > 0 && (narrow || top) ? (
                 <span className="absolute -right-1.5 -top-1 size-2.5 rounded-full bg-destructive ring-2 ring-surface" />
               ) : null}
             </span>
-            <span className={labelClass}>{label}</span>
-            {to === "/app/today" && alertCount > 0 && !narrow && !top ? (
+            <span className={labelClass}>{it.label}</span>
+            {it.id === "today" && alertCount > 0 && !narrow && !top ? (
               <span className="ml-auto rounded-full bg-destructive px-2 text-xs text-destructive-foreground" aria-label={`${alertCount} alerts`}>
                 {alertCount}
               </span>
             ) : null}
-          </Link>
-          {/* Super admins only: Latchkey's own settings, under Settings. */}
-          {to === "/app/settings" && isSuperAdmin ? (
-            <Link
-              to="/app/admin"
-              onClick={haptic}
-              title={adminCopy.navLabel}
-              className={cn(linkBase, top ? "shrink-0 px-3 py-2.5" : narrow ? "justify-center px-3 py-3" : "ml-4 px-3 py-2.5")}
-              activeProps={active}
-            >
-              <ShieldCheck className="size-5 shrink-0" />
-              <span className={labelClass}>{adminCopy.navLabel}</span>
-            </Link>
-          ) : null}
-          </Fragment>
+          </MenuLink>
         ))}
       </nav>
 

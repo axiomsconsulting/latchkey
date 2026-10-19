@@ -49,6 +49,7 @@ export function GuideSectionList({
   openKey,
   badges,
   children,
+  attachmentCount = () => 0,
 }: {
   propertyId: string;
   shown: EditorSection[];
@@ -59,6 +60,8 @@ export function GuideSectionList({
   openKey: string | null;
   badges: (s: EditorSection) => ReactNode;
   children: (s: EditorSection) => ReactNode;
+  /** How many photos and documents a section has: removing it deletes them, so it asks first. */
+  attachmentCount?: (key: SectionKey) => number;
 }) {
   const qc = useQueryClient();
   const reorder = useServerFn(reorderSections);
@@ -205,7 +208,7 @@ export function GuideSectionList({
                           aria-label={`${s.custom ? copy.deleteTip : copy.removeTip}: ${s.title}`}
                           disabled={busy !== null}
                           onClick={() =>
-                            s.custom
+                            s.custom || attachmentCount(key) > 0
                               ? setConfirm(s)
                               : void run(`rm-${key}`, () => remove({ data: { propertyId, sectionKey: key } }), copy.removedToast(s.title))
                           }
@@ -293,15 +296,21 @@ export function GuideSectionList({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{copy.deleteTitle(confirm?.title ?? "")}</AlertDialogTitle>
-            <AlertDialogDescription>{copy.deleteBody}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {confirm?.custom ? copy.deleteBody : copy.removeWithFiles}
+              {confirm && attachmentCount(confirm.key) > 0 ? ` ${copy.filesGoToo(attachmentCount(confirm.key))}` : ""}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => confirm && void run(`rm-${confirm.key}`, () => remove({ data: { propertyId, sectionKey: confirm.key } }), copy.deletedToast)}
+              onClick={() =>
+                confirm &&
+                void run(`rm-${confirm.key}`, () => remove({ data: { propertyId, sectionKey: confirm.key } }), confirm.custom ? copy.deletedToast : copy.removedToast(confirm.title))
+              }
             >
-              {copy.deleteConfirm}
+              {confirm?.custom ? copy.deleteConfirm : copy.removeConfirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

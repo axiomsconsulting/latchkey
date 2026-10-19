@@ -43,7 +43,10 @@ export const getGuideEditor = createServerFn({ method: "GET" })
     ]);
     const paths = (guides ?? []).flatMap((g) => (g.guide_steps ?? []).map((s) => s.image_url).filter((p): p is string => !!p));
     const signed = await signPaths(paths);
+    const { startersOffForProperty } = await import("./guide-starters.server");
     return {
+      /** Starter sections this host didn't start with (they can still add them). */
+      startersOff: await startersOffForProperty(data.propertyId),
       rooms: rooms ?? [],
       sections: (guides ?? []).map((g) => ({
         roomId: g.room_id,
@@ -402,7 +405,12 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       roomName: room.display_name ?? null,
       unavailableLines: weeklyLines(windows ?? [], room.id),
     };
-    const sections = buildGuide(stored, room.id, mode, facts).filter((sec) => !DOOR_SECTIONS.includes(sec.key));
+    const { startersOffForProperty } = await import("./guide-starters.server");
+    const { attachmentsFor } = await import("./attachments.server");
+    const [off, files] = await Promise.all([startersOffForProperty(p.id), attachmentsFor(p.id).catch(() => ({}) as Record<string, never>)]);
+    const sections = buildGuide(stored, room.id, mode, facts, off, Object.keys(files))
+      .filter((sec) => !DOOR_SECTIONS.includes(sec.key))
+      .map((sec) => ({ ...sec, attachments: (files as Record<string, import("./attachments.server").GuestAttachment[]>)[sec.key] ?? [] }));
     const forget = forgetCard(sections, windowsOn(windows ?? [], room.id, today, tz));
     const reminded = new Set(forget.map((i) => i.key));
     return {
@@ -461,6 +469,9 @@ export const removeGuideSection = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const sb = context.supabase as any;
+    // The section's photos and documents go with it, from the host's folder too.
+    const { deleteAttachments } = await import("./attachments.server");
+    await deleteAttachments(data.propertyId, data.sectionKey).catch(() => undefined);
     if (isCustom(data.sectionKey)) {
       const { error } = await sb.from("guides").delete().eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
       if (error) throw new Error(error.message);

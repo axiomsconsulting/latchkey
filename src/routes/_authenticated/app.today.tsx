@@ -131,6 +131,7 @@ function TodayPage() {
       <AlertsPanel />
 
       <DashboardSections
+        page="today"
         storageKey="latchkey.todayLayout"
         items={[
           {
@@ -856,7 +857,7 @@ function GuideCard({ propertyId, arriving, rooms }: { propertyId: string; arrivi
   const codes = useQuery({ queryKey: ["room-guide-codes", propertyId], queryFn: () => codesFn({ data: { propertyId } }) });
   const stored = (q.data?.sections ?? []) as unknown as StoredSection[];
   // The sections in this guide: the host's own included, removed ones left out.
-  const listed = editorSections(stored).shown;
+  const listed = editorSections(stored, q.data?.startersOff ?? []).shown;
   const keys = listed.map((s) => s.key);
   const written = stored.filter((x) => x.summary?.trim() || x.steps?.length) as Array<{ roomId: string | null; sectionKey: SectionKey }>;
   const p = guideProgress(keys, written);

@@ -32,6 +32,20 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.41.0",
+    date: "2026-10-19",
+    title: "Photos and documents in your guide",
+    items: [
+      { kind: "new", area: "Guest guide", text: "Attach photos, PDFs and Word, Excel or PowerPoint files to any section of your stay guide. Guests open them right inside their guide." },
+      { kind: "improved", area: "Guest guide", text: "Removing a section from your guide also removes its photos and documents." },
+      { kind: "fixed", area: "Settings", admin: true, text: "Latchkey admin: the tabs no longer slide under the page on narrow screens." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: arrange the menu for every host, hide items, and add your own links with icons from a starter set or your own upload." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: arrange or hide the sections of the home page, Today and Settings for every host." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: choose the starter guide sections new hosts begin with; hosts already here keep theirs." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: connect the Google Drive that guide attachments are kept in, a private folder per host." },
+    ],
+  },
+  {
     version: "0.40.1",
     date: "2026-10-18",
     title: "Kiosk timers fixed",

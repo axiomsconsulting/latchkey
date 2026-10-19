@@ -18,9 +18,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { common, guideCopy as copy, inRoomCopy as roomCopy } from "@/content/copy";
+import { common, guideAttachCopy, guideCopy as copy, inRoomCopy as roomCopy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { GuideSectionList } from "@/components/host/GuideSectionList";
+import { SectionAttachments } from "@/components/host/SectionAttachments";
+import { getGuideAttachments } from "@/lib/attachments.functions";
 import { RoomAmenities } from "@/components/host/RoomAmenities";
 import { SECTIONS, editorSections, type SectionKey } from "@/lib/guide";
 import { getRoomGuideCodes, renameGuideSection } from "@/lib/guide.functions";
@@ -69,6 +71,8 @@ function GuidesPage() {
   const { selectedId, select } = useSelectedProperty(properties);
   const fn = useServerFn(getGuideEditor);
   const q = useQuery({ queryKey: ["guide", selectedId], enabled: Boolean(selectedId), queryFn: () => fn({ data: { propertyId: selectedId! } }) });
+  const attachFn = useServerFn(getGuideAttachments);
+  const attach = useQuery({ queryKey: ["guide-attachments", selectedId], enabled: Boolean(selectedId), queryFn: () => attachFn({ data: { propertyId: selectedId! } }) });
   const { section: linkedSection, room: linkedRoom } = Route.useSearch();
   const [scope, setScope] = useState<string>(linkedRoom ?? "house");
   useEffect(() => {
@@ -88,7 +92,7 @@ function GuidesPage() {
   const roomId = scope === "house" ? null : scope;
   const room = rooms.find((r) => r.id === roomId);
   const houseCount = sections.filter((s) => s.roomId === null).length;
-  const { shown, removed } = editorSections(sections);
+  const { shown, removed } = editorSections(sections, (q.data as { startersOff?: string[] } | undefined)?.startersOff ?? []);
   const pinned = new Set(sections.filter((s) => s.roomId === null && s.pinned).map((s) => s.sectionKey));
   const roomAmenities = Array.isArray(room?.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [];
 
@@ -176,6 +180,7 @@ function GuidesPage() {
         <>
           <p className="text-sm text-muted-foreground">{roomId ? copy.listHelpRoom : copy.listHelp}</p>
           <GuideSectionList
+            attachmentCount={(key) => attach.data?.bySection[key]?.length ?? 0}
             propertyId={selectedId}
             shown={shown}
             removed={removed}
@@ -212,6 +217,11 @@ function GuidesPage() {
                     own={own}
                     inherited={house}
                   />
+                  {roomId ? (
+                    <p className="text-xs text-muted-foreground">{guideAttachCopy.roomNote}</p>
+                  ) : (
+                    <SectionAttachments propertyId={selectedId} sectionKey={sec.key} items={attach.data?.bySection[sec.key] ?? []} ready={attach.data?.ready === true} />
+                  )}
                 </div>
               );
             }}

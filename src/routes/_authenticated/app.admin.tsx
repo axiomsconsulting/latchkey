@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye, Loader2, ShieldCheck } from "lucide-react";
@@ -14,6 +14,8 @@ import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
+import { DriveAdmin, StarterSectionsAdmin } from "@/components/host/GuideAdmin";
+import { MenuPagesAdmin } from "@/components/host/MenuPagesAdmin";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { adminCopy as copy, channels, common } from "@/content/copy";
+import { adminCopy as copy, channels, common, menuAdminCopy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
 import {
   addSuperAdmin,
@@ -63,6 +65,7 @@ function AdminPage() {
   const fetchOverview = useServerFn(getAdminOverview);
   const isSuper = ws.data?.isSuperAdmin === true;
   const q = useQuery({ queryKey: ["admin-overview"], enabled: isSuper, queryFn: () => fetchOverview() });
+  const backFromDrive = !!(useSearch({ strict: false }) as { drive?: string }).drive;
 
   if (ws.isLoading) return <Skeleton className="mx-auto h-64 max-w-6xl rounded-2xl" />;
   if (!isSuper) return <EmptyState icon={ShieldCheck} title={copy.title} body={copy.notAdmin} />;
@@ -74,8 +77,9 @@ function AdminPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageHeader title={copy.title} subtitle={copy.subtitle} />
-      <Tabs defaultValue="overview">
-        <TabsList className="h-12 flex-wrap rounded-2xl p-1">
+      {/* Back from connecting Google Drive: straight to Integrations, where the result shows. */}
+      <Tabs defaultValue={backFromDrive ? "integrations" : "overview"}>
+        <TabsList className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
           <TabsTrigger value="overview" className="h-10 rounded-xl px-4">{copy.tabOverview}</TabsTrigger>
           <TabsTrigger value="hosts" className="h-10 rounded-xl px-4">{copy.tabHosts}</TabsTrigger>
           <TabsTrigger value="flags" className="h-10 rounded-xl px-4">
@@ -87,6 +91,7 @@ function AdminPage() {
           <TabsTrigger value="pricing" className="h-10 rounded-xl px-4">{copy.tabPricing}</TabsTrigger>
           <TabsTrigger value="routines" className="h-10 rounded-xl px-4">{copy.tabRoutines}</TabsTrigger>
           <TabsTrigger value="integrations" className="h-10 rounded-xl px-4">{copy.tabIntegrations}</TabsTrigger>
+          <TabsTrigger value="menu" className="h-10 rounded-xl px-4">{menuAdminCopy.tab}</TabsTrigger>
           <TabsTrigger value="settings" className="h-10 rounded-xl px-4">{copy.tabSettings}</TabsTrigger>
         </TabsList>
 
@@ -116,6 +121,13 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="integrations" className="mt-4">
           <IntegrationsAdmin />
+          <div className="mt-6">
+            <DriveAdmin />
+          </div>
+        </TabsContent>
+        <TabsContent value="menu" className="mt-4 space-y-6">
+          <MenuPagesAdmin />
+          <StarterSectionsAdmin />
         </TabsContent>
         <TabsContent value="settings" className="mt-4 space-y-6">
           <BrandAdmin />

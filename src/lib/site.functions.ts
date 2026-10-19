@@ -8,15 +8,17 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normaliseBrand, type Brand } from "@/lib/brand";
+import { normaliseUi, type UiConfig } from "@/lib/ui-config";
 
-export type SiteContext = { brand: Brand; tenant: { name: string; shortCode: string | null } | null };
+export type SiteContext = { brand: Brand; tenant: { name: string; shortCode: string | null } | null; ui: UiConfig };
 
 export const getSiteContext = createServerFn({ method: "GET" }).handler(async (): Promise<SiteContext> => {
-  const { currentSite, platformBrand } = await import("./brand.server");
+  const { currentSite, platformBrand, platformUi } = await import("./brand.server");
   const site = currentSite();
   return {
     brand: site?.brand ?? (await platformBrand()),
     tenant: site?.tenant ? { name: site.tenant.name, shortCode: site.tenant.shortCode } : null,
+    ui: normaliseUi(await platformUi()),
   };
 });
 
@@ -49,4 +51,64 @@ export const saveBrandSettings = createServerFn({ method: "POST" })
     const { forgetBrand } = await import("./brand.server");
     forgetBrand();
     return { ok: true, brand };
+  });
+
+/* ------------------------ menu and page layouts ------------------------- */
+
+const navEntry = z.object({
+  id: z.string().max(60),
+  hidden: z.boolean().optional(),
+  label: z.string().max(30).optional(),
+  href: z.string().max(500).optional(),
+  icon: z.string().max(40).optional(),
+  iconUrl: z.string().max(40_000).optional(),
+  iconColour: z.boolean().optional(),
+});
+
+/** Super admin: the menu and every page's sections, for all hosts. */
+export const saveUiConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ nav: z.array(navEntry).max(40), pages: z.record(z.string(), z.object({ order: z.array(z.string().max(40)).max(40), hidden: z.array(z.string().max(40)).max(40) })) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const ui = normaliseUi(data);
+    const { error } = await (context.supabase as unknown as Loose).from("site_settings").update({ ui, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw new Error(error.message);
+    const { forgetBrand } = await import("./brand.server");
+    forgetBrand();
+    return { ok: true, ui };
+  });
+
+/* ---------------------------- starter sections ---------------------------- */
+
+export const getStarterSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { starterSettings } = await import("./guide-starters.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as unknown as Loose).from("site_settings").select("guide_starters").eq("id", 1).maybeSingle();
+    return { available: !error, ...(await starterSettings()) };
+  });
+
+/** Takes a starter section out for hosts who sign up from now on (or puts it back). Existing hosts keep theirs. */
+export const setStarterSection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ key: z.string().max(40), offered: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { normaliseStarters } = await import("./guide");
+    const { starterSettings, forgetStarters } = await import("./guide-starters.server");
+    const { removed } = await starterSettings();
+    const next = { ...removed };
+    if (data.offered) delete next[data.key];
+    else next[data.key] = new Date().toISOString();
+    const clean = normaliseStarters({ removed: next });
+    if (!data.offered && !clean.removed[data.key]) throw new Error("Keep at least one starter section for new hosts.");
+    const { error } = await (context.supabase as unknown as Loose).from("site_settings").update({ guide_starters: clean, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw new Error(error.message);
+    forgetStarters();
+    return { ok: true, ...clean };
   });

@@ -43,8 +43,10 @@ import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_authenticated/app.room-qr.$propertyId'
+import { Route as ApiPublicAttachmentIdRouteImport } from './routes/api/public/attachment.$id'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
+import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 import { Route as ApiPublicInboundEmailSecretRouteImport } from './routes/api/public/inbound-email.$secret'
 import { Route as ApiPublicManifestAppRouteImport } from './routes/api/public/manifest/app'
 import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
@@ -235,6 +237,11 @@ const AuthenticatedAppRoomQrPropertyIdRoute =
     path: '/room-qr/$propertyId',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const ApiPublicAttachmentIdRoute = ApiPublicAttachmentIdRouteImport.update({
+  id: '/api/public/attachment/$id',
+  path: '/api/public/attachment/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
   id: '/api/public/calendar/$token',
   path: '/api/public/calendar/$token',
@@ -243,6 +250,11 @@ const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
 const ApiPublicCronLatchkeyRoute = ApiPublicCronLatchkeyRouteImport.update({
   id: '/api/public/cron/latchkey',
   path: '/api/public/cron/latchkey',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicGoogleCallbackRoute = ApiPublicGoogleCallbackRouteImport.update({
+  id: '/api/public/google/callback',
+  path: '/api/public/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicInboundEmailSecretRoute =
@@ -333,8 +345,10 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
+  '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
@@ -379,8 +393,10 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
+  '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
@@ -428,8 +444,10 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/_authenticated/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
+  '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
+  '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
@@ -477,8 +495,10 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
+    | '/api/public/attachment/$id'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/google/callback'
     | '/api/public/inbound-email/$secret'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
@@ -523,8 +543,10 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
+    | '/api/public/attachment/$id'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/google/callback'
     | '/api/public/inbound-email/$secret'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
@@ -571,8 +593,10 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/app/print/$propertyId'
     | '/_authenticated/app/room-qr/$propertyId'
+    | '/api/public/attachment/$id'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
+    | '/api/public/google/callback'
     | '/api/public/inbound-email/$secret'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
@@ -603,8 +627,10 @@ export interface RootRouteChildren {
   ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
+  ApiPublicAttachmentIdRoute: typeof ApiPublicAttachmentIdRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
+  ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicInboundEmailSecretRoute: typeof ApiPublicInboundEmailSecretRoute
   ApiPublicManifestAppRoute: typeof ApiPublicManifestAppRoute
   ApiPublicPushLatestRoute: typeof ApiPublicPushLatestRoute
@@ -856,6 +882,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRoomQrPropertyIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/attachment/$id': {
+      id: '/api/public/attachment/$id'
+      path: '/api/public/attachment/$id'
+      fullPath: '/api/public/attachment/$id'
+      preLoaderRoute: typeof ApiPublicAttachmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/calendar/$token': {
       id: '/api/public/calendar/$token'
       path: '/api/public/calendar/$token'
@@ -868,6 +901,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/latchkey'
       fullPath: '/api/public/cron/latchkey'
       preLoaderRoute: typeof ApiPublicCronLatchkeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/google/callback': {
+      id: '/api/public/google/callback'
+      path: '/api/public/google/callback'
+      fullPath: '/api/public/google/callback'
+      preLoaderRoute: typeof ApiPublicGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/inbound-email/$secret': {
@@ -1025,8 +1065,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackRoute: ApiPublicTrackRoute,
+  ApiPublicAttachmentIdRoute: ApiPublicAttachmentIdRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
+  ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicInboundEmailSecretRoute: ApiPublicInboundEmailSecretRoute,
   ApiPublicManifestAppRoute: ApiPublicManifestAppRoute,
   ApiPublicPushLatestRoute: ApiPublicPushLatestRoute,

@@ -147,3 +147,13 @@ Telegram, email or text as they've chosen.
   1. The owner adds it in Settings → Your own web address and adds the two DNS records shown (a CNAME to this app's address, and a TXT record that proves it's theirs), then taps Check.
   2. Once it shows as proved in Latchkey admin → Site settings → Hosts' own web addresses, add the same address to the hosting: in Lovable, Project settings → Domains → Connect domain. Wait until the hosting shows it as active (it issues the HTTPS certificate).
   3. Switch it Live in Latchkey admin. From then on, guests there see the host's name on every page, and the address's home page opens the host's property (the platform's home, pricing and trial pages aren't shown there).
+
+## Guide attachments (Google Drive)
+
+Hosts attach photos and documents to stay guide sections. They're kept in a Google Drive you own (free 15 GB), one private folder per host, each file named `<section id>-<attachment id>`. Nothing is shared publicly; guests see files only through 6-hour signed links from the app. Needs migration 0039.
+
+1. Google Cloud Console → new project → APIs & Services → enable **Google Drive API**.
+2. OAuth consent screen → External; add your Google account as a test user (or publish: the `drive.file` permission needs no Google review).
+3. Credentials → Create credentials → OAuth client ID → Web application. Authorised redirect URI: `https://<your app address>/api/public/google/callback` (shown in Latchkey admin → Integrations → Guide attachments).
+4. Lovable Cloud → Secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Optional: `ATTACHMENT_SIGNING_SECRET` (any long random string; otherwise the service key signs links).
+5. Latchkey admin → Integrations → **Connect Google Drive**, sign in with the account whose Drive should hold the files.

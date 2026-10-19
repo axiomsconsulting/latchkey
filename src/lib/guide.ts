@@ -82,17 +82,28 @@ export function autoSummary(key: SectionKey, f: GuideFacts): string | null {
  * in the host's own order, with anything they haven't ordered keeping the
  * standard running order.
  */
-export function buildGuide(stored: StoredSection[], roomId: string | null, mode: "basic" | "detailed", facts: GuideFacts): GuideSection[] {
+export function buildGuide(
+  stored: StoredSection[],
+  roomId: string | null,
+  mode: "basic" | "detailed",
+  facts: GuideFacts,
+  /** Starter sections this host didn't start with (startersOffFor). */
+  startersOff: readonly string[] = [],
+  /** Sections with photos or documents attached: shown even with nothing written. */
+  withFiles: readonly string[] = [],
+): GuideSection[] {
   const out: (GuideSection & { order: number })[] = [];
   const add = (key: SectionKey, title: string, i: number) => {
     const room = roomId ? stored.find((x) => x.roomId === roomId && x.sectionKey === key) : undefined;
     const house = stored.find((x) => x.roomId === null && x.sectionKey === key);
     // Removed by the host: left out, even where Latchkey could fill it in.
     if (house?.published === false) return;
+    // A starter this host never had, unless they've added it themselves.
+    if (!house && !isCustom(key) && startersOff.includes(key)) return;
     const src = room ?? house;
     const summary = src?.summary?.trim() || (isCustom(key) ? null : autoSummary(key, facts));
     const steps = mode === "detailed" ? (src?.steps ?? []).filter((st) => st.heading.trim() || st.body?.trim()) : [];
-    if (!summary && steps.length === 0) return;
+    if (!summary && steps.length === 0 && !withFiles.includes(key)) return;
     // Pinning and ordering are set once for the whole house, so a room's own
     // wording doesn't quietly unpin a reminder.
     const meta = house ?? room;
@@ -121,7 +132,7 @@ export type EditorSection = {
  * The editor's list: every section in the host's running order, their own
  * sections included, with removed ones set apart so they can be added back.
  */
-export function editorSections(stored: StoredSection[]): { shown: EditorSection[]; removed: EditorSection[] } {
+export function editorSections(stored: StoredSection[], startersOff: readonly string[] = []): { shown: EditorSection[]; removed: EditorSection[] } {
   const house = (key: string) => stored.find((x) => x.roomId === null && x.sectionKey === key);
   const all = [
     ...SECTIONS.map((s, i) => ({ key: s.key as SectionKey, title: s.title, hint: s.hint, custom: false, i })),
@@ -130,7 +141,9 @@ export function editorSections(stored: StoredSection[]): { shown: EditorSection[
       .map((x, i) => ({ key: x.sectionKey, title: x.title?.trim() || "More information", hint: "", custom: true, i: SECTIONS.length + i })),
   ].map((s) => {
     const h = house(s.key);
-    return { ...s, removed: h?.published === false, order: h?.sortOrder && h.sortOrder > 0 ? h.sortOrder : 100 + s.i };
+    // A starter this host didn't start with sits with the removed ones, ready to add.
+    const off = !h && !s.custom && startersOff.includes(s.key);
+    return { ...s, removed: h?.published === false || off, order: h?.sortOrder && h.sortOrder > 0 ? h.sortOrder : 100 + s.i };
   });
   all.sort((a, b) => a.order - b.order);
   const strip = ({ i: _i, order: _o, ...rest }: (typeof all)[number]) => rest;
@@ -262,3 +275,28 @@ export const STARTER: Record<BuiltInKey, { summary: string; steps: { heading: st
   checkout: { summary: "", steps: [{ heading: "Before you go", body: "Strip the bed, leave used towels in the bath and close the window." }, { heading: "Leaving", body: "Pull the front door shut behind you. No need to find us." }] },
   contact: { summary: "", steps: [{ heading: "Emergencies", body: "For a leak, no heating or being locked out, call any time." }] },
 };
+
+/**
+ * Starter sections a host doesn't start with: the ones the super admin took
+ * out for new hosts before this host signed up. Hosts who were already here
+ * keep them. `removed` maps section key → when it was taken out.
+ */
+export function startersOffFor(removed: Record<string, string> | null | undefined, hostCreatedAt: string | null | undefined): BuiltInKey[] {
+  if (!removed || !hostCreatedAt) return [];
+  const since = Date.parse(hostCreatedAt);
+  return SECTIONS.map((s) => s.key).filter((k) => {
+    const at = removed[k] ? Date.parse(removed[k]!) : NaN;
+    return Number.isFinite(at) && at <= since;
+  });
+}
+
+/** The super admin's starter settings, safe against anything stored; at least one starter always stays. */
+export function normaliseStarters(raw: unknown): { removed: Record<string, string> } {
+  const r = (raw && typeof raw === "object" ? (raw as Record<string, unknown>)["removed"] : null) as Record<string, unknown> | null;
+  const keys = new Set<string>(SECTIONS.map((s) => s.key));
+  const removed: Record<string, string> = {};
+  for (const [k, v] of Object.entries(r ?? {})) if (keys.has(k) && typeof v === "string" && Number.isFinite(Date.parse(v))) removed[k] = v;
+  // Never every starter: the first one still offered stays.
+  if (Object.keys(removed).length >= SECTIONS.length) delete removed[SECTIONS[0]!.key];
+  return { removed };
+}

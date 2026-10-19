@@ -22,6 +22,21 @@ async function db(): Promise<Loose> {
 
 const TTL = 60_000;
 let platformCache: { at: number; brand: Brand } | null = null;
+let uiCache: { at: number; ui: unknown } | null = null;
+
+/** The super admin's menu and page layouts (site_settings.ui), re-read at most once a minute. */
+export async function platformUi(): Promise<unknown> {
+  if (uiCache && Date.now() - uiCache.at < TTL) return uiCache.ui;
+  let ui: unknown = null;
+  try {
+    const { data, error } = await (await db()).from("site_settings").select("ui").eq("id", 1).maybeSingle();
+    if (!error) ui = data?.ui ?? null;
+  } catch {
+    ui = null;
+  }
+  uiCache = { at: Date.now(), ui };
+  return ui;
+}
 const tenantCache = new Map<string, { at: number; tenant: Tenant | null }>();
 
 /** The super admin's white label, re-read at most once a minute. */
@@ -41,6 +56,7 @@ export async function platformBrand(): Promise<Brand> {
 /** Forget the cached brand (after the super admin saves it). */
 export function forgetBrand() {
   platformCache = null;
+  uiCache = null;
   tenantCache.clear();
 }
 

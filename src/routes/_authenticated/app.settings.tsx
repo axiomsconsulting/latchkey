@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PageSections, Section } from "@/components/PageSections";
 import { CustomDomainSettings } from "@/components/host/CustomDomainSettings";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
@@ -178,6 +179,8 @@ function SettingsPage() {
         }
       />
 
+      <PageSections page="settings">
+      <Section id="business">
       <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
         {/* Business details and billing are the owner's; others can read them. */}
         <fieldset disabled={!isOwner} className="grid gap-4 sm:grid-cols-2">
@@ -226,22 +229,31 @@ function SettingsPage() {
         ) : null}
         </fieldset>
       </form>
+      </Section>
 
+      <Section id="alerts">
       {workspace.data ? (
         <div id="settings-alerts" className="scroll-mt-24 rounded-2xl">
           <AlertSettings hostId={workspace.data.hostId} canWrite={canWriteHost} />
         </div>
       ) : null}
+      </Section>
+      <Section id="messages">
       {workspace.data ? (
         <div id="settings-messages" className="scroll-mt-24 rounded-2xl">
           <PlatformMessagesSettings hostId={workspace.data.hostId} isOwner={isOwner} />
         </div>
       ) : null}
+      </Section>
+      <Section id="team">
       {workspace.data ? (
         <div id="settings-team" className="scroll-mt-24 rounded-2xl">
           <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} />
         </div>
       ) : null}
+      </Section>
+      <Section id="shortcuts">
+      <>
       {isOwner ? (
         <Link to="/app/billing" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
           <CreditCard className="size-5 text-primary" />
@@ -251,6 +263,9 @@ function SettingsPage() {
           </span>
         </Link>
       ) : null}
+      </>
+      </Section>
+      <Section id="adminLink">
       {workspace.data?.isSuperAdmin ? (
         <Link to="/app/admin" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
           <ShieldCheck className="size-5 text-primary" />
@@ -260,6 +275,9 @@ function SettingsPage() {
           </span>
         </Link>
       ) : null}
+      </Section>
+      <Section id="shortcuts2">
+      <>
       {canWriteHost ? (
         <Link to="/app/register" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
           <NotebookPen className="size-5 text-primary" />
@@ -278,18 +296,25 @@ function SettingsPage() {
           </span>
         </Link>
       ) : null}
+      </>
+      </Section>
 
-      {themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}
+      <Section id="extras">{themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}</Section>
+      <Section id="payments">
       {themedProperty && isOwner ? (
         <div id="settings-payments" className="scroll-mt-24 rounded-2xl">
           <PaymentsPanel propertyId={themedProperty.id} />
         </div>
       ) : null}
+      </Section>
+      <Section id="invoices">
       {workspace.data ? (
         <div id="settings-invoices" className="scroll-mt-24 rounded-2xl">
           <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} />
         </div>
       ) : null}
+      </Section>
+      <Section id="domain">
       {workspace.data ? (
         <div id="settings-domain" className="scroll-mt-24 rounded-2xl">
           <CustomDomainSettings
@@ -299,11 +324,15 @@ function SettingsPage() {
           />
         </div>
       ) : null}
+      </Section>
+      <Section id="api">
       {workspace.data ? (
         <div id="settings-api" className="scroll-mt-24 rounded-2xl">
           <ApiAccessPanel hostId={workspace.data.hostId} canWrite={canWriteHost} />
         </div>
       ) : null}
+      </Section>
+      <Section id="support">
       {workspace.data && !workspace.data.support ? (
         <SupportAccess
           hostId={workspace.data.hostId}
@@ -311,7 +340,9 @@ function SettingsPage() {
           isOwner={isOwner}
         />
       ) : null}
-      {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
+      </Section>
+      <Section id="theme">{themedProperty ? <ThemeStudio property={themedProperty} /> : null}</Section>
+      <Section id="labels">
       {workspace.data ? (
         <ChannelLabels
           hostId={workspace.data.hostId}
@@ -319,8 +350,10 @@ function SettingsPage() {
           sites={(host as { booking_sites?: unknown } | null)?.booking_sites}
         />
       ) : null}
-      {workspace.data && isOwner ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}
+      </Section>
+      <Section id="integrations">{workspace.data && isOwner ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}</Section>
 
+      <Section id="demo">
       {isOwner ? (
       <section id="settings-demo" className="card-soft scroll-mt-24 p-5">
         <div className="flex items-start gap-3">
@@ -350,7 +383,9 @@ function SettingsPage() {
         </div>
       </section>
       ) : null}
+      </Section>
 
+      <Section id="privacy">
       <section id="settings-privacy" className="card-soft scroll-mt-24 p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
@@ -362,6 +397,8 @@ function SettingsPage() {
           </div>
         </div>
       </section>
+      </Section>
+      </PageSections>
     </div>
   );
 }

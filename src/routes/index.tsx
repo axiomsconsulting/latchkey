@@ -13,6 +13,7 @@ import { getWorkspace } from "@/lib/host.functions";
 import { canWrite } from "@/lib/roles";
 import { HOME_REDIRECT_SCRIPT, rememberDashboard } from "@/lib/home-redirect";
 import { footerText } from "@/lib/brand";
+import { PageSections, Section } from "@/components/PageSections";
 import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/")({
@@ -97,6 +98,10 @@ function Landing() {
           </div>
         </section>
 
+        {/* Everything below the headline, in the order the super admin chose (Latchkey admin → Menu and pages). */}
+        <div className="space-y-16">
+          <PageSections page="home">
+        <Section id="benefits">
         <section className="grid gap-5 sm:grid-cols-3">
           {marketing.benefits.map((benefit, i) => {
             const Icon = benefitIcons[i] ?? Sparkles;
@@ -111,8 +116,10 @@ function Landing() {
             );
           })}
         </section>
+        </Section>
 
-        <section className="mt-16 grid gap-5 md:grid-cols-2">
+        <Section id="beforeAfter">
+        <section className="grid gap-5 md:grid-cols-2">
           <article className="rounded-3xl border border-border bg-muted p-6 sm:p-8">
             <h2 className="text-xl">{marketing.beforeAfter.beforeTitle(day)}</h2>
             <ul className="mt-5 space-y-3">
@@ -136,13 +143,15 @@ function Landing() {
             </ul>
           </article>
         </section>
+        </Section>
 
-        <div className="mt-16">
+        <Section id="pricing">
           <PricingSection />
-        </div>
+        </Section>
 
         {/* The facts, for anyone comparing: where the booking sites stop. */}
-        <section className="mt-16" aria-labelledby="gap-title">
+        <Section id="why">
+        <section aria-labelledby="gap-title">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">{marketing.gap.eyebrow}</p>
           <h2 id="gap-title" className="mt-3 max-w-3xl text-balance text-2xl leading-tight sm:text-3xl">{marketing.gap.title}</h2>
           <div className="card-soft mt-6 overflow-hidden p-0">
@@ -168,8 +177,10 @@ function Landing() {
             </dl>
           </div>
         </section>
+        </Section>
 
-        <section className="mt-10 flex flex-col gap-4 rounded-3xl border border-border bg-muted p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8" aria-labelledby="dev-title">
+        <Section id="developers">
+        <section className="flex flex-col gap-4 rounded-3xl border border-border bg-muted p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8" aria-labelledby="dev-title">
           <div>
             <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-accent">
               <Code2 className="size-4" /> {marketing.developers.eyebrow}
@@ -183,6 +194,9 @@ function Landing() {
             </Link>
           </Button>
         </section>
+        </Section>
+          </PageSections>
+        </div>
       </main>
 
       <footer className="border-t border-border px-5 py-8">
