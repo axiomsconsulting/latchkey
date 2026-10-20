@@ -2946,3 +2946,29 @@ export const roomPhotoCopy = branded({
   removed: "Back to the property's cover.",
 });
 
+/** Settings' sub-menus and the names on its section rail. */
+export const settingsRailCopy = branded({
+  label: "Settings sections",
+  groups: { business: "Business", guests: "Guests", money: "Money", look: "Look", apps: "Alerts and apps", admin: "Latchkey admin" } as Record<string, string>,
+  sections: {
+    business: ["Business details", "business"],
+    team: ["Team", "business"],
+    support: ["Support access", "business"],
+    domain: ["Own web address", "business"],
+    messages: ["Booking-site messages", "guests"],
+    labels: ["Booking sites", "guests"],
+    privacy: ["Privacy and retention", "guests"],
+    extras: ["Extras price list", "money"],
+    payments: ["Card payments", "money"],
+    invoices: ["Invoices", "money"],
+    theme: ["Look and feel", "look"],
+    alerts: ["Alerts", "apps"],
+    api: ["API & MCP", "apps"],
+    shortcuts: ["Phone shortcuts", "apps"],
+    shortcuts2: ["More shortcuts", "apps"],
+    adminLink: ["Latchkey admin", "admin"],
+    integrations: ["Demo / live", "admin"],
+    demo: ["Sample data", "admin"],
+  } as Record<string, [string, string]>,
+});
+

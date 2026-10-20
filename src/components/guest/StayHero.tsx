@@ -46,7 +46,17 @@ export function StayCover({
   return (
     <section className={cn("card-soft grid overflow-hidden p-0", side ? "sm:grid-cols-[1.15fr_1fr]" : "")} aria-label={copy.coverLabel}>
       {cover ? (
-        <img src={cover} alt="" width={1280} height={768} className={cn("h-full w-full object-cover", side ? "aspect-[16/10] sm:aspect-auto sm:min-h-64" : "aspect-[16/7]")} />
+        <div className="relative h-full">
+          <img src={cover} alt="" width={1280} height={768} className={cn("h-full w-full object-cover", side ? "aspect-[16/10] sm:aspect-auto sm:min-h-64" : "aspect-[16/7]")} />
+          {/* The property's logo and name on the photo, so the cover is always theirs. */}
+          {name ? <div className="absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-2.5 rounded-2xl bg-background/85 py-1.5 pl-1.5 pr-4 shadow-soft backdrop-blur-sm">
+            <LogoMark theme={theme} name={name} className="size-10 shrink-0" />
+            <span className="min-w-0">
+              <span className="block truncate font-display text-base leading-tight text-foreground">{name}</span>
+              {theme.subname ? <span className="block truncate text-[10px] uppercase tracking-[0.3em] text-muted-foreground">{theme.subname}</span> : null}
+            </span>
+          </div> : null}
+        </div>
       ) : (
         <div
           className={cn("relative flex items-center justify-center overflow-hidden", dark ? "border-b border-border sm:border-b-0 sm:border-r" : "bg-primary text-primary-foreground", side ? "aspect-[16/9] sm:aspect-auto sm:min-h-64" : "aspect-[16/6]")}

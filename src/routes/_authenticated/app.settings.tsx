@@ -25,6 +25,7 @@ import {
   common,
   registerPage as registerCopy,
   settings as copy,
+  settingsRailCopy,
 } from "@/content/copy";
 import { SupportAccess } from "@/components/host/SupportAccess";
 import { ApiAccessPanel } from "@/components/host/ApiAccessPanel";
@@ -34,6 +35,7 @@ import { DEMO_EMAIL } from "@/lib/demo-account";
 import { ChannelLabels } from "@/components/host/ChannelLabels";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { PrivacySettings } from "@/components/host/PrivacySettings";
+import { SectionRail } from "@/components/SectionRail";
 import { InvoiceSettings } from "@/components/host/InvoiceSettings";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
@@ -165,8 +167,12 @@ function SettingsPage() {
   const propertyCount = (workspace.data?.properties ?? []).length;
   const demo = (host as { contact_email?: string | null } | null)?.contact_email === DEMO_EMAIL;
 
+  // Each block's name and sub-menu, for the section rail.
+  const rail = Object.fromEntries(Object.entries(settingsRailCopy.sections).map(([id, [label, group]]) => [id, { label, group: settingsRailCopy.groups[group] ?? "" }]));
+
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
+      <SectionRail label={settingsRailCopy.label} />
       <PageHeader
         title={copy.title}
         subtitle={copy.subtitle}
@@ -180,7 +186,7 @@ function SettingsPage() {
         }
       />
 
-      <PageSections page="settings">
+      <PageSections page="settings" rail={rail}>
       <Section id="business">
       <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
         {/* Business details and billing are the owner's; others can read them. */}
