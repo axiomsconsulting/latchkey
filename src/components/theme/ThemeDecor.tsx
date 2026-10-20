@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SiteLogoMark } from "@/components/brand/BrandLogo";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { NAV_ICONS } from "@/components/NavIcon";
 import { brandName } from "@/lib/brand";
@@ -280,8 +281,8 @@ export function ThemeFooter({ theme, className }: { theme: ThemeConfig; classNam
     <footer className={cn("flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted-foreground", className)}>
       <span className="uppercase tracking-[0.25em]">{theme.tagline}</span>
       {theme.poweredBy ? (
-        <span>
-          Powered by <span className="font-semibold text-foreground">{brandName()}</span>
+        <span className="flex items-center gap-1.5">
+          Powered by <SiteLogoMark className="size-4 rounded-[5px]" /> <span className="font-semibold text-foreground">{brandName()}</span>
         </span>
       ) : null}
     </footer>

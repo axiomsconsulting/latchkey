@@ -42,7 +42,17 @@ export const getBrandSettings = createServerFn({ method: "GET" })
 
 export const saveBrandSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ name: z.string().max(40), tagline: z.string().max(120), footer: z.string().max(300) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        name: z.string().max(40),
+        tagline: z.string().max(120),
+        footer: z.string().max(300),
+        logoMark: z.enum(["key", "arch", "monogram", "initial"]),
+        logoUrl: z.string().max(2000),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const brand = normaliseBrand(data);
@@ -51,6 +61,28 @@ export const saveBrandSettings = createServerFn({ method: "POST" })
     const { forgetBrand } = await import("./brand.server");
     forgetBrand();
     return { ok: true, brand };
+  });
+
+/** Super admin: upload the site's own logo (PNG, JPG, WebP or SVG, under 1 MB); returns a long-lived link to save with the brand. */
+export const uploadSiteLogo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ filename: z.string().max(120), dataUrl: z.string().max(1_400_000) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(data.dataUrl);
+    if (!m) throw new Error("That file couldn't be read.");
+    const ext = data.filename.split(".").pop()?.toLowerCase() ?? "";
+    if (!["png", "jpg", "jpeg", "webp", "svg"].includes(ext)) throw new Error("Please upload a PNG, JPG, WebP or SVG file.");
+    const bytes = Buffer.from(m[2]!, "base64");
+    if (bytes.length > 1024 * 1024) throw new Error("Logos must be under 1 MB.");
+    const contentType = ext === "svg" ? "image/svg+xml" : `image/${ext === "jpg" ? "jpeg" : ext}`;
+    const path = `site/logo-${Date.now()}.${ext}`;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const up = await supabaseAdmin.storage.from("branding").upload(path, bytes, { contentType, upsert: true });
+    if (up.error) throw new Error(up.error.message);
+    const signed = await supabaseAdmin.storage.from("branding").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    if (signed.error) throw new Error(signed.error.message);
+    return { url: signed.data.signedUrl };
   });
 
 /* ------------------------ menu and page layouts ------------------------- */

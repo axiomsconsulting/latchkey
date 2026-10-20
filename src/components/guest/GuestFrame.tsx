@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { brandName } from "@/lib/brand";
 import { Link } from "@tanstack/react-router";
-import { KeyRound, Repeat } from "lucide-react";
+import { Repeat } from "lucide-react";
 
+import { SiteLogoMark } from "@/components/brand/BrandLogo";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { ThemeBackdrop, ThemeFooter } from "@/components/theme/ThemeDecor";
@@ -53,7 +54,7 @@ export function GuestFrame({
           </>
         ) : (
           <>
-            <KeyRound className="size-4 text-primary" /> {brandName()}
+            <SiteLogoMark className="size-6 rounded-lg" /> {brandName()}
           </>
         )}
         {switchable ? (

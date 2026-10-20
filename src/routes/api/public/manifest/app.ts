@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { rebrand } from "@/lib/brand";
+import { currentBrand, rebrand } from "@/lib/brand";
+import { appIcons, smallIcon } from "@/lib/brand-icons";
 
 const BASE = {
   "id": "/",
@@ -73,7 +74,11 @@ export const Route = createFileRoute("/api/public/manifest/app")({
     handlers: {
       GET: async () => {
         // The same as public/manifest.webmanifest, with the brand's name in it.
-        const manifest = JSON.parse(rebrand(JSON.stringify(BASE))) as typeof BASE;
+        const manifest = JSON.parse(rebrand(JSON.stringify(BASE))) as Omit<typeof BASE, "icons"> & { icons: ReturnType<typeof appIcons> };
+        // The icons follow the site logo the super admin chose.
+        const b = currentBrand();
+        manifest.icons = appIcons(b);
+        for (const s of manifest.shortcuts) s.icons = [{ src: smallIcon(b), sizes: s.icons[0]!.sizes }];
         return new Response(JSON.stringify(manifest), {
           headers: { "Content-Type": "application/manifest+json", "Cache-Control": "public, max-age=300" },
         });

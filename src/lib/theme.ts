@@ -4,9 +4,14 @@
  * are stored as hex and injected as the same tokens styles.css defines.
  */
 
-export type LogoPreset = "key" | "arch" | "fern" | "knot" | "lantern" | "monogram" | "sunburst" | "crest" | "leaf";
+/**
+ * "site" = the site logo the super admin chose (Latchkey admin → Brand), used
+ * until the host picks their own; "antique-key", "portico" and "serif-l" are
+ * Latchkey's own marks drawn in the host's colours.
+ */
+export type LogoPreset = "site" | "antique-key" | "portico" | "serif-l" | "key" | "arch" | "fern" | "knot" | "lantern" | "monogram" | "sunburst" | "crest" | "leaf";
 
-export const LOGO_PRESETS: LogoPreset[] = ["key", "arch", "fern", "knot", "lantern", "monogram", "sunburst", "crest", "leaf"];
+export const LOGO_PRESETS: LogoPreset[] = ["site", "antique-key", "portico", "serif-l", "key", "arch", "fern", "knot", "lantern", "monogram", "sunburst", "crest", "leaf"];
 
 export type Artwork = "none" | "skyline" | "palace" | "dunes" | "coast" | "hills";
 export const ARTWORKS: Artwork[] = ["none", "skyline", "palace", "dunes", "coast", "hills"];
@@ -279,7 +284,8 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     bodyFont: font(r.bodyFont, preset.bodyFont),
     customFontUrl: url(r.customFontUrl),
     customFontName: r.customFontName ? font(r.customFontName, "") || null : null,
-    logoPreset: pick(r.logoPreset, LOGO_PRESETS, preset.logoPreset),
+    // Never picked: the site logo, which the super admin chooses.
+    logoPreset: pick(r.logoPreset, LOGO_PRESETS, "site"),
     logoUrl: url(r.logoUrl),
     radius: clamp(r.radius, 0, 2, preset.radius),
     buttonRadius: r.buttonRadius === PILL ? PILL : clamp(r.buttonRadius, 0, 2, typeof r.radius === "number" && r.buttonRadius === undefined ? clamp(r.radius, 0, 2, preset.radius) : preset.buttonRadius),

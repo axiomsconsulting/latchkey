@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Building2, Check, DoorOpen, LayoutDashboard, Menu, PlayCircle, Sparkles } from "lucide-react";
+import { BedDouble, Building2, CalendarDays, Check, Code2, DoorOpen, Home, Info, KeyRound, LayoutDashboard, LogIn, LogOut, Menu, PlayCircle, Settings, Sparkles, Tag, Wrench } from "lucide-react";
 
 import { DemoPicker } from "@/components/DemoPicker";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { signOut } from "@/lib/demo-session";
 import { cn } from "@/lib/utils";
 
 const item =
-  "flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left text-base font-medium hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 text-left text-base font-medium hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:text-primary";
 
 function useSignedIn() {
   const [signedIn, setSignedIn] = useState(false);
@@ -51,38 +51,38 @@ export function SiteMenu() {
             </SheetHeader>
             <nav className="mt-4 flex flex-col gap-1 px-2 pb-6" aria-label={siteMenu.title}>
               <Link to="/" search={{ home: true }} className={item} onClick={close}>
-                {siteMenu.home}
+                <Home aria-hidden /> {siteMenu.home}
               </Link>
               <button type="button" className={item} onClick={() => { close(); setDemoOpen(true); }}>
-                {siteMenu.demo}
+                <PlayCircle aria-hidden /> {siteMenu.demo}
               </button>
-              <a href="/?home=1#pricing" className={item} onClick={close}>{siteMenu.pricing}</a>
-              <Link to="/kiosk/$code" params={{ code: "tour" }} className={item} onClick={close}>{siteMenu.guest}</Link>
+              <a href="/?home=1#pricing" className={item} onClick={close}><Tag aria-hidden /> {siteMenu.pricing}</a>
+              <Link to="/kiosk/$code" params={{ code: "tour" }} className={item} onClick={close}><BedDouble aria-hidden /> {siteMenu.guest}</Link>
               <Link to="/checkin" className={item} onClick={close}>
-                {siteMenu.guestPin}
+                <KeyRound aria-hidden /> {siteMenu.guestPin}
               </Link>
-              <Link to="/about" className={item} onClick={close}>{siteMenu.about}</Link>
-              <Link to="/developers" className={item} onClick={close}>{siteMenu.developers}</Link>
+              <Link to="/about" className={item} onClick={close}><Info aria-hidden /> {siteMenu.about}</Link>
+              <Link to="/developers" className={item} onClick={close}><Code2 aria-hidden /> {siteMenu.developers}</Link>
               {signedIn ? (
                 <>
                   <hr className="my-2 border-border" />
-                  <Link to="/app/today" className={item} onClick={close}>{siteMenu.dashboard}</Link>
+                  <Link to="/app/today" className={item} onClick={close}><LayoutDashboard aria-hidden /> {siteMenu.dashboard}</Link>
                   <PropertyList onPicked={close} />
-                  <Link to="/app/bookings" className={item} onClick={close}>{siteMenu.bookings}</Link>
-                  <Link to="/app/services" className={item} onClick={close}>{siteMenu.services}</Link>
-                  <Link to="/app/settings" className={item} onClick={close}>{siteMenu.admin}</Link>
+                  <Link to="/app/bookings" className={item} onClick={close}><CalendarDays aria-hidden /> {siteMenu.bookings}</Link>
+                  <Link to="/app/services" className={item} onClick={close}><Wrench aria-hidden /> {siteMenu.services}</Link>
+                  <Link to="/app/settings" className={item} onClick={close}><Settings aria-hidden /> {siteMenu.admin}</Link>
                   <button
                     type="button"
                     className={item}
                     onClick={async () => { close(); await signOut(); await navigate({ to: "/", search: { home: true } }); }}
                   >
-                    {siteMenu.signOut}
+                    <LogOut aria-hidden /> {siteMenu.signOut}
                   </button>
                 </>
               ) : (
                 <>
-                <Link to="/start" className={item} onClick={close}>{siteMenu.trial}</Link>
-                <Link to="/auth" className={item} onClick={close}>{siteMenu.signIn}</Link>
+                <Link to="/start" className={item} onClick={close}><Sparkles aria-hidden /> {siteMenu.trial}</Link>
+                <Link to="/auth" className={item} onClick={close}><LogIn aria-hidden /> {siteMenu.signIn}</Link>
               </>
               )}
             </nav>
@@ -171,7 +171,7 @@ function PropertyList({ onPicked }: { onPicked: () => void }) {
         <button
           key={p.id}
           type="button"
-          className={cn(item, "min-h-11 text-sm")}
+          className={cn(item, "min-h-11 text-sm [&>svg]:size-4")}
           aria-current={p.id === selectedId ? "true" : undefined}
           onClick={() => {
             select(p.id);

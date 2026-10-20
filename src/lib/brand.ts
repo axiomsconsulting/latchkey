@@ -11,9 +11,17 @@
 
 export const DEFAULT_NAME = "Latchkey";
 
+/** The site logo: one of Latchkey's marks (BrandLogo.tsx), or the name's initial. */
+export const BRAND_LOGO_MARKS = ["key", "arch", "monogram", "initial"] as const;
+export type BrandLogoMark = (typeof BRAND_LOGO_MARKS)[number];
+
 export type Brand = {
   /** The product's name, everywhere it appears. */
   name: string;
+  /** The site's default logo, chosen by the super admin: header, sign-in, browser tab, app icon, and hosts who haven't picked their own. */
+  logoMark: BrandLogoMark;
+  /** An uploaded logo instead of the mark (storage link); empty for none. */
+  logoUrl: string;
   /** The short line under the name on the home page. */
   tagline: string;
   /** The home page footer; empty means "© <year> <name>." plus the default line. */
@@ -22,6 +30,8 @@ export type Brand = {
 
 export const DEFAULT_BRAND: Brand = {
   name: DEFAULT_NAME,
+  logoMark: "key",
+  logoUrl: "",
   tagline: "Self check-in for guest houses, B&Bs and short lets",
   footer: "",
 };
@@ -31,8 +41,16 @@ const clean = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\
 /** Safe against anything stored. */
 export function normaliseBrand(raw: unknown): Brand {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const name = clean(r["name"], 40) || DEFAULT_BRAND.name;
+  const mark = BRAND_LOGO_MARKS.includes(r["logoMark"] as BrandLogoMark)
+    ? (r["logoMark"] as BrandLogoMark)
+    : // Saved before logos were chosen: a renamed (white label) product keeps its initial, never Latchkey's key.
+      name === DEFAULT_NAME ? DEFAULT_BRAND.logoMark : "initial";
+  const logoUrl = typeof r["logoUrl"] === "string" && /^https:\/\/\S{1,1990}$/.test(r["logoUrl"]) ? r["logoUrl"] : "";
   return {
-    name: clean(r["name"], 40) || DEFAULT_BRAND.name,
+    name,
+    logoMark: mark,
+    logoUrl,
     tagline: clean(r["tagline"], 120) || DEFAULT_BRAND.tagline,
     footer: clean(r["footer"], 300),
   };

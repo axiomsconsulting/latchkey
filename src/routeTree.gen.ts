@@ -44,6 +44,8 @@ import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_authenticated/app.room-qr.$propertyId'
 import { Route as ApiPublicAttachmentIdRouteImport } from './routes/api/public/attachment.$id'
+import { Route as ApiPublicBrandAppleRouteImport } from './routes/api/public/brand/apple'
+import { Route as ApiPublicBrandIconRouteImport } from './routes/api/public/brand/icon'
 import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar.$token'
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
@@ -242,6 +244,16 @@ const ApiPublicAttachmentIdRoute = ApiPublicAttachmentIdRouteImport.update({
   path: '/api/public/attachment/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBrandAppleRoute = ApiPublicBrandAppleRouteImport.update({
+  id: '/api/public/brand/apple',
+  path: '/api/public/brand/apple',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicBrandIconRoute = ApiPublicBrandIconRouteImport.update({
+  id: '/api/public/brand/icon',
+  path: '/api/public/brand/icon',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
   id: '/api/public/calendar/$token',
   path: '/api/public/calendar/$token',
@@ -346,6 +358,8 @@ export interface FileRoutesByFullPath {
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
+  '/api/public/brand/apple': typeof ApiPublicBrandAppleRoute
+  '/api/public/brand/icon': typeof ApiPublicBrandIconRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
@@ -394,6 +408,8 @@ export interface FileRoutesByTo {
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
+  '/api/public/brand/apple': typeof ApiPublicBrandAppleRoute
+  '/api/public/brand/icon': typeof ApiPublicBrandIconRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
@@ -445,6 +461,8 @@ export interface FileRoutesById {
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/_authenticated/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
+  '/api/public/brand/apple': typeof ApiPublicBrandAppleRoute
+  '/api/public/brand/icon': typeof ApiPublicBrandIconRoute
   '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
@@ -496,6 +514,8 @@ export interface FileRouteTypes {
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
+    | '/api/public/brand/apple'
+    | '/api/public/brand/icon'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/google/callback'
@@ -544,6 +564,8 @@ export interface FileRouteTypes {
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
+    | '/api/public/brand/apple'
+    | '/api/public/brand/icon'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/google/callback'
@@ -594,6 +616,8 @@ export interface FileRouteTypes {
     | '/_authenticated/app/print/$propertyId'
     | '/_authenticated/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
+    | '/api/public/brand/apple'
+    | '/api/public/brand/icon'
     | '/api/public/calendar/$token'
     | '/api/public/cron/latchkey'
     | '/api/public/google/callback'
@@ -628,6 +652,8 @@ export interface RootRouteChildren {
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
   ApiPublicAttachmentIdRoute: typeof ApiPublicAttachmentIdRoute
+  ApiPublicBrandAppleRoute: typeof ApiPublicBrandAppleRoute
+  ApiPublicBrandIconRoute: typeof ApiPublicBrandIconRoute
   ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
@@ -889,6 +915,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAttachmentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/brand/apple': {
+      id: '/api/public/brand/apple'
+      path: '/api/public/brand/apple'
+      fullPath: '/api/public/brand/apple'
+      preLoaderRoute: typeof ApiPublicBrandAppleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/brand/icon': {
+      id: '/api/public/brand/icon'
+      path: '/api/public/brand/icon'
+      fullPath: '/api/public/brand/icon'
+      preLoaderRoute: typeof ApiPublicBrandIconRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/calendar/$token': {
       id: '/api/public/calendar/$token'
       path: '/api/public/calendar/$token'
@@ -1066,6 +1106,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackRoute: ApiPublicTrackRoute,
   ApiPublicAttachmentIdRoute: ApiPublicAttachmentIdRoute,
+  ApiPublicBrandAppleRoute: ApiPublicBrandAppleRoute,
+  ApiPublicBrandIconRoute: ApiPublicBrandIconRoute,
   ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,

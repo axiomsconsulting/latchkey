@@ -14,6 +14,7 @@ import { LastUsed, SocialButtons } from "@/components/SocialButtons";
 import { authExtraCopy as extra } from "@/content/copy";
 import { lastSignIn, signInIntent, type SignInMethod } from "@/lib/social-auth";
 import { lastHost } from "@/lib/last-host";
+import { SiteLogoMark } from "@/components/brand/BrandLogo";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { rebrand } from "@/lib/brand";
@@ -156,7 +157,7 @@ function AuthPage() {
             </ThemeScope>
           ) : (
             <>
-              <img src="/icons/icon-192.png" alt="" className="size-11 rounded-xl" />
+              <SiteLogoMark className="size-11" />
               <span className="font-display text-xl">{brand.name}</span>
             </>
           )}

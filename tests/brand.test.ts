@@ -11,6 +11,17 @@ describe("white label", () => {
     expect(normaliseBrand({ name: "  Stay   Easy " }).name).toBe("Stay Easy");
   });
 
+  it("keeps the site logo the super admin chose, and never shows Latchkey's key on a renamed product saved before logos", () => {
+    expect(normaliseBrand(null).logoMark).toBe("key");
+    expect(normaliseBrand({ logoMark: "arch" }).logoMark).toBe("arch");
+    expect(normaliseBrand({ logoMark: "spaceship" }).logoMark).toBe("key");
+    expect(normaliseBrand({ name: "StayEasy" }).logoMark).toBe("initial");
+    expect(normaliseBrand({ name: "StayEasy", logoMark: "monogram" }).logoMark).toBe("monogram");
+    expect(normaliseBrand({ logoUrl: "https://x.supabase.co/storage/v1/object/sign/branding/site/logo.png?token=a" }).logoUrl).toMatch(/^https:/);
+    expect(normaliseBrand({ logoUrl: "javascript:alert(1)" }).logoUrl).toBe("");
+    expect(normaliseBrand({ logoUrl: "http://plain.example/logo.png" }).logoUrl).toBe("");
+  });
+
   it("renames the product everywhere text mentions it, and nothing else", () => {
     setBrand({ name: "StayEasy" });
     expect(brandName()).toBe("StayEasy");

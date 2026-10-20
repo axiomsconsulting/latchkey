@@ -94,7 +94,7 @@ export async function withSiteBrand<T>(request: Request, run: () => T | Promise<
   const platform = await platformBrand();
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
   const tenant = await tenantFor(host);
-  const brand = tenant?.name ? { ...platform, name: tenant.name, tagline: "", footer: `© ${new Date().getFullYear()} ${tenant.name}` } : platform;
+  const brand = tenant?.name ? { ...platform, name: tenant.name, logoMark: "initial" as const, logoUrl: "", tagline: "", footer: `© ${new Date().getFullYear()} ${tenant.name}` } : platform;
   return store.run({ brand, platform, tenant }, async () => run());
 }
 

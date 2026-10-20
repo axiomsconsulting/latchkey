@@ -18,7 +18,11 @@ describe("property themes", () => {
     const palace = normaliseTheme({ presetId: "palace-heritage" });
     expect(palace).toMatchObject({ frame: "ornate", artwork: "palace", headingCase: "upper", buttonFill: "gradient", layout: "centred", subname: "St James's" });
     const desert = normaliseTheme({ presetId: "desert-star" });
-    expect(desert).toMatchObject({ radius: 0, buttonRadius: 0, headerBand: true, buttonColour: "accent", logoPreset: "sunburst" });
+    expect(desert).toMatchObject({ radius: 0, buttonRadius: 0, headerBand: true, buttonColour: "accent" });
+    // A logo the host never picked follows the site logo; a picked one stays.
+    expect(desert.logoPreset).toBe("site");
+    expect(normaliseTheme({ presetId: "desert-star", logoPreset: "sunburst" }).logoPreset).toBe("sunburst");
+    expect(normaliseTheme({ logoPreset: "antique-key" }).logoPreset).toBe("antique-key");
     expect(normaliseTheme({ presetId: "express-green" }).buttonRadius).toBe(PILL);
     expect(THEME_PRESETS.length).toBeGreaterThanOrEqual(10);
   });

@@ -130,7 +130,8 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
 
   const set = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setTheme((t) => ({ ...t, [k]: v }));
   // A template keeps this property's own logo and photo.
-  const pickTemplate = (t: ThemeConfig) => setTheme({ ...t, logoUrl: theme.logoUrl ?? t.logoUrl, coverImageUrl: theme.coverImageUrl ?? t.coverImageUrl });
+  // A template changes the look, never the logo the host chose.
+  const pickTemplate = (t: ThemeConfig) => setTheme({ ...t, logoPreset: theme.logoPreset, logoUrl: theme.logoUrl ?? t.logoUrl, coverImageUrl: theme.coverImageUrl ?? t.coverImageUrl });
 
   async function onUpload(kind: "logo" | "font" | "cover", file: File | undefined) {
     if (!file) return;
@@ -321,9 +322,10 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
             </Group>
 
             <Group value="logo" title={copy.logo}>
+              <p className="mb-2 text-xs text-muted-foreground">{copy.logoHelp}</p>
               <div className="flex flex-wrap gap-2">
                 {LOGO_PRESETS.map((l) => (
-                  <button key={l} type="button" aria-label={l} aria-pressed={!theme.logoUrl && theme.logoPreset === l} onClick={() => setTheme((t) => ({ ...t, logoPreset: l, logoUrl: null }))} className={cn("spring rounded-2xl p-1 active:scale-90", !theme.logoUrl && theme.logoPreset === l ? "ring-2 ring-primary" : "")}>
+                  <button key={l} type="button" aria-label={copy.logoNames[l] ?? l} title={copy.logoNames[l] ?? l} aria-pressed={!theme.logoUrl && theme.logoPreset === l} onClick={() => setTheme((t) => ({ ...t, logoPreset: l, logoUrl: null }))} className={cn("spring rounded-2xl p-1 active:scale-90", !theme.logoUrl && theme.logoPreset === l ? "ring-2 ring-primary" : "")}>
                     <ThemeScope theme={theme} className="rounded-xl bg-transparent">
                       <LogoMark theme={{ logoPreset: l, logoUrl: null }} name={property.name} className="size-12" />
                     </ThemeScope>

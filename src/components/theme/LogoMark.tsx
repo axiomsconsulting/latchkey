@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { markArt, SiteLogoMark } from "@/components/brand/BrandLogo";
 import type { LogoPreset, ThemeConfig } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +97,16 @@ export function LogoMark({
   const [broken, setBroken] = useState(false);
   if (theme.logoUrl && !broken) {
     return <img src={theme.logoUrl} alt={`${name} logo`} onError={() => setBroken(true)} className={cn("size-10 rounded-xl object-contain", className)} />;
+  }
+  if (theme.logoPreset === "site") return <SiteLogoMark className={cn("rounded-xl", className)} />;
+  const own = theme.logoPreset === "antique-key" ? "key" : theme.logoPreset === "portico" ? "arch" : theme.logoPreset === "serif-l" ? "monogram" : null;
+  if (own) {
+    // Latchkey's marks in the host's colours: line work in the text colour, the jewel in the accent.
+    return (
+      <span className={cn("grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground", className)} aria-label={`${name} logo`}>
+        <svg viewBox="0 0 48 48" className="size-full" aria-hidden="true" dangerouslySetInnerHTML={{ __html: markArt(own, "currentColor", "var(--accent)") }} />
+      </span>
+    );
   }
   if (theme.logoPreset === "monogram") {
     const initials = name.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w) && w.toLowerCase() !== "the").slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "L";

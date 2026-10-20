@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.47.0",
+    date: "2026-10-20",
+    title: "Logos to choose from",
+    items: [
+      { kind: "new", area: "Settings", text: "Three Latchkey marks join the logo collection in Look and feel (antique key, doorway and keyhole, serif L), drawn in your colours, plus “Site logo”, which is used until you pick your own." },
+      { kind: "improved", area: "Website", text: "The website menu has an icon beside every item." },
+      { admin: true, kind: "new", area: "Website", text: "Latchkey admin → Brand: choose the site logo (one of the three marks, the name's first letter, or an upload). The header, sign-in, browser tab, installed app icon and “Powered by” follow it." },
+    ],
+  },
+  {
     version: "0.46.0",
     date: "2026-10-20",
     title: "A new logo",

@@ -51,9 +51,12 @@ Latchkey is now an installable app (PWA): manifest, icons, offline shell and
   app that opens straight onto that property's check-in, full screen and
   landscape. On iPad, also turn on **Guided Access** (Settings →
   Accessibility) so guests can't leave the kiosk.
-- App icons come from `public/Omnispace Favicon OMS.png`. To change them,
-  replace that file and regenerate `public/icons/` (see the commit that added
-  them for the `sips` commands), or ask Lovable to.
+- App icons follow the site logo chosen in **Latchkey admin → Site settings →
+  Brand** (antique key, doorway, serif L, first letter, or an upload). The
+  marks' PNG sets are in `public/icons/` (key) and `public/brand/icons/`.
+- Omnispace Estates' own OMS logo is in `public/partners/omnispace-estates/`.
+  It belongs to that business, not to Latchkey: upload it in that business's
+  **Settings → Look and feel → Logo**.
 
 ### Optional: Google Play and the App Store
 
