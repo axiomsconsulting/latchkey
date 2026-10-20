@@ -6,7 +6,7 @@
  * - Shows push alerts: pushes arrive without content, so the worker asks
  *   Latchkey for the newest alert for this device and shows that.
  */
-const VERSION = "lk-v3";
+const VERSION = "lk-v4";
 const SHELL = `${VERSION}-shell`;
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;

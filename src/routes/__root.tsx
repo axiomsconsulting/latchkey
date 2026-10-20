@@ -120,7 +120,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+      { rel: "icon", href: "/brand/latchkey-key.svg", type: "image/svg+xml" },
       // Made per site, so the installed app carries the brand's name.
       { rel: "manifest", href: "/api/public/manifest/app" },
       { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
