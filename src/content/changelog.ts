@@ -32,6 +32,20 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.43.0",
+    date: "2026-10-20",
+    title: "Your whole look, not just colours",
+    items: [
+      { kind: "new", area: "Settings", text: "Look and feel now covers everything guests see: button and card corners (square to fully round), button style, heading lettering and spacing, icon weight and style, a gradient background, a frame, line art (skyline, palace, dunes, coast, hills), a band of colour with your name, and a cover photo." },
+      { kind: "new", area: "Settings", text: "Set the words on your welcome screens: a line under your name, a small heading, your own welcome, up to three features, a footer line and “Powered by”." },
+      { kind: "new", area: "Settings", text: "Four new hotel-style templates (Grand Crimson, Express Green, Palace Heritage, Desert Star) and three new logo marks (sunburst, crest, leaf)." },
+      { kind: "new", area: "Settings", text: "Save any look as a template to start from later. Use any Google font by typing its name." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin: share a template with every host." },
+      { kind: "fixed", area: "Guest guide", text: "Your chosen fonts now show on every guest page and the kiosk." },
+      { kind: "improved", area: "Guest guide", text: "The guest guide has quick links at the top to Wi-Fi, the first guide sections and extras, in your icon style." },
+    ],
+  },
+  {
     version: "0.42.0",
     date: "2026-10-20",
     title: "Hotel-style looks",

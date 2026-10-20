@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
@@ -17,6 +17,7 @@ import { sectionIcon } from "@/components/guest/guide-icons";
 import { guideCopy as gcopy, guest as copy } from "@/content/copy";
 import { getStay } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
+import { ThemeIcon } from "@/components/theme/ThemeDecor";
 
 export const Route = createFileRoute("/stay/$token")({
   loader: ({ params }) => getStay({ data: { token: params.token } }),
@@ -60,12 +61,31 @@ function Stay() {
       </GuestFrame>
     );
   }
+  return <StayPage s={s} token={token} theme={s.theme} />;
+}
+
+type StayData = Extract<Awaited<ReturnType<typeof getStay>>, { found: true }>;
+
+/** Jumps to a part of the guide (opening a guide section if that's what it is). */
+function jumpTo(id: string) {
+  window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+}
+
+function StayPage({ s, token, theme }: { s: StayData; token: string; theme: StayData["theme"] }) {
   const p = s.property;
+  const [open, setOpen] = useState<string[]>([s.guide[0]?.key ?? ""]);
+  // Quick ways in, in the theme's icon style: Wi-Fi, the first guide sections, extras.
+  const tiles = [
+    ...(p?.wifi_name ? [{ id: "stay-wifi", icon: "wifi", label: copy.stayNetwork }] : []),
+    ...s.guide.slice(0, p?.wifi_name ? 3 : 4).map((g) => ({ id: `guide-${g.key}`, icon: "book-open", label: g.title, key: g.key })),
+    ...(s.readOnly ? [] : [{ id: "stay-extras", icon: "gift", label: gcopy.quickExtras }]),
+  ];
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
       <main className="mx-auto max-w-4xl space-y-6 py-8">
         <div className="flex items-start justify-between gap-4">
           <div>
+            {theme.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{theme.eyebrow}</p> : null}
             <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
             <p className="mt-2 text-lg text-muted-foreground">
               {s.room ? copy.roomLine(s.room.display_name, s.room.public_title) : p?.name}
@@ -73,6 +93,27 @@ function Stay() {
           </div>
           <StayInbox token={token} />
         </div>
+
+        {tiles.length > 1 ? (
+          <nav aria-label={gcopy.quickTitle} className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {tiles.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => {
+                  if ("key" in t && t.key) setOpen((o) => (o.includes(t.key) ? o : [...o, t.key]));
+                  jumpTo(t.id);
+                }}
+                className="card-soft flex min-h-24 flex-col items-center justify-center gap-2 p-3 text-center text-sm leading-tight hover:bg-secondary"
+              >
+                <ThemeIcon theme={theme} icon={t.icon} className="size-7" />
+                <span className="line-clamp-2">{t.label}</span>
+              </button>
+            ))}
+          </nav>
+        ) : null}
+
+        {theme.coverImageUrl ? <img src={theme.coverImageUrl} alt="" className="aspect-[16/7] w-full rounded-2xl object-cover shadow-soft" /> : null}
 
 
         <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">
@@ -106,7 +147,7 @@ function Stay() {
         ) : null}
 
         {p?.wifi_name ? (
-          <section className="card-soft flex flex-wrap items-center gap-3 p-5">
+          <section id="stay-wifi" className="card-soft flex scroll-mt-6 flex-wrap items-center gap-3 p-5">
             <Wifi className="size-6 text-primary" aria-hidden />
             <span className="text-lg">
               {copy.stayNetwork}: <span className="font-medium">{p.wifi_name}</span>
@@ -119,11 +160,11 @@ function Stay() {
           </section>
         ) : null}
 
-        <Accordion type="multiple" defaultValue={[s.guide[0]?.key ?? ""]} className="space-y-3">
+        <Accordion type="multiple" value={open} onValueChange={setOpen} className="space-y-3">
           {s.guide.map((sec) => {
             const Icon = sectionIcon(sec.key);
             return (
-              <AccordionItem key={sec.key} value={sec.key} className="card-soft border-0 px-5">
+              <AccordionItem key={sec.key} id={`guide-${sec.key}`} value={sec.key} className="card-soft scroll-mt-6 border-0 px-5">
                 <AccordionTrigger className="min-h-16 text-left font-display text-xl hover:no-underline">
                   <span className="flex items-center gap-3">
                     <Icon className="size-6 text-primary" aria-hidden />
@@ -157,7 +198,7 @@ function Stay() {
           })}
         </Accordion>
 
-        {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><StayExtras token={token} /><StayServices token={token} /></>)}
+        {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><div id="stay-extras" className="scroll-mt-6"><StayExtras token={token} /></div><StayServices token={token} /></>)}
         <StayInvoice token={token} place={p?.name ?? ""} />
         <StayReview token={token} />
       </main>

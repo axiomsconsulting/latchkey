@@ -20,8 +20,9 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
 
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* A property's theme sets --theme-font-* (src/lib/theme.ts); the app's own fonts otherwise. */
+  --font-display: var(--theme-font-display, "Fraunces", ui-serif, Georgia, serif);
+  --font-sans: var(--theme-font-sans, "Inter", ui-sans-serif, system-ui, sans-serif);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -282,4 +283,46 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/*
+ * A property's full look on guest pages (ThemeScope full): headings, button
+ * shapes and fills, card style and icon weight all follow the theme's
+ * tokens (src/lib/theme.ts themeVars). The host dashboard only takes colours
+ * and fonts, so it stays readable whatever the theme.
+ */
+[data-themed] {
+  background-image: var(--page-image, none);
+}
+[data-themed] :where(h1, h2, h3, h4) {
+  text-transform: var(--heading-case, none);
+  font-variant-caps: var(--heading-variant, normal);
+  letter-spacing: var(--heading-tracking, normal);
+  font-weight: var(--heading-weight, 500);
+}
+[data-themed] [data-slot="button"] {
+  border-radius: var(--radius-button, var(--radius-xl));
+  text-transform: var(--button-case, none);
+  letter-spacing: var(--button-tracking, normal);
+}
+[data-themed] [data-slot="button"][data-variant="default"] {
+  background-color: var(--btn-bg);
+  background-image: var(--btn-image, none);
+  color: var(--btn-fg);
+  border: 1.5px solid var(--btn-border, transparent);
+}
+[data-themed] [data-slot="button"][data-variant="default"]:hover {
+  filter: brightness(1.06);
+}
+[data-themed] [data-slot="button"][data-variant="outline"] {
+  border-color: color-mix(in srgb, var(--btn) 60%, transparent);
+  color: color-mix(in srgb, var(--btn) 85%, var(--foreground));
+  background-color: var(--card);
+}
+[data-themed] .card-soft {
+  box-shadow: var(--card-shadow, var(--shadow-soft));
+  border-color: var(--card-border, var(--color-border));
+}
+[data-themed] svg.lucide {
+  stroke-width: var(--icon-stroke, 2);
 }

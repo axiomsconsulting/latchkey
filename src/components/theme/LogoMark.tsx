@@ -46,6 +46,39 @@ function Glyph({ preset }: { preset: LogoPreset }) {
           <path d="M18 38h12" />
         </g>
       );
+    case "sunburst":
+      return (
+        <g {...common}>
+          <path d="M14 38a10 10 0 0 1 20 0" />
+          {[-75, -50, -25, 0, 25, 50, 75].map((a) => {
+            const r = (a * Math.PI) / 180;
+            const x1 = 24 + Math.sin(r) * 14;
+            const y1 = 38 - Math.cos(r) * 14;
+            const x2 = 24 + Math.sin(r) * 22;
+            const y2 = 38 - Math.cos(r) * 22;
+            return <path key={a} d={`M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`} stroke="var(--accent)" />;
+          })}
+          <path d="M8 38h32" />
+        </g>
+      );
+    case "crest":
+      return (
+        <g {...common}>
+          <path d="M19 9h10l-2 4h-6zM21 9l3-4 3 4" />
+          <path d="M18 15h12l-1 16H19zM24 18c2 2 2 6 0 8-2-2-2-6 0-8Z" />
+          <path d="M18 34c-6-2-9-8-9-14M30 34c6-2 9-8 9-14" stroke="var(--accent)" />
+          <path d="M11 24c2 0 4 1 5 3M37 24c-2 0-4 1-5 3M12 18c2 1 3 2 4 4M36 18c-2 1-3 2-4 4" stroke="var(--accent)" />
+          <path d="M20 38h8" />
+        </g>
+      );
+    case "leaf":
+      return (
+        <g {...common}>
+          <path d="M13 36C13 20 22 11 36 11c0 15-9 24-23 25Z" />
+          <path d="M13 36 30 18" stroke="var(--accent)" />
+          <path d="M20 29h6M24 25h5" stroke="var(--accent)" />
+        </g>
+      );
     default:
       return null;
   }

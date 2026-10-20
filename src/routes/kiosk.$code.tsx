@@ -6,6 +6,8 @@ import { CheckInFlow, JoinCheckIn } from "@/components/guest/CheckInFlow";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
+import { ThemeBackdrop, ThemeFooter, ThemeSideNotes } from "@/components/theme/ThemeDecor";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -389,15 +391,21 @@ function Kiosk() {
   }
 
   return (
-    <ThemeScope theme={p.theme} global>
+    <ThemeScope theme={p.theme} global full>
     {/* Inputs stay at 16px or more however small the page is fitted, so phones don't zoom in on them. */}
     <div className="relative min-h-screen select-none bg-background px-[var(--kiosk-header,16px)] sm:px-[calc(var(--kiosk-header,16px)*2)] [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]" onPointerDown={goFullscreen}>
+      <ThemeBackdrop theme={p.theme} />
+      {atWelcome ? <ThemeSideNotes theme={p.theme} /> : null}
       {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}
-      <div ref={content}>
+      <div ref={content} className="relative">
       {/* Sized once per display (--kiosk-header, in em below), so it never moves between screens. */}
       <header className="mx-auto flex max-w-[56em] items-center gap-[0.75em] pt-[1.5em]" style={{ fontSize: "var(--kiosk-header, 16px)" }}>
         <LogoMark theme={p.theme} name={p.name} className="size-[2.5em] shrink-0 text-[1.125em]" />
-        <span className="min-w-0 flex-1 truncate font-display text-[1.125em]">{p.name}</span>
+        <span className="min-w-0 flex-1">
+          {/* A centred theme shows its name on the welcome itself; the bar keeps just the mark. */}
+          <span className={cn("block truncate font-display text-[1.125em]", p.theme.layout === "centred" && atWelcome ? "invisible" : "")}>{p.name}</span>
+          {p.theme.subname && !(p.theme.layout === "centred" && atWelcome) ? <span className="block truncate text-[0.7em] uppercase tracking-[0.25em] text-muted-foreground">{p.theme.subname}</span> : null}
+        </span>
         <KioskClock tz={p.timezone ?? "Europe/London"} longName={p.name.length > 14} />
         {/* Beside the time: the day's progress on the welcome (tap to rest the screen); later, the phone QR (CheckInFlow puts it here). */}
         {/* Always the same box, whichever icon is in it (or none), so nothing beside it shifts. */}
@@ -440,6 +448,7 @@ function Kiosk() {
           qrPanel={saverLook.defaults.qrStyle === "panel"}
         />
       )}
+      <ThemeFooter theme={p.theme} className="mx-auto mt-[1.5em] max-w-6xl pb-[1em]" />
       </div>
 
 

@@ -93,7 +93,7 @@ export const uploadBrandAsset = createServerFn({ method: "POST" })
     z
       .object({
         propertyId: uuid,
-        kind: z.enum(["logo", "font"]),
+        kind: z.enum(["logo", "font", "cover"]),
         filename: z.string().max(120),
         dataUrl: z.string().max(4_200_000),
       })
@@ -109,13 +109,13 @@ export const uploadBrandAsset = createServerFn({ method: "POST" })
     const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(data.dataUrl);
     if (!m) throw new Error("That file couldn't be read.");
     const ext = data.filename.split(".").pop()?.toLowerCase() ?? "";
-    const allowed = data.kind === "logo" ? ["png", "jpg", "jpeg", "webp", "svg"] : ["ttf", "otf", "woff", "woff2"];
+    const allowed = data.kind === "logo" ? ["png", "jpg", "jpeg", "webp", "svg"] : data.kind === "cover" ? ["png", "jpg", "jpeg", "webp"] : ["ttf", "otf", "woff", "woff2"];
     if (!allowed.includes(ext)) throw new Error(`Please upload a ${allowed.join(", ")} file.`);
     const bytes = Buffer.from(m[2]!, "base64");
     if (bytes.length > 3 * 1024 * 1024) throw new Error("Files must be under 3 MB.");
 
     const contentType =
-      data.kind === "logo"
+      data.kind === "logo" || data.kind === "cover"
         ? ext === "svg" ? "image/svg+xml" : `image/${ext === "jpg" ? "jpeg" : ext}`
         : `font/${ext === "otf" ? "otf" : ext}`;
     const path = `${data.propertyId}/${data.kind}-${Date.now()}.${ext}`;

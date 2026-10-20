@@ -43,6 +43,8 @@ import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { demoLine, type DemoHint } from "@/lib/demo-guide";
 import { REGISTER_AGE, cleanRegisterEntry, isAlien, nationalityOptions } from "@/lib/hotel-register";
 import { cn } from "@/lib/utils";
+import { BrandBlock, ThemeFeatures } from "@/components/theme/ThemeDecor";
+import { welcomeTitle, type ThemeConfig } from "@/lib/theme";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 type Last4Kind = "reference" | "phone" | "email";
@@ -119,6 +121,8 @@ export type CheckinProperty = {
   checkOutBy?: string;
   channelLabels?: Record<string, string>;
   sites?: GuestSite[];
+  /** The property's look and words (src/lib/theme.ts). */
+  theme?: ThemeConfig;
 };
 
 /** Wider than tall: a tablet on its side or a computer screen. */
@@ -585,8 +589,19 @@ export function CheckInFlow({
         ) : null}
         {step.name === "welcome" ? (
           <div className="py-6 text-center">
-            <h1 className="text-3xl leading-tight sm:text-5xl">{copy.welcomeTo(property.name)}</h1>
-            <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">{copy.letsCheckIn}</p>
+            {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
+            {property.theme?.layout === "centred" ? <BrandBlock theme={property.theme} name={property.name} className="mb-6" /> : null}
+            {property.theme?.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{property.theme.eyebrow}</p> : null}
+            <h1 className="text-3xl leading-tight sm:text-5xl">{property.theme ? welcomeTitle(property.theme, property.name, copy.welcomeTo(property.name)) : copy.welcomeTo(property.name)}</h1>
+            {property.theme?.layout === "centred" ? (
+              <span aria-hidden className="mx-auto mt-4 flex w-48 items-center gap-2 text-accent">
+                <span className="h-px flex-1 bg-current opacity-60" />
+                <span className="size-2 rotate-45 bg-current" />
+                <span className="h-px flex-1 bg-current opacity-60" />
+              </span>
+            ) : null}
+            <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">{property.theme?.welcomeBody || copy.letsCheckIn}</p>
+            {property.theme?.features.length ? <ThemeFeatures theme={property.theme} className="mt-6 justify-center text-left" /> : null}
             <Button
               size="touch-xl"
               className="mt-10 w-full max-w-md text-xl"
