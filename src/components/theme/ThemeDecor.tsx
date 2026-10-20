@@ -250,13 +250,13 @@ export function ThemeFeatures({ theme, className }: { theme: ThemeConfig; classN
   );
 }
 
-/** The two short notes in the upper corners of a wide welcome screen. */
+/** The two short notes in the upper corners of a wide welcome screen (only where there's room beside the welcome). */
 export function ThemeSideNotes({ theme }: { theme: ThemeConfig }) {
   const [left, right] = theme.sideNotes;
   if (!left && !right) return null;
   const note = (text: string, side: "left" | "right") =>
     text ? (
-      <div className={cn("absolute top-24 hidden max-w-[11rem] text-xs uppercase leading-relaxed tracking-[0.3em] lg:block", side === "left" ? "left-10 text-left" : "right-10 text-right")} style={{ color: "var(--accent)" }}>
+      <div className={cn("absolute top-24 hidden max-w-[11rem] text-xs uppercase leading-relaxed tracking-[0.3em] min-[1360px]:block", side === "left" ? "left-10 text-left" : "right-10 text-right")} style={{ color: "var(--accent)" }}>
         {text.split("·").map((t) => (
           <span key={t} className="block">
             {t.trim()}
