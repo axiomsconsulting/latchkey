@@ -64,7 +64,7 @@ function RoomGuide() {
           <p className="mt-2 text-lg text-muted-foreground">{rcopy.subtitle(g.propertyName)}</p>
         </header>
 
-        {/* The same top as the stay guide: quick ways in, the cover with "staying here?", and the Wi-Fi. */}
+        {/* The same top as the stay guide: quick ways in, the cover (with "staying here?" until the room is checked in), and the Wi-Fi. */}
         <QuickTiles
           theme={g.theme}
           label={gcopy.quickTitle}
@@ -82,14 +82,14 @@ function RoomGuide() {
           theme={g.theme}
           name={g.propertyName}
           extras={false}
-          invite={{
-            eyebrow: stay ? rcopy.stayEyebrow : rcopy.stayingHere,
-            title: stay ? rcopy.openStay : rcopy.checkInTitle,
-            body: stay ? rcopy.yourStay : rcopy.checkInBody,
-            cta: stay ? rcopy.openStay : rcopy.checkIn,
-            href: stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`,
-            icon: "key",
-          }}
+          // This device's own stay: open it. Someone already checked in to this room today: no invite. Otherwise: check in.
+          invite={
+            stay
+              ? { eyebrow: rcopy.stayEyebrow, title: rcopy.openStay, body: rcopy.yourStay, cta: rcopy.openStay, href: `/stay/${stay}`, icon: "key" }
+              : g.occupied
+                ? undefined
+                : { eyebrow: rcopy.stayingHere, title: rcopy.checkInTitle, body: rcopy.checkInBody, cta: rcopy.checkIn, href: `/kiosk/${g.shortCode}?guest=1`, icon: "key" }
+          }
         />
         {g.wifi ? <InfoPill theme={g.theme} items={[`${copy.stayNetwork}: ${g.wifi.name}`, ...(g.wifi.password ? [`${copy.stayPassword}: ${g.wifi.password}`] : [])]} /> : null}
 
