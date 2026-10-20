@@ -296,25 +296,63 @@ export async function syncAllConnections(): Promise<{ connections: number; error
 }
 
 /**
- * Privacy retention: 90 days after check-out we drop the guest's name, phone
- * digits and notes, keeping the anonymised stay for statistics.
+ * Privacy retention, per business (hosts.privacy, src/lib/privacy.ts): after
+ * the chosen days (90 unless changed) we drop the guest's name, email, phone
+ * digits and notes, keeping the anonymised stay for statistics; messages go
+ * after their own chosen days, if any.
  */
 export async function runRetentionSweep(): Promise<number> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
-  const { data } = await supabaseAdmin
-    .from("bookings")
-    .update({
-      guest_full_name: null,
-      phone_last4: null,
-      notes: null,
-      anonymised_at: new Date().toISOString(),
-    })
-    .lt("check_out_date", cutoff)
-    .is("anonymised_at", null)
-    .select("id");
-  // Check-in privacy: results and attempts go 30 days after check-out.
+  const { normalisePrivacy, detailsCutoff, messagesCutoff } = await import("./privacy");
+  const db = supabaseAdmin as unknown as { from: (t: string) => any };
   const today = new Date().toISOString().slice(0, 10);
+  // Before migration 0041 there is no privacy column: everyone gets the defaults.
+  let hostRows: Array<{ id: string; privacy?: unknown }> = [];
+  {
+    const withPrivacy = await db.from("hosts").select("id, privacy");
+    hostRows = withPrivacy.error ? ((await db.from("hosts").select("id")).data ?? []) : (withPrivacy.data ?? []);
+  }
+  const { data: props } = await db.from("properties").select("id, host_id");
+  const propsOf = new Map<string, string[]>();
+  for (const p of (props ?? []) as Array<{ id: string; host_id: string }>) propsOf.set(p.host_id, [...(propsOf.get(p.host_id) ?? []), p.id]);
+  // Group properties by cutoff, so each distinct choice is one update.
+  const detailGroups = new Map<string, string[]>();
+  const messageGroups = new Map<string, string[]>();
+  for (const h of hostRows) {
+    const ids = propsOf.get(h.id) ?? [];
+    if (!ids.length) continue;
+    const choice = normalisePrivacy(h.privacy);
+    const d = detailsCutoff(today, choice);
+    detailGroups.set(d, [...(detailGroups.get(d) ?? []), ...ids]);
+    const m = messagesCutoff(today, choice);
+    if (m) messageGroups.set(m, [...(messageGroups.get(m) ?? []), ...ids]);
+  }
+  const chunks = <T,>(xs: T[], n = 150) => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
+  let anonymised = 0;
+  for (const [cutoff, ids] of detailGroups) {
+    for (const part of chunks(ids)) {
+      const { data } = await db
+        .from("bookings")
+        .update({ guest_full_name: null, guest_email: null, phone_last4: null, notes: null, anonymised_at: new Date().toISOString() })
+        .in("property_id", part)
+        .lt("check_out_date", cutoff)
+        .is("anonymised_at", null)
+        .select("id");
+      anonymised += data?.length ?? 0;
+    }
+  }
+  for (const [cutoff, ids] of messageGroups) {
+    for (const part of chunks(ids)) {
+      // A few thousand stays a run at most, so one run never times out.
+      for (let round = 0; round < 10; round++) {
+        const { data: stays } = await db.from("bookings").select("id, messages!inner(id)").in("property_id", part).lt("check_out_date", cutoff).limit(300);
+        const stayIds = ((stays ?? []) as Array<{ id: string }>).map((b) => b.id);
+        if (!stayIds.length) break;
+        await db.from("messages").delete().in("booking_id", stayIds);
+      }
+    }
+  }
+  // Check-in privacy: results and attempts go 30 days after check-out.
   const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
   await supabaseAdmin.from("verification_results").delete().lt("delete_after", today);
   await purgeGuestIds(today);
@@ -329,7 +367,7 @@ export async function runRetentionSweep(): Promise<number> {
   // Visitor analytics: 13 months, IP addresses cleared after 90 days.
   const { pruneAnalytics } = await import("./analytics.server");
   await pruneAnalytics();
-  return data?.length ?? 0;
+  return anonymised;
 }
 
 /**

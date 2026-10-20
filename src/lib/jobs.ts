@@ -38,7 +38,7 @@ export const JOBS: Job[] = branded([
     key: "retention",
     name: "Privacy clean-up",
     kind: "scheduled",
-    what: "Clears guest names after 90 days, removes ID records, register entries and old check-in data when they're due.",
+    what: "Clears guest details and messages when each business chose (90 days unless changed), removes ID records, register entries and old check-in data when they're due.",
     wakes: "Daily",
     defaultEvery: 1440,
     metric: "job:retention",

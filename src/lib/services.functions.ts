@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
-import { requireOwner, requireWrite } from "@/lib/roles";
+import { requireSuperAdmin, requireOwner, requireWrite } from "@/lib/roles";
 import { INTEGRATION_KEYS, normaliseModes } from "./integration-modes";
 import { categoryById } from "./services";
 import { normaliseTheme, RESERVED_SLUGS } from "./theme";
@@ -50,9 +50,10 @@ export const saveIntegrationModes = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    // Going live spends money and contacts real people: owner only.
-    await requireOwner(context.supabase, data.hostId);
-    const { error } = await context.supabase
+    // Going live spends money and contacts real people: Latchkey's admins decide, for any business.
+    await requireSuperAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("hosts")
       .update({ integration_modes: normaliseModes(data.modes) })
       .eq("id", data.hostId);

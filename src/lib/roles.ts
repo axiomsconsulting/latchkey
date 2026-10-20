@@ -61,3 +61,15 @@ export async function hostOfProperty(supabase: Client, propertyId: string): Prom
   if (!data) throw new Error("Property not found.");
   return data;
 }
+
+export const SUPER_ADMIN_ONLY = "Only Latchkey's admins can change that.";
+
+export async function isSuperAdmin(supabase: unknown): Promise<boolean> {
+  const { data } = await (supabase as { rpc: (fn: string) => Promise<{ data: unknown }> }).rpc("is_super_admin");
+  return data === true;
+}
+
+/** Latchkey-wide controls (demo/live switches, sample data): super admins only. */
+export async function requireSuperAdmin(supabase: unknown) {
+  if (!(await isSuperAdmin(supabase))) throw new Error(SUPER_ADMIN_ONLY);
+}

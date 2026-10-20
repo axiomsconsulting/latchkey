@@ -806,9 +806,6 @@ export const settings = branded({
   channelsIconHelp: "Square images work best. We shrink them to fit on one line.",
   channelsIconBad: "Please choose a PNG, JPG, WebP or ICO image.",
   channelsNeedName: "Give each site you add a name.",
-  privacyTitle: "Privacy and retention",
-  privacyBody:
-    "Guest names, phone digits and notes are cleared 90 days after check-out. Anonymous stay records are kept for your statistics.",
 });
 
 export const onboarding = branded({
@@ -1342,8 +1339,8 @@ export const themeStudio = branded({
 });
 
 export const integrations = branded({
-  title: "Integrations: demo or live",
-  subtitle: "Test each connection safely in demo mode, then switch it live when you're ready.",
+  title: "Integrations: demo or live (Latchkey admin)",
+  subtitle: "Only Latchkey's admins see this. Test each of this business's connections in demo mode, then switch it live once it's set up.",
   demo: "Demo",
   live: "Live",
   ready: "Ready",
@@ -2868,3 +2865,28 @@ export const stayHeroCopy = branded({
   helpCta: "Message host",
   messageTile: "Message host",
 });
+
+export const privacyCopy = branded({
+  title: "Privacy and retention",
+  body: "Choose how long Latchkey keeps your guests' details after they leave. The stay itself stays, without a name, for your statistics.",
+  details: "Guest names and contact details",
+  detailsHelp: "Name, email, phone digits and your notes on the stay.",
+  messages: "Guest messages",
+  messagesHelp: "Messages with the guest and booking-site emails about the stay.",
+  afterDays: (d: number) => (d === 365 ? "1 year after check-out" : `${d} days after check-out`),
+  keepMessages: "Keep until the stay is deleted",
+  saved: "Privacy choices saved. The nightly clear-up follows them from tonight.",
+  notReady: "These choices can be saved once the latest database update is applied. Until then: details 90 days, messages kept.",
+  ownerOnly: "Only the owner can change these.",
+  otherTitle: "What else is kept, and for how long",
+  idPhotos: "ID checks, ID copies and face photos: whether they're taken, and 7, 14 or 30 days, are set for each property.",
+  idPhotosLink: "Who's staying settings",
+  register: "UK guest register (law: Immigration (Hotel Records) Order 1972): 12 months from arrival, whatever you choose here.",
+  registerLink: "Open the register",
+  fixed: [
+    "Invoices: kept for your tax records.",
+    "Check-in attempts: 30 days. Team activity: 1 year.",
+    "Website visits: 13 months, with IP addresses cleared after 90 days.",
+  ],
+});
+

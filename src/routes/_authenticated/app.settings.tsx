@@ -33,6 +33,7 @@ import { TeamPanel } from "@/components/host/TeamPanel";
 import { DEMO_EMAIL } from "@/lib/demo-account";
 import { ChannelLabels } from "@/components/host/ChannelLabels";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
+import { PrivacySettings } from "@/components/host/PrivacySettings";
 import { InvoiceSettings } from "@/components/host/InvoiceSettings";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
@@ -351,10 +352,11 @@ function SettingsPage() {
         />
       ) : null}
       </Section>
-      <Section id="integrations">{workspace.data && isOwner ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}</Section>
+      {/* Latchkey admins only: going live, and sample data, are theirs to decide for each business. */}
+      <Section id="integrations">{workspace.data?.isSuperAdmin ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}</Section>
 
       <Section id="demo">
-      {isOwner ? (
+      {workspace.data?.isSuperAdmin || (isOwner && hasDemo) ? (
       <section id="settings-demo" className="card-soft scroll-mt-24 p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
@@ -366,10 +368,12 @@ function SettingsPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={() => runDemo("load")} disabled={demoBusy !== null}>
-            {demoBusy === "load" ? <Loader2 className="size-4 animate-spin" /> : null}
-            {hasDemo ? copy.resetDemo : copy.loadDemo}
-          </Button>
+          {workspace.data?.isSuperAdmin ? (
+            <Button onClick={() => runDemo("load")} disabled={demoBusy !== null}>
+              {demoBusy === "load" ? <Loader2 className="size-4 animate-spin" /> : null}
+              {hasDemo ? copy.resetDemo : copy.loadDemo}
+            </Button>
+          ) : null}
           {hasDemo ? (
             <Button
               variant="outline"
@@ -385,19 +389,7 @@ function SettingsPage() {
       ) : null}
       </Section>
 
-      <Section id="privacy">
-      <section id="settings-privacy" className="card-soft scroll-mt-24 p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
-            <ShieldCheck className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-lg">{copy.privacyTitle}</h2>
-            <p className="text-sm text-muted-foreground">{copy.privacyBody}</p>
-          </div>
-        </div>
-      </section>
-      </Section>
+      <Section id="privacy">{workspace.data ? <PrivacySettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}</Section>
       </PageSections>
     </div>
   );

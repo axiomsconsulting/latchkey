@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
-import { hostOfProperty, requireOwner, requireWrite } from "@/lib/roles";
+import { hostOfProperty, isSuperAdmin, requireOwner, requireWrite, SUPER_ADMIN_ONLY } from "@/lib/roles";
 import { maskUrl } from "./ical";
 import { RESERVED_SLUGS } from "./theme";
 import { todayInZone } from "./dates";
@@ -764,9 +764,15 @@ export const loadDemoData = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     // The shared demo resets itself; one visitor must not wipe it for everyone.
     assertNotSharedDemo(context.claims);
-    await requireOwner(context.supabase, data.hostId);
-    // Only Latchkey's server may mark rows as demo, so seed with the service role.
+    // Sample data is Latchkey's admins' to give, for any business. The one exception:
+    // an owner at first set-up, with no real property yet, may start from it.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!(await isSuperAdmin(context.supabase))) {
+      await requireOwner(context.supabase, data.hostId);
+      const { count } = await supabaseAdmin.from("properties").select("id", { count: "exact", head: true }).eq("host_id", data.hostId).eq("is_demo", false);
+      if ((count ?? 0) > 0) throw new Error(SUPER_ADMIN_ONLY);
+    }
+    // Only Latchkey's server may mark rows as demo, so seed with the service role.
     const property = await seedDemo(supabaseAdmin, data.hostId);
     return { propertyId: property.id };
   });
@@ -863,6 +869,12 @@ export const removeDemoData = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ hostId: uuid }).parse(input))
   .handler(async ({ data, context }) => {
+    // Owners can always clear sample data from their own account; admins for any business.
+    if (await isSuperAdmin(context.supabase)) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await removeDemoRows(supabaseAdmin as unknown as Client, data.hostId);
+      return { ok: true };
+    }
     await requireOwner(context.supabase, data.hostId);
     await removeDemoRows(context.supabase, data.hostId);
     return { ok: true };
