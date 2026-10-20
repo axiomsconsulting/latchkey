@@ -407,7 +407,8 @@ export const getRoomGuide = createServerFn({ method: "GET" })
     };
     const { startersOffForProperty } = await import("./guide-starters.server");
     const { attachmentsFor } = await import("./attachments.server");
-    const [off, files, { count: here }] = await Promise.all([
+    const { tilesForGuest, roomPhoto } = await import("./guide-tiles.server");
+    const [off, files, { count: here }, tiles, photo] = await Promise.all([
       startersOffForProperty(p.id),
       attachmentsFor(p.id).catch(() => ({}) as Record<string, never>),
       // Someone has already checked in to this room today: no check-in invite (no guest details leave).
@@ -419,6 +420,8 @@ export const getRoomGuide = createServerFn({ method: "GET" })
         .lte("check_in_date", today)
         .gte("check_out_date", today)
         .is("mirror_of", null),
+      tilesForGuest(p.id),
+      roomPhoto(room.id),
     ]);
     const sections = buildGuide(stored, room.id, mode, facts, off, Object.keys(files))
       .filter((sec) => !DOOR_SECTIONS.includes(sec.key))
@@ -431,6 +434,8 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       propertyName: p.name as string,
       shortCode: p.short_code as string,
       occupied: (here ?? 0) > 0,
+      tiles,
+      roomPhoto: photo,
       room: { name: room.display_name as string, title: (room.public_title as string | null) ?? null },
       wifi: p.wifi_name ? { name: p.wifi_name as string, password: (p.wifi_password as string | null) ?? null } : null,
       amenities: Array.isArray(room.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [],

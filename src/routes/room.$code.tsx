@@ -7,7 +7,8 @@ import { ExpandableText } from "@/components/guest/ExpandableText";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { sectionIcon } from "@/components/guest/guide-icons";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { InfoPill, QuickTiles, StayCover } from "@/components/guest/StayHero";
+import { GuideTiles, InfoPill, StayCover } from "@/components/guest/StayHero";
+import { shownTiles } from "@/lib/guide-tiles";
 import { guideCopy as gcopy, guest as copy, roomGuideCopy as rcopy } from "@/content/copy";
 import { getRoomGuide } from "@/lib/guide.functions";
 import { rememberedStay } from "@/lib/stay-link";
@@ -65,22 +66,27 @@ function RoomGuide() {
         </header>
 
         {/* The same top as the stay guide: quick ways in, the cover (with "staying here?" until the room is checked in), and the Wi-Fi. */}
-        <QuickTiles
+        <GuideTiles
           theme={g.theme}
           label={gcopy.quickTitle}
-          tiles={[
-            ...(g.wifi ? [{ id: "room-wifi", icon: "wifi", label: copy.stayNetwork }] : []),
-            ...g.guide.slice(0, 5).map((sec) => ({ id: `guide-${sec.key}`, icon: "book-open", label: sec.title })),
-          ]}
-          onPick={(id) => {
-            const key = id.startsWith("guide-") ? id.slice(6) : null;
+          tiles={shownTiles(g.tiles.tiles, { page: "room", sections: g.guide.map((sec) => ({ key: sec.key, title: sec.title })), hasWifi: !!g.wifi, canOrder: false }, { wifi: copy.stayNetwork, checkin: rcopy.checkIn })}
+          stored={g.tiles.tiles}
+          files={g.tiles.files}
+          onAction={(a) => {
+            if (a.kind === "checkin") {
+              window.location.href = stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`;
+              return;
+            }
+            if (a.kind !== "jump") return;
+            const key = a.section;
             if (key) setOpen((o) => (o.includes(key) ? o : [...o, key]));
-            window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+            window.setTimeout(() => (document.getElementById(a.target) ?? (key ? document.getElementById("forget") : null))?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
           }}
         />
         <StayCover
           theme={g.theme}
           name={g.propertyName}
+          photo={g.roomPhoto}
           extras={false}
           // This device's own stay: open it. Someone already checked in to this room today: no invite. Otherwise: check in.
           invite={

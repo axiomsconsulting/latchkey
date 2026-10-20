@@ -8,7 +8,8 @@ import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { StayExtras } from "@/components/guest/StayExtras";
 import { StayInbox, openStayInbox } from "@/components/guest/StayInbox";
-import { StayCover, StayHelp, StaySummary } from "@/components/guest/StayHero";
+import { GuideTiles, StayCover, StayHelp, StaySummary } from "@/components/guest/StayHero";
+import { shownTiles } from "@/lib/guide-tiles";
 import { cn } from "@/lib/utils";
 import { StayInvoice } from "@/components/guest/StayInvoice";
 import { StayReview } from "@/components/guest/StayReview";
@@ -68,20 +69,20 @@ function Stay() {
 
 type StayData = Extract<Awaited<ReturnType<typeof getStay>>, { found: true }>;
 
-/** Jumps to a part of the guide (opening a guide section if that's what it is). */
+/** Jumps to a part of the guide (a section on the reminder card is found there). */
 function jumpTo(id: string) {
-  window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  window.setTimeout(() => (document.getElementById(id) ?? (id.startsWith("guide-") ? document.getElementById("forget") : null))?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
 }
 
 function StayPage({ s, token, theme }: { s: StayData; token: string; theme: StayData["theme"] }) {
   const p = s.property;
   const [open, setOpen] = useState<string[]>([s.guide[0]?.key ?? ""]);
-  // Quick ways in, in the theme's icon style: Wi-Fi, the first guide sections, extras.
-  const tiles = [
-    ...(p?.wifi_name ? [{ id: "stay-wifi", icon: "wifi", label: copy.stayNetwork }] : []),
-    ...s.guide.slice(0, p?.wifi_name ? 3 : 4).map((g) => ({ id: `guide-${g.key}`, icon: "book-open", label: g.title, key: g.key })),
-    ...(s.readOnly ? [] : [{ id: "stay-extras", icon: "gift", label: gcopy.quickExtras }, { id: "message", icon: "message-circle", label: stayHeroCopy.messageTile }]),
-  ];
+  // Quick ways in, in the theme's icon style: the host's chosen tiles, or Wi-Fi, the first guide sections, extras and messages.
+  const tiles = shownTiles(
+    s.tiles.tiles,
+    { page: "stay", sections: [...s.guide, ...s.pinnedSections].map((g) => ({ key: g.key, title: g.title })), hasWifi: !!p?.wifi_name, canOrder: !s.readOnly },
+    { wifi: copy.stayNetwork, extras: gcopy.quickExtras, messages: stayHeroCopy.messageTile, times: stayHeroCopy.tileTimes },
+  );
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
       <main className="mx-auto max-w-4xl space-y-6 py-6 sm:py-8">
@@ -97,31 +98,25 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           <StayInbox token={token} />
         </div>
 
-        {tiles.length > 1 ? (
-          <nav aria-label={gcopy.quickTitle} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-6 sm:overflow-visible sm:px-0">
-            {tiles.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => {
-                  if (t.id === "message") {
-                    openStayInbox();
-                    return;
-                  }
-                  if ("key" in t && t.key) setOpen((o) => (o.includes(t.key) ? o : [...o, t.key]));
-                  jumpTo(t.id);
-                }}
-                className="card-soft flex min-h-24 w-24 shrink-0 flex-col items-center justify-center gap-2 p-3 text-center text-sm leading-tight hover:bg-secondary sm:w-auto"
-              >
-                <ThemeIcon theme={theme} icon={t.icon} className="size-7" />
-                <span className="line-clamp-2">{t.label}</span>
-              </button>
-            ))}
-          </nav>
-        ) : null}
+        <GuideTiles
+          theme={theme}
+          label={gcopy.quickTitle}
+          tiles={tiles}
+          stored={s.tiles.tiles}
+          files={s.tiles.files}
+          onAction={(a) => {
+            if (a.kind === "messages") return openStayInbox();
+            if (a.kind === "extras") return jumpTo("stay-extras");
+            if (a.kind === "jump") {
+              if (a.section) setOpen((o) => (o.includes(a.section!) ? o : [...o, a.section!]));
+              jumpTo(a.target);
+            }
+          }}
+        />
 
         {/* The cover photo with the extras invitation, the stay at a glance, and help: in every template's own look. */}
-        <StayCover theme={theme} name={p?.name ?? ""} extras={!s.readOnly} onExtras={() => jumpTo("stay-extras")} />
+        <StayCover theme={theme} name={p?.name ?? ""} photo={s.roomPhoto} extras={!s.readOnly} onExtras={() => jumpTo("stay-extras")} />
+        <div id="stay-times" className="scroll-mt-6">
         <StaySummary
           theme={theme}
           checkInDate={s.checkInDate}
@@ -131,6 +126,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           wifi={p?.wifi_name ?? null}
           room={s.room ? { name: s.room.display_name, title: s.room.public_title } : null}
         />
+        </div>
         {s.readOnly ? null : <StayHelp theme={theme} onMessage={openStayInbox} />}
 
 

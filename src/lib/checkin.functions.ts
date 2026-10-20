@@ -1398,7 +1398,13 @@ export const getStay = createServerFn({ method: "GET" })
 
     const { startersOffForProperty } = await import("./guide-starters.server");
     const { attachmentsFor } = await import("./attachments.server");
-    const [off, files] = await Promise.all([startersOffForProperty(b.property_id), attachmentsFor(b.property_id).catch(() => ({}) as Record<string, never>)]);
+    const { tilesForGuest, roomPhoto } = await import("./guide-tiles.server");
+    const [off, files, tiles, photo] = await Promise.all([
+      startersOffForProperty(b.property_id),
+      attachmentsFor(b.property_id).catch(() => ({}) as Record<string, never>),
+      tilesForGuest(b.property_id),
+      roomPhoto(b.room_id),
+    ]);
     const sections = buildGuide(stored, b.room_id, mode, facts, off, Object.keys(files)).map((sec) =>
       doorLocked && DOOR_SECTIONS.includes(sec.key)
         ? { ...sec, summary: "DOOR_LOCKED", steps: [], attachments: [] }
@@ -1429,6 +1435,8 @@ export const getStay = createServerFn({ method: "GET" })
       doorOpensAt: win.doorOpensAt.toISOString(),
       readOnly,
       forget,
+      tiles,
+      roomPhoto: photo,
     };
   });
 

@@ -1,13 +1,16 @@
-import { CalendarDays, Gift, KeyRound } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, Download, ExternalLink, Gift, KeyRound } from "lucide-react";
 
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeArt, ThemeIcon } from "@/components/theme/ThemeDecor";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { stayHeroCopy as copy } from "@/content/copy";
 import { formatUkDate, nightsBetween } from "@/lib/dates";
 import { luminance, type ThemeConfig } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { coverFor } from "@/lib/theme-covers";
+import { tilesPerRow, type GuideTile, type ShownTile } from "@/lib/guide-tiles";
 
 /**
  * The cover banner at the top of the guest guide: the host's cover photo
@@ -23,9 +26,12 @@ export function StayCover({
   extras,
   onExtras,
   invite,
+  photo,
 }: {
   theme: ThemeConfig;
   name: string;
+  /** A room's own cover photo, used before the property's. */
+  photo?: string | null | undefined;
   /** The stay guide: the extras invitation beside the cover. */
   extras: boolean;
   onExtras?: () => void;
@@ -36,7 +42,7 @@ export function StayCover({
   const centred = theme.layout === "centred";
   // A dark template (gold on navy) keeps its panel dark with the accent's line work; a light one uses its main colour.
   const dark = luminance(theme.background) < 0.2;
-  const cover = coverFor(theme);
+  const cover = photo || coverFor(theme);
   return (
     <section className={cn("card-soft grid overflow-hidden p-0", side ? "sm:grid-cols-[1.15fr_1fr]" : "")} aria-label={copy.coverLabel}>
       {cover ? (
@@ -157,22 +163,96 @@ export function StayHelp({ theme, onMessage }: { theme: ThemeConfig; onMessage: 
  * Quick ways in at the top of a guide, in the theme's icon style: one row
  * you can swipe on a phone, a tidy grid on wider screens.
  */
-export function QuickTiles({ theme, label, tiles, onPick }: { theme: ThemeConfig; label: string; tiles: Array<{ id: string; icon: string; label: string }>; onPick: (id: string) => void }) {
+/**
+ * The quick tiles under the welcome (src/lib/guide-tiles.ts): up to eight,
+ * sharing the full width in even rows on a phone (5 → 3 + 2) and one row on
+ * wider screens. The host's own tiles open in place: text, a photo, a PDF or
+ * a web page, without leaving the guide.
+ */
+export function GuideTiles({
+  theme,
+  label,
+  tiles,
+  stored,
+  files,
+  onAction,
+}: {
+  theme: ThemeConfig;
+  label: string;
+  tiles: ShownTile[];
+  /** The host's tiles as saved, for their content. */
+  stored: GuideTile[] | null;
+  /** Short-lived links to each tile's photo or PDF, by tile id. */
+  files: Record<string, string>;
+  onAction: (action: Exclude<ShownTile["action"], { kind: "open" }>) => void;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
   if (tiles.length < 2) return null;
+  const per = tilesPerRow(tiles.length);
+  const wide = Math.min(tiles.length, 8);
+  const opened = stored?.find((t) => t.id === openId) ?? null;
   return (
-    <nav aria-label={label} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-6 sm:overflow-visible sm:px-0">
-      {tiles.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => onPick(t.id)}
-          className="card-soft flex min-h-24 w-24 shrink-0 flex-col items-center justify-center gap-2 p-3 text-center text-sm leading-tight hover:bg-secondary sm:w-auto"
-        >
-          <ThemeIcon theme={theme} icon={t.icon} className="size-7" />
-          <span className="line-clamp-2">{t.label}</span>
-        </button>
-      ))}
-    </nav>
+    <>
+      <nav
+        aria-label={label}
+        className="flex flex-wrap gap-2"
+        style={{ ["--tile-basis" as string]: `calc((100% - ${(per - 1) * 0.5}rem) / ${per})`, ["--tile-basis-wide" as string]: `calc((100% - ${(wide - 1) * 0.5}rem) / ${wide})` }}
+      >
+        {tiles.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => (t.action.kind === "open" ? setOpenId(t.action.tileId) : onAction(t.action))}
+            className="card-soft flex min-h-20 min-w-0 grow basis-[var(--tile-basis)] flex-col items-center justify-center gap-1.5 px-1 py-3 text-center text-xs leading-tight min-[400px]:text-[13px] hover:bg-secondary sm:min-h-24 sm:basis-[var(--tile-basis-wide)] sm:gap-2 sm:p-3 sm:text-sm"
+          >
+            <ThemeIcon theme={theme} icon={t.icon} className="size-6 sm:size-7" />
+            <span lang="en" className="line-clamp-2 w-full hyphens-auto">{t.label}</span>
+          </button>
+        ))}
+      </nav>
+      <Dialog open={!!opened} onOpenChange={(o) => !o && setOpenId(null)}>
+        <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-3xl overflow-y-auto">
+          {opened?.content ? <TileContentView tile={opened} src={files[opened.id] ?? null} /> : null}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function TileContentView({ tile, src }: { tile: GuideTile; src: string | null }) {
+  const c = tile.content!;
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="font-display text-2xl">{tile.title}</DialogTitle>
+        <DialogDescription className="sr-only">{tile.title}</DialogDescription>
+      </DialogHeader>
+      {c.type === "text" ? <p className="whitespace-pre-line text-lg leading-relaxed">{c.body}</p> : null}
+      {c.type === "image" && src ? <img src={src} alt={tile.title ?? ""} className="max-h-[70dvh] w-full rounded-2xl object-contain" /> : null}
+      {c.type === "doc" && src ? (
+        <div className="space-y-3">
+          <iframe src={src} title={tile.title ?? c.name ?? ""} className="h-[65dvh] w-full rounded-2xl border border-border bg-surface" />
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <a href={src} target="_blank" rel="noreferrer" download={c.name}>
+              <Download className="size-4" /> {copy.tileDownload(c.name ?? "PDF")}
+            </a>
+          </Button>
+        </div>
+      ) : null}
+      {c.type === "link" && c.url ? (
+        <div className="space-y-3">
+          {/* Shown inside the guide; some sites refuse to be shown inside another page, so the link is always there too. */}
+          <iframe src={c.url} title={tile.title ?? c.url} className="h-[65dvh] w-full rounded-2xl border border-border bg-surface" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" referrerPolicy="no-referrer" />
+          <p className="text-sm text-muted-foreground">{copy.tileLinkHint}</p>
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <a href={c.url} target="_blank" rel="noreferrer noopener">
+              <ExternalLink className="size-4" /> {copy.tileOpenSite}
+            </a>
+          </Button>
+        </div>
+      ) : null}
+      {(c.type === "image" || c.type === "doc") && !src ? <p className="text-muted-foreground">{copy.tileMissing}</p> : null}
+    </>
   );
 }
 

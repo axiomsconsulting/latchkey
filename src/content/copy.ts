@@ -2850,6 +2850,11 @@ export const driveAdminCopy = branded({
 
 export const stayHeroCopy = branded({
   coverLabel: "Your stay",
+  tileDownload: (name: string) => `Download ${name}`,
+  tileOpenSite: "Open in a new tab",
+  tileLinkHint: "If the page stays blank, that site doesn't allow being shown here: open it in a new tab.",
+  tileMissing: "This file couldn't be loaded. Please try again in a moment.",
+  tileTimes: "Times",
   eyebrow: "Make it special",
   title: "Add an extra touch",
   body: "Late check-out, breakfast, an early arrival or something special: ask here and your host takes care of it.",
@@ -2888,5 +2893,56 @@ export const privacyCopy = branded({
     "Check-in attempts: 30 days. Team activity: 1 year.",
     "Website visits: 13 months, with IP addresses cleared after 90 days.",
   ],
+});
+
+export const guideTilesCopy = branded({
+  title: "Quick tiles",
+  body: "Up to 8 tiles at the top of every guest guide and room guide. They share the full width of a phone screen. Point them at a section, Wi-Fi, extras or messages, or add your own text, link, photo or PDF, which opens inside the guide.",
+  automatic: "Automatic",
+  own: "Choose my own",
+  preview: "What guests see",
+  tooFew: "Add at least two tiles to show them.",
+  icon: "Icon",
+  defaultIcon: "Default",
+  up: "Move up",
+  down: "Move down",
+  remove: "Remove tile",
+  section: "Section",
+  label: "Label",
+  labelPlaceholder: (d: string) => (d ? `Label (default: ${d})` : "Label"),
+  ownTitle: "Tile name (needed)",
+  contentType: "What it opens",
+  contentTypes: { text: "Text", link: "Web page", image: "Photo", doc: "PDF" } as Record<string, string>,
+  textPlaceholder: "What guests read when they tap the tile.",
+  uploadImage: "Upload photo",
+  uploadDoc: "Upload PDF",
+  replaceFile: "Replace",
+  checkinHint: "Shows on room guides only: check in, or open the guest's own stay.",
+  stayOnlyHint: "Shows on a guest's own stay guide only.",
+  add: "Add a tile",
+  full: "8 tiles: the most",
+  count: (n: number) => `${n} of 8`,
+  saved: "Tiles saved. Guests see them next time the guide opens.",
+  notReady: "Quick tiles can be chosen once the latest database update is applied. Until then guests see the automatic tiles.",
+  kinds: {
+    wifi: "Wi-Fi",
+    section: "A guide section",
+    extras: "Extras",
+    messages: "Message us",
+    times: "Stay times",
+    checkin: "Check in",
+    custom: "Your own: text, link, photo or PDF",
+  } as Record<string, string>,
+  kindLabels: { wifi: "Wi-Fi", extras: "Extras", messages: "Message host", times: "Times", checkin: "Check in" },
+});
+
+export const roomPhotoCopy = branded({
+  title: "Room photo",
+  body: "The cover of this room's guide and of guests' stay guides for this room. Without one, the property's cover is used.",
+  upload: "Upload photo",
+  replace: "Replace photo",
+  remove: "Use the property's cover",
+  saved: "Room photo saved.",
+  removed: "Back to the property's cover.",
 });
 

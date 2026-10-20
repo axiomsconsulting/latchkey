@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.48.0",
+    date: "2026-10-20",
+    title: "Your own quick tiles, room photos and privacy choices",
+    items: [
+      { kind: "new", area: "Guest guide", text: "Choose up to 8 quick tiles at the top of your guest and room guides (Stay guides → Quick tiles): sections, Wi-Fi, extras, messages, stay times, check-in, or your own text, web page, photo or PDF, which opens inside the guide. They share the full width of a phone screen." },
+      { kind: "new", area: "Guest guide", text: "Give each room's guide its own cover photo; rooms without one use the property's cover." },
+      { kind: "new", area: "Settings", text: "Privacy and retention: choose how long guests' details (30 days to 1 year) and messages are kept after check-out, and see what else is kept and for how long." },
+      { kind: "improved", area: "Settings", text: "Demo / live switches are now set by Latchkey's team. You can still remove sample data from your account." },
+      { admin: true, kind: "new", area: "Settings", text: "Demo / live switches and loading sample data are super admin only (Settings while viewing a business); the database refuses other changes to the switches." },
+    ],
+  },
+  {
     version: "0.47.0",
     date: "2026-10-20",
     title: "Logos to choose from",

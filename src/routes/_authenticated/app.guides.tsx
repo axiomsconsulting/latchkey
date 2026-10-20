@@ -24,6 +24,9 @@ import { GuideSectionList } from "@/components/host/GuideSectionList";
 import { SectionAttachments } from "@/components/host/SectionAttachments";
 import { getGuideAttachments } from "@/lib/attachments.functions";
 import { RoomAmenities } from "@/components/host/RoomAmenities";
+import { GuideTilesEditor } from "@/components/host/GuideTilesEditor";
+import { RoomPhoto } from "@/components/host/RoomPhoto";
+import { getGuideTiles } from "@/lib/guide-tiles.functions";
 import { SECTIONS, editorSections, type SectionKey } from "@/lib/guide";
 import { getRoomGuideCodes, renameGuideSection } from "@/lib/guide.functions";
 import {
@@ -67,8 +70,11 @@ type Section = {
 
 function GuidesPage() {
   const ws = useWorkspace();
-  const properties = (ws.data?.properties ?? []) as Array<{ id: string; name: string }>;
+  const properties = (ws.data?.properties ?? []) as Array<{ id: string; name: string; wifi_name?: string | null; theme_config?: unknown }>;
   const { selectedId, select } = useSelectedProperty(properties);
+  const tilesFn = useServerFn(getGuideTiles);
+  // Shares its cache with the tiles editor: also carries each room's photo.
+  const tilesQ = useQuery({ queryKey: ["guide-tiles", selectedId], enabled: Boolean(selectedId), queryFn: () => tilesFn({ data: { propertyId: selectedId! } }) });
   const fn = useServerFn(getGuideEditor);
   const q = useQuery({ queryKey: ["guide", selectedId], enabled: Boolean(selectedId), queryFn: () => fn({ data: { propertyId: selectedId! } }) });
   const attachFn = useServerFn(getGuideAttachments);
@@ -139,6 +145,15 @@ function GuidesPage() {
 
       <InRoomGuides propertyId={selectedId} />
 
+      {q.isLoading ? null : (
+        <GuideTilesEditor
+          propertyId={selectedId}
+          sections={shown.map((x) => ({ key: x.key, title: x.title }))}
+          hasWifi={!!properties.find((x) => x.id === selectedId)?.wifi_name}
+          themeConfig={properties.find((x) => x.id === selectedId)?.theme_config}
+        />
+      )}
+
       <div className="card-soft flex flex-wrap items-end gap-4 p-4">
         <div className="space-y-1">
           <Label>Editing</Label>
@@ -172,7 +187,14 @@ function GuidesPage() {
         <p className="basis-full text-sm text-muted-foreground">{room ? copy.basicHelp : copy.scopeHelp}</p>
       </div>
 
-      {q.isLoading ? null : room ? <RoomAmenities propertyId={selectedId} roomId={room.id} amenities={roomAmenities} /> : null}
+      {q.isLoading || !room ? null : (
+        <>
+          {tilesQ.data?.available ? (
+            <RoomPhoto propertyId={selectedId} roomId={room.id} photo={tilesQ.data.roomPhotos[room.id] ?? null} themeConfig={properties.find((x) => x.id === selectedId)?.theme_config} />
+          ) : null}
+          <RoomAmenities propertyId={selectedId} roomId={room.id} amenities={roomAmenities} />
+        </>
+      )}
 
       {q.isLoading ? (
         <Skeleton className="h-96 rounded-2xl" />
