@@ -7,6 +7,7 @@ import { stayHeroCopy as copy } from "@/content/copy";
 import { formatUkDate, nightsBetween } from "@/lib/dates";
 import { luminance, type ThemeConfig } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { coverFor } from "@/lib/theme-covers";
 
 /**
  * The cover banner at the top of the guest guide: the host's cover photo
@@ -18,10 +19,11 @@ export function StayCover({ theme, name, extras, onExtras }: { theme: ThemeConfi
   const centred = theme.layout === "centred";
   // A dark template (gold on navy) keeps its panel dark with the accent's line work; a light one uses its main colour.
   const dark = luminance(theme.background) < 0.2;
+  const cover = coverFor(theme);
   return (
     <section className={cn("card-soft grid overflow-hidden p-0", extras ? "sm:grid-cols-[1.15fr_1fr]" : "")} aria-label={copy.coverLabel}>
-      {theme.coverImageUrl ? (
-        <img src={theme.coverImageUrl} alt="" className={cn("h-full w-full object-cover", extras ? "aspect-[4/3] sm:aspect-auto sm:min-h-64" : "aspect-[16/7]")} />
+      {cover ? (
+        <img src={cover} alt="" width={1280} height={768} className={cn("h-full w-full object-cover", extras ? "aspect-[16/10] sm:aspect-auto sm:min-h-64" : "aspect-[16/7]")} />
       ) : (
         <div
           className={cn("relative flex items-center justify-center overflow-hidden", dark ? "border-b border-border sm:border-b-0 sm:border-r" : "bg-primary text-primary-foreground", extras ? "aspect-[16/9] sm:aspect-auto sm:min-h-64" : "aspect-[16/6]")}

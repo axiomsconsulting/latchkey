@@ -84,20 +84,21 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   ];
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
-      <main className="mx-auto max-w-4xl space-y-6 py-8">
+      <main className="mx-auto max-w-4xl space-y-6 py-6 sm:py-8">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             {theme.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{theme.eyebrow}</p> : null}
             <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
             <p className="mt-2 text-lg text-muted-foreground">
               {s.room ? copy.roomLine(s.room.display_name, s.room.public_title) : p?.name}
             </p>
+            {theme.welcomeBody ? <p className="mt-1 text-base text-muted-foreground">{theme.welcomeBody.replace("{property}", p?.name ?? "")}</p> : null}
           </div>
           <StayInbox token={token} />
         </div>
 
         {tiles.length > 1 ? (
-          <nav aria-label={gcopy.quickTitle} className={cn("grid gap-2", tiles.length >= 6 ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3 sm:grid-cols-5")}>
+          <nav aria-label={gcopy.quickTitle} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-6 sm:overflow-visible sm:px-0">
             {tiles.map((t) => (
               <button
                 key={t.id}
@@ -110,7 +111,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
                   if ("key" in t && t.key) setOpen((o) => (o.includes(t.key) ? o : [...o, t.key]));
                   jumpTo(t.id);
                 }}
-                className="card-soft flex min-h-24 flex-col items-center justify-center gap-2 p-3 text-center text-sm leading-tight hover:bg-secondary"
+                className="card-soft flex min-h-24 w-24 shrink-0 flex-col items-center justify-center gap-2 p-3 text-center text-sm leading-tight hover:bg-secondary sm:w-auto"
               >
                 <ThemeIcon theme={theme} icon={t.icon} className="size-7" />
                 <span className="line-clamp-2">{t.label}</span>
@@ -119,7 +120,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           </nav>
         ) : null}
 
-        {/* The cover banner, the stay at a glance, and help: in every template's own look. */}
+        {/* The cover photo with the extras invitation, the stay at a glance, and help: in every template's own look. */}
         <StayCover theme={theme} name={p?.name ?? ""} extras={!s.readOnly} onExtras={() => jumpTo("stay-extras")} />
         <StaySummary
           theme={theme}
