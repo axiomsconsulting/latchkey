@@ -1342,6 +1342,8 @@ export const integrations = branded({
 
 /** Guides page: the in-room guide nudge. */
 export const inRoomCopy = branded({
+  why: "Why it helps",
+  whyHide: "Hide",
   title: "Put a QR code in every room",
   body:
     "Booking sites keep their guidebooks inside their own app, and only for that booking. Latchkey's in-room guide is on the wall of the room itself: one scan shows how that room works and lets the guest reach you, whichever site they booked on.",

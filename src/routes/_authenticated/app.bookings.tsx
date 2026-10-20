@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, ArchiveRestore, CalendarDays, ChevronLeft, ChevronRight, Loader2, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Archive, ArchiveRestore, CalendarDays, ChevronLeft, ChevronRight, ListChecks, Loader2, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { BookingDialog, type BookingRow } from "@/components/host/BookingDialog";
@@ -342,8 +342,9 @@ function BookingsPage() {
         }
       />
 
+      {/* Two switches that fill the width on a phone (under 440px wide the first takes its own row), then Select. */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-xl border border-border bg-surface p-1">
+        <div className="flex flex-1 rounded-xl border border-border bg-surface p-1 max-[440px]:basis-full sm:flex-none">
           {(["active", "archive"] as const).map((v) => (
             <button
               key={v}
@@ -353,7 +354,7 @@ function BookingsPage() {
                 setPicked(new Set());
               }}
               className={cn(
-                "rounded-lg px-4 py-2 text-sm font-medium",
+                "flex-1 rounded-lg px-3 py-2 text-sm font-medium sm:px-4",
                 scope === v ? "bg-primary text-primary-foreground" : "text-muted-foreground",
               )}
             >
@@ -361,14 +362,14 @@ function BookingsPage() {
             </button>
           ))}
         </div>
-        <div className="inline-flex rounded-xl border border-border bg-surface p-1">
+        <div className="flex flex-1 rounded-xl border border-border bg-surface p-1 sm:flex-none">
           {(["list", "timeline"] as const).map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setView(v)}
               className={cn(
-                "rounded-lg px-4 py-2 text-sm font-medium",
+                "flex-1 rounded-lg px-3 py-2 text-sm font-medium sm:px-4",
                 view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground",
               )}
             >
@@ -377,17 +378,18 @@ function BookingsPage() {
           ))}
         </div>
 
-
         {canWrite && view === "list" ? (
           <Button
             variant={selecting ? "default" : "outline"}
-            className="ml-auto"
+            className="h-11 sm:ml-auto"
+            aria-label={selecting ? tools.done : tools.select}
             onClick={() => {
               setSelecting((v) => !v);
               setPicked(new Set());
             }}
           >
-            {selecting ? tools.done : tools.select}
+            <ListChecks className="size-4" />
+            <span className="max-sm:sr-only">{selecting ? tools.done : tools.select}</span>
           </Button>
         ) : null}
       </div>

@@ -45,7 +45,7 @@ export function SupportAccess({ hostId, until, isOwner }: { hostId: string; unti
         </div>
       </div>
       {isOwner ? (
-        <Button className="mt-4" variant={on ? "outline" : "default"} disabled={busy} onClick={() => void set(!on)}>
+        <Button className="mt-4 h-auto min-h-10 whitespace-normal py-2 text-left" variant={on ? "outline" : "default"} disabled={busy} onClick={() => void set(!on)}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : null}
           {on ? copy.stop : copy.allow}
         </Button>

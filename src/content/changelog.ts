@@ -32,6 +32,19 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.44.1",
+    date: "2026-10-20",
+    title: "Tidier on phones",
+    items: [
+      { kind: "improved", area: "Bookings", text: "On a phone, the Bookings buttons, switches and filters sit in clear rows that use the full width: search on its own line, then the three filters side by side." },
+      { kind: "fixed", area: "Services", text: "The Services tabs no longer run off the side of narrow phones." },
+      { kind: "improved", area: "Settings", text: "The phone header keeps your business name in full: What's new, the guest register, activity, subscription, feedback and sign-out are now in one menu." },
+      { kind: "improved", area: "Settings", text: "The extras price list is easy to edit on a phone, one item per card." },
+      { kind: "improved", area: "Guest guide", text: "The in-room QR card on Guides is shorter on a phone, with “Why it helps” one tap away." },
+      { kind: "improved", area: "Settings", text: "On dual-screen phones opened across both screens, the menu sits on one screen and the page on the other, clear of the hinge." },
+    ],
+  },
+  {
     version: "0.44.0",
     date: "2026-10-20",
     title: "A grand welcome in the guest guide",

@@ -40,22 +40,24 @@ function ShowHide({
   options,
   hidden,
   onChange,
+  className,
 }: {
   label: string;
   options: Option[];
   hidden: string[];
   onChange: (hidden: string[]) => void;
+  className?: string;
 }) {
   const shown = options.length - options.filter((o) => hidden.includes(o.key)).length;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className={cn("h-11 gap-2", hidden.length && "border-primary")}>
-          {label}
-          <span className="rounded-full bg-secondary px-2 text-xs">
+        <Button variant="outline" className={cn("h-11 min-w-0 gap-1.5 px-3", hidden.length && "border-primary", className)}>
+          <span className="truncate">{label}</span>
+          <span className="shrink-0 rounded-full bg-secondary px-1.5 text-xs">
             {shown}/{options.length}
           </span>
-          <ChevronDown className="size-4" />
+          <ChevronDown className="size-4 shrink-0 max-[380px]:hidden" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
@@ -98,36 +100,43 @@ export function BookingFilters({
   const pastShown = !filters.hideGroups.includes("past");
   const anyHidden = filters.hideGroups.length + filters.hideRooms.length + filters.hidePlatforms.length > 0 || filters.search;
 
+  // A phone: search on its own row, the three filters sharing the next evenly, then past stays and the count.
+  // Wider: all in one row.
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-56 flex-1">
+    <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+      <div className="relative lg:min-w-56 lg:flex-1">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="h-11 pl-9"
+          type="search"
           placeholder={copy.search}
           aria-label={copy.search}
           value={filters.search}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
         />
       </div>
-      <ShowHide label={copy.status} options={groupOptions} hidden={filters.hideGroups} onChange={(h) => onChange({ ...filters, hideGroups: h as StayGroup[] })} />
-      <ShowHide label={copy.rooms} options={roomOptions} hidden={filters.hideRooms} onChange={(h) => onChange({ ...filters, hideRooms: h })} />
-      <ShowHide label={copy.platforms} options={platformOptions} hidden={filters.hidePlatforms} onChange={(h) => onChange({ ...filters, hidePlatforms: h })} />
-      <label className="flex h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm">
-        <Switch
-          checked={pastShown}
-          onCheckedChange={(on) =>
-            onChange({ ...filters, hideGroups: on ? filters.hideGroups.filter((g) => g !== "past") : [...filters.hideGroups, "past"] })
-          }
-        />
-        {copy.showPast}
-      </label>
-      <span className="text-sm text-muted-foreground">{copy.shown(shown, total)}</span>
-      {anyHidden ? (
-        <Button variant="link" className="h-auto p-0" onClick={() => onChange({ search: "", hideGroups: [], hideRooms: [], hidePlatforms: [] })}>
-          {copy.clear}
-        </Button>
-      ) : null}
+      <div className="grid grid-cols-3 gap-2 lg:flex">
+        <ShowHide label={copy.status} options={groupOptions} hidden={filters.hideGroups} onChange={(h) => onChange({ ...filters, hideGroups: h as StayGroup[] })} />
+        <ShowHide label={copy.rooms} options={roomOptions} hidden={filters.hideRooms} onChange={(h) => onChange({ ...filters, hideRooms: h })} />
+        <ShowHide label={copy.platforms} options={platformOptions} hidden={filters.hidePlatforms} onChange={(h) => onChange({ ...filters, hidePlatforms: h })} />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <label className="flex h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm">
+          <Switch
+            checked={pastShown}
+            onCheckedChange={(on) =>
+              onChange({ ...filters, hideGroups: on ? filters.hideGroups.filter((g) => g !== "past") : [...filters.hideGroups, "past"] })
+            }
+          />
+          {copy.showPast}
+        </label>
+        <span className="text-sm text-muted-foreground">{copy.shown(shown, total)}</span>
+        {anyHidden ? (
+          <Button variant="link" className="h-auto p-0" onClick={() => onChange({ search: "", hideGroups: [], hideRooms: [], hidePlatforms: [] })}>
+            {copy.clear}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -326,3 +326,17 @@
 [data-themed] svg.lucide {
   stroke-width: var(--icon-stroke, 2);
 }
+
+/*
+ * Dual-screen phones spanned across both screens (Surface Duo, a Galaxy Fold
+ * opened flat in a browser that reports its halves): the menu stays on the
+ * left screen and the page sits wholly on the right one, so nothing falls
+ * into the hinge. Ignored everywhere else.
+ */
+@media (horizontal-viewport-segments: 2) {
+  [data-host-main] {
+    margin-left: env(viewport-segment-left 1 0, 0px) !important;
+    width: env(viewport-segment-width 1 0, 100%);
+    max-width: env(viewport-segment-width 1 0, 100%);
+  }
+}

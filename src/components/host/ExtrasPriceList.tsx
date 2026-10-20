@@ -18,7 +18,8 @@ import { cn } from "@/lib/utils";
 import { GripVertical, Trash2 } from "lucide-react";
 
 /** One line per item: grab bar, name, price, max, auto-approve, offered, delete. */
-const ROW = "grid min-w-[40rem] grid-cols-[1.75rem_minmax(8rem,1fr)_6.5rem_3.75rem_3.25rem_3.25rem_2.25rem] items-center gap-2 px-2";
+// A table from medium screens up; below that each item is a two-line card (name, then its settings, labelled).
+const ROW = "grid grid-cols-[1.75rem_minmax(0,1fr)_2.25rem] items-center gap-2 px-2 md:grid-cols-[1.75rem_minmax(8rem,1fr)_6.5rem_3.75rem_3.25rem_3.25rem_2.25rem]";
 
 const UNITS = ["item", "hour", "pack", "bag_day"] as const;
 
@@ -125,8 +126,8 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
       <section className="card-soft p-5">
         <h2 className="text-lg">{copy.priceList}</h2>
         <p className="text-sm text-muted-foreground">{copy.priceListSub}</p>
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-surface">
-          <div className={cn(ROW, "border-b border-border py-2 text-xs font-medium text-muted-foreground")}>
+        <div className="mt-4 rounded-2xl border border-border bg-surface">
+          <div className={cn(ROW, "hidden border-b border-border py-2 text-xs font-medium text-muted-foreground md:grid")}>
             <span aria-hidden />
             <span>{ui.name}</span>
             <span>{ui.price}</span>
@@ -162,6 +163,7 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
                   <span className="min-w-0 truncate text-sm font-medium" title={`${it.name} · ${copy.units[it.unit]}`}>
                     {it.name} <span className="font-normal text-muted-foreground">· {copy.units[it.unit]}</span>
                   </span>
+                  <div className="order-last col-span-3 flex flex-wrap items-center gap-x-4 gap-y-2 pb-1 pl-8 md:contents">
                   <label className="flex items-center gap-1 text-sm">
                     <span className="text-muted-foreground">{symbol}</span>
                     <Input
@@ -170,10 +172,20 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
                       onBlur={(e) => { const v = Math.round(Number(e.target.value) * 100); if (v !== it.pricePence) update(it, { pricePence: v }); }}
                     />
                   </label>
-                  <Input type="number" min="1" max="20" defaultValue={it.maxQty} className="h-8 w-14 px-2" aria-label={`${it.name} max`}
-                    onBlur={(e) => { const v = Number(e.target.value); if (v !== it.maxQty && v >= 1) update(it, { maxQty: v }); }} />
-                  <Switch checked={it.autoApprove} onCheckedChange={(v) => update(it, { autoApprove: v })} aria-label={`${it.name}: ${copy.autoApprove}`} />
-                  <Switch checked={it.active} onCheckedChange={(v) => update(it, { active: v })} aria-label={`${it.name}: ${it.isFree ? copy.free : copy.active}`} />
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <span className="text-muted-foreground md:hidden">{copy.max}</span>
+                    <Input type="number" min="1" max="20" defaultValue={it.maxQty} className="h-8 w-14 px-2" aria-label={`${it.name} max`}
+                      onBlur={(e) => { const v = Number(e.target.value); if (v !== it.maxQty && v >= 1) update(it, { maxQty: v }); }} />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <Switch checked={it.autoApprove} onCheckedChange={(v) => update(it, { autoApprove: v })} aria-label={`${it.name}: ${copy.autoApprove}`} />
+                    <span className="text-muted-foreground md:hidden">{ui.auto}</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <Switch checked={it.active} onCheckedChange={(v) => update(it, { active: v })} aria-label={`${it.name}: ${it.isFree ? copy.free : copy.active}`} />
+                    <span className="text-muted-foreground md:hidden">{ui.offered}</span>
+                  </label>
+                  </div>
                   <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label={`${it.name}: ${ui.remove}`}
                     onClick={() => { if (confirm(ui.removeConfirm)) void run(() => removeItem({ data: { propertyId, key: it.key } }), ui.removed); }}>
                     <Trash2 className="size-4" />

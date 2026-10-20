@@ -390,25 +390,34 @@ function InRoomGuides({ propertyId }: { propertyId: string }) {
   const codesFn = useServerFn(getRoomGuideCodes);
   const q = useQuery({ queryKey: ["room-guide-codes", propertyId], queryFn: () => codesFn({ data: { propertyId } }) });
   const rooms = q.data?.rooms ?? [];
+  const [why, setWhy] = useState(false);
   return (
     <section className="rounded-3xl border-2 border-primary/30 bg-primary/5 p-5">
-      <div className="flex flex-wrap items-start gap-4">
-        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
-          <QrCode className="size-6" />
-        </span>
-        <div className="min-w-0 flex-1 space-y-1">
-          <h2 className="text-xl">{roomCopy.title}</h2>
-          <p className="text-muted-foreground">{roomCopy.body}</p>
-          <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
-            {roomCopy.points.map((pt) => (
-              <li key={pt} className="flex gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {pt}
-              </li>
-            ))}
-          </ul>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
+            <QrCode className="size-6" />
+          </span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <h2 className="text-xl">{roomCopy.title}</h2>
+            {/* The why, open on wider screens; one tap away on a phone. */}
+            <button type="button" className="text-sm font-medium text-primary sm:hidden" aria-expanded={why} onClick={() => setWhy((w) => !w)}>
+              {why ? roomCopy.whyHide : roomCopy.why}
+            </button>
+            <div className={cn(why ? "block" : "hidden", "sm:block")}>
+              <p className="mt-1 text-muted-foreground">{roomCopy.body}</p>
+              <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
+                {roomCopy.points.map((pt) => (
+                  <li key={pt} className="flex gap-2">
+                    <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {pt}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
         {rooms.length > 1 ? (
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="w-full sm:w-auto">
             <Link to="/app/room-qr/$propertyId" params={{ propertyId }}>
               <Printer className="size-4" /> {roomCopy.printAll(rooms.length)}
             </Link>
@@ -421,7 +430,7 @@ function InRoomGuides({ propertyId }: { propertyId: string }) {
         <ul className="mt-4 divide-y divide-border rounded-2xl border border-border bg-surface">
           {rooms.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
-              <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
+              <span className="min-w-0 flex-1 basis-32 truncate font-medium">{r.name}</span>
               {r.code ? (
                 <>
                   <Button asChild size="sm" variant="ghost">

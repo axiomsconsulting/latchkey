@@ -145,9 +145,10 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
               <div className="flex flex-wrap items-start gap-3">
                 <Avatar name={m.name ?? m.email} url={m.avatarUrl} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">
-                    {m.name ?? m.email}
-                    {m.isYou ? <span className="ml-2 text-xs font-normal text-muted-foreground">({copy.you})</span> : null}
+                  {/* A long email shortens; "(You)" always stays in view. */}
+                  <p className="flex min-w-0 items-baseline gap-2 font-medium">
+                    <span className="truncate">{m.name ?? m.email}</span>
+                    {m.isYou ? <span className="shrink-0 text-xs font-normal text-muted-foreground">({copy.you})</span> : null}
                   </p>
                   {m.name ? <p className="truncate text-sm text-muted-foreground">{m.email}</p> : null}
                   <p className="text-xs text-muted-foreground">

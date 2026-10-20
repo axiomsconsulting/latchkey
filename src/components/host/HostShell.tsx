@@ -2,12 +2,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MoreHorizontal } from "lucide-react";
+import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MessageSquareHeart, MoreHorizontal } from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
-import { AccessGate, AnnouncementPopup, FeedbackButton, ShellBanners } from "@/components/host/ShellExtras";
+import { AccessGate, AnnouncementPopup, FeedbackButton, FeedbackDialog, ShellBanners } from "@/components/host/ShellExtras";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
 import { whatsNewCopy } from "@/content/copy";
@@ -24,7 +25,7 @@ import { rememberHost } from "@/lib/last-host";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
-import { adminCopy, auth, billingCopy, brand, hostNav, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
+import { adminCopy, auth, billingCopy, brand, feedbackCopy, hostNav, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
 import { useAlerts, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { getWorkspace } from "@/lib/host.functions";
 import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
@@ -80,6 +81,7 @@ export function HostShell() {
   const alertCount = useAlerts().data?.alerts.length ?? 0;
   const { data } = useWorkspace();
   const { canWrite, isOwner } = useRole();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   // The phone dock: the same menu, without Latchkey admin (reached from Settings there).
   const dock = useMenu(data?.isSuperAdmin === true).filter((i) => i.id !== "admin").slice(0, 7);
   useAccessWatch();
@@ -174,20 +176,44 @@ export function HostShell() {
         </Link>
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
         <HostInbox propertyId={selectedId ?? null} />
-        <Link to="/app/whats-new" aria-label={whatsNewCopy.navLabel} className="grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-secondary">
-          <Sparkles className="size-5" />
-        </Link>
-        <FeedbackButton compact className="px-2.5" />
         <UserChip compact className="px-1.5" />
-        <button
-          type="button"
-          onClick={leave}
-          aria-label={auth.signOut}
-          className="grid size-11 place-items-center rounded-xl text-muted-foreground"
-        >
-          <LogOut className="size-5" />
-        </button>
+        {/* Everything else in one menu, so the name has room on a phone. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label={hostNav.moreDrawer} className="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-secondary">
+              <MoreHorizontal className="size-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60 rounded-2xl p-1.5">
+            <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
+              <Link to="/app/whats-new"><Sparkles className="size-5" /> {whatsNewCopy.navLabel}</Link>
+            </DropdownMenuItem>
+            {canWrite ? (
+              <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
+                <Link to="/app/register"><NotebookPen className="size-5" /> {hostNav.register}</Link>
+              </DropdownMenuItem>
+            ) : null}
+            {isOwner ? (
+              <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
+                <Link to="/app/activity"><History className="size-5" /> {hostNav.activity}</Link>
+              </DropdownMenuItem>
+            ) : null}
+            {isOwner ? (
+              <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
+                <Link to="/app/billing"><CreditCard className="size-5" /> {billingCopy.navLabel}</Link>
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuItem className="min-h-11 gap-3 rounded-xl" onSelect={() => setFeedbackOpen(true)}>
+              <MessageSquareHeart className="size-5" /> {feedbackCopy.button}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="min-h-11 gap-3 rounded-xl" onSelect={() => void leave()}>
+              <LogOut className="size-5" /> {auth.signOut}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
+      {feedbackOpen ? <FeedbackDialog onClose={() => setFeedbackOpen(false)} /> : null}
       {(data?.memberships.length ?? 0) > 1 || properties.length > 1 || readOnly ? (
         <div className="mx-3 mt-2 flex items-center gap-2 md:hidden print:hidden">
           <HostSwitcher className="h-10 flex-1 rounded-2xl" />
@@ -197,6 +223,7 @@ export function HostShell() {
       ) : null}
 
       <main
+        data-host-main
         className={cn(
           "px-4 py-6 pb-32 transition-[margin,padding] duration-300 ease-out sm:px-6 md:pb-10",
           navMode === "full" ? "md:ml-72 md:py-10" : navMode === "rail" ? "md:ml-28 md:py-10" : "md:pb-10 md:pt-32",
@@ -228,7 +255,7 @@ export function HostShell() {
             item={it}
             onClick={haptic}
             ariaLabel={it.label}
-            className="spring flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 text-[10px] font-medium text-muted-foreground @container active:scale-90"
+            className="spring flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 text-[10px] font-medium text-muted-foreground @container active:scale-90 max-[360px]:px-0 max-[360px]:text-[9px] max-[360px]:tracking-tight"
             activeProps={{ className: "bg-primary !text-primary-foreground shadow-soft", "aria-current": "page" }}
           >
             <span className="relative">

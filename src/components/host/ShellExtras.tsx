@@ -164,7 +164,7 @@ export function FeedbackButton({ compact = false, className }: { compact?: boole
   );
 }
 
-function FeedbackDialog({ onClose }: { onClose: () => void }) {
+export function FeedbackDialog({ onClose }: { onClose: () => void }) {
   const send = useServerFn(sendFeedback);
   const ws = useWorkspace();
   const [tab, setTab] = useState<"host_rating" | "feature" | "bug">("host_rating");
