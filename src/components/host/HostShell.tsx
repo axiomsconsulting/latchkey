@@ -15,6 +15,7 @@ import { whatsNewCopy } from "@/content/copy";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
+import { OmniSearch } from "@/components/host/OmniSearch";
 import { NavIcon } from "@/components/NavIcon";
 import { MenuStrip } from "@/components/host/MenuStrip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -83,7 +84,8 @@ export function HostShell() {
   const { canWrite, isOwner } = useRole();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   // The phone dock: the same menu, without Latchkey admin (reached from Settings there).
-  const dock = useMenu(data?.isSuperAdmin === true).filter((i) => i.id !== "admin").slice(0, 7);
+  const allPages = useMenu(data?.isSuperAdmin === true);
+  const dock = allPages.filter((i) => i.id !== "admin").slice(0, 7);
   useAccessWatch();
   // Next time "/" opens on this device, go straight to the dashboard (not the shared demo).
   useEffect(() => {
@@ -165,7 +167,8 @@ export function HostShell() {
       ) : null}
 
       {/* Desktop: messages sit top right, away from the sidebar */}
-      <div className="glass fixed right-6 top-6 z-30 hidden rounded-2xl p-1 md:block print:hidden">
+      <div className="glass fixed right-6 top-6 z-30 hidden items-center gap-0.5 rounded-2xl p-1 md:flex print:hidden">
+        <OmniSearch pages={allPages} />
         <HostInbox propertyId={selectedId ?? null} />
       </div>
 
@@ -175,6 +178,7 @@ export function HostShell() {
           <LogoMark theme={theme} name={title} className="size-9" />
         </Link>
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
+        <OmniSearch pages={allPages} className="size-10" />
         <HostInbox propertyId={selectedId ?? null} />
         <UserChip compact className="px-1.5" />
         {/* Everything else in one menu, so the name has room on a phone. */}

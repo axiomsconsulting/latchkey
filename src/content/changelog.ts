@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.49.0",
+    date: "2026-10-20",
+    title: "Search everything, and a quicker Settings",
+    items: [
+      { kind: "new", area: "Settings", text: "Search from the top of every dashboard page (or press Ctrl K / ⌘K): guests and bookings, rooms, your guide, extras, jobs, tradespeople, calendar links, pages, settings, features and logos. Only your own business's data shows, and nothing you've removed or hidden." },
+      { kind: "improved", area: "Settings", text: "Settings is grouped into Business, Guests, Money, Look, Alerts and apps, with a see-through list of sections that slides in at the side while you scroll, so you can jump to any of them." },
+      { kind: "fixed", area: "Guest guide", text: "Your logo and name now show on the guest guide's cover photo, not only when there's no photo." },
+    ],
+  },
+  {
     version: "0.48.0",
     date: "2026-10-20",
     title: "Your own quick tiles, room photos and privacy choices",

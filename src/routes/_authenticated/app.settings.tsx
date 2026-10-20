@@ -43,7 +43,9 @@ import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 import { rebrand } from "@/lib/brand";
 
-const FOCUS = ["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy"] as const;
+// Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
+const FOCUS = ["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "extras", "theme", "labels", "domain", "support", "integrations", "shortcuts", "shortcuts2", "adminLink"] as const;
+const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy"]);
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   // ?focus=<section> lands on that part of Settings.
@@ -73,7 +75,7 @@ type Host = {
 function SettingsPage() {
   const workspace = useWorkspace();
   const { focus } = Route.useSearch();
-  useLandOn(focus ? `settings-${focus}` : null, !workspace.isLoading);
+  useLandOn(focus ? (OWN_CARD.has(focus) ? `settings-${focus}` : `rail-${focus}`) : null, !workspace.isLoading);
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
   const load = useServerFn(loadDemoData);
