@@ -1,4 +1,4 @@
-import { CalendarDays, Gift } from "lucide-react";
+import { CalendarDays, Gift, KeyRound } from "lucide-react";
 
 import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeArt, ThemeIcon } from "@/components/theme/ThemeDecor";
@@ -15,18 +15,35 @@ import { coverFor } from "@/lib/theme-covers";
  * art), beside an invitation to add extras. Every template shows it in its
  * own colours, corners, type and buttons.
  */
-export function StayCover({ theme, name, extras, onExtras }: { theme: ThemeConfig; name: string; extras: boolean; onExtras: () => void }) {
+export type CoverInvite = { eyebrow: string; title: string; body: string; cta: string; href?: string; onClick?: () => void; icon?: "gift" | "key" };
+
+export function StayCover({
+  theme,
+  name,
+  extras,
+  onExtras,
+  invite,
+}: {
+  theme: ThemeConfig;
+  name: string;
+  /** The stay guide: the extras invitation beside the cover. */
+  extras: boolean;
+  onExtras?: () => void;
+  /** Or any other invitation beside it (the room guide: check in or open your stay). */
+  invite?: CoverInvite | undefined;
+}) {
+  const side: CoverInvite | null = invite ?? (extras ? { eyebrow: copy.eyebrow, title: copy.title, body: copy.body, cta: copy.cta, icon: "gift", ...(onExtras ? { onClick: onExtras } : {}) } : null);
   const centred = theme.layout === "centred";
   // A dark template (gold on navy) keeps its panel dark with the accent's line work; a light one uses its main colour.
   const dark = luminance(theme.background) < 0.2;
   const cover = coverFor(theme);
   return (
-    <section className={cn("card-soft grid overflow-hidden p-0", extras ? "sm:grid-cols-[1.15fr_1fr]" : "")} aria-label={copy.coverLabel}>
+    <section className={cn("card-soft grid overflow-hidden p-0", side ? "sm:grid-cols-[1.15fr_1fr]" : "")} aria-label={copy.coverLabel}>
       {cover ? (
-        <img src={cover} alt="" width={1280} height={768} className={cn("h-full w-full object-cover", extras ? "aspect-[16/10] sm:aspect-auto sm:min-h-64" : "aspect-[16/7]")} />
+        <img src={cover} alt="" width={1280} height={768} className={cn("h-full w-full object-cover", side ? "aspect-[16/10] sm:aspect-auto sm:min-h-64" : "aspect-[16/7]")} />
       ) : (
         <div
-          className={cn("relative flex items-center justify-center overflow-hidden", dark ? "border-b border-border sm:border-b-0 sm:border-r" : "bg-primary text-primary-foreground", extras ? "aspect-[16/9] sm:aspect-auto sm:min-h-64" : "aspect-[16/6]")}
+          className={cn("relative flex items-center justify-center overflow-hidden", dark ? "border-b border-border sm:border-b-0 sm:border-r" : "bg-primary text-primary-foreground", side ? "aspect-[16/9] sm:aspect-auto sm:min-h-64" : "aspect-[16/6]")}
           style={dark ? { background: theme.background, color: theme.accent } : undefined}
         >
           <ThemeArt artwork={theme.artwork === "none" ? "hills" : theme.artwork} className="absolute inset-x-0 bottom-0 h-1/2 opacity-25" />
@@ -37,14 +54,22 @@ export function StayCover({ theme, name, extras, onExtras }: { theme: ThemeConfi
           </div>
         </div>
       )}
-      {extras ? (
+      {side ? (
         <div className={cn("flex flex-col justify-center gap-3 p-6 sm:p-8", centred && "items-center text-center")}>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">{copy.eyebrow}</p>
-          <h2 className="text-2xl leading-tight sm:text-3xl">{copy.title}</h2>
-          <p className="text-muted-foreground">{copy.body}</p>
-          <Button size="lg" className={cn("mt-2 h-12", centred ? "self-center" : "self-stretch sm:self-start")} onClick={onExtras}>
-            <Gift className="size-5" /> {copy.cta}
-          </Button>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">{side.eyebrow}</p>
+          <h2 className="text-2xl leading-tight sm:text-3xl">{side.title}</h2>
+          <p className="text-muted-foreground">{side.body}</p>
+          {side.href ? (
+            <Button asChild size="lg" className={cn("mt-2 h-12", centred ? "self-center" : "self-stretch sm:self-start")}>
+              <a href={side.href}>
+                {side.icon === "key" ? <KeyRound className="size-5" /> : <Gift className="size-5" />} {side.cta}
+              </a>
+            </Button>
+          ) : (
+            <Button size="lg" className={cn("mt-2 h-12", centred ? "self-center" : "self-stretch sm:self-start")} onClick={side.onClick}>
+              {side.icon === "key" ? <KeyRound className="size-5" /> : <Gift className="size-5" />} {side.cta}
+            </Button>
+          )}
         </div>
       ) : null}
     </section>
@@ -125,5 +150,46 @@ export function StayHelp({ theme, onMessage }: { theme: ThemeConfig; onMessage: 
         {copy.helpCta}
       </Button>
     </section>
+  );
+}
+
+/**
+ * Quick ways in at the top of a guide, in the theme's icon style: one row
+ * you can swipe on a phone, a tidy grid on wider screens.
+ */
+export function QuickTiles({ theme, label, tiles, onPick }: { theme: ThemeConfig; label: string; tiles: Array<{ id: string; icon: string; label: string }>; onPick: (id: string) => void }) {
+  if (tiles.length < 2) return null;
+  return (
+    <nav aria-label={label} className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-6 sm:overflow-visible sm:px-0">
+      {tiles.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => onPick(t.id)}
+          className="card-soft flex min-h-24 w-24 shrink-0 flex-col items-center justify-center gap-2 p-3 text-center text-sm leading-tight hover:bg-secondary sm:w-auto"
+        >
+          <ThemeIcon theme={theme} icon={t.icon} className="size-7" />
+          <span className="line-clamp-2">{t.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+/** A one-line pill in the theme's shape (e.g. the Wi-Fi name and password). */
+export function InfoPill({ theme, items }: { theme: ThemeConfig; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <p
+      className="flex flex-col items-center gap-x-3 gap-y-1 bg-secondary px-5 py-2.5 text-center text-sm font-medium text-secondary-foreground sm:flex-row sm:flex-wrap sm:justify-center"
+      style={{ borderRadius: theme.buttonRadius >= 1 ? "var(--radius-button)" : "var(--radius-lg)" }}
+    >
+      {items.map((p, i) => (
+        <span key={p} className="flex items-center gap-3">
+          {i > 0 ? <span aria-hidden className="hidden size-1 rounded-full bg-current opacity-50 sm:block" /> : null}
+          {p}
+        </span>
+      ))}
+    </p>
   );
 }

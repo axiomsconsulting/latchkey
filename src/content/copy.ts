@@ -1380,6 +1380,10 @@ export const roomGuideCopy = branded({
   needSomething: "Staying here? Check in or open your stay to message your host and order extras.",
   openStay: "Open your stay",
   checkIn: "Check in or find your stay",
+  stayingHere: "Staying here?",
+  stayEyebrow: "Your stay",
+  checkInTitle: "Check in, or open your stay",
+  checkInBody: "Message your host and order extras from your own stay page. No app, no login.",
   gone: "This room guide isn't available any more. Please ask your host.",
   footer: "This guide is for this room. Your host keeps it up to date.",
 });

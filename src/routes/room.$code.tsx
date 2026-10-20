@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarX, Check, MessageCircle, Wifi } from "lucide-react";
+import { CalendarX, Check, Wifi } from "lucide-react";
 
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { sectionIcon } from "@/components/guest/guide-icons";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
+import { InfoPill, QuickTiles, StayCover } from "@/components/guest/StayHero";
 import { guideCopy as gcopy, guest as copy, roomGuideCopy as rcopy } from "@/content/copy";
 import { getRoomGuide } from "@/lib/guide.functions";
 import { rememberedStay } from "@/lib/stay-link";
@@ -42,6 +42,7 @@ function forgetIcon(key: string) {
 function RoomGuide() {
   const g = Route.useLoaderData();
   const [stay, setStay] = useState<string | null>(null);
+  const [open, setOpen] = useState<string[]>(() => (g.found && g.guide[0] ? [g.guide[0].key] : []));
   useEffect(() => {
     if (g.found) setStay(rememberedStay(g.propertyId));
   }, [g]);
@@ -63,13 +64,34 @@ function RoomGuide() {
           <p className="mt-2 text-lg text-muted-foreground">{rcopy.subtitle(g.propertyName)}</p>
         </header>
 
-        <section className="card-soft flex flex-wrap items-center gap-3 p-5">
-          <MessageCircle className="size-6 shrink-0 text-primary" aria-hidden />
-          <p className="min-w-0 flex-1 text-lg">{stay ? rcopy.yourStay : rcopy.needSomething}</p>
-          <Button asChild size="lg" className="h-12">
-            <a href={stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`}>{stay ? rcopy.openStay : rcopy.checkIn}</a>
-          </Button>
-        </section>
+        {/* The same top as the stay guide: quick ways in, the cover with "staying here?", and the Wi-Fi. */}
+        <QuickTiles
+          theme={g.theme}
+          label={gcopy.quickTitle}
+          tiles={[
+            ...(g.wifi ? [{ id: "room-wifi", icon: "wifi", label: copy.stayNetwork }] : []),
+            ...g.guide.slice(0, 5).map((sec) => ({ id: `guide-${sec.key}`, icon: "book-open", label: sec.title })),
+          ]}
+          onPick={(id) => {
+            const key = id.startsWith("guide-") ? id.slice(6) : null;
+            if (key) setOpen((o) => (o.includes(key) ? o : [...o, key]));
+            window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+          }}
+        />
+        <StayCover
+          theme={g.theme}
+          name={g.propertyName}
+          extras={false}
+          invite={{
+            eyebrow: stay ? rcopy.stayEyebrow : rcopy.stayingHere,
+            title: stay ? rcopy.openStay : rcopy.checkInTitle,
+            body: stay ? rcopy.yourStay : rcopy.checkInBody,
+            cta: stay ? rcopy.openStay : rcopy.checkIn,
+            href: stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`,
+            icon: "key",
+          }}
+        />
+        {g.wifi ? <InfoPill theme={g.theme} items={[`${copy.stayNetwork}: ${g.wifi.name}`, ...(g.wifi.password ? [`${copy.stayPassword}: ${g.wifi.password}`] : [])]} /> : null}
 
         {g.forget.length ? (
           <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">
@@ -89,7 +111,7 @@ function RoomGuide() {
         ) : null}
 
         {g.wifi ? (
-          <section className="card-soft flex flex-wrap items-center gap-3 p-5">
+          <section id="room-wifi" className="card-soft flex scroll-mt-6 flex-wrap items-center gap-3 p-5">
             <Wifi className="size-6 text-primary" aria-hidden />
             <span className="text-lg">
               {copy.stayNetwork}: <span className="font-medium">{g.wifi.name}</span>
@@ -116,11 +138,11 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        <Accordion type="multiple" defaultValue={[g.guide[0]?.key ?? ""]} className="space-y-3">
+        <Accordion type="multiple" value={open} onValueChange={setOpen} className="space-y-3">
           {g.guide.map((sec) => {
             const Icon = sectionIcon(sec.key);
             return (
-              <AccordionItem key={sec.key} value={sec.key} className="card-soft border-0 px-5">
+              <AccordionItem key={sec.key} id={`guide-${sec.key}`} value={sec.key} className="card-soft scroll-mt-6 border-0 px-5">
                 <AccordionTrigger className="min-h-16 text-left font-display text-xl hover:no-underline">
                   <span className="flex items-center gap-3">
                     <Icon className="size-6 text-primary" aria-hidden />
