@@ -1170,6 +1170,66 @@ export type Database = {
           },
         ]
       }
+      guide_attachments: {
+        Row: {
+          created_at: string
+          file_id: string
+          host_id: string
+          id: string
+          kind: string
+          mime: string
+          name: string
+          position: number
+          property_id: string
+          provider: string
+          section_key: string
+          size_bytes: number
+        }
+        Insert: {
+          created_at?: string
+          file_id: string
+          host_id: string
+          id?: string
+          kind: string
+          mime: string
+          name: string
+          position?: number
+          property_id: string
+          provider?: string
+          section_key: string
+          size_bytes?: number
+        }
+        Update: {
+          created_at?: string
+          file_id?: string
+          host_id?: string
+          id?: string
+          kind?: string
+          mime?: string
+          name?: string
+          position?: number
+          property_id?: string
+          provider?: string
+          section_key?: string
+          size_bytes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_attachments_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_attachments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_steps: {
         Row: {
           body: string | null
@@ -1464,6 +1524,35 @@ export type Database = {
             foreignKeyName: "host_members_host_id_fkey"
             columns: ["host_id"]
             isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      host_storage: {
+        Row: {
+          created_at: string
+          folder_id: string
+          host_id: string
+          provider: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          host_id: string
+          provider?: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          host_id?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_storage_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: true
             referencedRelation: "hosts"
             referencedColumns: ["id"]
           },
@@ -2089,6 +2178,24 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_secrets: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       presence_log: {
         Row: {
           at: string
@@ -2607,6 +2714,7 @@ export type Database = {
         Row: {
           brand: Json
           cost_model: Json | null
+          guide_starters: Json
           id: number
           integrations: Json
           invoice_nightly_lines: boolean
@@ -2617,11 +2725,13 @@ export type Database = {
           projection: Json | null
           signups_open: boolean
           support_email: string | null
+          ui: Json
           updated_at: string
         }
         Insert: {
           brand?: Json
           cost_model?: Json | null
+          guide_starters?: Json
           id?: number
           integrations?: Json
           invoice_nightly_lines?: boolean
@@ -2632,11 +2742,13 @@ export type Database = {
           projection?: Json | null
           signups_open?: boolean
           support_email?: string | null
+          ui?: Json
           updated_at?: string
         }
         Update: {
           brand?: Json
           cost_model?: Json | null
+          guide_starters?: Json
           id?: number
           integrations?: Json
           invoice_nightly_lines?: boolean
@@ -2647,6 +2759,7 @@ export type Database = {
           projection?: Json | null
           signups_open?: boolean
           support_email?: string | null
+          ui?: Json
           updated_at?: string
         }
         Relationships: []
