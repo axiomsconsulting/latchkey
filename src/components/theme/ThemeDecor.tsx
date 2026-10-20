@@ -102,6 +102,17 @@ function Hills() {
 
 const ART: Record<Exclude<Artwork, "none">, () => ReactNode> = { skyline: Skyline, palace: Palace, dunes: Dunes, coast: Coast, hills: Hills };
 
+/** One of the theme's line drawings on its own (for a panel), in the current text colour. */
+export function ThemeArt({ artwork, className }: { artwork: Artwork; className?: string }) {
+  if (artwork === "none") return null;
+  const Art = ART[artwork];
+  return (
+    <div aria-hidden className={className}>
+      <Art />
+    </div>
+  );
+}
+
 /** A flourish for each corner of an ornate frame. */
 function Flourish({ className }: { className?: string }) {
   return (
@@ -210,7 +221,7 @@ export function BrandBlock({ theme, name, size = "lg", className }: { theme: The
 }
 
 /** An icon in the theme's own style: its colour, line weight and (optional) circle or square. */
-export function ThemeIcon({ theme, icon, className }: { theme: ThemeConfig; icon: string; className?: string }) {
+export function ThemeIcon({ theme, icon, className }: { theme: ThemeConfig; icon: string; className?: string | undefined }) {
   const Icon = NAV_ICONS[icon] ?? NAV_ICONS["sparkles"]!;
   const glyph = <Icon className={cn("size-6", className)} style={{ color: "var(--icon)" }} aria-hidden />;
   if (theme.iconFrame === "none") return glyph;

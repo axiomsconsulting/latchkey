@@ -2821,3 +2821,21 @@ export const driveAdminCopy = branded({
   results: { connected: "Google Drive connected.", cancelled: "Connecting was cancelled.", expired: "That took too long. Please try again.", failed: "Google didn't finish connecting. Please try again." } as Record<string, string>,
   scopeNote: "Latchkey only asks for permission to see the files it creates (drive.file), nothing else in the Drive.",
 });
+
+export const stayHeroCopy = branded({
+  coverLabel: "Your stay",
+  eyebrow: "Make it special",
+  title: "Add an extra touch",
+  body: "Late check-out, breakfast, an early arrival or something special: ask here and your host takes care of it.",
+  cta: "Explore extras",
+  inFrom: (t: string) => `Check-in from ${t}`,
+  outBy: (t: string, day: string) => `Check-out by ${t}, ${day}`,
+  wifi: (name: string) => `Wi-Fi: ${name}`,
+  yourStay: "Your stay",
+  nights: (n: number) => (n === 1 ? "1 night" : `${n} nights`),
+  room: "Your room",
+  helpEyebrow: "Need something?",
+  helpBody: "Your host is here to help. Send a message any time.",
+  helpCta: "Message host",
+  messageTile: "Message host",
+});

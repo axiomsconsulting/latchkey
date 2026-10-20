@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, MessageCircle, Send } from "lucide-react";
@@ -34,6 +34,10 @@ const STATUS: Record<string, string> = {
   done: "Done",
 };
 
+/** Fire this (window event) to open the guest's messages from anywhere on the guide. */
+export const OPEN_STAY_INBOX = "latchkey:open-stay-inbox";
+export const openStayInbox = () => window.dispatchEvent(new Event(OPEN_STAY_INBOX));
+
 export function StayInbox({ token }: { token: string }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -55,6 +59,14 @@ export function StayInbox({ token }: { token: string }) {
       await qc.invalidateQueries({ queryKey: ["stay-inbox", token] });
     },
   });
+
+  // Other parts of the guide ("Message host") open this too.
+  useEffect(() => {
+    const open = () => void onOpenChange(true);
+    window.addEventListener(OPEN_STAY_INBOX, open);
+    return () => window.removeEventListener(OPEN_STAY_INBOX, open);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data?.unread]);
 
   async function onOpenChange(next: boolean) {
     setOpen(next);

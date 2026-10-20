@@ -7,14 +7,16 @@ import { CalendarX, Check, Wifi } from "lucide-react";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { StayExtras } from "@/components/guest/StayExtras";
-import { StayInbox } from "@/components/guest/StayInbox";
+import { StayInbox, openStayInbox } from "@/components/guest/StayInbox";
+import { StayCover, StayHelp, StaySummary } from "@/components/guest/StayHero";
+import { cn } from "@/lib/utils";
 import { StayInvoice } from "@/components/guest/StayInvoice";
 import { StayReview } from "@/components/guest/StayReview";
 import { StayServices } from "@/components/guest/StayServices";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { sectionIcon } from "@/components/guest/guide-icons";
-import { guideCopy as gcopy, guest as copy } from "@/content/copy";
+import { guideCopy as gcopy, guest as copy, stayHeroCopy } from "@/content/copy";
 import { getStay } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
 import { ThemeIcon } from "@/components/theme/ThemeDecor";
@@ -78,7 +80,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   const tiles = [
     ...(p?.wifi_name ? [{ id: "stay-wifi", icon: "wifi", label: copy.stayNetwork }] : []),
     ...s.guide.slice(0, p?.wifi_name ? 3 : 4).map((g) => ({ id: `guide-${g.key}`, icon: "book-open", label: g.title, key: g.key })),
-    ...(s.readOnly ? [] : [{ id: "stay-extras", icon: "gift", label: gcopy.quickExtras }]),
+    ...(s.readOnly ? [] : [{ id: "stay-extras", icon: "gift", label: gcopy.quickExtras }, { id: "message", icon: "message-circle", label: stayHeroCopy.messageTile }]),
   ];
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
@@ -95,12 +97,16 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         </div>
 
         {tiles.length > 1 ? (
-          <nav aria-label={gcopy.quickTitle} className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <nav aria-label={gcopy.quickTitle} className={cn("grid gap-2", tiles.length >= 6 ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3 sm:grid-cols-5")}>
             {tiles.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => {
+                  if (t.id === "message") {
+                    openStayInbox();
+                    return;
+                  }
                   if ("key" in t && t.key) setOpen((o) => (o.includes(t.key) ? o : [...o, t.key]));
                   jumpTo(t.id);
                 }}
@@ -113,7 +119,18 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           </nav>
         ) : null}
 
-        {theme.coverImageUrl ? <img src={theme.coverImageUrl} alt="" className="aspect-[16/7] w-full rounded-2xl object-cover shadow-soft" /> : null}
+        {/* The cover banner, the stay at a glance, and help: in every template's own look. */}
+        <StayCover theme={theme} name={p?.name ?? ""} extras={!s.readOnly} onExtras={() => jumpTo("stay-extras")} />
+        <StaySummary
+          theme={theme}
+          checkInDate={s.checkInDate}
+          checkInTime={s.checkInTime}
+          checkOutDate={s.checkOutDate}
+          checkOutTime={s.checkOutTime}
+          wifi={p?.wifi_name ?? null}
+          room={s.room ? { name: s.room.display_name, title: s.room.public_title } : null}
+        />
+        {s.readOnly ? null : <StayHelp theme={theme} onMessage={openStayInbox} />}
 
 
         <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">

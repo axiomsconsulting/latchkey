@@ -1327,14 +1327,14 @@ export const getStay = createServerFn({ method: "GET" })
     }
     const { data: b } = await db
       .from("bookings")
-      .select("guest_full_name, check_in_date, check_out_date, check_out_time, room_id, property_id, status")
+      .select("guest_full_name, check_in_date, check_out_date, check_in_time, check_out_time, room_id, property_id, status")
       .eq("id", t.booking_id)
       .single();
     if (!b || b.status === "cancelled") return { found: false as const };
     const [{ data: p }, { data: room }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("name, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
+        .select("name, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
         .eq("id", b.property_id)
         .single(),
       b.room_id
@@ -1413,6 +1413,8 @@ export const getStay = createServerFn({ method: "GET" })
       found: true as const,
       propertyId: b.property_id,
       firstName: firstName(b.guest_full_name),
+      checkInDate: b.check_in_date as string,
+      checkInTime: ((b as { check_in_time?: string | null }).check_in_time ?? (p as { default_check_in_time?: string } | null)?.default_check_in_time ?? "15:00").slice(0, 5),
       checkOutDate: b.check_out_date,
       checkOutTime,
       property: p,
