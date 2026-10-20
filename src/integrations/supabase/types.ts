@@ -2938,6 +2938,44 @@ export type Database = {
           },
         ]
       }
+      theme_templates: {
+        Row: {
+          blurb: string
+          config: Json
+          created_at: string
+          created_by: string | null
+          host_id: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          blurb?: string
+          config: Json
+          created_at?: string
+          created_by?: string | null
+          host_id?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          blurb?: string
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          host_id?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theme_templates_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "hosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trades: {
         Row: {
           area: string | null
