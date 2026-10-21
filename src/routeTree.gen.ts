@@ -34,6 +34,7 @@ import { Route as AuthenticatedAppGuidesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAppHousekeepingRouteImport } from './routes/_authenticated/app.housekeeping'
 import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authenticated/app.properties'
 import { Route as AuthenticatedAppRegisterRouteImport } from './routes/_authenticated/app.register'
+import { Route as AuthenticatedAppReportsRouteImport } from './routes/_authenticated/app.reports'
 import { Route as AuthenticatedAppServicesRouteImport } from './routes/_authenticated/app.services'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
@@ -191,6 +192,11 @@ const AuthenticatedAppRegisterRoute =
     path: '/register',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppReportsRoute = AuthenticatedAppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppServicesRoute =
   AuthenticatedAppServicesRouteImport.update({
     id: '/services',
@@ -354,6 +360,7 @@ export interface FileRoutesByFullPath {
   '/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/app/register': typeof AuthenticatedAppRegisterRoute
+  '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/services': typeof AuthenticatedAppServicesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
@@ -405,6 +412,7 @@ export interface FileRoutesByTo {
   '/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/app/register': typeof AuthenticatedAppRegisterRoute
+  '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/services': typeof AuthenticatedAppServicesRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup': typeof AuthenticatedAppSetupRoute
@@ -459,6 +467,7 @@ export interface FileRoutesById {
   '/_authenticated/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/_authenticated/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/_authenticated/app/register': typeof AuthenticatedAppRegisterRoute
+  '/_authenticated/app/reports': typeof AuthenticatedAppReportsRoute
   '/_authenticated/app/services': typeof AuthenticatedAppServicesRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
@@ -513,6 +522,7 @@ export interface FileRouteTypes {
     | '/app/housekeeping'
     | '/app/properties'
     | '/app/register'
+    | '/app/reports'
     | '/app/services'
     | '/app/settings'
     | '/app/setup'
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/app/housekeeping'
     | '/app/properties'
     | '/app/register'
+    | '/app/reports'
     | '/app/services'
     | '/app/settings'
     | '/app/setup'
@@ -617,6 +628,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/housekeeping'
     | '/_authenticated/app/properties'
     | '/_authenticated/app/register'
+    | '/_authenticated/app/reports'
     | '/_authenticated/app/services'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup'
@@ -858,6 +870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRegisterRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/reports': {
+      id: '/_authenticated/app/reports'
+      path: '/reports'
+      fullPath: '/app/reports'
+      preLoaderRoute: typeof AuthenticatedAppReportsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/services': {
       id: '/_authenticated/app/services'
       path: '/services'
@@ -1053,6 +1072,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppHousekeepingRoute: typeof AuthenticatedAppHousekeepingRoute
   AuthenticatedAppPropertiesRoute: typeof AuthenticatedAppPropertiesRoute
   AuthenticatedAppRegisterRoute: typeof AuthenticatedAppRegisterRoute
+  AuthenticatedAppReportsRoute: typeof AuthenticatedAppReportsRoute
   AuthenticatedAppServicesRoute: typeof AuthenticatedAppServicesRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetupRoute: typeof AuthenticatedAppSetupRoute
@@ -1073,6 +1093,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppHousekeepingRoute: AuthenticatedAppHousekeepingRoute,
   AuthenticatedAppPropertiesRoute: AuthenticatedAppPropertiesRoute,
   AuthenticatedAppRegisterRoute: AuthenticatedAppRegisterRoute,
+  AuthenticatedAppReportsRoute: AuthenticatedAppReportsRoute,
   AuthenticatedAppServicesRoute: AuthenticatedAppServicesRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetupRoute: AuthenticatedAppSetupRoute,

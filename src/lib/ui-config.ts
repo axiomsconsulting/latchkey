@@ -30,6 +30,7 @@ export const NAV_BUILT_INS: NavBuiltIn[] = [
   { id: "guides", to: "/app/guides", labelKey: "guides", icon: "book-open" },
   { id: "properties", to: "/app/properties", labelKey: "properties", icon: "home" },
   { id: "connections", to: "/app/connections", labelKey: "connections", icon: "plug" },
+  { id: "reports", to: "/app/reports", labelKey: "reports", icon: "chart-column" },
   { id: "settings", to: "/app/settings", labelKey: "settings", icon: "settings" },
   { id: "admin", to: "/app/admin", labelKey: "admin", icon: "shield-check", locked: true, superOnly: true },
 ];
