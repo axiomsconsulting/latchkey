@@ -29,6 +29,10 @@ export const demoCopy = branded({
   openingGuest: "Opening the guest journey…",
   openingHost: "Opening the host dashboard…",
   pageTitle: "See it for yourself",
+  regionsTitle: "Around the world",
+  regionsBody: "Four fictional properties, one on each hotel theme, with local rooms, guests, prices and breakfast menus.",
+  asGuest: "As a guest",
+  asHost: "As the host",
   pageBody: "No sign-up needed. Walk through a guest's check-in and stay, or look around the host's dashboard.",
   error: "The demo couldn't start just now. Please try again.",
 });
@@ -2694,6 +2698,14 @@ export const visitorsCopy = branded({
 
 /** Super admin: every routine that spends Lovable Run credits. */
 export const routinesCopy = branded({
+  demoLinksTitle: "Public demo links",
+  demoLinksBody: "Share these. Each regional link carries its own campaign name unless the link already has utm_* tags; results show in Visitors → Launch funnel.",
+  demoHill: "The Hill Suites · Amersham",
+  demoGuest: "Guest journey",
+  demoHost: "Host dashboard",
+  demoCampaign: (c: string) => `campaign: ${c}`,
+  demoCopy: "Copy",
+  demoCopied: "Link copied.",
   recordingTitle: "Recording account",
   recordingBody: "Refill the separate account you record videos from: three weeks of stays at about 70%, turnovers, a late arrival, an ID check, requests and a conversation. The sign-in comes from RECORDING_HOST_EMAIL in Lovable Cloud → Secrets; only its sample data is replaced.",
   recordingButton: "Reseed recording account",

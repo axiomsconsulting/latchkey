@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.56.0",
+    date: "2026-10-21",
+    title: "Demos around the world",
+    items: [
+      { kind: "new", area: "Demo", text: "Four more demo properties, one on each hotel theme: a motor lodge in Texas (Desert Star), a town house in Mayfair (Palace Heritage), a maison in Paris (Grand Crimson) and an express hotel in Tokyo (Express Green). Each has local rooms, guests, tradespeople, extras and a breakfast menu priced in local money, and its own guest and host demo links (latchkey.omsestates.uk/demo)." },
+      { admin: true, kind: "improved", area: "Demo", text: "One routine rebuilds every demo property daily (Routines → Public demo), each on its own. Routines lists every shareable demo link with its campaign name." },
+    ],
+  },
+  {
     version: "0.55.0",
     date: "2026-10-21",
     title: "Breakfast, and prices in local money",

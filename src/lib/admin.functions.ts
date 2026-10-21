@@ -702,7 +702,7 @@ export const runRoutineNow = createServerFn({ method: "POST" })
       }
       const { ensureTour } = await import("./demo.functions");
       await ensureTour(await admin(), true);
-      return { status: "Rebuilt (run by hand)" };
+      return { status: "Rebuilt every demo property (run by hand)" };
     } catch (e) {
       const status = `Failed: ${e instanceof Error ? e.message : "unknown error"}`;
       await recordRun(data.key, status, started);

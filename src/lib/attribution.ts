@@ -100,6 +100,21 @@ export function captureOnce() {
   captureAttribution();
 }
 
+/**
+ * A demo link's own campaign, used only when the visit came with no utm_*
+ * of its own (a post's tags always win).
+ */
+export function defaultCampaign(campaign: string) {
+  if (typeof window === "undefined") return;
+  const now = read();
+  if (now && UTM_KEYS.some((k) => now[k])) return;
+  try {
+    window.sessionStorage.setItem(KEY, JSON.stringify({ ...(now ?? {}), utm_source: "latchkey", utm_medium: "demo-link", utm_campaign: campaign, landing_path: window.location.pathname.slice(0, 200), captured_at: new Date().toISOString() }));
+  } catch {
+    // Storage blocked: nothing kept.
+  }
+}
+
 export function getAttribution(): Attribution {
   return typeof window === "undefined" ? {} : (read() ?? {});
 }

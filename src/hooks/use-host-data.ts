@@ -28,6 +28,16 @@ export function useRole() {
 /** Remembers which property the host was last looking at. */
 const PROPERTY_EVENT = "latchkey:property";
 
+/** Opens the dashboard on this property next (the regional demo links). */
+export function rememberSelectedProperty(id: string) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, id);
+    window.dispatchEvent(new Event(PROPERTY_EVENT));
+  } catch {
+    // Storage blocked: the dashboard opens on its first property instead.
+  }
+}
+
 function readStored(): string | null {
   try {
     return window.localStorage.getItem(STORAGE_KEY);

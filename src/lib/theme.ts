@@ -425,7 +425,7 @@ export const RESERVED_SLUGS = new Set([
   "pricing", "help", "support", "admin", "login", "signin", "signup", "register", "terms", "privacy", "www", "mail", "static",
   "enquire", "stay-again", "brand", "partners",
   // The shared public demo owns these.
-  "tour", "demo", "showcase",
+  "tour", "demo", "showcase", "desert-star-texas", "ashcombe-mayfair", "maison-vermeil-paris", "aoba-tokyo",
 ]);
 
 /**

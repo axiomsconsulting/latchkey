@@ -22,8 +22,10 @@ import {
   DEMO_PROPERTY,
   DEMO_ROOMS,
   DEMO_UNAVAILABILITY,
+  buildRecordingBookings,
   demoDates,
 } from "./demo-data";
+import type { ShowcaseSpec } from "./demo-showcase";
 
 const uuid = z.string().uuid();
 
@@ -786,33 +788,58 @@ export type DemoSeed = {
   messages?: typeof DEMO_MESSAGES;
   /** Start today's housekeeping board (rooms leaving today: one to clean, one being cleaned). */
   readiness?: boolean;
+  /** A whole demo property of its own (the regional demos): its details, look, rooms and work. */
+  property?: Record<string, unknown>;
+  theme?: Record<string, unknown>;
+  rooms?: typeof DEMO_ROOMS;
+  connections?: Array<{ roomKey: string; channel: DemoBooking["channel"]; listing_name: string }>;
+  extras?: Array<{ key: string; name: string; description?: string; pricePence: number; unit: string; maxQty: number; isFree?: boolean; autoApprove?: boolean; isLoan?: boolean; breakfast?: unknown }>;
+  trades?: Array<{ name: string; company_name: string; category: string; phone: string; area: string; notes: string; rating: number; is_preferred?: boolean }>;
+  guides?: Array<{ section_key: string; summary: string }>;
+  windows?: typeof DEMO_UNAVAILABILITY;
 };
 
-/** Wipes and re-creates the demo property for a host. Used by the public demo and the recording account too. */
+/**
+ * Wipes and re-creates a demo property for a host: a host's own sample data
+ * (no code: all their sample rows are replaced), or one named demo property
+ * (a code: only that property is replaced, so the public demo's properties
+ * never wipe each other). Used by the public demo and the recording account too.
+ */
 export async function seedDemo(supabase: Client, hostId: string, shortCode?: string, seed: DemoSeed = {}) {
   const bookings = seed.bookings ?? DEMO_BOOKINGS;
   const jobs = seed.jobs ?? DEMO_JOBS;
   const messages = seed.messages ?? DEMO_MESSAGES;
+  const demoRooms = seed.rooms ?? DEMO_ROOMS;
+  const db = supabase as unknown as { from: (t: string) => any };
+  if (shortCode) {
+    await db.from("properties").delete().eq("host_id", hostId).eq("is_demo", true).eq("short_code", shortCode);
+  } else {
     await removeDemoRows(supabase, hostId);
+  }
 
     const suffix = Math.random().toString(36).slice(2, 6);
-    const { data: property, error } = await supabase
-      .from("properties")
-      .insert({
-        ...DEMO_PROPERTY,
-        short_code: shortCode ?? `${DEMO_PROPERTY.short_code}-${suffix}`,
-        check_in_pin: String(100000 + Math.floor(Math.random() * 899999)),
-        host_id: hostId,
-        is_demo: true,
-      })
-      .select("*")
-      .single();
-    if (error) throw new Error(error.message);
+    const base = {
+      ...DEMO_PROPERTY,
+      check_in_pin: String(100000 + Math.floor(Math.random() * 899999)),
+      ...(seed.property ?? {}),
+      ...(seed.theme ? { theme_config: seed.theme } : {}),
+      short_code: shortCode ?? `${DEMO_PROPERTY.short_code}-${suffix}`,
+      host_id: hostId,
+      is_demo: true,
+    } as Record<string, unknown>;
+    const { withLegacy } = await import("./checkin.server");
+    // A property's own currency needs migration 0047; before it, the business's.
+    const { currency: _currency, ...withoutCurrency } = base;
+    const { data: property, error } = await withLegacy<{ id: string; short_code: string; timezone: string | null } | null>(
+      () => db.from("properties").insert(base).select("*").single(),
+      () => db.from("properties").insert(withoutCurrency).select("*").single(),
+    );
+    if (error || !property) throw new Error(error?.message ?? "Couldn't create the demo property.");
 
     const { data: rooms, error: roomErr } = await supabase
       .from("rooms")
       .insert(
-        DEMO_ROOMS.map((r) => ({
+        demoRooms.map((r) => ({
           property_id: property.id,
           room_number: r.room_number,
           display_name: r.display_name,
@@ -828,11 +855,11 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
     if (roomErr) throw new Error(roomErr.message);
 
     const roomByKey = new Map(
-      DEMO_ROOMS.map((r, i) => [r.key, rooms?.[i]?.id ?? null] as const),
+      demoRooms.map((r, i) => [r.key, rooms?.[i]?.id ?? null] as const),
     );
 
     const today = todayInZone(property.timezone ?? "Europe/London");
-    const { data: stays } = await supabase.from("bookings").insert(
+    const { data: stays } = await db.from("bookings").insert(
       bookings.map((b) => ({
         property_id: property.id,
         room_id: roomByKey.get(b.roomKey) ?? null,
@@ -878,7 +905,7 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
     if (seed.readiness) {
       // Today's departures on the housekeeping board (migration 0042; skipped before it).
       const leaving = bookings.filter((b) => b.check_out_offset === 0);
-      await (supabase as unknown as { from: (t: string) => any })
+      await db
         .from("room_readiness")
         .insert(
           leaving.map((b, i) => ({
@@ -886,14 +913,14 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
             room_id: roomByKey.get(b.roomKey),
             day: today,
             status: i === 0 ? "cleaning" : "to_clean",
-            assignee: i === 0 ? "Marta (housekeeping)" : null,
+            assignee: i === 0 ? (seed.trades?.find((t) => t.category === "cleaning")?.name ?? "Marta (housekeeping)") : null,
           })),
         )
         .then(() => undefined, () => undefined);
     }
 
     await supabase.from("unavailability_windows").insert(
-      DEMO_UNAVAILABILITY.map((w) => ({
+      (seed.windows ?? DEMO_UNAVAILABILITY).map((w) => ({
         property_id: property.id,
         room_id: null,
         reason: w.reason,
@@ -904,8 +931,8 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
       })),
     );
 
-    await supabase.from("channel_connections").insert(
-      DEMO_CONNECTIONS.map((c) => ({
+    await db.from("channel_connections").insert(
+      (seed.connections ?? DEMO_CONNECTIONS).map((c) => ({
         property_id: property.id,
         room_id: roomByKey.get(c.roomKey) ?? null,
         channel: c.channel,
@@ -917,7 +944,92 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
       })),
     );
 
+    // The regional demos' own price list (with breakfast), tradespeople and guide text.
+    if (seed.extras?.length) {
+      const currency = (base["currency"] as string | undefined) ?? "GBP";
+      await db.from("extras_catalogue").insert(
+        seed.extras.map((e, i) => ({
+          property_id: property.id,
+          item_key: e.key,
+          name: e.name,
+          description: e.description ?? null,
+          price_pence: e.isFree ? 0 : e.pricePence,
+          unit: e.unit,
+          max_qty: e.maxQty,
+          is_free: !!e.isFree,
+          auto_approve: !!e.autoApprove,
+          requires_approval: !e.autoApprove,
+          active: true,
+          is_loan: !!e.isLoan,
+          sort_order: i,
+          currency,
+          options: e.breakfast ? { breakfast: e.breakfast } : {},
+          is_demo: true,
+        })),
+      );
+    }
+    if (seed.trades?.length) {
+      await db.from("trades").insert(seed.trades.map((t) => ({ ...t, host_id: hostId, property_id: property.id, source: "manual", is_demo: true })));
+    }
+    if (seed.guides?.length) {
+      const { SECTIONS } = await import("./guide");
+      await db.from("guides").insert(
+        seed.guides.map((g, i) => ({
+          property_id: property.id,
+          room_id: null,
+          section_key: g.section_key,
+          title: SECTIONS.find((x) => x.key === g.section_key)?.title ?? g.section_key,
+          summary: g.summary,
+          published: true,
+          sort_order: i + 1,
+          is_demo: true,
+        })),
+      );
+    }
+
     return property as { id: string; short_code: string };
+}
+
+/** One regional demo property (src/lib/demo-showcase.ts) on a host: rebuilt from scratch, dates relative to today. */
+export async function seedShowcase(supabase: Client, hostId: string, spec: ShowcaseSpec) {
+  const stays = buildRecordingBookings(spec.rooms, {
+    guests: spec.guests,
+    channels: spec.channels,
+    checkIn: spec.checkIn,
+    checkOut: spec.checkOut,
+    lateArrival: spec.lateArrival,
+    from: -10,
+    to: 14,
+    namedToday: true,
+  });
+  const staying = stays.filter((b) => b.status === "checked_in" && b.guest_full_name);
+  const arriving = stays.find((b) => b.check_in_offset === 0 && b.guest_full_name);
+  const asker = staying[0];
+  return seedDemo(supabase, hostId, spec.short_code, {
+    property: spec.property,
+    theme: spec.theme,
+    rooms: spec.rooms,
+    bookings: stays,
+    connections: spec.rooms.map((r, i) => ({ roomKey: r.key, channel: spec.channels[i % spec.channels.length]!, listing_name: `${spec.property.name} · ${r.display_name}` })).filter((c) => c.channel !== "direct"),
+    extras: spec.extras,
+    trades: spec.trades,
+    guides: spec.guides,
+    windows: [],
+    readiness: true,
+    jobs: [
+      ...(asker ? [{ roomKey: asker.roomKey, guest: asker.guest_full_name, source: "guest" as const, category: spec.request.category, title: spec.request.title, note: spec.request.note, urgency: "normal" as const, status: "new" as const }] : []),
+      { roomKey: spec.maintenance.roomKey, guest: null, source: "maintenance" as const, category: spec.maintenance.category, title: spec.maintenance.title, note: spec.maintenance.note, urgency: "low" as const, status: "acknowledged" as const },
+    ] as never,
+    messages: [
+      ...(asker?.guest_full_name
+        ? [
+            { guest: asker.guest_full_name, direction: "inbound" as const, minutesAgo: 140, body: spec.conversation.ask },
+            { guest: asker.guest_full_name, direction: "outbound" as const, minutesAgo: 120, body: spec.conversation.reply },
+          ]
+        : []),
+      ...(arriving?.guest_full_name ? [{ guest: arriving.guest_full_name, direction: "inbound" as const, minutesAgo: 35, body: spec.conversation.waiting }] : []),
+    ] as never,
+  });
 }
 
 export const removeDemoData = createServerFn({ method: "POST" })

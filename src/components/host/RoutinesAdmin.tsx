@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Clapperboard, Clock, Loader2, Play, Zap } from "lucide-react";
+import { Clapperboard, Clock, Link2, Loader2, Play, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { common, routinesCopy as copy, studioCopy } from "@/content/copy";
 import { listRoutines, runRoutineNow, saveRoutine, type RoutineRow } from "@/lib/admin.functions";
 import { seedRecordingAccount } from "@/lib/demo.functions";
+import { SHOWCASE } from "@/lib/demo-showcase";
 import { formatUkDate } from "@/lib/dates";
 import { JOBS, type Job } from "@/lib/jobs";
 import { creditPence, type CostModel } from "@/lib/pricing-model";
@@ -41,6 +42,7 @@ export function RoutinesAdmin() {
         <p className="text-muted-foreground">{copy.body}</p>
         {migrationPending ? <p className="rounded-xl bg-warning/15 p-3 text-sm">{studioCopy.migration}</p> : null}
       </div>
+      <DemoLinks />
       <RecordingAccount />
       {JOBS.map((job) => (
         <RoutineCard key={job.key} job={job} row={settings.find((s) => s.key === job.key)} uses={usageMonth[job.metric] ?? 0} costs={costs} />
@@ -169,6 +171,42 @@ function RecordingAccount() {
       >
         {busy ? <Loader2 className="size-4 animate-spin" /> : null} {copy.recordingButton}
       </Button>
+    </div>
+  );
+}
+
+/** Every public demo link, with its campaign name, ready to copy into a post. */
+function DemoLinks() {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const rows = [
+    { label: copy.demoHill, guest: "/tour", host: "/demo/host", guestCampaign: "", hostCampaign: "" },
+    ...SHOWCASE.map((s) => ({ label: `${s.property.name} · ${s.label} (${s.themeName})`, guest: `/tour/${s.key}`, host: `/demo/host/${s.key}`, guestCampaign: s.campaign.guest, hostCampaign: s.campaign.host })),
+  ];
+  const copyLink = (url: string) => void navigator.clipboard.writeText(url).then(() => toast.success(copy.demoCopied), () => toast.error(common.errorBody));
+  return (
+    <div className="card-soft space-y-3 p-5">
+      <div>
+        <h3 className="flex items-center gap-2 font-display text-lg"><Link2 className="size-5 text-primary" /> {copy.demoLinksTitle}</h3>
+        <p className="text-sm text-muted-foreground">{copy.demoLinksBody}</p>
+      </div>
+      <ul className="divide-y divide-border rounded-2xl border border-border">
+        {rows.map((r) => (
+          <li key={r.guest} className="space-y-2 p-3">
+            <p className="text-sm font-medium">{r.label}</p>
+            {[
+              { kind: copy.demoGuest, path: r.guest, campaign: r.guestCampaign },
+              { kind: copy.demoHost, path: r.host, campaign: r.hostCampaign },
+            ].map((l) => (
+              <div key={l.path} className="flex flex-wrap items-center gap-2">
+                <span className="w-24 shrink-0 text-xs text-muted-foreground">{l.kind}</span>
+                <code className="min-w-0 flex-1 basis-48 truncate rounded-lg bg-muted px-2 py-1 text-xs">{origin}{l.path}</code>
+                {l.campaign ? <span className="text-xs text-muted-foreground">{copy.demoCampaign(l.campaign)}</span> : null}
+                <Button size="sm" variant="ghost" onClick={() => copyLink(`${origin}${l.path}`)}>{copy.demoCopy}</Button>
+              </div>
+            ))}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

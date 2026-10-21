@@ -18,7 +18,7 @@ export type DemoRoom = {
 
 export type DemoBooking = {
   roomKey: string;
-  channel: "airbnb" | "booking_com" | "homestay" | "direct" | "other";
+  channel: "airbnb" | "booking_com" | "homestay" | "vrbo" | "agoda" | "direct" | "other";
   source: "ical" | "manual" | "csv" | "api";
   guest_full_name: string | null;
   reservation_code: string | null;

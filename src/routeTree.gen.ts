@@ -29,6 +29,7 @@ import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
+import { Route as TourRegionRouteImport } from './routes/tour_.$region'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAppActivityRouteImport } from './routes/_authenticated/app.activity'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
@@ -49,6 +50,7 @@ import { Route as AuthenticatedAppWhatsNewRouteImport } from './routes/_authenti
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
+import { Route as DemoHostRegionRouteImport } from './routes/demo.host_.$region'
 import { Route as StayAgainWithdrawTokenRouteImport } from './routes/stay-again.withdraw.$token'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_authenticated/app.room-qr.$propertyId'
@@ -168,6 +170,11 @@ const StayTokenRoute = StayTokenRouteImport.update({
   path: '/stay/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TourRegionRoute = TourRegionRouteImport.update({
+  id: '/tour_/$region',
+  path: '/tour/$region',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -275,6 +282,11 @@ const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
 const ApiPublicTrackRoute = ApiPublicTrackRouteImport.update({
   id: '/api/public/track',
   path: '/api/public/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoHostRegionRoute = DemoHostRegionRouteImport.update({
+  id: '/demo/host_/$region',
+  path: '/demo/host/$region',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StayAgainWithdrawTokenRoute = StayAgainWithdrawTokenRouteImport.update({
@@ -397,6 +409,7 @@ export interface FileRoutesByFullPath {
   '/p/$code': typeof PCodeRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
+  '/tour/$region': typeof TourRegionRoute
   '/demo/': typeof DemoIndexRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
@@ -417,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/demo/host/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
@@ -456,6 +470,7 @@ export interface FileRoutesByTo {
   '/p/$code': typeof PCodeRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
+  '/tour/$region': typeof TourRegionRoute
   '/demo': typeof DemoIndexRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
@@ -476,6 +491,7 @@ export interface FileRoutesByTo {
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/demo/host/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
@@ -518,6 +534,7 @@ export interface FileRoutesById {
   '/p/$code': typeof PCodeRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
+  '/tour_/$region': typeof TourRegionRoute
   '/demo/': typeof DemoIndexRoute
   '/_authenticated/app/activity': typeof AuthenticatedAppActivityRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
@@ -538,6 +555,7 @@ export interface FileRoutesById {
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/demo/host_/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
@@ -580,6 +598,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/room/$code'
     | '/stay/$token'
+    | '/tour/$region'
     | '/demo/'
     | '/app/activity'
     | '/app/admin'
@@ -600,6 +619,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/demo/host/$region'
     | '/stay-again/withdraw/$token'
     | '/app/'
     | '/app/print/$propertyId'
@@ -639,6 +659,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/room/$code'
     | '/stay/$token'
+    | '/tour/$region'
     | '/demo'
     | '/app/activity'
     | '/app/admin'
@@ -659,6 +680,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/demo/host/$region'
     | '/stay-again/withdraw/$token'
     | '/app'
     | '/app/print/$propertyId'
@@ -700,6 +722,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/room/$code'
     | '/stay/$token'
+    | '/tour_/$region'
     | '/demo/'
     | '/_authenticated/app/activity'
     | '/_authenticated/app/admin'
@@ -720,6 +743,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/demo/host_/$region'
     | '/stay-again/withdraw/$token'
     | '/_authenticated/app/'
     | '/_authenticated/app/print/$propertyId'
@@ -761,10 +785,12 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   RoomCodeRoute: typeof RoomCodeRoute
   StayTokenRoute: typeof StayTokenRoute
+  TourRegionRoute: typeof TourRegionRoute
   DemoIndexRoute: typeof DemoIndexRoute
   ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
+  DemoHostRegionRoute: typeof DemoHostRegionRoute
   StayAgainWithdrawTokenRoute: typeof StayAgainWithdrawTokenRoute
   ApiPublicAttachmentIdRoute: typeof ApiPublicAttachmentIdRoute
   ApiPublicBrandAppleRoute: typeof ApiPublicBrandAppleRoute
@@ -925,6 +951,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StayTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tour_/$region': {
+      id: '/tour_/$region'
+      path: '/tour/$region'
+      fullPath: '/tour/$region'
+      preLoaderRoute: typeof TourRegionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
       path: '/'
@@ -1063,6 +1096,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/track'
       fullPath: '/api/public/track'
       preLoaderRoute: typeof ApiPublicTrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/host_/$region': {
+      id: '/demo/host_/$region'
+      path: '/demo/host/$region'
+      fullPath: '/demo/host/$region'
+      preLoaderRoute: typeof DemoHostRegionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stay-again/withdraw/$token': {
@@ -1290,10 +1330,12 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   RoomCodeRoute: RoomCodeRoute,
   StayTokenRoute: StayTokenRoute,
+  TourRegionRoute: TourRegionRoute,
   DemoIndexRoute: DemoIndexRoute,
   ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackRoute: ApiPublicTrackRoute,
+  DemoHostRegionRoute: DemoHostRegionRoute,
   StayAgainWithdrawTokenRoute: StayAgainWithdrawTokenRoute,
   ApiPublicAttachmentIdRoute: ApiPublicAttachmentIdRoute,
   ApiPublicBrandAppleRoute: ApiPublicBrandAppleRoute,

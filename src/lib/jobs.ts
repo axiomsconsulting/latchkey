@@ -72,7 +72,7 @@ export const JOBS: Job[] = branded([
     key: "demo_tour",
     name: "Public demo",
     kind: "on_use",
-    what: "Rebuilds the shared demo once a day when visitors open it. Off: the demo shows as unavailable.",
+    what: "Rebuilds every public demo property (The Hill Suites and the Texas, Mayfair, Paris and Tokyo demos) once a day when visitors open them. Off: the demos show as unavailable.",
     metric: "job:demo_rebuild",
     runnable: true,
   },

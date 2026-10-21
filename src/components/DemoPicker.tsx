@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { demoCopy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
-import { sessionUtm, withAttribution } from "@/lib/attribution";
+import { defaultCampaign, sessionUtm, withAttribution } from "@/lib/attribution";
+import { rememberSelectedProperty } from "@/hooks/use-host-data";
+import type { ShowcaseKey } from "@/lib/demo-showcase";
 import { markDemo } from "@/lib/demo-session";
 import { startDemo } from "@/lib/demo.functions";
 
@@ -18,11 +20,11 @@ export function useDemo() {
   const [busy, setBusy] = useState<"host" | "guest" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function go(as: "host" | "guest") {
+  async function go(as: "host" | "guest", region?: ShowcaseKey) {
     setBusy(as);
     setError(null);
     try {
-      const res = await run({ data: { as } });
+      const res = await run({ data: { as, ...(region ? { region } : {}) } });
       if (as === "guest") {
         // The real kiosk screen: a phone gets the phone version, a tablet or computer the door-tablet one.
         await navigate({ to: "/kiosk/$code", params: { code: res.code }, search: sessionUtm() });
@@ -33,6 +35,8 @@ export function useDemo() {
       const { error: e } = await supabase.auth.verifyOtp({ token_hash: res.tokenHash!, type: "magiclink" });
       if (e) throw e;
       markDemo(true);
+      // A regional demo opens on its own property.
+      if (res.propertyId) rememberSelectedProperty(res.propertyId);
       await navigate({ href: withAttribution("/app/today") });
     } catch {
       setError(demoCopy.error);
@@ -86,13 +90,15 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
  * /tour and /demo/host: open the demo straight away (the stable links for
  * posts and emails), with a calm wait and a way to try again.
  */
-export function DemoLauncher({ as }: { as: "host" | "guest" }) {
+export function DemoLauncher({ as, region, campaign }: { as: "host" | "guest"; region?: ShowcaseKey; campaign?: string }) {
   const { go, error } = useDemo();
   const started = useRef(false);
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    void go(as);
+    // Each demo link has its own campaign name, unless the link brought its own tags.
+    if (campaign) defaultCampaign(campaign);
+    void go(as, region);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [as]);
   return (
@@ -101,7 +107,7 @@ export function DemoLauncher({ as }: { as: "host" | "guest" }) {
         {error ? (
           <>
             <p role="alert" className="text-lg">{error}</p>
-            <Button onClick={() => void go(as)}>{demoCopy.tryAgain}</Button>
+            <Button onClick={() => void go(as, region)}>{demoCopy.tryAgain}</Button>
           </>
         ) : (
           <>

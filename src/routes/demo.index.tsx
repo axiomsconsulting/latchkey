@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { demoCopy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
 import { sessionUtm, type Utm } from "@/lib/attribution";
+import { SHOWCASE } from "@/lib/demo-showcase";
 
 /** /demo: both demos as plain links, for anyone who lands here first. */
 export const Route = createFileRoute("/demo/")({
@@ -46,6 +47,23 @@ function DemoPage() {
           </span>
           <ArrowRight className="size-5 text-muted-foreground" />
         </Link>
+        {/* The regional demos: one property on each of the four hotel themes. */}
+        <section className="space-y-3" aria-labelledby="regions">
+          <h2 id="regions" className="text-2xl">{demoCopy.regionsTitle}</h2>
+          <p className="text-muted-foreground">{demoCopy.regionsBody}</p>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {SHOWCASE.map((r) => (
+              <li key={r.key} className="card-soft space-y-2 p-4">
+                <p className="font-display text-lg leading-tight">{r.property.name}</p>
+                <p className="text-sm text-muted-foreground">{r.label} · {r.themeName}</p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Link to="/tour/$region" params={{ region: r.key }} search={utm as never} className="rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground">{demoCopy.asGuest}</Link>
+                  <Link to="/demo/host/$region" params={{ region: r.key }} search={utm as never} className="rounded-full border border-border px-3 py-1.5 text-sm font-medium">{demoCopy.asHost}</Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
         <p className="text-sm text-muted-foreground">{demoCopy.resetNote}</p>
       </main>
     </div>

@@ -28,7 +28,7 @@ import {
   surnameInitial,
   usesListFlow,
 } from "./checkin-logic";
-import { DEMO_CODE, isTour } from "./demo-account";
+import { DEMO_CODES, isTour } from "./demo-account";
 import {
   ADULT_AGE,
   ageOn,
@@ -113,7 +113,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
     const srvMod = await srv();
     // The public guest tour rebuilds itself once a day, even when visitors
     // arrive straight from a link instead of through the demo picker.
-    const tour = data.code.toLowerCase() === DEMO_CODE;
+    const tour = DEMO_CODES.includes(data.code.toLowerCase());
     if (tour) {
       const { jobAllowed } = await import("./usage.server");
       if (!(await jobAllowed("demo_tour"))) return { found: false as const };

@@ -30,39 +30,67 @@ function londonDay(d: Date): string {
 }
 
 /**
- * Rebuilds the shared demo property when it is missing, from an earlier day,
- * or has no arrival today, so the guest tour always has someone to check in.
- * Concurrent visitors race for one claim, so only one of them rebuilds.
+ * The one demo routine: every public demo property (The Hill Suites' tour and
+ * the four regional demos) is rebuilt when it's missing, from an earlier day,
+ * or has nobody arriving today, so each tour always has someone to check in.
+ * Each property is rebuilt on its own (never wiping the others), and
+ * concurrent visitors race for one claim per property, so only one rebuilds.
  */
-export async function freshDemoCode(admin: any, hostId: string, force = false): Promise<string> {
-  const { data: prop } = await admin
-    .from("properties").select("id, short_code, created_at")
-    .eq("host_id", hostId).eq("is_demo", true).eq("short_code", DEMO_CODE).limit(1).maybeSingle();
-  const today = londonDay(new Date());
-  if (!force && prop && londonDay(new Date(prop.created_at)) === today && Date.now() - Date.parse(prop.created_at) < DAY_MS) {
-    const { count } = await admin.from("bookings").select("id", { count: "exact", head: true })
-      .eq("property_id", prop.id).eq("check_in_date", today);
-    if (count) return DEMO_CODE;
-  }
-  if (prop) {
-    // created_at doubles as "seeded at": only the request that moves it rebuilds.
-    const { data: claimed } = await admin
-      .from("properties").update({ created_at: new Date().toISOString() })
-      .eq("id", prop.id).eq("created_at", prop.created_at).select("id");
-    if (!claimed?.length) return DEMO_CODE;
-  }
-  try {
-    const started = Date.now();
-    // Undo anything changed on the account before the settings lock existed.
-    await admin.from("hosts").update(DEMO_HOST).eq("id", hostId);
-    await seedDemo(admin, hostId, DEMO_CODE);
+export async function refreshDemoProperties(admin: any, hostId: string, force = false): Promise<void> {
+  const { SHOWCASE } = await import("./demo-showcase");
+  const { todayInZone } = await import("./dates");
+  const { seedShowcase } = await import("./host.functions");
+  const targets: Array<{ code: string; seed: () => Promise<unknown> }> = [
+    { code: DEMO_CODE, seed: () => seedDemo(admin, hostId, DEMO_CODE) },
+    ...SHOWCASE.map((spec) => ({ code: spec.short_code, seed: () => seedShowcase(admin, hostId, spec) })),
+  ];
+  const started = Date.now();
+  let rebuilt = 0;
+  // Undo anything changed on the account before the settings lock existed.
+  let hostFixed = false;
+  await Promise.all(
+    targets.map(async (t) => {
+      const { data: prop } = await admin
+        .from("properties").select("id, short_code, created_at, timezone")
+        .eq("host_id", hostId).eq("is_demo", true).eq("short_code", t.code).limit(1).maybeSingle();
+      // "Today" is the property's own (Tokyo's starts before London's).
+      const tz = (prop?.timezone as string | null) ?? "Europe/London";
+      const today = todayInZone(tz);
+      if (!force && prop && todayInZone(tz, new Date(prop.created_at)) === today && Date.now() - Date.parse(prop.created_at) < DAY_MS) {
+        const { count } = await admin.from("bookings").select("id", { count: "exact", head: true }).eq("property_id", prop.id).eq("check_in_date", today);
+        if (count) return;
+      }
+      if (prop) {
+        // created_at doubles as "seeded at": only the request that moves it rebuilds.
+        const { data: claimed } = await admin
+          .from("properties").update({ created_at: new Date().toISOString() })
+          .eq("id", prop.id).eq("created_at", prop.created_at).select("id");
+        if (!claimed?.length) return;
+      }
+      try {
+        if (!hostFixed) {
+          hostFixed = true;
+          await admin.from("hosts").update(DEMO_HOST).eq("id", hostId);
+        }
+        await t.seed();
+        rebuilt++;
+      } catch {
+        // Someone else created it first (the code is unique); theirs is fine.
+      }
+    }),
+  );
+  if (rebuilt) {
     const { recordRun } = await import("./usage.server");
-    await recordRun("demo_tour", "Rebuilt", started);
-  } catch {
-    // Someone else created it first (the code is unique); theirs is fine.
+    await recordRun("demo_tour", `Rebuilt ${rebuilt} of ${targets.length} demo properties`, started);
   }
+}
+
+/** Kept for older callers: refreshes every demo property and returns The Hill Suites' tour code. */
+export async function freshDemoCode(admin: any, hostId: string, force = false): Promise<string> {
+  await refreshDemoProperties(admin, hostId, force);
   return DEMO_CODE;
 }
+
 
 /**
  * The shared workspace. Normally found through the tour property (only the
@@ -98,14 +126,16 @@ async function demoHostId(admin: any): Promise<string> {
 
 /** Makes sure today's guest tour exists; used when /kiosk/tour is opened directly. `force` rebuilds it anyway. */
 export async function ensureTour(admin: any, force = false): Promise<void> {
-  await freshDemoCode(admin, await demoHostId(admin), force);
+  await refreshDemoProperties(admin, await demoHostId(admin), force);
 }
 
 export const startDemo = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ as: z.enum(["host", "guest"]) }).parse(input))
+  .inputValidator((input: unknown) => z.object({ as: z.enum(["host", "guest"]), region: z.enum(["texas", "mayfair", "paris", "tokyo"]).optional() }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
+    const { showcaseByKey } = await import("./demo-showcase");
+    const spec = data.region ? showcaseByKey(data.region) : null;
     // The super admin can switch the public demo off (Latchkey admin → Routines).
     const { jobAllowed } = await import("./usage.server");
     if (!(await jobAllowed("demo_tour"))) throw new Error(UNAVAILABLE);
@@ -123,13 +153,17 @@ export const startDemo = createServerFn({ method: "POST" })
     }
 
     const hostId = await demoHostId(admin);
-    const code = await freshDemoCode(admin, hostId);
-    if (data.as === "guest") return { code, tokenHash: null };
+    await refreshDemoProperties(admin, hostId);
+    // The regional demo asked for, or The Hill Suites.
+    const code = spec?.short_code ?? DEMO_CODE;
+    const { data: prop } = await admin.from("properties").select("id").eq("host_id", hostId).eq("is_demo", true).eq("short_code", code).maybeSingle();
+    const propertyId = (prop?.id as string | undefined) ?? null;
+    if (data.as === "guest") return { code, tokenHash: null, propertyId };
 
     // Host: one-time sign-in token, verified in the browser.
     const { data: link, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: DEMO_EMAIL });
     if (error) throw new Error(UNAVAILABLE);
-    return { code, tokenHash: link.properties.hashed_token as string };
+    return { code, tokenHash: link.properties.hashed_token as string, propertyId };
   });
 
 /**
