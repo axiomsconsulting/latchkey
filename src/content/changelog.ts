@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.54.3",
+    date: "2026-10-21",
+    title: "Site logo fix",
+    items: [
+      { admin: true, kind: "fixed", area: "Website", text: "An uploaded site logo now stays: pages no longer swap it for the antique key once they've loaded, and the Brand form always shows what's saved, so saving it again can't put the key back." },
+    ],
+  },
+  {
     version: "0.54.2",
     date: "2026-10-21",
     title: "Wording",

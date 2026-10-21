@@ -34,10 +34,11 @@ export const getBrandSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await requireSuperAdmin(context.supabase);
-    const { platformBrand } = await import("./brand.server");
+    // Straight from the database, never a cached copy: the form saves back exactly what it shows,
+    // so a stale copy from another server instance would overwrite a logo just uploaded.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await (supabaseAdmin as unknown as Loose).from("site_settings").select("brand").eq("id", 1).maybeSingle();
-    return { available: !error, brand: await platformBrand() };
+    const { data, error } = await (supabaseAdmin as unknown as Loose).from("site_settings").select("brand").eq("id", 1).maybeSingle();
+    return { available: !error, brand: normaliseBrand(error ? null : data?.brand) };
   });
 
 export const saveBrandSettings = createServerFn({ method: "POST" })

@@ -152,7 +152,10 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
+  const { queryClient, site } = Route.useRouteContext() as { queryClient: QueryClient; site?: { brand: unknown } | null };
+  // The brand the server rendered with (beforeLoad doesn't run again in the browser on
+  // first load): set before any page draws a logo or a name, so they never fall back to the default.
+  if (site) setBrand(site.brand);
   // Before any page reads it: where this visit came from (idempotent, browser only).
   captureOnce();
 
