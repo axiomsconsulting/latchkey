@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { GuestDemoDock } from "@/components/DemoDock";
 import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
@@ -86,6 +87,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   );
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
+      <GuestDemoDock code={s.demoCode} />
       <main className="mx-auto max-w-4xl space-y-6 py-6 sm:py-8">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

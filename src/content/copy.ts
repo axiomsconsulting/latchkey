@@ -3450,3 +3450,20 @@ export const groupBrandCopy = branded({
   ownerOnly: "Only the owner can change the group brand.",
 });
 
+/** The floating demo panel (DemoDock). */
+export const demoDockCopy = branded({
+  label: "Demo",
+  pill: "Demo",
+  move: "Move",
+  collapse: "Fold away",
+  hostTitle: "Host dashboard demo",
+  guestTitle: "Guest journey demo",
+  text: "You're exploring a demo. Everyone shares it, and it resets daily.",
+  switchHost: "Switch property",
+  switchGuest: "Switch property experience",
+  hill: "The Hill Suites · Amersham",
+  trial: "Start free trial",
+  leaveHost: "Leave demo",
+  leaveGuest: "Back to Latchkey",
+});
+

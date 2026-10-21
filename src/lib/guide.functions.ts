@@ -357,7 +357,7 @@ export const getRoomGuide = createServerFn({ method: "GET" })
     const [{ data: p }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("id, host_id, name, short_code, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, active")
+        .select("id, host_id, is_demo, name, short_code, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, active")
         .eq("id", room.property_id)
         .single(),
       db
@@ -434,6 +434,7 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       propertyName: p.name as string,
       shortCode: p.short_code as string,
       occupied: (here ?? 0) > 0,
+      demoCode: p.is_demo === true ? (p.short_code as string) : null,
       tiles,
       roomPhoto: photo,
       room: { name: room.display_name as string, title: (room.public_title as string | null) ?? null },

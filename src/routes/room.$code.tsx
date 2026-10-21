@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { GuestDemoDock } from "@/components/DemoDock";
 import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarX, Check, Wifi } from "lucide-react";
@@ -58,6 +59,7 @@ function RoomGuide() {
 
   return (
     <GuestFrame theme={g.theme} name={g.propertyName}>
+      <GuestDemoDock code={g.demoCode} />
       <main className="mx-auto max-w-4xl space-y-6 py-8">
         <header>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">{rcopy.eyebrow}</p>

@@ -13,12 +13,12 @@ import { AccessGate, AnnouncementPopup, FeedbackButton, FeedbackDialog, ShellBan
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
-import { demoBannerCopy, whatsNewCopy } from "@/content/copy";
+import { whatsNewCopy } from "@/content/copy";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { OmniSearch } from "@/components/host/OmniSearch";
-import { sessionUtm } from "@/lib/attribution";
+import { DemoDock, HostDemoSwitch } from "@/components/DemoDock";
 import { NavIcon } from "@/components/NavIcon";
 import { MenuStrip } from "@/components/host/MenuStrip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -247,6 +247,26 @@ export function HostShell() {
         </div>
       ) : null}
 
+      {/* The shared demo: a floating panel (bottom right, moveable, folds away) with the property switcher and the ways out. */}
+      {isSharedDemo ? (
+        <DemoDock
+          mode="host"
+          onLeave={async () => {
+            await signOut();
+            await navigate({ to: "/", search: { home: true } });
+          }}
+        >
+          <HostDemoSwitch
+            properties={properties}
+            value={selectedId ?? null}
+            onChange={(id) => {
+              select(id);
+              void navigate({ to: "/app/today" });
+            }}
+          />
+        </DemoDock>
+      ) : null}
+
       <main
         data-host-main
         className={cn(
@@ -255,25 +275,6 @@ export function HostShell() {
         )}
       >
         <ShellBanners />
-        {(host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL ? (
-          // The shared demo says what it is, with the two ways out.
-          <div role="note" className="mx-auto mb-5 flex max-w-6xl flex-wrap items-center gap-3 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm print:hidden">
-            <span className="min-w-0 flex-1 basis-56">{demoBannerCopy.text}</span>
-            <Button asChild size="sm" variant="accent">
-              <Link to="/start" search={sessionUtm() as never}>{demoBannerCopy.trial}</Link>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={async () => {
-                await signOut();
-                await navigate({ to: "/", search: { home: true } });
-              }}
-            >
-              {demoBannerCopy.leave}
-            </Button>
-          </div>
-        ) : null}
         <TrialBanner />
         <SetPasswordPrompt />
         <AccessGate>

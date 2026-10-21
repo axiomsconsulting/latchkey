@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { demoCopy } from "@/content/copy";
+import { GuestDemoDock } from "@/components/DemoDock";
 import { trackEvent } from "@/lib/track";
 import { pickUtm, type Utm } from "@/lib/attribution";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
@@ -465,15 +465,8 @@ function Kiosk() {
       </div>
 
 
-      {/* The public tour always says it's a demo (and how to get back). */}
-      {tour ? (
-        <a
-          href="/?home=1"
-          className="fixed bottom-3 left-3 z-40 rounded-full bg-foreground/80 px-3 py-1.5 text-xs font-medium text-background shadow-soft backdrop-blur hover:bg-foreground print:hidden"
-        >
-          {demoCopy.tourLabel}
-        </a>
-      ) : null}
+      {/* The public tour: the floating demo panel (says it's a demo, switch property, start a trial, leave). */}
+      {tour ? <GuestDemoDock code={p.code} /> : null}
 
       {/* The host's welcome for an arriving guest: over everything, wakes the screen. */}
       {shared && welcome ? (

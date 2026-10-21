@@ -406,3 +406,11 @@ export const SHOWCASE_CODES = SHOWCASE.map((s) => s.short_code);
 export function showcaseByKey(key: string): ShowcaseSpec | null {
   return SHOWCASE.find((s) => s.key === key) ?? null;
 }
+
+/** Which demo a property code belongs to: "hill" (The Hill Suites' tour) or a regional key. */
+export function demoKeyForCode(code: string | null | undefined): string | null {
+  if (!code) return null;
+  if (code === "tour") return "hill";
+  return SHOWCASE.find((s) => s.short_code === code)?.key ?? null;
+}
+

@@ -1335,7 +1335,7 @@ export const getStay = createServerFn({ method: "GET" })
     const [{ data: p }, { data: room }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("name, host_id, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
+        .select("name, host_id, is_demo, short_code, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
         .eq("id", b.property_id)
         .single(),
       b.room_id
@@ -1430,6 +1430,8 @@ export const getStay = createServerFn({ method: "GET" })
         ? ((room as { amenities: unknown[] }).amenities.filter((a): a is string => typeof a === "string"))
         : [],
       theme: await withGroup(normaliseTheme(p?.theme_config), (p as { host_id?: string } | null)?.host_id, p?.name ?? ""),
+      /** A public demo stay (the guest tour): its demo property's code, for the demo panel. */
+      demoCode: p && isTour(p as { is_demo?: boolean | null; short_code?: string | null }) ? ((p as { short_code?: string }).short_code ?? null) : null,
       mode,
       guide: sections.filter((sec) => !reminded.has(sec.key)),
       pinnedSections: sections.filter((sec) => reminded.has(sec.key)),
