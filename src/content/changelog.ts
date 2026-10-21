@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.55.0",
+    date: "2026-10-21",
+    title: "Breakfast, and prices in local money",
+    items: [
+      { kind: "new", area: "Services", text: "Breakfast menu in Extras: build your own à la carte breakfast for each way you serve it (light or packed, delivered to the room, or in the dining room), in sections with descriptions and prices. Guests order it from their stay guide for a morning and time, and it's charged like any extra." },
+      { kind: "new", area: "Settings", text: "Regional pricing: a property can price its extras and breakfast in its own currency (Settings → Money → Extras price list), so a property abroad charges in local money." },
+    ],
+  },
+  {
     version: "0.54.4",
     date: "2026-10-21",
     title: "Settings menu",

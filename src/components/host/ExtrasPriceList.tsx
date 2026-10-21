@@ -11,7 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { extrasCopy as copy, priceListUi as ui } from "@/content/copy";
 import type { ExtraItem } from "@/lib/extras";
-import { addPriceItem, deletePriceItem, getPriceList, saveMoneySettings, savePriceItem, setPriceOrder } from "@/lib/extras.functions";
+import { addPriceItem, deletePriceItem, getPriceList, saveMoneySettings, savePriceItem, setPriceOrder, setPropertyCurrency } from "@/lib/extras.functions";
+import { BreakfastMenuEditor } from "@/components/host/BreakfastMenuEditor";
+import { CurrencyPicker } from "@/components/WorldPickers";
 import { moveItem } from "@/lib/reorder";
 import { currencySymbol } from "@/lib/world";
 import { cn } from "@/lib/utils";
@@ -41,8 +43,10 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
   const [dragging, setDragging] = useState<string | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
   useEffect(() => {
-    if (q.data && !dragging) setOrder(q.data.items.map((i) => i.key));
+    // Breakfast dishes have their own menu below.
+    if (q.data && !dragging) setOrder(q.data.items.filter((i) => !i.breakfast).map((i) => i.key));
   }, [q.data, dragging]);
+  const setCurrencyFn = useServerFn(setPropertyCurrency);
   const symbol = currencySymbol(q.data?.currency ?? "GBP");
 
   async function saveOrder(keys: string[]) {
@@ -99,7 +103,7 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
   async function update(item: ExtraItem, patch: Partial<ExtraItem>) {
     const next = { ...item, ...patch };
     try {
-      await saveItem({ data: { propertyId, item: { key: next.key, name: next.name, pricePence: next.pricePence, unit: next.unit, maxQty: next.maxQty, isFree: next.isFree, autoApprove: next.autoApprove, active: next.active, isLoan: next.isLoan } } });
+      await saveItem({ data: { propertyId, item: { key: next.key, name: next.name, pricePence: next.pricePence, unit: next.unit, maxQty: next.maxQty, isFree: next.isFree, autoApprove: next.autoApprove, active: next.active, isLoan: next.isLoan, ...(next.description !== undefined ? { description: next.description } : {}) } } });
       await qc.invalidateQueries({ queryKey: ["price-list", propertyId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Please try again.");
@@ -126,6 +130,18 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
       <section className="card-soft p-5">
         <h2 className="text-lg">{copy.priceList}</h2>
         <p className="text-sm text-muted-foreground">{copy.priceListSub}</p>
+        {/* Regional pricing: a property abroad can charge in its own currency. */}
+        {q.data.propertyCurrency !== undefined ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-muted p-3 text-sm">
+            <span className="min-w-0 flex-1 basis-56">{ui.currencyLine(q.data.currency, q.data.hostCurrency)}</span>
+            <div className="w-64 max-w-full">
+              <CurrencyPicker
+                value={q.data.propertyCurrency ?? q.data.hostCurrency}
+                onChange={(v) => void run(() => setCurrencyFn({ data: { propertyId, currency: v === q.data!.hostCurrency ? null : v } }), ui.currencySaved)}
+              />
+            </div>
+          </div>
+        ) : null}
         <div className="mt-4 rounded-2xl border border-border bg-surface">
           <div className={cn(ROW, "hidden border-b border-border py-2 text-xs font-medium text-muted-foreground md:grid")}>
             <span aria-hidden />
@@ -236,6 +252,8 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
           <Button className="mt-4" variant="outline" onClick={() => setDraft({ ...BLANK })}>{ui.addItem}</Button>
         )}
       </section>
+
+      <BreakfastMenuEditor propertyId={propertyId} items={q.data.items.filter((i) => i.breakfast)} currency={q.data.currency} />
 
       <section className="card-soft space-y-4 p-5">
         <h2 className="text-lg">{copy.money}</h2>

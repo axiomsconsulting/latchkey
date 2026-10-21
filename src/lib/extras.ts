@@ -17,7 +17,83 @@ export type ExtraItem = {
   isLoan: boolean;
   /** Bag size multipliers for luggage (Bounce-style). */
   sizes?: { key: string; label: string; pricePence: number }[];
+  /** A line under the name (a breakfast dish, what's in a pack). */
+  description?: string;
+  /** On the breakfast menu: how it's served and which part of the menu (options.breakfast). */
+  breakfast?: BreakfastInfo;
 };
+
+/* ------------------------------- breakfast ------------------------------- */
+
+/** How breakfast reaches the guest: a light or packed breakfast, delivered to the room, or served in the dining room. */
+export const BREAKFAST_STYLES = ["packed", "delivered", "dining"] as const;
+export type BreakfastStyle = (typeof BREAKFAST_STYLES)[number];
+export type BreakfastInfo = { style: BreakfastStyle; section?: string };
+
+export function isBreakfast(i: Pick<ExtraItem, "breakfast">): boolean {
+  return !!i.breakfast && (BREAKFAST_STYLES as readonly string[]).includes(i.breakfast.style);
+}
+
+/** options.breakfast from the database, made safe. */
+export function normaliseBreakfast(raw: unknown): BreakfastInfo | undefined {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  if (!(BREAKFAST_STYLES as readonly string[]).includes(r["style"] as string)) return undefined;
+  const section = typeof r["section"] === "string" ? r["section"].replace(/\s+/g, " ").trim().slice(0, 40) : "";
+  return section ? { style: r["style"] as BreakfastStyle, section } : { style: r["style"] as BreakfastStyle };
+}
+
+export type BreakfastMenu = Array<{ style: BreakfastStyle; sections: Array<{ name: string; items: ExtraItem[] }> }>;
+
+/** The guest's breakfast menu: only styles with something on them, sections in the host's order. */
+export function breakfastMenu(items: ExtraItem[]): BreakfastMenu {
+  const out: BreakfastMenu = [];
+  for (const style of BREAKFAST_STYLES) {
+    const list = items.filter((i) => i.active && i.breakfast?.style === style);
+    if (!list.length) continue;
+    const sections: Array<{ name: string; items: ExtraItem[] }> = [];
+    for (const it of list) {
+      const name = it.breakfast?.section ?? "";
+      const sec = sections.find((x) => x.name === name);
+      if (sec) sec.items.push(it);
+      else sections.push({ name, items: [it] });
+    }
+    out.push({ style, sections });
+  }
+  return out;
+}
+
+/** Mornings breakfast can be ordered for: from tomorrow (or today, before the cut-off) to the check-out morning. */
+export function breakfastMornings(opts: { today: string; nowTime: string; checkIn: string; checkOut: string; cutoff?: string }): string[] {
+  const out: string[] = [];
+  const first = opts.checkIn > opts.today ? addDay(opts.checkIn, 1) : opts.nowTime < (opts.cutoff ?? "07:00") ? opts.today : addDay(opts.today, 1);
+  for (let d = first; d <= opts.checkOut && out.length < 30; d = addDay(d, 1)) out.push(d);
+  return out;
+}
+
+/** Times to choose from, every half hour (07:00 to 10:30 by default). */
+export function breakfastTimes(start = "07:00", end = "10:30"): string[] {
+  const out: string[] = [];
+  const [sh, sm] = start.split(":").map(Number) as [number, number];
+  const [eh, em] = end.split(":").map(Number) as [number, number];
+  for (let m = sh * 60 + sm; m <= eh * 60 + em; m += 30) out.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
+  return out;
+}
+
+/** Every line of a breakfast order must be on that style's menu. */
+export function breakfastProblem(items: ExtraItem[], lines: BasketLine[], style: BreakfastStyle): string | null {
+  if (!lines.length) return "Choose something from the menu.";
+  for (const l of lines) {
+    const it = items.find((i) => i.key === l.key);
+    if (!it || !it.active || it.breakfast?.style !== style) return "Something in your order isn't on that menu.";
+  }
+  return null;
+}
+
+function addDay(iso: string, n: number): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 
 export const DEFAULT_EXTRAS: ExtraItem[] = [
   { key: "bath_towel", name: "Extra bath towel", pricePence: 300, unit: "item", maxQty: 4, isFree: false, autoApprove: true, active: true, isLoan: false },
@@ -151,3 +227,14 @@ export function availableWindows(quietStart: string, quietEnd: string, blocked: 
 export function cleaningGapMinutes(checkOut: string, nextCheckIn: string): number {
   return toMin(nextCheckIn) - toMin(checkOut);
 }
+
+/**
+ * Amounts are kept in hundredths of the currency's main unit everywhere
+ * (pence, cents, and for yen 120000 = ¥1,200). Stripe wants zero-decimal
+ * currencies (yen, won…) in whole units instead.
+ */
+const ZERO_DECIMAL = new Set(["bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf"]);
+export function stripeAmount(hundredths: number, currency: string): number {
+  return ZERO_DECIMAL.has(currency.toLowerCase()) ? Math.round(hundredths / 100) : hundredths;
+}
+

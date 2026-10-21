@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { breakfastCopy } from "@/content/copy";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -77,6 +78,11 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
                 )}
               </div>
               <p className="mt-1">{r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</p>
+              {r.breakfast ? (
+                <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium">
+                  {breakfastLine(r.breakfast)}
+                </p>
+              ) : null}
               <p className="text-sm text-muted-foreground">
                 {r.window ? copy.windows[r.window] : null}
                 {r.lateUntil ? ` · ${copy.until(r.lateUntil.slice(0, 5))}` : ""}
@@ -158,3 +164,12 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
     </section>
   );
 }
+
+/** "Breakfast in the dining room · Thu 22 Oct, 08:00" (property time is in the stored instant's local rendering). */
+function breakfastLine(b: { at: string | null; style: string }): string {
+  const style = breakfastCopy.styles[b.style] ?? b.style;
+  if (!b.at) return `Breakfast · ${style}`;
+  const when = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(b.at));
+  return `Breakfast · ${style} · ${when}`;
+}
+

@@ -1720,6 +1720,8 @@ export const todayRequests = branded({
 
 /** Adding and editing price list items. */
 export const priceListUi = branded({
+  currencyLine: (cur: string, host: string) => (cur === host ? `Prices in ${cur}, your business's currency. A property abroad can charge in its own:` : `Prices in ${cur} for this property (your business uses ${host}).`),
+  currencySaved: "Currency saved for this property.",
   addItem: "Add an item",
   editItem: "Edit item",
   name: "Name",
@@ -3364,5 +3366,50 @@ export const privacyPageCopy = branded({
     },
   ],
   guests: "Guests' check-in details, ID checks and messages belong to the business you stayed with. Ask them how they handle your data.",
+});
+
+export const breakfastCopy = branded({
+  title: "Breakfast menu",
+  body: "Your own à la carte breakfast, for each way you serve it. Guests order from their stay guide for a morning and time, and it's charged like any extra.",
+  styles: { packed: "Light or packed", delivered: "Delivered to the room", dining: "In the dining room" } as Record<string, string>,
+  styleHelp: {
+    packed: "Something light or to take away: a pastry bag, a breakfast box for an early start.",
+    delivered: "Brought to the guest's door or room at the time they choose.",
+    dining: "Served at a table in your dining room or breakfast room.",
+  } as Record<string, string>,
+  empty: "Nothing on this menu yet. Guests only see the ways you serve breakfast that have dishes.",
+  name: "Dish",
+  namePlaceholder: "Dish name",
+  description: "What's in it",
+  descriptionPlaceholder: "What's in it (optional)",
+  section: "Menu section",
+  sectionPlaceholder: "Section (Hot, Drinks…)",
+  sectionIdeas: ["Hot", "Cold", "Pastries", "Sides", "Drinks"],
+  price: "Price",
+  priceOf: (n: string) => `${n} price`,
+  offered: "Offered",
+  offeredOf: (n: string) => `${n}: offered`,
+  removeOf: (n: string) => `Remove ${n}`,
+  removeConfirm: "Remove this dish from the menu?",
+  removed: "Dish removed.",
+  add: "Add to the menu",
+  addTitle: (style: string) => `Add a dish (${style.toLowerCase()})`,
+  added: "Added to the breakfast menu.",
+});
+
+export const guestBreakfastCopy = branded({
+  title: "Breakfast",
+  body: "Choose from the menu, then the morning and time. Your host confirms it, like any extra.",
+  howLabel: "How you'd like breakfast",
+  included: "Included",
+  less: (n: string) => `One less ${n}`,
+  more: (n: string) => `One more ${n}`,
+  morning: "Morning",
+  time: "Time",
+  noteLabel: "Anything your host should know",
+  notePlaceholder: "Allergies, a cot-side table, an early taxi…",
+  choose: "Choose something from the menu",
+  order: (total: string) => (total ? `Order breakfast · ${total}` : "Order breakfast"),
+  sent: "Breakfast ordered. Your host will confirm it.",
 });
 

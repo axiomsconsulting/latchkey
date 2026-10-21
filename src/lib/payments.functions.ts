@@ -7,6 +7,7 @@
  * businesses the super admin runs, until they link their own).
  */
 import { createServerFn } from "@tanstack/react-start";
+import { stripeAmount } from "./extras";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -62,6 +63,15 @@ async function refreshAccount(hostId: string, account: string): Promise<StripeAc
   return acct;
 }
 
+/** A property's own currency (regional pricing, migration 0047) or its business's. */
+async function propertyCurrency(db: any, propertyId: string | null | undefined, hostCurrency: string | null | undefined): Promise<string> {
+  if (propertyId) {
+    const { data, error } = await db.from("properties").select("currency").eq("id", propertyId).maybeSingle();
+    if (!error && data?.currency) return data.currency as string;
+  }
+  return hostCurrency || "GBP";
+}
+
 export const getPaymentStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
@@ -81,7 +91,7 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
       live: stripeLiveMode(),
       webhookReady: Boolean(process.env["STRIPE_WEBHOOK_SECRET"]),
       syncedCount: count ?? 0,
-      currency: (p as { hosts?: { currency?: string } | null }).hosts?.currency ?? "GBP",
+      currency: await propertyCurrency(context.supabase, data.propertyId, (p as { hosts?: { currency?: string } | null }).hosts?.currency),
       isSuperAdmin: isSuper === true,
     };
     const payee = await payeeFor(p.host_id);
@@ -185,7 +195,7 @@ export const syncPriceListToStripe = createServerFn({ method: "POST" })
     const { stripeCall } = await import("./stripe.server");
     const { data: p } = await context.supabase.from("properties").select("id, name, hosts(currency)").eq("id", data.propertyId).single();
     if (!p) throw new Error("Property not found.");
-    const currency = (((p as any).hosts?.currency ?? "GBP") as string).toLowerCase();
+    const currency = (await propertyCurrency(context.supabase, data.propertyId, (p as any).hosts?.currency)).toLowerCase();
     const { data: rows } = await context.supabase
       .from("extras_catalogue")
       .select("id, item_key, name, price_pence, unit, is_free, active, stripe_product_id, stripe_price_id")
@@ -218,7 +228,7 @@ export const syncPriceListToStripe = createServerFn({ method: "POST" })
       }
       const price = await stripeCall<{ id: string }>(
         "/prices",
-        { product: productId, currency, unit_amount: r.price_pence, metadata: { latchkey_item: r.item_key ?? r.name, unit: r.unit } },
+        { product: productId, currency, unit_amount: stripeAmount(r.price_pence, currency), metadata: { latchkey_item: r.item_key ?? r.name, unit: r.unit } },
         "POST",
         account,
       );
@@ -257,7 +267,7 @@ export const startExtrasCheckout = createServerFn({ method: "POST" })
       throw new Error("Your host isn't taking card payments yet. Please pay them another way, or send them a message.");
     }
     const account = payee.mode === "connected" ? payee.account : null;
-    const currency = ((b?.properties?.hosts?.currency ?? "GBP") as string).toLowerCase();
+    const currency = (await propertyCurrency(db, b?.property_id, b?.properties?.hosts?.currency)).toLowerCase();
     const names = Array.isArray(r.items) ? (r.items as any[]).map((i) => `${i.qty ?? 1} × ${i.name ?? i.key}`).join(", ") : "Extras";
 
     // Charged directly in the host's account: the money, receipt and any refund are theirs.
@@ -275,7 +285,7 @@ export const startExtrasCheckout = createServerFn({ method: "POST" })
             quantity: 1,
             price_data: {
               currency,
-              unit_amount: r.total_pence,
+              unit_amount: stripeAmount(r.total_pence, currency),
               product_data: { name: `${b?.properties?.name ?? "Your stay"} — extras`, description: names.slice(0, 200) },
             },
           },

@@ -7,7 +7,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireOwner } from "@/lib/roles";
 import {
-  DEFAULT_EXTRAS, availableWindows, basketAutoApproves, earlyCheckinOptions, lateCheckoutOptions, priceBasket,
+  DEFAULT_EXTRAS, availableWindows, basketAutoApproves, breakfastMornings, breakfastProblem, breakfastTimes, earlyCheckinOptions, lateCheckoutOptions,
+  normaliseBreakfast, priceBasket, BREAKFAST_STYLES,
   type ExtraItem, type ExtraUnit, type WindowKey,
 } from "./extras";
 import { rebrand } from "@/lib/brand";
@@ -18,18 +19,30 @@ const HOLD_MS = 2 * 3600_000;
 
 type Row = {
   item_key: string | null; name: string; price_pence: number; unit: string; max_qty: number; is_free: boolean;
-  auto_approve: boolean; active: boolean; is_loan: boolean; options: unknown; sort_order: number;
+  auto_approve: boolean; active: boolean; is_loan: boolean; options: unknown; sort_order: number; description?: string | null;
 };
 
 function toItem(r: Row): ExtraItem {
-  const sizes = (r.options as { sizes?: ExtraItem["sizes"] } | null)?.sizes;
+  const options = (r.options ?? {}) as { sizes?: ExtraItem["sizes"]; breakfast?: unknown };
+  const breakfast = normaliseBreakfast(options.breakfast);
   return {
     key: r.item_key ?? r.name, name: r.name, pricePence: r.price_pence, unit: r.unit as ExtraUnit, maxQty: r.max_qty,
-    isFree: r.is_free, autoApprove: r.auto_approve, active: r.active, isLoan: r.is_loan, ...(sizes ? { sizes } : {}),
+    isFree: r.is_free, autoApprove: r.auto_approve, active: r.active, isLoan: r.is_loan, ...(options.sizes ? { sizes: options.sizes } : {}),
+    ...(r.description ? { description: r.description } : {}),
+    ...(breakfast ? { breakfast } : {}),
   };
 }
 
-const COLS = "item_key, name, price_pence, unit, max_qty, is_free, auto_approve, active, is_loan, options, sort_order";
+const COLS = "item_key, name, description, price_pence, unit, max_qty, is_free, auto_approve, active, is_loan, options, sort_order";
+
+/**
+ * The currency a property's extras are priced in: its own (migration 0047,
+ * regional pricing) or the business's.
+ */
+async function currencyFor(db: any, propertyId: string, hostCurrency: string | null | undefined): Promise<string> {
+  const { data, error } = await db.from("properties").select("currency").eq("id", propertyId).maybeSingle();
+  return (!error && (data?.currency as string | null)) || hostCurrency || "GBP";
+}
 
 async function loadItems(db: any, propertyId: string, currency: string, seed: boolean): Promise<ExtraItem[]> {
   const { data } = await db.from("extras_catalogue").select(COLS).eq("property_id", propertyId).not("item_key", "is", null).is("deleted_at", null).order("sort_order");
@@ -52,10 +65,15 @@ export const getPriceList = createServerFn({ method: "GET" })
     const { data: p } = await context.supabase.from("properties").select("id, hosts(currency, tax_registered, tax_label, tax_rate_bp, prices_include_tax, bank_details, out_until)").eq("id", data.propertyId).single();
     if (!p) throw new Error("Property not found.");
     const h = (p as any).hosts;
-    const items = await loadItems(context.supabase, data.propertyId, h?.currency ?? "GBP", true);
+    const currency = await currencyFor(context.supabase, data.propertyId, h?.currency);
+    const items = await loadItems(context.supabase, data.propertyId, currency, true);
+    const { data: own, error: ownError } = await (context.supabase as any).from("properties").select("currency").eq("id", data.propertyId).maybeSingle();
     return {
       items,
-      currency: h?.currency ?? "GBP",
+      currency,
+      hostCurrency: (h?.currency as string | null) ?? "GBP",
+      /** null = the business's currency; undefined before migration 0047 (can't be set yet). */
+      propertyCurrency: ownError ? undefined : ((own?.currency as string | null) ?? null),
       tax: { registered: !!h?.tax_registered, label: h?.tax_label ?? "VAT", rateBp: h?.tax_rate_bp ?? 2000, pricesInclude: h?.prices_include_tax ?? true },
       bankDetails: (h?.bank_details as string | null) ?? "",
       outUntil: (h?.out_until as string | null) ?? null,
@@ -66,16 +84,30 @@ const itemSchema = z.object({
   key: z.string().min(1).max(40), name: z.string().trim().min(1).max(80), pricePence: z.number().int().min(0).max(100000),
   unit: z.enum(["item", "hour", "bag_day", "pack"]), maxQty: z.number().int().min(1).max(20), isFree: z.boolean(),
   autoApprove: z.boolean(), active: z.boolean(), isLoan: z.boolean(),
+  description: z.string().trim().max(200).optional(),
+  breakfast: z.object({ style: z.enum(BREAKFAST_STYLES), section: z.string().trim().max(40).optional() }).nullable().optional(),
 });
+
+/** The item's options with its breakfast details set or cleared, keeping anything else (bag sizes). */
+function withBreakfast(options: unknown, b: { style: (typeof BREAKFAST_STYLES)[number]; section?: string | undefined } | null | undefined): Record<string, unknown> {
+  const o = { ...((options && typeof options === "object" ? options : {}) as Record<string, unknown>) };
+  if (b === undefined) return o;
+  if (b === null) delete o["breakfast"];
+  else o["breakfast"] = b.section ? { style: b.style, section: b.section } : { style: b.style };
+  return o;
+}
 
 export const savePriceItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid, item: itemSchema }).parse(d))
   .handler(async ({ data, context }) => {
     const i = data.item;
+    const { data: before } = await context.supabase.from("extras_catalogue").select("options").eq("property_id", data.propertyId).eq("item_key", i.key).maybeSingle();
     const { error } = await context.supabase.from("extras_catalogue").update({
       name: i.name, price_pence: i.isFree ? 0 : i.pricePence, unit: i.unit, max_qty: i.maxQty, is_free: i.isFree,
       auto_approve: i.autoApprove, requires_approval: !i.autoApprove, active: i.active, is_loan: i.isLoan,
+      ...(i.description !== undefined ? { description: i.description || null } : {}),
+      options: withBreakfast((before as { options?: unknown } | null)?.options, i.breakfast) as never,
     }).eq("property_id", data.propertyId).eq("item_key", i.key);
     if (error) throw new Error("Couldn't save that item.");
     return { ok: true };
@@ -89,7 +121,7 @@ export const addPriceItem = createServerFn({ method: "POST" })
     const i = data.item;
     const base = i.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 32) || "item";
     const { data: p } = await context.supabase.from("properties").select("hosts(currency)").eq("id", data.propertyId).single();
-    const currency = ((p as any)?.hosts?.currency as string) ?? "GBP";
+    const currency = await currencyFor(context.supabase, data.propertyId, (p as any)?.hosts?.currency);
     const { data: existing } = await context.supabase.from("extras_catalogue").select("item_key, sort_order").eq("property_id", data.propertyId);
     const keys = new Set((existing ?? []).map((r: any) => r.item_key));
     let key = base;
@@ -99,7 +131,8 @@ export const addPriceItem = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("extras_catalogue").insert({
       property_id: data.propertyId, item_key: key, name: i.name, price_pence: i.isFree ? 0 : i.pricePence,
       unit: i.unit, max_qty: i.maxQty, is_free: i.isFree, auto_approve: i.autoApprove, requires_approval: !i.autoApprove,
-      active: i.active, is_loan: i.isLoan, sort_order: nextOrder, currency, options: {},
+      active: i.active, is_loan: i.isLoan, sort_order: nextOrder, currency, options: withBreakfast({}, i.breakfast) as never,
+      description: i.description || null,
     });
     if (error) throw new Error("Couldn't add that item.");
     return { ok: true, key };
@@ -156,6 +189,24 @@ export const setPriceOrder = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Regional pricing: price this property's extras in its own currency (null = the business's). */
+export const setPropertyCurrency = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, currency: z.string().regex(/^[A-Z]{3}$/).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { isCurrency } = await import("./world");
+    if (data.currency && !isCurrency(data.currency)) throw new Error("Please pick a currency from the list.");
+    const { data: p } = await context.supabase.from("properties").select("host_id").eq("id", data.propertyId).single();
+    if (!p) throw new Error("Property not found.");
+    await requireOwner(context.supabase, (p as { host_id: string }).host_id);
+    const { error } = await (context.supabase as any).from("properties").update({ currency: data.currency }).eq("id", data.propertyId);
+    if (error) throw new Error(error.message.includes("currency") ? "Regional pricing needs the latest update (migration 0047)." : "Couldn't save the currency.");
+    // Existing items follow the property's currency (or the business's again).
+    const { data: h } = await context.supabase.from("hosts").select("currency").eq("id", (p as { host_id: string }).host_id).single();
+    await (context.supabase as any).from("extras_catalogue").update({ currency: data.currency ?? (h as { currency?: string } | null)?.currency ?? "GBP" }).eq("property_id", data.propertyId);
+    return { ok: true };
+  });
+
 export const saveMoneySettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
@@ -183,7 +234,14 @@ export const listExtrasRequests = createServerFn({ method: "GET" })
       .eq("bookings.property_id", data.propertyId)
       .order("created_at", { ascending: false })
       .limit(50);
+    // Breakfast orders: which morning, what time and how it's served (migration 0047).
+    const ids = (rows ?? []).map((r: any) => r.id);
+    const { data: bf, error: bfError } = ids.length
+      ? await (context.supabase as any).from("requests").select("id, breakfast_at, breakfast_style").in("id", ids)
+      : { data: [], error: null };
+    const breakfastOf = new Map(((bfError ? [] : bf) ?? []).filter((x: any) => x.breakfast_style).map((x: any) => [x.id, { at: x.breakfast_at as string | null, style: x.breakfast_style as string }]));
     return (rows ?? []).map((r: any) => ({
+      breakfast: (breakfastOf.get(r.id) as { at: string | null; style: string } | undefined) ?? null,
       id: r.id, status: r.status as string, items: r.items as { name: string; qty: number; totalPence: number }[],
       window: r.time_window as string | null, totalPence: r.total_pence as number, payBy: r.pay_by as string | null,
       suggested: r.suggested_window as string | null, lateUntil: r.late_until as string | null, earlyFrom: r.early_from as string | null,
@@ -263,8 +321,12 @@ export const getStayExtras = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { db, b } = await stayContext(data.token);
     const p = b.properties;
-    const currency = p.hosts?.currency ?? "GBP";
+    const currency = await currencyFor(db, b.property_id, p.hosts?.currency);
     const items = (await loadItems(db, b.property_id, currency, true)).filter((i) => i.active);
+    const tz = p.timezone ?? "Europe/London";
+    const now = new Date();
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
+    const nowTime = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
     const flags = await roomDayFlags(db, b);
     const late = items.find((i) => i.key === "late_checkout");
     const early = items.find((i) => i.key === "early_checkin");
@@ -299,6 +361,9 @@ export const getStayExtras = createServerFn({ method: "GET" })
         rateBp: (p.hosts?.tax_rate_bp as number | null) ?? 2000,
         pricesInclude: p.hosts?.prices_include_tax ?? true,
       },
+      // Breakfast: the mornings and times it can be ordered for, in the property's time.
+      breakfastMornings: breakfastMornings({ today, nowTime, checkIn: b.check_in_date, checkOut: b.check_out_date }),
+      breakfastTimes: breakfastTimes(),
       lateOptions: late ? lateCheckoutOptions({ checkOutTime: (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5), maxHours: late.maxQty, sameDayArrival: flags.sameDayArrival, blocked: [] }) : [],
       earlyOptions: early ? earlyCheckinOptions({ checkInTime: (b.check_in_time ?? p.default_check_in_time ?? "15:00").slice(0, 5), maxHours: early.maxQty, sameDayDeparture: flags.sameDayDeparture, blocked: [] }) : [],
       requests: (reqs ?? []).map((r: any) => ({
@@ -320,12 +385,27 @@ export const createExtrasRequest = createServerFn({ method: "POST" })
     lines: z.array(z.object({ key: z.string().max(40), qty: z.number().int().min(1).max(20), size: z.string().max(20).nullable().default(null) })).min(1).max(12),
     window: z.enum(["asap", "evening", "morning", "door"]),
     note: z.string().trim().max(300).nullable().default(null),
+    /** A breakfast order: how it's served, and when. */
+    breakfast: z.object({ style: z.enum(BREAKFAST_STYLES), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), time: z.string().regex(/^\d{2}:\d{2}$/) }).nullable().default(null),
   }).parse(d))
   .handler(async ({ data }) => {
     const { db, b } = await stayContext(data.token);
     const p = b.properties;
-    const items = await loadItems(db, b.property_id, p.hosts?.currency ?? "GBP", true);
+    const items = await loadItems(db, b.property_id, await currencyFor(db, b.property_id, p.hosts?.currency), true);
     const priced = priceBasket(items, data.lines);
+    let breakfastAt: string | null = null;
+    if (data.breakfast) {
+      const problem = breakfastProblem(items, data.lines, data.breakfast.style);
+      if (problem) throw new Error(problem);
+      const tz = p.timezone ?? "Europe/London";
+      const now = new Date();
+      const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
+      const nowTime = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+      if (!breakfastMornings({ today, nowTime, checkIn: b.check_in_date, checkOut: b.check_out_date }).includes(data.breakfast.date)) throw new Error("Breakfast can't be ordered for that morning.");
+      if (!breakfastTimes().includes(data.breakfast.time)) throw new Error("Please pick a breakfast time.");
+      const { zonedToUtc } = await import("./guide");
+      breakfastAt = zonedToUtc(data.breakfast.date, data.breakfast.time, tz).toISOString();
+    }
     const flags = await roomDayFlags(db, b);
 
     let lateUntil: string | null = null;
@@ -352,17 +432,24 @@ export const createExtrasRequest = createServerFn({ method: "POST" })
     const total = priced.reduce((s, l) => s + l.totalPence, 0);
     const auto = basketAutoApproves(items, data.lines);
     const status = auto ? (total > 0 ? "awaiting_payment" : "approved") : "requested";
-    const { data: row, error } = await db.from("requests").insert({
-      booking_id: b.id, kind: "extras", status, items: priced, time_window: data.window as WindowKey, total_pence: total,
+    const base = {
+      booking_id: b.id, kind: "extras", status, items: priced, time_window: (data.breakfast ? "morning" : data.window) as WindowKey, total_pence: total,
       pay_by: status === "awaiting_payment" ? new Date(Date.now() + HOLD_MS).toISOString() : null,
       late_until: lateUntil, early_from: earlyFrom, message: data.note,
-    }).select("id").single();
-    if (error) throw new Error("We couldn't send that. Please try again.");
+    };
+    const { withLegacy } = await import("./checkin.server");
+    const breakfastLine = data.breakfast ? `Breakfast (${data.breakfast.style === "packed" ? "light or packed" : data.breakfast.style === "delivered" ? "delivered to the room" : "in the dining room"}) for ${data.breakfast.date} at ${data.breakfast.time}.` : null;
+    const { data: row, error } = await withLegacy(
+      () => db.from("requests").insert({ ...base, ...(data.breakfast ? { breakfast_at: breakfastAt, breakfast_style: data.breakfast.style } : {}) } as never).select("id").single(),
+      // Before migration 0047: the breakfast time goes in the guest's note instead.
+      () => db.from("requests").insert({ ...base, message: [breakfastLine, data.note].filter(Boolean).join(" ") || null } as never).select("id").single(),
+    );
+    if (error || !row) throw new Error("We couldn't send that. Please try again.");
 
     const { raiseAlert } = await import("./checkin.server");
     await raiseAlert({
       hostId: p.host_id, propertyId: b.property_id, bookingId: b.id, kind: "service_request",
-      message: `${auto ? "Auto-approved" : "Needs approval"}: ${priced.map((l) => `${l.qty}× ${l.name}`).join(", ")}`,
+      message: `${auto ? "Auto-approved" : "Needs approval"}: ${priced.map((l) => `${l.qty}× ${l.name}`).join(", ")}${breakfastLine ? ` · ${breakfastLine}` : ""}`,
     });
     return { id: row.id, status };
   });

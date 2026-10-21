@@ -12,6 +12,10 @@ import { formatPence } from "@/lib/services";
 import { acceptSuggestion, cancelExtrasRequest, chooseOfflinePayment, createExtrasRequest, getStayExtras } from "@/lib/extras.functions";
 import { confirmExtrasPayment, startExtrasCheckout } from "@/lib/payments.functions";
 import { cn } from "@/lib/utils";
+import { breakfastMenu, type BreakfastStyle, type ExtraItem } from "@/lib/extras";
+import { breakfastCopy, guestBreakfastCopy as bcopy } from "@/content/copy";
+import { formatUkDate } from "@/lib/dates";
+import { Coffee } from "lucide-react";
 
 type Line = { key: string; qty: number; size: string | null };
 
@@ -114,7 +118,8 @@ export function StayExtras({ token }: { token: string }) {
   if (q.isLoading) return <div className="card-soft h-40 animate-pulse" />;
   if (!d) return null;
 
-  const regular = d.items.filter((i) => i.key !== "late_checkout" && i.key !== "early_checkin");
+  // Breakfast dishes have their own card above; everything else is a tile.
+  const regular = d.items.filter((i) => i.key !== "late_checkout" && i.key !== "early_checkin" && !i.breakfast);
   const lineOf = (k: string) => lines.find((l) => l.key === k);
   const nameOf = (k: string) => d.items.find((i) => i.key === k)?.name ?? k;
   const receiptReq = d.requests.find((r) => r.id === receiptId) ?? null;
@@ -224,6 +229,19 @@ export function StayExtras({ token }: { token: string }) {
 
       {hourPicker("late_checkout", copy.lateTitle, d.lateOptions.map((o) => ({ hours: o.hours, label: copy.until(o.until) })), copy.lateNone)}
       {hourPicker("early_checkin", copy.earlyTitle, d.earlyOptions.map((o) => ({ hours: o.hours, label: copy.from(o.from) })), copy.earlyNone)}
+
+      <BreakfastOrder
+        items={d.items}
+        currency={cur}
+        mornings={d.breakfastMornings ?? []}
+        times={d.breakfastTimes ?? []}
+        onOrder={async (order) => {
+          const res = await create({ data: { token, lines: order.lines.map((l) => ({ ...l, size: null })), window: "morning", note: order.note, breakfast: { style: order.style, date: order.date, time: order.time } } });
+          await qc.invalidateQueries({ queryKey: ["stay-extras", token] });
+          if (res.status === "awaiting_payment") await pay(res.id);
+          else toast.success(bcopy.sent);
+        }}
+      />
 
       <div className="grid gap-3 pb-24 sm:grid-cols-2">
         {regular.map((it) => {
@@ -335,3 +353,137 @@ export function StayExtras({ token }: { token: string }) {
     </section>
   );
 }
+
+/**
+ * Breakfast from the host's menu: how it's served (light or packed,
+ * delivered, in the dining room), à la carte dishes, the morning and time.
+ * Sent and charged like any extra.
+ */
+function BreakfastOrder({
+  items,
+  currency,
+  mornings,
+  times,
+  onOrder,
+}: {
+  items: ExtraItem[];
+  currency: string;
+  mornings: string[];
+  times: string[];
+  onOrder: (o: { style: BreakfastStyle; lines: Array<{ key: string; qty: number }>; date: string; time: string; note: string | null }) => Promise<void>;
+}) {
+  const menu = breakfastMenu(items);
+  const [style, setStyle] = useState<BreakfastStyle | null>(menu[0]?.style ?? null);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [date, setDate] = useState(mornings[0] ?? "");
+  const [time, setTime] = useState(times.includes("08:00") ? "08:00" : (times[0] ?? ""));
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!menu.length || !mornings.length) return null;
+  const current = menu.find((m) => m.style === style) ?? menu[0]!;
+  const chosen = current.sections.flatMap((s) => s.items).filter((i) => (qty[i.key] ?? 0) > 0);
+  const total = chosen.reduce((a, i) => a + (i.isFree ? 0 : i.pricePence) * (qty[i.key] ?? 0), 0);
+
+  return (
+    <section className="card-soft space-y-4 p-5" aria-labelledby="breakfast-title">
+      <div className="flex items-start gap-3">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary"><Coffee className="size-5" /></span>
+        <div className="min-w-0">
+          <h3 id="breakfast-title" className="text-xl">{bcopy.title}</h3>
+          <p className="text-sm text-muted-foreground">{bcopy.body}</p>
+        </div>
+      </div>
+      {menu.length > 1 ? (
+        <div role="radiogroup" aria-label={bcopy.howLabel} className="flex flex-wrap gap-2">
+          {menu.map((m) => (
+            <button
+              key={m.style}
+              type="button"
+              role="radio"
+              aria-checked={current.style === m.style}
+              onClick={() => {
+                setStyle(m.style);
+                setQty({});
+              }}
+              className={cn("min-h-11 rounded-full border px-4 text-sm font-medium", current.style === m.style ? "border-primary bg-primary text-primary-foreground" : "border-border")}
+            >
+              {breakfastCopy.styles[m.style]}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm font-medium">{breakfastCopy.styles[current.style]}</p>
+      )}
+      {current.sections.map((sec) => (
+        <div key={sec.name || "menu"} className="space-y-2">
+          {sec.name ? <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{sec.name}</h4> : null}
+          <ul className="divide-y divide-border rounded-2xl border border-border">
+            {sec.items.map((it) => {
+              const n = qty[it.key] ?? 0;
+              return (
+                <li key={it.key} className="flex items-center gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{it.name}</p>
+                    {it.description ? <p className="text-sm text-muted-foreground">{it.description}</p> : null}
+                  </div>
+                  <span className="shrink-0 text-sm tabular-nums">{it.isFree ? bcopy.included : formatPence(it.pricePence, currency)}</span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button size="icon" variant="outline" className="size-10" aria-label={bcopy.less(it.name)} disabled={n === 0} onClick={() => setQty((q) => ({ ...q, [it.key]: Math.max(0, n - 1) }))}>
+                      <Minus className="size-4" />
+                    </Button>
+                    <span className="w-6 text-center tabular-nums" aria-live="polite">{n}</span>
+                    <Button size="icon" variant="outline" className="size-10" aria-label={bcopy.more(it.name)} disabled={n >= it.maxQty} onClick={() => setQty((q) => ({ ...q, [it.key]: n + 1 }))}>
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">{bcopy.morning}</span>
+          <select className="h-11 w-full rounded-xl border border-border bg-surface px-3" value={date} onChange={(e) => setDate(e.target.value)}>
+            {mornings.map((m) => <option key={m} value={m}>{formatUkDate(m)}</option>)}
+          </select>
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">{bcopy.time}</span>
+          <select className="h-11 w-full rounded-xl border border-border bg-surface px-3" value={time} onChange={(e) => setTime(e.target.value)}>
+            {times.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+      </div>
+      <textarea
+        className="min-h-16 w-full rounded-xl border border-border bg-surface p-3 text-sm"
+        maxLength={300}
+        placeholder={bcopy.notePlaceholder}
+        aria-label={bcopy.noteLabel}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <Button
+        size="touch"
+        className="w-full sm:w-auto"
+        disabled={!chosen.length || busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await onOrder({ style: current.style, lines: chosen.map((i) => ({ key: i.key, qty: qty[i.key]! })), date, time, note: note.trim() || null });
+            setQty({});
+            setNote("");
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Please try again.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? <Loader2 className="size-4 animate-spin" /> : null} {chosen.length ? bcopy.order(total > 0 ? formatPence(total, currency) : "") : bcopy.choose}
+      </Button>
+    </section>
+  );
+}
+
