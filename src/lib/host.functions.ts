@@ -1110,3 +1110,36 @@ export const saveChannelLabels = createServerFn({ method: "POST" })
     } else if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Where this business's first visit came from (utm_*, ref): saved once, at set-up (migration 0044). */
+export const recordSignupSource = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        hostId: uuid,
+        attribution: z.object({
+          utm_source: z.string().max(200).optional(),
+          utm_medium: z.string().max(200).optional(),
+          utm_campaign: z.string().max(200).optional(),
+          utm_content: z.string().max(200).optional(),
+          utm_term: z.string().max(200).optional(),
+          ref: z.string().max(200).optional(),
+          clickId: z.boolean().optional(),
+          landing_path: z.string().max(200).optional(),
+          captured_at: z.string().max(40).optional(),
+        }),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireOwner(context.supabase, data.hostId);
+    // Only the first time; quietly nothing before migration 0044.
+    await (context.supabase as unknown as { from: (t: string) => any })
+      .from("hosts")
+      .update({ signup_utm: data.attribution })
+      .eq("id", data.hostId)
+      .is("signup_utm", null);
+    return { ok: true };
+  });
+

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getAttribution } from "@/lib/attribution";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -13,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { authExtraCopy as extraCopy, common, onboarding as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/use-host-data";
-import { loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
+import { recordSignupSource, loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
 import { cn } from "@/lib/utils";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
 import { rebrand } from "@/lib/brand";
@@ -37,7 +38,17 @@ function SetupPage() {
   const saveProp = useServerFn(saveProperty);
   const addRoom = useServerFn(saveRoom);
   const demo = useServerFn(loadDemoData);
+  const recordSource = useServerFn(recordSignupSource);
   const qc = useQueryClient();
+  // Where this trial came from (the post, the campaign), saved once on the new business.
+  const setupHostId = workspace.data?.hostId ?? null;
+  useEffect(() => {
+    if (!setupHostId || workspace.data?.role !== "owner") return;
+    const attribution = getAttribution();
+    if (!Object.keys(attribution).length) return;
+    void recordSource({ data: { hostId: setupHostId, attribution } }).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setupHostId]);
 
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
