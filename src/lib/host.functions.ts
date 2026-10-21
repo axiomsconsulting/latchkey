@@ -15,6 +15,7 @@ import { RESERVED_SLUGS } from "./theme";
 import { todayInZone } from "./dates";
 import {
   DEMO_BOOKINGS,
+  type DemoBooking,
   DEMO_CONNECTIONS,
   DEMO_JOBS,
   DEMO_MESSAGES,
@@ -779,8 +780,19 @@ export const loadDemoData = createServerFn({ method: "POST" })
     return { propertyId: property.id };
   });
 
-/** Wipes and re-creates the demo property for a host. Used by the public demo too. */
-export async function seedDemo(supabase: Client, hostId: string, shortCode?: string) {
+export type DemoSeed = {
+  bookings?: DemoBooking[];
+  jobs?: typeof DEMO_JOBS;
+  messages?: typeof DEMO_MESSAGES;
+  /** Start today's housekeeping board (rooms leaving today: one to clean, one being cleaned). */
+  readiness?: boolean;
+};
+
+/** Wipes and re-creates the demo property for a host. Used by the public demo and the recording account too. */
+export async function seedDemo(supabase: Client, hostId: string, shortCode?: string, seed: DemoSeed = {}) {
+  const bookings = seed.bookings ?? DEMO_BOOKINGS;
+  const jobs = seed.jobs ?? DEMO_JOBS;
+  const messages = seed.messages ?? DEMO_MESSAGES;
     await removeDemoRows(supabase, hostId);
 
     const suffix = Math.random().toString(36).slice(2, 6);
@@ -821,7 +833,7 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
 
     const today = todayInZone(property.timezone ?? "Europe/London");
     const { data: stays } = await supabase.from("bookings").insert(
-      DEMO_BOOKINGS.map((b) => ({
+      bookings.map((b) => ({
         property_id: property.id,
         room_id: roomByKey.get(b.roomKey) ?? null,
         channel: b.channel,
@@ -842,7 +854,7 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
     // Open work and a conversation, so Services, housekeeping and messages aren't empty.
     const stayOf = new Map(((stays ?? []) as Array<{ id: string; guest_full_name: string | null }>).map((x) => [x.guest_full_name, x.id]));
     await supabase.from("service_jobs").insert(
-      DEMO_JOBS.map((j) => ({
+      jobs.map((j) => ({
         host_id: hostId,
         property_id: property.id,
         room_id: roomByKey.get(j.roomKey) ?? null,
@@ -857,11 +869,28 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
       })),
     );
     await supabase.from("messages").insert(
-      DEMO_MESSAGES.filter((m) => stayOf.get(m.guest)).map((m) => {
+      messages.filter((m) => stayOf.get(m.guest)).map((m) => {
         const at = new Date(Date.now() - m.minutesAgo * 60_000).toISOString();
         return { booking_id: stayOf.get(m.guest)!, direction: m.direction, channel: "stay_page", body: m.body, sent_at: at, created_at: at };
       }),
     );
+
+    if (seed.readiness) {
+      // Today's departures on the housekeeping board (migration 0042; skipped before it).
+      const leaving = bookings.filter((b) => b.check_out_offset === 0);
+      await (supabase as unknown as { from: (t: string) => any })
+        .from("room_readiness")
+        .insert(
+          leaving.map((b, i) => ({
+            property_id: property.id,
+            room_id: roomByKey.get(b.roomKey),
+            day: today,
+            status: i === 0 ? "cleaning" : "to_clean",
+            assignee: i === 0 ? "Marta (housekeeping)" : null,
+          })),
+        )
+        .then(() => undefined, () => undefined);
+    }
 
     await supabase.from("unavailability_windows").insert(
       DEMO_UNAVAILABILITY.map((w) => ({

@@ -160,3 +160,17 @@ Hosts attach photos and documents to stay guide sections. They're kept in a Goog
 3. Credentials → Create credentials → OAuth client ID → Web application. Authorised redirect URI: `https://<your app address>/api/public/google/callback` (shown in Latchkey admin → Integrations → Guide attachments).
 4. Lovable Cloud → Secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Optional: `ATTACHMENT_SIGNING_SECRET` (any long random string; otherwise the service key signs links).
 5. Latchkey admin → Integrations → **Connect Google Drive**, sign in with the account whose Drive should hold the files.
+
+## Recording account (for demo videos)
+
+A separate host account for screen recordings, untouched by the public demo's
+daily rebuild or its visitors.
+
+1. Create the account yourself: Lovable Cloud → Authentication → Add user
+   (or sign up normally). Keep its password in your password manager only.
+2. Lovable Cloud → Secrets: add `RECORDING_HOST_EMAIL` (that account's email)
+   and, if you like, `RECORDING_BUSINESS_NAME` (defaults to "The Hill Suites").
+3. Latchkey admin → Routines → **Reseed recording account**. It fills three
+   weeks of stays relative to today at the guest link `/showcase`, keeps every
+   integration in demo mode, and never bills the account. Press it again any
+   time to refresh the dates.

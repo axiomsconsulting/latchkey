@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Clock, Loader2, Play, Zap } from "lucide-react";
+import { Clapperboard, Clock, Loader2, Play, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { common, routinesCopy as copy, studioCopy } from "@/content/copy";
 import { listRoutines, runRoutineNow, saveRoutine, type RoutineRow } from "@/lib/admin.functions";
+import { seedRecordingAccount } from "@/lib/demo.functions";
 import { formatUkDate } from "@/lib/dates";
 import { JOBS, type Job } from "@/lib/jobs";
 import { creditPence, type CostModel } from "@/lib/pricing-model";
@@ -40,6 +41,7 @@ export function RoutinesAdmin() {
         <p className="text-muted-foreground">{copy.body}</p>
         {migrationPending ? <p className="rounded-xl bg-warning/15 p-3 text-sm">{studioCopy.migration}</p> : null}
       </div>
+      <RecordingAccount />
       {JOBS.map((job) => (
         <RoutineCard key={job.key} job={job} row={settings.find((s) => s.key === job.key)} uses={usageMonth[job.metric] ?? 0} costs={costs} />
       ))}
@@ -139,3 +141,35 @@ function RoutineCard({ job, row, uses, costs }: { job: Job; row: RoutineRow | un
     </article>
   );
 }
+
+/** The screen-recording account: refill it with three weeks of realistic stays (RECORDING_HOST_EMAIL in Secrets). */
+function RecordingAccount() {
+  const run = useServerFn(seedRecordingAccount);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="card-soft flex flex-wrap items-center gap-3 p-5">
+      <div className="min-w-0 flex-1 basis-64">
+        <h3 className="flex items-center gap-2 font-display text-lg"><Clapperboard className="size-5 text-primary" /> {copy.recordingTitle}</h3>
+        <p className="text-sm text-muted-foreground">{copy.recordingBody}</p>
+      </div>
+      <Button
+        variant="outline"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            const r = await run();
+            toast.success(copy.recordingDone(r.stays));
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : common.errorBody);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? <Loader2 className="size-4 animate-spin" /> : null} {copy.recordingButton}
+      </Button>
+    </div>
+  );
+}
+

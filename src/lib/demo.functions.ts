@@ -4,6 +4,7 @@
  * login or PIN. Only is_demo rows on that account are ever touched.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 import { DEMO_CODE, DEMO_EMAIL, DEMO_INTEGRATION_MODES } from "./demo-account";
@@ -129,4 +130,69 @@ export const startDemo = createServerFn({ method: "POST" })
     const { data: link, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: DEMO_EMAIL });
     if (error) throw new Error(UNAVAILABLE);
     return { code, tokenHash: link.properties.hashed_token as string };
+  });
+
+/**
+ * Super admin: (re)fills the screen-recording account, a separate host the
+ * public demo never touches. Its sign-in is RECORDING_HOST_EMAIL (Lovable
+ * Cloud → Secrets); the account is made by hand, never here, and no password
+ * passes through this code. Only that host's sample rows are replaced.
+ */
+export const seedRecordingAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { requireSuperAdmin } = await import("./roles");
+    await requireSuperAdmin(context.supabase);
+    const email = (process.env["RECORDING_HOST_EMAIL"] ?? "").trim().toLowerCase();
+    if (!email) throw new Error("Set RECORDING_HOST_EMAIL in Lovable Cloud → Secrets first.");
+    if (email === DEMO_EMAIL) throw new Error("The recording account must not be the shared demo account.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+
+    // Find the person (never create them).
+    let userId: string | null = null;
+    for (let page = 1; page <= 20 && !userId; page++) {
+      const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+      if (error) throw new Error("Couldn't look up the recording account.");
+      const users = (data?.users ?? []) as Array<{ id: string; email?: string | null }>;
+      userId = users.find((u) => (u.email ?? "").toLowerCase() === email)?.id ?? null;
+      if (users.length < 200) break;
+    }
+    if (!userId) throw new Error("No account with the recording email yet. Create it in Lovable Cloud → Authentication first.");
+
+    // Its own business (made once), kept on demo integrations and never billed.
+    const name = (process.env["RECORDING_BUSINESS_NAME"] ?? "").trim() || "The Hill Suites";
+    const { data: member } = await admin.from("host_members").select("host_id").eq("user_id", userId).eq("role", "owner").limit(1).maybeSingle();
+    let hostId = (member?.host_id as string | undefined) ?? null;
+    const fields = { business_name: name, contact_email: email, currency: "GBP", timezone: "Europe/London", integration_modes: DEMO_INTEGRATION_MODES, subscription_status: "comped" };
+    if (hostId) {
+      await admin.from("hosts").update(fields).eq("id", hostId);
+    } else {
+      const { data: made, error } = await admin.from("hosts").insert(fields).select("id").single();
+      if (error) throw new Error(error.message);
+      hostId = made.id as string;
+      await admin.from("host_members").insert({ host_id: hostId, user_id: userId, role: "owner" });
+    }
+
+    // Three weeks of realistic stays, a request or two, a conversation, today's turnovers.
+    const { buildRecordingBookings } = await import("./demo-data");
+    const bookings = buildRecordingBookings();
+    const staying = bookings.filter((b) => b.status === "checked_in" && b.guest_full_name);
+    const leavingSoon = staying.find((b) => b.check_out_offset === 1) ?? staying[1] ?? staying[0];
+    const towels = staying[0];
+    const jobs = [
+      ...(towels ? [{ roomKey: towels.roomKey, guest: towels.guest_full_name, source: "guest" as const, category: "linen", title: "Fresh towels", note: "Could we have fresh towels this afternoon?", urgency: "normal" as const, status: "new" as const }] : []),
+      ...(leavingSoon ? [{ roomKey: leavingSoon.roomKey, guest: leavingSoon.guest_full_name, source: "guest" as const, category: "late_checkout", title: "Late check-out", note: "Flight is in the evening: could we stay until 1pm?", urgency: "low" as const, status: "acknowledged" as const }] : []),
+      { roomKey: "r2", guest: null, source: "maintenance" as const, category: "handyman", title: "Wardrobe door sticks", note: "Plane the bottom edge.", urgency: "low" as const, status: "new" as const },
+    ];
+    const messages = towels?.guest_full_name
+      ? [
+          { guest: towels.guest_full_name, direction: "inbound" as const, minutesAgo: 95, body: "Hello! Is there somewhere nearby for breakfast?" },
+          { guest: towels.guest_full_name, direction: "outbound" as const, minutesAgo: 80, body: "Yes: The Old Bakery opens at 7:30, two minutes' walk. It's in your guide under Local tips too." },
+          { guest: towels.guest_full_name, direction: "inbound" as const, minutesAgo: 20, body: "Perfect, thank you. Could we also have fresh towels later?" },
+        ]
+      : [];
+
+    const property = await seedDemo(admin, hostId, "showcase", { bookings, jobs: jobs as never, messages, readiness: true });
+    return { ok: true, propertyCode: property.short_code, stays: bookings.length };
   });

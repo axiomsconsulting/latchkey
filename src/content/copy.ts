@@ -2691,6 +2691,10 @@ export const visitorsCopy = branded({
 
 /** Super admin: every routine that spends Lovable Run credits. */
 export const routinesCopy = branded({
+  recordingTitle: "Recording account",
+  recordingBody: "Refill the separate account you record videos from: three weeks of stays at about 70%, turnovers, a late arrival, an ID check, requests and a conversation. The sign-in comes from RECORDING_HOST_EMAIL in Lovable Cloud → Secrets; only its sample data is replaced.",
+  recordingButton: "Reseed recording account",
+  recordingDone: (n: number) => `Recording account refilled with ${n} stays.`,
   title: "Routines that use Run credits",
   body:
     "Everything Latchkey runs on Lovable's servers. Scheduled ones are woken by Lovable's scheduler (set in Lovable under Cloud → Cron); when one is off or not due, the wake-up stops before any real work. Switching off a feature that runs when used turns that feature off for every host.",

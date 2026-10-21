@@ -294,3 +294,67 @@ export function demoDates(today: string, b: DemoBooking) {
     check_out_date: addDays(today, b.check_out_offset),
   };
 }
+
+/* ------------------------- recording account -------------------------- */
+
+/** Fictional guests for the screen-recording account (never real people). */
+export const RECORDING_GUESTS = [
+  "Amelia Hart", "Jonas Weber", "Priya Nair", "Callum Reid", "Sofia Ricci", "Daniel Okoye", "Maya Lindqvist", "Tom Fletcher",
+  "Aisha Rahman", "Lucas Moreau", "Grace Whitfield", "Mateo García", "Hannah Brooks", "Kenji Sato", "Isla Campbell", "Omar Haddad",
+  "Freya Nilsen", "Ben Carter", "Zara Malik", "Noah Fischer", "Ella Byrne", "Arjun Mehta", "Chloe Dupont", "Leo Martins",
+];
+
+const RECORDING_CHANNELS: DemoBooking["channel"][] = ["airbnb", "booking_com", "direct", "airbnb", "booking_com", "direct", "airbnb"];
+// Nights and the gap after each stay: about 70% of nights are occupied.
+const STAY_PATTERN: Array<[nights: number, gap: number]> = [[3, 1], [2, 0], [4, 2], [1, 1], [3, 0], [2, 2], [5, 1], [2, 0]];
+
+/**
+ * Bookings for the recording account: every room from 7 days ago to 21 days
+ * ahead, about 70% full, on Airbnb, Booking.com and direct, 1 to 3 guests
+ * (never more than the room takes), some late arrivals, same-day turnovers
+ * (out by 11:00, in from 15:00), and one stay flagged for an ID check.
+ */
+export function buildRecordingBookings(rooms: Array<Pick<DemoRoom, "key" | "max_guests">> = DEMO_ROOMS): DemoBooking[] {
+  const out: DemoBooking[] = [];
+  let n = 0;
+  rooms.forEach((room, r) => {
+    // Each room starts at a different point in the pattern, so turnovers don't all land on one day.
+    let day = -7 - r;
+    let p = r * 3;
+    while (day < 21) {
+      const [nights, gap] = STAY_PATTERN[p % STAY_PATTERN.length]!;
+      const inOff = day;
+      const outOff = day + nights;
+      if (outOff > -7) {
+        const late = n % 5 === 2;
+        const status: DemoBooking["status"] =
+          outOff <= 0 ? "checked_out" : inOff < 0 ? "checked_in" : inOff === 0 && n % 2 === 0 ? "needs_details" : "upcoming";
+        out.push({
+          roomKey: room.key,
+          channel: RECORDING_CHANNELS[n % RECORDING_CHANNELS.length]!,
+          source: RECORDING_CHANNELS[n % RECORDING_CHANNELS.length] === "direct" ? "manual" : "ical",
+          guest_full_name: status === "needs_details" ? null : RECORDING_GUESTS[n % RECORDING_GUESTS.length]!,
+          reservation_code: RECORDING_CHANNELS[n % RECORDING_CHANNELS.length] === "direct" ? null : `RX${(48210 + n * 37).toString(36).toUpperCase()}`,
+          guest_count: Math.min(room.max_guests, 1 + (n % 3)),
+          phone_last4: String(1000 + ((n * 7919) % 9000)),
+          check_in_offset: inOff,
+          check_out_offset: outOff,
+          check_in_time: late ? "22:30" : "15:00",
+          check_out_time: "11:00",
+          status,
+          notes: late ? "Late arrival, around 22:30." : null,
+        });
+        n++;
+      }
+      day = outOff + gap;
+      p++;
+    }
+  });
+  // One upcoming stay waits on an ID check, so that screen can be shown.
+  const flag = out.find((b) => b.status === "upcoming" && b.check_in_offset >= 1 && b.guest_full_name);
+  if (flag) {
+    flag.status = "flagged";
+    flag.notes = "ID check needs a look: the name on the ID didn't match the booking.";
+  }
+  return out;
+}
