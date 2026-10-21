@@ -9,6 +9,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { captureAttribution, captureOnce } from "@/lib/attribution";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "../components/ui/sonner";
@@ -84,6 +85,8 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
+    // Where this visit came from, kept for the session before anything redirects (/tour, /p, the demo).
+    if (typeof window !== "undefined") captureAttribution(new URLSearchParams(window.location.search));
     const site = await loadSite().catch(() => null);
     if (site) setBrand(site.brand);
     const code = site?.tenant?.shortCode;
@@ -94,7 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: rebrand("Latchkey — self-service arrivals for small hosts") },
+      { title: rebrand("Latchkey — guest operations for independent accommodation") },
       {
         name: "description",
         content:
@@ -150,6 +153,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // Before any page reads it: where this visit came from (idempotent, browser only).
+  captureOnce();
 
   return (
     <QueryClientProvider client={queryClient}>

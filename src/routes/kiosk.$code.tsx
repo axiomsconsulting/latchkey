@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { pickUtm, type Utm } from "@/lib/attribution";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -34,7 +35,9 @@ export const Route = createFileRoute("/kiosk/$code")({
   // ?guest=1: a guest's own phone (from a QR code or link), not the shared door tablet.
   // ?resume=<token>: carry on a check-in started on the door tablet.
   // ?join=<share>: another guest on the same booking fills in their own details.
-  validateSearch: (search: Record<string, unknown>): { guest?: boolean; resume?: string; join?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { guest?: boolean; resume?: string; join?: string } & Utm => ({
+    // A shared link's source stays on the URL (the tour from /tour or a post).
+    ...pickUtm(search),
     ...(typeof search["join"] === "string" ? { join: search["join"] } : {}),
     ...(search["guest"] === true || search["guest"] === "1" || search["guest"] === 1 ? { guest: true } : {}),
     ...(typeof search["resume"] === "string" ? { resume: search["resume"] } : {}),

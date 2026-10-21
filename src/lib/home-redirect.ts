@@ -19,4 +19,4 @@ export function rememberDashboard(canUse: boolean) {
 }
 
 /** Inline, runs before the home page shows. Kept tiny and dependency-free. */
-export const HOME_REDIRECT_SCRIPT = `(function(){try{if(/[?&]home=(1|true)/.test(location.search))return;var u=Number(localStorage.getItem(${JSON.stringify(DASHBOARD_NOTE)}));if(u&&u>Date.now()){document.documentElement.style.visibility="hidden";location.replace("/app/today");}}catch(e){}})();`;
+export const HOME_REDIRECT_SCRIPT = `(function(){try{if(/[?&]home=(1|true)/.test(location.search))return;var u=Number(localStorage.getItem(${JSON.stringify(DASHBOARD_NOTE)}));if(u&&u>Date.now()){document.documentElement.style.visibility="hidden";location.replace("/app/today"+(/[?&]utm_/.test(location.search)?location.search:""));}}catch(e){}})();`;

@@ -17,7 +17,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckinRouteImport } from './routes/checkin'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as StartRouteImport } from './routes/start'
+import { Route as TourRouteImport } from './routes/tour'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as DemoIndexRouteImport } from './routes/demo.index'
+import { Route as DemoHostRouteImport } from './routes/demo.host'
 import { Route as EnquireCodeRouteImport } from './routes/enquire.$code'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
@@ -104,10 +107,25 @@ const StartRoute = StartRouteImport.update({
   path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TourRoute = TourRouteImport.update({
+  id: '/tour',
+  path: '/tour',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const DemoIndexRoute = DemoIndexRouteImport.update({
+  id: '/demo/',
+  path: '/demo/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoHostRoute = DemoHostRouteImport.update({
+  id: '/demo/host',
+  path: '/demo/host',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EnquireCodeRoute = EnquireCodeRouteImport.update({
   id: '/enquire/$code',
@@ -362,7 +380,9 @@ export interface FileRoutesByFullPath {
   '/checkin': typeof CheckinRoute
   '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
+  '/tour': typeof TourRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
@@ -370,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/p/$code': typeof PCodeRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
+  '/demo/': typeof DemoIndexRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
@@ -418,6 +439,8 @@ export interface FileRoutesByTo {
   '/checkin': typeof CheckinRoute
   '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
+  '/tour': typeof TourRoute
+  '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
@@ -425,6 +448,7 @@ export interface FileRoutesByTo {
   '/p/$code': typeof PCodeRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
+  '/demo': typeof DemoIndexRoute
   '/app/activity': typeof AuthenticatedAppActivityRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
@@ -475,7 +499,9 @@ export interface FileRoutesById {
   '/checkin': typeof CheckinRoute
   '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
+  '/tour': typeof TourRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
@@ -483,6 +509,7 @@ export interface FileRoutesById {
   '/p/$code': typeof PCodeRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
+  '/demo/': typeof DemoIndexRoute
   '/_authenticated/app/activity': typeof AuthenticatedAppActivityRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
@@ -533,7 +560,9 @@ export interface FileRouteTypes {
     | '/checkin'
     | '/developers'
     | '/start'
+    | '/tour'
     | '/app'
+    | '/demo/host'
     | '/enquire/$code'
     | '/invite/$token'
     | '/invoice/$token'
@@ -541,6 +570,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/room/$code'
     | '/stay/$token'
+    | '/demo/'
     | '/app/activity'
     | '/app/admin'
     | '/app/billing'
@@ -589,6 +619,8 @@ export interface FileRouteTypes {
     | '/checkin'
     | '/developers'
     | '/start'
+    | '/tour'
+    | '/demo/host'
     | '/enquire/$code'
     | '/invite/$token'
     | '/invoice/$token'
@@ -596,6 +628,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/room/$code'
     | '/stay/$token'
+    | '/demo'
     | '/app/activity'
     | '/app/admin'
     | '/app/billing'
@@ -645,7 +678,9 @@ export interface FileRouteTypes {
     | '/checkin'
     | '/developers'
     | '/start'
+    | '/tour'
     | '/_authenticated/app'
+    | '/demo/host'
     | '/enquire/$code'
     | '/invite/$token'
     | '/invoice/$token'
@@ -653,6 +688,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/room/$code'
     | '/stay/$token'
+    | '/demo/'
     | '/_authenticated/app/activity'
     | '/_authenticated/app/admin'
     | '/_authenticated/app/billing'
@@ -703,6 +739,8 @@ export interface RootRouteChildren {
   CheckinRoute: typeof CheckinRoute
   DevelopersRoute: typeof DevelopersRoute
   StartRoute: typeof StartRoute
+  TourRoute: typeof TourRoute
+  DemoHostRoute: typeof DemoHostRoute
   EnquireCodeRoute: typeof EnquireCodeRoute
   InviteTokenRoute: typeof InviteTokenRoute
   InvoiceTokenRoute: typeof InvoiceTokenRoute
@@ -710,6 +748,7 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   RoomCodeRoute: typeof RoomCodeRoute
   StayTokenRoute: typeof StayTokenRoute
+  DemoIndexRoute: typeof DemoIndexRoute
   ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
@@ -789,12 +828,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tour': {
+      id: '/tour'
+      path: '/tour'
+      fullPath: '/tour'
+      preLoaderRoute: typeof TourRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app': {
       id: '/_authenticated/app'
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/demo/': {
+      id: '/demo/'
+      path: '/demo'
+      fullPath: '/demo/'
+      preLoaderRoute: typeof DemoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo/host': {
+      id: '/demo/host'
+      path: '/demo/host'
+      fullPath: '/demo/host'
+      preLoaderRoute: typeof DemoHostRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/enquire/$code': {
       id: '/enquire/$code'
@@ -1200,6 +1260,8 @@ const rootRouteChildren: RootRouteChildren = {
   CheckinRoute: CheckinRoute,
   DevelopersRoute: DevelopersRoute,
   StartRoute: StartRoute,
+  TourRoute: TourRoute,
+  DemoHostRoute: DemoHostRoute,
   EnquireCodeRoute: EnquireCodeRoute,
   InviteTokenRoute: InviteTokenRoute,
   InvoiceTokenRoute: InvoiceTokenRoute,
@@ -1207,6 +1269,7 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   RoomCodeRoute: RoomCodeRoute,
   StayTokenRoute: StayTokenRoute,
+  DemoIndexRoute: DemoIndexRoute,
   ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackRoute: ApiPublicTrackRoute,

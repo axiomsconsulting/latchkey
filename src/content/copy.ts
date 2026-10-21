@@ -23,7 +23,12 @@ export const demoCopy = branded({
   guestBody: "Check in, read the stay guide and order extras.",
   hostTitle: "As a host",
   hostBody: "See arrivals, bookings, calendars and requests.",
-  resetNote: "Demo data is shared and resets every day.",
+  resetNote: "This is a demo. Its data is shared and resets every day.",
+  tryAgain: "Try again",
+  openingGuest: "Opening the guest journey…",
+  openingHost: "Opening the host dashboard…",
+  pageTitle: "See it for yourself",
+  pageBody: "No sign-up needed. Walk through a guest's check-in and stay, or look around the host's dashboard.",
   error: "The demo couldn't start just now. Please try again.",
 });
 

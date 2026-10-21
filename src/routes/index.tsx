@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, BedDouble, Building2, CalendarCheck, Check, Code2, DoorOpen, Hourglass, Inbox, LayoutDashboard, Loader2, MessagesSquare, Minus, MoonStar, Palette, Sparkles, Wrench } from "lucide-react";
+import { ArrowRight, BedDouble, Building2, CalendarCheck, Check, Code2, DoorOpen, Hourglass, Inbox, LayoutDashboard, MessagesSquare, Minus, MoonStar, Palette, Sparkles, Wrench } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { brand, marketing } from "@/content/copy";
 import { OfferRibbon, PricingSection } from "@/components/PricingSection";
-import { useDemo } from "@/components/DemoPicker";
+import { sessionUtm, type Utm } from "@/lib/attribution";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkspace } from "@/lib/host.functions";
@@ -22,9 +22,9 @@ export const Route = createFileRoute("/")({
     search["home"] === true || search["home"] === "1" || search["home"] === 1 ? { home: true } : {},
   head: () => ({
     meta: [
-      { title: rebrand("Latchkey — hotel-grade guest operations for independent accommodation") },
+      { title: rebrand("Latchkey — guest operations for independent accommodation") },
       { name: "description", content: marketing.subhead },
-      { property: "og:title", content: rebrand("Latchkey — hotel-grade guest operations for independent accommodation") },
+      { property: "og:title", content: rebrand("Latchkey — guest operations for independent accommodation") },
       { property: "og:description", content: marketing.subhead },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -50,7 +50,9 @@ function Landing() {
   useEffect(() => setDay(weekday()), []);
   const { home } = Route.useSearch();
   const navigate = useNavigate();
-  const demo = useDemo();
+  // The session's utm_* on the demo and trial links, read after hydration.
+  const [utm, setUtm] = useState<Utm>({});
+  useEffect(() => setUtm(sessionUtm()), []);
 
   // Hosts and managers who are signed in go straight to their dashboard.
   useEffect(() => {
@@ -82,20 +84,20 @@ function Landing() {
           <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">{marketing.subhead}</p>
           {/* See it first: the guest journey, then the host's side; the trial for anyone ready. */}
           <div className="mt-9 flex flex-wrap gap-3">
-            <Button size="lg" variant="accent" className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base" disabled={demo.busy !== null} onClick={() => void demo.go("guest")}>
-              {demo.busy === "guest" ? <Loader2 className="animate-spin" /> : null}
-              {marketing.primaryCta}
-              <ArrowRight />
+            {/* Real links (shareable, crawlable); the session's utm_* go along. */}
+            <Button asChild size="lg" variant="accent" className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base">
+              <Link to="/tour" search={utm as never}>
+                {marketing.primaryCta}
+                <ArrowRight />
+              </Link>
             </Button>
-            <Button size="lg" variant="outline" className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base" disabled={demo.busy !== null} onClick={() => void demo.go("host")}>
-              {demo.busy === "host" ? <Loader2 className="animate-spin" /> : null}
-              {marketing.hostCta}
+            <Button asChild size="lg" variant="outline" className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base">
+              <Link to="/demo/host" search={utm as never}>{marketing.hostCta}</Link>
             </Button>
             <Button asChild size="lg" variant="ghost" className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base">
-              <Link to="/start">{marketing.secondaryCta}</Link>
+              <Link to="/start" search={utm as never}>{marketing.secondaryCta}</Link>
             </Button>
           </div>
-          {demo.error ? <p role="alert" className="mt-3 text-sm text-destructive">{demo.error}</p> : null}
           <OfferRibbon />
           <div className="mt-8 flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">{marketing.trust}</span>
@@ -161,8 +163,10 @@ function Landing() {
             })}
           </ol>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button variant="outline" disabled={demo.busy !== null} onClick={() => void demo.go("guest")}>
-              {marketing.primaryCta} <ArrowRight />
+            <Button asChild variant="outline">
+              <Link to="/tour" search={utm as never}>
+                {marketing.primaryCta} <ArrowRight />
+              </Link>
             </Button>
           </div>
         </section>

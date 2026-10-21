@@ -1,11 +1,13 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, LayoutDashboard, Loader2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { demoCopy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
+import { sessionUtm, withAttribution } from "@/lib/attribution";
 import { markDemo } from "@/lib/demo-session";
 import { startDemo } from "@/lib/demo.functions";
 
@@ -23,7 +25,7 @@ export function useDemo() {
       const res = await run({ data: { as } });
       if (as === "guest") {
         // The real kiosk screen: a phone gets the phone version, a tablet or computer the door-tablet one.
-        await navigate({ to: "/kiosk/$code", params: { code: res.code } });
+        await navigate({ to: "/kiosk/$code", params: { code: res.code }, search: sessionUtm() });
         return;
       }
       // Local only: a global sign-out here would end every other demo visitor's session.
@@ -31,7 +33,7 @@ export function useDemo() {
       const { error: e } = await supabase.auth.verifyOtp({ token_hash: res.tokenHash!, type: "magiclink" });
       if (e) throw e;
       markDemo(true);
-      await navigate({ to: "/app/today" });
+      await navigate({ href: withAttribution("/app/today") });
     } catch {
       setError(demoCopy.error);
     } finally {
@@ -77,5 +79,38 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
         <p className="text-xs text-muted-foreground">{demoCopy.resetNote}</p>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * /tour and /demo/host: open the demo straight away (the stable links for
+ * posts and emails), with a calm wait and a way to try again.
+ */
+export function DemoLauncher({ as }: { as: "host" | "guest" }) {
+  const { go, error } = useDemo();
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    void go(as);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [as]);
+  return (
+    <main className="grid min-h-screen place-items-center bg-background px-5">
+      <div className="card-soft w-full max-w-md space-y-4 p-8 text-center">
+        {error ? (
+          <>
+            <p role="alert" className="text-lg">{error}</p>
+            <Button onClick={() => void go(as)}>{demoCopy.tryAgain}</Button>
+          </>
+        ) : (
+          <>
+            <Loader2 className="mx-auto size-8 animate-spin text-primary" aria-hidden />
+            <p className="font-display text-xl" role="status">{as === "guest" ? demoCopy.openingGuest : demoCopy.openingHost}</p>
+          </>
+        )}
+        <p className="text-xs text-muted-foreground">{demoCopy.resetNote}</p>
+      </div>
+    </main>
   );
 }
