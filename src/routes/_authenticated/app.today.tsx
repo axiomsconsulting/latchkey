@@ -547,7 +547,7 @@ function CleaningToday({
   const tight = tightTurnarounds(lists);
   const stay = (id: string) => [...lists.arriving, ...lists.leaving].find((b) => b.id === id);
   return (
-    <Card id="cleaning" icon={SprayCan} title={copy.cleaningTitle} action={<CardLink to="/app/properties" search={{ focus: "cleaning" }}>{copy.setTimes}</CardLink>}>
+    <Card id="cleaning" icon={SprayCan} title={copy.cleaningTitle} action={<CardLink to="/app/housekeeping">{copy.openBoard}</CardLink>}>
       {today.length === 0 && tight.length === 0 ? <p className="text-sm text-muted-foreground">{copy.cleaningEmpty}</p> : null}
       <ul className="space-y-1">
         {tight.map((t) => {

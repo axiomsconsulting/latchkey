@@ -85,7 +85,11 @@ export function HostShell() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   // The phone dock: the same menu, without Latchkey admin (reached from Settings there).
   const allPages = useMenu(data?.isSuperAdmin === true);
-  const dock = allPages.filter((i) => i.id !== "admin").slice(0, 7);
+  // Seven fit; Settings always keeps its place, and whatever doesn't fit goes in the More menu.
+  const dockable = allPages.filter((i) => i.id !== "admin");
+  const settingsItem = dockable.find((i) => i.id === "settings");
+  const dock = dockable.length <= 7 ? dockable : [...dockable.filter((i) => i.id !== "settings").slice(0, settingsItem ? 6 : 7), ...(settingsItem ? [settingsItem] : [])];
+  const overflow = dockable.filter((i) => !dock.includes(i));
   useAccessWatch();
   // Next time "/" opens on this device, go straight to the dashboard (not the shared demo).
   useEffect(() => {
@@ -189,6 +193,17 @@ export function HostShell() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60 rounded-2xl p-1.5">
+            {/* Menu items that don't fit in the phone's bottom bar. */}
+            {overflow.map((it) => (
+              <DropdownMenuItem key={it.id} asChild className="min-h-11 gap-3 rounded-xl md:hidden">
+                {it.external ? (
+                  <a href={it.href} target="_blank" rel="noreferrer"><NavIcon icon={it.icon} className="size-5" /> {it.label}</a>
+                ) : (
+                  <Link to={it.href}><NavIcon icon={it.icon} className="size-5" /> {it.label}</Link>
+                )}
+              </DropdownMenuItem>
+            ))}
+            {overflow.length ? <DropdownMenuSeparator className="md:hidden" /> : null}
             <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
               <Link to="/app/whats-new"><Sparkles className="size-5" /> {whatsNewCopy.navLabel}</Link>
             </DropdownMenuItem>

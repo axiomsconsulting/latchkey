@@ -25,6 +25,7 @@ export type NavBuiltIn = {
 export const NAV_BUILT_INS: NavBuiltIn[] = [
   { id: "today", to: "/app/today", labelKey: "today", icon: "sun" },
   { id: "bookings", to: "/app/bookings", labelKey: "bookings", icon: "calendar-days" },
+  { id: "housekeeping", to: "/app/housekeeping", labelKey: "housekeeping", icon: "spray-can" },
   { id: "services", to: "/app/services", labelKey: "services", icon: "wrench" },
   { id: "guides", to: "/app/guides", labelKey: "guides", icon: "book-open" },
   { id: "properties", to: "/app/properties", labelKey: "properties", icon: "home" },
@@ -111,8 +112,15 @@ export function normaliseNav(raw: unknown): NavEntry[] {
       ...(e["hidden"] === true ? { hidden: true } : {}),
     });
   }
-  // Built-ins the admin hasn't placed (new ones in a later release) go at the end, in their default order.
-  for (const b of NAV_BUILT_INS) if (!seen.has(b.id)) out.push({ id: b.id });
+  // Built-ins the admin hasn't placed (new ones in a later release) join their default neighbours:
+  // straight after the built-in that comes before them, or at the end.
+  for (const [i, b] of NAV_BUILT_INS.entries()) {
+    if (seen.has(b.id)) continue;
+    const before = NAV_BUILT_INS.slice(0, i).reverse().find((x) => seen.has(x.id));
+    const at = before ? out.findIndex((e) => e.id === before.id) + 1 : out.length;
+    out.splice(at, 0, { id: b.id });
+    seen.add(b.id);
+  }
   return out;
 }
 

@@ -15,10 +15,14 @@ describe("menu", () => {
       { id: "custom_help", label: "Help", href: "https://help.example.com", icon: "life-buoy" },
       { id: "today", hidden: true },
     ]);
-    expect(nav.slice(0, 3).map((e) => e.id)).toEqual(["settings", "custom_help", "today"]);
     expect(nav.find((e) => e.id === "today")?.hidden).toBe(true);
-    // Built-ins the admin didn't place come back at the end.
-    expect(nav.slice(3).map((e) => e.id)).toEqual(["bookings", "services", "guides", "properties", "connections", "admin"]);
+    // Built-ins the admin didn't place join their default neighbours; the admin's own order stays.
+    expect(nav.map((e) => e.id)).toEqual(["settings", "admin", "custom_help", "today", "bookings", "housekeeping", "services", "guides", "properties", "connections"]);
+  });
+
+  it("puts a menu item added in a later release next to its neighbour in a saved menu", () => {
+    const saved = ["today", "bookings", "services", "guides", "properties", "connections", "settings", "admin"].map((id) => ({ id }));
+    expect(normaliseNav(saved).map((e) => e.id).slice(0, 4)).toEqual(["today", "bookings", "housekeeping", "services"]);
   });
 
   it("never hides Latchkey admin, and shows it only to super admins", () => {

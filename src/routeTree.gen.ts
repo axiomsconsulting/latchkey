@@ -31,6 +31,7 @@ import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenticated/app.bookings'
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
 import { Route as AuthenticatedAppGuidesRouteImport } from './routes/_authenticated/app.guides'
+import { Route as AuthenticatedAppHousekeepingRouteImport } from './routes/_authenticated/app.housekeeping'
 import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authenticated/app.properties'
 import { Route as AuthenticatedAppRegisterRouteImport } from './routes/_authenticated/app.register'
 import { Route as AuthenticatedAppServicesRouteImport } from './routes/_authenticated/app.services'
@@ -172,6 +173,12 @@ const AuthenticatedAppGuidesRoute = AuthenticatedAppGuidesRouteImport.update({
   path: '/guides',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppHousekeepingRoute =
+  AuthenticatedAppHousekeepingRouteImport.update({
+    id: '/housekeeping',
+    path: '/housekeeping',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppPropertiesRoute =
   AuthenticatedAppPropertiesRouteImport.update({
     id: '/properties',
@@ -344,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
+  '/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/app/register': typeof AuthenticatedAppRegisterRoute
   '/app/services': typeof AuthenticatedAppServicesRoute
@@ -394,6 +402,7 @@ export interface FileRoutesByTo {
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
+  '/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/app/register': typeof AuthenticatedAppRegisterRoute
   '/app/services': typeof AuthenticatedAppServicesRoute
@@ -447,6 +456,7 @@ export interface FileRoutesById {
   '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
   '/_authenticated/app/guides': typeof AuthenticatedAppGuidesRoute
+  '/_authenticated/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/_authenticated/app/properties': typeof AuthenticatedAppPropertiesRoute
   '/_authenticated/app/register': typeof AuthenticatedAppRegisterRoute
   '/_authenticated/app/services': typeof AuthenticatedAppServicesRoute
@@ -500,6 +510,7 @@ export interface FileRouteTypes {
     | '/app/bookings'
     | '/app/connections'
     | '/app/guides'
+    | '/app/housekeeping'
     | '/app/properties'
     | '/app/register'
     | '/app/services'
@@ -550,6 +561,7 @@ export interface FileRouteTypes {
     | '/app/bookings'
     | '/app/connections'
     | '/app/guides'
+    | '/app/housekeeping'
     | '/app/properties'
     | '/app/register'
     | '/app/services'
@@ -602,6 +614,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/bookings'
     | '/_authenticated/app/connections'
     | '/_authenticated/app/guides'
+    | '/_authenticated/app/housekeeping'
     | '/_authenticated/app/properties'
     | '/_authenticated/app/register'
     | '/_authenticated/app/services'
@@ -824,6 +837,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppGuidesRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/housekeeping': {
+      id: '/_authenticated/app/housekeeping'
+      path: '/housekeeping'
+      fullPath: '/app/housekeeping'
+      preLoaderRoute: typeof AuthenticatedAppHousekeepingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/properties': {
       id: '/_authenticated/app/properties'
       path: '/properties'
@@ -1030,6 +1050,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBookingsRoute: typeof AuthenticatedAppBookingsRoute
   AuthenticatedAppConnectionsRoute: typeof AuthenticatedAppConnectionsRoute
   AuthenticatedAppGuidesRoute: typeof AuthenticatedAppGuidesRoute
+  AuthenticatedAppHousekeepingRoute: typeof AuthenticatedAppHousekeepingRoute
   AuthenticatedAppPropertiesRoute: typeof AuthenticatedAppPropertiesRoute
   AuthenticatedAppRegisterRoute: typeof AuthenticatedAppRegisterRoute
   AuthenticatedAppServicesRoute: typeof AuthenticatedAppServicesRoute
@@ -1049,6 +1070,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBookingsRoute: AuthenticatedAppBookingsRoute,
   AuthenticatedAppConnectionsRoute: AuthenticatedAppConnectionsRoute,
   AuthenticatedAppGuidesRoute: AuthenticatedAppGuidesRoute,
+  AuthenticatedAppHousekeepingRoute: AuthenticatedAppHousekeepingRoute,
   AuthenticatedAppPropertiesRoute: AuthenticatedAppPropertiesRoute,
   AuthenticatedAppRegisterRoute: AuthenticatedAppRegisterRoute,
   AuthenticatedAppServicesRoute: AuthenticatedAppServicesRoute,

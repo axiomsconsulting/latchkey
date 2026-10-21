@@ -18,7 +18,7 @@ export type ChangeItem = {
   admin?: true;
   kind: ChangeKind;
   /** Which part of Latchkey: shown as a tag and used to group features. */
-  area: "Check-in" | "Guest guide" | "Bookings" | "Calendar" | "Services" | "Team" | "Settings" | "Invoices" | "Guest register" | "Demo" | "Website" | "Security";
+  area: "Check-in" | "Guest guide" | "Bookings" | "Housekeeping" | "Reports" | "Calendar" | "Services" | "Team" | "Settings" | "Invoices" | "Guest register" | "Demo" | "Website" | "Security";
   text: string;
 };
 
@@ -31,6 +31,16 @@ export type Release = {
 
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
+  {
+    version: "0.50.0",
+    date: "2026-10-21",
+    title: "Housekeeping board",
+    items: [
+      { kind: "new", area: "Housekeeping", text: "Housekeeping board: every room for the day, whether it's a turnover, a departure, an arrival or staying, what time it must be ready by, and where cleaning has got to (to clean, cleaning, clean, ready). Assign it to someone, leave a note, or take a room out of service. Rooms with someone arriving that aren't ready stand out." },
+      { kind: "improved", area: "Team", text: "Cleaners on your team can update the housekeeping board, and nothing else." },
+      { kind: "improved", area: "Settings", text: "On phones, menu items that don't fit in the bottom bar are in the ⋯ menu; Settings always stays in the bar." },
+    ],
+  },
   {
     version: "0.49.1",
     date: "2026-10-21",

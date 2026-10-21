@@ -1,4 +1,4 @@
-import {
+import { ChartColumn, SprayCan,
   Bath, BedDouble, Bell, BookOpen, Bot, Building2, CalendarDays, Car, ChartBar, ClipboardList, Coffee, CreditCard, DoorOpen, FileText, Gift,
   Globe, Hammer, Headphones, Heart, HelpCircle, Home, Inbox, Key, LayoutDashboard, LifeBuoy, Link as LinkIcon, MapPin, Megaphone, MessageCircle,
   Leaf, NotebookPen, Package, Phone, Plug, Receipt, Settings, ShieldCheck, ShoppingBag, Sparkles, Star, Sun, Tag, Users, UtensilsCrossed, Wifi, Wrench,
@@ -14,7 +14,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "help-circle": HelpCircle, "file-text": FileText, "notebook-pen": NotebookPen, "clipboard-list": ClipboardList, receipt: Receipt, "credit-card": CreditCard,
   "chart-bar": ChartBar, users: Users, "building-2": Building2, "bed-double": BedDouble, bath: Bath, "door-open": DoorOpen, key: Key, wifi: Wifi, car: Car,
   "map-pin": MapPin, coffee: Coffee, "utensils-crossed": UtensilsCrossed, "shopping-bag": ShoppingBag, package: Package, gift: Gift, tag: Tag, star: Star,
-  heart: Heart, leaf: Leaf, sparkles: Sparkles, megaphone: Megaphone, hammer: Hammer, globe: Globe, bot: Bot, link: LinkIcon,
+  heart: Heart, leaf: Leaf, sparkles: Sparkles, "spray-can": SprayCan, "chart-column": ChartColumn, megaphone: Megaphone, hammer: Hammer, globe: Globe, bot: Bot, link: LinkIcon,
 };
 
 /**
