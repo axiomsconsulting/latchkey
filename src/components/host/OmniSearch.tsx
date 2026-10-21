@@ -26,7 +26,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { releasesFor } from "@/content/changelog";
-import { adminCopy, billingCopy, hostNav, integrations as integrationsCopy, omniCopy as copy, settingsRailCopy, themeStudio, whatsNewCopy } from "@/content/copy";
+import { adminCopy, billingCopy, hostNav, integrations as integrationsCopy, omniCopy as copy, settingsMenuCopy, themeStudio, whatsNewCopy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { SECTIONS } from "@/lib/guide";
 import { INTEGRATION_KEYS } from "@/lib/integration-modes";
@@ -114,9 +114,9 @@ export function OmniSearch({ pages, className }: { pages: Array<{ id: string; la
       { kind: "page", id: "page-billing", title: billingCopy.navLabel, href: "/app/billing", keywords: "subscription plan card payment invoice trial" },
     );
     if (superAdmin) out.push({ kind: "page", id: "page-admin", title: adminCopy.navLabel, href: "/app/admin", keywords: "super admin pricing site settings brand" });
-    for (const [id, [label, group]] of Object.entries(settingsRailCopy.sections)) {
+    for (const [id, [label, group]] of Object.entries(settingsMenuCopy.sections)) {
       if (ADMIN_SETTINGS.has(id) && !superAdmin) continue;
-      out.push({ kind: "setting", id: `setting-${id}`, title: label, subtitle: `${copy.settings} · ${settingsRailCopy.groups[group] ?? ""}`, href: `/app/settings?focus=${id}`, keywords: copy.settingWords[id] ?? "" });
+      out.push({ kind: "setting", id: `setting-${id}`, title: label, subtitle: `${copy.settings} · ${settingsMenuCopy.groups[group] ?? ""}`, href: `/app/settings?focus=${id}`, keywords: copy.settingWords[id] ?? "" });
     }
     for (const s of SECTIONS) out.push({ kind: "guide", id: `section-${s.key}`, title: s.title, subtitle: copy.guideSection, href: `/app/guides?section=${s.key}`, keywords: s.hint });
     out.push({ kind: "guide", id: "guide-tiles", title: copy.quickTiles, subtitle: copy.guides, href: "/app/guides", keywords: "tiles shortcuts buttons top of guide" });

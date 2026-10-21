@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PageSections, Section } from "@/components/PageSections";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomDomainSettings } from "@/components/host/CustomDomainSettings";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
@@ -10,7 +11,7 @@ import { checkPhone, splitPhone } from "@/lib/world";
 import { worldCopy } from "@/content/copy";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CreditCard, History, Loader2, NotebookPen, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { Bell, Building2, CreditCard, History, Loader2, NotebookPen, Palette, Plus, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
@@ -25,7 +26,7 @@ import {
   common,
   registerPage as registerCopy,
   settings as copy,
-  settingsRailCopy,
+  settingsMenuCopy,
 } from "@/content/copy";
 import { SupportAccess } from "@/components/host/SupportAccess";
 import { ApiAccessPanel } from "@/components/host/ApiAccessPanel";
@@ -35,7 +36,6 @@ import { DEMO_EMAIL } from "@/lib/demo-account";
 import { ChannelLabels } from "@/components/host/ChannelLabels";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { PrivacySettings } from "@/components/host/PrivacySettings";
-import { SectionRail } from "@/components/SectionRail";
 import { InvoiceSettings } from "@/components/host/InvoiceSettings";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
@@ -45,6 +45,15 @@ import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
 const FOCUS = ["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "extras", "theme", "labels", "domain", "support", "integrations", "shortcuts", "shortcuts2", "adminLink"] as const;
+/** The menu's groups, in order, with their icons (names in settingsMenuCopy). */
+const SETTINGS_GROUPS = [
+  { id: "business", icon: Building2 },
+  { id: "guests", icon: Users },
+  { id: "money", icon: CreditCard },
+  { id: "look", icon: Palette },
+  { id: "apps", icon: Bell },
+  { id: "admin", icon: ShieldCheck },
+] as const;
 const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy"]);
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
@@ -75,7 +84,19 @@ type Host = {
 function SettingsPage() {
   const workspace = useWorkspace();
   const { focus } = Route.useSearch();
-  useLandOn(focus ? (OWN_CARD.has(focus) ? `settings-${focus}` : `rail-${focus}`) : null, !workspace.isLoading);
+  // The menu at the top: one tab per group; a link to a section opens its tab, then lands on it.
+  const superAdmin = workspace.data?.isSuperAdmin === true;
+  const groupOf = (id: string): string => {
+    // Owners keep "remove sample data" with their business; the rest of that group is admin-only.
+    if (id === "demo" && !superAdmin) return "business";
+    return settingsMenuCopy.sections[id]?.[1] ?? "business";
+  };
+  const [tab, setTab] = useState<string>(() => (focus ? (settingsMenuCopy.sections[focus]?.[1] ?? "business") : "business"));
+  useEffect(() => {
+    if (focus) setTab(groupOf(focus));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, superAdmin]);
+  useLandOn(focus ? (OWN_CARD.has(focus) ? `settings-${focus}` : `section-${focus}`) : null, !workspace.isLoading && !!focus && tab === groupOf(focus));
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
   const load = useServerFn(loadDemoData);
@@ -169,12 +190,10 @@ function SettingsPage() {
   const propertyCount = (workspace.data?.properties ?? []).length;
   const demo = (host as { contact_email?: string | null } | null)?.contact_email === DEMO_EMAIL;
 
-  // Each block's name and sub-menu, for the section rail.
-  const rail = Object.fromEntries(Object.entries(settingsRailCopy.sections).map(([id, [label, group]]) => [id, { label, group: settingsRailCopy.groups[group] ?? "" }]));
+  const groups = SETTINGS_GROUPS.filter((g) => g.id !== "admin" || superAdmin);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
-      <SectionRail label={settingsRailCopy.label} />
       <PageHeader
         title={copy.title}
         subtitle={copy.subtitle}
@@ -188,7 +207,17 @@ function SettingsPage() {
         }
       />
 
-      <PageSections page="settings" rail={rail}>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList aria-label={settingsMenuCopy.label} className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
+          {groups.map((g) => (
+            <TabsTrigger key={g.id} value={g.id} className="h-10 gap-2 rounded-xl px-4">
+              <g.icon className="size-4" aria-hidden /> {settingsMenuCopy.groups[g.id]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      <PageSections page="settings" anchors only={(id) => groupOf(id) === tab}>
       <Section id="business">
       <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
         {/* Business details and billing are the owner's; others can read them. */}

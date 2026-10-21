@@ -12,22 +12,25 @@ export function Section({ children }: { id: string; children: ReactNode }) {
 export function PageSections({
   page,
   children,
-  rail,
+  only,
+  anchors = false,
 }: {
   page: string;
   children: ReactNode;
-  /** Long pages (Settings): each block is marked for SectionRail with its name and sub-menu. */
-  rail?: Record<string, { label: string; group: string }>;
+  /** Show just some blocks (Settings: the open tab's group), still in the super admin's order. */
+  only?: (id: string) => boolean;
+  /** Give each block an anchor (#section-<id>) that links can land on. */
+  anchors?: boolean;
 }) {
   const ui = useUi();
   const items = Children.toArray(children).filter((c): c is ReactElement<{ id: string }> => isValidElement(c) && typeof (c.props as { id?: unknown }).id === "string");
   const byId = new Map(items.map((c) => [c.props.id, c]));
-  const ids = arrange(ui.pages[page], items.map((c) => c.props.id));
+  const ids = arrange(ui.pages[page], items.map((c) => c.props.id)).filter((id) => !only || only(id));
   return (
     <>
       {ids.map((id) =>
-        rail?.[id] ? (
-          <div key={id} id={`rail-${id}`} data-rail="" data-rail-label={rail[id]!.label} data-rail-group={rail[id]!.group} className="scroll-mt-24 empty:hidden">
+        anchors ? (
+          <div key={id} id={`section-${id}`} className="scroll-mt-24 empty:hidden">
             {byId.get(id)}
           </div>
         ) : (

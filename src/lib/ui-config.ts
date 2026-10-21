@@ -193,7 +193,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
   },
   settings: {
     label: "Settings",
-    // Grouped into the sub-menus the section rail shows (settingsRailCopy): business, guests, money, look, alerts and apps, Latchkey admin.
+    // Grouped like the Settings menu tabs (settingsMenuCopy): business, guests, money, look, alerts and apps, Latchkey admin.
     sections: [
       { id: "business", label: "Business details" },
       { id: "team", label: "Team" },

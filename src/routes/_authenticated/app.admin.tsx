@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, Loader2, ShieldCheck } from "lucide-react";
+import { Building2, ChartLine, Eye, Flag, LayoutDashboard, ListTree, Loader2, Megaphone, MessageSquareHeart, Plug, Settings, ShieldCheck, Tag, Timer } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
@@ -81,19 +81,19 @@ function AdminPage() {
       {/* Back from connecting Google Drive: straight to Integrations, where the result shows. */}
       <Tabs defaultValue={backFromDrive ? "integrations" : "overview"}>
         <TabsList className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
-          <TabsTrigger value="overview" className="h-10 rounded-xl px-4">{copy.tabOverview}</TabsTrigger>
-          <TabsTrigger value="hosts" className="h-10 rounded-xl px-4">{copy.tabHosts}</TabsTrigger>
-          <TabsTrigger value="flags" className="h-10 rounded-xl px-4">
+          <TabsTrigger value="overview" className="h-10 gap-2 rounded-xl px-4"><LayoutDashboard className="size-4" aria-hidden />{copy.tabOverview}</TabsTrigger>
+          <TabsTrigger value="hosts" className="h-10 gap-2 rounded-xl px-4"><Building2 className="size-4" aria-hidden />{copy.tabHosts}</TabsTrigger>
+          <TabsTrigger value="flags" className="h-10 gap-2 rounded-xl px-4"><Flag className="size-4" aria-hidden />
             {copy.tabFlags} {openFlags ? <Badge variant="destructive" className="ml-2">{openFlags}</Badge> : null}
           </TabsTrigger>
-          <TabsTrigger value="feedback" className="h-10 rounded-xl px-4">{copy.tabFeedback}</TabsTrigger>
-          <TabsTrigger value="messages" className="h-10 rounded-xl px-4">{copy.tabMessages}</TabsTrigger>
-          <TabsTrigger value="visitors" className="h-10 rounded-xl px-4">{copy.tabVisitors}</TabsTrigger>
-          <TabsTrigger value="pricing" className="h-10 rounded-xl px-4">{copy.tabPricing}</TabsTrigger>
-          <TabsTrigger value="routines" className="h-10 rounded-xl px-4">{copy.tabRoutines}</TabsTrigger>
-          <TabsTrigger value="integrations" className="h-10 rounded-xl px-4">{copy.tabIntegrations}</TabsTrigger>
-          <TabsTrigger value="menu" className="h-10 rounded-xl px-4">{menuAdminCopy.tab}</TabsTrigger>
-          <TabsTrigger value="settings" className="h-10 rounded-xl px-4">{copy.tabSettings}</TabsTrigger>
+          <TabsTrigger value="feedback" className="h-10 gap-2 rounded-xl px-4"><MessageSquareHeart className="size-4" aria-hidden />{copy.tabFeedback}</TabsTrigger>
+          <TabsTrigger value="messages" className="h-10 gap-2 rounded-xl px-4"><Megaphone className="size-4" aria-hidden />{copy.tabMessages}</TabsTrigger>
+          <TabsTrigger value="visitors" className="h-10 gap-2 rounded-xl px-4"><ChartLine className="size-4" aria-hidden />{copy.tabVisitors}</TabsTrigger>
+          <TabsTrigger value="pricing" className="h-10 gap-2 rounded-xl px-4"><Tag className="size-4" aria-hidden />{copy.tabPricing}</TabsTrigger>
+          <TabsTrigger value="routines" className="h-10 gap-2 rounded-xl px-4"><Timer className="size-4" aria-hidden />{copy.tabRoutines}</TabsTrigger>
+          <TabsTrigger value="integrations" className="h-10 gap-2 rounded-xl px-4"><Plug className="size-4" aria-hidden />{copy.tabIntegrations}</TabsTrigger>
+          <TabsTrigger value="menu" className="h-10 gap-2 rounded-xl px-4"><ListTree className="size-4" aria-hidden />{menuAdminCopy.tab}</TabsTrigger>
+          <TabsTrigger value="settings" className="h-10 gap-2 rounded-xl px-4"><Settings className="size-4" aria-hidden />{copy.tabSettings}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">

@@ -3046,9 +3046,9 @@ export const roomPhotoCopy = branded({
   removed: "Back to the property's cover.",
 });
 
-/** Settings' sub-menus and the names on its section rail. */
-export const settingsRailCopy = branded({
-  label: "Settings sections",
+/** The Settings menu: its groups (tabs) and which section sits in which. */
+export const settingsMenuCopy = branded({
+  label: "Settings menu",
   groups: { business: "Business", guests: "Guests", money: "Money", look: "Look", apps: "Alerts and apps", admin: "Latchkey admin" } as Record<string, string>,
   sections: {
     business: ["Business details", "business"],
