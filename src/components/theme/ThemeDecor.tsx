@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { groupBrandCopy as groupCopy } from "@/content/copy";
 
 import { SiteLogoMark } from "@/components/brand/BrandLogo";
 import { LogoMark } from "@/components/theme/LogoMark";
@@ -276,10 +277,17 @@ export function ThemeSideNotes({ theme }: { theme: ThemeConfig }) {
 
 /** The foot of a guest page: the theme's line, and "Powered by <product>" if the host shows it. */
 export function ThemeFooter({ theme, className }: { theme: ThemeConfig; className?: string }) {
-  if (!theme.tagline && !theme.poweredBy) return null;
+  if (!theme.tagline && !theme.poweredBy && !theme.group) return null;
   return (
     <footer className={cn("flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted-foreground", className)}>
       <span className="uppercase tracking-[0.25em]">{theme.tagline}</span>
+      {/* The group this property belongs to, when the host shows it. */}
+      {theme.group ? (
+        <span className="flex items-center gap-2">
+          <LogoMark theme={{ logoPreset: theme.group.logoPreset, logoUrl: theme.group.logoUrl }} name={theme.group.name} className="size-6 rounded-md text-[10px]" />
+          {groupCopy.partOf(theme.group.name)}
+        </span>
+      ) : null}
       {theme.poweredBy ? (
         <span className="flex items-center gap-1.5">
           Powered by <SiteLogoMark className="size-4 rounded-[5px]" /> <span className="font-semibold text-foreground">{brandName()}</span>

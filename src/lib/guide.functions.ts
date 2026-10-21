@@ -357,7 +357,7 @@ export const getRoomGuide = createServerFn({ method: "GET" })
     const [{ data: p }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("id, name, short_code, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, active")
+        .select("id, host_id, name, short_code, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, active")
         .eq("id", room.property_id)
         .single(),
       db
@@ -439,7 +439,7 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       room: { name: room.display_name as string, title: (room.public_title as string | null) ?? null },
       wifi: p.wifi_name ? { name: p.wifi_name as string, password: (p.wifi_password as string | null) ?? null } : null,
       amenities: Array.isArray(room.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [],
-      theme: normaliseTheme(p.theme_config),
+      theme: await (await import("./group-brand.server")).withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
       forget,
       guide: sections.filter((sec) => !reminded.has(sec.key)),
     };

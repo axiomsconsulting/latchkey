@@ -36,6 +36,7 @@ import { DEMO_EMAIL } from "@/lib/demo-account";
 import { ChannelLabels } from "@/components/host/ChannelLabels";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { PrivacySettings } from "@/components/host/PrivacySettings";
+import { GroupBrandSettings } from "@/components/host/GroupBrandSettings";
 import { InvoiceSettings } from "@/components/host/InvoiceSettings";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
@@ -44,7 +45,7 @@ import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
 import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
-const FOCUS = ["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "extras", "theme", "labels", "domain", "support", "integrations", "shortcuts", "shortcuts2", "adminLink"] as const;
+const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "extras", "theme", "labels", "domain", "support", "integrations", "shortcuts", "shortcuts2", "adminLink"] as const;
 /** The menu's groups, in order, with their icons (names in settingsMenuCopy). */
 const SETTINGS_GROUPS = [
   { id: "business", icon: Building2 },
@@ -283,6 +284,7 @@ function SettingsPage() {
         </div>
       ) : null}
       </Section>
+      <Section id="group">{workspace.data && !demo ? <GroupBrandSettings hostId={workspace.data.hostId} isOwner={isOwner} themeConfig={themedProperty?.theme_config} /> : null}</Section>
       <Section id="team">
       {demo ? null : (<>
       {workspace.data ? (

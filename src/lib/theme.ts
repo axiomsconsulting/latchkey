@@ -31,6 +31,8 @@ export type ThemeConfig = {
   customFontName: string | null;
   logoPreset: LogoPreset;
   logoUrl: string | null;
+  /** Guest pages only, set by the server (src/lib/group-brand.ts): "Part of {group}", when the host shows it. Never stored. */
+  group?: { name: string; logoUrl: string | null; logoPreset: LogoPreset };
   /** Cards, panels and tiles (rem, 0 = square). */
   radius: number;
   /** Buttons (rem, 0 = square, PILL = fully round). */

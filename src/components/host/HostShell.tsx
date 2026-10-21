@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { getGroupBrand } from "@/lib/group-brand.functions";
+import { DEFAULT_GROUP_BRAND, effectiveLogo } from "@/lib/group-brand";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MessageSquareHeart, MoreHorizontal } from "lucide-react";
 
@@ -112,6 +114,11 @@ export function HostShell() {
   const host = data?.host as { business_name?: string } | null | undefined;
   const isSharedDemo = useIsSharedDemo();
   const title = property?.name ?? host?.business_name ?? brand.name;
+  // The group: its logo where the host chose it, and its name under the property's.
+  const groupFn = useServerFn(getGroupBrand);
+  const groupQ = useQuery({ queryKey: ["group-brand", data?.hostId], enabled: !!data?.hostId, queryFn: () => groupFn({ data: { hostId: data!.hostId } }), staleTime: 60_000 });
+  const logoTheme = { ...theme, ...effectiveLogo(theme, groupQ.data?.brand ?? DEFAULT_GROUP_BRAND) };
+  const groupName = host?.business_name && host.business_name !== title ? host.business_name : brand.name;
   // Remembered for the sign-in page ("welcome back" with their own logo); never a support view or the demo.
   useEffect(() => {
     const support = (data as { support?: unknown } | undefined)?.support;
@@ -158,6 +165,8 @@ export function HostShell() {
         mode={navMode}
         onMode={chooseNavMode}
         theme={theme}
+        logoTheme={logoTheme}
+        groupName={groupName}
         title={title}
         alertCount={alertCount}
         readOnly={readOnly}
@@ -176,7 +185,7 @@ export function HostShell() {
       {/* Phone/tablet portrait: compact glass header */}
       <header className="glass sticky top-2 z-10 mx-3 mt-2 flex items-center gap-1 rounded-2xl px-3 py-2 md:hidden print:hidden">
         <Link to="/" search={{ home: true }} aria-label={brand.name} className="shrink-0 rounded-xl">
-          <LogoMark theme={theme} name={title} className="size-9" />
+          <LogoMark theme={logoTheme} name={title} className="size-9" />
         </Link>
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
         <OmniSearch pages={allPages} className="size-10" />
@@ -348,6 +357,8 @@ function DesktopNav({
   mode,
   onMode,
   theme,
+  logoTheme,
+  groupName,
   title,
   alertCount,
   readOnly,
@@ -359,6 +370,8 @@ function DesktopNav({
   mode: NavMode;
   onMode: (mode: NavMode) => void;
   theme: ReturnType<typeof normaliseTheme>;
+  logoTheme?: ReturnType<typeof normaliseTheme>;
+  groupName?: string;
   title: string;
   alertCount: number;
   readOnly: ReactNode;
@@ -484,10 +497,10 @@ function DesktopNav({
       )}
     >
       <Link to="/" search={{ home: true }} className="flex shrink-0 items-center gap-3 rounded-2xl px-2 py-2" title={title}>
-        <LogoMark theme={theme} name={title} />
+        <LogoMark theme={logoTheme ?? theme} name={title} />
         <span className={cn("min-w-0", narrow ? "sr-only" : top ? "hidden @[84rem]:block" : "", fade)}>
           <span className="block truncate font-display text-lg leading-tight">{title}</span>
-          <span className="block truncate text-xs text-muted-foreground">{brand.name}</span>
+          <span className="block truncate text-xs text-muted-foreground">{groupName ?? brand.name}</span>
         </span>
       </Link>
 

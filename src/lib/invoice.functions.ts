@@ -302,7 +302,30 @@ export const getInvoice = createServerFn({ method: "GET" })
       () => db.from("invoices").select(`${cols}, lines`).eq("access_token", data.token).maybeSingle(),
       () => db.from("invoices").select(cols).eq("access_token", data.token).maybeSingle(),
     );
-    return inv ? { found: true as const, invoice: inv } : { found: false as const };
+    if (!inv) return { found: false as const };
+    // The top of the invoice: the group's name and logo, or the property's (the host's choice, migration 0048).
+    let header: { name: string; logoUrl: string | null; logoPreset: string } | null = null;
+    try {
+      const { data: ids } = await db.from("invoices").select("host_id, property_id").eq("access_token", data.token).maybeSingle();
+      const [{ data: host }, { data: prop }] = await Promise.all([
+        (db as any).from("hosts").select("business_name, group_brand").eq("id", ids?.host_id).maybeSingle(),
+        ids?.property_id ? db.from("properties").select("name, theme_config").eq("id", ids.property_id).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      const { normaliseGroupBrand, effectiveLogo } = await import("./group-brand");
+      const { normaliseTheme } = await import("./theme");
+      const g = normaliseGroupBrand(host?.group_brand);
+      const theme = normaliseTheme((prop as { theme_config?: unknown } | null)?.theme_config);
+      if (g.showOnInvoices || !prop) {
+        const logo = g.logoUrl || g.logoPreset ? { logoUrl: g.logoUrl, logoPreset: g.logoPreset ?? "site" } : effectiveLogo(theme, g);
+        header = { name: (host?.business_name as string | null) ?? inv.seller_name, logoUrl: logo.logoUrl, logoPreset: logo.logoPreset };
+      } else {
+        const logo = effectiveLogo(theme, { ...g, propertyLogos: "own" });
+        header = { name: (prop as { name: string }).name, logoUrl: logo.logoUrl, logoPreset: logo.logoPreset };
+      }
+    } catch {
+      header = null;
+    }
+    return { found: true as const, invoice: inv, header };
   });
 
 /* --------------------------------- hosts --------------------------------- */

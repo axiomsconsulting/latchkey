@@ -196,6 +196,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
     // Grouped like the Settings menu tabs (settingsMenuCopy): business, guests, money, look, alerts and apps, Latchkey admin.
     sections: [
       { id: "business", label: "Business details" },
+      { id: "group", label: "Group brand" },
       { id: "team", label: "Team" },
       { id: "support", label: "Support access" },
       { id: "domain", label: "Own web address" },

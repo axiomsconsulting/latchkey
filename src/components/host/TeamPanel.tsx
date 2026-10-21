@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { useLocation } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -27,6 +28,7 @@ import { INVITE_ROLES, type InviteRole } from "@/lib/roles";
 import {
   changeRole,
   inviteMember,
+  setMemberProperties,
   leaveHost,
   listTeam,
   removeMember,
@@ -53,6 +55,8 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setNewRole] = useState<InviteRole>("manager");
+  const [inviteProps, setInviteProps] = useState<string[] | null>(null);
+  const setScope = useServerFn(setMemberProperties);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -86,12 +90,13 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
     e.preventDefault();
     setBusy("invite");
     try {
-      const res = await invite({ data: { hostId, email, role } });
+      const res = await invite({ data: { hostId, email, role, propertyIds: role === "owner" ? null : inviteProps } });
       await qc.invalidateQueries({ queryKey: ["team", hostId] });
       if (res.emailed) toast.success(copy.sent);
       else toast.warning(copy.notEmailed);
       setInviteOpen(false);
       setEmail("");
+      setInviteProps(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
     } finally {
@@ -186,8 +191,22 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
               <div className="mt-2 rounded-2xl bg-secondary/40 p-3 text-sm">
                 <p>{copy.roleHints[m.role]}</p>
                 <p className="mt-1 text-muted-foreground">
-                  {copy.accessTo(properties.map((p) => `${p.name} (${copy.rooms(p.rooms)})`).join(", ") || copy.noProperties)}
+                  {copy.accessTo(
+                    properties
+                      .filter((p) => m.role === "owner" || !m.propertyIds || m.propertyIds.includes(p.id))
+                      .map((p) => `${p.name} (${copy.rooms(p.rooms)})`)
+                      .join(", ") || copy.noProperties,
+                  )}
                 </p>
+                {/* A property's own team: owners choose which properties someone covers. */}
+                {manage && !m.isYou && m.role !== "owner" && properties.length > 1 && team.data?.scopable ? (
+                  <PropertyScope
+                    properties={properties}
+                    value={m.propertyIds}
+                    disabled={busy !== null}
+                    onChange={(ids) => void act(`scope-${m.userId}`, () => setScope({ data: { hostId, userId: m.userId, propertyIds: ids } }), copy.scopeSaved)}
+                  />
+                ) : null}
               </div>
               {m.isYou && !demo ? (
                 <Button variant="ghost" size="sm" className="mt-2" onClick={() => setProfileOpen(true)}>
@@ -201,6 +220,7 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
               <span className="min-w-0 flex-1 truncate text-muted-foreground">{i.email}</span>
               <span className="text-sm text-muted-foreground">
                 {copy.roles[i.role]} · {i.expired ? copy.expired : copy.pending}
+                {i.propertyIds?.length ? ` · ${properties.filter((p) => i.propertyIds!.includes(p.id)).map((p) => p.name).join(", ")}` : ""}
               </span>
               {manage ? (
                 <>
@@ -247,6 +267,12 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
                 </label>
               ))}
             </fieldset>
+            {role !== "owner" && properties.length > 1 && team.data?.scopable ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{copy.scopeLabel}</p>
+                <PropertyScope properties={properties} value={inviteProps} onChange={setInviteProps} />
+              </div>
+            ) : null}
             <Button type="submit" className="w-full" disabled={busy === "invite"}>
               {busy === "invite" ? <Loader2 className="size-4 animate-spin" /> : null}
               {copy.send}
@@ -400,3 +426,51 @@ function ProfileDialog({
     </Dialog>
   );
 }
+
+/** All of the business's properties, or only some (a property's own manager, cleaner or viewer). */
+function PropertyScope({
+  properties,
+  value,
+  onChange,
+  disabled,
+}: {
+  properties: Array<{ id: string; name: string }>;
+  value: string[] | null;
+  onChange: (ids: string[] | null) => void;
+  disabled?: boolean;
+}) {
+  const all = !value || value.length === 0;
+  return (
+    <div className="mt-2 space-y-2 text-sm">
+      <div role="radiogroup" aria-label={copy.scopeLabel} className="flex flex-wrap gap-2">
+        <button type="button" role="radio" aria-checked={all} disabled={disabled} onClick={() => onChange(null)} className={cn("min-h-9 rounded-full border px-3 text-xs font-medium", all ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
+          {copy.scopeAll}
+        </button>
+        <button type="button" role="radio" aria-checked={!all} disabled={disabled} onClick={() => onChange([properties[0]!.id])} className={cn("min-h-9 rounded-full border px-3 text-xs font-medium", !all ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
+          {copy.scopeSome}
+        </button>
+      </div>
+      {!all ? (
+        <ul className="flex flex-wrap gap-2">
+          {properties.map((p) => {
+            const on = value!.includes(p.id);
+            return (
+              <li key={p.id}>
+                <label className="flex min-h-9 items-center gap-2 rounded-full border border-border px-3 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={disabled || (on && value!.length === 1)}
+                    onChange={() => onChange(on ? value!.filter((x) => x !== p.id) : [...value!, p.id])}
+                  />
+                  {p.name}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+

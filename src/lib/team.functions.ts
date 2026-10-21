@@ -99,14 +99,25 @@ export const listTeam = createServerFn({ method: "GET" })
       const { data: urls } = await supabaseAdmin.storage.from("branding").createSignedUrls(paths, 60 * 60);
       for (const u of urls ?? []) if (u.path && u.signedUrl) signed[u.path] = u.signedUrl;
     }
-    // Access is host-wide today: every member reaches every property.
     const { data: props } = await context.supabase
       .from("properties")
-      .select("name, rooms(id)")
+      .select("id, name, rooms(id)")
       .eq("host_id", data.hostId)
       .order("created_at", { ascending: true });
+    // Which properties each person (and invite) covers: null = the whole business (migration 0048).
+    const scope = new Map<string, string[] | null>();
+    const inviteScope = new Map<string, string[] | null>();
+    {
+      const { data: m, error: mErr } = await db.from("host_members").select("user_id, property_ids").eq("host_id", data.hostId);
+      if (!mErr) for (const r of (m ?? []) as Array<{ user_id: string; property_ids: string[] | null }>) scope.set(r.user_id, r.property_ids);
+      const { data: iv, error: iErr } = await db.from("host_invitations").select("id, property_ids").eq("host_id", data.hostId).is("accepted_at", null);
+      if (!iErr) for (const r of (iv ?? []) as Array<{ id: string; property_ids: string[] | null }>) inviteScope.set(r.id, r.property_ids);
+      if (mErr) scope.set("__unavailable", null);
+    }
     return {
-      properties: (props ?? []).map((p) => ({ name: p.name, rooms: (p.rooms as unknown[] | null)?.length ?? 0 })),
+      /** Per-property access can be set (after migration 0048). */
+      scopable: !scope.has("__unavailable"),
+      properties: (props ?? []).map((p) => ({ id: p.id as string, name: p.name, rooms: (p.rooms as unknown[] | null)?.length ?? 0 })),
       members: rows.map((m) => ({
         userId: m.user_id,
         email: m.email,
@@ -116,19 +127,23 @@ export const listTeam = createServerFn({ method: "GET" })
         avatarUrl: m.avatar_path ? (signed[m.avatar_path] ?? null) : null,
         joined: m.created_at,
         lastSignIn: m.last_sign_in_at ?? null,
+        propertyIds: scope.get(m.user_id) ?? null,
       })),
       invites: ((invites ?? []) as Array<{ id: string; email: string; role: string; created_at: string; expires_at: string }>).map((i) => ({
         id: i.id,
         email: i.email,
         role: displayRole(i.role),
         expired: Date.parse(i.expires_at) < Date.now(),
+        propertyIds: inviteScope.get(i.id) ?? null,
       })),
     };
   });
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, email: z.string().trim().email().max(254), role: inviteRole }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: uuid, email: z.string().trim().email().max(254), role: inviteRole, propertyIds: z.array(uuid).max(200).nullable().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
@@ -157,13 +172,14 @@ export const inviteMember = createServerFn({ method: "POST" })
       .is("revoked_at", null);
 
     const t = await newInviteToken();
-    const { error } = await db.from("host_invitations").insert({
-      host_id: data.hostId,
-      email,
-      role: data.role,
-      token_hash: t.hash,
-      invited_by: context.userId,
-    });
+    const row = { host_id: data.hostId, email, role: data.role, token_hash: t.hash, invited_by: context.userId };
+    // Only some properties (a property's own manager): owners always cover everything.
+    const ids = data.role !== "owner" && data.propertyIds?.length ? await ownPropertyIds(context.supabase, data.hostId, data.propertyIds) : null;
+    const { withLegacy } = await import("./checkin.server");
+    const { error } = await withLegacy(
+      () => db.from("host_invitations").insert({ ...row, property_ids: ids }),
+      () => db.from("host_invitations").insert(row),
+    );
     if (error) throw new Error(error.message);
 
     const { data: host } = await context.supabase.from("hosts").select("business_name").eq("id", data.hostId).single();
@@ -237,6 +253,33 @@ export const changeRole = createServerFn({ method: "POST" })
       .eq("user_id", data.userId)
       .select("id");
     if (error) throw new Error(error.message);
+    if (!rows?.length) throw new Error("That person isn't on this team.");
+    return { ok: true };
+  });
+
+/** Only properties of this business, in case a list was tampered with. */
+async function ownPropertyIds(supabase: unknown, hostId: string, ids: string[]): Promise<string[]> {
+  const { data } = await (supabase as { from: (t: string) => any }).from("properties").select("id").eq("host_id", hostId).in("id", ids);
+  const ok = ((data ?? []) as Array<{ id: string }>).map((p) => p.id);
+  if (!ok.length) throw new Error("Pick at least one of your properties.");
+  return ok;
+}
+
+/** Which properties a team member covers: all of them (null) or only some (a property's own manager). Owners always cover all. */
+export const setMemberProperties = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ hostId: uuid, userId: uuid, propertyIds: z.array(uuid).max(200).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    await requireOwner(context.supabase, data.hostId);
+    const ids = data.propertyIds?.length ? await ownPropertyIds(context.supabase, data.hostId, data.propertyIds) : null;
+    const { data: rows, error } = await untyped(context.supabase)
+      .from("host_members")
+      .update({ property_ids: ids })
+      .eq("host_id", data.hostId)
+      .eq("user_id", data.userId)
+      .select("id");
+    if (error) throw new Error(error.message.includes("property_ids") ? "Per-property access needs the latest update (migration 0048)." : error.message);
     if (!rows?.length) throw new Error("That person isn't on this team.");
     return { ok: true };
   });

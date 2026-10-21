@@ -16,6 +16,11 @@ describe("regional demo properties", () => {
     expect(new Set(SHOWCASE.map((s) => s.property.currency))).toEqual(new Set(["USD", "GBP", "EUR", "JPY"]));
   });
 
+  it("uses each template's logo from the concept mockups", () => {
+    const logos = Object.fromEntries(SHOWCASE.map((s) => [s.theme["presetId"], s.theme["logoPreset"]]));
+    expect(logos).toEqual({ "desert-star": "sunburst", "palace-heritage": "lantern", "grand-crimson": "monogram", "express-green": "key" });
+  });
+
   it("has its own links and campaign names, all reserved and treated as public tours", () => {
     const codes = SHOWCASE.map((s) => s.short_code);
     const campaigns = SHOWCASE.flatMap((s) => [s.campaign.guest, s.campaign.host]);

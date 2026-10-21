@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.57.0",
+    date: "2026-10-21",
+    title: "Groups of properties",
+    items: [
+      { kind: "new", area: "Settings", text: "Group brand (Settings → Business): your business's own logo beside each property's. Choose whether properties show their own logo (with the group's where one has none) or the group logo everywhere, whether guest pages say “Part of {group}”, and whether invoices carry the group's name and logo." },
+      { kind: "new", area: "Team", text: "Property managers: give a team member only some of your properties. They see and change only those properties, their bookings, guests, housekeeping and requests. Owners always see everything." },
+      { kind: "improved", area: "Demo", text: "Each regional demo property has the logo from its template's design." },
+    ],
+  },
+  {
     version: "0.56.0",
     date: "2026-10-21",
     title: "Demos around the world",

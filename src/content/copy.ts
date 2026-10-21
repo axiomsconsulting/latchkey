@@ -1928,6 +1928,10 @@ export const offerCopy = branded({
 });
 
 export const team = branded({
+  scopeLabel: "Properties",
+  scopeAll: "All properties",
+  scopeSome: "Only some",
+  scopeSaved: "Properties updated.",
   title: "Team",
   body: "Invite people to help run your rooms. Each person signs in with their own account.",
   roles: {
@@ -3066,6 +3070,7 @@ export const settingsMenuCopy = branded({
   groups: { business: "Business", guests: "Guests", money: "Money", look: "Look", apps: "Alerts and apps", admin: "Latchkey admin" } as Record<string, string>,
   sections: {
     business: ["Business details", "business"],
+    group: ["Group brand", "business"],
     team: ["Team", "business"],
     support: ["Support access", "business"],
     domain: ["Own web address", "business"],
@@ -3423,5 +3428,25 @@ export const guestBreakfastCopy = branded({
   choose: "Choose something from the menu",
   order: (total: string) => (total ? `Order breakfast · ${total}` : "Order breakfast"),
   sent: "Breakfast ordered. Your host will confirm it.",
+});
+
+export const groupBrandCopy = branded({
+  partOf: (group: string) => `Part of ${group}`,
+  title: "Group brand",
+  body: "For a business with more than one property. Each property keeps its own logo (Look and feel); here you choose your business's logo and where it shows.",
+  logo: "Group logo",
+  upload: "Upload a logo",
+  removeLogo: "Remove",
+  noLogo: "No group logo",
+  propertyLogos: "Property logos",
+  own: "Each property's own logo (the group logo where a property has none)",
+  group: "The group logo on every property",
+  guestPages: "Show “Part of {group}” on guest pages",
+  guestPagesHelp: "On the guest guide, room guides and kiosk, with your group logo.",
+  invoices: "Show the group on invoices",
+  invoicesHelp: "Your group name and logo at the top. Off: the property's name and logo instead; your business details always stay in the small print.",
+  saved: "Group brand saved.",
+  notReady: "The group brand can be set once the latest database update is applied.",
+  ownerOnly: "Only the owner can change the group brand.",
 });
 

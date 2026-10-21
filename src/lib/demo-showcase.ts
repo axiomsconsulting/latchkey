@@ -108,6 +108,8 @@ export const SHOWCASE: ShowcaseSpec[] = [
     },
     theme: {
       presetId: "desert-star",
+      // The logo from the concept mockups for this template.
+      logoPreset: "sunburst",
       subname: "Marfa, Texas",
       eyebrow: "Howdy",
       welcomeTitle: "Your stay at {property}",
@@ -190,6 +192,8 @@ export const SHOWCASE: ShowcaseSpec[] = [
     },
     theme: {
       presetId: "palace-heritage",
+      // The logo from the concept mockups for this template.
+      logoPreset: "lantern",
       subname: "Mayfair",
       welcomeTitle: "Welcome, your stay awaits",
       welcomeBody: "Tap to begin your arrival",
@@ -266,6 +270,8 @@ export const SHOWCASE: ShowcaseSpec[] = [
     },
     theme: {
       presetId: "grand-crimson",
+      // The logo from the concept mockups for this template.
+      logoPreset: "monogram",
       subname: "Le Marais, Paris",
       welcomeTitle: "Bienvenue à {property}",
       welcomeBody: "Check yourself in, find your room and ask for anything you need.",
@@ -339,6 +345,8 @@ export const SHOWCASE: ShowcaseSpec[] = [
     },
     theme: {
       presetId: "express-green",
+      // The logo from the concept mockups for this template.
+      logoPreset: "key",
       subname: "Kanda, Tokyo",
       welcomeTitle: "Welcome. Let's get you checked in",
       welcomeBody: "Start with the first letter of your surname.",

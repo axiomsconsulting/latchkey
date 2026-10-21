@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { LogoMark } from "@/components/theme/LogoMark";
+import type { LogoPreset } from "@/lib/theme";
 import { Download, Mail } from "lucide-react";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
@@ -44,6 +46,7 @@ function InvoicePage() {
     );
   }
   const i = res.invoice;
+  const header = res.header;
   const money = (p: number) => formatMoney(p, i.currency);
   // One line per night when the invoice was made that way; older ones have a single line.
   const lines = Array.isArray((i as { lines?: unknown }).lines)
@@ -73,6 +76,12 @@ function InvoicePage() {
       <article className="mx-auto max-w-3xl rounded-2xl bg-white p-8 text-[#1d1d1b] shadow-soft sm:p-12 print:max-w-none print:rounded-none print:p-0 print:shadow-none">
         <header className="flex flex-wrap items-start justify-between gap-6 border-b border-black/10 pb-6">
           <div>
+            {header ? (
+              <div className="mb-3 flex items-center gap-3">
+                <LogoMark theme={{ logoUrl: header.logoUrl, logoPreset: header.logoPreset as LogoPreset }} name={header.name} className="size-12" />
+                {header.name !== i.seller_name ? <span className="font-display text-xl">{header.name}</span> : null}
+              </div>
+            ) : null}
             <h1 className="font-display text-2xl">{i.seller_name}</h1>
             {i.seller_address ? <p className="mt-1 whitespace-pre-line text-sm text-black/70">{i.seller_address}</p> : null}
             {i.seller_tax_number ? (

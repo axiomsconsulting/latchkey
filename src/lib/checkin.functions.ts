@@ -4,6 +4,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
+import { withGroup } from "./group-brand.server";
 import { z } from "zod";
 
 import { isPlatformKey, platformKey } from "./booking-sites";
@@ -154,7 +155,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
       channelLabels: await channelLabels(p.host_id),
       sites: await guestSites(p.host_id),
-      theme: normaliseTheme(p.theme_config),
+      theme: await withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
       demoHint: isTour(p) ? await demoHint(p.id, today) : null,
       /** The public guest tour: the same kiosk, with a few demo hooks (kiosk.$code.tsx). */
       tour: isTour(p),
@@ -1334,7 +1335,7 @@ export const getStay = createServerFn({ method: "GET" })
     const [{ data: p }, { data: room }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("name, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
+        .select("name, host_id, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
         .eq("id", b.property_id)
         .single(),
       b.room_id
@@ -1428,7 +1429,7 @@ export const getStay = createServerFn({ method: "GET" })
       amenities: Array.isArray((room as { amenities?: unknown } | null)?.amenities)
         ? ((room as { amenities: unknown[] }).amenities.filter((a): a is string => typeof a === "string"))
         : [],
-      theme: normaliseTheme(p?.theme_config),
+      theme: await withGroup(normaliseTheme(p?.theme_config), (p as { host_id?: string } | null)?.host_id, p?.name ?? ""),
       mode,
       guide: sections.filter((sec) => !reminded.has(sec.key)),
       pinnedSections: sections.filter((sec) => reminded.has(sec.key)),

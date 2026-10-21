@@ -47,7 +47,7 @@ export const getEnquiryPage = createServerFn({ method: "GET" })
       propertyName: p.name as string,
       shortCode: p.short_code as string,
       business,
-      theme: normaliseTheme(p.theme_config),
+      theme: await (await import("./group-brand.server")).withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
       today: todayIn(p.timezone),
       consent: consentText(business),
     };
