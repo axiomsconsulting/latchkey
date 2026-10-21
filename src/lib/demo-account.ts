@@ -4,8 +4,13 @@
  * not this, and keeps every real-guest protection.
  */
 
+import { INTEGRATION_KEYS, type IntegrationModes } from "./integration-modes";
+
 export const DEMO_EMAIL = "demo@latchkey.omsestates.uk";
 export const DEMO_CODE = "tour";
+
+/** Every outside integration stays simulated on the shared account (tests/demo-account.test.ts). */
+export const DEMO_INTEGRATION_MODES: IntegrationModes = Object.fromEntries(INTEGRATION_KEYS.map((k) => [k, "demo"])) as IntegrationModes;
 
 export const DEMO_LOCKED = "Settings are locked in the shared demo. Start a free trial to change them.";
 

@@ -185,6 +185,82 @@ export const DEMO_BOOKINGS: DemoBooking[] = [
     status: "checked_out",
     notes: null,
   },
+  // The coming days, so the housekeeping board, reports and Today always have work in every room.
+  {
+    roomKey: "r2",
+    channel: "direct",
+    source: "manual",
+    guest_full_name: "Hannah Lee",
+    reservation_code: null,
+    guest_count: 2,
+    phone_last4: "3318",
+    check_in_offset: 1,
+    check_out_offset: 3,
+    check_in_time: "16:00",
+    check_out_time: "11:00",
+    status: "upcoming",
+    notes: "Returning guest: asked for the garden room again.",
+  },
+  {
+    roomKey: "r1",
+    channel: "booking_com",
+    source: "ical",
+    guest_full_name: "Sofia Marin",
+    reservation_code: "BK-48211",
+    guest_count: 2,
+    phone_last4: "7720",
+    check_in_offset: 3,
+    check_out_offset: 5,
+    check_in_time: "22:30",
+    check_out_time: "11:00",
+    status: "upcoming",
+    notes: "Late arrival, around 22:30.",
+  },
+  {
+    roomKey: "r3",
+    channel: "direct",
+    source: "manual",
+    guest_full_name: "Chloe Martin",
+    reservation_code: null,
+    guest_count: 1,
+    phone_last4: "5503",
+    check_in_offset: 5,
+    check_out_offset: 8,
+    check_in_time: "15:00",
+    check_out_time: "11:00",
+    status: "upcoming",
+    notes: null,
+  },
+  {
+    roomKey: "r1",
+    channel: "airbnb",
+    source: "ical",
+    guest_full_name: "Owen Price",
+    reservation_code: "HMX2Q8",
+    guest_count: 2,
+    phone_last4: "6614",
+    check_in_offset: 6,
+    check_out_offset: 9,
+    check_in_time: "15:00",
+    check_out_time: "11:00",
+    status: "upcoming",
+    notes: null,
+  },
+  {
+    roomKey: "r2",
+    channel: "airbnb",
+    source: "ical",
+    guest_full_name: "Ravi Mehta",
+    reservation_code: "HMB7K2",
+    guest_count: 2,
+    phone_last4: "2287",
+    check_in_offset: 7,
+    check_out_offset: 10,
+    check_in_time: "15:00",
+    check_out_time: "11:00",
+    status: "upcoming",
+    notes: null,
+  },
 ];
 
 /** Weekly whole-house cleaning: Tuesdays and Thursdays, 10:00 to 15:00. */
@@ -197,6 +273,19 @@ export const DEMO_CONNECTIONS = [
   { roomKey: "r1", channel: "airbnb" as const, listing_name: "The Hill — Suite 1" },
   { roomKey: "r2", channel: "booking_com" as const, listing_name: "Garden Room, Amersham" },
   { roomKey: "r3", channel: "homestay" as const, listing_name: "Loft Single" },
+];
+
+/** A guest request and a maintenance job, so Services and the housekeeping board have something open. */
+export const DEMO_JOBS = [
+  { roomKey: "r3", guest: "Ade Okafor", source: "guest" as const, category: "linen", title: "Extra towels", note: "Two more bath towels, please.", urgency: "normal" as const, status: "new" as const },
+  { roomKey: "r2", guest: null, source: "maintenance" as const, category: "handyman", title: "Shower drips after use", note: "Check the mixer seal before the weekend.", urgency: "low" as const, status: "acknowledged" as const },
+];
+
+/** A short conversation (answered) and a question still waiting, minutes before now. */
+export const DEMO_MESSAGES = [
+  { guest: "Ade Okafor", direction: "inbound" as const, minutesAgo: 190, body: "Hi, could we have two more towels please?" },
+  { guest: "Ade Okafor", direction: "outbound" as const, minutesAgo: 170, body: "Of course. I'll leave them outside your door by 6pm." },
+  { guest: "Jane Brown", direction: "inbound" as const, minutesAgo: 40, body: "We're on the train, arriving around 9pm. Is the door code the same as in the guide?" },
 ];
 
 export function demoDates(today: string, b: DemoBooking) {

@@ -73,6 +73,8 @@ export const saveNotifyPrefs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ hostId: uuid, prefs: prefsSchema }).parse(d))
   .handler(async ({ data, context }) => {
+    // A phone number or email here would get texts and emails for every demo visitor's actions.
+    assertNotSharedDemo(context.claims);
     await requireWrite(context.supabase, data.hostId);
     const db = await admin();
     const { error } = await db.from("hosts").update({ notify_prefs: data.prefs }).eq("id", data.hostId);

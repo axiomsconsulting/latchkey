@@ -11,11 +11,12 @@ import { AccessGate, AnnouncementPopup, FeedbackButton, FeedbackDialog, ShellBan
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
-import { whatsNewCopy } from "@/content/copy";
+import { demoBannerCopy, whatsNewCopy } from "@/content/copy";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
 import { OmniSearch } from "@/components/host/OmniSearch";
+import { sessionUtm } from "@/lib/attribution";
 import { NavIcon } from "@/components/NavIcon";
 import { MenuStrip } from "@/components/host/MenuStrip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -73,6 +74,12 @@ function MenuLink({ item, className, activeProps, onClick, title, ariaLabel, chi
 
 const NAV_KEY = "latchkey.nav";
 
+/** Signed in as the shared public demo account. */
+function useIsSharedDemo(): boolean {
+  const ws = useWorkspace();
+  return (ws.data?.host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL;
+}
+
 function haptic() {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(8);
 }
@@ -103,6 +110,7 @@ export function HostShell() {
   const property = properties.find((p) => p.id === selectedId) ?? null;
   const theme = normaliseTheme(property?.theme_config);
   const host = data?.host as { business_name?: string } | null | undefined;
+  const isSharedDemo = useIsSharedDemo();
   const title = property?.name ?? host?.business_name ?? brand.name;
   // Remembered for the sign-in page ("welcome back" with their own logo); never a support view or the demo.
   useEffect(() => {
@@ -159,17 +167,6 @@ export function HostShell() {
         onSignOut={() => void leave()}
       />
 
-      {(host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL ? (
-        <button
-          type="button"
-          // The trial page swaps the shared demo for the visitor's own trial.
-          onClick={() => void navigate({ to: "/start" })}
-          className="fixed bottom-24 right-4 z-40 h-12 rounded-full bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-lifted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:bottom-6 md:right-6 print:hidden"
-        >
-          Start your free trial
-        </button>
-      ) : null}
-
       {/* Desktop: messages sit top right, away from the sidebar */}
       <div className="glass fixed right-6 top-6 z-30 hidden items-center gap-0.5 rounded-2xl p-1 md:flex print:hidden">
         <OmniSearch pages={allPages} />
@@ -217,7 +214,7 @@ export function HostShell() {
                 <Link to="/app/activity"><History className="size-5" /> {hostNav.activity}</Link>
               </DropdownMenuItem>
             ) : null}
-            {isOwner ? (
+            {isOwner && !isSharedDemo ? (
               <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
                 <Link to="/app/billing"><CreditCard className="size-5" /> {billingCopy.navLabel}</Link>
               </DropdownMenuItem>
@@ -249,6 +246,25 @@ export function HostShell() {
         )}
       >
         <ShellBanners />
+        {(host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL ? (
+          // The shared demo says what it is, with the two ways out.
+          <div role="note" className="mx-auto mb-5 flex max-w-6xl flex-wrap items-center gap-3 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm print:hidden">
+            <span className="min-w-0 flex-1 basis-56">{demoBannerCopy.text}</span>
+            <Button asChild size="sm" variant="accent">
+              <Link to="/start" search={sessionUtm() as never}>{demoBannerCopy.trial}</Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                await signOut();
+                await navigate({ to: "/", search: { home: true } });
+              }}
+            >
+              {demoBannerCopy.leave}
+            </Button>
+          </div>
+        ) : null}
         <TrialBanner />
         <SetPasswordPrompt />
         <AccessGate>
@@ -352,6 +368,7 @@ function DesktopNav({
   isOwner: boolean;
   onSignOut: () => void;
 }) {
+  const isSharedDemo = useIsSharedDemo();
   const isSuperAdmin = useWorkspace().data?.isSuperAdmin === true;
   const menu = useMenu(isSuperAdmin);
   const [dragWidth, setDragWidth] = useState<number | null>(null);
@@ -451,7 +468,7 @@ function DesktopNav({
         {canWrite ? one("/app/register", hostNav.register, NotebookPen) : null}
         {isOwner ? one("/app/activity", hostNav.activity, History) : null}
         {one("/app/whats-new", whatsNewCopy.navLabel, Sparkles)}
-        {isOwner ? one("/app/billing", billingCopy.navLabel, CreditCard) : null}
+        {isOwner && !isSharedDemo ? one("/app/billing", billingCopy.navLabel, CreditCard) : null}
         <FeedbackButton compact={!inDrawer && (narrow || top)} {...(inDrawer ? { className: "w-full" } : {})} />
       </>
     );

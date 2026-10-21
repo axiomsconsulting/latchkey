@@ -255,11 +255,13 @@ function SettingsPage() {
       ) : null}
       </Section>
       <Section id="team">
+      {demo ? null : (<>
       {workspace.data ? (
         <div id="settings-team" className="scroll-mt-24 rounded-2xl">
           <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} />
         </div>
       ) : null}
+      </>)}
       </Section>
       <Section id="shortcuts">
       <>
@@ -310,11 +312,13 @@ function SettingsPage() {
 
       <Section id="extras">{themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}</Section>
       <Section id="payments">
+      {demo ? null : (<>
       {themedProperty && isOwner ? (
         <div id="settings-payments" className="scroll-mt-24 rounded-2xl">
           <PaymentsPanel propertyId={themedProperty.id} />
         </div>
       ) : null}
+      </>)}
       </Section>
       <Section id="invoices">
       {workspace.data ? (
@@ -324,6 +328,7 @@ function SettingsPage() {
       ) : null}
       </Section>
       <Section id="domain">
+      {demo ? null : (<>
       {workspace.data ? (
         <div id="settings-domain" className="scroll-mt-24 rounded-2xl">
           <CustomDomainSettings
@@ -333,15 +338,19 @@ function SettingsPage() {
           />
         </div>
       ) : null}
+      </>)}
       </Section>
       <Section id="api">
+      {demo ? null : (<>
       {workspace.data ? (
         <div id="settings-api" className="scroll-mt-24 rounded-2xl">
           <ApiAccessPanel hostId={workspace.data.hostId} canWrite={canWriteHost} />
         </div>
       ) : null}
+      </>)}
       </Section>
       <Section id="support">
+      {demo ? null : (<>
       {workspace.data && !workspace.data.support ? (
         <SupportAccess
           hostId={workspace.data.hostId}
@@ -349,6 +358,7 @@ function SettingsPage() {
           isOwner={isOwner}
         />
       ) : null}
+      </>)}
       </Section>
       <Section id="theme">{themedProperty ? <ThemeStudio property={themedProperty} /> : null}</Section>
       <Section id="labels">

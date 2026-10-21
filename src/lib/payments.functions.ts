@@ -175,6 +175,7 @@ export const syncPriceListToStripe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
     const hostId = await hostOfProperty(context.supabase, data.propertyId);
     // Billing set-up is the owner's: this creates products in Stripe.
     await requireOwner(context.supabase, hostId);

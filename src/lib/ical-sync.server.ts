@@ -361,6 +361,8 @@ export async function runRetentionSweep(): Promise<number> {
   await supabaseAdmin.from("check_in_attempts").delete().lt("created_at", monthAgo);
   await supabaseAdmin.from("checkin_sessions").delete().lt("expires_at", new Date().toISOString());
   await supabaseAdmin.from("stay_tokens").delete().lt("expires_at", new Date().toISOString());
+  // Demo rate-limit rows are only needed for an hour; keep a day at most.
+  await db.from("demo_starts").delete().lt("at", new Date(Date.now() - 86_400_000).toISOString());
   // Direct enquiries go a year after they arrived (migration 0043; nothing to do before it).
   await db.from("direct_enquiries").delete().lt("created_at", new Date(Date.now() - 365 * 86_400_000).toISOString());
   // The team activity history is kept for a year.

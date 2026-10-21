@@ -3305,3 +3305,9 @@ export const directCopy = branded({
   theirWords: "What they agreed to",
 });
 
+export const demoBannerCopy = branded({
+  text: "You're exploring a demo. Everyone shares it, and it resets daily.",
+  trial: "Start free trial",
+  leave: "Leave demo",
+});
+

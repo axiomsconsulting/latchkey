@@ -16,6 +16,8 @@ import { todayInZone } from "./dates";
 import {
   DEMO_BOOKINGS,
   DEMO_CONNECTIONS,
+  DEMO_JOBS,
+  DEMO_MESSAGES,
   DEMO_PROPERTY,
   DEMO_ROOMS,
   DEMO_UNAVAILABILITY,
@@ -818,7 +820,7 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
     );
 
     const today = todayInZone(property.timezone ?? "Europe/London");
-    await supabase.from("bookings").insert(
+    const { data: stays } = await supabase.from("bookings").insert(
       DEMO_BOOKINGS.map((b) => ({
         property_id: property.id,
         room_id: roomByKey.get(b.roomKey) ?? null,
@@ -835,6 +837,30 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
         is_demo: true,
         ...demoDates(today, b),
       })),
+    ).select("id, guest_full_name");
+
+    // Open work and a conversation, so Services, housekeeping and messages aren't empty.
+    const stayOf = new Map(((stays ?? []) as Array<{ id: string; guest_full_name: string | null }>).map((x) => [x.guest_full_name, x.id]));
+    await supabase.from("service_jobs").insert(
+      DEMO_JOBS.map((j) => ({
+        host_id: hostId,
+        property_id: property.id,
+        room_id: roomByKey.get(j.roomKey) ?? null,
+        booking_id: j.guest ? (stayOf.get(j.guest) ?? null) : null,
+        source: j.source,
+        category: j.category,
+        title: j.title,
+        note: j.note,
+        urgency: j.urgency,
+        status: j.status,
+        is_demo: true,
+      })),
+    );
+    await supabase.from("messages").insert(
+      DEMO_MESSAGES.filter((m) => stayOf.get(m.guest)).map((m) => {
+        const at = new Date(Date.now() - m.minutesAgo * 60_000).toISOString();
+        return { booking_id: stayOf.get(m.guest)!, direction: m.direction, channel: "stay_page", body: m.body, sent_at: at, created_at: at };
+      }),
     );
 
     await supabase.from("unavailability_windows").insert(

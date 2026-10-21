@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.53.0",
+    date: "2026-10-21",
+    title: "Easier to try",
+    items: [
+      { kind: "new", area: "Website", text: "Stable demo links: latchkey.omsestates.uk/tour opens the guest journey and /demo/host opens the host dashboard, keeping any campaign details on the link. The home page buttons go straight to them." },
+      { kind: "improved", area: "Demo", text: "The host demo says it's a shared demo that resets daily, with Start free trial and Leave demo; account settings that can't be changed in the demo are hidden; every room has guests, a request and messages over the coming days." },
+      { admin: true, kind: "new", area: "Website", text: "Where a trial came from (utm_* and ref on the first visit) is saved on the new business. The public demo is limited to 30 starts an hour per visitor, and can never be switched to live integrations; alert settings and Stripe price syncing are locked for the shared account." },
+    ],
+  },
+  {
     version: "0.52.1",
     date: "2026-10-21",
     title: "Home page fix",

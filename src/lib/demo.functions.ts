@@ -6,23 +6,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { DEMO_CODE, DEMO_EMAIL } from "./demo-account";
+import { DEMO_CODE, DEMO_EMAIL, DEMO_INTEGRATION_MODES } from "./demo-account";
 import { seedDemo } from "./host.functions";
-import { INTEGRATION_KEYS, type IntegrationModes } from "./integration-modes";
 
 export { DEMO_CODE };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const UNAVAILABLE = "The demo is unavailable right now.";
+const TOO_MANY = "You've opened the demo a lot from here in the last hour. Please try again a little later.";
+const DEMO_STARTS_PER_HOUR = 30;
 
-/** Every outside integration stays simulated on the shared account. */
-const ALL_DEMO = Object.fromEntries(INTEGRATION_KEYS.map((k) => [k, "demo"])) as IntegrationModes;
 const DEMO_HOST = {
   business_name: "The Hill Suites (demo)",
   contact_email: DEMO_EMAIL,
   currency: "GBP",
   timezone: "Europe/London",
-  integration_modes: ALL_DEMO,
+  integration_modes: DEMO_INTEGRATION_MODES,
 };
 
 function londonDay(d: Date): string {
@@ -109,6 +108,18 @@ export const startDemo = createServerFn({ method: "POST" })
     // The super admin can switch the public demo off (Latchkey admin → Routines).
     const { jobAllowed } = await import("./usage.server");
     if (!(await jobAllowed("demo_tour"))) throw new Error(UNAVAILABLE);
+
+    // A fair limit per visitor (a one-day hash of their address, never the address itself).
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const { hashIp, requestIp } = await import("./ip-hash.server");
+    const ipHash = hashIp(requestIp(getRequest().headers));
+    if (ipHash) {
+      const hourAgo = new Date(Date.now() - 3_600_000).toISOString();
+      const { count, error: countError } = await admin.from("demo_starts").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("at", hourAgo);
+      // Before migration 0045 there's no table: no limit.
+      if (!countError && (count ?? 0) >= DEMO_STARTS_PER_HOUR) throw new Error(TOO_MANY);
+      if (!countError) await admin.from("demo_starts").insert({ ip_hash: ipHash, kind: data.as });
+    }
 
     const hostId = await demoHostId(admin);
     const code = await freshDemoCode(admin, hostId);

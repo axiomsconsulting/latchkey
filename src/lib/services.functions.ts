@@ -53,6 +53,12 @@ export const saveIntegrationModes = createServerFn({ method: "POST" })
     // Going live spends money and contacts real people: Latchkey's admins decide, for any business.
     await requireSuperAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Never for the shared public demo: every visitor would be emailing real addresses.
+    if (Object.values(data.modes).includes("live")) {
+      const { DEMO_EMAIL } = await import("./demo-account");
+      const { data: h } = await supabaseAdmin.from("hosts").select("contact_email").eq("id", data.hostId).maybeSingle();
+      if ((h?.contact_email ?? "").toLowerCase() === DEMO_EMAIL) throw new Error("The shared demo always stays in demo mode.");
+    }
     const { error } = await supabaseAdmin
       .from("hosts")
       .update({ integration_modes: normaliseModes(data.modes) })
