@@ -25,6 +25,7 @@ export const demoCopy = branded({
   hostBody: "See arrivals, bookings, calendars and requests.",
   resetNote: "This is a demo. Its data is shared and resets every day.",
   tryAgain: "Try again",
+  tourLabel: "Demo · resets daily · Back to Latchkey",
   openingGuest: "Opening the guest journey…",
   openingHost: "Opening the host dashboard…",
   pageTitle: "See it for yourself",
@@ -72,7 +73,7 @@ export const about = branded({
 
 export const marketing = branded({
   /** The category, above the headline. */
-  category: "Guest operations for independent accommodation",
+  category: "Guest operations system for independent accommodation",
   headline: "Hotel-grade guest operations for the stays you run yourself.",
   subhead:
     "Booking sites confirm the reservation. Latchkey runs everything after it: self check-in, a branded stay guide, requests and extras, guest records and alerts, for serviced accommodation, guest houses, B&Bs and Airbnb and Booking.com hosts.",
@@ -623,7 +624,7 @@ export const kioskWelcomeCopy = branded({
   headline: "Big words",
   body: "Smaller words (optional)",
   for: "Show for",
-  defaultHeadline: (first: string) => (first ? `Welcome, ${first}!` : "Welcome!"),
+  defaultHeadline: (first: string) => (first ? `Welcome, ${first}` : "Welcome"),
   defaultBody: "We're so glad you're here. Tap anywhere to check in and we'll get you to your room.",
   durations: { "30": "30 minutes", "60": "1 hour", "120": "2 hours", "240": "4 hours", "480": "8 hours" } as Record<string, string>,
   show: "Show on the kiosk",
@@ -860,7 +861,7 @@ export const connections = branded({
   noHistory: "No sync history yet.",
   testOk: "That link works.",
   managerTitle: "Channel manager (Beds24, Smoobu, Hostaway)",
-  managerBody: "Direct two-way sync with channel managers is planned for a later stage.",
+  managerBody: "Latchkey works alongside channel managers through calendar links. It doesn't sync rates or availability with them.",
   comingSoon: "Coming soon",
   conflictTitle: "Something needs your eye",
   syncedToast: "Calendar checked",
@@ -1676,7 +1677,7 @@ export const calendarUi = branded({
   helpSubtitle: "Where to find the calendar link on each platform.",
   managerTitle: "Channel manager API",
   managerBody:
-    "Expedia and hotel-style listings connect through a channel manager rather than a calendar link. Direct connections are coming soon.",
+    "Expedia and hotel-style listings connect through a channel manager rather than a calendar link. Add the channel manager's calendar link here instead.",
   errors: {
     https: "The link must start with https://",
     notCalendar: "This link looks like a web page, not a calendar.",

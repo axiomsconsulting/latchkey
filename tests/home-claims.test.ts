@@ -8,6 +8,10 @@ describe("home page claims", () => {
     for (const shipped of ["housekeeping", "report", "direct stay", "enquir"]) expect(next).not.toContain(shipped);
   });
 
+  it("says 'hotel-grade' at most once on the home page", () => {
+    expect(JSON.stringify(marketing).match(/hotel-grade/gi)?.length ?? 0).toBeLessThanOrEqual(1);
+  });
+
   it("doesn't make claims the positioning rules out", () => {
     const all = JSON.stringify(marketing).toLowerCase();
     for (const banned of ["no commission", "revpar", "dynamic pricing", "hotel pms that"]) expect(all).not.toContain(banned);

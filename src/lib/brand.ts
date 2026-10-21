@@ -32,7 +32,7 @@ export const DEFAULT_BRAND: Brand = {
   name: DEFAULT_NAME,
   logoMark: "key",
   logoUrl: "",
-  tagline: "Guest operations for independent accommodation",
+  tagline: "Guest operations system for independent accommodation",
   footer: "",
 };
 
@@ -57,7 +57,7 @@ export function normaliseBrand(raw: unknown): Brand {
   };
 }
 
-const OLD_TAGLINES = ["Self check-in for guest houses, B&Bs and short lets"];
+const OLD_TAGLINES = ["Self check-in for guest houses, B&Bs and short lets", "Guest operations for independent accommodation"];
 
 let current: Brand = DEFAULT_BRAND;
 // On the server, each request's own brand (brand.server.ts), so two requests never mix.
