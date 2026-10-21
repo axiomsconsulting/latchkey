@@ -18,6 +18,7 @@ import { Route as CheckinRouteImport } from './routes/checkin'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as EnquireCodeRouteImport } from './routes/enquire.$code'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
@@ -30,6 +31,7 @@ import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated/app.billing'
 import { Route as AuthenticatedAppBookingsRouteImport } from './routes/_authenticated/app.bookings'
 import { Route as AuthenticatedAppConnectionsRouteImport } from './routes/_authenticated/app.connections'
+import { Route as AuthenticatedAppDirectRouteImport } from './routes/_authenticated/app.direct'
 import { Route as AuthenticatedAppGuidesRouteImport } from './routes/_authenticated/app.guides'
 import { Route as AuthenticatedAppHousekeepingRouteImport } from './routes/_authenticated/app.housekeeping'
 import { Route as AuthenticatedAppPropertiesRouteImport } from './routes/_authenticated/app.properties'
@@ -43,6 +45,7 @@ import { Route as AuthenticatedAppWhatsNewRouteImport } from './routes/_authenti
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
+import { Route as StayAgainWithdrawTokenRouteImport } from './routes/stay-again.withdraw.$token'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_authenticated/app.room-qr.$propertyId'
 import { Route as ApiPublicAttachmentIdRouteImport } from './routes/api/public/attachment.$id'
@@ -105,6 +108,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const EnquireCodeRoute = EnquireCodeRouteImport.update({
+  id: '/enquire/$code',
+  path: '/enquire/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
@@ -169,6 +177,11 @@ const AuthenticatedAppConnectionsRoute =
     path: '/connections',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppDirectRoute = AuthenticatedAppDirectRouteImport.update({
+  id: '/direct',
+  path: '/direct',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppGuidesRoute = AuthenticatedAppGuidesRouteImport.update({
   id: '/guides',
   path: '/guides',
@@ -238,6 +251,11 @@ const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
 const ApiPublicTrackRoute = ApiPublicTrackRouteImport.update({
   id: '/api/public/track',
   path: '/api/public/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StayAgainWithdrawTokenRoute = StayAgainWithdrawTokenRouteImport.update({
+  id: '/stay-again/withdraw/$token',
+  path: '/stay-again/withdraw/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppPrintPropertyIdRoute =
@@ -345,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -356,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
+  '/app/direct': typeof AuthenticatedAppDirectRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
   '/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
@@ -369,6 +389,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
@@ -397,6 +418,7 @@ export interface FileRoutesByTo {
   '/checkin': typeof CheckinRoute
   '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
+  '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -408,6 +430,7 @@ export interface FileRoutesByTo {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/app/connections': typeof AuthenticatedAppConnectionsRoute
+  '/app/direct': typeof AuthenticatedAppDirectRoute
   '/app/guides': typeof AuthenticatedAppGuidesRoute
   '/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/app/properties': typeof AuthenticatedAppPropertiesRoute
@@ -421,6 +444,7 @@ export interface FileRoutesByTo {
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
@@ -452,6 +476,7 @@ export interface FileRoutesById {
   '/developers': typeof DevelopersRoute
   '/start': typeof StartRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -463,6 +488,7 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/bookings': typeof AuthenticatedAppBookingsRoute
   '/_authenticated/app/connections': typeof AuthenticatedAppConnectionsRoute
+  '/_authenticated/app/direct': typeof AuthenticatedAppDirectRoute
   '/_authenticated/app/guides': typeof AuthenticatedAppGuidesRoute
   '/_authenticated/app/housekeeping': typeof AuthenticatedAppHousekeepingRoute
   '/_authenticated/app/properties': typeof AuthenticatedAppPropertiesRoute
@@ -476,6 +502,7 @@ export interface FileRoutesById {
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/_authenticated/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
@@ -507,6 +534,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/start'
     | '/app'
+    | '/enquire/$code'
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
@@ -518,6 +546,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/bookings'
     | '/app/connections'
+    | '/app/direct'
     | '/app/guides'
     | '/app/housekeeping'
     | '/app/properties'
@@ -531,6 +560,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/stay-again/withdraw/$token'
     | '/app/'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
@@ -559,6 +589,7 @@ export interface FileRouteTypes {
     | '/checkin'
     | '/developers'
     | '/start'
+    | '/enquire/$code'
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
@@ -570,6 +601,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/bookings'
     | '/app/connections'
+    | '/app/direct'
     | '/app/guides'
     | '/app/housekeeping'
     | '/app/properties'
@@ -583,6 +615,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/stay-again/withdraw/$token'
     | '/app'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
@@ -613,6 +646,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/start'
     | '/_authenticated/app'
+    | '/enquire/$code'
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
@@ -624,6 +658,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/bookings'
     | '/_authenticated/app/connections'
+    | '/_authenticated/app/direct'
     | '/_authenticated/app/guides'
     | '/_authenticated/app/housekeeping'
     | '/_authenticated/app/properties'
@@ -637,6 +672,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/stay-again/withdraw/$token'
     | '/_authenticated/app/'
     | '/_authenticated/app/print/$propertyId'
     | '/_authenticated/app/room-qr/$propertyId'
@@ -667,6 +703,7 @@ export interface RootRouteChildren {
   CheckinRoute: typeof CheckinRoute
   DevelopersRoute: typeof DevelopersRoute
   StartRoute: typeof StartRoute
+  EnquireCodeRoute: typeof EnquireCodeRoute
   InviteTokenRoute: typeof InviteTokenRoute
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
@@ -676,6 +713,7 @@ export interface RootRouteChildren {
   ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
+  StayAgainWithdrawTokenRoute: typeof StayAgainWithdrawTokenRoute
   ApiPublicAttachmentIdRoute: typeof ApiPublicAttachmentIdRoute
   ApiPublicBrandAppleRoute: typeof ApiPublicBrandAppleRoute
   ApiPublicBrandIconRoute: typeof ApiPublicBrandIconRoute
@@ -757,6 +795,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/enquire/$code': {
+      id: '/enquire/$code'
+      path: '/enquire/$code'
+      fullPath: '/enquire/$code'
+      preLoaderRoute: typeof EnquireCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
       id: '/invite/$token'
@@ -840,6 +885,13 @@ declare module '@tanstack/react-router' {
       path: '/connections'
       fullPath: '/app/connections'
       preLoaderRoute: typeof AuthenticatedAppConnectionsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/direct': {
+      id: '/_authenticated/app/direct'
+      path: '/direct'
+      fullPath: '/app/direct'
+      preLoaderRoute: typeof AuthenticatedAppDirectRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/guides': {
@@ -931,6 +983,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/track'
       fullPath: '/api/public/track'
       preLoaderRoute: typeof ApiPublicTrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stay-again/withdraw/$token': {
+      id: '/stay-again/withdraw/$token'
+      path: '/stay-again/withdraw/$token'
+      fullPath: '/stay-again/withdraw/$token'
+      preLoaderRoute: typeof StayAgainWithdrawTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/print/$propertyId': {
@@ -1068,6 +1127,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppBookingsRoute: typeof AuthenticatedAppBookingsRoute
   AuthenticatedAppConnectionsRoute: typeof AuthenticatedAppConnectionsRoute
+  AuthenticatedAppDirectRoute: typeof AuthenticatedAppDirectRoute
   AuthenticatedAppGuidesRoute: typeof AuthenticatedAppGuidesRoute
   AuthenticatedAppHousekeepingRoute: typeof AuthenticatedAppHousekeepingRoute
   AuthenticatedAppPropertiesRoute: typeof AuthenticatedAppPropertiesRoute
@@ -1089,6 +1149,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppBookingsRoute: AuthenticatedAppBookingsRoute,
   AuthenticatedAppConnectionsRoute: AuthenticatedAppConnectionsRoute,
+  AuthenticatedAppDirectRoute: AuthenticatedAppDirectRoute,
   AuthenticatedAppGuidesRoute: AuthenticatedAppGuidesRoute,
   AuthenticatedAppHousekeepingRoute: AuthenticatedAppHousekeepingRoute,
   AuthenticatedAppPropertiesRoute: AuthenticatedAppPropertiesRoute,
@@ -1139,6 +1200,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckinRoute: CheckinRoute,
   DevelopersRoute: DevelopersRoute,
   StartRoute: StartRoute,
+  EnquireCodeRoute: EnquireCodeRoute,
   InviteTokenRoute: InviteTokenRoute,
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
@@ -1148,6 +1210,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackRoute: ApiPublicTrackRoute,
+  StayAgainWithdrawTokenRoute: StayAgainWithdrawTokenRoute,
   ApiPublicAttachmentIdRoute: ApiPublicAttachmentIdRoute,
   ApiPublicBrandAppleRoute: ApiPublicBrandAppleRoute,
   ApiPublicBrandIconRoute: ApiPublicBrandIconRoute,

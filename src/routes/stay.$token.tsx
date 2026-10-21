@@ -13,6 +13,7 @@ import { shownTiles } from "@/lib/guide-tiles";
 import { cn } from "@/lib/utils";
 import { StayInvoice } from "@/components/guest/StayInvoice";
 import { StayReview } from "@/components/guest/StayReview";
+import { StayAgain } from "@/components/guest/StayAgain";
 import { StayServices } from "@/components/guest/StayServices";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -215,6 +216,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><div id="stay-extras" className="scroll-mt-6"><StayExtras token={token} /></div><StayServices token={token} /></>)}
         <StayInvoice token={token} place={p?.name ?? ""} />
         <StayReview token={token} />
+        {s.readOnly ? null : <StayAgain token={token} />}
       </main>
     </GuestFrame>
   );

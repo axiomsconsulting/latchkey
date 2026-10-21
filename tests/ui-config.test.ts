@@ -17,7 +17,7 @@ describe("menu", () => {
     ]);
     expect(nav.find((e) => e.id === "today")?.hidden).toBe(true);
     // Built-ins the admin didn't place join their default neighbours; the admin's own order stays.
-    expect(nav.map((e) => e.id)).toEqual(["settings", "admin", "custom_help", "today", "bookings", "housekeeping", "services", "guides", "properties", "connections", "reports"]);
+    expect(nav.map((e) => e.id)).toEqual(["settings", "admin", "custom_help", "today", "bookings", "housekeeping", "services", "guides", "properties", "connections", "direct", "reports"]);
   });
 
   it("puts a menu item added in a later release next to its neighbour in a saved menu", () => {

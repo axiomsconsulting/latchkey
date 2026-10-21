@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.52.0",
+    date: "2026-10-21",
+    title: "Repeat direct stays",
+    items: [
+      { kind: "new", area: "Bookings", text: "Direct stays: your own enquiry page for each property, where past guests (or anyone) ask about dates. You reply from your own email and can turn an enquiry into a direct stay in one tap. Guests who've stayed before are marked as returning." },
+      { kind: "new", area: "Guest guide", text: "“Stay with us again” on the guest guide: guests can ask about future dates, or tick a box to hear from you about future stays. Their exact words and the date are kept, and every email you send from Latchkey includes their link to stop. Nothing is sent automatically." },
+    ],
+  },
+  {
     version: "0.51.0",
     date: "2026-10-21",
     title: "Operations reports",

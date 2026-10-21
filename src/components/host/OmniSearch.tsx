@@ -49,11 +49,12 @@ const ICONS: Record<SearchKind, LucideIcon> = {
   trade: HardHat,
   connection: Plug,
   look: Palette,
+  enquiry: CalendarDays,
 };
 
 /** The groups results show under, in this order. */
 const GROUPS: Array<{ key: string; kinds: SearchKind[] }> = [
-  { key: "guests", kinds: ["guest"] },
+  { key: "guests", kinds: ["guest", "enquiry"] },
   { key: "yours", kinds: ["property", "room", "guide", "extra", "job", "trade", "connection", "look"] },
   { key: "pages", kinds: ["page", "setting"] },
   { key: "features", kinds: ["feature", "logo", "integration"] },

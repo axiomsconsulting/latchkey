@@ -8,7 +8,7 @@ import { rebrand } from "@/lib/brand";
 export type Channel = "email" | "push" | "telegram" | "sms";
 export const CHANNELS: Channel[] = ["email", "push", "telegram", "sms"];
 
-export type AlertKind = "lockout" | "id_mismatch" | "id_partial" | "self_declared" | "service_request" | "party" | "handover" | "test";
+export type AlertKind = "lockout" | "id_mismatch" | "id_partial" | "self_declared" | "service_request" | "party" | "handover" | "direct_enquiry" | "test";
 
 /** Kinds that need the host now: the only ones sent by SMS unless the host asks for everything. */
 export const URGENT: AlertKind[] = ["lockout", "handover", "party"];
@@ -54,6 +54,7 @@ const TITLES: Record<AlertKind, string> = {
   service_request: "Guest request",
   party: "More guests than booked",
   handover: "Guest wants you to check them in",
+  direct_enquiry: "New direct enquiry",
   test: "Test alert",
 };
 
@@ -63,6 +64,7 @@ export function alertTitle(kind: string): string {
 
 /** Where tapping the alert should land. */
 export function alertPath(kind: string, bookingId: string | null): string {
+  if (kind === "direct_enquiry") return "/app/direct";
   if (bookingId && kind !== "test") return `/app/bookings?guest=${bookingId}`;
   return "/app/today";
 }

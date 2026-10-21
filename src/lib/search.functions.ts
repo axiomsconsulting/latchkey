@@ -41,7 +41,7 @@ export const omniSearch = createServerFn({ method: "GET" })
       }
     };
 
-    const [stays, rooms, guides, steps, extras, jobs, trades, links, looks] = await Promise.all([
+    const [stays, rooms, guides, steps, extras, jobs, trades, links, looks, enquiries] = await Promise.all([
       safe<{ id: string; guest_full_name: string | null; reservation_code: string | null; check_in_date: string; check_out_date: string; status: string; property_id: string }>(
         sb
           .from("bookings")
@@ -83,6 +83,9 @@ export const omniSearch = createServerFn({ method: "GET" })
       safe<{ id: string; name: string; host_id: string | null }>(
         sb.from("theme_templates").select("id, name, host_id").or(`host_id.eq.${data.hostId},host_id.is.null`).ilike("name", like).limit(LIMIT),
       ),
+      safe<{ id: string; name: string; email: string; check_in: string; check_out: string; status: string }>(
+        sb.from("direct_enquiries").select("id, name, email, check_in, check_out, status").eq("host_id", data.hostId).or(or(["name", "email", "message"])).order("created_at", { ascending: false }).limit(LIMIT),
+      ),
     ]);
 
     const word = q.toLowerCase().split(" ")[0]!;
@@ -121,6 +124,7 @@ export const omniSearch = createServerFn({ method: "GET" })
     for (const j of jobs) hits.push({ kind: "job", id: j.id, title: j.title, subtitle: j.status.replace(/_/g, " "), href: `/app/services?job=${j.id}`, ...(j.property_id ? { propertyId: j.property_id } : {}) });
     for (const t of trades) hits.push({ kind: "trade", id: t.id, title: t.name, subtitle: [t.company_name, t.category].filter(Boolean).join(" · "), href: "/app/services?tab=trades" });
     for (const l of links) hits.push({ kind: "connection", id: l.id, title: l.listing_name || l.channel, subtitle: `${l.channel} · ${nameOf.get(l.property_id) ?? ""}`, href: `/app/connections?link=${l.id}`, propertyId: l.property_id });
+    for (const e of enquiries) hits.push({ kind: "enquiry", id: e.id, title: e.name, subtitle: `${stayLine(e.check_in, e.check_out)} · ${e.status}`, href: "/app/direct" });
     for (const t of looks) hits.push({ kind: "look", id: t.id, title: t.name, subtitle: t.host_id ? "Your saved look" : "Shared look", href: "/app/settings?focus=theme" });
     return { hits: hits.map((h) => (h.subtitle === undefined ? (({ subtitle: _s, ...rest }) => rest)(h) : h)) };
   });

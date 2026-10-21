@@ -21,7 +21,8 @@ export type SearchKind =
   | "job"
   | "trade"
   | "connection"
-  | "look";
+  | "look"
+  | "enquiry";
 
 export type SearchHit = {
   kind: SearchKind;
