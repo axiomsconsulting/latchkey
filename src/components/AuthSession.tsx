@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { trackEvent } from "@/lib/track";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -30,6 +31,8 @@ export function AuthSession() {
         const r = await claim({ data: { code } });
         clearTrialClaim();
         if (r.moved) {
+          // The launch funnel: a trial saved with Google or Apple.
+          trackEvent("trial_signup_completed", { method: user.app_metadata?.provider ?? "social" });
           await qc.invalidateQueries();
           toast.success(copy.trialSaved);
         }

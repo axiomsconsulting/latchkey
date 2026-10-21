@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.54.0",
+    date: "2026-10-21",
+    title: "Kinder website statistics",
+    items: [
+      { kind: "improved", area: "Website", text: "The website no longer keeps visitors' IP addresses or towns, and a new Privacy page explains what's counted, with a switch to turn it off in your browser." },
+      { admin: true, kind: "new", area: "Website", text: "Launch funnel (Latchkey admin → Visitors): tour opened and finished, host demo opened, trial started and saved, by utm_source and utm_campaign. Visits keep every utm_* field; addresses are now a one-day hash (migration 0046 also clears stored addresses and towns)." },
+    ],
+  },
+  {
     version: "0.53.0",
     date: "2026-10-21",
     title: "Easier to try",

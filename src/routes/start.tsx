@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { trackEvent } from "@/lib/track";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
@@ -36,6 +37,7 @@ function StartTrial() {
         return;
       }
       if (user) await signOut();
+      trackEvent("trial_signup_started");
       // The super admin can pause new trials from the admin page.
       const site = await getSiteSettings().catch(() => null);
       if (site && !site.signups_open) {

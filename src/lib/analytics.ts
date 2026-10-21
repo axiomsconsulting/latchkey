@@ -346,3 +346,85 @@ export function duration(ms: number): string {
   if (m < 60) return `${m}m ${s % 60}s`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
+
+/* --------------------------- funnel events ---------------------------- */
+
+/** The launch funnel: the only events the browser may send (analytics_events, migration 0046). */
+export const EVENT_NAMES = ["tour_view", "tour_complete", "demo_host_view", "trial_signup_started", "trial_signup_completed"] as const;
+export type EventName = (typeof EVENT_NAMES)[number];
+
+export function isEventName(n: unknown): n is EventName {
+  return typeof n === "string" && (EVENT_NAMES as readonly string[]).includes(n);
+}
+
+const UTM_FIELDS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
+export type UtmFields = Partial<Record<(typeof UTM_FIELDS)[number], string>>;
+
+/** utm_* from a beacon: an object (now) or a bare source string (older pages). Each up to 200 characters. */
+export function cleanUtm(raw: unknown): UtmFields {
+  if (typeof raw === "string") return raw.trim() && raw.length <= 200 ? { utm_source: raw.trim() } : {};
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const out: UtmFields = {};
+  for (const k of UTM_FIELDS) {
+    const v = r[k];
+    if (typeof v === "string" && v.trim() && v.length <= 200) out[k] = v.trim();
+  }
+  return out;
+}
+
+/** Extra details on an event: a flat object, at most 1 KB, or nothing. */
+export function cleanProps(raw: unknown): Record<string, string | number | boolean> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(0, 20)) {
+    if (!/^[a-z0-9_]{1,40}$/i.test(k)) continue;
+    if (typeof v === "string") out[k] = v.slice(0, 200);
+    else if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+    else if (typeof v === "boolean") out[k] = v;
+  }
+  return JSON.stringify(out).length <= 1024 ? out : {};
+}
+
+export type FunnelEvent = { name: string; visitor_id: string | null; utm_source: string | null; utm_campaign: string | null };
+export type FunnelRow = {
+  utmSource: string;
+  utmCampaign: string;
+  tourViews: number;
+  tourCompletes: number;
+  hostDemoViews: number;
+  trialsStarted: number;
+  trialsCompleted: number;
+  /** Trials completed per visitor who saw either demo. */
+  demoToTrial: number | null;
+};
+
+/** The funnel by source and campaign: distinct visitors at each step. */
+export function funnelRows(events: FunnelEvent[]): FunnelRow[] {
+  const groups = new Map<string, Map<string, Set<string>>>();
+  for (const e of events) {
+    if (!isEventName(e.name) || !e.visitor_id) continue;
+    const key = `${e.utm_source || "(direct)"}\u0000${e.utm_campaign || "(none)"}`;
+    const g = groups.get(key) ?? new Map<string, Set<string>>();
+    const set = g.get(e.name) ?? new Set<string>();
+    set.add(e.visitor_id);
+    g.set(e.name, set);
+    groups.set(key, g);
+  }
+  const rows: FunnelRow[] = [];
+  for (const [key, g] of groups) {
+    const [utmSource, utmCampaign] = key.split("\u0000") as [string, string];
+    const n = (name: EventName) => g.get(name)?.size ?? 0;
+    const sawDemo = new Set([...(g.get("tour_view") ?? []), ...(g.get("demo_host_view") ?? [])]).size;
+    rows.push({
+      utmSource,
+      utmCampaign,
+      tourViews: n("tour_view"),
+      tourCompletes: n("tour_complete"),
+      hostDemoViews: n("demo_host_view"),
+      trialsStarted: n("trial_signup_started"),
+      trialsCompleted: n("trial_signup_completed"),
+      demoToTrial: sawDemo ? Math.round((n("trial_signup_completed") / sawDemo) * 1000) / 10 : null,
+    });
+  }
+  return rows.sort((a, b) => b.trialsCompleted - a.trialsCompleted || b.tourViews - a.tourViews);
+}

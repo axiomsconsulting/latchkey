@@ -16,6 +16,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CheckinRouteImport } from './routes/checkin'
 import { Route as DevelopersRouteImport } from './routes/developers'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as TourRouteImport } from './routes/tour'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
@@ -100,6 +101,11 @@ const CheckinRoute = CheckinRouteImport.update({
 const DevelopersRoute = DevelopersRouteImport.update({
   id: '/developers',
   path: '/developers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StartRoute = StartRouteImport.update({
@@ -379,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/developers': typeof DevelopersRoute
+  '/privacy': typeof PrivacyRoute
   '/start': typeof StartRoute
   '/tour': typeof TourRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
@@ -438,6 +445,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/developers': typeof DevelopersRoute
+  '/privacy': typeof PrivacyRoute
   '/start': typeof StartRoute
   '/tour': typeof TourRoute
   '/demo/host': typeof DemoHostRoute
@@ -498,6 +506,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/checkin': typeof CheckinRoute
   '/developers': typeof DevelopersRoute
+  '/privacy': typeof PrivacyRoute
   '/start': typeof StartRoute
   '/tour': typeof TourRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
@@ -559,6 +568,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkin'
     | '/developers'
+    | '/privacy'
     | '/start'
     | '/tour'
     | '/app'
@@ -618,6 +628,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkin'
     | '/developers'
+    | '/privacy'
     | '/start'
     | '/tour'
     | '/demo/host'
@@ -677,6 +688,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkin'
     | '/developers'
+    | '/privacy'
     | '/start'
     | '/tour'
     | '/_authenticated/app'
@@ -738,6 +750,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckinRoute: typeof CheckinRoute
   DevelopersRoute: typeof DevelopersRoute
+  PrivacyRoute: typeof PrivacyRoute
   StartRoute: typeof StartRoute
   TourRoute: typeof TourRoute
   DemoHostRoute: typeof DemoHostRoute
@@ -819,6 +832,13 @@ declare module '@tanstack/react-router' {
       path: '/developers'
       fullPath: '/developers'
       preLoaderRoute: typeof DevelopersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/start': {
@@ -1259,6 +1279,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckinRoute: CheckinRoute,
   DevelopersRoute: DevelopersRoute,
+  PrivacyRoute: PrivacyRoute,
   StartRoute: StartRoute,
   TourRoute: TourRoute,
   DemoHostRoute: DemoHostRoute,

@@ -2,7 +2,7 @@
  * Recording visits for the super admin's analytics. Server only. Writes go
  * through the service role; nothing here ever blocks the page being viewed.
  */
-import { botReason, parseUserAgent } from "./analytics";
+import { botReason, cleanProps, cleanUtm, isEventName, parseUserAgent } from "./analytics";
 
 const VISIT_GAP_MS = 30 * 60_000;
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,7 +13,10 @@ async function db() {
 }
 
 export type Hit = {
-  t: "view" | "leave";
+  t: "view" | "leave" | "event";
+  /** Events only: one of EVENT_NAMES, with small flat details. */
+  name?: string;
+  props?: unknown;
   v: string;
   id: string;
   path?: string;
@@ -23,14 +26,18 @@ export type Hit = {
   wd?: boolean;
   tz?: string;
   lang?: string;
-  utm?: string;
+  /** utm_* (an object; older pages send just the source as a string). */
+  utm?: unknown;
 };
 
-/** Where the request came from: the address and what the host network knows of it. */
-export function origin(request: Request) {
+/**
+ * Where the request came from: country and region, and a one-day hash of the
+ * address (never the address itself, nor the town).
+ */
+export async function origin(request: Request) {
   const h = request.headers;
-  const ip = (h.get("cf-connecting-ip") ?? h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? "").trim() || null;
-  const cf = (request as unknown as { cf?: { country?: string; region?: string; city?: string } }).cf ?? {};
+  const { hashIp, requestIp } = await import("./ip-hash.server");
+  const cf = (request as unknown as { cf?: { country?: string; region?: string } }).cf ?? {};
   const decode = (s: string | null) => {
     if (!s) return null;
     try {
@@ -40,10 +47,9 @@ export function origin(request: Request) {
     }
   };
   return {
-    ip,
+    ip_hash: hashIp(requestIp(h)),
     country: cf.country ?? h.get("cf-ipcountry") ?? h.get("x-vercel-ip-country") ?? h.get("x-country-code") ?? null,
     region: cf.region ?? decode(h.get("cf-region") ?? h.get("x-vercel-ip-country-region")),
-    city: cf.city ?? decode(h.get("cf-ipcity") ?? h.get("x-vercel-ip-city")),
   };
 }
 
@@ -53,6 +59,27 @@ export async function recordHit(hit: Hit, request: Request): Promise<void> {
   if (!uuidRe.test(hit.v ?? "") || !uuidRe.test(hit.id ?? "")) return;
   const d = await db();
   const now = new Date().toISOString();
+
+  if (hit.t === "event") {
+    if (!isEventName(hit.name)) return;
+    const { data: open } = await d
+      .from("analytics_visits")
+      .select("id")
+      .eq("visitor_id", hit.v)
+      .gte("last_at", new Date(Date.now() - VISIT_GAP_MS).toISOString())
+      .order("last_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    await d.from("analytics_events").insert({
+      visitor_id: hit.v,
+      visit_id: open?.id ?? null,
+      name: hit.name,
+      path: clip(hit.path, 300),
+      ...cleanUtm(hit.utm),
+      props: cleanProps(hit.props),
+    });
+    return;
+  }
 
   if (hit.t === "leave") {
     const ms = Math.max(0, Math.min(6 * 3_600_000, Math.round(Number(hit.ms) || 0)));
@@ -101,20 +128,12 @@ export async function recordHit(hit: Hit, request: Request): Promise<void> {
     .maybeSingle();
   let visitId = open?.id as string | undefined;
   if (!visitId) {
-    const where = origin(request);
-    const { data: made } = await d
-      .from("analytics_visits")
-      .insert({
-        visitor_id: hit.v,
-        entry_path: path,
-        exit_path: path,
-        referrer: clip(hit.ref, 500),
-        utm_source: clip(hit.utm, 80),
-        is_bot: !!firstBot || !!existing?.is_bot,
-        ...where,
-      })
-      .select("id")
-      .single();
+    const where = await origin(request);
+    const utm = cleanUtm(hit.utm);
+    const base = { visitor_id: hit.v, entry_path: path, exit_path: path, referrer: clip(hit.ref, 500), utm_source: utm.utm_source ?? null, is_bot: !!firstBot || !!existing?.is_bot, country: where.country, region: where.region };
+    let made = (await d.from("analytics_visits").insert({ ...base, ...utm, ip_hash: where.ip_hash }).select("id").single()).data;
+    // Before migration 0046 (no utm_medium… or ip_hash yet): the older columns only, still no address.
+    if (!made) made = (await d.from("analytics_visits").insert(base).select("id").single()).data;
     visitId = made?.id;
     const { bumpUsage } = await import("./usage.server");
     await bumpUsage(null, "analytics:visit");
@@ -151,7 +170,7 @@ export async function identifyVisitor(visitorId: string, userId: string, email: 
   });
 }
 
-/** Privacy: visits are kept 13 months; IP addresses are cleared after 90 days. */
+/** Privacy: visits and funnel events are kept 13 months; addresses are never stored (older ones cleared). */
 export async function pruneAnalytics(): Promise<void> {
   try {
     const d = await db();
@@ -160,6 +179,7 @@ export async function pruneAnalytics(): Promise<void> {
     await d.from("analytics_visits").delete().lt("started_at", keep);
     await d.from("analytics_visitors").delete().lt("last_seen", keep);
     await d.from("analytics_visits").update({ ip: null }).lt("started_at", ipKeep).not("ip", "is", null);
+    await d.from("analytics_events").delete().lt("at", keep);
   } catch {
     // Before migration 0028.
   }

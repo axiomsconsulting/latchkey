@@ -133,3 +133,22 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
       views: views.map((v) => ({ visitId: v.visit_id as string, path: v.path as string, title: v.title as string | null, at: v.at as string, durationMs: Number(v.duration_ms) })),
     };
   });
+
+/** Super admin: the launch funnel by source and campaign (analytics_events, migration 0046). */
+export const getLaunchFunnel = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ days: z.number().int().min(1).max(395) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await loose(context.supabase).rpc("is_super_admin");
+    if (isAdmin !== true) throw new Error("Super admin only.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - data.days * 86_400_000).toISOString();
+    const { data: events, error } = await loose(supabaseAdmin)
+      .from("analytics_events")
+      .select("name, visitor_id, utm_source, utm_campaign")
+      .gte("at", since)
+      .limit(50_000);
+    if (error) return { migrationPending: true, rows: [] };
+    const { funnelRows } = await import("./analytics");
+    return { migrationPending: false, rows: funnelRows((events ?? []) as Parameters<typeof funnelRows>[0]) };
+  });

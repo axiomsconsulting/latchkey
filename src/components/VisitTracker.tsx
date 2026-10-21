@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { supabase } from "@/integrations/supabase/client";
 import { identifyVisit } from "@/lib/analytics.functions";
+import { pickUtm, sessionUtm } from "@/lib/attribution";
 
 const VISITOR = "lk_vid";
 const IDENTIFIED = "lk_vid_who";
@@ -34,7 +35,7 @@ export function trackingOff(): boolean {
   return n.globalPrivacyControl === true || n.doNotTrack === "1" || read(NO_TRACK) === "1";
 }
 
-function visitorId(): string {
+export function visitorId(): string {
   let id = read(VISITOR);
   if (!id) {
     id = crypto.randomUUID();
@@ -43,7 +44,7 @@ function visitorId(): string {
   return id;
 }
 
-function send(body: Record<string, unknown>) {
+export function send(body: Record<string, unknown>) {
   const json = JSON.stringify(body);
   // text/plain keeps it a simple request; sendBeacon survives the tab closing.
   if (!navigator.sendBeacon?.("/api/public/track", new Blob([json], { type: "text/plain" }))) {
@@ -80,6 +81,8 @@ export function VisitTracker() {
     const id = crypto.randomUUID();
     view.current = { id, path, shownMs: 0, since: document.visibilityState === "visible" ? Date.now() : null };
     const params = new URLSearchParams(window.location.search);
+    // An old-style ?ref= link still names its source.
+    if (!params.get("utm_source") && params.get("ref")) params.set("utm_source", params.get("ref")!);
     let ref = document.referrer;
     try {
       if (ref && new URL(ref).host === window.location.host) ref = "";
@@ -93,7 +96,8 @@ export function VisitTracker() {
       path,
       title: document.title,
       ref: ref || undefined,
-      utm: params.get("utm_source") ?? params.get("ref") ?? undefined,
+      // Every utm_* (this page's, or the session's first touch), so a campaign is seen in full.
+      utm: Object.keys(pickUtm(params)).length ? pickUtm(params) : sessionUtm(),
       wd: navigator.webdriver === true,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
       lang: navigator.language,

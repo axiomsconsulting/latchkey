@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { trackEvent } from "@/lib/track";
+import { isDemoBrowser } from "@/lib/demo-session";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -82,6 +84,10 @@ const clock = (iso: string) =>
 
 function TodayPage() {
   const workspace = useWorkspace();
+  // The launch funnel: someone looking around the host demo.
+  useEffect(() => {
+    if (isDemoBrowser()) trackEvent("demo_host_view");
+  }, []);
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);

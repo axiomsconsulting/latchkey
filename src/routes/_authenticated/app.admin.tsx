@@ -11,6 +11,7 @@ import { PricingAdmin } from "@/components/host/PricingAdmin";
 import { PricingStudio } from "@/components/host/PricingStudio";
 import { RoutinesAdmin } from "@/components/host/RoutinesAdmin";
 import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
+import { LaunchFunnel } from "@/components/host/LaunchFunnel";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
@@ -110,7 +111,8 @@ function AdminPage() {
         <TabsContent value="messages" className="mt-4">
           <Announcements hosts={hosts} />
         </TabsContent>
-        <TabsContent value="visitors" className="mt-4">
+        <TabsContent value="visitors" className="mt-4 space-y-5">
+          <LaunchFunnel />
           <VisitorAnalytics />
         </TabsContent>
         <TabsContent value="pricing" className="mt-4">

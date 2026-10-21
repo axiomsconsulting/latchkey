@@ -252,7 +252,7 @@ function PersonDetail({
               {at(v.startedAt)} · {copy.pagesN(v.pages)} · {duration(v.durationMs)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {[v.city, v.region, v.country].filter(Boolean).join(", ") || "—"} {v.ip ? `· ${v.ip}` : ""} {v.referrer ? `· ${copy.via} ${v.referrer}` : ""}
+              {[v.city, v.region, v.country].filter(Boolean).join(", ") || "—"} {v.referrer ? `· ${copy.via} ${v.referrer}` : ""}
             </p>
             <ul className="mt-2 space-y-0.5 text-xs">
               {(viewsByVisit.get(v.id) ?? [])

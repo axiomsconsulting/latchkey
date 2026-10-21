@@ -317,8 +317,9 @@ function Landing() {
       </main>
 
       <footer className="border-t border-border px-5 py-8">
-        <p className="mx-auto max-w-6xl text-sm text-muted-foreground">
-          {footerText(marketing.footer)}
+        <p className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 text-sm text-muted-foreground">
+          <span>{footerText(marketing.footer)}</span>
+          <Link to="/privacy" className="underline-offset-2 hover:underline">{marketing.privacyLink}</Link>
         </p>
       </footer>
     </div>

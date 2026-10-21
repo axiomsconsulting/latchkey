@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { trackEvent } from "@/lib/track";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,8 +22,12 @@ export function SetPasswordPrompt() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const check = (u: { is_anonymous?: boolean; email?: string | null; email_confirmed_at?: string | null; user_metadata?: Record<string, unknown> } | null | undefined) =>
-      setOpen(!!u && !u.is_anonymous && !!u.email && !!u.email_confirmed_at && u.user_metadata?.["needs_password"] === true);
+    const check = (u: { is_anonymous?: boolean; email?: string | null; email_confirmed_at?: string | null; user_metadata?: Record<string, unknown> } | null | undefined) => {
+      const saved = !!u && !u.is_anonymous && !!u.email && !!u.email_confirmed_at && u.user_metadata?.["needs_password"] === true;
+      // The launch funnel: a trial saved by email, now confirmed.
+      if (saved) trackEvent("trial_signup_completed", { method: "email" });
+      setOpen(saved);
+    };
     void supabase.auth.getUser().then(({ data }) => check(data.user));
     const { data } = supabase.auth.onAuthStateChange((_e, s) => check(s?.user));
     return () => data.subscription.unsubscribe();

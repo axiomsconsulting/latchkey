@@ -56,3 +56,11 @@ describe("demo / live switches", () => {
     expect((await db.system<{ m: unknown }>("select integration_modes as m from hosts where id = $1", [hostId]))[0]!.m).toEqual(before);
   });
 });
+
+describe("funnel events table", () => {
+  it("is readable by super admins only and refuses unknown events", async () => {
+    await db.system("insert into analytics_events (name, utm_source) values ('tour_view', 'linkedin')");
+    expect(await db.as("owner", "select id from analytics_events")).toEqual([]);
+    await expect(db.system("insert into analytics_events (name) values ('purchase')")).rejects.toThrow();
+  });
+});

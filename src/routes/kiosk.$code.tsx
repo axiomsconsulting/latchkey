@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/track";
 import { pickUtm, type Utm } from "@/lib/attribution";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -324,6 +325,10 @@ function Kiosk() {
   // (and isTour() on the server): it never takes over the visitor's browser,
   // and the hidden host corner just leaves the tour.
   const tour = p.tour === true;
+  // The launch funnel: someone opened the guest tour.
+  useEffect(() => {
+    if (tour) trackEvent("tour_view");
+  }, [tour]);
   // Installing from here installs this property's kiosk, not the host app.
   useEffect(() => {
     if (!shared || tour) return;
@@ -447,7 +452,11 @@ function Kiosk() {
           kiosk={shared}
           resumeToken={personal ? (resume ?? null) : null}
           onWelcome={setAtWelcome}
-          onStep={setStepKey}
+          onStep={(k: string) => {
+            setStepKey(k);
+            // …and got all the way to "you're checked in".
+            if (tour && k.startsWith("done:")) trackEvent("tour_complete");
+          }}
           qrPanel={saverLook.defaults.qrStyle === "panel"}
         />
       )}
