@@ -9,7 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { markDemo } from "@/lib/demo-session";
 import { startDemo } from "@/lib/demo.functions";
 
-export function DemoPicker({ children, open, onOpenChange }: { children?: ReactNode; open?: boolean; onOpenChange?: (o: boolean) => void }) {
+/** Starts the shared demo as a guest (the real kiosk screen) or as a host (the dashboard). */
+export function useDemo() {
   const run = useServerFn(startDemo);
   const navigate = useNavigate();
   const [busy, setBusy] = useState<"host" | "guest" | null>(null);
@@ -37,6 +38,11 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
       setBusy(null);
     }
   }
+  return { go, busy, error };
+}
+
+export function DemoPicker({ children, open, onOpenChange }: { children?: ReactNode; open?: boolean; onOpenChange?: (o: boolean) => void }) {
+  const { go, busy, error } = useDemo();
 
   const option = (as: "host" | "guest", icon: ReactNode, title: string, body: string) => (
     <button

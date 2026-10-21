@@ -66,17 +66,81 @@ export const about = branded({
 });
 
 export const marketing = branded({
-  headline: "Every guest checked in. Without you at the door.",
-  subhead: "ID checks, the guest register and every booking site, in one place. Guests check themselves in; you get your evenings back.",
-  primaryCta: "Try the demo",
-  secondaryCta: "Start free trial",
-  trust: "Free for 30 days · No app for guests · Works alongside",
-  footer: "© 2026 Latchkey. Self check-in and stay companion for hosts.",
+  /** The category, above the headline. */
+  category: "Guest operations for independent accommodation",
+  headline: "Hotel-grade guest operations for the stays you run yourself.",
+  subhead:
+    "Booking sites confirm the reservation. Latchkey runs everything after it: self check-in, a branded stay guide, requests and extras, guest records and alerts, for serviced accommodation, guest houses, B&Bs and Airbnb and Booking.com hosts.",
+  primaryCta: "See the guest journey",
+  hostCta: "Explore the host dashboard",
+  secondaryCta: "Start a 30-day free trial",
+  trust: "Works alongside",
+  trustTail: "and any iCal calendar",
+  footer: "© 2026 Latchkey. Guest operations for independent accommodation.",
+  /** The three outcomes, right under the hero. */
   benefits: [
-    { title: "Every adult, ID-checked", body: "Not just the person who booked. Guests check in at the door or on their own phones, in about a minute." },
-    { title: "The guest register, done", body: "Names and nationalities recorded as guests arrive, kept 12 months, ready if the police ask." },
-    { title: "All your bookings, one list", body: "Airbnb, Booking.com and direct stays side by side, with double bookings flagged before they happen." },
+    { title: "Fewer late-night arrivals", body: "Guests check themselves in at your door tablet or on their own phone, at any hour. No waiting up, no key handovers." },
+    { title: "Fewer messages across apps", body: "Arrivals, requests, extras and repairs from every booking site land in one calm workspace, with alerts where you want them." },
+    { title: "A more professional stay", body: "Your logo, colours and guide from the first tap, so the stay feels like your business, not just the booking platform's." },
   ],
+  audience: {
+    title: "Built for independent accommodation",
+    body: "From one owner-run property to a small portfolio with a team, without a front desk or an enterprise hotel system.",
+    kinds: ["Serviced accommodation", "Guest houses and B&Bs", "Boutique stays", "Airbnb and Booking.com hosts", "Multi-property operators", "Short-stay shared houses"],
+  },
+  journey: {
+    eyebrow: "The guest journey",
+    title: "From booking to check-out, in one flow.",
+    steps: [
+      { title: "A booking arrives", body: "On any site. Its calendar link brings it into one list, with the same stay matched across sites." },
+      { title: "The guest checks in", body: "At your door tablet or on their own phone, any hour, the whole group on their own phones if you like." },
+      { title: "A branded stay guide", body: "Wi-Fi, getting in, house rules and room details, in your look, with a QR guide in every room." },
+      { title: "Help and extras", body: "Towels, a late check-out or a repair: asked from the stay page, paid by card when you charge." },
+      { title: "You see it all", body: "Arrivals, requests and messages on Today, with alerts by push, Telegram, email or text." },
+    ],
+  },
+  pillars: {
+    eyebrow: "What it does",
+    title: "Four things, done properly.",
+    items: [
+      {
+        title: "Arrivals and guest records",
+        points: [
+          "Self check-in at a front-door tablet or on the guest's phone",
+          "Groups check in together on their own phones",
+          "ID checks and photos, according to your settings",
+          "Supports UK guest-register record keeping for applicable accommodation",
+        ],
+      },
+      {
+        title: "Guest experience",
+        points: [
+          "Branded stay and room guides, on your own web address if you like",
+          "Room QR codes, quick tiles, photos and PDFs",
+          "Messages and requests from the guest's stay page",
+          "Invoices for direct stays, on a link guests keep",
+        ],
+      },
+      {
+        title: "In-house operations",
+        points: [
+          "One bookings list across Airbnb, Booking.com, Homestay, direct and iCal",
+          "Requests, extras and service jobs in one shared flow",
+          "Maintenance with your own trades, and local ones found fast",
+          "Card payments for extras, straight to your own account",
+        ],
+      },
+      {
+        title: "Multi-property control",
+        points: [
+          "A Today dashboard for arrivals, departures and what needs you",
+          "Switch between properties; teams with owner, manager and viewer roles",
+          "Alerts by push, Telegram, email and text",
+          "Open API and MCP server for your own tools and AI assistants",
+        ],
+      },
+    ],
+  },
   beforeAfter: {
     beforeTitle: (day: string) => `${day}, before`,
     before: [
@@ -89,23 +153,38 @@ export const marketing = branded({
     after: [
       "Guests let themselves in, any hour",
       "One arrivals list for every site",
-      "The register fills itself in",
+      "Register details recorded as guests check in",
       "Requests and extras land in one inbox",
     ],
   },
-  /** Further down: where the booking sites stop and Latchkey takes over. */
+  /** Booking platforms vs Latchkey, and what it does not replace. */
   gap: {
-    eyebrow: "Why Latchkey",
-    title: "Booking sites stop at the booking. Latchkey takes it from the door.",
-    theyLabel: "Booking sites",
+    eyebrow: "Booking platforms vs Latchkey",
+    title: "Booking platforms help guests find you. Latchkey runs the stay.",
+    theyLabel: "Booking platforms",
     usLabel: "Latchkey",
     rows: [
-      { topic: "Identity", they: "Check the person who booked", us: "Checks every adult who arrives" },
-      { topic: "Guest register", they: "Not their job", us: "Kept for you, 12 months, ready to inspect" },
-      { topic: "Calendars", they: "One each, dates only", us: "One list, same stay matched across sites" },
-      { topic: "Arrival", they: "Notes buried in their app", us: "Door code and house rules on the guest's phone, from arrival day" },
-      { topic: "During the stay", they: "A message thread", us: "Requests, paid extras and repairs in one inbox" },
-      { topic: "Returning guests", they: "Commission every time", us: "Direct bookings and invoices, no commission" },
+      { topic: "Arrival", they: "Notes buried in their app", us: "Self check-in at your door or on the guest's phone" },
+      { topic: "Identity", they: "Check the person who booked", us: "Checks each adult at check-in, as you choose" },
+      { topic: "Records", they: "Not their job", us: "Supports the UK guest register, kept 12 months" },
+      { topic: "Calendars", they: "One each, dates only", us: "One list, the same stay matched across sites" },
+      { topic: "During the stay", they: "A message thread", us: "Requests, paid extras and repairs in one flow" },
+      { topic: "Your brand", they: "Their brand, their app", us: "Your logo, guide and web address on every stay" },
+    ],
+    keepTitle: "Keep using your booking sites for",
+    keep: ["Listings and being found", "Rates, availability and distribution", "Taking the booking and its payment", "Their own inbox (forward it to Latchkey if you like)"],
+    oursTitle: "Latchkey runs what happens after the booking",
+    ours: ["Arrivals and self check-in", "Stay and room guides", "Requests, extras and repairs", "Guest records and the register", "Operations across every site"],
+    note: "Latchkey works alongside your booking sites and any channel manager. It isn't a channel manager, a booking engine or a hotel PMS.",
+  },
+  next: {
+    eyebrow: "On the way",
+    title: "Next for in-house operations",
+    body: "Built around the work that starts after the booking. Not available yet.",
+    items: [
+      { title: "Housekeeping and readiness board", body: "Room by room: departures, cleaning, inspection and “ready for guest”." },
+      { title: "Operations reporting", body: "Occupancy, check-ins, requests and extras across every booking site." },
+      { title: "Repeat direct stays", body: "Help past guests come back to you directly, with their consent." },
     ],
   },
   developers: {

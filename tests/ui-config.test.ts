@@ -58,9 +58,18 @@ describe("page sections", () => {
   });
 
   it("keeps the admin's order and hidden sections, never hiding locked ones", () => {
-    const l = normaliseLayouts({ settings: { order: ["privacy", "adminLink"], hidden: ["adminLink", "demo", "nope"] } });
-    expect(l["settings"]!.order.slice(0, 2)).toEqual(["privacy", "adminLink"]);
+    const l = normaliseLayouts({ settings: { order: ["adminLink", "privacy"], hidden: ["adminLink", "demo", "nope"] } });
+    const order = l["settings"]!.order;
+    expect(order.indexOf("adminLink")).toBeLessThan(order.indexOf("privacy"));
     expect(l["settings"]!.hidden).toEqual(["demo"]);
+  });
+
+  it("puts sections added in a later release next to their default neighbours, not at the end", () => {
+    // Saved before "messages" and "labels" existed: they join after "domain", where they sit by default.
+    const l = normaliseLayouts({ settings: { order: ["business", "team", "support", "domain", "privacy", "extras"], hidden: [] } });
+    const order = l["settings"]!.order;
+    expect(order.slice(0, 7)).toEqual(["business", "team", "support", "domain", "messages", "labels", "privacy"]);
+    expect(order).toHaveLength(new Set(order).size);
   });
 
   it("arranges what a page shows", () => {

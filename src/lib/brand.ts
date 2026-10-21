@@ -32,7 +32,7 @@ export const DEFAULT_BRAND: Brand = {
   name: DEFAULT_NAME,
   logoMark: "key",
   logoUrl: "",
-  tagline: "Self check-in for guest houses, B&Bs and short lets",
+  tagline: "Guest operations for independent accommodation",
   footer: "",
 };
 
@@ -51,10 +51,13 @@ export function normaliseBrand(raw: unknown): Brand {
     name,
     logoMark: mark,
     logoUrl,
-    tagline: clean(r["tagline"], 120) || DEFAULT_BRAND.tagline,
+    // A tagline still saved as an earlier default follows the current one.
+    tagline: ((t) => (!t || OLD_TAGLINES.includes(t) ? DEFAULT_BRAND.tagline : t))(clean(r["tagline"], 120)),
     footer: clean(r["footer"], 300),
   };
 }
+
+const OLD_TAGLINES = ["Self check-in for guest houses, B&Bs and short lets"];
 
 let current: Brand = DEFAULT_BRAND;
 // On the server, each request's own brand (brand.server.ts), so two requests never mix.

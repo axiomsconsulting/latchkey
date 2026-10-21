@@ -154,10 +154,14 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
   home: {
     label: "Home page",
     sections: [
-      { id: "benefits", label: "Three benefits" },
+      { id: "benefits", label: "Three outcomes" },
+      { id: "audience", label: "Who it's for" },
+      { id: "journey", label: "The guest journey" },
+      { id: "pillars", label: "Four pillars" },
       { id: "beforeAfter", label: "Before and with" },
+      { id: "why", label: "Booking platforms vs Latchkey" },
+      { id: "next", label: "On the way" },
       { id: "pricing", label: "Pricing" },
-      { id: "why", label: "Why (booking sites compared)" },
       { id: "developers", label: "For developers" },
     ],
   },
@@ -215,8 +219,18 @@ export function normaliseLayouts(raw: unknown): PageLayouts {
     const ids = def.sections.map((s) => s.id);
     const known = new Set(ids);
     const order = [...new Set((Array.isArray(p["order"]) ? p["order"] : []).filter((x): x is string => typeof x === "string" && known.has(x)))];
-    // Sections the admin hasn't placed (new ones in a later release) go at the end, in their default order.
-    for (const id of ids) if (!order.includes(id)) order.push(id);
+    // Sections the admin hasn't placed (new ones in a later release) join their default neighbours:
+    // straight after the section that comes before them by default, or before the one after them.
+    for (const [i, id] of ids.entries()) {
+      if (order.includes(id)) continue;
+      const before = ids.slice(0, i).reverse().find((x) => order.includes(x));
+      if (before) {
+        order.splice(order.indexOf(before) + 1, 0, id);
+        continue;
+      }
+      const after = ids.slice(i + 1).find((x) => order.includes(x));
+      order.splice(after ? order.indexOf(after) : order.length, 0, id);
+    }
     const locked = new Set(def.sections.filter((s) => s.locked).map((s) => s.id));
     const hidden = [...new Set((Array.isArray(p["hidden"]) ? p["hidden"] : []).filter((x): x is string => typeof x === "string" && known.has(x) && !locked.has(x)))];
     out[page] = { order, hidden };
