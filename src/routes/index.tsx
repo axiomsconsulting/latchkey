@@ -281,7 +281,7 @@ function Landing() {
           <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-accent"><Hourglass className="size-4" /> {marketing.next.eyebrow}</p>
           <h2 id="next-title" className="mt-2 text-xl sm:text-2xl">{marketing.next.title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{marketing.next.body}</p>
-          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+          <ul className="mt-5 grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]">
             {marketing.next.items.map((it) => (
               <li key={it.title} className="rounded-2xl bg-muted p-4">
                 <span className="block font-display">{it.title}</span>

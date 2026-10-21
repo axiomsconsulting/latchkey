@@ -183,12 +183,10 @@ export const marketing = branded({
   },
   next: {
     eyebrow: "On the way",
-    title: "Next for in-house operations",
+    title: "Next for your guest journey",
     body: "Built around the work that starts after the booking. Not available yet.",
     items: [
-      { title: "Housekeeping and readiness board", body: "Room by room: departures, cleaning, inspection and “ready for guest”." },
-      { title: "Operations reporting", body: "Occupancy, check-ins, requests and extras across every booking site." },
-      { title: "Repeat direct stays", body: "Help past guests come back to you directly, with their consent." },
+      { title: "Automated stay messages", body: "Your own pre-arrival, arrival-day and check-out reminders, on the stay page and by email." },
     ],
   },
   developers: {
