@@ -104,7 +104,7 @@ export function CheckInQr({
  * The QR opens inline for another phone; on the kiosk it starts open,
  * because the link itself is no use on a shared screen.
  */
-export function GuideLink({ url, kiosk = false }: { url: string; kiosk?: boolean }) {
+export function GuideLink({ url, kiosk = false, beside = false }: { url: string; kiosk?: boolean; /** Beside the guide button on a door tablet on its side, filling its half. */ beside?: boolean }) {
   const [qrOpen, setQrOpen] = useState(kiosk);
   const [copied, setCopied] = useState(false);
   const src = useQrImage(qrOpen ? url : null);
@@ -123,8 +123,9 @@ export function GuideLink({ url, kiosk = false }: { url: string; kiosk?: boolean
   }
 
   return (
-    <div className="mx-auto mt-8 max-w-md rounded-2xl border border-border bg-card p-5 text-left">
-      <h2 className="text-xl">{copy.guideLinkTitle}</h2>
+    <div className={cn("mx-auto rounded-2xl border border-border bg-card p-5 text-left", beside ? "w-full max-w-lg" : kiosk ? "mt-8 w-full max-w-xl" : "mt-8 max-w-md", kiosk && "sm:p-6")}>
+      {/* On the kiosk, the same sizes as the rest of the check-in (headings, body text). */}
+      <h2 className={kiosk ? "text-2xl" : "text-xl"}>{copy.guideLinkTitle}</h2>
       {!kiosk ? (
         <>
           <p className="mt-1 text-muted-foreground">{copy.guideLinkBody}</p>
@@ -150,21 +151,29 @@ export function GuideLink({ url, kiosk = false }: { url: string; kiosk?: boolean
         </>
       ) : null}
 
+      {/* On the kiosk the square is the only way to take the link away, so it simply shows. */}
+      {!kiosk ? (
       <button
         type="button"
         aria-expanded={qrOpen}
         onClick={() => setQrOpen((o) => !o)}
-        className="mt-4 flex min-h-11 w-full items-center justify-between rounded-xl px-1 text-left font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={cn("mt-4 flex min-h-11 w-full items-center justify-between rounded-xl px-1 text-left font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", kiosk && "min-h-14 text-lg")}
       >
         <span className="flex items-center gap-2">
           <QrCode className="size-5" /> {qrOpen ? copy.guideLinkQrHide : copy.guideLinkQrShow}
         </span>
         <ChevronDown className={cn("size-5 transition-transform", qrOpen && "rotate-180")} />
       </button>
+      ) : null}
       {qrOpen ? (
         <div className="mt-2 text-center animate-in fade-in slide-in-from-top-1">
-          {src ? <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[15rem] rounded-xl" /> : <div className="mx-auto aspect-square w-full max-w-[15rem] rounded-xl bg-muted" />}
-          <p className="mt-2 text-sm text-muted-foreground">{copy.guideLinkQrBody}</p>
+          {/* On the kiosk the square is as big as the screen allows, never squeezed by the text. */}
+          {src ? (
+            <img src={src} alt={copy.qrAlt} className={cn("mx-auto aspect-square w-full rounded-xl", kiosk ? "max-w-[min(20rem,calc(100dvh-27rem))]" : "max-w-[15rem]")} />
+          ) : (
+            <div className={cn("mx-auto aspect-square w-full rounded-xl bg-muted", kiosk ? "max-w-[min(20rem,calc(100dvh-27rem))]" : "max-w-[15rem]")} />
+          )}
+          <p className={cn("mt-2 text-muted-foreground", kiosk ? "text-lg" : "text-sm")}>{copy.guideLinkQrBody}</p>
         </div>
       ) : null}
     </div>

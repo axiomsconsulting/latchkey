@@ -388,6 +388,25 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
                 <Switch checked={theme.poweredBy} onCheckedChange={(v) => set("poweredBy", v)} />
               </label>
             </Group>
+            <Group value="kiosk" title={copy.kioskGroup}>
+              <p className="text-sm font-medium">{copy.kioskTouch}</p>
+              <div role="radiogroup" aria-label={copy.kioskTouch} className="grid gap-2 sm:grid-cols-2">
+                {(["standard", "expanded"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={theme.kioskTouch === v}
+                    onClick={() => set("kioskTouch", v)}
+                    className={`rounded-xl border p-3 text-left text-sm transition-colors ${theme.kioskTouch === v ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary"}`}
+                  >
+                    <span className="block font-medium">{copy.kioskTouches[v].label}</span>
+                    <span className="block text-muted-foreground">{copy.kioskTouches[v].help}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">{copy.kioskTouchHelp}</p>
+            </Group>
           </Accordion>
 
           <div className="space-y-1">

@@ -1470,6 +1470,13 @@ export const themeStudio = branded({
   featurePlaceholder: "Right in the heart of town",
   tagline: "Footer line",
   poweredBy: "Show “Powered by Latchkey”",
+  kioskGroup: "Door tablet",
+  kioskTouch: "Button size on the door tablet",
+  kioskTouchHelp: "Guests' own phones always keep the standard size.",
+  kioskTouches: {
+    standard: { label: "Standard", help: "Buttons as designed, centred on the screen." },
+    expanded: { label: "Expanded", help: "Uses the whole screen with a thin margin: bigger letters, dates, number pads, buttons and corner icons, easy to press with any finger." },
+  },
   sharedBadge: "Shared",
   yoursBadge: "Yours",
   templateName: "Name this look to save it as a template",
@@ -2574,12 +2581,6 @@ export const adminCopy = branded({
   kioskQrStyles: {
     panel: { label: "Full panel on the right", help: "A large square beside the welcome, with a short explanation." },
     icon: { label: "Small icon at the top", help: "A phone icon beside the time; tapping it opens the square." },
-  },
-  kioskTouchTitle: "Door tablet buttons",
-  kioskTouchHelp: "How big the buttons, letters and number pads are on a door tablet. Guests' own phones always keep the standard size.",
-  kioskTouchStyles: {
-    standard: { label: "Standard", help: "Buttons as designed, centred on the screen." },
-    expanded: { label: "Expanded", help: "Uses the whole screen, with a thin margin: bigger keys, number pads, buttons and corner icons, easy to press with any finger." },
   },
   kioskResetMinutes: "Unfinished check-in goes back to the start after (minutes with no touch)",
   kioskSaverMinutes: "Screensaver starts after (minutes with no touch)",

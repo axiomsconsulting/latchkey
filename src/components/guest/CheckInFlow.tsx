@@ -536,6 +536,9 @@ export function CheckInFlow({
   // so this holds either way up; only the welcome's layout depends on the way up.
   const landscape = useLandscape();
   const kioskWide = kiosk;
+  // A door tablet on its side: the camera beside its buttons, the guide's QR beside its button,
+  // so those steps use the width instead of shrinking the text to fit the height.
+  const cameraSide = kiosk && landscape;
   const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
   // While other guests are being filled in: the square lets each use their own phone at once.
   const joinUrl = typeof window === "undefined" || !share ? null : `${window.location.origin}/kiosk/${property.code}?join=${encodeURIComponent(share)}`;
@@ -792,7 +795,7 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "identity" && step.method === "photo_id" ? (
-          <section className="mx-auto max-w-xl">
+          <section className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}>
             <h1 className="text-2xl sm:text-4xl">{copy.idTitle}</h1>
             {!step.consented ? (
               <>
@@ -811,12 +814,15 @@ export function CheckInFlow({
               <div className="mt-6">
                 <IdCamera
                   busy={busy}
+                  side={cameraSide}
                   onCapture={(full, small) => void onPhoto(full, small)}
                   onFail={() => fallback("photo_id", copy.idCameraFailed)}
+                  extra={
+                    <Button variant="ghost" size="lg" className="w-full" onClick={() => fallback("photo_id")}>
+                      {copy.idUseOther}
+                    </Button>
+                  }
                 />
-                <Button variant="ghost" size="lg" className="mt-3 w-full" onClick={() => fallback("photo_id")}>
-                  {copy.idUseOther}
-                </Button>
               </div>
             )}
           </section>
@@ -862,7 +868,7 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "companion" ? (
-          <section className="mx-auto max-w-xl">
+          <section className={cn("mx-auto", step.ready && cameraSide ? "max-w-5xl" : "max-w-xl")}>
             <h1 className="text-2xl sm:text-4xl">{copy.companionTitle(step.position + 1, adults)}</h1>
             {!step.ready ? (
               <>
@@ -883,12 +889,15 @@ export function CheckInFlow({
                 <IdCamera
                   key={`companion-${step.position}`}
                   busy={busy}
+                  side={cameraSide}
                   onCapture={(full, small) => void onCompanion(step.position, full, small)}
                   onFail={() => void onSkipCompanion(step.position)}
+                  extra={
+                    <Button variant="ghost" size="lg" className="w-full" disabled={busy} onClick={() => void onSkipCompanion(step.position)}>
+                      {copy.companionSkip}
+                    </Button>
+                  }
                 />
-                <Button variant="ghost" size="lg" className="mt-3 w-full" disabled={busy} onClick={() => void onSkipCompanion(step.position)}>
-                  {copy.companionSkip}
-                </Button>
               </div>
             )}
           </section>
@@ -914,7 +923,7 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "face" ? (
-          <section className="mx-auto max-w-xl">
+          <section className={cn("mx-auto", cameraSide ? "max-w-5xl" : "max-w-xl")}>
             <h1 className="text-2xl sm:text-4xl">
               {step.position === 0 ? copy.faceTitle : copy.faceTitleOther(step.position + 1)}
             </h1>
@@ -923,15 +932,18 @@ export function CheckInFlow({
                 key={`face-${step.position}`}
                 facing="user"
                 busy={busy}
+                side={cameraSide}
                 help={copy.faceBody}
                 cta={copy.faceTake}
                 busyLabel={copy.faceSaving}
                 onCapture={(_full, small) => void onFace(step.position, small)}
                 onFail={() => void advance(queue)}
+                extra={
+                  <Button variant="ghost" size="lg" className="w-full" disabled={busy} onClick={() => void advance(queue)}>
+                    {copy.faceSkip}
+                  </Button>
+                }
               />
-              <Button variant="ghost" size="lg" className="mt-3 w-full" disabled={busy} onClick={() => void advance(queue)}>
-                {copy.faceSkip}
-              </Button>
             </div>
           </section>
         ) : null}
@@ -973,19 +985,21 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "done" ? (
-          <section className="py-4 text-center">
-            <CheckCircle2 className="mx-auto size-14 text-success" />
-            <h1 className="mt-4 text-3xl sm:text-5xl">{copy.doneTitle(step.firstName)}</h1>
-            <p className="mt-4 text-2xl">
-              {step.roomName ? copy.roomLine(step.roomName, step.roomTitle) : copy.noRoom}
-            </p>
-            <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
-              <Link to="/stay/$token" params={{ token: step.stayToken }}>
-                <BookOpen className="size-6" /> {copy.stayGuideCta}
-              </Link>
-            </Button>
+          <section data-kx={cameraSide ? undefined : "center"} className={cn("py-4 text-center", cameraSide && "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-10")}>
+            <div>
+              <CheckCircle2 className="mx-auto size-14 text-success" />
+              <h1 className="mt-4 text-3xl sm:text-5xl">{copy.doneTitle(step.firstName)}</h1>
+              <p className="mt-4 text-2xl">
+                {step.roomName ? copy.roomLine(step.roomName, step.roomTitle) : copy.noRoom}
+              </p>
+              <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
+                <Link to="/stay/$token" params={{ token: step.stayToken }}>
+                  <BookOpen className="size-6" /> {copy.stayGuideCta}
+                </Link>
+              </Button>
+            </div>
             {typeof window !== "undefined" ? (
-              <GuideLink url={`${window.location.origin}/stay/${step.stayToken}`} kiosk={kiosk} />
+              <GuideLink url={`${window.location.origin}/stay/${step.stayToken}`} kiosk={kiosk} beside={cameraSide} />
             ) : null}
           </section>
         ) : null}

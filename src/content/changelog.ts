@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.60.0",
+    date: "2026-10-22",
+    title: "Door tablet button size",
+    items: [
+      { kind: "new", area: "Settings", text: "Look and feel → Door tablet: choose Standard or Expanded buttons for each property's kiosk. Expanded uses the whole screen for big letters, dates, number pads and buttons." },
+      { kind: "fixed", area: "Check-in", text: "Expanded buttons: words wrap inside their box, clear of its edges, instead of spilling out; each kind of button keeps one size on every step." },
+      { kind: "improved", area: "Check-in", text: "The ID and face photo steps on a tablet on its side put the camera beside its buttons, so the text no longer shrinks to make room." },
+      { kind: "improved", area: "Check-in", text: "The last step on the kiosk shows the guest guide button and its QR code side by side on a tablet on its side, with the QR code full size; text stays the same size from step to step." },
+      { admin: true, kind: "improved", area: "Check-in", text: "The door tablet button size moved from Latchkey admin to each host's Look and feel." },
+    ],
+  },
+  {
     version: "0.59.0",
     date: "2026-10-22",
     title: "Kiosk night light",

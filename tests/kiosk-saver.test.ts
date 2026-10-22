@@ -22,9 +22,6 @@ describe("kiosk screensaver look", () => {
   it("shows the full phone panel unless the admin chose the small icon", () => {
     expect(normaliseDefaults({}).qrStyle).toBe("panel");
     expect(normaliseDefaults({ qrStyle: "icon" }).qrStyle).toBe("icon");
-    expect(normaliseDefaults({}).touch).toBe("standard");
-    expect(normaliseDefaults({ touch: "expanded" }).touch).toBe("expanded");
-    expect(normaliseDefaults({ touch: "huge" }).touch).toBe("standard");
     expect(normaliseDefaults({ qrStyle: "huge" }).qrStyle).toBe("panel");
   });
 

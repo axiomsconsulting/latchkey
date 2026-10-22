@@ -361,19 +361,32 @@ html[data-kiosk-touch="expanded"] [data-kiosk-flow] main {
 html[data-kiosk-touch="expanded"] [data-kiosk-flow] section {
   max-width: none;
 }
+/*
+ * Buttons keep one size per kind on every step (main 1.75rem, others 1.5rem,
+ * plain links 1.3rem), and grow taller rather than spill: words wrap inside
+ * the box, clear of its edges.
+ */
 html[data-kiosk-touch="expanded"] [data-kiosk-flow] [data-slot="button"] {
   max-width: none;
+  min-width: 0;
+  height: auto;
+  padding: 0.75rem 1.25rem;
+  line-height: 1.2;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 html[data-kiosk-touch="expanded"] [data-kiosk-flow] [data-slot="button"][data-size="touch-xl"] {
-  height: 6.5rem;
+  min-height: 6.5rem;
   font-size: 1.75rem;
 }
 html[data-kiosk-touch="expanded"] [data-kiosk-flow] [data-slot="button"][data-size="touch"] {
-  height: 5.5rem;
+  min-height: 5.5rem;
   font-size: 1.5rem;
 }
 html[data-kiosk-touch="expanded"] [data-kiosk-flow] [data-slot="button"][data-size="lg"] {
-  height: 4.75rem;
+  min-height: 4.75rem;
   padding-inline: 2rem;
   font-size: 1.3rem;
 }
@@ -384,8 +397,10 @@ html[data-kiosk-touch="expanded"] [data-kiosk-flow] [data-slot="button"] svg {
 html[data-kiosk-touch="expanded"] [data-kiosk-flow] input {
   min-height: 5rem;
 }
-html[data-kiosk-touch="expanded"] [data-kx="grid"] > [data-slot="button"] {
-  font-size: 2rem;
+/* Every choice in a grid (letters, dates, sites, bookings, yes/no) at the main size. */
+html[data-kiosk-touch="expanded"] [data-kiosk-flow] [data-kx="grid"] > [data-slot="button"][data-size] {
+  min-height: 4.5rem;
+  font-size: 1.75rem;
 }
 /* A few big choices (dates, sites, bookings) share the width between them, with no empty columns. */
 html[data-kiosk-touch="expanded"] [data-kx-fit] {
@@ -479,7 +494,7 @@ html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kiosk-flow] > 
 }
 html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] [data-kx="grid"] {
   flex: 1 1 auto;
-  grid-auto-rows: minmax(5.5rem, 1fr);
+  grid-auto-rows: minmax(4.5rem, 1fr);
   align-content: stretch;
 }
 html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] [data-kx="grid"] > [data-slot="button"] {

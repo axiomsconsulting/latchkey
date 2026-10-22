@@ -33,6 +33,10 @@ import { rebrand } from "@/lib/brand";
 
 // Press and hold the top-right corner this long for the host's exit.
 const HOLD_MS = 3_000;
+// On a tablet (shorter side at least this many px), a screen never shrinks below this share of the
+// display's scale, so text sizes stay consistent from step to step.
+const TABLET_SHORT_SIDE = 600;
+const TABLET_KEEP = 0.85;
 // How far into the corner (px) the hold counts.
 const HOLD_CORNER = 64;
 
@@ -166,7 +170,10 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
       html.setAttribute("data-kiosk-measure", "");
       const tall = el.offsetHeight;
       html.removeAttribute("data-kiosk-measure");
-      const min = landscape ? FIT.min : FIT.min_upright;
+      // On a tablet, text stays close to the same size on every screen (layouts use the width
+      // instead); only a phone may shrink a long screen right down.
+      const smallest = landscape ? FIT.min : FIT.min_upright;
+      const min = Math.min(display.w, display.h) >= TABLET_SHORT_SIDE ? Math.max(smallest, scale() * TABLET_KEEP) : smallest;
       if (tall > h) {
         // Too tall: shrink until it fits, a hair under so rounding never leaves it over.
         mayGrow = false;
@@ -370,8 +377,8 @@ function Kiosk() {
   const { welcome, dismiss } = useKioskWelcome(p.code, shared, welcomeMinutes);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
-  // Door tablets only: keys, pads and buttons grow to use the whole screen (Latchkey admin → kiosk settings).
-  const expanded = shared && saverLook.defaults.touch === "expanded";
+  // Door tablets only: keys, pads and buttons grow to use the whole screen (the host's Look and feel → Door tablet).
+  const expanded = shared && p.theme.kioskTouch === "expanded";
   // On <html>, so dialogs (portalled outside this page) are sized to match.
   useEffect(() => {
     if (!expanded) return;

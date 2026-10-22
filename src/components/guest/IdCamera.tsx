@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Camera, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { guest as copy } from "@/content/copy";
+import { cn } from "@/lib/utils";
 
 /** Draws the frame no larger than `max` pixels on its longest side. */
 function still(video: HTMLVideoElement, max: number, quality: number, mirror: boolean): string {
@@ -117,7 +118,13 @@ export function IdCamera({
   help,
   cta,
   busyLabel,
+  side = false,
+  extra,
 }: {
+  /** A door tablet on its side: the camera on the left, the help and buttons beside it, so nothing has to shrink. */
+  side?: boolean;
+  /** More buttons under the main one (skip, another way). */
+  extra?: ReactNode;
   busy: boolean;
   onCapture: (full: string, small: string) => void;
   onFail: () => void;
@@ -168,14 +175,16 @@ export function IdCamera({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={side ? "grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-center gap-8" : "space-y-4"}>
       <div className="relative overflow-hidden rounded-2xl bg-muted">
         <video
           ref={videoRef}
           playsInline
           muted
-          // Never taller than about half the screen, so the button below stays in view.
-          className={facing === "user" ? "aspect-[4/3] max-h-[46dvh] w-full -scale-x-100 object-cover" : "aspect-[4/3] max-h-[46dvh] w-full object-cover"}
+          // Stacked: never taller than about half the screen, so the button below stays in view.
+          // Beside the buttons: as tall as the screen allows once the heading and the rest (sized in rem) fit,
+          // so the text keeps its size and the camera takes what's left.
+          className={cn("aspect-[4/3] w-full object-cover", side ? "max-h-[min(58dvh,calc(100dvh-28rem))]" : "max-h-[46dvh]", facing === "user" && "-scale-x-100")}
         />
         {ready && facing === "environment" ? <IdHint /> : null}
         {!ready ? (
@@ -184,11 +193,14 @@ export function IdCamera({
           </div>
         ) : null}
       </div>
-      <p className="text-center text-muted-foreground">{help ?? copy.idCameraHelp}</p>
-      <Button size="touch-xl" className="w-full" onClick={capture} disabled={!ready || busy}>
-        {busy ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
-        {busy ? (busyLabel ?? copy.idChecking) : (cta ?? copy.idTakePhoto)}
-      </Button>
+      <div className="space-y-4">
+        <p className={cn("text-center text-muted-foreground", side && "text-lg")}>{help ?? copy.idCameraHelp}</p>
+        <Button size="touch-xl" className="w-full" onClick={capture} disabled={!ready || busy}>
+          {busy ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
+          {busy ? (busyLabel ?? copy.idChecking) : (cta ?? copy.idTakePhoto)}
+        </Button>
+        {extra}
+      </div>
     </div>
   );
 }

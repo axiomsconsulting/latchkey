@@ -68,6 +68,8 @@ export type ThemeConfig = {
   features: ThemeFeature[];
   /** "Powered by <product>" at the foot of guest pages. */
   poweredBy: boolean;
+  /** Door tablets: buttons as designed, or expanded to fill the screen for big, easy-to-press targets. */
+  kioskTouch: "standard" | "expanded";
 };
 
 /** buttonRadius for fully round ("pill") buttons. */
@@ -105,6 +107,7 @@ const base = {
   sideNotes: ["", ""],
   features: [],
   poweredBy: false,
+  kioskTouch: "standard",
 } as const satisfies Partial<ThemeConfig>;
 
 type Preset = Omit<ThemePreset, keyof typeof base | "buttonRadius" | "sideNotes" | "features"> &
@@ -316,6 +319,7 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     sideNotes: [words(notes[0], 80, ""), words(notes[1], 80, "")],
     features,
     poweredBy: typeof r.poweredBy === "boolean" ? r.poweredBy : preset.poweredBy,
+    kioskTouch: pick(r.kioskTouch, ["standard", "expanded"] as const, "standard"),
   };
 }
 
