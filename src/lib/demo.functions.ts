@@ -177,7 +177,8 @@ export const seedRecordingAccount = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { requireSuperAdmin } = await import("./roles");
     await requireSuperAdmin(context.supabase);
-    const email = (process.env["RECORDING_HOST_EMAIL"] ?? "").trim().toLowerCase();
+    // Tolerate quotes pasted into the secret along with the address.
+    const email = (process.env["RECORDING_HOST_EMAIL"] ?? "").trim().replace(/^["'<\s]+|["'>\s]+$/g, "").toLowerCase();
     if (!email) throw new Error("Set RECORDING_HOST_EMAIL in Lovable Cloud → Secrets first.");
     if (email === DEMO_EMAIL) throw new Error("The recording account must not be the shared demo account.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -192,7 +193,12 @@ export const seedRecordingAccount = createServerFn({ method: "POST" })
       userId = users.find((u) => (u.email ?? "").toLowerCase() === email)?.id ?? null;
       if (users.length < 200) break;
     }
-    if (!userId) throw new Error("No account with the recording email yet. Create it in Lovable Cloud → Authentication first.");
+    if (!userId) {
+      // Say which address was looked for (masked), so a mistyped secret is easy to spot.
+      const [local = "", domain = ""] = email.split("@");
+      const masked = `${local.slice(0, 2)}${"•".repeat(Math.max(1, local.length - 2))}@${domain}`;
+      throw new Error(`No account signed up as ${masked} (RECORDING_HOST_EMAIL). Check the secret matches the account's sign-in email, or create the account in Lovable Cloud → Authentication first.`);
+    }
 
     // Its own business (made once), kept on demo integrations and never billed.
     const name = (process.env["RECORDING_BUSINESS_NAME"] ?? "").trim() || "The Hill Suites";
