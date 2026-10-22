@@ -24,7 +24,7 @@ export function PhoneQrIcon({ className }: { className?: string }) {
 }
 
 /** Draws the QR once per URL; the image is small enough to keep in state. */
-function useQrImage(url: string | null) {
+export function useQrImage(url: string | null, colours: { dark: string; light: string } = { dark: "#1f3d2b", light: "#fdfaf4" }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
@@ -32,7 +32,7 @@ function useQrImage(url: string | null) {
       setSrc(null);
       return;
     }
-    QRCode.toDataURL(url, { width: 640, margin: 1, color: { dark: "#1f3d2b", light: "#fdfaf4" } })
+    QRCode.toDataURL(url, { width: 640, margin: 1, color: colours })
       .then((d) => {
         if (live) setSrc(d);
       })
@@ -42,7 +42,7 @@ function useQrImage(url: string | null) {
     return () => {
       live = false;
     };
-  }, [url]);
+  }, [url, colours.dark, colours.light]);
   return src;
 }
 

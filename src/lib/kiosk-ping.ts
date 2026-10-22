@@ -1,6 +1,6 @@
 /**
- * "The welcome changed": a realtime ping from the host's screen to that
- * property's kiosk, so it shows (or hides) the message straight away. It
+ * "The welcome (or what shows at rest) changed": a realtime ping from the
+ * host's screen to that property's kiosk, so it updates straight away. It
  * carries nothing private; the kiosk then asks Latchkey for the message.
  * Browser only.
  */
@@ -28,11 +28,31 @@ export async function pingKiosk(shortCode: string): Promise<void> {
   }
 }
 
-/** On the kiosk: call back whenever the host pings. Returns the unsubscribe. */
+/**
+ * On the kiosk: call back whenever the host pings. Returns the unsubscribe.
+ * Several parts of the kiosk listen (the welcome, the screen at rest); they
+ * share one channel per property, since a channel name can only be joined once.
+ */
+const listening = new Map<string, { channel: ReturnType<typeof supabase.channel>; fns: Set<() => void> }>();
+
 export function onKioskPing(shortCode: string, fn: () => void): () => void {
-  const channel = supabase.channel(kioskChannel(shortCode)).on("broadcast", { event: "refresh" }, () => fn());
-  channel.subscribe();
+  const name = kioskChannel(shortCode);
+  let entry = listening.get(name);
+  if (!entry) {
+    const fns = new Set<() => void>();
+    const channel = supabase.channel(name).on("broadcast", { event: "refresh" }, () => fns.forEach((f) => f()));
+    channel.subscribe();
+    entry = { channel, fns };
+    listening.set(name, entry);
+  }
+  entry.fns.add(fn);
   return () => {
-    void supabase.removeChannel(channel);
+    const e = listening.get(name);
+    if (!e) return;
+    e.fns.delete(fn);
+    if (e.fns.size === 0) {
+      listening.delete(name);
+      void supabase.removeChannel(e.channel);
+    }
   };
 }

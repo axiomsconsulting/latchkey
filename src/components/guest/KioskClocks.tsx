@@ -4,9 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { guest as copy } from "@/content/copy";
 import { Moon, Sun, Sunrise, Sunset, Type } from "lucide-react";
 
+import { useQrImage } from "@/components/guest/CheckInQr";
 import { burnDrift, clockHands, dayProgress, kioskNow, quietNow, worldClocksFor } from "@/lib/kiosk-clock";
 import { zoneCity } from "@/lib/world";
-import { kioskSaverLook, saveKioskSaverLook } from "@/lib/kiosk.functions";
+import { kioskSaverLook, saveKioskNightLook, saveKioskSaverLook } from "@/lib/kiosk.functions";
+import { onKioskPing } from "@/lib/kiosk-ping";
+import { DEFAULT_NIGHT_LOOK, DEFAULT_REST, arrangeClocks, nightLookFor, normaliseRest, type KioskRest, type NightLook } from "@/lib/kiosk-rest";
 import {
   BRIGHTNESS,
   DEFAULT_SAVER,
@@ -21,7 +24,7 @@ import {
 } from "@/lib/kiosk-saver";
 
 /** Ticks on the minute (and when the tab comes back), so the clocks never lag. */
-function useNow(stepMs = 15_000) {
+export function useNow(stepMs = 15_000) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const tick = () => setNow(new Date());
@@ -86,13 +89,25 @@ const DAY_ICONS = {
   night: Moon,
 } as const;
 
-function Dial({ city, tz, home, now, here, look }: { city: string; tz: string; home: string; now: Date; here: boolean; look: SaverLook }) {
+/** Taller than wide: the clock screensaver stacks instead of lining up. */
+function useUpright() {
+  const [upright, setUpright] = useState(false);
+  useEffect(() => {
+    const update = () => setUpright(window.innerHeight > window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return upright;
+}
+
+function Dial({ city, tz, home, now, here, look, big = false }: { city: string; tz: string; home: string; now: Date; here: boolean; look: SaverLook; /** Upright: the home clock on top, larger. */ big?: boolean }) {
   const h = clockHands(now, tz, home);
   const b = look.brightness;
   const w = look.size;
   return (
     <figure className="flex flex-col items-center gap-3" style={{ opacity: here ? 1 : 0.8 }}>
-      <svg viewBox="0 0 100 100" className={here ? "size-32 sm:size-44 lg:size-52" : "size-24 sm:size-32 lg:size-36"} aria-hidden>
+      <svg viewBox="0 0 100 100" className={big ? "size-48 sm:size-64 lg:size-80" : here ? "size-32 sm:size-44 lg:size-52" : "size-24 sm:size-32 lg:size-36"} aria-hidden>
         <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeOpacity={glow(0.22, b)} strokeWidth={0.8 * w} />
         {Array.from({ length: 12 }, (_, i) => (
           <line
@@ -130,6 +145,29 @@ function Dial({ city, tz, home, now, here, look }: { city: string; tz: string; h
   );
 }
 
+/**
+ * The "check in on your phone" square on the clock screensaver: white, dimmed
+ * with the screensaver but never below what a phone camera reads, with a line
+ * under it. It wanders with the rest of the display, so it never burns in.
+ */
+function SaverQr({ url, look }: { url: string; look: SaverLook }) {
+  const src = useQrImage(url, { dark: "#000000", light: "#ffffff" });
+  if (!src) return null;
+  return (
+    <figure className="flex flex-col items-center gap-3">
+      <img
+        src={src}
+        alt={copy.qrAlt}
+        className="rounded-2xl p-2"
+        style={{ width: `${10 * look.size}rem`, maxWidth: "36vmin", background: "#ffffff", opacity: Math.min(0.95, Math.max(0.6, glow(0.45, look.brightness))) }}
+      />
+      <figcaption className="max-w-[14rem] text-center uppercase tracking-[0.2em]" style={text(0.65, 0.4, look)}>
+        {copy.saverQr}
+      </figcaption>
+    </figure>
+  );
+}
+
 /** Text on the screensaver: size in rem at the original look, and how strongly its white shows. */
 const text = (rem: number, alpha: number, look: SaverLook): React.CSSProperties => ({
   fontSize: `${rem * look.size}rem`,
@@ -142,7 +180,7 @@ const text = (rem: number, alpha: number, look: SaverLook): React.CSSProperties 
  * slides in; drag up or down (or scroll, or use the arrow keys) to change
  * the value. Touching it never wakes the kiosk.
  */
-function SaverBand({
+export function SaverBand({
   side,
   label,
   icon: Icon,
@@ -268,58 +306,88 @@ const lookKey = (code: string) => `latchkey.saverLook.${code}`;
  * tablet, then from the server (the host's choice, or Latchkey's starting
  * point); changes are saved for the host when a slide ends.
  */
-export function useSaverLook(code: string) {
+export function useSaverLook(code: string, live = true) {
   const fetchLook = useServerFn(kioskSaverLook);
   const saveLook = useServerFn(saveKioskSaverLook);
+  const saveNight = useServerFn(saveKioskNightLook);
   const [defaults, setDefaults] = useState<SaverDefaults>(DEFAULT_SAVER);
   const [look, setLook] = useState<SaverLook>({ brightness: DEFAULT_SAVER.brightness, size: DEFAULT_SAVER.size });
-  const current = useRef(look);
-  current.current = look;
+  // What shows at rest (the host's choice for this property) and the night light's own look.
+  const [rest, setRest] = useState<KioskRest>(DEFAULT_REST);
+  const [night, setNightLook] = useState<NightLook>(DEFAULT_NIGHT_LOOK);
+  // When the host last switched the night light on from their dashboard (the kiosk can rest at once).
+  const [nightOnAt, setNightOnAt] = useState(0);
+  const current = useRef({ look, night, rest });
+  current.current = { look, night, rest };
   const sliding = useRef(false);
+  const keep = useCallback(
+    (v: { defaults: SaverDefaults; look: SaverLook; rest: KioskRest; night: NightLook }) => {
+      try {
+        window.localStorage.setItem(lookKey(code), JSON.stringify(v));
+      } catch {
+        // Private mode: fine, the server has it.
+      }
+    },
+    [code],
+  );
   useEffect(() => {
     try {
-      const kept = JSON.parse(window.localStorage.getItem(lookKey(code)) ?? "null") as { defaults?: unknown; look?: unknown } | null;
+      const kept = JSON.parse(window.localStorage.getItem(lookKey(code)) ?? "null") as { defaults?: unknown; look?: unknown; rest?: unknown; night?: unknown } | null;
       if (kept) {
         const d = normaliseDefaults(kept.defaults);
         setDefaults(d);
         setLook(lookFor(d, kept.look));
+        setRest(normaliseRest(kept.rest));
+        setNightLook(nightLookFor(kept.night));
       }
     } catch {
       // Nothing kept on this tablet yet.
     }
-    const load = () =>
+    const load = (pinged = false) =>
       void fetchLook({ data: { code } })
         .then((r) => {
+          if (pinged && r.rest.nightLight && !current.current.rest.nightLight) setNightOnAt(Date.now());
           setDefaults(r.defaults);
+          setRest(r.rest);
           // Never undo a slide the host is making right now.
-          if (!sliding.current) setLook(r.look);
-          try {
-            window.localStorage.setItem(lookKey(code), JSON.stringify(r));
-          } catch {
-            // Private mode: fine, the server has it.
+          if (!sliding.current) {
+            setLook(r.look);
+            setNightLook(r.night);
           }
+          keep(r);
         })
         .catch(() => {});
     load();
-    // Latchkey admin's timings and the host's look reach a running kiosk within two minutes.
+    // Latchkey admin's timings and the host's look reach a running kiosk within two minutes;
+    // the host's own switch (night light, clock, nothing) at once, through the kiosk ping.
     const id = window.setInterval(load, 120_000);
-    return () => window.clearInterval(id);
-  }, [code, fetchLook]);
+    const stop = live ? onKioskPing(code, () => load(true)) : () => {};
+    return () => {
+      window.clearInterval(id);
+      stop();
+    };
+  }, [code, fetchLook, keep, live]);
   const commit = useCallback(() => {
     sliding.current = false;
-    const l = current.current;
-    try {
-      window.localStorage.setItem(lookKey(code), JSON.stringify({ defaults, look: l }));
-    } catch {
-      // Not kept on this tablet.
-    }
+    const l = current.current.look;
+    keep({ defaults, look: l, rest, night: current.current.night });
     void saveLook({ data: { code, ...l } }).catch(() => {});
-  }, [code, defaults, saveLook]);
+  }, [code, defaults, rest, keep, saveLook]);
+  const commitNight = useCallback(() => {
+    sliding.current = false;
+    const n = current.current.night;
+    keep({ defaults, look: current.current.look, rest, night: n });
+    void saveNight({ data: { code, ...n } }).catch(() => {});
+  }, [code, defaults, rest, keep, saveNight]);
   const change = useCallback((next: SaverLook | ((l: SaverLook) => SaverLook)) => {
     sliding.current = true;
     setLook(next);
   }, []);
-  return { defaults, look, setLook: change, commit };
+  const changeNight = useCallback((next: NightLook | ((l: NightLook) => NightLook)) => {
+    sliding.current = true;
+    setNightLook(next);
+  }, []);
+  return { defaults, look, setLook: change, commit, rest, night, setNight: changeNight, commitNight, nightOnAt };
 }
 
 /**
@@ -334,6 +402,7 @@ export function KioskScreensaver({
   onWake,
   quiet,
   saver,
+  qrUrl = null,
 }: {
   name: string;
   tz: string;
@@ -341,6 +410,8 @@ export function KioskScreensaver({
   quiet?: { start: string; end: string } | undefined;
   /** From useSaverLook, which the kiosk also reads its timings from. */
   saver: ReturnType<typeof useSaverLook>;
+  /** The host chose to show the "check in on your phone" square, so guests needn't touch the screen. */
+  qrUrl?: string | null;
 }) {
   const now = useNow(20_000);
   const [started] = useState(() => Date.now());
@@ -348,6 +419,12 @@ export function KioskScreensaver({
   const local = kioskNow(now, tz);
   const q = quiet ? quietNow(now, tz, quiet.start, quiet.end) : null;
   const { defaults, look, setLook, commit } = saver;
+  const upright = useUpright();
+  const { main, row } = arrangeClocks(worldClocksFor(tz, zoneCity(tz), now), { qr: !!qrUrl, portrait: upright });
+  const dial = (c: { city: string; tz: string; home: boolean }, big = false) => (
+    <Dial key={c.city} city={c.city} tz={c.tz} home={tz} now={now} here={c.home} look={look} big={big} />
+  );
+  const square = qrUrl ? <SaverQr url={qrUrl} look={look} /> : null;
   return (
     <div
       role="button"
@@ -365,11 +442,18 @@ export function KioskScreensaver({
         className="flex flex-col items-center gap-12 transition-transform duration-[19000ms] ease-in-out"
         style={{ transform: `translate(${drift.x}px, ${drift.y}px)`, color: `rgb(255 255 255 / ${glow(0.4, look.brightness)})` }}
       >
-        {/* Here in the middle; two cities behind on the left, two ahead on the right. */}
+        {/* Upright: home on top (larger, the QR square beside it), the other cities in a row below.
+            On its side: here in the middle, cities behind on the left and ahead on the right; with the
+            QR square, one either side of home and the square after them. */}
+        {main ? (
+          <div className="flex items-center justify-center gap-10 sm:gap-16">
+            {dial(main, true)}
+            {square}
+          </div>
+        ) : null}
         <div className="flex items-center justify-center gap-6 sm:gap-10 lg:gap-14">
-          {worldClocksFor(tz, zoneCity(tz), now).map((c) => (
-            <Dial key={c.city} city={c.city} tz={c.tz} home={tz} now={now} here={c.home} look={look} />
-          ))}
+          {row.map((c) => dial(c))}
+          {!main && square ? <div className="ml-4 sm:ml-8">{square}</div> : null}
         </div>
         <div className="text-center">
           <p className="font-display tracking-wide" style={text(1.5, 0.35, look)}>

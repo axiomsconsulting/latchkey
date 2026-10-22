@@ -32,6 +32,17 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.59.0",
+    date: "2026-10-22",
+    title: "Kiosk night light",
+    items: [
+      { kind: "new", area: "Check-in", text: "Night light: the door tablet can light the hallway at rest with softly changing colours instead of the clock screensaver. Choose a style (breathe, sweep, colour cycle, aurora or steady), colours, speed, and whether it comes on whenever the kiosk rests or only in quiet hours. A dark band keeps passing across the screen so nothing burns in. On the kiosk, slide the left edge for brightness and the right edge for colour depth; any other touch wakes it, ready to check in. Properties → Kiosk at rest." },
+      { kind: "new", area: "Check-in", text: "Switch the kiosk at rest straight from Today: night light, clocks or screen off. The kiosk changes at once, and an idle kiosk lights up as soon as you turn the night light on." },
+      { kind: "new", area: "Check-in", text: "The clock screensaver can show the check-in QR code, so guests can scan it without touching the kiosk: the clocks make room for it." },
+      { kind: "improved", area: "Check-in", text: "On a tablet stood upright, the clock screensaver puts your own clock on top, larger, with the other cities in a row underneath." },
+    ],
+  },
+  {
     version: "0.58.0",
     date: "2026-10-22",
     title: "Upright kiosks and bigger buttons",

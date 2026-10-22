@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
+import { KioskRestSettings } from "@/components/host/KioskRestSettings";
 import { CheckinSettings } from "@/components/host/CheckinSettings";
 import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
 import { RoomFeedPanel } from "@/components/host/RoomFeedPanel";
@@ -752,6 +753,11 @@ function PropertiesPage() {
         <CheckinSettings
           property={property as unknown as { id: string; short_code: string; checkin_methods: unknown }}
         />
+        </div>
+      ) : null}
+      {property ? (
+        <div id="property-kiosk-rest" className="scroll-mt-24 rounded-2xl">
+          <KioskRestSettings property={property as unknown as { id: string; short_code: string; kiosk_rest?: unknown; quiet_hours_start?: string | null; quiet_hours_end?: string | null }} />
         </div>
       ) : null}
       {property ? (

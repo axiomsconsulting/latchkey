@@ -40,6 +40,7 @@ import { EmptyState } from "@/components/host/EmptyState";
 import { GuestReviews } from "@/components/host/GuestReviews";
 import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
+import { KioskRestQuick } from "@/components/host/KioskRestSettings";
 import { GuestMessages } from "@/components/host/GuestMessages";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 import { PageHeader } from "@/components/host/PageHeader";
@@ -962,7 +963,7 @@ function GuideCard({ propertyId, arriving, rooms }: { propertyId: string; arrivi
   );
 }
 
-function KioskCard({ property, arriving }: { property: { id: string; short_code: string }; arriving: Stay[] }) {
+function KioskCard({ property, arriving }: { property: { id: string; short_code: string; kiosk_rest?: unknown; quiet_hours_start?: string | null; quiet_hours_end?: string | null }; arriving: Stay[] }) {
   const { canWrite } = useRole();
   const tile = "flex items-center gap-2 whitespace-nowrap rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted";
   return (
@@ -985,6 +986,7 @@ function KioskCard({ property, arriving }: { property: { id: string; short_code:
           </Link>
         </Peek>
       </div>
+      {canWrite ? <KioskRestQuick property={property} /> : null}
       {canWrite ? <KioskWelcomePanel propertyId={property.id} shortCode={property.short_code} arriving={arriving} /> : null}
     </Card>
   );

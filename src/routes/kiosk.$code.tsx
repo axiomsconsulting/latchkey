@@ -23,6 +23,7 @@ import { PinPad } from "@/components/guest/PinPad";
 import { InstallApp } from "@/components/InstallApp";
 import { DayIcon, KioskClock, KioskScreensaver, headerIconClass, useSaverLook } from "@/components/guest/KioskClocks";
 import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
+import { KioskBlank, KioskNightLight, useRestShowing } from "@/components/guest/KioskNightLight";
 import { idleActions } from "@/lib/kiosk-saver";
 import { guest as copy } from "@/content/copy";
 import { FIT, displayChanged, fitFontSize, fitted, personalPhone, widthCap, type Display, type Orientation } from "@/lib/kiosk-fit";
@@ -364,7 +365,7 @@ function Kiosk() {
   const [saver, setSaver] = useState(false);
   const [atWelcome, setAtWelcome] = useState(true);
   // Brightness, clock size and timings: the host's own where set, else Latchkey's (super admin).
-  const saverLook = useSaverLook(p.code);
+  const saverLook = useSaverLook(p.code, shared);
   const { resetMinutes, saverMinutes, welcomeMinutes } = saverLook.defaults;
   const { welcome, dismiss } = useKioskWelcome(p.code, shared, welcomeMinutes);
   const content = useRef<HTMLDivElement | null>(null);
@@ -379,6 +380,11 @@ function Kiosk() {
     return () => html.removeAttribute("data-kiosk-touch");
   }, [expanded]);
   useScreenFit(content, atWelcome, stepKey, expanded);
+  // The host just switched the night light on from their dashboard: an idle kiosk (on the welcome) lights up now.
+  useEffect(() => {
+    if (saverLook.nightOnAt && shared && atWelcome) setSaver(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saverLook.nightOnAt]);
 
   const bump = useKioskIdle({
     enabled: shared,
@@ -542,8 +548,9 @@ function Kiosk() {
       ) : null}
 
       {shared && saver ? (
-        <KioskScreensaver
+        <KioskAtRest
           name={p.name}
+          code={p.code}
           saver={saverLook}
           tz={p.timezone ?? "Europe/London"}
           quiet={{ start: p.quietStart, end: p.quietEnd }}
@@ -575,4 +582,31 @@ function Kiosk() {
     </div>
     </ThemeScope>
   );
+}
+
+/**
+ * The kiosk at rest, as the host chose for this property: the night light
+ * (always, or in quiet hours), the clock screensaver (with the check-in QR
+ * code if they chose it), or a dark screen. Any touch wakes it, ready to use.
+ */
+function KioskAtRest({
+  name,
+  code,
+  saver,
+  tz,
+  quiet,
+  onWake,
+}: {
+  name: string;
+  code: string;
+  saver: ReturnType<typeof useSaverLook>;
+  tz: string;
+  quiet: { start: string; end: string };
+  onWake: () => void;
+}) {
+  const showing = useRestShowing(saver.rest, tz, quiet);
+  if (showing === "night") return <KioskNightLight saver={saver} onWake={onWake} />;
+  if (showing === "blank") return <KioskBlank onWake={onWake} />;
+  const qrUrl = saver.rest.clockQr && typeof window !== "undefined" ? `${window.location.origin}/kiosk/${code}?guest=1` : null;
+  return <KioskScreensaver name={name} saver={saver} tz={tz} quiet={quiet} qrUrl={qrUrl} onWake={onWake} />;
 }

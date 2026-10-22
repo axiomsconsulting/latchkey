@@ -142,22 +142,75 @@ async function saverDefaults(db: Loose) {
 }
 
 async function hostByCode(db: Loose, code: string) {
-  const { data } = await db.from("properties").select("host_id, is_demo").eq("short_code", code.toLowerCase()).maybeSingle();
-  return data ? { hostId: data.host_id as string, demo: data.is_demo === true } : null;
+  const { withLegacy } = await import("./checkin.server");
+  // kiosk_rest is from migration 0049.
+  const { data } = await withLegacy<any>(
+    () => db.from("properties").select("host_id, is_demo, kiosk_rest").eq("short_code", code.toLowerCase()).maybeSingle(),
+    () => db.from("properties").select("host_id, is_demo").eq("short_code", code.toLowerCase()).maybeSingle(),
+  );
+  return data ? { hostId: data.host_id as string, demo: data.is_demo === true, rest: (data.kiosk_rest as unknown) ?? null } : null;
 }
 
-/** The kiosk's screensaver brightness and clock size: the host's own, or Latchkey's starting point. */
+const optional = (v: unknown) => (v === null || v === undefined ? undefined : Number(v));
+
+/**
+ * The kiosk at rest: the clock screensaver's brightness and clock size (the
+ * host's own, or Latchkey's starting point), what this property shows at
+ * rest (night light, clock or nothing) and the night light's own look.
+ */
 export const kioskSaverLook = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
-    const { admin } = await import("./checkin.server");
+    const { admin, withLegacy } = await import("./checkin.server");
     const { lookFor } = await import("./kiosk-saver");
+    const { nightLookFor, normaliseRest } = await import("./kiosk-rest");
     const db = (await admin()) as unknown as Loose;
     const defaults = await saverDefaults(db);
     const host = await hostByCode(db, data.code);
-    const { data: own, error } = host ? await db.from("kiosk_looks").select("brightness, size").eq("host_id", host.hostId).maybeSingle() : { data: null, error: null };
-    const row = error || !own ? null : { brightness: own.brightness === null ? undefined : Number(own.brightness), size: own.size === null ? undefined : Number(own.size) };
-    return { defaults, look: lookFor(defaults, row) };
+    const { data: own, error } = host
+      ? await withLegacy<any>(
+          () => db.from("kiosk_looks").select("brightness, size, night_brightness, night_depth").eq("host_id", host.hostId).maybeSingle(),
+          () => db.from("kiosk_looks").select("brightness, size").eq("host_id", host.hostId).maybeSingle(),
+        )
+      : { data: null, error: null };
+    const row = error || !own ? null : own;
+    return {
+      defaults,
+      look: lookFor(defaults, row ? { brightness: optional(row.brightness), size: optional(row.size) } : null),
+      rest: normaliseRest(host?.rest),
+      night: nightLookFor(row ? { brightness: optional(row.night_brightness), depth: optional(row.night_depth) } : null),
+    };
+  });
+
+/** Changed on the night light's bands: kept for every kiosk of this host, inside the limits. */
+export const saveKioskNightLook = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code, brightness: z.number().finite(), depth: z.number().finite() }).parse(d))
+  .handler(async ({ data }) => {
+    const { admin } = await import("./checkin.server");
+    const { nightLookFor } = await import("./kiosk-rest");
+    const db = (await admin()) as unknown as Loose;
+    const host = await hostByCode(db, data.code);
+    const night = nightLookFor(data);
+    // The shared demo and tour kiosks keep the starting look for every visitor.
+    if (!host || host.demo) return { ok: false, night };
+    const { error } = await db
+      .from("kiosk_looks")
+      .upsert({ host_id: host.hostId, night_brightness: night.brightness, night_depth: night.depth, updated_at: new Date().toISOString() }, { onConflict: "host_id" });
+    return { ok: !error, night };
+  });
+
+/** The host chooses what the property's kiosk shows at rest (night light, clock screensaver or nothing). */
+export const saveKioskRest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, rest: z.record(z.string(), z.unknown()) }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const { normaliseRest } = await import("./kiosk-rest");
+    const rest = normaliseRest(data.rest);
+    const { error } = await (context.supabase as unknown as Loose).from("properties").update({ kiosk_rest: rest }).eq("id", data.propertyId);
+    if (error) throw new Error(/kiosk_rest/.test(error.message) ? "The night light needs the latest update (migration 0049)." : error.message);
+    return { ok: true, rest };
   });
 
 /** Changed on the screensaver's bands: kept for every kiosk of this host, inside the limits. */
