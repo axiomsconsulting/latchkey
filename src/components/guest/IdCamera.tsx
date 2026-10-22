@@ -184,7 +184,7 @@ export function IdCamera({
           // Stacked: never taller than about half the screen, so the button below stays in view.
           // Beside the buttons: as tall as the screen allows once the heading and the rest (sized in rem) fit,
           // so the text keeps its size and the camera takes what's left.
-          className={cn("aspect-[4/3] w-full object-cover", side ? "max-h-[min(58dvh,calc(100dvh-28rem))]" : "max-h-[46dvh]", facing === "user" && "-scale-x-100")}
+          className={cn("aspect-[4/3] w-full object-cover", side ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]" : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]", facing === "user" && "-scale-x-100")}
         />
         {ready && facing === "environment" ? <IdHint /> : null}
         {!ready ? (

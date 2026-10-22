@@ -442,7 +442,7 @@ html[data-kiosk-touch="expanded"] .kiosk-qr-dialog h2 {
   padding-right: 5rem;
 }
 html[data-kiosk-touch="expanded"] .kiosk-qr-dialog img {
-  max-width: min(82vw, 62vh);
+  max-width: min(82vw, calc(var(--kiosk-h, 100vh) * 0.62));
 }
 html[data-kiosk-touch="expanded"] .kiosk-qr-dialog p {
   font-size: 1.25rem;
@@ -467,7 +467,8 @@ html[data-kiosk-touch="expanded"] .kiosk-close svg {
 /* Stretching to fill the screen. */
 html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] {
   display: flex;
-  min-height: 100dvh;
+  /* The kiosk's settled height (useScreenFit), so a keyboard never stretches or squeezes it. */
+  min-height: var(--kiosk-h, 100dvh);
   flex-direction: column;
 }
 html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] [data-kx="col"],

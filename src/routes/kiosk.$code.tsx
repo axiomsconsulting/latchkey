@@ -26,7 +26,8 @@ import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWe
 import { KioskBlank, KioskNightLight, useRestShowing } from "@/components/guest/KioskNightLight";
 import { idleActions } from "@/lib/kiosk-saver";
 import { guest as copy } from "@/content/copy";
-import { FIT, displayChanged, fitFontSize, fitted, personalPhone, widthCap, type Display, type Orientation } from "@/lib/kiosk-fit";
+import { FIT, calibrationKey, fitFontSize, fitted, keyboardLikely, orientedScreen, personalPhone, settleDisplay, widthCap, type Display } from "@/lib/kiosk-fit";
+import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
 import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
@@ -88,22 +89,36 @@ export const Route = createFileRoute("/kiosk/$code")({
 function usePortraitPhone() {
   const [phone, setPhone] = useState(false);
   useEffect(() => {
-    const update = () =>
-      setPhone(personalPhone({ w: window.screen.width, h: window.screen.height }, { w: window.innerWidth, h: window.innerHeight }));
+    const update = () => setPhone(personalPhone({ w: window.screen.width, h: window.screen.height }, deviceOrientation()));
     update();
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    window.screen.orientation?.addEventListener?.("change", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.screen.orientation?.removeEventListener?.("change", update);
+    };
   }, []);
   return phone;
 }
 
-/** The device's own orientation. Not the page's shape, which an on-screen keyboard can flip. */
-function deviceOrientation(): Orientation {
-  const type = window.screen.orientation?.type;
-  if (type) return type.startsWith("landscape") ? "landscape" : "portrait";
-  const legacy = (window as { orientation?: number }).orientation;
-  if (typeof legacy === "number") return Math.abs(legacy) === 90 ? "landscape" : "portrait";
-  return window.screen.width > window.screen.height ? "landscape" : "portrait";
+/** This device's page height, the way it's held, from a time no keyboard was up (settleDisplay). */
+const DISPLAY_KEY = "latchkey.display";
+function remembered(key: string): number | null {
+  try {
+    const v = (JSON.parse(window.localStorage.getItem(DISPLAY_KEY) ?? "{}") as Record<string, unknown>)[key];
+    return typeof v === "number" && v > 0 ? v : null;
+  } catch {
+    return null;
+  }
+}
+function remember(key: string, h: number) {
+  try {
+    const all = JSON.parse(window.localStorage.getItem(DISPLAY_KEY) ?? "{}") as Record<string, number>;
+    if ((all[key] ?? 0) >= h) return;
+    window.localStorage.setItem(DISPLAY_KEY, JSON.stringify({ ...all, [key]: h }));
+  } catch {
+    // Not remembered on this device: it's worked out from the screen instead.
+  }
 }
 
 /** A text box (or similar) has focus, so an on-screen keyboard may be up. */
@@ -119,11 +134,14 @@ function typing(): boolean {
  * and nothing shakes. Everything below the header is in rem, so the page's
  * base font size scales it all together.
  *
- * - The display is measured once and taken as fixed. It's measured again
- *   only when the device turns (its own orientation, not the page's shape)
- *   or the width changes (a desktop window, a foldable opening), or a
- *   desktop window gets much shorter. An on-screen keyboard, or a phone's
- *   address bar, never counts (displayChanged, tested).
+ * - The display is settled once and kept (settleDisplay, tested). On a
+ *   phone or tablet it's measured again only when the device turns (its own
+ *   orientation, not the page's shape) or the width changes (a foldable);
+ *   an on-screen keyboard or a toolbar never shrinks it. Opened with the
+ *   keyboard still up (the address was just typed), the height comes from
+ *   what this device remembered, or from its screen, and the real height
+ *   replaces it once, when the keyboard goes. On a computer, a much shorter
+ *   window counts too. --kiosk-h carries the height for sizes in CSS.
  * - Wider than tall, the welcome sets the scale: it grows or shrinks to just
  *   fill the height. Upright, the scale is the page as designed (16px).
  * - Each new screen starts at that scale and then only ever shrinks, until
@@ -145,8 +163,23 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
     const html = document.documentElement;
     const before = html.style.fontSize;
     const measure = (): Display => ({ w: window.innerWidth, h: window.innerHeight, orientation: deviceOrientation() });
-    // The display as measured: what every screen is fitted to.
-    let display = measure();
+    const touch = isTouchDevice();
+    const screenSize = () => ({ w: window.screen.width, h: window.screen.height });
+    const fullscreen = () => !!document.fullscreenElement || !!window.matchMedia?.("(display-mode: fullscreen), (display-mode: standalone)").matches;
+    // The keyboard takes a moment to slide away after typing ends: that counts as typing too.
+    let typedAt = 0;
+    const keyboardMaybeUp = () => typing() || Date.now() - typedAt < 1500;
+    // What the browser says now, made into the display (and remembered when no keyboard is up).
+    const settle = (prev: Display | null): Display => {
+      const now = measure();
+      const key = calibrationKey(screenSize(), now.orientation);
+      const ctx = { touch, screen: screenSize(), typing: keyboardMaybeUp(), fullscreen: fullscreen(), calibrated: remembered(key) };
+      if (touch && !ctx.typing && !keyboardLikely(now.h, orientedScreen(ctx.screen, now.orientation).h)) remember(key, now.h);
+      return settleDisplay(prev, now, ctx);
+    };
+    const same = (a: Display, b: Display) => a.w === b.w && a.h === b.h && a.orientation === b.orientation && !!a.estimated === !!b.estimated;
+    // The display as settled: what every screen is fitted to.
+    let display = settle(null);
     // Font size per pixel of display height, from the last landscape welcome.
     let ratio: number | null = null;
     // Since the last reset: may this screen still grow (only the landscape welcome, until it first shrinks)?
@@ -159,6 +192,7 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
     const wide = () => display.w > display.h;
     const scale = () => (!wide() ? FIT.base : ratio !== null ? Math.min(FIT.max, Math.max(FIT.min, ratio * display.h)) : FIT.base);
     const header = (v: number) => html.style.setProperty("--kiosk-header", `${v}px`);
+    const height = () => html.style.setProperty("--kiosk-h", `${display.h}px`);
 
     const check = () => {
       const el = content.current;
@@ -196,6 +230,7 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
       frame = requestAnimationFrame(check);
     };
     const reset = () => {
+      height();
       if (!wide()) ratio = null;
       const start = scale();
       set(start);
@@ -203,26 +238,17 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
       mayGrow = wide() && welcome.current;
       schedule();
     };
-    // The keyboard takes a moment to slide away after typing ends: that counts as typing too.
-    let typedAt = 0;
-    const keyboardMaybeUp = () => typing() || Date.now() - typedAt < 1500;
     const resized = () => {
-      const now = measure();
-      if (!displayChanged(display, now, keyboardMaybeUp())) return;
-      display = now;
+      const next = settle(display);
+      if (same(next, display)) return;
+      display = next;
       reset();
     };
     // Turning the device: its new size can arrive a moment after the event.
     let turnTimer = 0;
     const turned = () => {
       window.clearTimeout(turnTimer);
-      turnTimer = window.setTimeout(() => {
-        // Only if it really turned (or the width changed); never for the keyboard's height.
-        const now = measure();
-        if (now.orientation === display.orientation && Math.abs(now.w - display.w) <= 1) return;
-        display = now;
-        reset();
-      }, 250);
+      turnTimer = window.setTimeout(resized, 250);
     };
 
     // Typing: keep the box in view above the keyboard; afterwards, back to filling the screen.
@@ -242,12 +268,8 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
       focusTimer = window.setTimeout(() => {
         if (typing()) return;
         window.scrollTo({ top: 0, behavior: "smooth" });
-        // A turn or a width change while typing is caught up now (the keyboard's height never is).
-        const now = measure();
-        if (now.orientation !== display.orientation || Math.abs(now.w - display.w) > 1) {
-          display = now;
-          reset();
-        }
+        // A turn or a width change while typing (or an estimate made with the keyboard up) is caught up now.
+        resized();
       }, 200);
     };
     const keyboardMoved = () => {
@@ -278,6 +300,7 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
       window.visualViewport?.removeEventListener("resize", keyboardMoved);
       html.style.fontSize = before;
       html.style.removeProperty("--kiosk-header");
+      html.style.removeProperty("--kiosk-h");
     };
   }, [content]);
   // A new screen (or a change of button size) starts from the scale again.

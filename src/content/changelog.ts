@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.61.1",
+    date: "2026-10-23",
+    title: "Steady kiosk screen",
+    items: [
+      { kind: "fixed", area: "Check-in", text: "The kiosk and guests' own phones no longer resize when an on-screen keyboard opens, including when the page was opened with the keyboard still up after typing the address. The screen's size comes from the device and is remembered on it; only turning the device changes the layout." },
+    ],
+  },
+  {
     version: "0.61.0",
     date: "2026-10-23",
     title: "Housekeeping schedule and listing import",

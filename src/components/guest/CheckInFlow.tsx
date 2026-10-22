@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { guest as copy } from "@/content/copy";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLandscapeDisplay } from "@/hooks/use-display";
 import type { CheckinMethod } from "@/lib/checkin-logic";
 import {
   addFacePhoto,
@@ -124,22 +125,6 @@ export type CheckinProperty = {
   /** The property's look and words (src/lib/theme.ts). */
   theme?: ThemeConfig;
 };
-
-/** Wider than tall: a tablet on its side or a computer screen. */
-function useLandscape() {
-  const [wide, setWide] = useState(false);
-  useEffect(() => {
-    const update = () => setWide(window.innerWidth > window.innerHeight);
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("orientationchange", update);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("orientationchange", update);
-    };
-  }, []);
-  return wide;
-}
 
 export function CheckInFlow({
   property,
@@ -534,7 +519,8 @@ export function CheckInFlow({
   // On a tablet or computer at the door, guests can use their own phone instead.
   // The kiosk prop already means a shared screen (a phone held upright is the guest's own),
   // so this holds either way up; only the welcome's layout depends on the way up.
-  const landscape = useLandscape();
+  // The way the device is held (a keyboard never flips it), or a computer window's shape.
+  const landscape = useLandscapeDisplay();
   const kioskWide = kiosk;
   // A door tablet on its side: the camera beside its buttons, the guide's QR beside its button,
   // so those steps use the width instead of shrinking the text to fit the height.

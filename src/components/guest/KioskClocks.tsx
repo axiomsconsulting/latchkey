@@ -5,6 +5,7 @@ import { guest as copy } from "@/content/copy";
 import { Moon, Sun, Sunrise, Sunset, Type } from "lucide-react";
 
 import { useQrImage } from "@/components/guest/CheckInQr";
+import { useLandscapeDisplay } from "@/hooks/use-display";
 import { burnDrift, clockHands, dayProgress, kioskNow, quietNow, worldClocksFor } from "@/lib/kiosk-clock";
 import { zoneCity } from "@/lib/world";
 import { kioskSaverLook, saveKioskNightLook, saveKioskSaverLook } from "@/lib/kiosk.functions";
@@ -88,18 +89,6 @@ const DAY_ICONS = {
   evening: Sunset,
   night: Moon,
 } as const;
-
-/** Taller than wide: the clock screensaver stacks instead of lining up. */
-function useUpright() {
-  const [upright, setUpright] = useState(false);
-  useEffect(() => {
-    const update = () => setUpright(window.innerHeight > window.innerWidth);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-  return upright;
-}
 
 function Dial({ city, tz, home, now, here, look, big = false }: { city: string; tz: string; home: string; now: Date; here: boolean; look: SaverLook; /** Upright: the home clock on top, larger. */ big?: boolean }) {
   const h = clockHands(now, tz, home);
@@ -279,7 +268,7 @@ export function SaverBand({
       onFocus={keep}
     >
       <div
-        className="flex h-[72vh] w-14 flex-col items-center gap-3 rounded-full border px-2 py-4 transition-all duration-300 ease-out"
+        className="flex h-[calc(var(--kiosk-h,100vh)*0.72)] w-14 flex-col items-center gap-3 rounded-full border px-2 py-4 transition-all duration-300 ease-out"
         style={{
           opacity: shown || dragging ? 1 : 0,
           transform: `translateX(${shown || dragging ? 0 : side === "left" ? -24 : 24}px)`,
@@ -419,7 +408,8 @@ export function KioskScreensaver({
   const local = kioskNow(now, tz);
   const q = quiet ? quietNow(now, tz, quiet.start, quiet.end) : null;
   const { defaults, look, setLook, commit } = saver;
-  const upright = useUpright();
+  // Upright the way the device is held: the clocks stack.
+  const upright = !useLandscapeDisplay();
   const { main, row } = arrangeClocks(worldClocksFor(tz, zoneCity(tz), now), { qr: !!qrUrl, portrait: upright });
   const dial = (c: { city: string; tz: string; home: boolean }, big = false) => (
     <Dial key={c.city} city={c.city} tz={c.tz} home={tz} now={now} here={c.home} look={look} big={big} />

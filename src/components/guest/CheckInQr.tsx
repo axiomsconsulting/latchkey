@@ -169,9 +169,9 @@ export function GuideLink({ url, kiosk = false, beside = false }: { url: string;
         <div className="mt-2 text-center animate-in fade-in slide-in-from-top-1">
           {/* On the kiosk the square is as big as the screen allows, never squeezed by the text. */}
           {src ? (
-            <img src={src} alt={copy.qrAlt} className={cn("mx-auto aspect-square w-full rounded-xl", kiosk ? "max-w-[min(20rem,calc(100dvh-27rem))]" : "max-w-[15rem]")} />
+            <img src={src} alt={copy.qrAlt} className={cn("mx-auto aspect-square w-full rounded-xl", kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]")} />
           ) : (
-            <div className={cn("mx-auto aspect-square w-full rounded-xl bg-muted", kiosk ? "max-w-[min(20rem,calc(100dvh-27rem))]" : "max-w-[15rem]")} />
+            <div className={cn("mx-auto aspect-square w-full rounded-xl bg-muted", kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]")} />
           )}
           <p className={cn("mt-2 text-muted-foreground", kiosk ? "text-lg" : "text-sm")}>{copy.guideLinkQrBody}</p>
         </div>
@@ -212,7 +212,7 @@ export function KioskQr({
         <Smartphone className="mx-auto mb-2 size-7 text-primary [@media(max-height:560px)]:hidden" aria-hidden />
         <h2 className="font-display text-xl sm:text-2xl">{copy.kioskQrTitle}</h2>
         {/* Sized by the screen's height too, so it fits a small tablet on its side. */}
-        <img src={src} alt={copy.qrAlt} className="mx-auto my-3 aspect-square w-full max-h-[42vh] max-w-[15rem] rounded-2xl object-contain" />
+        <img src={src} alt={copy.qrAlt} className="mx-auto my-3 aspect-square w-full max-h-[calc(var(--kiosk-h,100vh)*0.42)] max-w-[15rem] rounded-2xl object-contain" />
         <p className="text-sm text-muted-foreground sm:text-base">{copy.kioskQrBody}</p>
       </aside>
     );
