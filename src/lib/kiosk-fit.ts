@@ -45,3 +45,16 @@ export function displayChanged(was: Display, now: Display, typing: boolean): boo
   if (typing) return false;
   return Math.abs(now.h - was.h) > 150;
 }
+
+/** Phones' shorter side is well under this (CSS px); even small tablets' is above it. */
+export const PHONE_SHORT_SIDE = 600;
+
+/**
+ * Someone's own phone held upright, rather than a door tablet (which may
+ * stand either way up). Judged by the device's screen, not the window, so a
+ * tablet turned upright stays the shared kiosk.
+ */
+export function personalPhone(screen: { w: number; h: number }, viewport: { w: number; h: number }): boolean {
+  const short = Math.min(screen.w, screen.h);
+  return short > 0 && short < PHONE_SHORT_SIDE && viewport.h >= viewport.w;
+}

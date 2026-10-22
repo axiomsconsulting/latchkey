@@ -532,9 +532,10 @@ export function CheckInFlow({
   }
 
   // On a tablet or computer at the door, guests can use their own phone instead.
-  // Landscape (wider than tall) counts, whatever width the browser reports.
+  // The kiosk prop already means a shared screen (a phone held upright is the guest's own),
+  // so this holds either way up; only the welcome's layout depends on the way up.
   const landscape = useLandscape();
-  const kioskWide = kiosk && (landscape || !onPhone);
+  const kioskWide = kiosk;
   const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
   // While other guests are being filled in: the square lets each use their own phone at once.
   const joinUrl = typeof window === "undefined" || !share ? null : `${window.location.origin}/kiosk/${property.code}?join=${encodeURIComponent(share)}`;
@@ -551,7 +552,8 @@ export function CheckInFlow({
           : null;
 
   return (
-    <div className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}>
+    // data-kx: the parts that stretch to fill a door tablet set to expanded buttons (styles.css).
+    <div data-kiosk-flow data-kx="col" className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}>
       {canGoBack ? (
         <Button
           variant="ghost"
@@ -572,10 +574,14 @@ export function CheckInFlow({
       ) : null}
 
       <div
+        data-kx="grow"
         className={cn(
           "grid gap-6",
+          // Upright, the phone square sits under the welcome instead of beside it.
           kioskWide && step.name === "welcome" && qrPanel
-            ? "grid-cols-[minmax(0,1fr)_minmax(13rem,20rem)] items-center"
+            ? landscape
+              ? "grid-cols-[minmax(0,1fr)_minmax(13rem,20rem)] items-center"
+              : "items-center"
             : handoffUrl && !onPhone && !kiosk
               ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
               : "",
@@ -583,12 +589,12 @@ export function CheckInFlow({
       >
 
 
-      <main className="card-soft p-6 sm:p-10" aria-live="polite">
+      <main data-kx="col" className="card-soft p-6 sm:p-10" aria-live="polite">
         {demoHint ? (
           <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">{demoHint}</p>
         ) : null}
         {step.name === "welcome" ? (
-          <div className="py-6 text-center">
+          <div data-kx="center" className="py-6 text-center">
             {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
             {property.theme?.layout === "centred" ? <BrandBlock theme={property.theme} name={property.name} className="mb-6" /> : null}
             {property.theme?.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{property.theme.eyebrow}</p> : null}
@@ -616,10 +622,10 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "letter" ? (
-          <section>
+          <section data-kx="col">
             <h1 className="text-2xl sm:text-4xl">{copy.stepLetter}</h1>
             <p className="mt-2 text-muted-foreground">{copy.stepLetterHint}</p>
-            <div className="mt-6 grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-9">
+            <div data-kx="grid" className="mt-6 grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-9">
               {LETTERS.map((l) => (
                 <Button
                   key={l}
@@ -641,9 +647,9 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "checkout" ? (
-          <section>
+          <section data-kx="col">
             <h1 className="text-2xl sm:text-4xl">{copy.stepCheckout}</h1>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {property.checkoutChoices.map((d) => (
                 <Button
                   key={d}
@@ -664,9 +670,9 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "platform" ? (
-          <section>
+          <section data-kx="col">
             <h1 className="text-2xl sm:text-4xl">{copy.stepPlatform}</h1>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
               {step.only.map(siteOf).map((site) => (
                 <Button
                   key={site.key}
@@ -686,12 +692,12 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "pick" ? (
-          <section>
+          <section data-kx="col">
             <h1 className="text-2xl sm:text-4xl">{copy.stepPickBooking}</h1>
             {step.items.length === 0 ? (
               <p className="mt-6 text-lg text-muted-foreground">{copy.noArrivals}</p>
             ) : (
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
                 {step.items.map((i) => (
                   <Button
                     key={i.id}
@@ -762,7 +768,7 @@ export function CheckInFlow({
         ) : null}
 
         {step.name === "confirm" ? (
-          <section className="py-4 text-center">
+          <section data-kx="col" className="py-4 text-center">
             <h1 className="text-4xl sm:text-6xl">{step.returning ? copy.welcomeBack(step.firstName) : copy.hi(step.firstName)}</h1>
             <p className="mt-4 text-xl text-muted-foreground">
               {step.returning ? (
@@ -773,7 +779,7 @@ export function CheckInFlow({
                 copy.confirmBody
               )}
             </p>
-            <div className="mx-auto mt-8 grid max-w-xl gap-3 sm:grid-cols-2">
+            <div data-kx="grid" className="mx-auto mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2">
               <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
                 {busy ? <Loader2 className="size-6 animate-spin" /> : null}
                 {copy.confirmYes}
@@ -1041,10 +1047,16 @@ function Last4Step({
   const [kind, setKind] = useState<Last4Kind>(kinds[0] ?? "reference");
   const [value, setValue] = useState("");
   const isEmail = kind === "email";
+  const choose = kinds.length > 1;
+  // The number pad is there from the start whenever the phone digits are a choice, so
+  // picking another way never squeezes or stretches the screen: both entries share one space.
+  const withPad = kinds.includes("phone");
+  const padOn = kind === "phone";
   return (
-    <section className="mx-auto max-w-xl">
+    <section data-kx="col" className={cn("mx-auto", choose ? "max-w-4xl" : "max-w-xl")}>
       <h1 className="text-2xl sm:text-4xl">{copy.last4Title}</h1>
-      {kinds.length > 1 ? (
+      <div data-kx="grow" className={cn("grid gap-6", choose && "sm:grid-cols-2 sm:items-start")}>
+      {choose ? (
         <div className="mt-6 grid gap-2">
           {kinds.map((k) => (
             <Button
@@ -1064,18 +1076,21 @@ function Last4Step({
       ) : (
         <p className="mt-4 text-lg">{copy.last4Kinds[kind]}</p>
       )}
-      {kind === "phone" ? (
-        <div className="mt-6">
+      {/* One cell: the pad and the typed box sit on top of each other; the one not in use is hidden but keeps its space. */}
+      <div data-kx="grow" className="grid [&>*]:[grid-area:1/1]">
+      {withPad ? (
+        <div data-kx="col" className={cn("mt-6", !padOn && "invisible")} aria-hidden={!padOn}>
           <PinPad
-            value={value}
+            value={padOn ? value : ""}
             onChange={setValue}
             length={4}
-            busy={busy}
-            onComplete={(v) => void onSubmit(kind, v)}
+            busy={busy || !padOn}
+            onComplete={(v) => void onSubmit("phone", v)}
           />
-          {busy ? <Loader2 className="mx-auto mt-4 size-6 animate-spin text-muted-foreground" /> : null}
+          {busy && padOn ? <Loader2 className="mx-auto mt-4 size-6 animate-spin text-muted-foreground" /> : null}
         </div>
-      ) : (
+      ) : null}
+      {!padOn ? (
         <form
           className="mt-6 space-y-4"
           onSubmit={(e) => {
@@ -1097,7 +1112,9 @@ function Last4Step({
             {copy.last4Submit}
           </Button>
         </form>
-      )}
+      ) : null}
+      </div>
+      </div>
       <Button variant="ghost" size="lg" className="mt-3 w-full" onClick={onOther}>
         {copy.idUseOther}
       </Button>

@@ -225,7 +225,8 @@ export function KioskQr({
       {/* Beside the time and date at the top of the kiosk, where the day icon sits on the welcome. */}
       {target ? createPortal(button, target) : button}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm">
+        {/* kiosk-qr-dialog / kiosk-close: a larger square and close button on expanded door tablets (styles.css). */}
+        <DialogContent className="kiosk-qr-dialog max-w-sm" closeClassName="kiosk-close">
           <DialogHeader>
             <DialogTitle>{others ? copy.othersHeading : carryOn ? copy.qrHeading : copy.kioskQrTitle}</DialogTitle>
           </DialogHeader>

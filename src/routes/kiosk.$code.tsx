@@ -25,13 +25,15 @@ import { DayIcon, KioskClock, KioskScreensaver, headerIconClass, useSaverLook } 
 import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
 import { idleActions } from "@/lib/kiosk-saver";
 import { guest as copy } from "@/content/copy";
-import { FIT, displayChanged, fitFontSize, fitted, widthCap, type Display, type Orientation } from "@/lib/kiosk-fit";
+import { FIT, displayChanged, fitFontSize, fitted, personalPhone, widthCap, type Display, type Orientation } from "@/lib/kiosk-fit";
 import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
 
 // Press and hold the top-right corner this long for the host's exit.
 const HOLD_MS = 3_000;
+// How far into the corner (px) the hold counts.
+const HOLD_CORNER = 64;
 
 export const Route = createFileRoute("/kiosk/$code")({
   // ?guest=1: a guest's own phone (from a QR code or link), not the shared door tablet.
@@ -73,11 +75,16 @@ export const Route = createFileRoute("/kiosk/$code")({
   component: Kiosk,
 });
 
-/** A phone held upright is someone's own device; anything wider is a shared screen. */
+/**
+ * A phone held upright is someone's own device; anything else is a shared
+ * screen, including a door tablet stood upright (judged by the device's
+ * screen, personalPhone, tested).
+ */
 function usePortraitPhone() {
   const [phone, setPhone] = useState(false);
   useEffect(() => {
-    const update = () => setPhone(window.innerWidth < 768 && window.innerHeight >= window.innerWidth);
+    const update = () =>
+      setPhone(personalPhone({ w: window.screen.width, h: window.screen.height }, { w: window.innerWidth, h: window.innerHeight }));
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -120,8 +127,12 @@ function typing(): boolean {
  *   so it stays exactly where it is from screen to screen.
  * - Typing: the box being typed in is brought into view above the keyboard;
  *   when typing ends the page goes back to filling the screen.
+ * - Expanded buttons: the page is measured at its natural height (the
+ *   stretching rules in styles.css are off while <html> has
+ *   data-kiosk-measure), so the scale is fitted exactly as in Standard; the
+ *   keys and buttons then grow into whatever space is left.
  */
-function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome: boolean, stepKey: string) {
+function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome: boolean, stepKey: string, expanded: boolean) {
   const welcome = useRef(atWelcome);
   welcome.current = atWelcome;
   const refit = useRef<{ reset: () => void }>({ reset: () => {} });
@@ -150,7 +161,10 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
       const h = display.h;
       const landscape = wide();
       const current = px();
+      // Switched off and on within this one frame, so nothing is ever painted unstretched.
+      html.setAttribute("data-kiosk-measure", "");
       const tall = el.offsetHeight;
+      html.removeAttribute("data-kiosk-measure");
       const min = landscape ? FIT.min : FIT.min_upright;
       if (tall > h) {
         // Too tall: shrink until it fits, a hair under so rounding never leaves it over.
@@ -258,10 +272,10 @@ function useScreenFit(content: React.RefObject<HTMLDivElement | null>, atWelcome
       html.style.removeProperty("--kiosk-header");
     };
   }, [content]);
-  // A new screen starts from the scale again.
+  // A new screen (or a change of button size) starts from the scale again.
   useEffect(() => {
     refit.current.reset();
-  }, [atWelcome, stepKey]);
+  }, [atWelcome, stepKey, expanded]);
 }
 
 /**
@@ -353,10 +367,18 @@ function Kiosk() {
   const saverLook = useSaverLook(p.code);
   const { resetMinutes, saverMinutes, welcomeMinutes } = saverLook.defaults;
   const { welcome, dismiss } = useKioskWelcome(p.code, shared, welcomeMinutes);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
-  useScreenFit(content, atWelcome, stepKey);
+  // Door tablets only: keys, pads and buttons grow to use the whole screen (Latchkey admin → kiosk settings).
+  const expanded = shared && saverLook.defaults.touch === "expanded";
+  // On <html>, so dialogs (portalled outside this page) are sized to match.
+  useEffect(() => {
+    if (!expanded) return;
+    const html = document.documentElement;
+    html.setAttribute("data-kiosk-touch", "expanded");
+    return () => html.removeAttribute("data-kiosk-touch");
+  }, [expanded]);
+  useScreenFit(content, atWelcome, stepKey, expanded);
 
   const bump = useKioskIdle({
     enabled: shared,
@@ -378,18 +400,60 @@ function Kiosk() {
     if (!document.fullscreenElement) void document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
   }
 
-  function startHold() {
-    holdTimer.current = setTimeout(() => {
-      // Tour: there's no host PIN; the corner just leaves the tour.
-      if (tour) return void navigate({ to: "/", search: { home: true } });
-      setPin("");
-      setPinError(false);
-      setExitOpen(true);
-    }, HOLD_MS);
-  }
-  function endHold() {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-  }
+  // The host's way out: press and hold the top-right corner. Watched on the whole page rather
+  // than with a hidden button, so whatever sits in the corner (the phone QR, the day icon)
+  // still answers a tap; only a hold that opened the exit swallows its click.
+  const openExit = useRef(() => {});
+  openExit.current = () => {
+    // Tour: there's no host PIN; the corner just leaves the tour.
+    if (tour) return void navigate({ to: "/", search: { home: true } });
+    setPin("");
+    setPinError(false);
+    setExitOpen(true);
+  };
+  useEffect(() => {
+    if (!shared) return;
+    let timer = 0;
+    let fired = false;
+    const inCorner = (e: PointerEvent) => e.clientX >= window.innerWidth - HOLD_CORNER && e.clientY <= HOLD_CORNER;
+    const stop = () => window.clearTimeout(timer);
+    const down = (e: PointerEvent) => {
+      fired = false;
+      stop();
+      if (!inCorner(e)) return;
+      timer = window.setTimeout(() => {
+        fired = true;
+        openExit.current();
+      }, HOLD_MS);
+    };
+    const move = (e: PointerEvent) => {
+      if (!inCorner(e)) stop();
+    };
+    const click = (e: MouseEvent) => {
+      if (!fired) return;
+      fired = false;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const menu = (e: MouseEvent) => {
+      if (e.clientX >= window.innerWidth - HOLD_CORNER && e.clientY <= HOLD_CORNER) e.preventDefault();
+    };
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointermove", move, true);
+    window.addEventListener("pointerup", stop, true);
+    window.addEventListener("pointercancel", stop, true);
+    window.addEventListener("click", click, true);
+    window.addEventListener("contextmenu", menu, true);
+    return () => {
+      stop();
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", stop, true);
+      window.removeEventListener("pointercancel", stop, true);
+      window.removeEventListener("click", click, true);
+      window.removeEventListener("contextmenu", menu, true);
+    };
+  }, [shared]);
 
   async function tryUnlock(e: React.FormEvent) {
     e.preventDefault();
@@ -402,13 +466,20 @@ function Kiosk() {
   return (
     <ThemeScope theme={p.theme} global full>
     {/* Inputs stay at 16px or more however small the page is fitted, so phones don't zoom in on them. */}
-    <div className="relative min-h-screen select-none bg-background px-[var(--kiosk-header,16px)] sm:px-[calc(var(--kiosk-header,16px)*2)] [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]" onPointerDown={goFullscreen}>
+    {/* Expanded: only a thin margin at the screen's edges. */}
+    <div
+      className={cn(
+        "relative min-h-screen select-none bg-background [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]",
+        expanded ? "px-[0.5rem]" : "px-[var(--kiosk-header,16px)] sm:px-[calc(var(--kiosk-header,16px)*2)]",
+      )}
+      onPointerDown={goFullscreen}
+    >
       <ThemeBackdrop theme={p.theme} />
       {atWelcome ? <ThemeSideNotes theme={p.theme} /> : null}
       {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}
-      <div ref={content} className="relative">
+      <div ref={content} data-kx="screen" className="relative">
       {/* Sized once per display (--kiosk-header, in em below), so it never moves between screens. */}
-      <header className="mx-auto flex max-w-[56em] items-center gap-[0.75em] pt-[1.5em]" style={{ fontSize: "var(--kiosk-header, 16px)" }}>
+      <header className={cn("mx-auto flex items-center gap-[0.75em]", expanded ? "w-full max-w-none pt-[0.5em]" : "max-w-[56em] pt-[1.5em]")} style={{ fontSize: "var(--kiosk-header, 16px)" }}>
         <LogoMark theme={p.theme} name={p.name} className="size-[2.5em] shrink-0 text-[1.125em]" />
         <span className="min-w-0 flex-1">
           {/* A centred theme shows its name on the welcome itself; the bar keeps just the mark. */}
@@ -432,17 +503,6 @@ function Kiosk() {
           ) : null}
         </div>
       </header>
-      {shared ? (
-      <button
-        type="button"
-        aria-label={copy.kioskExitTitle}
-        className="absolute right-0 top-0 z-10 size-16 opacity-0"
-        onPointerDown={startHold}
-        onPointerUp={endHold}
-        onPointerLeave={endHold}
-        onContextMenu={(e) => e.preventDefault()}
-      />
-      ) : null}
       {join ? (
         <JoinCheckIn share={join} />
       ) : (
@@ -461,7 +521,7 @@ function Kiosk() {
           qrPanel={saverLook.defaults.qrStyle === "panel"}
         />
       )}
-      <ThemeFooter theme={p.theme} className="mx-auto mt-[1.5em] max-w-6xl pb-[1em]" />
+      <ThemeFooter theme={p.theme} className={cn("mx-auto max-w-6xl", expanded ? "mt-[0.5em] w-full pb-[0.5em]" : "mt-[1.5em] pb-[1em]")} />
       </div>
 
 
@@ -495,7 +555,7 @@ function Kiosk() {
       ) : null}
 
       <Dialog open={exitOpen} onOpenChange={setExitOpen}>
-        <DialogContent>
+        <DialogContent closeClassName="kiosk-close">
           <DialogHeader>
             <DialogTitle>{copy.kioskExitTitle}</DialogTitle>
             <DialogDescription>{copy.kioskExitBody}</DialogDescription>

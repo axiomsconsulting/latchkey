@@ -26,7 +26,8 @@ export const Route = createFileRoute("/api/public/manifest/kiosk/$code")({
           scope: `/kiosk/${code}`,
           display: "fullscreen",
           display_override: ["fullscreen", "standalone"],
-          orientation: "landscape",
+          // Either way up: door tablets are mounted on their side or upright.
+          orientation: "any",
           background_color: "#FBF9F5",
           theme_color: "#194129",
           icons: [

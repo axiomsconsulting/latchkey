@@ -247,7 +247,7 @@ export function HostShell() {
         </div>
       ) : null}
 
-      {/* The shared demo: a floating panel (bottom right, moveable, folds away) with the property switcher and the ways out. */}
+      {/* The shared demo: a tab on the side of the screen opening the property switcher (previews of each look) and the ways out. */}
       {isSharedDemo ? (
         <DemoDock
           mode="host"
@@ -256,14 +256,17 @@ export function HostShell() {
             await navigate({ to: "/", search: { home: true } });
           }}
         >
-          <HostDemoSwitch
-            properties={properties}
-            value={selectedId ?? null}
-            onChange={(id) => {
-              select(id);
-              void navigate({ to: "/app/today" });
-            }}
-          />
+          {(done) => (
+            <HostDemoSwitch
+              properties={properties}
+              value={selectedId ?? null}
+              done={done}
+              onChange={(id) => {
+                select(id);
+                void navigate({ to: "/app/today" });
+              }}
+            />
+          )}
         </DemoDock>
       ) : null}
 

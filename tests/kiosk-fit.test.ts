@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FIT, displayChanged, fitFontSize, fitted, widthCap } from "../src/lib/kiosk-fit";
+import { FIT, displayChanged, fitFontSize, fitted, personalPhone, widthCap } from "../src/lib/kiosk-fit";
 
 describe("kiosk fit to screen", () => {
   it("shrinks the page on a phone on its side", () => {
@@ -42,5 +42,18 @@ describe("is the display really different?", () => {
   });
   it("fits again when a desktop window is made much shorter", () => {
     expect(displayChanged({ w: 1400, h: 900, orientation: "landscape" }, { w: 1400, h: 600, orientation: "landscape" }, false)).toBe(true);
+  });
+
+  it("tells a guest's phone held upright from a door tablet turned upright", () => {
+    // iPhone upright: its own phone.
+    expect(personalPhone({ w: 390, h: 844 }, { w: 390, h: 760 })).toBe(true);
+    // The same phone on its side: a shared screen, as before.
+    expect(personalPhone({ w: 844, h: 390 }, { w: 844, h: 360 })).toBe(false);
+    // A small Android tablet and an iPad stood upright stay the kiosk.
+    expect(personalPhone({ w: 600, h: 960 }, { w: 600, h: 900 })).toBe(false);
+    expect(personalPhone({ w: 820, h: 1180 }, { w: 820, h: 1100 })).toBe(false);
+    // A narrow window on a computer is not a phone.
+    expect(personalPhone({ w: 1920, h: 1080 }, { w: 420, h: 900 })).toBe(false);
+    expect(personalPhone({ w: 0, h: 0 }, { w: 390, h: 800 })).toBe(false);
   });
 });

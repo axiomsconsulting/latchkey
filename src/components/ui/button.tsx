@@ -45,8 +45,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
-      // data-slot and data-variant let a property's theme restyle buttons on guest pages (styles.css [data-themed]).
-      <Comp data-slot="button" data-variant={variant ?? "default"} className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      // data-slot, data-variant and data-size let a property's theme restyle buttons on guest pages (styles.css [data-themed], the kiosk's expanded buttons).
+      <Comp data-slot="button" data-variant={variant ?? "default"} data-size={size ?? "default"} className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
     );
   },
 );

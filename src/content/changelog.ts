@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.58.0",
+    date: "2026-10-22",
+    title: "Upright kiosks and bigger buttons",
+    items: [
+      { kind: "new", area: "Check-in", text: "Door tablets work upright too: turn the tablet and the check-in screen follows, with the phone square under the welcome instead of beside it. Installed kiosk apps can turn either way." },
+      { admin: true, kind: "new", area: "Check-in", text: "Kiosk settings → Door tablet buttons: Standard, or Expanded, which uses the whole screen with a thin margin: letters, dates, number pads and buttons grow to fill it, the corner icons are larger, and the phone square and close buttons are bigger." },
+      { kind: "improved", area: "Check-in", text: "Confirming with the last digits of your phone: the number pad is in place from the start, beside the other choices on a wide screen, so the screen no longer jumps when you switch between them." },
+      { kind: "fixed", area: "Check-in", text: "The phone icon in the kiosk's top corner always answers a tap; the host's press-and-hold exit no longer sits on top of it." },
+      { kind: "improved", area: "Demo", text: "The demo panel is now a small tab on the side of the screen: tap it to switch property from previews of each one's look, and it folds away again once you pick. Drag it anywhere and it sticks to the nearer side." },
+    ],
+  },
+  {
     version: "0.57.2",
     date: "2026-10-22",
     title: "Recording account fix",
