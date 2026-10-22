@@ -91,7 +91,7 @@ export function PrivacySettings({ hostId, isOwner }: { hostId: string; isOwner: 
         <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
           <li>
             {copy.idPhotos}{" "}
-            <Link to="/app/properties" search={{ focus: "records" }} className="font-medium text-primary underline-offset-2 hover:underline">{copy.idPhotosLink}</Link>
+            <Link to="/app/settings" search={{ focus: "records" }} className="font-medium text-primary underline-offset-2 hover:underline">{copy.idPhotosLink}</Link>
           </li>
           <li>
             {copy.register}{" "}

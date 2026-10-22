@@ -780,8 +780,11 @@ export const getIntegrationStatus = createServerFn({ method: "GET" })
     }
     const origin = i.publicOrigin();
     const secret = i.inboundSecret();
+    // Listing import: the Firecrawl key, and the routine switch (off until the super admin turns it on).
+    const { data: listingRow } = await loose(await admin()).from("job_settings").select("enabled").eq("key", "listing_import").maybeSingle();
     return {
       origin,
+      firecrawl: { keySet: !!(process.env["FIRECRAWL_API_KEY"] ?? "").trim(), enabled: listingRow?.enabled === true },
       push: { ready: !!i.pushKeys() },
       telegram: { tokenSet: !!i.telegramToken(), bot, webhookSet: !!webhook && webhook.startsWith(origin) },
       sms: { ready: !!i.twilio() },

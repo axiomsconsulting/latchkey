@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,10 +8,9 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
-import { KioskRestSettings } from "@/components/host/KioskRestSettings";
 import { CheckinSettings } from "@/components/host/CheckinSettings";
-import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
-import { RoomFeedPanel } from "@/components/host/RoomFeedPanel";
+import { RoomFeedNote, RoomFeedPanel } from "@/components/host/RoomFeedPanel";
+import { ListingImportButton } from "@/components/host/ListingImport";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,15 +37,10 @@ import { COUNTRY_CHOICES, region } from "@/lib/regions";
 import { usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { formatUkTime } from "@/lib/dates";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
-import {
-  deleteRoom,
-  deleteUnavailability,
-  saveProperty,
-  saveRoom,
-  saveUnavailability,
-} from "@/lib/host.functions";
+import { deleteRoom, saveProperty, saveRoom } from "@/lib/host.functions";
 import { rebrand } from "@/lib/brand";
 
+// "records" and "cleaning" moved (Settings, Housekeeping); old links still open the page.
 const FOCUS = ["property", "checkin", "records", "rooms", "cleaning"] as const;
 
 export const Route = createFileRoute("/_authenticated/app/properties")({
@@ -58,7 +52,7 @@ export const Route = createFileRoute("/_authenticated/app/properties")({
       { title: rebrand("Properties · Latchkey host dashboard") },
       {
         name: "description",
-        content: "Manage your rooms, door details, house rules and cleaning windows.",
+        content: "Manage your property, rooms, door details and check-in.",
       },
     ],
   }),
@@ -475,165 +469,6 @@ function PropertyDialog({
   );
 }
 
-function WindowEditor({
-  propertyId,
-  rooms,
-  windows,
-}: {
-  propertyId: string;
-  rooms: Room[];
-  windows: Array<{
-    id: string;
-    room_id: string | null;
-    day_of_week: number | null;
-    start_time: string | null;
-    end_time: string | null;
-    reason: string | null;
-  }>;
-}) {
-  const save = useServerFn(saveUnavailability);
-  const remove = useServerFn(deleteUnavailability);
-  const qc = useQueryClient();
-  const [day, setDay] = useState("2");
-  const [roomId, setRoomId] = useState("all");
-  const [start, setStart] = useState("10:00");
-  const [end, setEnd] = useState("15:00");
-  const [reason, setReason] = useState("Cleaning");
-  const [busy, setBusy] = useState(false);
-
-  async function add() {
-    setBusy(true);
-    try {
-      await save({
-        data: {
-          property_id: propertyId,
-          room_id: roomId === "all" ? null : roomId,
-          reason: reason.trim() || null,
-          day_of_week: Number(day),
-          start_time: start,
-          end_time: end,
-          starts_at: null,
-          ends_at: null,
-        },
-      });
-      await qc.invalidateQueries({ queryKey: ["board"] });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : common.errorBody);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function drop(id: string) {
-    await remove({ data: { id } });
-    await qc.invalidateQueries({ queryKey: ["board"] });
-  }
-
-  return (
-    <section className="card-soft p-5">
-      <h2 className="text-lg">{copy.cleaning}</h2>
-
-      {windows.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">{copy.noWindows}</p>
-      ) : (
-        <ul className="mt-3 divide-y divide-border">
-          {windows.map((w) => (
-            <li key={w.id} className="flex items-center gap-3 py-3 text-sm">
-              <span className="min-w-0 flex-1">
-                {copy.weekly} {DAYS[w.day_of_week ?? 0]} · {formatUkTime(w.start_time)}–
-                {formatUkTime(w.end_time)} ·{" "}
-                {w.room_id
-                  ? (rooms.find((r) => r.id === w.room_id)?.display_name ?? copy.wholeHouse)
-                  : copy.wholeHouse}
-                {w.reason ? ` · ${w.reason}` : ""}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => drop(w.id)}
-                aria-label={`${common.remove} window`}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-[repeat(4,minmax(0,1fr))_auto] sm:items-end">
-        <div className="space-y-1.5">
-          <Label>Day</Label>
-          <Select value={day} onValueChange={setDay}>
-            <SelectTrigger className="h-11">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DAYS.map((d, i) => (
-                <SelectItem key={d} value={String(i)}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Room</Label>
-          <Select value={roomId} onValueChange={setRoomId}>
-            <SelectTrigger className="h-11">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{copy.wholeHouse}</SelectItem>
-              {rooms.map((r) => (
-                <SelectItem key={r.id} value={r.id}>
-                  {r.display_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ws">From</Label>
-          <Input
-            id="ws"
-            type="time"
-            className="h-11"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="we">Until</Label>
-          <Input
-            id="we"
-            type="time"
-            className="h-11"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-          />
-        </div>
-        <Button className="h-11" onClick={add} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-          {copy.addWindow}
-        </Button>
-      </div>
-
-      <div className="mt-3">
-        <Label htmlFor="wr" className="sr-only">
-          Reason
-        </Label>
-        <Input
-          id="wr"
-          className="h-11"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="What is this window for?"
-        />
-      </div>
-    </section>
-  );
-}
-
 function PropertiesPage() {
   const workspace = useWorkspace();
   const propertyList = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
@@ -672,14 +507,6 @@ function PropertiesPage() {
 
   const property = board.data?.property as Property | null;
   const rooms = (board.data?.rooms ?? []) as Room[];
-  const windows = (board.data?.windows ?? []) as Array<{
-    id: string;
-    room_id: string | null;
-    day_of_week: number | null;
-    start_time: string | null;
-    end_time: string | null;
-    reason: string | null;
-  }>;
 
   async function dropRoom(id: string) {
     try {
@@ -698,6 +525,8 @@ function PropertiesPage() {
         actions={
           <>
             <PropertyPicker properties={propertyList} value={selectedId} onChange={select} />
+            {/* Experimental (Latchkey admin switches it on): fill this property in from the host's own listings. */}
+            {property ? <ListingImportButton property={property} rooms={rooms} /> : null}
             <Button variant="outline" onClick={() => setPropDialog(true)}>
               {common.edit}
             </Button>
@@ -755,16 +584,24 @@ function PropertiesPage() {
         />
         </div>
       ) : null}
-      {property ? (
-        <div id="property-kiosk-rest" className="scroll-mt-24 rounded-2xl">
-          <KioskRestSettings property={property as unknown as { id: string; short_code: string; kiosk_rest?: unknown; quiet_hours_start?: string | null; quiet_hours_end?: string | null }} />
-        </div>
-      ) : null}
-      {property ? (
-        <div id="property-records" className="scroll-mt-24 rounded-2xl">
-          <GuestRecordsSettings property={property as unknown as { id: string; guest_records?: unknown; country_code?: string | null }} />
-        </div>
-      ) : null}
+      {/* Moved: guest records and the kiosk at rest to Settings, cleaning times to Housekeeping. */}
+      <nav aria-label={copy.elsewhereTitle} className="card-soft p-5">
+        <h2 className="text-lg">{copy.elsewhereTitle}</h2>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+          {([
+            ["records", "/app/settings", { focus: "records" }],
+            ["kioskRest", "/app/settings", { focus: "kioskRest" }],
+            ["schedule", "/app/housekeeping", { focus: "schedule" }],
+          ] as const).map(([key, to, search]) => (
+            <li key={key}>
+              <Link to={to} search={search} className="flex h-full flex-col rounded-xl border border-border p-3 text-sm hover:bg-secondary">
+                <span className="font-medium">{copy.elsewhere[key]![0]}</span>
+                <span className="text-muted-foreground">{copy.elsewhere[key]![1]}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       <section id="property-rooms" className="scroll-mt-24 space-y-3 rounded-2xl">
         <div className="flex items-center justify-between">
@@ -775,6 +612,8 @@ function PropertiesPage() {
           </Button>
         </div>
 
+        {/* What sharing a room's calendar does, said once for every room below. */}
+        {rooms.length ? <RoomFeedNote /> : null}
         {rooms.length === 0 ? (
           <EmptyState icon={BedDouble} title={copy.noRooms} />
         ) : (
@@ -815,9 +654,6 @@ function PropertiesPage() {
         )}
       </section>
 
-      <div id="property-cleaning" className="scroll-mt-24 rounded-2xl">
-        <WindowEditor propertyId={selectedId} rooms={rooms} windows={windows} />
-      </div>
 
       {roomDialog.open ? (
         <RoomDialog

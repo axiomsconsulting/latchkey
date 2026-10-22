@@ -7,7 +7,18 @@ import { Switch } from "@/components/ui/switch";
 import { feedCopy as copy } from "@/content/copy";
 import { getRoomFeed, setRoomFeed } from "@/lib/feed.functions";
 
-/** Lets the host share this room's direct bookings as a calendar link. */
+/** What a room's shared calendar is for and what it holds: once, above the list of rooms. */
+export function RoomFeedNote() {
+  return (
+    <div className="rounded-2xl border border-border bg-secondary/30 p-4 text-sm">
+      <p className="font-medium">{copy.title}</p>
+      <p className="mt-1 text-muted-foreground">{copy.body}</p>
+      <p className="mt-1 text-muted-foreground">{copy.detail}</p>
+    </div>
+  );
+}
+
+/** Lets the host share this room's direct bookings as a calendar link (explained once by RoomFeedNote). */
 export function RoomFeedPanel({ roomId, roomName }: { roomId: string; roomName: string }) {
   const qc = useQueryClient();
   const get = useServerFn(getRoomFeed);
@@ -39,10 +50,8 @@ export function RoomFeedPanel({ roomId, roomName }: { roomId: string; roomName: 
         />
         {copy.enable}
       </label>
-      <p className="mt-1 text-sm text-muted-foreground">{copy.body}</p>
       {url ? (
         <div className="mt-2 space-y-2">
-          <p className="text-xs text-muted-foreground">{copy.detail}</p>
           <code className="block truncate rounded-xl bg-surface px-3 py-2 text-xs">{url}</code>
           <div className="flex flex-wrap gap-2">
             <Button

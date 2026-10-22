@@ -21,6 +21,8 @@ export type Job = {
   metric: string;
   /** Can the super admin run it now? */
   runnable: boolean;
+  /** Experimental: off until the super admin switches it on. */
+  startsOff?: boolean;
 };
 
 export const JOBS: Job[] = branded([
@@ -124,6 +126,15 @@ export const JOBS: Job[] = branded([
     metric: "api:request",
     runnable: false,
   },
+  {
+    key: "listing_import",
+    name: "Listing import with Firecrawl (experimental)",
+    kind: "on_use",
+    what: "Reads hosts' own public listing pages on Airbnb, Booking.com, Vrbo, Agoda and Homestay through Firecrawl (FIRECRAWL_API_KEY, paid per page) so they can add their property, rooms and photos. Off: the import button doesn't show.",
+    metric: "firecrawl:scrape",
+    runnable: false,
+    startsOff: true,
+  },
 ]);
 
 export type JobSetting = { key: string; enabled: boolean; every_minutes: number | null; last_run_at: string | null };
@@ -131,7 +142,7 @@ export type JobSetting = { key: string; enabled: boolean; every_minutes: number 
 /** Whether a scheduled job should run now, given its switch and last run. */
 export function jobDue(job: Job, s: JobSetting | undefined, now: Date = new Date()): boolean {
   if (s && !s.enabled) return false;
-  if (job.kind !== "scheduled") return s ? s.enabled : true;
+  if (job.kind !== "scheduled") return s ? s.enabled : !job.startsOff;
   const every = s?.every_minutes ?? job.defaultEvery ?? 0;
   if (!s?.last_run_at) return true;
   // A minute's grace so a run every 30 minutes isn't skipped by a few seconds.

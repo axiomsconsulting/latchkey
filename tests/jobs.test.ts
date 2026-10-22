@@ -19,6 +19,11 @@ describe("routines", () => {
     expect(jobDue(ai, { key: "ai_id_reading", enabled: false, every_minutes: null, last_run_at: null }, now)).toBe(false);
     expect(jobDue(ai, undefined, now)).toBe(true);
   });
+  it("keeps experimental routines off until switched on", () => {
+    const listing = JOBS.find((j) => j.key === "listing_import")!;
+    expect(jobDue(listing, undefined, now)).toBe(false);
+    expect(jobDue(listing, { key: "listing_import", enabled: true, every_minutes: null, last_run_at: null }, now)).toBe(true);
+  });
   it("lists each routine once", () => {
     expect(new Set(JOBS.map((j) => j.key)).size).toBe(JOBS.length);
   });

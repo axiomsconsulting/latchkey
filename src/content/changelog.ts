@@ -32,6 +32,20 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.61.0",
+    date: "2026-10-23",
+    title: "Housekeeping schedule and listing import",
+    items: [
+      { kind: "new", area: "Housekeeping", text: "The day at a glance: every room on one timeline, from the guest leaving to the next arriving, with your cleaning and unavailable times over it and a line at the time now. Tap a room to go to its card." },
+      { kind: "improved", area: "Housekeeping", text: "Cleaning and unavailable times moved from Properties to Housekeeping → Schedule: your standard times, the week day by day (tap a day to see it on the board), one-off windows, and adding a window for one day or every day. Each room's card shows its windows for the day." },
+      { kind: "new", area: "Settings", text: "Import from your listings (experimental): paste links to your own Airbnb, Booking.com, Vrbo, Agoda or Homestay listings and Latchkey reads each public page, showing its progress and what it found, then lets you choose which details, rooms, photos and house rules to add." },
+      { kind: "improved", area: "Settings", text: "Who's staying and ID records moved to Settings → Guests, and Kiosk at rest to Settings → Look, with a property switcher at the top of Settings. Properties links to their new homes." },
+      { kind: "improved", area: "Settings", text: "Properties explains sharing a room's calendar once, above the rooms, instead of under every room." },
+      { admin: true, kind: "new", area: "Settings", text: "Latchkey admin → Integrations → Listing import (Firecrawl): needs FIRECRAWL_API_KEY; off until switched on (also in Routines). Each page read is counted as firecrawl:scrape." },
+      { admin: true, kind: "improved", area: "Settings", text: "The Latchkey admin tab left Settings: demo / live switches and sample data for the business you're viewing are now in Latchkey admin → Businesses." },
+    ],
+  },
+  {
     version: "0.60.0",
     date: "2026-10-22",
     title: "Door tablet button size",

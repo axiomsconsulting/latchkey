@@ -127,7 +127,7 @@ export function OmniSearch({ pages, className }: { pages: Array<{ id: string; la
     for (const [key, name] of Object.entries(themeStudio.logoNames)) out.push({ kind: "logo", id: `logo-${key}`, title: name, subtitle: copy.logoChoice, href: "/app/settings?focus=theme", keywords: "logo" });
     if (superAdmin) {
       out.push({ kind: "logo", id: "logo-site", title: copy.siteLogo, subtitle: adminCopy.navLabel, href: "/app/admin", keywords: "logo brand favicon app icon white label" });
-      for (const k of INTEGRATION_KEYS) out.push({ kind: "integration", id: `int-${k}`, title: integrationsCopy.items[k].name, subtitle: copy.demoLive, href: "/app/settings?focus=integrations", keywords: "integration demo live switch" });
+      for (const k of INTEGRATION_KEYS) out.push({ kind: "integration", id: `int-${k}`, title: integrationsCopy.items[k].name, subtitle: copy.demoLive, href: "/app/admin?tab=hosts", keywords: "integration demo live switch" });
     }
     return out;
   }, [pages, superAdmin]);

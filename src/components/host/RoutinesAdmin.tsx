@@ -56,7 +56,7 @@ function RoutineCard({ job, row, uses, costs }: { job: Job; row: RoutineRow | un
   const run = useServerFn(runRoutineNow);
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
-  const enabled = row?.enabled ?? true;
+  const enabled = row?.enabled ?? !job.startsOff;
   const every = row?.every_minutes ?? job.defaultEvery ?? null;
   const credits = creditsFor(job, uses, costs);
   const intervals = Object.keys(copy.intervals)

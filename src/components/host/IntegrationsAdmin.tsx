@@ -7,8 +7,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { common, integrationsCopy as copy } from "@/content/copy";
-import { connectTelegramWebhook, getIntegrationStatus, makeVapidKeys, saveIntegrationSettings, sendTestSms } from "@/lib/admin.functions";
+import { connectTelegramWebhook, getIntegrationStatus, makeVapidKeys, saveIntegrationSettings, saveRoutine, sendTestSms } from "@/lib/admin.functions";
 
 function Status({ ok }: { ok: boolean }) {
   return ok ? (
@@ -42,6 +43,7 @@ export function IntegrationsAdmin() {
   const tgFn = useServerFn(connectTelegramWebhook);
   const vapidFn = useServerFn(makeVapidKeys);
   const smsFn = useServerFn(sendTestSms);
+  const routineFn = useServerFn(saveRoutine);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["integration-status"], queryFn: () => statusFn() });
   const [address, setAddress] = useState("");
@@ -115,6 +117,19 @@ export function IntegrationsAdmin() {
             </Button>
           </div>
         ) : null}
+      </Block>
+
+      <Block title={copy.firecrawl.title} body={copy.firecrawl.body} ok={s.firecrawl.keySet}>
+        <label className="flex items-center gap-3 text-sm">
+          <Switch
+            checked={s.firecrawl.enabled}
+            disabled={busy !== null || (!s.firecrawl.keySet && !s.firecrawl.enabled)}
+            onCheckedChange={(v) => void run("firecrawl", () => routineFn({ data: { key: "listing_import", enabled: v, everyMinutes: null } }), copy.firecrawl.switched(v))}
+            aria-label={copy.firecrawl.title}
+          />
+          {s.firecrawl.enabled ? copy.firecrawl.on : copy.firecrawl.off}
+          {!s.firecrawl.keySet ? <span className="text-muted-foreground">· {copy.firecrawl.needsKey}</span> : null}
+        </label>
       </Block>
 
       <Block title={copy.inbound.title} body={copy.inbound.body} ok={s.inbound.secretSet && !!s.inbound.address}>

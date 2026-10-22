@@ -534,6 +534,14 @@ export const platformMsgCopy = branded({
 
 /** Latchkey admin: platform-wide integrations. */
 export const integrationsCopy = branded({
+  firecrawl: {
+    title: "Listing import (Firecrawl, experimental)",
+    body: "Hosts paste links to their own listings on Airbnb, Booking.com, Vrbo, Agoda or Homestay, and Latchkey reads the public page through Firecrawl to fill in their property, rooms and photos for them to check. Each page read costs Firecrawl credits. Add FIRECRAWL_API_KEY in Lovable Cloud → Secrets, then switch it on here (or in Routines).",
+    on: "On for every host",
+    off: "Off",
+    needsKey: "Add FIRECRAWL_API_KEY first.",
+    switched: (on: boolean) => (on ? "Listing import is on for hosts." : "Listing import is off."),
+  },
   title: "Integrations",
   body: "Keys live in Lovable Cloud → Secrets, never here. This shows what's set up and the one-time steps left. Each paid or free channel can also be switched off in Routines.",
   ready: "Set up",
@@ -827,8 +835,15 @@ export const bookings = branded({
 
 export const properties = branded({
   title: "Properties",
-  subtitle: "Your rooms, door details and cleaning windows.",
+  subtitle: "Your property, its rooms and how guests check in.",
   addProperty: "Add property",
+  elsewhereTitle: "Also for this property",
+  elsewhere: {
+    records: ["Who's staying and ID records", "Settings → Guests"],
+    kioskRest: ["Kiosk at rest (night light, clocks, screen off)", "Settings → Look"],
+    schedule: ["Cleaning and unavailable times", "Housekeeping → Schedule"],
+  } as Record<string, [string, string]>,
+  feedTitle: "Room calendars",
   addRoom: "Add room",
   noProperties: "No properties yet. Add one, or load the demo rooms to have a look around.",
   noRooms: "No rooms in this property yet.",
@@ -886,6 +901,7 @@ export const settings = branded({
   demoTitle: "Demo content",
   demoBody:
     "Load The Hill Suites in Amersham: three rooms, bookings across four channels, and Tuesday and Thursday cleaning windows.",
+  demoOwnerBody: "Your business still has the sample rooms and bookings from the demo. Remove them when you're ready to run your own.",
   loadDemo: "Load demo rooms",
   resetDemo: "Reset demo dates",
   removeDemo: "Remove demo data",
@@ -1746,8 +1762,69 @@ export const calendarUi = branded({
   },
 });
 
+export const listingImportCopy = branded({
+  open: "Import from your listings",
+  openHint: "Experimental: fill in this property and its rooms from your own public listings.",
+  title: "Import from your listings",
+  experimental: "Experimental",
+  intro: "Paste the links to your own listings. Latchkey reads each public page, the way a guest would see it, and shows you what it found before anything is added.",
+  linksLabel: "Links to your listings (one per line, or several at once)",
+  linksPlaceholder: "https://www.airbnb.co.uk/rooms/12345678\nhttps://www.booking.com/hotel/gb/your-place.html",
+  add: "Add links",
+  sites: "Works with",
+  notListing: "This looks like a search or home page, not your listing.",
+  unknown: "Not a booking site Latchkey reads. It will be skipped.",
+  shows: "Shows publicly",
+  hidden: "Not public (add these yourself)",
+  remove: "Remove link",
+  prices: "Also read prices for these dates",
+  pricesHelp: "Most sites only show a price for chosen dates. Prices are shown for reference; Latchkey doesn't manage your rates.",
+  checkIn: "Arriving",
+  checkOut: "Leaving",
+  read: (n: number) => (n === 1 ? "Read 1 page" : `Read ${n} pages`),
+  reading: (platform: string) => `Reading your ${platform} page with Firecrawl`,
+  usually: "usually 10 to 40 seconds",
+  queued: "Waiting",
+  done: "Read",
+  failed: "Couldn't read this page",
+  retry: "Try again",
+  overall: (done: number, total: number) => `${done} of ${total} pages read`,
+  found: "Found",
+  nothingFound: "Nothing useful on this page. Check it's your listing and that it's public.",
+  review: "Review what was found",
+  back: "Back",
+  propertyTitle: "Your property",
+  current: (v: string) => `Now: ${v}`,
+  empty: "not set",
+  fields: { name: "Name", address: "Address", postcode: "Postcode", country: "Country", checkIn: "Check-in from", checkOut: "Check-out by", parking: "Parking notes" } as Record<string, string>,
+  rules: (n: number) => `Add ${n} house rules to your stay guide`,
+  rulesHelp: "Only if your guide's House rules section is still empty.",
+  coverTitle: "Cover photo for your guest pages",
+  noCover: "Keep my cover",
+  roomsTitle: "Rooms",
+  roomNew: "New room",
+  roomUpdate: (name: string) => `Updates your room "${name}"`,
+  roomName: "Room name",
+  sleeps: "Sleeps",
+  ensuite: "En-suite",
+  description: "Description",
+  amenities: (n: number) => (n === 1 ? "1 amenity" : `${n} amenities`),
+  photo: "Room photo",
+  noPhoto: "No photo",
+  price: (amount: string, site: string) => `Listed at ${amount} on ${site}. For reference only: Latchkey doesn't store rates.`,
+  apply: (n: number) => (n === 1 ? "Add 1 change" : `Add ${n} changes`),
+  applying: "Adding to your property…",
+  applied: (r: { roomsAdded: number; roomsUpdated: number; photos: number }) =>
+    [r.roomsAdded ? `${r.roomsAdded} room${r.roomsAdded === 1 ? "" : "s"} added` : null, r.roomsUpdated ? `${r.roomsUpdated} updated` : null, r.photos ? `${r.photos} photo${r.photos === 1 ? "" : "s"} saved` : null]
+      .filter(Boolean)
+      .join(", ") || "Your property is up to date",
+  photosSkipped: (n: number) => `${n} photo${n === 1 ? "" : "s"} couldn't be copied; add ${n === 1 ? "it" : "them"} on Stay guides.`,
+  finished: "Done. Check your rooms below; you can change anything at any time.",
+  close: "Close",
+});
+
 export const feedCopy = branded({
-  title: "Share this room's Latchkey calendar",
+  title: "Share each room's Latchkey calendar",
   body:
     "Only needed if you take direct bookings in Latchkey. If your platforms already sync with each other, leave this off.",
   detail:
@@ -2507,6 +2584,10 @@ export const feedbackCopy = branded({
 
 /** The super admin's area. */
 export const adminCopy = branded({
+  viewingTitle: (name: string) => `The business you're viewing${name ? `: ${name}` : ""}`,
+  viewingBody: "Latchkey's own switches for this business: whether each connection is in demo or live, and its sample data. Use \"View as host\" below to open another business.",
+  sampleLoaded: "Demo rooms loaded",
+  sampleRemoved: "Demo content removed",
   navLabel: "Latchkey admin",
   title: "Latchkey admin",
   subtitle: "Every business, billing, trial checks, feedback, announcements and site settings.",
@@ -3124,27 +3205,28 @@ export const roomPhotoCopy = branded({
 /** The Settings menu: its groups (tabs) and which section sits in which. */
 export const settingsMenuCopy = branded({
   label: "Settings menu",
-  groups: { business: "Business", guests: "Guests", money: "Money", look: "Look", apps: "Alerts and apps", admin: "Latchkey admin" } as Record<string, string>,
+  groups: { business: "Business", guests: "Guests", money: "Money", look: "Look", apps: "Alerts and apps" } as Record<string, string>,
   sections: {
     business: ["Business details", "business"],
     group: ["Group brand", "business"],
     team: ["Team", "business"],
     support: ["Support access", "business"],
     domain: ["Own web address", "business"],
+    demo: ["Sample data", "business"],
     messages: ["Booking-site messages", "guests"],
     labels: ["Booking sites", "guests"],
+    records: ["Who's staying and ID records", "guests"],
     privacy: ["Privacy and retention", "guests"],
     extras: ["Extras price list", "money"],
     payments: ["Card payments", "money"],
     invoices: ["Invoices", "money"],
     theme: ["Look and feel", "look"],
+    kioskRest: ["Kiosk at rest", "look"],
     alerts: ["Alerts", "apps"],
     api: ["API & MCP", "apps"],
     shortcuts: ["Phone shortcuts", "apps"],
     shortcuts2: ["More shortcuts", "apps"],
-    adminLink: ["Latchkey admin", "admin"],
-    integrations: ["Demo / live", "admin"],
-    demo: ["Sample data", "admin"],
+    adminLink: ["Latchkey admin", "apps"],
   } as Record<string, [string, string]>,
 });
 
@@ -3212,8 +3294,9 @@ export const omniCopy = branded({
     api: "mcp developers key claude chatgpt",
     shortcuts: "phone home screen",
     shortcuts2: "phone home screen",
-    integrations: "demo live switches id email",
     demo: "sample data demo rooms",
+    records: "who's staying adults children id photo face register keep days",
+    kioskRest: "night light screensaver clock qr screen off tablet",
   } as Record<string, string>,
 });
 
@@ -3258,6 +3341,47 @@ export const housekeepingCopy = branded({
   you: "you",
   lastChange: (status: string, who: string | null, at: string) => (who ? `${status}: ${who} at ${at}` : `${status} at ${at}`),
   suggested: "From today's bookings",
+  subtitleFull: "The day's turnovers on one timeline with your cleaning windows, where each room has got to, and the weekly schedule behind it.",
+  plan: {
+    title: "The day at a glance",
+    body: "Each room from the guest leaving to the next arriving, with the cleaning and unavailable times. Tap a room to go to its card.",
+    wholeHouse: "Whole property",
+    now: "Now",
+    legend: { guest_out: "Guest leaving", free: "Free to clean", window: "Cleaning or unavailable", guest_in: "Guest arriving", staying: "Guest staying", closed: "Closed" } as Record<string, string>,
+    outAt: (t: string) => `Out ${t}`,
+    dueAt: (t: string) => `Ready by ${t}`,
+  },
+  windowLine: (reason: string | null, start: string, end: string, house: boolean) => `${reason || (house ? "House cleaning" : "Room cleaning")} ${start}–${end}${house ? " (whole property)" : ""}`,
+  schedule: {
+    title: "Schedule",
+    body: "Your standard times and the weekly cleaning and unavailable times. They show on the timeline above and in guests' stay guides; check-in isn't offered for a room during its windows.",
+    times: "Standard times",
+    checkOut: "Check-out by",
+    checkIn: "Check-in from",
+    quiet: "Quiet hours",
+    editTimes: "Change times",
+    week: "Every week",
+    oneOff: "One-off",
+    none: "Nothing this day",
+    goTo: (day: string) => `Show ${day} on the board`,
+    add: "Add a window",
+    day: "Day",
+    everyDay: "Every day",
+    room: "Room",
+    wholeHouse: "Whole property",
+    from: "From",
+    until: "Until",
+    reason: "What for",
+    reasons: ["Cleaning", "Deep clean", "Laundry", "Maintenance", "Owner use"],
+    addCta: "Add",
+    added: "Added to the schedule",
+    removed: "Removed from the schedule",
+    remove: (what: string) => `Remove ${what}`,
+    badTimes: "Until must be after From.",
+    viewOnly: "Owners and managers change the schedule.",
+    days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  },
 });
 
 export const reportsCopy = branded({

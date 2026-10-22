@@ -145,3 +145,115 @@ export function boardOrder(cards: BoardCard[]): BoardCard[] {
   const rank = (c: BoardCard) => (c.arriving && c.status !== "ready" ? 0 : c.status && c.status !== "ready" ? 1 : c.status === "ready" ? 2 : 3);
   return [...cards].sort((a, b) => rank(a) - rank(b) || (a.dueBy ?? "99").localeCompare(b.dueBy ?? "99") || a.roomName.localeCompare(b.roomName));
 }
+
+/* -------------------------------- schedule -------------------------------- */
+
+/**
+ * Cleaning and unavailable times (unavailability_windows): weekly ones (a
+ * day of the week and hours) and one-off ones (from a moment to a moment).
+ * The board shows each day's windows on a timeline beside the rooms' check-out
+ * and check-in times, and in the weekly schedule underneath.
+ */
+export type ScheduleWindow = {
+  id: string;
+  room_id: string | null;
+  day_of_week: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  reason: string | null;
+};
+
+/** One window as it falls on a day: "HH:MM" to "HH:MM", for a room or the whole property (roomId null). */
+export type DayWindow = { id: string; roomId: string | null; start: string; end: string; reason: string | null; weekly: boolean };
+
+const hhmm = (t: string) => t.slice(0, 5);
+const dowOf = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay();
+function zoned(instant: string, tz: string): { date: string; time: string } {
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const p = Object.fromEntries(f.formatToParts(new Date(instant)).map((x) => [x.type, x.value]));
+  return { date: `${p["year"]}-${p["month"]}-${p["day"]}`, time: `${p["hour"]}:${p["minute"]}` };
+}
+
+/** The windows that fall on `day` (in the property's time zone), earliest first. */
+export function windowsForDay(windows: ScheduleWindow[], day: string, tz: string): DayWindow[] {
+  const dow = dowOf(day);
+  const out: DayWindow[] = [];
+  for (const w of windows) {
+    if (w.day_of_week !== null && w.start_time && w.end_time) {
+      if (w.day_of_week === dow) out.push({ id: w.id, roomId: w.room_id, start: hhmm(w.start_time), end: hhmm(w.end_time), reason: w.reason, weekly: true });
+    } else if (w.starts_at && w.ends_at) {
+      const s = zoned(w.starts_at, tz);
+      const e = zoned(w.ends_at, tz);
+      if (s.date <= day && e.date >= day) {
+        out.push({ id: w.id, roomId: w.room_id, start: s.date === day ? s.time : "00:00", end: e.date === day ? e.time : "24:00", reason: w.reason, weekly: false });
+      }
+    }
+  }
+  return out.sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/** A room's windows on the day: its own and the whole property's. */
+export const roomWindows = (dayWindows: DayWindow[], roomId: string) => dayWindows.filter((w) => w.roomId === null || w.roomId === roomId);
+
+export const toMinutes = (t: string) => {
+  const [h = "0", m = "0"] = t.split(":");
+  return Number(h) * 60 + Number(m);
+};
+
+/** The hours the day's timeline covers: everything that happens, with an hour either side, at least 08:00–20:00. */
+export function dayAxis(input: { cards: BoardCard[]; windows: DayWindow[]; checkOut: string; checkIn: string }): { from: number; to: number } {
+  const times = [toMinutes(input.checkOut), toMinutes(input.checkIn), 8 * 60, 20 * 60];
+  for (const w of input.windows) times.push(toMinutes(w.start), toMinutes(w.end));
+  for (const c of input.cards) {
+    if (c.leaving?.check_out_time) times.push(toMinutes(c.leaving.check_out_time.slice(0, 5)));
+    if (c.dueBy) times.push(toMinutes(c.dueBy));
+  }
+  const from = Math.max(0, Math.floor((Math.min(...times) - 60) / 60) * 60);
+  const to = Math.min(24 * 60, Math.ceil((Math.max(...times) + 60) / 60) * 60);
+  return { from, to };
+}
+
+export type LaneSegment = { kind: "guest_out" | "window" | "free" | "guest_in" | "staying" | "closed"; from: number; to: number; label?: string | null };
+
+/**
+ * One room's day on the timeline: the leaving guest until they check out,
+ * the windows, the free time for cleaning in between, and the arriving
+ * guest from their check-in. Minutes from midnight, clipped to the axis.
+ */
+export function roomLane(card: BoardCard, windows: DayWindow[], o: { checkOut: string; checkIn: string; axis: { from: number; to: number } }): { segments: LaneSegment[]; out: number | null; due: number | null } {
+  const { from, to } = o.axis;
+  const clip = (s: LaneSegment): LaneSegment | null => {
+    const a = Math.max(from, s.from);
+    const b = Math.min(to, s.to);
+    return b > a ? { ...s, from: a, to: b } : null;
+  };
+  const out = card.leaving ? toMinutes((card.leaving.check_out_time ?? o.checkOut).slice(0, 5)) : null;
+  const due = card.arriving ? toMinutes(card.dueBy ?? o.checkIn) : null;
+  const segs: Array<LaneSegment | null> = [];
+  if (card.occupancy === "staying") segs.push(clip({ kind: "staying", from, to }));
+  else if (card.occupancy === "closed") segs.push(clip({ kind: "closed", from, to }));
+  else {
+    if (out !== null) segs.push(clip({ kind: "guest_out", from, to: out }));
+    segs.push(clip({ kind: "free", from: out ?? from, to: due ?? to }));
+    if (due !== null) segs.push(clip({ kind: "guest_in", from: due, to }));
+  }
+  for (const w of windows) segs.push(clip({ kind: "window", from: toMinutes(w.start), to: toMinutes(w.end), label: w.reason }));
+  return { segments: segs.filter((s): s is LaneSegment => !!s), out, due };
+}
+
+/** The weekly schedule as seven days (Monday first), each with its windows in time order. */
+export function weekGrid(windows: ScheduleWindow[]): Array<{ dow: number; windows: ScheduleWindow[] }> {
+  return [1, 2, 3, 4, 5, 6, 0].map((dow) => ({
+    dow,
+    windows: windows.filter((w) => w.day_of_week === dow && w.start_time && w.end_time).sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? "")),
+  }));
+}
+
+/** The next date on or after `day` that falls on `dow` (0 = Sunday). */
+export function nextOnWeekday(day: string, dow: number): string {
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + ((dow - d.getUTCDay() + 7) % 7));
+  return d.toISOString().slice(0, 10);
+}

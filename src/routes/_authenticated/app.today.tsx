@@ -582,7 +582,7 @@ function CleaningToday({
         {today.map((w) => (
           <li key={w.id}>
             <Peek className="block" content={<p>{w.reason ?? "Cleaning"} · {w.room_id ? roomName(w.room_id) : copy.wholeHouse}</p>}>
-              <Link to="/app/properties" search={{ focus: "cleaning" }} className={rowClass}>
+              <Link to="/app/housekeeping" search={{ focus: "schedule" }} className={rowClass}>
                 <span className="w-28 shrink-0 text-sm tabular-nums">
                   {formatUkTime(w.start_time)}–{formatUkTime(w.end_time)}
                 </span>
@@ -997,9 +997,9 @@ function KeySettings({ isUk }: { isUk: boolean }) {
   const links: Array<{ key: string; to: string; search?: Record<string, string> }> = [
     { key: "property", to: "/app/properties", search: { focus: "property" } },
     { key: "checkin", to: "/app/properties", search: { focus: "checkin" } },
-    { key: "records", to: "/app/properties", search: { focus: "records" } },
+    { key: "records", to: "/app/settings", search: { focus: "records" } },
     { key: "rooms", to: "/app/properties", search: { focus: "rooms" } },
-    { key: "cleaning", to: "/app/properties", search: { focus: "cleaning" } },
+    { key: "cleaning", to: "/app/housekeeping", search: { focus: "schedule" } },
     { key: "alerts", to: "/app/settings", search: { focus: "alerts" } },
     { key: "platformMessages", to: "/app/settings", search: { focus: "messages" } },
     { key: "team", to: "/app/settings", search: { focus: "team" } },

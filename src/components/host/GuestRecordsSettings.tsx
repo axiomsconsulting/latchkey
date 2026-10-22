@@ -47,7 +47,7 @@ export function GuestRecordsSettings({
     setBusy(true);
     try {
       await save({ data: { propertyId: property.id, records: form } });
-      await qc.invalidateQueries({ queryKey: ["board"] });
+      await Promise.all([qc.invalidateQueries({ queryKey: ["board"] }), qc.invalidateQueries({ queryKey: ["workspace"] })]);
       toast.success(checkinSettings.saved);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);

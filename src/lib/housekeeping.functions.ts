@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { addDays } from "./dates";
-import { READINESS, type BoardStay, type ReadinessRow } from "./housekeeping";
+import { READINESS, type BoardStay, type ReadinessRow, type ScheduleWindow } from "./housekeeping";
 
 type Loose = { from: (t: string) => any };
 const uuid = z.string().uuid();
@@ -21,12 +21,12 @@ export const getHousekeepingBoard = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ propertyId: uuid, day: isoDay.optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as Loose;
-    const { data: p } = await sb.from("properties").select("id, host_id, name, timezone, default_check_in_time").eq("id", data.propertyId).maybeSingle();
+    const { data: p } = await sb.from("properties").select("id, host_id, name, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end").eq("id", data.propertyId).maybeSingle();
     if (!p) throw new Error("Property not found.");
     const tz = (p.timezone as string | null) ?? "Europe/London";
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
     const day = data.day ?? today;
-    const [{ data: rooms }, { data: stays }, readiness, { data: jobs }, { data: trades }] = await Promise.all([
+    const [{ data: rooms }, { data: stays }, readiness, { data: jobs }, { data: trades }, { data: windows }] = await Promise.all([
       sb.from("rooms").select("id, display_name, sort_order").eq("property_id", p.id).neq("active", false).order("sort_order"),
       sb
         .from("bookings")
@@ -38,6 +38,8 @@ export const getHousekeepingBoard = createServerFn({ method: "GET" })
       sb.from("room_readiness").select("room_id, status, assignee, due_time, note, updated_at, updated_by_name").eq("property_id", p.id).eq("day", day),
       sb.from("service_jobs").select("room_id").eq("property_id", p.id).not("room_id", "is", null).not("status", "in", DONE).is("archived_at", null),
       sb.from("trades").select("name, category").eq("host_id", p.host_id).limit(50),
+      // The cleaning and unavailable times, weekly and one-off: the board's timeline and schedule.
+      sb.from("unavailability_windows").select("id, room_id, day_of_week, start_time, end_time, starts_at, ends_at, reason").eq("property_id", p.id),
     ]);
     const openJobs: Record<string, number> = {};
     for (const j of (jobs ?? []) as Array<{ room_id: string }>) openJobs[j.room_id] = (openJobs[j.room_id] ?? 0) + 1;
@@ -65,6 +67,11 @@ export const getHousekeepingBoard = createServerFn({ method: "GET" })
       prevDay: addDays(day, -1),
       nextDay: addDays(day, 1),
       defaultCheckIn: ((p.default_check_in_time as string | null) ?? "15:00").slice(0, 5),
+      defaultCheckOut: ((p.default_check_out_time as string | null) ?? "11:00").slice(0, 5),
+      quietStart: ((p.quiet_hours_start as string | null) ?? "22:00").slice(0, 5),
+      quietEnd: ((p.quiet_hours_end as string | null) ?? "07:00").slice(0, 5),
+      timezone: tz,
+      windows: (windows ?? []) as ScheduleWindow[],
       rooms: (rooms ?? []) as Array<{ id: string; display_name: string }>,
       stays: (stays ?? []) as BoardStay[],
       readiness: (readiness.error ? [] : (readiness.data ?? [])) as ReadinessRow[],

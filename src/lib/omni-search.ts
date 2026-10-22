@@ -94,7 +94,7 @@ export const AREA_PAGES: Record<string, string> = {
 };
 
 /** Settings sections that only Latchkey's admins see. */
-export const ADMIN_SETTINGS = new Set(["adminLink", "integrations", "demo"]);
+export const ADMIN_SETTINGS = new Set(["adminLink"]);
 
 /** A stay's dates for a result line: "12 Oct – 14 Oct 2026". */
 export function stayLine(checkIn: string, checkOut: string): string {

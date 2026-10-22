@@ -13,6 +13,7 @@ import { RoutinesAdmin } from "@/components/host/RoutinesAdmin";
 import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
 import { LaunchFunnel } from "@/components/host/LaunchFunnel";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
+import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
 import { DriveAdmin, StarterSectionsAdmin } from "@/components/host/GuideAdmin";
@@ -66,7 +67,8 @@ function AdminPage() {
   const fetchOverview = useServerFn(getAdminOverview);
   const isSuper = ws.data?.isSuperAdmin === true;
   const q = useQuery({ queryKey: ["admin-overview"], enabled: isSuper, queryFn: () => fetchOverview() });
-  const backFromDrive = !!(useSearch({ strict: false }) as { drive?: string }).drive;
+  const search = useSearch({ strict: false }) as { drive?: string; tab?: string };
+  const backFromDrive = !!search.drive;
 
   if (ws.isLoading) return <Skeleton className="mx-auto h-64 max-w-6xl rounded-2xl" />;
   if (!isSuper) return <EmptyState icon={ShieldCheck} title={copy.title} body={copy.notAdmin} />;
@@ -79,7 +81,7 @@ function AdminPage() {
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageHeader title={copy.title} subtitle={copy.subtitle} />
       {/* Back from connecting Google Drive: straight to Integrations, where the result shows. */}
-      <Tabs defaultValue={backFromDrive ? "integrations" : "overview"}>
+      <Tabs defaultValue={backFromDrive ? "integrations" : search.tab === "hosts" ? "hosts" : "overview"}>
         <TabsList className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
           <TabsTrigger value="overview" className="h-10 gap-2 rounded-xl px-4"><LayoutDashboard className="size-4" aria-hidden />{copy.tabOverview}</TabsTrigger>
           <TabsTrigger value="hosts" className="h-10 gap-2 rounded-xl px-4"><Building2 className="size-4" aria-hidden />{copy.tabHosts}</TabsTrigger>
@@ -99,7 +101,9 @@ function AdminPage() {
         <TabsContent value="overview" className="mt-4">
           {q.isLoading ? <Skeleton className="h-48 rounded-2xl" /> : <Overview hosts={hosts} pricing={pricing} />}
         </TabsContent>
-        <TabsContent value="hosts" className="mt-4">
+        <TabsContent value="hosts" className="mt-4 space-y-6">
+          {/* Demo / live and sample data for the business being viewed (moved here from Settings). */}
+          <AdminBusinessTools />
           {q.isLoading ? <Skeleton className="h-48 rounded-2xl" /> : <HostTable hosts={hosts} pricing={pricing} />}
         </TabsContent>
         <TabsContent value="flags" className="mt-4">

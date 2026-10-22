@@ -193,7 +193,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
   },
   settings: {
     label: "Settings",
-    // Grouped like the Settings menu tabs (settingsMenuCopy): business, guests, money, look, alerts and apps, Latchkey admin.
+    // Grouped like the Settings menu tabs (settingsMenuCopy): business, guests, money, look, alerts and apps.
     sections: [
       { id: "business", label: "Business details" },
       { id: "group", label: "Group brand" },
@@ -202,18 +202,19 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "domain", label: "Own web address" },
       { id: "messages", label: "Booking-site messages" },
       { id: "labels", label: "Booking sites" },
+      { id: "records", label: "Who's staying and ID records" },
       { id: "privacy", label: "Privacy" },
       { id: "extras", label: "Extras price list" },
       { id: "payments", label: "Card payments" },
       { id: "invoices", label: "Invoices" },
       { id: "theme", label: "Look and feel" },
+      { id: "kioskRest", label: "Kiosk at rest" },
       { id: "alerts", label: "Alerts" },
       { id: "api", label: "API & MCP" },
       { id: "shortcuts", label: "Subscription shortcut (phones)" },
       { id: "shortcuts2", label: "Register and activity shortcuts (phones)" },
       { id: "adminLink", label: "Latchkey admin link", locked: true },
-      { id: "integrations", label: "Demo / live switches (admins only)" },
-      { id: "demo", label: "Sample data (admins load; owners can remove)" },
+      { id: "demo", label: "Sample data (owners can remove)" },
     ],
   },
 };

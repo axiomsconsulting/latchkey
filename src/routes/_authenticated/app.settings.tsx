@@ -34,18 +34,20 @@ import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-dat
 import { TeamPanel } from "@/components/host/TeamPanel";
 import { DEMO_EMAIL } from "@/lib/demo-account";
 import { ChannelLabels } from "@/components/host/ChannelLabels";
-import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { PrivacySettings } from "@/components/host/PrivacySettings";
 import { GroupBrandSettings } from "@/components/host/GroupBrandSettings";
 import { InvoiceSettings } from "@/components/host/InvoiceSettings";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
-import { loadDemoData, removeDemoData, saveHost } from "@/lib/host.functions";
+import { removeDemoData, saveHost } from "@/lib/host.functions";
+import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
+import { KioskRestSettings } from "@/components/host/KioskRestSettings";
+import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
-const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "extras", "theme", "labels", "domain", "support", "integrations", "shortcuts", "shortcuts2", "adminLink"] as const;
+const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "records", "kioskRest", "extras", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
 /** The menu's groups, in order, with their icons (names in settingsMenuCopy). */
 const SETTINGS_GROUPS = [
   { id: "business", icon: Building2 },
@@ -53,9 +55,9 @@ const SETTINGS_GROUPS = [
   { id: "money", icon: CreditCard },
   { id: "look", icon: Palette },
   { id: "apps", icon: Bell },
-  { id: "admin", icon: ShieldCheck },
 ] as const;
-const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy"]);
+// Latchkey-wide and per-business admin switches (demo / live, sample data) live in Latchkey admin → Businesses.
+const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "records", "kioskRest"]);
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   // ?focus=<section> lands on that part of Settings.
@@ -87,11 +89,7 @@ function SettingsPage() {
   const { focus } = Route.useSearch();
   // The menu at the top: one tab per group; a link to a section opens its tab, then lands on it.
   const superAdmin = workspace.data?.isSuperAdmin === true;
-  const groupOf = (id: string): string => {
-    // Owners keep "remove sample data" with their business; the rest of that group is admin-only.
-    if (id === "demo" && !superAdmin) return "business";
-    return settingsMenuCopy.sections[id]?.[1] ?? "business";
-  };
+  const groupOf = (id: string): string => settingsMenuCopy.sections[id]?.[1] ?? "business";
   const [tab, setTab] = useState<string>(() => (focus ? (settingsMenuCopy.sections[focus]?.[1] ?? "business") : "business"));
   useEffect(() => {
     if (focus) setTab(groupOf(focus));
@@ -100,7 +98,6 @@ function SettingsPage() {
   useLandOn(focus ? (OWN_CARD.has(focus) ? `settings-${focus}` : `section-${focus}`) : null, !workspace.isLoading && !!focus && tab === groupOf(focus));
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
-  const load = useServerFn(loadDemoData);
   const drop = useServerFn(removeDemoData);
   const qc = useQueryClient();
 
@@ -116,8 +113,8 @@ function SettingsPage() {
   const propsList = (workspace.data?.properties ?? []) as Array<{ id: string; name: string; short_code: string; theme_config: unknown; country_code?: string | null }>;
   const homeCountry = propsList[0]?.country_code ?? "GB";
   const [phone, setPhone] = useState<{ country: string; national: string; valid: boolean; e164: string | null }>({ country: "GB", national: "", valid: true, e164: null });
-  const { selectedId } = useSelectedProperty(propsList);
-  const [demoBusy, setDemoBusy] = useState<"load" | "remove" | null>(null);
+  const { selectedId, select } = useSelectedProperty(propsList);
+  const [demoBusy, setDemoBusy] = useState<"remove" | null>(null);
 
   useEffect(() => {
     if (!host) return;
@@ -162,14 +159,13 @@ function SettingsPage() {
     }
   }
 
-  async function runDemo(action: "load" | "remove") {
+  async function runDemo(action: "remove") {
     if (!workspace.data) return;
     setDemoBusy(action);
     try {
-      if (action === "load") await load({ data: { hostId: workspace.data.hostId } });
-      else await drop({ data: { hostId: workspace.data.hostId } });
+      await drop({ data: { hostId: workspace.data.hostId } });
       await qc.invalidateQueries();
-      toast.success(action === "load" ? "Demo rooms loaded" : "Demo content removed");
+      toast.success("Demo content removed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
     } finally {
@@ -191,7 +187,7 @@ function SettingsPage() {
   const propertyCount = (workspace.data?.properties ?? []).length;
   const demo = (host as { contact_email?: string | null } | null)?.contact_email === DEMO_EMAIL;
 
-  const groups = SETTINGS_GROUPS.filter((g) => g.id !== "admin" || superAdmin);
+  const groups = SETTINGS_GROUPS;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -199,12 +195,16 @@ function SettingsPage() {
         title={copy.title}
         subtitle={copy.subtitle}
         actions={
-          <Button asChild variant="outline">
-            <Link to="/app/setup">
-              <Plus className="size-4" />
-              {propertyCount === 0 ? "Set up your rooms" : "Add property"}
-            </Link>
-          </Button>
+          <>
+            {/* Look and feel, extras, payments, guest records and the kiosk are set per property. */}
+            {propsList.length > 1 ? <PropertyPicker properties={propsList} value={selectedId} onChange={select} /> : null}
+            <Button asChild variant="outline">
+              <Link to="/app/setup">
+                <Plus className="size-4" />
+                {propertyCount === 0 ? "Set up your rooms" : "Add property"}
+              </Link>
+            </Button>
+          </>
         }
       />
 
@@ -401,11 +401,10 @@ function SettingsPage() {
         />
       ) : null}
       </Section>
-      {/* Latchkey admins only: going live, and sample data, are theirs to decide for each business. */}
-      <Section id="integrations">{workspace.data?.isSuperAdmin ? <IntegrationSwitches hostId={workspace.data.hostId} /> : null}</Section>
 
       <Section id="demo">
-      {workspace.data?.isSuperAdmin || (isOwner && hasDemo) ? (
+      {/* Owners can remove sample data; Latchkey admins load it from Latchkey admin → Businesses. */}
+      {isOwner && hasDemo ? (
       <section id="settings-demo" className="card-soft scroll-mt-24 p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
@@ -413,16 +412,10 @@ function SettingsPage() {
           </span>
           <div className="min-w-0">
             <h2 className="text-lg">{copy.demoTitle}</h2>
-            <p className="text-sm text-muted-foreground">{copy.demoBody}</p>
+            <p className="text-sm text-muted-foreground">{copy.demoOwnerBody}</p>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {workspace.data?.isSuperAdmin ? (
-            <Button onClick={() => runDemo("load")} disabled={demoBusy !== null}>
-              {demoBusy === "load" ? <Loader2 className="size-4 animate-spin" /> : null}
-              {hasDemo ? copy.resetDemo : copy.loadDemo}
-            </Button>
-          ) : null}
           {hasDemo ? (
             <Button
               variant="outline"
@@ -439,6 +432,20 @@ function SettingsPage() {
       </Section>
 
       <Section id="privacy">{workspace.data ? <PrivacySettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}</Section>
+      <Section id="records">
+      {themedProperty ? (
+        <div id="settings-records" className="scroll-mt-24 rounded-2xl">
+          <GuestRecordsSettings property={themedProperty as unknown as { id: string; guest_records?: unknown; country_code?: string | null }} />
+        </div>
+      ) : null}
+      </Section>
+      <Section id="kioskRest">
+      {themedProperty ? (
+        <div id="settings-kioskRest" className="scroll-mt-24 rounded-2xl">
+          <KioskRestSettings property={themedProperty as unknown as { id: string; short_code: string; kiosk_rest?: unknown; quiet_hours_start?: string | null; quiet_hours_end?: string | null }} />
+        </div>
+      ) : null}
+      </Section>
       </PageSections>
     </div>
   );
