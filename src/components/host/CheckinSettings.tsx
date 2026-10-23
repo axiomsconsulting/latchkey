@@ -44,7 +44,7 @@ export function CheckinSettings({
       await save({
         data: { propertyId: property.id, methods: { order: [primary, other, "self_declare"], enabled } },
       });
-      await qc.invalidateQueries({ queryKey: ["board"] });
+      await Promise.all([qc.invalidateQueries({ queryKey: ["board"] }), qc.invalidateQueries({ queryKey: ["workspace"] })]);
       toast.success(copy.saved);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);

@@ -32,6 +32,8 @@ import {
   Sparkles,
   SprayCan,
   Wrench,
+  Hand,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -187,7 +189,9 @@ function TodayPage() {
           { id: "maintenance", node: <MaintenanceAhead propertyId={selectedId} /> },
           { id: "connections", node: <Connections propertyId={selectedId} rooms={rooms} /> },
           { id: "guide", node: <GuideCard propertyId={selectedId} arriving={lists.arriving} rooms={rooms} /> },
+          { id: "arrivalGuides", node: <ArrivalGuides arriving={lists.arriving} /> },
           { id: "kiosk", node: property ? <KioskCard property={property} arriving={lists.arriving} /> : null },
+          { id: "welcome", node: property ? <WelcomeCard property={property} arriving={lists.arriving} /> : null },
           { id: "settings", wide: true, node: <KeySettings isUk={(property?.country_code ?? "GB") === "GB"} /> },
           { id: "reviews", wide: true, node: workspace.data?.hostId ? <GuestReviews hostId={workspace.data.hostId} /> : null },
         ]}
@@ -944,21 +948,6 @@ function GuideCard({ propertyId, arriving, rooms }: { propertyId: string; arrivi
           </Link>
         </p>
       ) : null}
-      {canWrite && arriving.length ? (
-        <div className="mt-3 border-t border-border pt-3">
-          <p className="mb-2 text-sm font-medium">{copy.guideToday}</p>
-          <ul className="space-y-1.5">
-            {arriving.slice(0, 6).map((b) => (
-              <li key={b.id} className="flex items-center gap-2">
-                <Link to="/app/bookings" search={{ guest: b.id }} className="min-w-0 flex-1 truncate text-sm hover:underline">
-                  {b.guest_full_name ?? copy.guestNoName}
-                </Link>
-                <GuideLinkButton bookingId={b.id} className="h-8 px-3 text-xs" />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </Card>
   );
 }
@@ -967,7 +956,7 @@ function KioskCard({ property, arriving }: { property: { id: string; short_code:
   const { canWrite } = useRole();
   const tile = "flex items-center gap-2 whitespace-nowrap rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted";
   return (
-    <Card id="kiosk" icon={QrCode} title={copy.kioskTitle} action={<CardLink to="/app/properties" search={{ focus: "checkin" }}>{copy.checkinSettings}</CardLink>}>
+    <Card id="kiosk" icon={QrCode} title={copy.kioskTitle} action={<CardLink to="/app/settings" search={{ focus: "checkin" }}>{copy.checkinSettings}</CardLink>}>
       <p className="mb-3 text-sm text-muted-foreground">{copy.kioskBody}</p>
       <div className="flex flex-wrap gap-2">
         <Peek content={<p>{copy.kioskPeek}</p>}>
@@ -987,7 +976,39 @@ function KioskCard({ property, arriving }: { property: { id: string; short_code:
         </Peek>
       </div>
       {canWrite ? <KioskRestQuick property={property} /> : null}
-      {canWrite ? <KioskWelcomePanel propertyId={property.id} shortCode={property.short_code} arriving={arriving} /> : null}
+    </Card>
+  );
+}
+
+/** A welcome for an arriving guest, full screen on the kiosk: its own card, apart from the kiosk's settings. */
+function WelcomeCard({ property, arriving }: { property: { id: string; short_code: string }; arriving: Stay[] }) {
+  const { canWrite } = useRole();
+  if (!canWrite) return null;
+  return (
+    <Card id="welcome" icon={Hand} title={copy.welcomeTitle}>
+      <p className="mb-3 text-sm text-muted-foreground">{copy.welcomeBody}</p>
+      <KioskWelcomePanel propertyId={property.id} shortCode={property.short_code} arriving={arriving} bare />
+    </Card>
+  );
+}
+
+/** Today's arrivals and their private guide links: copy one to send it the guest's own way. */
+function ArrivalGuides({ arriving }: { arriving: Stay[] }) {
+  const { canWrite } = useRole();
+  if (!canWrite || !arriving.length) return null;
+  return (
+    <Card id="arrivalGuides" icon={Send} title={copy.guideToday}>
+      <p className="mb-2 text-sm text-muted-foreground">{copy.guideTodayBody}</p>
+      <ul className="space-y-1.5">
+        {arriving.map((b) => (
+          <li key={b.id} className="flex items-center gap-2">
+            <Link to="/app/bookings" search={{ guest: b.id }} className="min-w-0 flex-1 truncate text-sm hover:underline">
+              {b.guest_full_name ?? copy.guestNoName}
+            </Link>
+            <GuideLinkButton bookingId={b.id} className="h-8 px-3 text-xs" />
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -996,7 +1017,7 @@ function KeySettings({ isUk }: { isUk: boolean }) {
   const { isOwner } = useRole();
   const links: Array<{ key: string; to: string; search?: Record<string, string> }> = [
     { key: "property", to: "/app/properties", search: { focus: "property" } },
-    { key: "checkin", to: "/app/properties", search: { focus: "checkin" } },
+    { key: "checkin", to: "/app/settings", search: { focus: "checkin" } },
     { key: "records", to: "/app/settings", search: { focus: "records" } },
     { key: "rooms", to: "/app/properties", search: { focus: "rooms" } },
     { key: "cleaning", to: "/app/housekeeping", search: { focus: "schedule" } },

@@ -77,7 +77,7 @@ export function rankHits(query: string, hits: SearchHit[], limit = 8): SearchHit
 
 /** Which page each changelog area lives on, so a feature opens where it is used. */
 export const AREA_PAGES: Record<string, string> = {
-  "Check-in": "/app/properties?focus=checkin",
+  "Check-in": "/app/settings?focus=checkin",
   "Guest guide": "/app/guides",
   Bookings: "/app/bookings",
   Housekeeping: "/app/housekeeping",

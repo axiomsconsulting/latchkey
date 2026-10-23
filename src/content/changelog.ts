@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.63.0",
+    date: "2026-10-23",
+    title: "Guest phone numbers and tidier pages",
+    items: [
+      { kind: "new", area: "Bookings", text: "Add a guest's full phone number (with its country) instead of only the last 4 digits; the last 4 digits for check-in come from it. On the guest's card, Call, Text and WhatsApp open your phone, or whatever makes calls on your computer (iPhone on a Mac, Phone Link on Windows)." },
+      { kind: "new", area: "Bookings", text: "The guest's card can put a welcome for that guest on the kiosk: written for them, change any word and show it from the card." },
+      { kind: "improved", area: "Bookings", text: "The guest's card keeps Edit, Hide and Remove together, with Copy guide link and Kiosk welcome on the line below, all the same size." },
+      { kind: "improved", area: "Settings", text: "How guests check in moved to Settings → Guests, and each room's shared calendar to Connections, with what it does explained once." },
+      { kind: "improved", area: "Settings", text: "Today: Guest welcome and sending today's arrivals their guide are now cards of their own, apart from the kiosk and the stay guide." },
+    ],
+  },
+  {
     version: "0.62.0",
     date: "2026-10-23",
     title: "One timeline, brighter night light",

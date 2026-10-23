@@ -24,7 +24,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ChannelIcon } from "@/components/ChannelIcon";
-import { bookings as copy, common, invoiceCopy, statuses } from "@/content/copy";
+import { bookings as copy, common, invoiceCopy, statuses, worldCopy } from "@/content/copy";
+import { PhoneInput } from "@/components/WorldPickers";
+import { splitPhone } from "@/lib/world";
 import { useBookingSites, useWorkspace } from "@/hooks/use-host-data";
 import { taxTerms } from "@/lib/invoice";
 import { platformKey, toChannel } from "@/lib/booking-sites";
@@ -55,6 +57,7 @@ export type BookingRow = {
   feed_status?: string | null;
   guest_email?: string | null;
   guest_address?: string | null;
+  guest_phone?: string | null;
   stay_amount_pence?: number | null;
   stay_amount_includes_tax?: boolean | null;
   id_check_status?: string | null;
@@ -115,6 +118,8 @@ export function BookingDialog({
   const undo = useServerFn(undoCheckIn);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  // The guest's full number, with its country; the last 4 digits come from it.
+  const [phone, setPhone] = useState<{ country: string; national: string; valid: boolean; e164: string | null }>({ country: "GB", national: "", valid: true, e164: null });
   const [undoing, setUndoing] = useState(false);
 
   async function onUndo() {
@@ -173,6 +178,10 @@ export function BookingDialog({
     } else {
       setForm(blank(propertyId, rooms[0]?.id ?? null, defaults));
     }
+    const home = ((ws.data?.properties ?? []) as Array<{ id: string; country_code?: string | null }>).find((p) => p.id === propertyId)?.country_code ?? "GB";
+    const split = splitPhone(booking?.guest_phone ?? null, home);
+    setPhone({ ...split, valid: true, e164: booking?.guest_phone ?? null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, booking, propertyId, rooms, defaults]);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -183,6 +192,11 @@ export function BookingDialog({
     e.preventDefault();
     if (form.check_out_date <= form.check_in_date) {
       toast.error("The check-out date needs to be after the check-in date.");
+      return;
+    }
+    if (!phone.valid) {
+      toast.error(worldCopy.fixPhone);
+      document.getElementById("phone")?.focus();
       return;
     }
     setBusy(true);
@@ -196,7 +210,8 @@ export function BookingDialog({
           guest_full_name: form.guest_full_name.trim() || null,
           reservation_code: form.reservation_code.trim() || null,
           guest_count: Number(form.guest_count) || 1,
-          phone_last4: /^\d{4}$/.test(form.phone_last4) ? form.phone_last4 : null,
+          phone_last4: phone.e164 ? phone.e164.replace(/\D/g, "").slice(-4) : /^\d{4}$/.test(form.phone_last4) ? form.phone_last4 : null,
+          guest_phone: phone.national.trim() ? phone.e164 : null,
           check_in_date: form.check_in_date,
           check_out_date: form.check_out_date,
           check_in_time: form.check_in_time || null,
@@ -402,17 +417,24 @@ export function BookingDialog({
               onChange={(e) => set("guest_count", Number(e.target.value))}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone, last 4 digits</Label>
-            <Input
-              id="phone"
-              inputMode="numeric"
-              maxLength={4}
-              className="h-12"
-              value={form.phone_last4}
-              onChange={(e) => set("phone_last4", e.target.value.replace(/\D/g, ""))}
-              placeholder="8842"
-            />
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="phone">{copy.phoneFull}</Label>
+            <PhoneInput id="phone" country={phone.country} national={phone.national} onChange={setPhone} />
+            {/* Booking sites often share only the end of the number: that's enough for check-in. */}
+            {!phone.national.trim() ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Label htmlFor="phone4" className="font-normal text-muted-foreground">{copy.phoneLast4Only}</Label>
+                <Input
+                  id="phone4"
+                  inputMode="numeric"
+                  maxLength={4}
+                  className="h-10 w-24"
+                  value={form.phone_last4}
+                  onChange={(e) => set("phone_last4", e.target.value.replace(/\D/g, ""))}
+                  placeholder="8842"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">

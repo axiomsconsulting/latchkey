@@ -8,8 +8,6 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
-import { CheckinSettings } from "@/components/host/CheckinSettings";
-import { RoomFeedNote, RoomFeedPanel } from "@/components/host/RoomFeedPanel";
 import { ListingImportButton } from "@/components/host/ListingImport";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +38,7 @@ import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFiel
 import { deleteRoom, saveProperty, saveRoom } from "@/lib/host.functions";
 import { rebrand } from "@/lib/brand";
 
-// "records" and "cleaning" moved (Settings, Housekeeping); old links still open the page.
+// "checkin", "records" and "cleaning" moved (Settings, Housekeeping); old links still open the page.
 const FOCUS = ["property", "checkin", "records", "rooms", "cleaning"] as const;
 
 export const Route = createFileRoute("/_authenticated/app/properties")({
@@ -577,21 +575,16 @@ function PropertiesPage() {
         </section>
       ) : null}
 
-      {property ? (
-        <div id="property-checkin" className="scroll-mt-24 rounded-2xl">
-        <CheckinSettings
-          property={property as unknown as { id: string; short_code: string; checkin_methods: unknown }}
-        />
-        </div>
-      ) : null}
       {/* Moved: guest records and the kiosk at rest to Settings, cleaning times to Housekeeping. */}
       <nav aria-label={copy.elsewhereTitle} className="card-soft p-5">
         <h2 className="text-lg">{copy.elsewhereTitle}</h2>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {([
+            ["checkin", "/app/settings", { focus: "checkin" }],
             ["records", "/app/settings", { focus: "records" }],
             ["kioskRest", "/app/settings", { focus: "kioskRest" }],
             ["schedule", "/app/housekeeping", { focus: "schedule" }],
+            ["calendars", "/app/connections", {}],
           ] as const).map(([key, to, search]) => (
             <li key={key}>
               <Link to={to} search={search} className="flex h-full flex-col rounded-xl border border-border p-3 text-sm hover:bg-secondary">
@@ -612,8 +605,6 @@ function PropertiesPage() {
           </Button>
         </div>
 
-        {/* What sharing a room's calendar does, said once for every room below. */}
-        {rooms.length ? <RoomFeedNote /> : null}
         {rooms.length === 0 ? (
           <EmptyState icon={BedDouble} title={copy.noRooms} />
         ) : (
@@ -647,7 +638,6 @@ function PropertiesPage() {
                 >
                   <Trash2 className="size-4" />
                 </Button>
-                <RoomFeedPanel roomId={r.id} roomName={r.display_name} />
               </li>
             ))}
           </ul>

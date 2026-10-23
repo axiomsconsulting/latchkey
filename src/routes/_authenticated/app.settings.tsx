@@ -42,12 +42,13 @@ import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { removeDemoData, saveHost } from "@/lib/host.functions";
 import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
+import { CheckinSettings } from "@/components/host/CheckinSettings";
 import { KioskRestSettings } from "@/components/host/KioskRestSettings";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
-const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "records", "kioskRest", "extras", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
+const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "kioskRest", "extras", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
 /** The menu's groups, in order, with their icons (names in settingsMenuCopy). */
 const SETTINGS_GROUPS = [
   { id: "business", icon: Building2 },
@@ -57,7 +58,7 @@ const SETTINGS_GROUPS = [
   { id: "apps", icon: Bell },
 ] as const;
 // Latchkey-wide and per-business admin switches (demo / live, sample data) live in Latchkey admin → Businesses.
-const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "records", "kioskRest"]);
+const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "kioskRest"]);
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   // ?focus=<section> lands on that part of Settings.
@@ -432,6 +433,13 @@ function SettingsPage() {
       </Section>
 
       <Section id="privacy">{workspace.data ? <PrivacySettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}</Section>
+      <Section id="checkin">
+      {themedProperty ? (
+        <div id="settings-checkin" className="scroll-mt-24 rounded-2xl">
+          <CheckinSettings property={themedProperty as unknown as { id: string; short_code: string; checkin_methods: unknown }} />
+        </div>
+      ) : null}
+      </Section>
       <Section id="records">
       {themedProperty ? (
         <div id="settings-records" className="scroll-mt-24 rounded-2xl">

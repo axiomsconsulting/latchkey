@@ -25,10 +25,18 @@ export function KioskWelcomePanel({
   propertyId,
   shortCode,
   arriving,
+  bare = false,
+  forBooking,
+  onDone,
 }: {
   propertyId: string;
   shortCode: string;
   arriving: Array<{ id: string; guest_full_name: string | null }>;
+  /** In its own card: no divider or heading of its own. */
+  bare?: boolean;
+  /** For one guest (the guest's card): no guest picker, the welcome written for them. */
+  forBooking?: { id: string; guest_full_name: string | null };
+  onDone?: () => void;
 }) {
   const fetchFn = useServerFn(getKioskWelcome);
   const setFn = useServerFn(setKioskWelcome);
@@ -36,7 +44,7 @@ export function KioskWelcomePanel({
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["kiosk-welcome", propertyId], queryFn: () => fetchFn({ data: { propertyId } }), refetchInterval: 20_000 });
   const current = q.data?.message ?? null;
-  const named = arriving.filter((b) => b.guest_full_name?.trim());
+  const named = forBooking ? [forBooking] : arriving.filter((b) => b.guest_full_name?.trim());
   const [bookingId, setBookingId] = useState<string>(named[0]?.id ?? "none");
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState<string>(copy.defaultBody);
@@ -66,6 +74,7 @@ export function KioskWelcomePanel({
       await qc.invalidateQueries({ queryKey: ["kiosk-welcome", propertyId] });
       setEditing(false);
       toast.success(done);
+      onDone?.();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : common.errorBody);
     } finally {
@@ -91,10 +100,12 @@ export function KioskWelcomePanel({
   if (q.data && !q.data.available) return <p className="text-sm text-muted-foreground">{copy.notReady}</p>;
 
   return (
-    <div className="space-y-3 border-t border-border pt-3">
-      <p className="flex items-center gap-2 text-sm font-medium">
-        <Hand className="size-4 text-primary" /> {copy.title}
-      </p>
+    <div className={bare ? "space-y-3" : "space-y-3 border-t border-border pt-3"}>
+      {bare ? null : (
+        <p className="flex items-center gap-2 text-sm font-medium">
+          <Hand className="size-4 text-primary" /> {copy.title}
+        </p>
+      )}
 
       {current && !editing ? (
         <div className="space-y-2">
@@ -116,7 +127,7 @@ export function KioskWelcomePanel({
         </div>
       ) : (
         <div className="space-y-2">
-          {named.length && !editing ? (
+          {named.length && !editing && !forBooking ? (
             <div className="space-y-1">
               <Label className="text-xs">{copy.forGuest}</Label>
               <Select value={bookingId} onValueChange={setBookingId}>

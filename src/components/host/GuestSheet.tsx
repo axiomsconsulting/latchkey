@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, ArchiveRestore, BadgeCheck, BedDouble, Loader2, Pencil, Send, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, BadgeCheck, BedDouble, Loader2, MessageCircle, MessageSquare, MonitorUp, Pencil, Phone, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
@@ -24,7 +24,10 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { common, guestCard as copy, invoiceCopy } from "@/content/copy";
-import { useBookingSites, useRole } from "@/hooks/use-host-data";
+import { useBookingSites, useRole, useWorkspace } from "@/hooks/use-host-data";
+import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
+import { isE164, phoneLinks } from "@/lib/phone-links";
+import { checkPhone } from "@/lib/world";
 import { platformKey } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime, nightsBetween, stayState } from "@/lib/dates";
 import { archiveBookings, deleteBookings, getGuestDetails } from "@/lib/guests.functions";
@@ -61,6 +64,9 @@ export function GuestSheet({
   const fetchDetails = useServerFn(getGuestDetails);
   const send = useServerFn(sendHostMessage);
   const markRead = useServerFn(markHostRead);
+  const ws = useWorkspace();
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  useEffect(() => setWelcomeOpen(false), [bookingId]);
   const archive = useServerFn(archiveBookings);
   const remove = useServerFn(deleteBookings);
   const qc = useQueryClient();
@@ -108,6 +114,8 @@ export function GuestSheet({
 
   const d = details.data;
   const b = d?.booking;
+  // The property's kiosk, for a welcome written for this guest.
+  const shortCode = b ? (((ws.data?.properties ?? []) as Array<{ id: string; short_code: string }>).find((p) => p.id === b.propertyId)?.short_code ?? null) : null;
   const nights = b ? nightsBetween(b.checkIn, b.checkOut) : 0;
   const site = b ? sites.find((x) => x.key === platformKey({ channel: b.channel, site_key: b.siteKey })) : undefined;
 
@@ -148,19 +156,44 @@ export function GuestSheet({
               <Fact label={copy.reference} value={b.reservationCode ?? "—"} />
               {b.email ? <Fact label={copy.email} value={b.email} /> : null}
               {b.address ? <Fact label={copy.address} value={b.address} wide /> : null}
-              {b.phoneLast4 ? <Fact label={copy.phone} value={`•••• ${b.phoneLast4}`} /> : null}
+              {b.phone && isE164(b.phone) ? (
+                <div className="col-span-2">
+                  <dt className="text-xs text-muted-foreground">{copy.phone}</dt>
+                  <dd className="flex flex-wrap items-center gap-2">
+                    <span className="mr-1 tabular-nums">{checkPhone(b.phone, "GB").ok ? (checkPhone(b.phone, "GB") as { display: string }).display : b.phone}</span>
+                    {/* tel: and sms: go to the phone app, or to whatever makes calls on this computer. */}
+                    <Button asChild variant="outline" size="sm" title={copy.callHint}>
+                      <a href={phoneLinks(b.phone).call}>
+                        <Phone className="size-4" /> {copy.call}
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" title={copy.callHint}>
+                      <a href={phoneLinks(b.phone).text}>
+                        <MessageSquare className="size-4" /> {copy.text}
+                      </a>
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <a href={phoneLinks(b.phone).whatsapp} target="_blank" rel="noopener noreferrer">
+                        <MessageCircle className="size-4" /> {copy.whatsapp}
+                      </a>
+                    </Button>
+                  </dd>
+                </div>
+              ) : b.phoneLast4 ? (
+                <Fact label={copy.phone} value={`•••• ${b.phoneLast4}`} />
+              ) : null}
               {b.checkedInAt ? <Fact label={copy.checkedIn} value={when.format(new Date(b.checkedInAt))} /> : null}
               {b.notes ? <Fact label={copy.notes} value={b.notes} wide /> : null}
             </dl>
 
             {canWrite ? (
-              <div className="mt-4 flex flex-wrap gap-2 px-4">
+              <div className="mt-4 space-y-2 px-4">
+              <div className="flex flex-wrap gap-2">
                 {onEdit ? (
                   <Button variant="outline" size="sm" onClick={() => onEdit(b.id)}>
                     <Pencil className="size-4" /> {common.edit}
                   </Button>
                 ) : null}
-                <GuideLinkButton bookingId={b.id} />
                 <Button
                   variant="outline"
                   size="sm"
@@ -175,6 +208,28 @@ export function GuestSheet({
                 <Button variant="ghost" size="sm" className="text-destructive" disabled={busy !== null} onClick={() => setConfirmDelete(true)}>
                   <Trash2 className="size-4" /> {common.remove}
                 </Button>
+              </div>
+              {/* Reaching the guest: their guide link, and a welcome on the kiosk written for them. */}
+              <div className="flex flex-wrap gap-2">
+                <GuideLinkButton bookingId={b.id} size="sm" />
+                {shortCode ? (
+                  <Button variant={welcomeOpen ? "secondary" : "outline"} size="sm" aria-expanded={welcomeOpen} onClick={() => setWelcomeOpen((o) => !o)}>
+                    <MonitorUp className="size-4" /> {welcomeOpen ? copy.kioskWelcomeHide : copy.kioskWelcome}
+                  </Button>
+                ) : null}
+              </div>
+              {welcomeOpen && shortCode ? (
+                <div className="rounded-2xl border border-border p-3">
+                  <KioskWelcomePanel
+                    bare
+                    propertyId={b.propertyId}
+                    shortCode={shortCode}
+                    arriving={[]}
+                    forBooking={{ id: b.id, guest_full_name: b.guestName }}
+                    onDone={() => setWelcomeOpen(false)}
+                  />
+                </div>
+              ) : null}
               </div>
             ) : null}
 

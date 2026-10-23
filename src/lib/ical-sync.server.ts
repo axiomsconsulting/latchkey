@@ -331,13 +331,17 @@ export async function runRetentionSweep(): Promise<number> {
   let anonymised = 0;
   for (const [cutoff, ids] of detailGroups) {
     for (const part of chunks(ids)) {
-      const { data } = await db
-        .from("bookings")
-        .update({ guest_full_name: null, guest_email: null, phone_last4: null, notes: null, anonymised_at: new Date().toISOString() })
-        .in("property_id", part)
-        .lt("check_out_date", cutoff)
-        .is("anonymised_at", null)
-        .select("id");
+      const clear = (withPhone: boolean) =>
+        db
+          .from("bookings")
+          .update({ guest_full_name: null, guest_email: null, phone_last4: null, ...(withPhone ? { guest_phone: null } : {}), notes: null, anonymised_at: new Date().toISOString() })
+          .in("property_id", part)
+          .lt("check_out_date", cutoff)
+          .is("anonymised_at", null)
+          .select("id");
+      // The full phone number (migration 0050) goes too; before that column exists, the rest still does.
+      let { data, error } = await clear(true);
+      if (error && /guest_phone/.test(error.message)) ({ data } = await clear(false));
       anonymised += data?.length ?? 0;
     }
   }

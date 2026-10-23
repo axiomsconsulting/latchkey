@@ -413,6 +413,8 @@ const bookingInput = z.object({
   status: z.enum(["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged", "blocked"]),
   notes: z.string().nullable(),
   guest_email: z.string().trim().email().max(254).nullable().default(null),
+  /** The guest's full number (E.164); sets phone_last4 too. Only sent when the form has it (migration 0050). */
+  guest_phone: z.string().regex(/^\+[1-9]\d{6,14}$/).nullable().optional(),
   // Only sent when the form has it, so saving works before migration 0030.
   guest_address: z.string().trim().max(400).nullable().optional(),
   /** A booking site the host added; the stay is then stored as channel "other". */
@@ -440,10 +442,16 @@ export const saveBooking = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => bookingInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { id, site_key, stay_amount_pence, stay_amount_includes_tax, guest_address, ...base } = data;
+    const { id, site_key, stay_amount_pence, stay_amount_includes_tax, guest_address, guest_phone, ...base } = data;
+    // A full number also gives the last 4 digits guests confirm at check-in.
+    if (guest_phone) base.phone_last4 = guest_phone.replace(/\D/g, "").slice(-4);
     // The amount is only written when given, so saving works before migration 0023.
     // The address is added separately below, so saving works before migration 0031.
-    const address = guest_address !== undefined ? { guest_address: guest_address || null } : {};
+    const address = {
+      ...(guest_address !== undefined ? { guest_address: guest_address || null } : {}),
+      // Written with the newest columns, so saving still works before migration 0050.
+      ...(guest_phone !== undefined ? { guest_phone } : {}),
+    };
     const rest = {
       ...base,
       ...(stay_amount_pence !== undefined ? { stay_amount_pence } : {}),

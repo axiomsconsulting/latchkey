@@ -22,7 +22,7 @@ import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { ChannelIcon } from "@/components/ChannelIcon";
 import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
-import { RoomFeedPanel } from "@/components/host/RoomFeedPanel";
+import { RoomFeedNote, RoomFeedPanel } from "@/components/host/RoomFeedPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -474,6 +474,9 @@ function PropertyLinks({ property }: { property: { id: string; name: string } })
       ) : rooms.length === 0 ? (
         <p className="text-sm text-muted-foreground">{linkTools.noRooms}</p>
       ) : (
+        <>
+        {/* What sharing a room's Latchkey calendar does, said once for every room below. */}
+        <RoomFeedNote />
         <div className="grid gap-4 lg:grid-cols-2">
           {rooms.map((r) => (
             <RoomCard
@@ -499,6 +502,7 @@ function PropertyLinks({ property }: { property: { id: string; name: string } })
             />
           ) : null}
         </div>
+        </>
       )}
 
       {dialog ? (

@@ -72,7 +72,7 @@ describe("page sections", () => {
     // Saved before "messages" and "labels" existed: they join after "domain", where they sit by default.
     const l = normaliseLayouts({ settings: { order: ["business", "team", "support", "domain", "privacy", "extras"], hidden: [] } });
     const order = l["settings"]!.order;
-    expect(order.slice(0, 9)).toEqual(["business", "group", "team", "support", "domain", "messages", "labels", "records", "privacy"]);
+    expect(order.slice(0, 9)).toEqual(["business", "group", "team", "support", "domain", "messages", "labels", "checkin", "records"]);
     expect(order).toHaveLength(new Set(order).size);
   });
 

@@ -116,6 +116,8 @@ export const getGuestDetails = createServerFn({ method: "GET" })
         reservationCode: b.reservation_code,
         guestCount: b.guest_count,
         phoneLast4: b.phone_last4,
+        phone: ((b as { guest_phone?: string | null }).guest_phone ?? null) as string | null,
+        propertyId: b.property_id,
         email: b.guest_email,
         address: ((b as { guest_address?: string | null }).guest_address ?? null) as string | null,
         checkIn: b.check_in_date,
