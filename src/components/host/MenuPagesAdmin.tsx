@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { NAV_ICONS, NavIcon } from "@/components/NavIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -171,6 +172,8 @@ export function MenuPagesAdmin() {
   }, [ui]);
 
   const rows = resolveNav(nav, labels, { superAdmin: true, includeHidden: true });
+  // Menu and page layouts save together; editing an item finishes first.
+  const dirty = !editing && changed({ nav, pages }, { nav: ui.nav, pages: ui.pages });
   const layout = pages[page] ?? { order: [], hidden: [] };
   const sections = PAGES[page]?.sections ?? [];
 
@@ -193,11 +196,14 @@ export function MenuPagesAdmin() {
   return (
     <div className="space-y-6">
       <section className="card-soft space-y-4 p-5">
-        <div>
-          <h2 className="flex items-center gap-2 font-display text-lg">
-            <MenuIcon className="size-5 text-primary" /> {copy.menuTitle}
-          </h2>
-          <p className="text-sm text-muted-foreground">{copy.menuHelp}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 font-display text-lg">
+              <MenuIcon className="size-5 text-primary" /> {copy.menuTitle}
+            </h2>
+            <p className="text-sm text-muted-foreground">{copy.menuHelp}</p>
+          </div>
+          <SaveButton dirty={dirty} busy={busy} label={copy.save} onClick={() => void saveAll()} />
         </div>
         <ul className="divide-y divide-border rounded-xl border border-border">
           {rows.map((r, i) => {
@@ -276,11 +282,14 @@ export function MenuPagesAdmin() {
       </section>
 
       <section className="card-soft space-y-4 p-5">
-        <div>
-          <h2 className="flex items-center gap-2 font-display text-lg">
-            <LayoutList className="size-5 text-primary" /> {copy.pagesTitle}
-          </h2>
-          <p className="text-sm text-muted-foreground">{copy.pagesHelp}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 font-display text-lg">
+              <LayoutList className="size-5 text-primary" /> {copy.pagesTitle}
+            </h2>
+            <p className="text-sm text-muted-foreground">{copy.pagesHelp}</p>
+          </div>
+          <SaveButton dirty={dirty} busy={busy} label={copy.save} onClick={() => void saveAll()} />
         </div>
         <div className="space-y-1">
           <Label>{copy.page}</Label>
@@ -325,9 +334,6 @@ export function MenuPagesAdmin() {
         </ul>
       </section>
 
-      <Button onClick={() => void saveAll()} disabled={busy || !!editing}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null} {copy.save}
-      </Button>
     </div>
   );
 }

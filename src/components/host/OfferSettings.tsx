@@ -5,7 +5,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +31,7 @@ export function OfferSettings() {
 
   if (q.isLoading || !q.data || !form) return <Skeleton className="h-48 rounded-2xl" />;
   const live = offerRunning(form, ukToday());
+  const dirty = changed({ ...form, price }, { ...q.data.offer, price: (q.data.offer.pricePence / 100).toFixed(2) });
 
   async function submit() {
     if (!form) return;
@@ -53,6 +54,7 @@ export function OfferSettings() {
         <Sparkles className="size-5 text-accent" />
         <h2 className="text-xl">{copy.adminTitle}</h2>
         <Badge variant={live ? "default" : "secondary"}>{live ? copy.live : copy.notLive}</Badge>
+        <SaveButton className="ml-auto" dirty={dirty} busy={busy} label={copy.save} onClick={() => void submit()} />
       </div>
       <p className="text-muted-foreground">{copy.adminBody}</p>
       {q.data.migrationPending ? <p className="rounded-xl bg-muted p-3 text-sm">Run migration 0029 first (Lovable applies it on the next sync).</p> : null}
@@ -77,13 +79,7 @@ export function OfferSettings() {
           <Input id="offer-end" type="date" value={form.endsOn} onChange={(e) => setForm({ ...form, endsOn: e.target.value })} />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4">
-        <Button disabled={busy} onClick={() => void submit()}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-          {copy.save}
-        </Button>
-        <span className="text-sm text-muted-foreground">{copy.counts(q.data.waiting, q.data.used)}</span>
-      </div>
+      <p className="text-sm text-muted-foreground">{copy.counts(q.data.waiting, q.data.used)}</p>
     </section>
   );
 }

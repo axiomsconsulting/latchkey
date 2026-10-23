@@ -45,6 +45,7 @@ import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
 import { CheckinSettings } from "@/components/host/CheckinSettings";
 import { KioskRestSettings } from "@/components/host/KioskRestSettings";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
@@ -130,6 +131,14 @@ function SettingsPage() {
     const parsed = split.national ? checkPhone(split.national, split.country) : null;
     setPhone({ ...split, valid: !parsed || parsed.ok, e164: parsed && parsed.ok ? parsed.e164 : null });
   }, [host, homeCountry]);
+
+  // Save stays grey until a detail differs from what's saved.
+  const businessDirty =
+    !!host &&
+    changed(
+      { ...form, contact_phone: phone.national.trim() ? phone.e164 : null },
+      { business_name: host.business_name ?? "", contact_email: host.contact_email ?? "", contact_phone: host.contact_phone ?? null, currency: host.currency ?? "GBP", timezone: host.timezone ?? "Europe/London" },
+    );
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -224,7 +233,10 @@ function SettingsPage() {
       <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
         {/* Business details and billing are the owner's; others can read them. */}
         <fieldset disabled={!isOwner} className="grid gap-4 sm:grid-cols-2">
-        <h2 className="text-lg sm:col-span-2">{copy.business}</h2>
+        <div className="flex items-start justify-between gap-3 sm:col-span-2">
+          <h2 className="text-lg">{copy.business}</h2>
+          {isOwner ? <SaveButton type="submit" dirty={businessDirty} busy={busy} label={copy.save} /> : null}
+        </div>
 
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="bn">{copy.businessName}</Label>
@@ -259,14 +271,7 @@ function SettingsPage() {
           <TimeZonePicker id="tz" value={form.timezone} onChange={(v) => setForm((f) => ({ ...f, timezone: v }))} />
         </div>
 
-        {isOwner ? (
-          <div className="sm:col-span-2">
-            <Button type="submit" disabled={busy}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-              {copy.save}
-            </Button>
-          </div>
-        ) : null}
+
         </fieldset>
       </form>
       </Section>

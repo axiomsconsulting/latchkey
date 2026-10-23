@@ -379,10 +379,11 @@ function Review({
             ...(f("parking") ? { parking_notes: f("parking") } : {}),
           },
           houseRules: rules ? plan.property.houseRules : [],
+          propertyLinks: plan.propertyLinks,
           coverPhotoUrl: cover,
           rooms: roomList
             .filter((x) => x.on && x.name.trim())
-            .map((x) => ({ existingId: x.existingId, name: x.name.trim(), description: x.description, maxGuests: Math.min(30, Math.max(1, x.maxGuests)), ensuite: x.ensuite, amenities: x.amenities.slice(0, 30), photoUrl: x.photoUrl })),
+            .map((x) => ({ existingId: x.existingId, name: x.name.trim(), description: x.description, maxGuests: Math.min(30, Math.max(1, x.maxGuests)), ensuite: x.ensuite, amenities: x.amenities.slice(0, 30), photoUrl: x.photoUrl, listingUrl: x.url })),
         },
       });
       await Promise.all([qc.invalidateQueries({ queryKey: ["board"] }), qc.invalidateQueries({ queryKey: ["workspace"] }), qc.invalidateQueries({ queryKey: ["guide"] })]);

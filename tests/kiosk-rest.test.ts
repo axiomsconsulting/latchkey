@@ -27,11 +27,11 @@ describe("kiosk at rest settings", () => {
   it("starts with the clock screensaver and no night light, safe against anything stored", () => {
     expect(normaliseRest(null)).toEqual(DEFAULT_REST);
     expect(normaliseRest({ nightLight: "yes", mode: "disco", palette: 3, speed: "warp", otherwise: "tv" })).toEqual(DEFAULT_REST);
-    expect(normaliseRest({ nightLight: true, nightWhen: "quiet", mode: "aurora", palette: "ocean", speed: 5, otherwise: "blank", clockQr: true })).toEqual({
+    expect(normaliseRest({ nightLight: true, nightWhen: "quiet", mode: "aurora", palette: "moonlight", speed: 5, otherwise: "blank", clockQr: true })).toEqual({
       nightLight: true,
       nightWhen: "quiet",
       mode: "aurora",
-      palette: "ocean",
+      palette: "moonlight",
       speed: 5,
       otherwise: "blank",
       clockQr: true,
@@ -40,6 +40,12 @@ describe("kiosk at rest settings", () => {
 
   it("keeps what was saved before patterns were grouped and speed became a slider", () => {
     expect(normaliseRest({ mode: "breathe", speed: "slow" })).toMatchObject({ mode: "glow", speed: 2 });
+    // Colours grouped into five families: old choices go to the nearest.
+    expect(normaliseRest({ palette: "ocean" }).palette).toBe("moonlight");
+    expect(normaliseRest({ palette: "lavender" }).palette).toBe("moonlight");
+    expect(normaliseRest({ palette: "sunset" }).palette).toBe("ember");
+    expect(normaliseRest({ palette: "forest" }).palette).toBe("meadow");
+    expect(Object.keys(NIGHT_PALETTES)).toEqual(["candle", "ember", "moonlight", "meadow", "pearl"]);
     expect(normaliseRest({ mode: "steady", speed: "lively" })).toMatchObject({ mode: "glow", speed: 4 });
     expect(normaliseRest({ mode: "sweep" }).mode).toBe("flow");
     expect(normaliseRest({ mode: "cycle", speed: 99 })).toMatchObject({ mode: "flow", speed: 5 });
@@ -72,7 +78,7 @@ describe("night light colours", () => {
   });
 
   it("goes round the palette and back to the start", () => {
-    const p = NIGHT_PALETTES.ocean;
+    const p = NIGHT_PALETTES.moonlight;
     expect(along(p, 0)).toBe(p[0]);
     expect(along(p, 1 / p.length)).toBe(p[1]);
     expect(along(p, 1)).toBe(p[0]);
@@ -82,7 +88,7 @@ describe("night light colours", () => {
   it("draws every style at any moment", () => {
     for (const mode of NIGHT_MODES) {
       for (const t of [0, 7.3, 600, 86_400]) {
-        const f = nightFrame({ mode, palette: "spectrum", speed: 3 }, t, 0.7);
+        const f = nightFrame({ mode, palette: "ember", speed: 3 }, t, 0.7);
         expect(f.background.length).toBeGreaterThan(6);
         expect(f.level).toBeGreaterThanOrEqual(GLOW_LOW);
         expect(f.level).toBeLessThanOrEqual(1);

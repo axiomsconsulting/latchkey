@@ -11,6 +11,7 @@ import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -123,10 +124,15 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
   const [share, setShare] = useState(false);
   const [googleFont, setGoogleFont] = useState("");
 
+  // What was last saved, so Save greys out until something changes.
+  const [saved, setSaved] = useState(() => ({ theme: normaliseTheme(property.theme_config), slug: property.short_code }));
   useEffect(() => {
-    setTheme(normaliseTheme(property.theme_config));
+    const t = normaliseTheme(property.theme_config);
+    setTheme(t);
     setSlug(property.short_code);
+    setSaved({ theme: t, slug: property.short_code });
   }, [property.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dirty = changed({ theme, slug }, saved);
 
   const set = <K extends keyof ThemeConfig>(k: K, v: ThemeConfig[K]) => setTheme((t) => ({ ...t, [k]: v }));
   // A template keeps this property's own logo and photo.
@@ -157,6 +163,7 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
     try {
       await save({ data: { propertyId: property.id, theme, shortCode: slug } });
       await qc.invalidateQueries({ queryKey: ["workspace"] });
+      setSaved({ theme, slug });
       toast.success(copy.saved);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : common.errorBody);
@@ -186,8 +193,13 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
 
   return (
     <section className="card-soft p-5">
-      <h2 className="text-lg">{copy.title}</h2>
-      <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg">{copy.title}</h2>
+          <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
+        </div>
+        <SaveButton dirty={dirty} busy={busy === "save"} label={copy.save} onClick={() => void submit()} />
+      </div>
 
       <div className="mt-5 grid gap-6 xl:grid-cols-[1fr_minmax(0,30rem)]">
         <div className="space-y-6">
@@ -418,10 +430,6 @@ export function ThemeStudio({ property }: { property: { id: string; name: string
             <p className="text-xs text-muted-foreground">{copy.linkHelp}</p>
           </div>
 
-          <Button onClick={submit} disabled={busy !== null}>
-            {busy === "save" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-            {copy.save}
-          </Button>
         </div>
 
         {/* Live preview: the same pieces guests see. */}

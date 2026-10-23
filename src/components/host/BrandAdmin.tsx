@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -71,11 +72,14 @@ export function BrandAdmin() {
 
   return (
     <section className="card-soft space-y-4 p-5">
-      <div>
-        <h2 className="flex items-center gap-2 font-display text-lg">
-          <Palette className="size-5 text-primary" /> {copy.title}
-        </h2>
-        <p className="text-sm text-muted-foreground">{copy.help}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 font-display text-lg">
+            <Palette className="size-5 text-primary" /> {copy.title}
+          </h2>
+          <p className="text-sm text-muted-foreground">{copy.help}</p>
+        </div>
+        <SaveButton dirty={!!q.data?.available && changed(form, q.data.brand)} busy={busy} onClick={() => void save()} />
       </div>
       {q.data && !q.data.available ? <p className="text-sm text-muted-foreground">{copy.notReady}</p> : null}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -129,9 +133,6 @@ export function BrandAdmin() {
         <Textarea id="b-foot" rows={2} maxLength={300} value={form.footer} onChange={(e) => setForm((f) => ({ ...f, footer: e.target.value }))} />
         <p className="text-xs text-muted-foreground">{copy.footerHint}</p>
       </div>
-      <Button onClick={() => void save()} disabled={busy || !q.data?.available}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null} {common.save}
-      </Button>
     </section>
   );
 }

@@ -5,6 +5,7 @@ import { Loader2, MonitorSmartphone } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -77,11 +78,14 @@ export function KioskSaverAdmin() {
 
   return (
     <section className="card-soft space-y-4 p-5">
-      <div>
-        <h2 className="flex items-center gap-2 font-display text-lg">
-          <MonitorSmartphone className="size-5 text-primary" /> {copy.kioskSaverTitle}
-        </h2>
-        <p className="text-sm text-muted-foreground">{copy.kioskSaverHelp}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 font-display text-lg">
+            <MonitorSmartphone className="size-5 text-primary" /> {copy.kioskSaverTitle}
+          </h2>
+          <p className="text-sm text-muted-foreground">{copy.kioskSaverHelp}</p>
+        </div>
+        <SaveButton dirty={!!q.data?.available && changed(normaliseDefaults(form), q.data.defaults)} busy={busy} onClick={() => void save()} />
       </div>
       {q.data && !q.data.available ? <p className="text-sm text-muted-foreground">{copy.kioskSaverNotReady}</p> : null}
       <div className="grid gap-5 md:grid-cols-[1fr_14rem]">
@@ -128,9 +132,6 @@ export function KioskSaverAdmin() {
           ))}
         </div>
       </div>
-      <Button onClick={() => void save()} disabled={busy || !q.data?.available}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null} {common.save}
-      </Button>
     </section>
   );
 }

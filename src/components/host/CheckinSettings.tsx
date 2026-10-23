@@ -6,6 +6,7 @@ import { Loader2, MonitorSmartphone, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
@@ -26,14 +27,19 @@ export function CheckinSettings({
     initial.order.find((m) => m !== "self_declare" && initial.enabled[m]) ?? "photo_id",
   );
   const [busy, setBusy] = useState(false);
+  // What was last saved, to grey out Save until something changes.
+  const [saved, setSaved] = useState(() => ({ enabled: initial.enabled, primary: initial.order.find((m) => m !== "self_declare" && initial.enabled[m]) ?? "photo_id" }));
   const save = useServerFn(saveCheckinMethods);
   const qc = useQueryClient();
 
   useEffect(() => {
     const m = normaliseMethods(property.checkin_methods);
+    const p = m.order.find((k) => k !== "self_declare" && m.enabled[k]) ?? "photo_id";
     setEnabled(m.enabled);
-    setPrimary(m.order.find((k) => k !== "self_declare" && m.enabled[k]) ?? "photo_id");
+    setPrimary(p);
+    setSaved({ enabled: m.enabled, primary: p });
   }, [property.id, property.checkin_methods]);
+  const dirty = changed({ enabled, primary }, saved);
 
   const idOff = !enabled.photo_id && !enabled.last4;
 
@@ -45,6 +51,7 @@ export function CheckinSettings({
         data: { propertyId: property.id, methods: { order: [primary, other, "self_declare"], enabled } },
       });
       await Promise.all([qc.invalidateQueries({ queryKey: ["board"] }), qc.invalidateQueries({ queryKey: ["workspace"] })]);
+      setSaved({ enabled, primary });
       toast.success(copy.saved);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -71,6 +78,7 @@ export function CheckinSettings({
               <MonitorSmartphone className="size-4" /> {copy.openKiosk}
             </a>
           </Button>
+          <SaveButton dirty={dirty} busy={busy} onClick={() => void onSave()} />
         </div>
       </div>
 
@@ -112,10 +120,6 @@ export function CheckinSettings({
 
       <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{idOff ? copy.listFlowNote : copy.fallbackNote}</p>
 
-      <Button className="mt-4" onClick={onSave} disabled={busy}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-        {common.save}
-      </Button>
     </section>
   );
 }

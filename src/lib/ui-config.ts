@@ -211,7 +211,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "payments", label: "Card payments" },
       { id: "invoices", label: "Invoices" },
       { id: "theme", label: "Look and feel" },
-      { id: "kioskRest", label: "Kiosk at rest" },
+      { id: "kioskRest", label: "Screen saver" },
       { id: "alerts", label: "Alerts" },
       { id: "api", label: "API & MCP" },
       { id: "shortcuts", label: "Subscription shortcut (phones)" },

@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.64.0",
+    date: "2026-10-23",
+    title: "Listing links and clearer saving",
+    items: [
+      { kind: "new", area: "Settings", text: "Keep links to your property's and each room's own listings on the booking sites (added by hand or by the listing import); their icons on Properties open the listing straight away." },
+      { kind: "improved", area: "Settings", text: "Every settings card with a Save button has it at the top right: grey until you change something, with a small reminder while changes aren't saved yet." },
+      { kind: "improved", area: "Check-in", text: "Kiosk at rest is now called Screen saver. Smaller style tiles, five clear colours (Candlelight, Ember, Moonlight, Meadow, Pearl), and a preview showing exactly what the kiosk will: the night light, clocks or a dark screen, with the QR code, switching every 2 seconds between quiet hours and the rest of the day." },
+      { kind: "improved", area: "Calendar", text: "Connections: the last check opens the recent checks, and remove sits with Sync now and Edit, so each calendar link takes less room." },
+      { kind: "fixed", area: "Bookings", text: "Adding a guest's name to a stay waiting for details now marks it as an ordinary upcoming stay, so it no longer asks for details again." },
+    ],
+  },
+  {
     version: "0.63.0",
     date: "2026-10-23",
     title: "Guest phone numbers and tidier pages",

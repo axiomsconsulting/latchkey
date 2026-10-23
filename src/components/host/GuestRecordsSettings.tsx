@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,17 +37,24 @@ export function GuestRecordsSettings({
   // UK properties keep the guest register, which needs to know who's staying.
   const uk = registerApplies(property.country_code);
   const [form, setForm] = useState<GuestRecords>(() => normaliseRecords(property.guest_records));
+  const [saved, setSaved] = useState<GuestRecords>(form);
   const [busy, setBusy] = useState(false);
   const save = useServerFn(saveGuestRecords);
   const qc = useQueryClient();
 
-  useEffect(() => setForm(normaliseRecords(property.guest_records)), [property.id, property.guest_records]);
+  useEffect(() => {
+    const r = normaliseRecords(property.guest_records);
+    setForm(r);
+    setSaved(r);
+  }, [property.id, property.guest_records]);
+  const dirty = changed(form, saved);
 
   async function onSave() {
     setBusy(true);
     try {
       await save({ data: { propertyId: property.id, records: form } });
       await Promise.all([qc.invalidateQueries({ queryKey: ["board"] }), qc.invalidateQueries({ queryKey: ["workspace"] })]);
+      setSaved(form);
       toast.success(checkinSettings.saved);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -62,10 +69,11 @@ export function GuestRecordsSettings({
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
           <ShieldCheck className="size-5" />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-xl">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
+        <SaveButton dirty={dirty} busy={busy} onClick={() => void onSave()} />
       </div>
 
       <div className="mt-5 flex items-start gap-3 rounded-xl border border-border p-4">
@@ -126,10 +134,6 @@ export function GuestRecordsSettings({
 
       <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{uk ? copy.lawNoteUk : copy.lawNoteElsewhere}</p>
 
-      <Button className="mt-4" onClick={onSave} disabled={busy}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-        {common.save}
-      </Button>
     </section>
   );
 }

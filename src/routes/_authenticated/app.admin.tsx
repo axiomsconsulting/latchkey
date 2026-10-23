@@ -21,6 +21,7 @@ import { MenuPagesAdmin } from "@/components/host/MenuPagesAdmin";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -536,9 +537,26 @@ function SiteSettings() {
       });
     }
   }, [q.data]);
+  const [busy, setBusy] = useState(false);
+  const dirty = !!q.data && changed(form, { signupsOpen: q.data.signups_open, invoiceNightlyLines: q.data.invoice_nightly_lines, supportEmail: q.data.support_email ?? "", notice: q.data.notice ?? "" });
 
   return (
     <section className="card-soft space-y-4 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-lg">{copy.siteSettingsTitle}</h2>
+        <SaveButton
+          dirty={dirty}
+          busy={busy}
+          onClick={() => {
+            setBusy(true);
+            void save({ data: form })
+              .then(() => qc.invalidateQueries({ queryKey: ["site-settings"] }))
+              .then(() => toast.success(copy.saved))
+              .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+              .finally(() => setBusy(false));
+          }}
+        />
+      </div>
       <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
         <Label htmlFor="signups" className="text-base">
           {copy.signupsOpen}
@@ -566,16 +584,6 @@ function SiteSettings() {
         <Label htmlFor="notice">{copy.notice}</Label>
         <Textarea id="notice" rows={2} maxLength={300} value={form.notice} onChange={(e) => setForm((f) => ({ ...f, notice: e.target.value }))} />
       </div>
-      <Button
-        onClick={() =>
-          void save({ data: form })
-            .then(() => qc.invalidateQueries({ queryKey: ["site-settings"] }))
-            .then(() => toast.success(copy.saved))
-            .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
-        }
-      >
-        {common.save}
-      </Button>
     </section>
   );
 }

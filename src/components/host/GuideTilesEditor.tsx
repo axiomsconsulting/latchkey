@@ -8,6 +8,7 @@ import { NavIcon } from "@/components/NavIcon";
 import { GuideTiles } from "@/components/guest/StayHero";
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -130,10 +131,11 @@ export function GuideTilesEditor({
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
           <LayoutGrid className="size-5" />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
+        {q.data?.available ? <SaveButton dirty={dirty} busy={busy} onClick={() => void save()} /> : null}
       </div>
 
       {q.isLoading ? <Skeleton className="h-32 rounded-2xl" /> : null}
@@ -277,9 +279,6 @@ export function GuideTilesEditor({
                 </SelectContent>
               </Select>
             ) : null}
-            <Button onClick={() => void save()} disabled={busy || !dirty}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : null} {common.save}
-            </Button>
             {tiles ? <span className="text-xs text-muted-foreground">{copy.count(tiles.length)}</span> : null}
           </div>
         </>

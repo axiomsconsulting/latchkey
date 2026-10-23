@@ -18,19 +18,22 @@ export type NightMode = (typeof NIGHT_MODES)[number];
 /** Patterns saved before they were grouped. */
 const OLD_MODES: Record<string, NightMode> = { breathe: "glow", steady: "glow", sweep: "flow", cycle: "flow" };
 
-/** Bright, soothing sets of colours (a night light has to light the hall); the warm ones are kindest to sleep. */
+/**
+ * Five bright colour families, each a few close shades so the light drifts
+ * gently: yellowish, reddish, bluish, greenish and whitish. The warm ones are
+ * kindest to sleep.
+ */
 export const NIGHT_PALETTES = {
-  candle: ["#ffd29a", "#ffb870", "#ffe4bd", "#ffc684"],
-  ember: ["#ff9a4d", "#ff6f61", "#ffbe5c", "#ff7e9a"],
-  sunset: ["#ff8a65", "#ffb77d", "#ff7aa8", "#c48cff"],
-  lavender: ["#b79cff", "#f0a0f0", "#9d8cff", "#ffb3d9"],
-  moonlight: ["#8fb0ff", "#b8d0ff", "#7d9cff", "#d6e2ff"],
-  ocean: ["#4fe3d6", "#5aa9ff", "#7ef0ff", "#6f8dff"],
-  forest: ["#6fe3a0", "#b4f08c", "#4fd690", "#e2f59a"],
-  spectrum: ["#ff6b6b", "#ffc04d", "#fff06b", "#7cf08a", "#5ad4ff", "#a98bff"],
+  candle: ["#ffd29a", "#ffbf75", "#ffe2b5", "#ffc887"],
+  ember: ["#ff8a6b", "#ff6f7d", "#ffa07a", "#ff7f9a"],
+  moonlight: ["#8fb0ff", "#a6c4ff", "#7fa2ff", "#b9cfff"],
+  meadow: ["#7fe3a3", "#a6ef9a", "#6fd9b0", "#c2f2a0"],
+  pearl: ["#fff4e6", "#f3f0ff", "#fffaf0", "#eef6ff"],
 } as const satisfies Record<string, readonly string[]>;
 export type NightPalette = keyof typeof NIGHT_PALETTES;
 export const NIGHT_PALETTE_KEYS = Object.keys(NIGHT_PALETTES) as NightPalette[];
+/** Colours saved before they were grouped into five families. */
+const OLD_PALETTES: Record<string, NightPalette> = { sunset: "ember", lavender: "moonlight", ocean: "moonlight", forest: "meadow", spectrum: "candle" };
 
 /** Speed 1 (slowest) to 5 (liveliest); 3 is how the preview always looked. Each multiplies every period. */
 export const NIGHT_SPEED = { min: 1, max: 5, default: 3 } as const;
@@ -72,7 +75,7 @@ export function normaliseRest(raw: unknown): KioskRest {
     nightLight: r["nightLight"] === true,
     nightWhen: pick(r["nightWhen"], ["always", "quiet"] as const, DEFAULT_REST.nightWhen),
     mode: pick(typeof r["mode"] === "string" ? (OLD_MODES[r["mode"]] ?? r["mode"]) : null, NIGHT_MODES, DEFAULT_REST.mode),
-    palette: pick(r["palette"], NIGHT_PALETTE_KEYS, DEFAULT_REST.palette),
+    palette: pick(typeof r["palette"] === "string" ? (OLD_PALETTES[r["palette"]] ?? r["palette"]) : null, NIGHT_PALETTE_KEYS, DEFAULT_REST.palette),
     speed: Math.min(NIGHT_SPEED.max, Math.max(NIGHT_SPEED.min, Math.round(typeof r["speed"] === "number" ? r["speed"] : typeof r["speed"] === "string" ? (OLD_SPEEDS[r["speed"]] ?? NIGHT_SPEED.default) : NIGHT_SPEED.default))),
     otherwise: pick(r["otherwise"], ["clock", "blank"] as const, DEFAULT_REST.otherwise),
     clockQr: r["clockQr"] === true,

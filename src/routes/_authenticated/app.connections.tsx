@@ -627,9 +627,16 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
       ) : null}
 
       <div className="mt-2 flex flex-wrap items-center gap-1">
-        <span className="mr-auto text-xs text-muted-foreground">
+        {/* The last check opens the recent checks: no separate button needed. */}
+        <button
+          type="button"
+          aria-expanded={history}
+          onClick={() => setHistory((h) => !h)}
+          title={copy.history}
+          className="mr-auto rounded text-left text-xs text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground"
+        >
           {copy.lastSynced}: {checked}
-        </span>
+        </button>
         {canWrite ? (
           <>
             <Button variant="ghost" size="sm" onClick={() => void syncNow()} disabled={state === "syncing"}>
@@ -639,16 +646,12 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
             <Button variant="ghost" size="sm" onClick={onEdit}>
               <Pencil className="size-4" /> {common.edit}
             </Button>
+            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirm(true)} aria-label={common.remove}>
+              <Trash2 className="size-4" />
+            </Button>
           </>
         ) : null}
-        <Button variant="ghost" size="sm" onClick={() => setHistory((h) => !h)}>
-          {copy.history}
-        </Button>
-        {canWrite ? (
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirm(true)} aria-label={common.remove}>
-            <Trash2 className="size-4" />
-          </Button>
-        ) : null}
+
       </div>
 
       {history ? (

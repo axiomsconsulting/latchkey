@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { channels, common, settings as copy } from "@/content/copy";
@@ -81,6 +82,7 @@ export function ChannelLabels({
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => setRows(initialRows(labels, sites)), [labels, sites]);
+  const dirty = changed(rows, initialRows(labels, sites));
 
   const update = (key: string, patch: Partial<Row>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -118,10 +120,13 @@ export function ChannelLabels({
 
   return (
     <section className="card-soft space-y-3 p-5">
-      <div>
-        <h2 className="text-lg">{copy.channelsTitle}</h2>
-        <p className="text-sm text-muted-foreground">{copy.channelsBody}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{copy.channelsIconHelp}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg">{copy.channelsTitle}</h2>
+          <p className="text-sm text-muted-foreground">{copy.channelsBody}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{copy.channelsIconHelp}</p>
+        </div>
+        <SaveButton dirty={dirty} busy={busy} label={copy.save} onClick={() => void submit()} />
       </div>
       <input
         ref={fileInput}
@@ -203,10 +208,6 @@ export function ChannelLabels({
           onClick={() => setRows((rs) => [...rs, { key: newSiteKey(), label: "", icon_url: null, builtIn: false }])}
         >
           <Plus className="size-4" /> {copy.channelsAdd}
-        </Button>
-        <Button type="button" onClick={submit} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-          {copy.save}
         </Button>
       </div>
     </section>

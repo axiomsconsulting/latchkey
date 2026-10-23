@@ -846,7 +846,7 @@ export const properties = branded({
   elsewhere: {
     checkin: ["How guests check in", "Settings → Guests"],
     records: ["Who's staying and ID records", "Settings → Guests"],
-    kioskRest: ["Kiosk at rest (night light, clocks, screen off)", "Settings → Look"],
+    kioskRest: ["Screen saver (night light, clocks, screen off)", "Settings → Look"],
     schedule: ["Cleaning and unavailable times", "Housekeeping → Schedule"],
     calendars: ["Calendar links and each room's shared calendar", "Connections"],
   } as Record<string, [string, string]>,
@@ -956,7 +956,7 @@ export const common = branded({
 });
 
 export const kioskRestCopy = branded({
-  title: "Kiosk at rest",
+  title: "Screen saver",
   body: "What the door tablet shows when nobody is using it. Any touch wakes it, ready to check in.",
   nightLight: "Night light",
   nightLightHelp: "Bright, softly changing colours that light the hallway at night, instead of the clock screensaver. A fine shimmer keeps every pixel changing, so nothing burns in.",
@@ -973,12 +973,9 @@ export const kioskRestCopy = branded({
   palettes: {
     candle: "Candlelight",
     ember: "Ember",
-    sunset: "Sunset",
-    lavender: "Lavender",
     moonlight: "Moonlight",
-    ocean: "Ocean",
-    forest: "Forest",
-    spectrum: "Rainbow",
+    meadow: "Meadow",
+    pearl: "Pearl",
   },
   speed: "Speed",
   speedEnds: ["Slow", "Lively"],
@@ -993,9 +990,12 @@ export const kioskRestCopy = branded({
   clockQr: "Check-in QR code while the kiosk rests",
   clockQrHelp: "Shown on the clock screensaver, the night light and with the screen off, so guests can scan it without touching the kiosk. It's never a white block (light on dark, or dark on the night light) and moves every few minutes so nothing burns in.",
   preview: "Preview",
+  previewQuiet: "Quiet hours",
+  previewDay: "Rest of the day",
+  previewShowing: { night: "Night light", clock: "Clock screensaver", blank: "Screen off" } as Record<string, string>,
   bandsNote: "On the kiosk, slide the left edge for brightness and the right edge for colour depth.",
-  saved: "Kiosk at rest saved. The kiosk has been told.",
-  quickTitle: "Kiosk at rest",
+  saved: "Screen saver saved. The kiosk has been told.",
+  quickTitle: "Screen saver",
   quick: { night: "Night light", clock: "Clocks", blank: "Screen off" },
   quickDone: { night: "Night light on. An idle kiosk lights up now.", clock: "The kiosk shows the clocks at rest.", blank: "The kiosk's screen goes dark at rest." },
   quickQuiet: (start: string, end: string, otherwise: string) => `Night light from ${start} to ${end}; ${otherwise.toLowerCase()} otherwise.`,
@@ -1829,6 +1829,19 @@ export const listingImportCopy = branded({
   close: "Close",
 });
 
+export const saveCopy = branded({
+  unsaved: "Changes not saved yet",
+});
+
+export const listingLinksCopy = branded({
+  label: "Your listings on booking sites",
+  placeholder: "https://www.airbnb.co.uk/rooms/12345678",
+  propertyHint: "Links to this property's own pages (one per line). Their icons open them straight from Properties.",
+  roomHint: "Links to this room's own listings (one per line), e.g. its Airbnb listing.",
+  otherSite: "Website",
+  open: (site: string) => `Open on ${site}`,
+});
+
 export const feedCopy = branded({
   title: "Share each room's Latchkey calendar",
   body:
@@ -2597,6 +2610,7 @@ export const feedbackCopy = branded({
 
 /** The super admin's area. */
 export const adminCopy = branded({
+  siteSettingsTitle: "Sign-ups, support and notices",
   viewingTitle: (name: string) => `The business you're viewing${name ? `: ${name}` : ""}`,
   viewingBody: "Latchkey's own switches for this business: whether each connection is in demo or live, and its sample data. Use \"View as host\" below to open another business.",
   sampleLoaded: "Demo rooms loaded",
@@ -3235,7 +3249,7 @@ export const settingsMenuCopy = branded({
     payments: ["Card payments", "money"],
     invoices: ["Invoices", "money"],
     theme: ["Look and feel", "look"],
-    kioskRest: ["Kiosk at rest", "look"],
+    kioskRest: ["Screen saver", "look"],
     alerts: ["Alerts", "apps"],
     api: ["API & MCP", "apps"],
     shortcuts: ["Phone shortcuts", "apps"],

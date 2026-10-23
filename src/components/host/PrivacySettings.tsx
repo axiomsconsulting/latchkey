@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/host/SaveButton";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { common, privacyCopy as copy } from "@/content/copy";
@@ -47,10 +47,11 @@ export function PrivacySettings({ hostId, isOwner }: { hostId: string; isOwner: 
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
           <ShieldCheck className="size-5" />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
+        {isOwner ? <SaveButton dirty={changed && editable} busy={busy} onClick={() => void save()} /> : null}
       </div>
 
       {form ? (
@@ -78,13 +79,7 @@ export function PrivacySettings({ hostId, isOwner }: { hostId: string; isOwner: 
         </div>
       ) : null}
       {q.data && !q.data.available ? <p className="text-sm text-muted-foreground">{copy.notReady}</p> : null}
-      {isOwner ? (
-        <Button onClick={() => void save()} disabled={busy || !changed}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null} {common.save}
-        </Button>
-      ) : (
-        <p className="text-xs text-muted-foreground">{copy.ownerOnly}</p>
-      )}
+      {isOwner ? null : <p className="text-xs text-muted-foreground">{copy.ownerOnly}</p>}
 
       <div className="rounded-2xl border border-border bg-surface p-4">
         <h3 className="text-sm font-semibold">{copy.otherTitle}</h3>

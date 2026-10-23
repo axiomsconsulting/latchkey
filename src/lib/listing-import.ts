@@ -371,6 +371,8 @@ export type PlannedRoom = {
   photos: string[];
   /** Where it came from, for the review list. */
   from: ListingPlatform;
+  /** The listing page it came from, when that page is this one room (kept as the room's link). */
+  url: string | null;
   pricePerNight: number | null;
 };
 
@@ -389,6 +391,8 @@ export type ImportPlan = {
   };
   photos: string[];
   rooms: PlannedRoom[];
+  /** Pages for the whole property (kept as the property's links). */
+  propertyLinks: string[];
   prices: Array<{ platform: ListingPlatform; amount: number; currency: string | null; per: string | null }>;
 };
 
@@ -425,6 +429,7 @@ export function planImport(listings: Listing[], existingRooms: Array<{ id: strin
         amenities: r.amenities.length ? r.amenities : [],
         photos: r.photos.length ? r.photos : [],
         from: l.platform,
+        url: PLATFORM_PROFILES[l.platform].shape === "unit" ? l.url : null,
         pricePerNight: r.pricePerNight,
       });
     }
@@ -445,6 +450,7 @@ export function planImport(listings: Listing[], existingRooms: Array<{ id: strin
     },
     photos,
     rooms: [...rooms.values()],
+    propertyLinks: listings.filter((l) => PLATFORM_PROFILES[l.platform].shape === "property").map((l) => l.url),
     prices: listings.filter((l) => l.price).map((l) => ({ platform: l.platform, ...l.price! })),
   };
 }

@@ -13,6 +13,7 @@ import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -267,11 +268,15 @@ function SectionEditor({
   const [summary, setSummary] = useState(start?.summary ?? "");
   const [steps, setSteps] = useState<Step[]>(start?.steps ?? []);
   const [busy, setBusy] = useState<string | null>(null);
+  // What was last saved: Save stays grey until the section changes.
+  const [saved, setSaved] = useState(() => ({ summary: start?.summary ?? "", steps: start?.steps ?? [] }));
 
   useEffect(() => {
     setSummary(start?.summary ?? "");
     setSteps(start?.steps ?? []);
+    setSaved({ summary: start?.summary ?? "", steps: start?.steps ?? [] });
   }, [own, inherited]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dirty = changed({ summary, steps }, saved);
 
   const patch = (i: number, p: Partial<Step>) => setSteps((xs) => xs.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const move = (i: number, d: -1 | 1) =>
@@ -308,6 +313,7 @@ function SectionEditor({
         },
       });
       await qc.invalidateQueries({ queryKey: ["guide", propertyId] });
+      setSaved({ summary, steps });
       toast.success(copy.saved);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : common.errorBody);
@@ -331,7 +337,10 @@ function SectionEditor({
 
   return (
     <div className="space-y-4 pb-2">
-      <p className="text-sm text-muted-foreground">{roomId && !own && inherited ? copy.inherits : hint}</p>
+      <div className="flex items-start justify-between gap-3 pt-2">
+        <p className="min-w-0 text-sm text-muted-foreground">{roomId && !own && inherited ? copy.inherits : hint}</p>
+        <SaveButton dirty={dirty} busy={busy === "save"} label={copy.save} onClick={() => void submit()} />
+      </div>
       <div className="space-y-1">
         <Label htmlFor={`sum-${sectionKey}`}>{copy.summary}</Label>
         <Textarea id={`sum-${sectionKey}`} value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={500} />
@@ -373,10 +382,6 @@ function SectionEditor({
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={() => setSteps((xs) => [...xs, { heading: "", body: "", imagePath: null, imageUrl: null }])} disabled={steps.length >= 20}>
           <Plus className="size-4" /> {copy.addStep}
-        </Button>
-        <Button type="button" onClick={submit} disabled={busy !== null}>
-          {busy === "save" ? <Loader2 className="size-4 animate-spin" /> : null}
-          {copy.save}
         </Button>
         {roomId && own ? (
           <Button type="button" variant="ghost" onClick={revert} disabled={busy !== null}>{copy.useHouse}</Button>

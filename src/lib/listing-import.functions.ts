@@ -135,6 +135,8 @@ export const applyListingImport = createServerFn({ method: "POST" })
           })
           .default({}),
         houseRules: z.array(z.string().trim().min(1).max(200)).max(20).default([]),
+        /** The pages read for the whole property, kept as its listing links. */
+        propertyLinks: z.array(z.string().url().max(2000)).max(10).default([]),
         coverPhotoUrl: z.string().url().max(2000).nullable().default(null),
         rooms: z
           .array(
@@ -146,6 +148,8 @@ export const applyListingImport = createServerFn({ method: "POST" })
               ensuite: z.boolean(),
               amenities: z.array(z.string().trim().min(1).max(80)).max(30),
               photoUrl: z.string().url().max(2000).nullable(),
+              /** The room's own listing page, kept as its link. */
+              listingUrl: z.string().url().max(2000).nullable().default(null),
             }),
           )
           .max(40),
@@ -187,6 +191,12 @@ export const applyListingImport = createServerFn({ method: "POST" })
         roomId = row.id as string;
         result.roomsAdded++;
       }
+      if (r.listingUrl) {
+        // Kept beside any links already there; before migration 0051 this is skipped.
+        const { mergeListingLinks } = await import("./listing-links");
+        const { data: had } = await sb.from("rooms").select("listing_links").eq("id", roomId).maybeSingle();
+        await sb.from("rooms").update({ listing_links: mergeListingLinks(had?.listing_links, [r.listingUrl]) }).eq("id", roomId);
+      }
       if (r.photoUrl) {
         const url = await copyPhoto(r.photoUrl, `${data.propertyId}/room-${roomId}-${Date.now()}`);
         if (url) {
@@ -194,6 +204,12 @@ export const applyListingImport = createServerFn({ method: "POST" })
           result.photos++;
         } else result.photosSkipped++;
       }
+    }
+
+    if (data.propertyLinks.length) {
+      const { mergeListingLinks } = await import("./listing-links");
+      const { data: had } = await sb.from("properties").select("listing_links").eq("id", data.propertyId).maybeSingle();
+      await sb.from("properties").update({ listing_links: mergeListingLinks(had?.listing_links, data.propertyLinks) }).eq("id", data.propertyId);
     }
 
     if (data.coverPhotoUrl) {

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Clock3, Loader2, Moon, MonitorOff, QrCode } from "lucide-react";
+import { Clock3, Moon, MonitorOff, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
+import { useQrImage } from "@/components/guest/CheckInQr";
 import { NightGlow } from "@/components/guest/KioskNightLight";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -18,6 +20,7 @@ import {
   NIGHT_PALETTE_KEYS,
   NIGHT_SPEED,
   normaliseRest,
+  restNow,
   type KioskRest,
 } from "@/lib/kiosk-rest";
 import { cn } from "@/lib/utils";
@@ -57,25 +60,38 @@ const tile = (on: boolean) =>
   );
 
 /**
- * Properties → Kiosk at rest: the night light (style, colours, speed, when),
- * what shows otherwise (clock screensaver or nothing) and the QR code on the
- * clock screensaver. Every style and colour is previewed live, sped up.
+ * Settings → Look → Screen saver: the night light (style, colours, speed,
+ * when), what shows otherwise (clock screensaver or nothing) and the QR code
+ * at rest. Styles and colours are small live swatches; the preview shows
+ * exactly what the kiosk will (QR, clock or a dark screen), switching every
+ * 2 seconds when the night light is for quiet hours only.
  */
 export function KioskRestSettings({ property }: { property: RestProperty }) {
-  const [rest, setRest] = useState<KioskRest>(() => normaliseRest(property.kiosk_rest));
-  useEffect(() => setRest(normaliseRest(property.kiosk_rest)), [property.id, property.kiosk_rest]);
+  const [saved, setSaved] = useState<KioskRest>(() => normaliseRest(property.kiosk_rest));
+  const [rest, setRest] = useState<KioskRest>(saved);
+  useEffect(() => {
+    const r = normaliseRest(property.kiosk_rest);
+    setSaved(r);
+    setRest(r);
+  }, [property.id, property.kiosk_rest]);
   const { busy, run } = useSaveRest(property);
   const set = (patch: Partial<KioskRest>) => setRest((r) => ({ ...r, ...patch }));
   const quiet = { start: hhmm(property.quiet_hours_start, "22:00"), end: hhmm(property.quiet_hours_end, "07:00") };
+  const dirty = changed(rest, saved);
 
   return (
     <section className="card-soft p-5">
-      <h2 className="text-xl">{copy.title}</h2>
-      <p className="text-sm text-muted-foreground">{copy.body}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl">{copy.title}</h2>
+          <p className="text-sm text-muted-foreground">{copy.body}</p>
+        </div>
+        <SaveButton dirty={dirty} busy={busy} onClick={() => void run(rest, copy.saved).then((ok) => ok && setSaved(rest))} />
+      </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="space-y-5">
-          <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-4">
+      <div className="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_14rem]">
+        <div className="space-y-4">
+          <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-3">
             <div>
               <Label htmlFor="kr-night" className="flex items-center gap-2 text-base">
                 <Moon className="size-4 text-primary" /> {copy.nightLight}
@@ -87,38 +103,36 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
 
           {rest.nightLight ? (
             <>
-              <fieldset className="space-y-2">
+              <fieldset className="space-y-1.5">
                 <legend className="text-sm font-medium">{copy.when}</legend>
                 <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
                   {(["always", "quiet"] as const).map((w) => (
-                    <button key={w} type="button" role="radio" aria-checked={rest.nightWhen === w} onClick={() => set({ nightWhen: w })} className={cn(tile(rest.nightWhen === w), "p-3")}>
+                    <button key={w} type="button" role="radio" aria-checked={rest.nightWhen === w} onClick={() => set({ nightWhen: w })} className={cn(tile(rest.nightWhen === w), "p-2.5")}>
                       <span className="block font-medium">{copy.whenOptions[w]}</span>
-                      {w === "quiet" ? <span className="block text-muted-foreground">{copy.quietBetween(quiet.start, quiet.end)}</span> : null}
+                      {w === "quiet" ? <span className="block text-xs text-muted-foreground">{copy.quietBetween(quiet.start, quiet.end)}</span> : null}
                     </button>
                   ))}
                 </div>
               </fieldset>
 
-              <fieldset className="space-y-2">
+              {/* Styles and colours: the same small tiles, each a live swatch. */}
+              <fieldset className="space-y-1.5">
                 <legend className="text-sm font-medium">{copy.style}</legend>
-                <div role="radiogroup" className="grid grid-cols-3 gap-2">
+                <div role="radiogroup" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {NIGHT_MODES.map((m) => (
-                    <button key={m} type="button" role="radio" aria-checked={rest.mode === m} onClick={() => set({ mode: m })} className={cn(tile(rest.mode === m), "flex flex-col justify-start overflow-hidden")}>
-                      <span className="relative block aspect-[4/3]">
+                    <button key={m} type="button" role="radio" aria-checked={rest.mode === m} title={copy.modes[m].help} onClick={() => set({ mode: m })} className={cn(tile(rest.mode === m), "p-2")}>
+                      <span className="relative block h-8 overflow-hidden rounded-lg">
                         <NightGlow rest={{ ...rest, mode: m }} depth={DEFAULT_NIGHT_LOOK.depth} brightness={DEFAULT_NIGHT_LOOK.brightness} />
                       </span>
-                      <span className="block px-2.5 py-2">
-                        <span className="block font-medium">{copy.modes[m].label}</span>
-                        <span className="block text-xs text-muted-foreground">{copy.modes[m].help}</span>
-                      </span>
+                      <span className="mt-1.5 block font-medium">{copy.modes[m].label}</span>
                     </button>
                   ))}
                 </div>
               </fieldset>
 
-              <fieldset className="space-y-2">
+              <fieldset className="space-y-1.5">
                 <legend className="text-sm font-medium">{copy.colours}</legend>
-                <div role="radiogroup" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div role="radiogroup" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {NIGHT_PALETTE_KEYS.map((k) => (
                     <button key={k} type="button" role="radio" aria-checked={rest.palette === k} onClick={() => set({ palette: k })} className={cn(tile(rest.palette === k), "p-2")}>
                       <span className="block h-8 rounded-lg" style={{ background: `linear-gradient(90deg, ${NIGHT_PALETTES[k].join(", ")})` }} />
@@ -128,44 +142,31 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
                 </div>
               </fieldset>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="kr-speed" className="flex items-baseline justify-between text-sm font-medium">
                   {copy.speed} <span className="font-normal text-muted-foreground">{copy.speedValue(rest.speed)}</span>
                 </Label>
-                <input
-                  id="kr-speed"
-                  type="range"
-                  min={NIGHT_SPEED.min}
-                  max={NIGHT_SPEED.max}
-                  step={1}
-                  value={rest.speed}
-                  onChange={(e) => set({ speed: Number(e.target.value) })}
-                  className="h-11 w-full accent-[var(--primary)]"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{copy.speedEnds[0]}</span>
-                  <span>{copy.speedEnds[1]}</span>
-                </div>
+                <input id="kr-speed" type="range" min={NIGHT_SPEED.min} max={NIGHT_SPEED.max} step={1} value={rest.speed} onChange={(e) => set({ speed: Number(e.target.value) })} className="h-9 w-full accent-[var(--primary)]" />
               </div>
             </>
           ) : null}
 
-          <fieldset className="space-y-2">
+          <fieldset className="space-y-1.5">
             <legend className="text-sm font-medium">{rest.nightLight ? (rest.nightWhen === "quiet" ? copy.otherwiseQuiet : copy.otherwiseOff) : copy.otherwise}</legend>
             <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
               {(["clock", "blank"] as const).map((o) => (
-                <button key={o} type="button" role="radio" aria-checked={rest.otherwise === o} onClick={() => set({ otherwise: o })} className={cn(tile(rest.otherwise === o), "flex items-start gap-3 p-3")}>
+                <button key={o} type="button" role="radio" aria-checked={rest.otherwise === o} onClick={() => set({ otherwise: o })} className={cn(tile(rest.otherwise === o), "flex items-start gap-2.5 p-2.5")}>
                   {o === "clock" ? <Clock3 className="mt-0.5 size-5 text-primary" /> : <MonitorOff className="mt-0.5 size-5 text-primary" />}
                   <span>
                     <span className="block font-medium">{copy.otherwiseOptions[o].label}</span>
-                    <span className="block text-muted-foreground">{copy.otherwiseOptions[o].help}</span>
+                    <span className="block text-xs text-muted-foreground">{copy.otherwiseOptions[o].help}</span>
                   </span>
                 </button>
               ))}
             </div>
           </fieldset>
 
-          <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-4">
+          <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-3">
             <div>
               <Label htmlFor="kr-qr" className="flex items-center gap-2 text-base">
                 <QrCode className="size-4 text-primary" /> {copy.clockQr}
@@ -176,29 +177,50 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
           </div>
         </div>
 
-        {/* The night light as it will look (sped up), or what shows instead. */}
         <aside className="space-y-2">
           <p className="text-sm font-medium">{copy.preview}</p>
-          <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-black lg:aspect-[3/4]">
-            {rest.nightLight ? (
-              <NightGlow rest={rest} depth={DEFAULT_NIGHT_LOOK.depth} brightness={DEFAULT_NIGHT_LOOK.brightness} />
-            ) : (
-              <div className="grid size-full place-items-center text-center text-sm text-white/60">
-                <span className="space-y-2">
-                  {rest.otherwise === "clock" ? <Clock3 className="mx-auto size-10" /> : <MonitorOff className="mx-auto size-10" />}
-                  <span className="block">{copy.otherwiseOptions[rest.otherwise].label}</span>
-                </span>
-              </div>
-            )}
-          </div>
+          <RestPreview rest={rest} shortCode={property.short_code} />
           <p className="text-xs text-muted-foreground">{copy.bandsNote}</p>
         </aside>
       </div>
-
-      <Button className="mt-5" disabled={busy} onClick={() => void run(rest, copy.saved)}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null} {common.save}
-      </Button>
     </section>
+  );
+}
+
+/** What the kiosk shows at rest, in miniature; alternates every 2 s when the night light is for quiet hours only. */
+function RestPreview({ rest, shortCode }: { rest: KioskRest; shortCode: string }) {
+  const cycles = rest.nightLight && rest.nightWhen === "quiet";
+  const [inQuiet, setInQuiet] = useState(true);
+  useEffect(() => {
+    if (!cycles) return;
+    const id = window.setInterval(() => setInQuiet((q) => !q), 2000);
+    return () => window.clearInterval(id);
+  }, [cycles]);
+  const showing = restNow(rest, cycles ? inQuiet : true);
+  const url = typeof window === "undefined" ? null : `${window.location.origin}/kiosk/${shortCode}?guest=1`;
+  const qr = useQrImage(rest.clockQr ? url : null, showing === "night" ? { dark: "#000000e6", light: "#00000000" } : { dark: "#c8c8c8ff", light: "#00000000" });
+  const now = new Date();
+  const hour = ((now.getHours() % 12) + now.getMinutes() / 60) * 30;
+  const minute = now.getMinutes() * 6;
+  return (
+    <div className="space-y-1">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-black">
+        {showing === "night" ? <NightGlow rest={rest} depth={DEFAULT_NIGHT_LOOK.depth} brightness={DEFAULT_NIGHT_LOOK.brightness} /> : null}
+        {showing === "clock" ? (
+          <svg viewBox="0 0 100 100" className="absolute left-1/2 top-1/2 size-20 -translate-x-1/2 -translate-y-1/2 text-white/60" aria-hidden>
+            <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <line x1="50" y1="50" x2="50" y2="26" stroke="currentColor" strokeWidth="3" strokeLinecap="round" transform={`rotate(${hour} 50 50)`} />
+            <line x1="50" y1="50" x2="50" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" transform={`rotate(${minute} 50 50)`} />
+          </svg>
+        ) : null}
+        {qr ? <img src={qr} alt="" className="absolute bottom-2 right-2 size-12" /> : null}
+      </div>
+      <p className="text-center text-xs text-muted-foreground">
+        {cycles ? (inQuiet ? copy.previewQuiet : copy.previewDay) : null}
+        {cycles ? " · " : null}
+        {copy.previewShowing[showing]}
+      </p>
+    </div>
   );
 }
 

@@ -335,6 +335,22 @@ export const saveRoom = createServerFn({ method: "POST" })
     return row;
   });
 
+/** The property's or a room's links to its own listings on the booking sites (migration 0051). */
+export const saveListingLinks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ propertyId: uuid, roomId: uuid.nullable(), urls: z.array(z.string().max(2000)).max(20) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { normaliseListingLinks } = await import("./listing-links");
+    const listing_links = normaliseListingLinks(data.urls);
+    const sb = context.supabase as unknown as { from: (t: string) => any };
+    const q = data.roomId
+      ? sb.from("rooms").update({ listing_links }).eq("id", data.roomId).eq("property_id", data.propertyId)
+      : sb.from("properties").update({ listing_links }).eq("id", data.propertyId);
+    const { error } = await q;
+    if (error) throw new Error(/listing_links/.test(error.message) ? "Listing links need the latest update (migration 0051)." : error.message);
+    return { ok: true, listing_links };
+  });
+
 export const deleteRoom = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: uuid }).parse(input))
@@ -443,6 +459,8 @@ export const saveBooking = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { id, site_key, stay_amount_pence, stay_amount_includes_tax, guest_address, guest_phone, ...base } = data;
+    // A stay waiting for details that now has the guest's name is an ordinary upcoming stay.
+    if (base.status === "needs_details" && base.guest_full_name?.trim()) base.status = "upcoming";
     // A full number also gives the last 4 digits guests confirm at check-in.
     if (guest_phone) base.phone_last4 = guest_phone.replace(/\D/g, "").slice(-4);
     // The amount is only written when given, so saving works before migration 0023.

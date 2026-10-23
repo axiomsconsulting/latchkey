@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -94,11 +95,15 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
     }
   }
 
+  // The money settings as saved: Save stays grey until one differs.
+  const savedMoney = q.data
+    ? { registered: q.data.tax.registered, label: q.data.tax.label, rate: String(q.data.tax.rateBp / 100), pricesInclude: q.data.tax.pricesInclude, bank: q.data.bankDetails, outUntil: q.data.outUntil ? q.data.outUntil.slice(0, 16) : "" }
+    : null;
   useEffect(() => {
-    if (!q.data) return;
-    const t = q.data.tax;
-    setMoney({ registered: t.registered, label: t.label, rate: String(t.rateBp / 100), pricesInclude: t.pricesInclude, bank: q.data.bankDetails, outUntil: q.data.outUntil ? q.data.outUntil.slice(0, 16) : "" });
+    if (savedMoney) setMoney(savedMoney);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q.data]);
+  const [moneyBusy, setMoneyBusy] = useState(false);
 
   async function update(item: ExtraItem, patch: Partial<ExtraItem>) {
     const next = { ...item, ...patch };
@@ -111,6 +116,7 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
   }
 
   async function submitMoney() {
+    setMoneyBusy(true);
     try {
       await saveMoney({ data: {
         hostId, registered: money.registered, label: money.label, rateBp: Math.round(Number(money.rate || 0) * 100),
@@ -120,6 +126,8 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
       await qc.invalidateQueries({ queryKey: ["price-list", propertyId] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setMoneyBusy(false);
     }
   }
 
@@ -256,7 +264,10 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
       <BreakfastMenuEditor propertyId={propertyId} items={q.data.items.filter((i) => i.breakfast)} currency={q.data.currency} />
 
       <section className="card-soft space-y-4 p-5">
-        <h2 className="text-lg">{copy.money}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-lg">{copy.money}</h2>
+          <SaveButton dirty={!!savedMoney && changed(money, savedMoney)} busy={moneyBusy} label={copy.save} onClick={() => void submitMoney()} />
+        </div>
         <label className="flex items-center gap-3"><Switch checked={money.registered} onCheckedChange={(v) => setMoney({ ...money, registered: v })} />{copy.taxRegistered}</label>
         {money.registered ? (
           <div className="flex flex-wrap gap-4">
@@ -267,7 +278,6 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
         ) : null}
         <div><Label>{copy.bank}</Label><Textarea value={money.bank} onChange={(e) => setMoney({ ...money, bank: e.target.value })} placeholder="Name, sort code, account number" /></div>
         <div><Label>{copy.outUntil}</Label><Input type="datetime-local" value={money.outUntil} onChange={(e) => setMoney({ ...money, outUntil: e.target.value })} className="w-64" /></div>
-        <Button onClick={submitMoney}>{copy.save}</Button>
       </section>
     </div>
   );

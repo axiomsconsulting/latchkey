@@ -30,12 +30,14 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { common, properties as copy } from "@/content/copy";
+import { common, listingLinksCopy as linksCopy, properties as copy } from "@/content/copy";
 import { COUNTRY_CHOICES, region } from "@/lib/regions";
 import { usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { formatUkTime } from "@/lib/dates";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
-import { deleteRoom, saveProperty, saveRoom } from "@/lib/host.functions";
+import { deleteRoom, saveListingLinks, saveProperty, saveRoom } from "@/lib/host.functions";
+import { ListingLinkIcons, ListingLinksField, linksText } from "@/components/host/ListingLinks";
+import { normaliseListingLinks } from "@/lib/listing-links";
 import { rebrand } from "@/lib/brand";
 
 // "checkin", "records" and "cleaning" moved (Settings, Housekeeping); old links still open the page.
@@ -70,6 +72,7 @@ type Room = {
   has_ensuite: boolean;
   sort_order: number;
   active: boolean;
+  listing_links?: unknown;
 };
 
 type Property = {
@@ -90,6 +93,7 @@ type Property = {
   wifi_password: string | null;
   host_contact_name: string | null;
   host_contact_phone: string | null;
+  listing_links?: unknown;
 };
 
 function RoomDialog({
@@ -106,8 +110,10 @@ function RoomDialog({
   nextOrder: number;
 }) {
   const save = useServerFn(saveRoom);
+  const saveLinks = useServerFn(saveListingLinks);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [links, setLinks] = useState(() => linksText(room?.listing_links));
   const [form, setForm] = useState({
     display_name: room?.display_name ?? "",
     room_number: room?.room_number ?? "",
@@ -122,7 +128,7 @@ function RoomDialog({
     e.preventDefault();
     setBusy(true);
     try {
-      await save({
+      const saved = await save({
         data: {
           ...(room ? { id: room.id } : {}),
           property_id: propertyId,
@@ -137,6 +143,10 @@ function RoomDialog({
           active: room?.active ?? true,
         },
       });
+      if (links !== linksText(room?.listing_links)) {
+        const roomId = room?.id ?? (saved as { id?: string } | null)?.id;
+        if (roomId) await saveLinks({ data: { propertyId, roomId, urls: normaliseListingLinks(links).map((l) => l.url) } });
+      }
       await qc.invalidateQueries({ queryKey: ["board"] });
       onOpenChange(false);
     } catch (err) {
@@ -227,6 +237,7 @@ function RoomDialog({
             />
             Children welcome (they give their age at check-in, no ID)
           </label>
+          <ListingLinksField id="room-links" value={links} onChange={setLinks} hint={linksCopy.roomHint} />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {common.cancel}
@@ -252,8 +263,10 @@ function PropertyDialog({
   property: Property;
 }) {
   const save = useServerFn(saveProperty);
+  const saveLinks = useServerFn(saveListingLinks);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [links, setLinks] = useState(() => linksText(property.listing_links));
   const [form, setForm] = useState({
     name: property.name,
     address: property.address ?? "",
@@ -302,6 +315,7 @@ function PropertyDialog({
           host_contact_phone: form.host_contact_phone.trim() || null,
         },
       });
+      if (links !== linksText(property.listing_links)) await saveLinks({ data: { propertyId: property.id, roomId: null, urls: normaliseListingLinks(links).map((l) => l.url) } });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["board"] }),
         qc.invalidateQueries({ queryKey: ["workspace"] }),
@@ -443,6 +457,9 @@ function PropertyDialog({
               onChange={(e) => setForm((f) => ({ ...f, wifi_password: e.target.value }))}
             />
           </div>
+          <div className="sm:col-span-2">
+            <ListingLinksField id="property-links" value={links} onChange={setLinks} hint={linksCopy.propertyHint} />
+          </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="pk">Parking notes</Label>
             <Textarea
@@ -542,7 +559,9 @@ function PropertiesPage() {
                   "No address yet"}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* The property's own pages on the booking sites, one tap away. */}
+              <ListingLinkIcons links={property.listing_links} />
               <Badge variant="secondary">/kiosk/{property.short_code}</Badge>
               {property.check_in_pin ? (
                 <Badge variant="outline">
@@ -615,7 +634,10 @@ function PropertiesPage() {
                 className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-4 last:border-0"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{r.display_name}</span>
+                  <span className="flex min-w-0 items-center gap-1">
+                    <span className="truncate font-medium">{r.display_name}</span>
+                    <ListingLinkIcons links={r.listing_links} className="inline-flex shrink-0 items-center" />
+                  </span>
                   <span className="block text-sm text-muted-foreground">
                     Sleeps {r.max_guests}
                     {r.children_allowed === false ? " · Adults only" : ""}

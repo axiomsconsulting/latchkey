@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +28,7 @@ export function InvoiceSettings({ hostId, isOwner }: { hostId: string; isOwner: 
 
   if (!s?.available) return null;
   const taxName = s.taxLabel || s.terms.name;
+  const dirty = changed(form, { enabled: s.enabled, taxNumber: s.taxNumber, prefix: s.prefix }) && !!form.prefix;
 
   async function submit() {
     setBusy(true);
@@ -48,10 +49,11 @@ export function InvoiceSettings({ hostId, isOwner }: { hostId: string; isOwner: 
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
           <FileText className="size-5" />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg">{copy.settingsTitle}</h2>
           <p className="text-sm text-muted-foreground">{copy.settingsBody}</p>
         </div>
+        {isOwner ? <SaveButton dirty={dirty} busy={busy} onClick={() => void submit()} /> : null}
       </div>
       <fieldset disabled={!isOwner} className="mt-4 space-y-4">
         <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
@@ -87,12 +89,6 @@ export function InvoiceSettings({ hostId, isOwner }: { hostId: string; isOwner: 
         <p className="rounded-xl bg-muted p-3 text-sm">
           {copy.taxSummary(s.registered, taxName, (s.rateBp / 100).toString(), s.pricesInclude)}
         </p>
-        {isOwner ? (
-          <Button onClick={() => void submit()} disabled={busy || !form.prefix}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {common.save}
-          </Button>
-        ) : null}
       </fieldset>
     </section>
   );

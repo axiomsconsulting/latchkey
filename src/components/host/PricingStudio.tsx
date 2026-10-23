@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { OfferSettings } from "@/components/host/OfferSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,8 +78,8 @@ export function PricingStudio() {
       <OfferSettings />
       <Now model={model} costs={costs} proj={proj} hosts={d.hosts} usage30={d.usage30} />
       <Plans model={model} setModel={setModel} costs={costs} proj={proj} published={d.published} payers={summariseHosts(model, d.hosts).payers} />
-      <Costs costs={costs} setCosts={setCosts} hosts={d.hosts} model={model} usage30={d.usage30} />
-      <ProjectionView model={model} costs={costs} proj={proj} setProj={setProj} today={d.today} />
+      <Costs costs={costs} saved={d.costs} setCosts={setCosts} hosts={d.hosts} model={model} usage30={d.usage30} />
+      <ProjectionView model={model} costs={costs} proj={proj} saved={d.projection} setProj={setProj} today={d.today} />
     </div>
   );
 }
@@ -308,12 +309,15 @@ function Field({ label, value, onChange, step }: { label: string; value: string;
 
 function Costs({
   costs,
+  saved,
   setCosts,
   hosts,
   model,
   usage30,
 }: {
   costs: CostModel;
+  /** As saved, so Save stays grey until something changes. */
+  saved: CostModel;
   setCosts: (c: CostModel) => void;
   hosts: Hosts;
   model: PricingModel;
@@ -342,9 +346,12 @@ function Costs({
 
   return (
     <section className="card-soft space-y-5 p-5">
-      <div className="space-y-1">
-        <h2 className="text-xl">{copy.costsTitle}</h2>
-        <p className="text-muted-foreground">{copy.costsBody}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-xl">{copy.costsTitle}</h2>
+          <p className="text-muted-foreground">{copy.costsBody}</p>
+        </div>
+        <SaveButton dirty={changed(costs, saved)} busy={busy} label={copy.saveCosts} onClick={() => void go(() => save({ data: { costs } }), copy.saved)} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {(Object.keys(copy.costFields) as Array<keyof CostModel>).map((k) => {
@@ -357,9 +364,6 @@ function Costs({
           );
         })}
       </div>
-      <Button variant="outline" disabled={busy} onClick={() => void go(() => save({ data: { costs } }), copy.saved)}>
-        {copy.saveCosts}
-      </Button>
 
       <div className="space-y-3 rounded-2xl border border-border p-4">
         <h3 className="font-medium">{copy.calibrateTitle}</h3>
@@ -386,12 +390,14 @@ function ProjectionView({
   model,
   costs,
   proj,
+  saved,
   setProj,
   today,
 }: {
   model: PricingModel;
   costs: CostModel;
   proj: Projection;
+  saved: Projection;
   setProj: (p: Projection) => void;
   today: string;
 }) {
@@ -421,9 +427,12 @@ function ProjectionView({
 
   return (
     <section className="card-soft space-y-5 p-5">
-      <div className="space-y-1">
-        <h2 className="text-xl">{copy.projTitle}</h2>
-        <p className="text-muted-foreground">{copy.projBody}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-xl">{copy.projTitle}</h2>
+          <p className="text-muted-foreground">{copy.projBody}</p>
+        </div>
+        <SaveButton dirty={changed(proj, saved)} busy={busy} label={copy.saveProj} onClick={() => void go(() => save({ data: { projection: proj as unknown as Record<string, unknown> } }), copy.saved)} />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {model.plans.map((p) => (
@@ -443,9 +452,6 @@ function ProjectionView({
         <Field label={copy.apiTypical} value={String(proj.apiRequests)} step="500" onChange={(v) => setProj({ ...proj, apiRequests: num(v) })} />
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" disabled={busy} onClick={() => void go(() => save({ data: { projection: proj as unknown as Record<string, unknown> } }), copy.saved)}>
-          {copy.saveProj}
-        </Button>
         <Button variant="ghost" disabled={busy} onClick={() => void go(() => rebase(), copy.rebased)}>
           {copy.rebase}
         </Button>

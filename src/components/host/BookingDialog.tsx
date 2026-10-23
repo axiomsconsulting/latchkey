@@ -216,7 +216,8 @@ export function BookingDialog({
           check_out_date: form.check_out_date,
           check_in_time: form.check_in_time || null,
           check_out_time: form.check_out_time || null,
-          status: form.status as (typeof STATUS_KEYS)[number],
+          // Details given: no longer waiting for them.
+          status: (form.status === "needs_details" && form.guest_full_name.trim() ? "upcoming" : form.status) as (typeof STATUS_KEYS)[number],
           notes: form.notes.trim() || null,
           guest_email: form.guest_email.trim() || null,
           guest_address: form.guest_address.trim() || null,
