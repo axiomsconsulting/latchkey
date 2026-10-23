@@ -16,10 +16,9 @@ import {
   NIGHT_MODES,
   NIGHT_PALETTES,
   NIGHT_PALETTE_KEYS,
-  NIGHT_SPEEDS,
+  NIGHT_SPEED,
   normaliseRest,
   type KioskRest,
-  type NightSpeed,
 } from "@/lib/kiosk-rest";
 import { cn } from "@/lib/utils";
 
@@ -102,11 +101,11 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
 
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium">{copy.style}</legend>
-                <div role="radiogroup" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                <div role="radiogroup" className="grid grid-cols-3 gap-2">
                   {NIGHT_MODES.map((m) => (
                     <button key={m} type="button" role="radio" aria-checked={rest.mode === m} onClick={() => set({ mode: m })} className={cn(tile(rest.mode === m), "flex flex-col justify-start overflow-hidden")}>
                       <span className="relative block aspect-[4/3]">
-                        <NightGlow rest={{ ...rest, mode: m }} depth={DEFAULT_NIGHT_LOOK.depth} brightness={0.9} speedUp={8} />
+                        <NightGlow rest={{ ...rest, mode: m }} depth={DEFAULT_NIGHT_LOOK.depth} brightness={DEFAULT_NIGHT_LOOK.brightness} />
                       </span>
                       <span className="block px-2.5 py-2">
                         <span className="block font-medium">{copy.modes[m].label}</span>
@@ -129,16 +128,25 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
                 </div>
               </fieldset>
 
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">{copy.speed}</legend>
-                <div role="radiogroup" className="flex flex-wrap gap-2">
-                  {(Object.keys(NIGHT_SPEEDS) as NightSpeed[]).map((sp) => (
-                    <button key={sp} type="button" role="radio" aria-checked={rest.speed === sp} onClick={() => set({ speed: sp })} className={cn(tile(rest.speed === sp), "px-4 py-2 font-medium")}>
-                      {copy.speeds[sp]}
-                    </button>
-                  ))}
+              <div className="space-y-2">
+                <Label htmlFor="kr-speed" className="flex items-baseline justify-between text-sm font-medium">
+                  {copy.speed} <span className="font-normal text-muted-foreground">{copy.speedValue(rest.speed)}</span>
+                </Label>
+                <input
+                  id="kr-speed"
+                  type="range"
+                  min={NIGHT_SPEED.min}
+                  max={NIGHT_SPEED.max}
+                  step={1}
+                  value={rest.speed}
+                  onChange={(e) => set({ speed: Number(e.target.value) })}
+                  className="h-11 w-full accent-[var(--primary)]"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{copy.speedEnds[0]}</span>
+                  <span>{copy.speedEnds[1]}</span>
                 </div>
-              </fieldset>
+              </div>
             </>
           ) : null}
 
@@ -173,7 +181,7 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
           <p className="text-sm font-medium">{copy.preview}</p>
           <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-black lg:aspect-[3/4]">
             {rest.nightLight ? (
-              <NightGlow rest={rest} depth={DEFAULT_NIGHT_LOOK.depth} brightness={0.9} speedUp={6} />
+              <NightGlow rest={rest} depth={DEFAULT_NIGHT_LOOK.depth} brightness={DEFAULT_NIGHT_LOOK.brightness} />
             ) : (
               <div className="grid size-full place-items-center text-center text-sm text-white/60">
                 <span className="space-y-2">

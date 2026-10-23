@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { boardOrder, boardTotals, buildBoard, dayAxis, nextOnWeekday, nextStatus, occupancyFor, roomLane, roomWindows, suggestedStatus, weekGrid, windowsForDay, type BoardStay } from "../src/lib/housekeeping";
+import { boardOrder, boardTotals, buildBoard, dayAxis, filterRooms, orderRooms, turnsFor, nextOnWeekday, nextStatus, occupancyFor, roomLane, roomWindows, suggestedStatus, weekGrid, windowsForDay, type BoardStay } from "../src/lib/housekeeping";
 
 const stay = (id: string, room: string, inD: string, outD: string, extra: Partial<BoardStay> = {}): BoardStay => ({
   id, room_id: room, guest_full_name: id, check_in_date: inD, check_out_date: outD, status: "upcoming", ...extra,
@@ -105,5 +105,35 @@ describe("housekeeping schedule", () => {
     expect(grid[1]!.windows.map((w) => w.id)).toEqual(["w2", "w1"]);
     expect(nextOnWeekday("2026-10-20", 2)).toBe("2026-10-20");
     expect(nextOnWeekday("2026-10-20", 1)).toBe("2026-10-26");
+  });
+});
+
+describe("housekeeping on the timeline", () => {
+  const rooms = [{ id: "r1", display_name: "One" }, { id: "r2", display_name: "Two" }, { id: "r3", display_name: "Three" }, { id: "r4", display_name: "Four" }];
+  const stays: BoardStay[] = [
+    stay("a", "r1", "2026-10-18", "2026-10-20", { check_out_time: "10:30" }),
+    stay("b", "r1", "2026-10-20", "2026-10-22", { check_in_time: "16:00" }),
+    stay("c", "r2", "2026-10-19", "2026-10-21"),
+    stay("d", "r3", "2026-10-20", "2026-10-23"),
+  ];
+  const readiness = [{ room_id: "r1", day: "2026-10-20", status: "cleaning" as const, assignee: "Ana", due_time: null, note: null, updated_at: null }, { room_id: "r4", day: "2026-10-20", status: "out_of_service" as const, assignee: null, due_time: null, note: null, updated_at: null }];
+
+  it("finds each day's turnovers: from leaving to ready-by, with the day's state", () => {
+    const turns = turnsFor({ days: ["2026-10-20", "2026-10-21"], rooms, stays, readiness, checkIn: "15:00", checkOut: "11:00" });
+    expect(turns.map((t) => [t.roomId, t.day, t.from, t.to, t.status])).toEqual([
+      ["r1", "2026-10-20", "10:30", "16:00", "cleaning"],
+      ["r3", "2026-10-20", "06:00", "15:00", "clean"],
+      ["r4", "2026-10-20", "00:00", "24:00", "out_of_service"],
+      ["r2", "2026-10-21", "11:00", "22:00", "to_clean"],
+    ]);
+  });
+
+  it("keeps the property's order whatever the status, unless asked to put work first", () => {
+    const cards = buildBoard({ day: "2026-10-20", rooms, stays, readiness: readiness.map(({ day: _d, ...r }) => r), defaultCheckIn: "15:00" });
+    expect(orderRooms(rooms, cards, "property").map((r) => r.id)).toEqual(["r1", "r2", "r3", "r4"]);
+    // r1 (arriving, cleaning) and r3 (arriving, clean) first: not ready for someone coming.
+    expect(orderRooms(rooms, cards, "state").map((r) => r.id)).toEqual(["r1", "r3", "r2", "r4"]);
+    expect(filterRooms(rooms, cards, "arriving").map((r) => r.id)).toEqual(["r1", "r3"]);
+    expect(filterRooms(rooms, cards, "out_of_service").map((r) => r.id)).toEqual(["r4"]);
   });
 });

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, ArchiveRestore, CalendarDays, ChevronLeft, ChevronRight, ListChecks, Loader2, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Archive, ArchiveRestore, CalendarDays, ListChecks, Loader2, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { BookingDialog, type BookingRow } from "@/components/host/BookingDialog";
@@ -11,7 +11,8 @@ import { ImportDialog } from "@/components/host/ImportDialog";
 import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { GuestSheet } from "@/components/host/GuestSheet";
-import { StayCalendar, type Activity } from "@/components/host/StayCalendar";
+import { BookingsTimeline, type Activity } from "@/components/host/BookingsTimeline";
+import type { ScheduleWindow } from "@/lib/housekeeping";
 import { BookingFilters, BookingsTable, Tip } from "@/components/host/BookingsTable";
 import {
   AlertDialog,
@@ -125,7 +126,6 @@ function BookingsPage() {
     }
   }
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "smart", dir: "asc" });
-  const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<BookingRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -185,10 +185,6 @@ function BookingsPage() {
     [all, filters, todayIso],
   );
 
-  const days = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(todayIso, offset * 7 + i)),
-    [todayIso, offset],
-  );
 
   function openNew() {
     setEditing(null);
@@ -505,32 +501,21 @@ function BookingsPage() {
         />
         </div>
       ) : (
-        <div className="card-soft overflow-x-auto p-0">
-          <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-            <Button variant="ghost" size="sm" onClick={() => setOffset((o) => o - 1)}>
-              <ChevronLeft className="size-4" />
-              Earlier
-            </Button>
-            <span className="text-sm font-medium">
-              {formatUkDate(days[0]!)} – {formatUkDate(days[6]!)}
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => setOffset((o) => o + 1)}>
-              Later
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-
-          <StayCalendar
-            rooms={rooms}
-            stays={filtered}
-            allStays={all}
-            windows={windows}
-            days={days}
-            today={todayIso}
-            activity={activity}
-            onOpen={(id) => openGuest(id)}
-          />
-        </div>
+        // One day in hours up to a month: swipe through time, pinch to zoom (the same timeline as Housekeeping).
+        <BookingsTimeline
+          rooms={rooms}
+          stays={filtered}
+          allStays={all}
+          windows={windows as unknown as ScheduleWindow[]}
+          times={{
+            checkIn: ((data?.property as { default_check_in_time?: string } | null)?.default_check_in_time ?? "15:00").slice(0, 5),
+            checkOut: ((data?.property as { default_check_out_time?: string } | null)?.default_check_out_time ?? "11:00").slice(0, 5),
+          }}
+          timezone={(data?.property as { timezone?: string | null } | null)?.timezone ?? "Europe/London"}
+          today={todayIso}
+          activity={activity}
+          onOpen={(id) => openGuest(id)}
+        />
       )}
 
       <GuestSheet

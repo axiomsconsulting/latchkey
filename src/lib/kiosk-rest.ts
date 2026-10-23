@@ -1,32 +1,43 @@
 /**
  * What a door kiosk shows at rest (properties.kiosk_rest): a night light that
  * lights the hallway with softly changing colours, the clock screensaver
- * (optionally with the check-in QR code), or nothing. The night light's
- * colours are worked out here frame by frame, and a dark band keeps sweeping
- * across the screen so every pixel regularly goes to black (no burn-in).
- * Pure, so the kiosk, the host's preview and the server agree.
+ * or nothing, each optionally with the check-in QR code (moving every few
+ * minutes). The night light's colours are worked out here frame by frame, at
+ * full brightness, with a fine moving shimmer over them so no pixel ever
+ * holds one colour (no burn-in). Pure, so the kiosk, the host's preview and
+ * the server agree.
  */
 
-export const NIGHT_MODES = ["breathe", "sweep", "cycle", "aurora", "steady"] as const;
+/**
+ * Three patterns: Glow (one colour at a time, gently brightening and dimming:
+ * what used to be Breathe and Steady), Flow (bands of colour drifting across:
+ * Sweep and Colour cycle) and Aurora (soft glows wandering).
+ */
+export const NIGHT_MODES = ["glow", "flow", "aurora"] as const;
 export type NightMode = (typeof NIGHT_MODES)[number];
+/** Patterns saved before they were grouped. */
+const OLD_MODES: Record<string, NightMode> = { breathe: "glow", steady: "glow", sweep: "flow", cycle: "flow" };
 
-/** Soothing sets of colours; the warm ones are kindest to sleep. */
+/** Bright, soothing sets of colours (a night light has to light the hall); the warm ones are kindest to sleep. */
 export const NIGHT_PALETTES = {
-  candle: ["#ffcf8a", "#ffb36b", "#ffe2b0", "#ffc27a"],
-  ember: ["#ff8a3d", "#ff5e5b", "#ffb347", "#d9485f"],
-  sunset: ["#ff7e5f", "#feb47b", "#c06c84", "#6c5b7b"],
-  lavender: ["#9b7bd6", "#d58fd8", "#6c5ce7", "#f1a7c5"],
-  moonlight: ["#5b7cfa", "#8fb3ff", "#3a4aa8", "#b6c6ff"],
-  ocean: ["#1fb5a8", "#2d7dd2", "#5ad1e6", "#3b5bdb"],
-  forest: ["#3fa66b", "#8cc084", "#2e8b57", "#c3d982"],
-  spectrum: ["#ff5e5e", "#ffb84d", "#ffe66d", "#6be37a", "#4dc6ff", "#8f6bff"],
+  candle: ["#ffd29a", "#ffb870", "#ffe4bd", "#ffc684"],
+  ember: ["#ff9a4d", "#ff6f61", "#ffbe5c", "#ff7e9a"],
+  sunset: ["#ff8a65", "#ffb77d", "#ff7aa8", "#c48cff"],
+  lavender: ["#b79cff", "#f0a0f0", "#9d8cff", "#ffb3d9"],
+  moonlight: ["#8fb0ff", "#b8d0ff", "#7d9cff", "#d6e2ff"],
+  ocean: ["#4fe3d6", "#5aa9ff", "#7ef0ff", "#6f8dff"],
+  forest: ["#6fe3a0", "#b4f08c", "#4fd690", "#e2f59a"],
+  spectrum: ["#ff6b6b", "#ffc04d", "#fff06b", "#7cf08a", "#5ad4ff", "#a98bff"],
 } as const satisfies Record<string, readonly string[]>;
 export type NightPalette = keyof typeof NIGHT_PALETTES;
 export const NIGHT_PALETTE_KEYS = Object.keys(NIGHT_PALETTES) as NightPalette[];
 
-/** How fast everything moves: multiplies every period (bigger = slower). */
-export const NIGHT_SPEEDS = { slow: 1.6, gentle: 1, lively: 0.6 } as const;
-export type NightSpeed = keyof typeof NIGHT_SPEEDS;
+/** Speed 1 (slowest) to 5 (liveliest); 3 is how the preview always looked. Each multiplies every period. */
+export const NIGHT_SPEED = { min: 1, max: 5, default: 3 } as const;
+const SPEED_FACTOR = [3, 1.7, 1, 0.6, 0.35] as const;
+export const speedFactor = (speed: number) => SPEED_FACTOR[Math.min(4, Math.max(0, Math.round(speed) - 1))]!;
+/** Speeds saved as words before the slider. */
+const OLD_SPEEDS: Record<string, number> = { slow: 2, gentle: 3, lively: 4 };
 
 export type KioskRest = {
   /** The night light comes on instead of the clock screensaver. */
@@ -35,19 +46,20 @@ export type KioskRest = {
   nightWhen: "always" | "quiet";
   mode: NightMode;
   palette: NightPalette;
-  speed: NightSpeed;
+  /** 1 (slowest) to 5. */
+  speed: number;
   /** At rest without the night light: the clock screensaver, or a dark screen. */
   otherwise: "clock" | "blank";
-  /** The clock screensaver also shows the "check in on your phone" QR code. */
+  /** The "check in on your phone" QR code whatever shows at rest (clock, night light, screen off). Stored as clockQr. */
   clockQr: boolean;
 };
 
 export const DEFAULT_REST: KioskRest = {
   nightLight: false,
   nightWhen: "always",
-  mode: "breathe",
+  mode: "glow",
   palette: "candle",
-  speed: "gentle",
+  speed: NIGHT_SPEED.default,
   otherwise: "clock",
   clockQr: false,
 };
@@ -59,9 +71,9 @@ export function normaliseRest(raw: unknown): KioskRest {
   return {
     nightLight: r["nightLight"] === true,
     nightWhen: pick(r["nightWhen"], ["always", "quiet"] as const, DEFAULT_REST.nightWhen),
-    mode: pick(r["mode"], NIGHT_MODES, DEFAULT_REST.mode),
+    mode: pick(typeof r["mode"] === "string" ? (OLD_MODES[r["mode"]] ?? r["mode"]) : null, NIGHT_MODES, DEFAULT_REST.mode),
     palette: pick(r["palette"], NIGHT_PALETTE_KEYS, DEFAULT_REST.palette),
-    speed: pick(r["speed"], Object.keys(NIGHT_SPEEDS) as NightSpeed[], DEFAULT_REST.speed),
+    speed: Math.min(NIGHT_SPEED.max, Math.max(NIGHT_SPEED.min, Math.round(typeof r["speed"] === "number" ? r["speed"] : typeof r["speed"] === "string" ? (OLD_SPEEDS[r["speed"]] ?? NIGHT_SPEED.default) : NIGHT_SPEED.default))),
     otherwise: pick(r["otherwise"], ["clock", "blank"] as const, DEFAULT_REST.otherwise),
     clockQr: r["clockQr"] === true,
   };
@@ -75,13 +87,13 @@ export function restNow(rest: KioskRest, quietHours: boolean): "night" | "clock"
 
 /* ------------------------------ night look ------------------------------ */
 
-/** Brightness (left band) and colour depth (right band): 0 depth is a soft warm white, 1 the palette's full colour. */
+/** Brightness (left band) and colour depth (right band): 0 depth is a soft warm white, 1 the palette's full colour. Full brightness to start: it has to light the hall. */
 export const NIGHT_LOOK = {
   brightness: { min: 0.05, max: 1, step: 0.05 },
   depth: { min: 0, max: 1, step: 0.05 },
 } as const;
 export type NightLook = { brightness: number; depth: number };
-export const DEFAULT_NIGHT_LOOK: NightLook = { brightness: 0.4, depth: 0.7 };
+export const DEFAULT_NIGHT_LOOK: NightLook = { brightness: 1, depth: 0.85 };
 
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -130,53 +142,51 @@ export const deepen = (colour: string, depth: number) => mix(WARM_WHITE, colour,
 
 /* --------------------------------- frames -------------------------------- */
 
-/** Periods in seconds at "gentle" speed. */
+/** Periods in seconds at speed 3 (multiplied by speedFactor). */
 export const PERIODS = {
-  /** Steady: once round the palette. */
-  steady: 20 * 60,
-  /** Breathe: one breath in and out; the colour drifts round the palette meanwhile. */
-  breath: 14,
-  breatheDrift: 10 * 60,
-  /** Colour cycle: each colour in turn. */
-  cycleEach: 20,
-  /** Sweep: the band of colours crossing the screen. */
-  sweep: 45,
-  /** Aurora: the slowest of the drifting glows. */
-  aurora: 90,
-  /** The dark band that takes every pixel through black. */
-  blackBand: 150,
+  /** Once round the palette. */
+  drift: 90,
+  /** Glow: one slow swell and fade. */
+  glow: 8,
+  /** Flow: the bands of colour crossing the screen. */
+  flow: 12,
+  /** Aurora: the glows' wandering. */
+  aurora: 20,
+  /** The shimmer that keeps every pixel changing: one full turn of its angle. */
+  care: 45,
 } as const;
+
+/** The dimmest Glow gets in its fade: never so dim it looks like the screen failing. */
+export const GLOW_LOW = 0.78;
 
 export type NightFrame = {
   /** CSS background for the coloured layer. */
   background: string;
   backgroundSize?: string;
   backgroundPosition?: string;
-  /** 0..1, multiplies the brightness (the breathing). */
+  /** 0..1, multiplies the brightness (Glow's swell). */
   level: number;
 };
 
 /** The night light at `t` seconds since it started. */
 export function nightFrame(rest: Pick<KioskRest, "mode" | "palette" | "speed">, t: number, depth: number): NightFrame {
-  const k = NIGHT_SPEEDS[rest.speed];
+  const k = speedFactor(rest.speed);
   const colours = NIGHT_PALETTES[rest.palette].map((c) => deepen(c, depth));
   const turn = (period: number) => t / (period * k);
+  const drift = turn(PERIODS.drift);
   switch (rest.mode) {
-    case "steady":
-      return { background: along(colours, turn(PERIODS.steady)), level: 1 };
-    case "breathe": {
-      const breath = 0.5 - 0.5 * Math.cos(2 * Math.PI * turn(PERIODS.breath));
-      return { background: along(colours, turn(PERIODS.breatheDrift)), level: 0.3 + 0.7 * breath };
+    case "glow": {
+      const swell = 0.5 - 0.5 * Math.cos(2 * Math.PI * turn(PERIODS.glow));
+      // A soft spot of the next colour keeps even one colour from sitting flat.
+      const a = along(colours, drift);
+      const b = along(colours, drift + 0.25);
+      return { background: `radial-gradient(120% 120% at 50% 40%, ${b} 0%, ${a} 70%)`, level: GLOW_LOW + (1 - GLOW_LOW) * swell };
     }
-    case "cycle":
-      return { background: along(colours, turn(PERIODS.cycleEach * colours.length)), level: 1 };
-    case "sweep": {
-      // Three colours across a band three screens wide, sliding past; the colours drift too.
-      const drift = turn(PERIODS.steady);
+    case "flow": {
       const a = along(colours, drift);
       const b = along(colours, drift + 1 / 3);
       const c = along(colours, drift + 2 / 3);
-      const pos = ((turn(PERIODS.sweep) % 1) + 1) % 1;
+      const pos = ((turn(PERIODS.flow) % 1) + 1) % 1;
       return {
         background: `linear-gradient(100deg, ${a} 0%, ${b} 16.7%, ${c} 33.3%, ${a} 50%, ${b} 66.7%, ${c} 83.3%, ${a} 100%)`,
         backgroundSize: "200% 100%",
@@ -185,28 +195,53 @@ export function nightFrame(rest: Pick<KioskRest, "mode" | "palette" | "speed">, 
       };
     }
     case "aurora": {
-      // Three soft glows drifting on slow, different loops over a dim wash of the first.
+      // Three bright glows wandering on slow, different loops over a wash of the palette (never dark).
       const p = turn(PERIODS.aurora) * 2 * Math.PI;
       const blob = (i: number) => {
         const x = 50 + 35 * Math.sin(p * (0.7 + i * 0.23) + i * 2.1);
         const y = 50 + 30 * Math.cos(p * (0.5 + i * 0.31) + i * 1.3);
-        const c = along(colours, turn(PERIODS.steady) + i / 3);
-        return `radial-gradient(circle at ${x.toFixed(1)}% ${y.toFixed(1)}%, ${c} 0%, ${c}00 60%)`;
+        const c = along(colours, drift + i / 3);
+        return `radial-gradient(circle at ${x.toFixed(1)}% ${y.toFixed(1)}%, ${c} 0%, ${c}00 62%)`;
       };
-      return { background: `${blob(0)}, ${blob(1)}, ${blob(2)}, ${mix("#000000", colours[0]!, 0.35)}`, level: 1 };
+      return { background: `${blob(0)}, ${blob(1)}, ${blob(2)}, ${mix(along(colours, drift + 0.5), "#000000", 0.15)}`, level: 1 };
     }
   }
 }
 
 /**
- * The dark band's centre across the screen (0 = left edge, 1 = right edge)
- * at `t` seconds. It runs from well off one side to well off the other, so
- * every pixel spends a few seconds in its black middle on each pass.
+ * The shimmer over the night light: faint, wide ripples spreading from a
+ * slowly wandering centre, so every pixel keeps changing a little and none
+ * holds one colour for long (no burn-in), without any band or line that could
+ * look like a fault. CSS background and position at `t` seconds.
  */
-export const BLACK_BAND = { width: 0.4, solid: [0.35, 0.65] as const, from: -0.4, to: 1.4 } as const;
-export function blackBand(t: number): number {
-  const f = (((t / PERIODS.blackBand) % 1) + 1) % 1;
-  return BLACK_BAND.from + (BLACK_BAND.to - BLACK_BAND.from) * f;
+export function carePattern(t: number, speed: number): { background: string; backgroundPosition: string } {
+  const k = speedFactor(speed);
+  const p = (t / (PERIODS.care * k)) * 2 * Math.PI;
+  const x = 50 + 40 * Math.sin(p);
+  const y = 50 + 35 * Math.sin(p * 0.7 + 1);
+  // The rings spread outwards continuously: a 90px ripple moving 4px a second at speed 3.
+  const r = ((t * 4) / k) % 90;
+  return {
+    background: `repeating-radial-gradient(circle at ${x.toFixed(1)}% ${y.toFixed(1)}%, rgb(255 255 255 / 0.07) ${r.toFixed(1)}px, rgb(0 0 0 / 0.04) ${(r + 45).toFixed(1)}px, rgb(255 255 255 / 0.07) ${(r + 90).toFixed(1)}px)`,
+    backgroundPosition: "0 0",
+  };
+}
+
+/* ------------------------------- the QR code ------------------------------ */
+
+/** Where the resting QR code sits, moving on every few minutes so it never burns in. */
+export const QR_MOVE_MINUTES = 3;
+export const QR_SPOTS = [
+  { x: "right", y: "bottom" },
+  { x: "left", y: "top" },
+  { x: "center", y: "bottom" },
+  { x: "right", y: "top" },
+  { x: "left", y: "bottom" },
+  { x: "center", y: "top" },
+] as const;
+export type QrSpot = (typeof QR_SPOTS)[number];
+export function qrSpot(at: Date): QrSpot {
+  return QR_SPOTS[Math.floor(at.getTime() / (QR_MOVE_MINUTES * 60_000)) % QR_SPOTS.length]!;
 }
 
 /* ------------------------------ clock layout ----------------------------- */

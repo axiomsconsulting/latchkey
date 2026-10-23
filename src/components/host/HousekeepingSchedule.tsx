@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,169 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { common, housekeepingCopy } from "@/content/copy";
 import { deleteUnavailability, saveUnavailability } from "@/lib/host.functions";
-import { dayAxis, roomLane, roomWindows, toMinutes, weekGrid, type BoardCard, type DayWindow, type LaneSegment, type Readiness, type ScheduleWindow } from "@/lib/housekeeping";
+import { toMinutes, weekGrid, type ScheduleWindow } from "@/lib/housekeeping";
 import { cn } from "@/lib/utils";
 
 const copy = housekeepingCopy;
-const clock = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-
-const SEGMENT_TONE: Record<LaneSegment["kind"], string> = {
-  guest_out: "bg-foreground/25",
-  free: "bg-success/15",
-  guest_in: "bg-primary/75",
-  staying: "bg-foreground/15",
-  closed: "bg-muted-foreground/25",
-  window: "",
-};
-// Cleaning and unavailable windows: striped, over whatever else the room is doing.
-const STRIPES = { backgroundImage: "repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 75%, transparent) 0 6px, color-mix(in srgb, var(--accent) 35%, transparent) 6px 12px)" };
-
-const STATUS_DOT: Record<Readiness, string> = {
-  to_clean: "bg-destructive",
-  cleaning: "bg-accent",
-  clean: "bg-secondary-foreground/50",
-  ready: "bg-primary",
-  out_of_service: "bg-muted-foreground",
-};
-
-/** Minutes from midnight now at the property. */
-function nowMinutes(tz: string) {
-  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map((x) => [x.type, x.value]));
-  return Number(p["hour"]) * 60 + Number(p["minute"]);
-}
-
-/**
- * The day at a glance: one lane per room on a shared timeline, from the guest
- * leaving to the next one arriving, with the day's cleaning and unavailable
- * windows over it and a line at the time now. A room's lane takes you to its
- * card below.
- */
-export function DayPlan({
-  cards,
-  windows,
-  checkOut,
-  checkIn,
-  isToday,
-  timezone,
-  onPick,
-}: {
-  cards: BoardCard[];
-  windows: DayWindow[];
-  checkOut: string;
-  checkIn: string;
-  isToday: boolean;
-  timezone: string;
-  onPick: (roomId: string) => void;
-}) {
-  const axis = dayAxis({ cards, windows, checkOut, checkIn });
-  const span = axis.to - axis.from;
-  const at = (m: number) => `${((m - axis.from) / span) * 100}%`;
-  const width = (s: { from: number; to: number }) => `${((s.to - s.from) / span) * 100}%`;
-  const hours: number[] = [];
-  const step = span > 14 * 60 ? 120 : 60;
-  for (let m = axis.from; m <= axis.to; m += step) hours.push(m);
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    if (!isToday) return setNow(null);
-    const tick = () => setNow(nowMinutes(timezone));
-    tick();
-    const id = window.setInterval(tick, 60_000);
-    return () => window.clearInterval(id);
-  }, [isToday, timezone]);
-  const house = windows.filter((w) => w.roomId === null);
-
-  const lane = (segments: LaneSegment[], label: string) => (
-    <div className="relative h-9 overflow-hidden rounded-lg bg-muted/60" aria-label={label}>
-      {segments.map((s, i) => (
-        <span
-          key={i}
-          title={`${copy.plan.legend[s.kind]}${s.label ? ` · ${s.label}` : ""} · ${clock(s.from)}–${clock(s.to)}`}
-          className={cn("absolute inset-y-0", SEGMENT_TONE[s.kind], s.kind === "window" && "inset-y-1.5 rounded-md")}
-          style={{ left: at(s.from), width: width(s), ...(s.kind === "window" ? STRIPES : {}) }}
-        />
-      ))}
-    </div>
-  );
-
-  return (
-    <section className="card-soft p-4 sm:p-5" aria-labelledby="day-plan">
-      <h2 id="day-plan" className="text-lg">{copy.plan.title}</h2>
-      <p className="text-sm text-muted-foreground">{copy.plan.body}</p>
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {(["guest_out", "free", "window", "guest_in", "staying"] as const).map((k) => (
-          <li key={k} className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-3 w-5 rounded", SEGMENT_TONE[k])} style={k === "window" ? STRIPES : undefined} /> {copy.plan.legend[k]}
-          </li>
-        ))}
-      </ul>
-
-      {/* Scrolls sideways inside the card on a narrow phone; the page itself never does. */}
-      <div className="no-scrollbar mt-4 overflow-x-auto">
-        <div className="relative min-w-[34rem]">
-          <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-3">
-            <span />
-            <div className="relative h-5 text-[11px] tabular-nums text-muted-foreground">
-              {/* Every other hour on a phone; the first and last sit inside the edges. */}
-              {hours.map((m, i) => (
-                <span
-                  key={m}
-                  className={cn("absolute", i === 0 ? "" : i === hours.length - 1 ? "-translate-x-full" : "-translate-x-1/2", i % 2 === 1 && i !== hours.length - 1 && "max-sm:hidden")}
-                  style={{ left: at(m) }}
-                >
-                  {clock(m)}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <ol className="mt-1 space-y-1.5">
-            {house.length ? (
-              <li className="grid grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-3">
-                <span className="truncate text-sm font-medium">{copy.plan.wholeHouse}</span>
-                {lane(house.map((w) => ({ kind: "window" as const, from: Math.max(axis.from, toMinutes(w.start)), to: Math.min(axis.to, toMinutes(w.end)), label: w.reason })), copy.plan.wholeHouse)}
-              </li>
-            ) : null}
-            {cards.map((c) => {
-              const l = roomLane(c, roomWindows(windows, c.roomId), { checkOut, checkIn, axis });
-              return (
-                <li key={c.roomId}>
-                  <button
-                    type="button"
-                    onClick={() => onPick(c.roomId)}
-                    className="grid w-full grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-3 rounded-lg text-left hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      {c.status ? <span className={cn("size-2.5 shrink-0 rounded-full", STATUS_DOT[c.status])} aria-hidden /> : <span className="size-2.5 shrink-0" />}
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">{c.roomName}</span>
-                        <span className="block truncate text-[11px] text-muted-foreground">
-                          {[l.out !== null ? copy.plan.outAt(clock(l.out)) : null, l.due !== null ? copy.plan.dueAt(clock(l.due)) : null].filter(Boolean).join(" · ") ||
-                            (c.status ? copy.status[c.status] : copy.occupancy[c.occupancy])}
-                        </span>
-                      </span>
-                    </span>
-                    {lane(l.segments, c.roomName)}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-
-          {now !== null && now >= axis.from && now <= axis.to ? (
-            <div className="pointer-events-none absolute inset-y-0 grid grid-cols-[8.5rem_minmax(0,1fr)] gap-3" style={{ left: 0, right: 0 }} aria-hidden>
-              <span />
-              <span className="relative">
-                <span className="absolute inset-y-0 w-0.5 bg-destructive" style={{ left: at(now) }}>
-                  <span className="absolute -top-0.5 left-1 rounded bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">{copy.plan.now}</span>
-                </span>
-              </span>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /**
  * The schedule behind the board: the property's standard times, the weekly
@@ -189,7 +30,10 @@ export function WeekSchedule({
   timezone,
   canEdit,
   onGoTo,
+  embedded = false,
 }: {
+  /** Inside the Housekeeping page's folding Schedule section: no card or title of its own. */
+  embedded?: boolean;
   propertyId: string;
   rooms: Array<{ id: string; display_name: string }>;
   windows: ScheduleWindow[];
@@ -259,8 +103,8 @@ export function WeekSchedule({
   );
 
   return (
-    <section id="housekeeping-schedule" className="card-soft scroll-mt-24 space-y-5 p-4 sm:p-5">
-      <div className="flex items-start gap-3">
+    <section id="housekeeping-schedule" className={cn("scroll-mt-24 space-y-5 p-4 sm:p-5", !embedded && "card-soft")}>
+      <div className={cn("flex items-start gap-3", embedded && "hidden")}>
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
           <CalendarClock className="size-5" />
         </span>

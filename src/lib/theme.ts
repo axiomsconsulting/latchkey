@@ -116,11 +116,6 @@ const preset = (p: Preset): ThemePreset => ({ ...base, sideNotes: ["", ""], feat
 
 export const THEME_PRESETS: ThemePreset[] = [
   preset({ presetId: "heritage", name: "Boutique Heritage", blurb: "Forest green, cream and terracotta", primary: "#2f4f3a", accent: "#c2643c", background: "#f8f3ea", surface: "#fdfaf4", foreground: "#23332a", headingFont: "Fraunces", bodyFont: "Inter", logoPreset: "key", radius: 1 }),
-  preset({ presetId: "cotswold", name: "Cotswold Stone", blurb: "Warm sand, slate and ochre", primary: "#3d4a57", accent: "#c58a2b", background: "#f4ede1", surface: "#fbf7f0", foreground: "#2a3038", headingFont: "Playfair Display", bodyFont: "Plus Jakarta Sans", logoPreset: "arch", radius: 0.75 }),
-  preset({ presetId: "midnight", name: "Midnight Manor", blurb: "Oxford blue, linen and champagne", primary: "#1f2e4d", accent: "#b8955a", background: "#f3efe7", surface: "#fbf9f4", foreground: "#1b2336", headingFont: "DM Serif Display", bodyFont: "Outfit", logoPreset: "lantern", radius: 0.5 }),
-  preset({ presetId: "nordic", name: "Nordic Sanctuary", blurb: "Sage, alabaster and charcoal", primary: "#56705f", accent: "#3b3b3b", background: "#f2f2ec", surface: "#fafaf6", foreground: "#2b2f2c", headingFont: "Syne", bodyFont: "Manrope", logoPreset: "fern", radius: 1.5 }),
-  preset({ presetId: "seaside", name: "Seaside Guesthouse", blurb: "Harbour teal, sandstone and coral", primary: "#1f5f66", accent: "#e0765a", background: "#f5f1ea", surface: "#fcfaf6", foreground: "#1d3538", headingFont: "Cormorant Garamond", bodyFont: "Karla", logoPreset: "knot", radius: 1.25, artwork: "coast" }),
-  preset({ presetId: "townhouse", name: "Modern Townhouse", blurb: "Ink, bone and brick red", primary: "#1e1e1e", accent: "#b3412f", background: "#f4f1ec", surface: "#ffffff", foreground: "#1e1e1e", headingFont: "Space Grotesk", bodyFont: "DM Sans", logoPreset: "monogram", radius: 0.375 }),
 
   // Hotel-grade templates: whole looks (shape, type, icons, backdrop, words), start points any host can pick and adjust.
   preset({
@@ -242,6 +237,44 @@ export const THEME_PRESETS: ThemePreset[] = [
     tagline: "A brighter stay awaits",
     poweredBy: true,
   }),
+  // The sixth: contemporary and dark, nothing like the five above (bright coral and mint on charcoal, bold rounded shapes).
+  preset({
+    presetId: "atelier",
+    name: "Atelier Noir",
+    blurb: "Contemporary studio: charcoal, coral and mint, bold type, round buttons",
+    primary: "#ff6b4a",
+    accent: "#7fe0c8",
+    background: "#141414",
+    surface: "#1f1f1f",
+    foreground: "#f5f1ea",
+    headingFont: "Syne",
+    bodyFont: "Figtree",
+    logoPreset: "monogram",
+    radius: 1.5,
+    buttonRadius: PILL,
+    cardStyle: "flat",
+    headingWeight: 700,
+    iconStroke: 2,
+    iconTone: "accent",
+    iconFrame: "square",
+    eyebrow: "Hello",
+    welcomeTitle: "Make yourself at home",
+    welcomeBody: "Check yourself in, then everything for your stay is in your guide.",
+    tagline: "Stay well",
+    poweredBy: true,
+  }),
+];
+
+/**
+ * Looks no longer offered as templates (grouped into Atelier Noir). Properties
+ * that chose one keep it: normaliseTheme still reads them.
+ */
+const RETIRED_PRESETS: ThemePreset[] = [
+  preset({ presetId: "cotswold", name: "Cotswold Stone", blurb: "Warm sand, slate and ochre", primary: "#3d4a57", accent: "#c58a2b", background: "#f4ede1", surface: "#fbf7f0", foreground: "#2a3038", headingFont: "Playfair Display", bodyFont: "Plus Jakarta Sans", logoPreset: "arch", radius: 0.75 }),
+  preset({ presetId: "midnight", name: "Midnight Manor", blurb: "Oxford blue, linen and champagne", primary: "#1f2e4d", accent: "#b8955a", background: "#f3efe7", surface: "#fbf9f4", foreground: "#1b2336", headingFont: "DM Serif Display", bodyFont: "Outfit", logoPreset: "lantern", radius: 0.5 }),
+  preset({ presetId: "nordic", name: "Nordic Sanctuary", blurb: "Sage, alabaster and charcoal", primary: "#56705f", accent: "#3b3b3b", background: "#f2f2ec", surface: "#fafaf6", foreground: "#2b2f2c", headingFont: "Syne", bodyFont: "Manrope", logoPreset: "fern", radius: 1.5 }),
+  preset({ presetId: "seaside", name: "Seaside Guesthouse", blurb: "Harbour teal, sandstone and coral", primary: "#1f5f66", accent: "#e0765a", background: "#f5f1ea", surface: "#fcfaf6", foreground: "#1d3538", headingFont: "Cormorant Garamond", bodyFont: "Karla", logoPreset: "knot", radius: 1.25, artwork: "coast" }),
+  preset({ presetId: "townhouse", name: "Modern Townhouse", blurb: "Ink, bone and brick red", primary: "#1e1e1e", accent: "#b3412f", background: "#f4f1ec", surface: "#ffffff", foreground: "#1e1e1e", headingFont: "Space Grotesk", bodyFont: "DM Sans", logoPreset: "monogram", radius: 0.375 }),
 ];
 
 export const DEFAULT_THEME: ThemeConfig = THEME_PRESETS[0]!;
@@ -267,7 +300,7 @@ const words = (v: unknown, max: number, fb: string) =>
 /** Accepts anything from storage and returns a complete, safe theme. */
 export function normaliseTheme(raw: unknown): ThemeConfig {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<ThemeConfig> & Record<string, unknown>;
-  const preset = THEME_PRESETS.find((p) => p.presetId === r.presetId) ?? DEFAULT_THEME;
+  const preset = [...THEME_PRESETS, ...RETIRED_PRESETS].find((p) => p.presetId === r.presetId) ?? DEFAULT_THEME;
   const colour = (v: unknown, fb: string) => (typeof v === "string" && HEX.test(v) ? v : fb);
   const font = (v: unknown, fb: string) => (typeof v === "string" && /^[A-Za-z0-9 ]{2,40}$/.test(v) ? v : fb);
   const url = (v: unknown) => (typeof v === "string" && /^https:\/\//.test(v) ? v : null);

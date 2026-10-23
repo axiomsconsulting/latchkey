@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.62.0",
+    date: "2026-10-23",
+    title: "One timeline, brighter night light",
+    items: [
+      { kind: "new", area: "Bookings", text: "The bookings timeline now zooms from a single day in hours to a month: swipe or drag to move through time, pinch (or Ctrl/⌘ and scroll) to zoom, or use the buttons. Stays sit at their real check-in and check-out times, and many rooms scroll inside it while the dates stay at the top." },
+      { kind: "improved", area: "Housekeeping", text: "Housekeeping is now an overlay on the same timeline: each turnover between guests is coloured by where its cleaning has got to, with its ready-by time; tap a room or a turnover to move it on. Rooms stay in your property's order when their status changes; filter by state, or show the rooms needing attention first. The weekly schedule folds away underneath." },
+      { kind: "improved", area: "Check-in", text: "The night light is brighter (full brightness to start), runs at the lively speed the preview showed with a speed slider in settings, and has three patterns: Glow, Flow and Aurora. The black bands are gone: soft, slowly spreading ripples keep every pixel changing instead." },
+      { kind: "improved", area: "Check-in", text: "The check-in QR code at rest shows on the clock screensaver, the night light and with the screen off, never as a white block, and moves every few minutes so nothing burns in." },
+      { kind: "improved", area: "Settings", text: "Look and feel: Boutique Heritage, the four hotel looks and a new one, Atelier Noir (charcoal, coral and mint). The older five are no longer offered; properties using them keep their look." },
+    ],
+  },
+  {
     version: "0.61.1",
     date: "2026-10-23",
     title: "Steady kiosk screen",

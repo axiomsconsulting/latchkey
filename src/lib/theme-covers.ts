@@ -21,6 +21,8 @@ const COVERS: Record<string, string> = {
   "express-green": expressGreen,
   "palace-heritage": palaceHeritage,
   "desert-star": desertStar,
+  // Atelier Noir: the dark, modern interior.
+  atelier: midnight,
 };
 
 export function coverFor(theme: { coverImageUrl: string | null; presetId: string }): string | null {

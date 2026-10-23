@@ -257,3 +257,65 @@ export function nextOnWeekday(day: string, dow: number): string {
   d.setUTCDate(d.getUTCDate() + ((dow - d.getUTCDay() + 7) % 7));
   return d.toISOString().slice(0, 10);
 }
+
+/* ------------------------------ the timeline ------------------------------ */
+
+/**
+ * One room's housekeeping on one day, for the timeline: the stretch from the
+ * guest leaving (or the start of the working day) to the next guest's ready-by
+ * time (or the end of it), and where the work has got to. Rooms out of
+ * service cover the whole day. Times "HH:MM" on that day.
+ */
+export type Turn = { roomId: string; day: string; from: string; to: string; status: Readiness | null; saved: boolean; occupancy: Occupancy; dueBy: string | null; assignee: string | null };
+
+const DAY_START = "06:00";
+const DAY_END = "22:00";
+
+export function turnsFor(input: {
+  days: string[];
+  rooms: BoardRoom[];
+  stays: BoardStay[];
+  readiness: Array<ReadinessRow & { day: string }>;
+  checkIn: string;
+  checkOut: string;
+}): Turn[] {
+  const out: Turn[] = [];
+  for (const day of input.days) {
+    const cards = buildBoard({ day, rooms: input.rooms, stays: input.stays, readiness: input.readiness.filter((r) => r.day === day), defaultCheckIn: input.checkIn });
+    for (const c of cards) {
+      const base = { roomId: c.roomId, day, status: c.status, saved: c.saved, occupancy: c.occupancy, dueBy: c.dueBy, assignee: c.assignee };
+      if (c.status === "out_of_service") out.push({ ...base, from: "00:00", to: "24:00" });
+      else if (c.leaving || c.arriving) {
+        const from = c.leaving ? (c.leaving.check_out_time ?? input.checkOut).slice(0, 5) : DAY_START;
+        const to = c.arriving ? (c.dueBy ?? input.checkIn) : DAY_END;
+        if (from < to) out.push({ ...base, from, to });
+      } else if (c.saved && c.status) out.push({ ...base, from: DAY_START, to: DAY_END });
+    }
+  }
+  return out;
+}
+
+/** The order of the board's filter and "needs attention" sort. */
+export const STATE_ORDER: Array<Readiness | "none"> = ["to_clean", "cleaning", "clean", "ready", "none", "out_of_service"];
+export type RoomFilter = "all" | "arriving" | Readiness;
+
+/** Rooms in the property's own order, or (when chosen) the ones needing work first; a status change never moves a room otherwise. */
+export function orderRooms<R extends { id: string }>(rooms: R[], cards: BoardCard[], by: "property" | "state"): R[] {
+  if (by === "property") return rooms;
+  const rank = (id: string) => {
+    const c = cards.find((x) => x.roomId === id);
+    const late = c?.arriving && c.status !== "ready" ? -1 : 0;
+    return STATE_ORDER.indexOf(c?.status ?? "none") + late;
+  };
+  return rooms.map((r, i) => ({ r, i, k: rank(r.id) })).sort((a, b) => a.k - b.k || a.i - b.i).map((x) => x.r);
+}
+
+/** Rooms shown for a filter on the day's cards. */
+export function filterRooms<R extends { id: string }>(rooms: R[], cards: BoardCard[], filter: RoomFilter): R[] {
+  if (filter === "all") return rooms;
+  return rooms.filter((r) => {
+    const c = cards.find((x) => x.roomId === r.id);
+    if (!c) return false;
+    return filter === "arriving" ? !!c.arriving : c.status === filter;
+  });
+}

@@ -635,8 +635,9 @@ function KioskAtRest({
   onWake: () => void;
 }) {
   const showing = useRestShowing(saver.rest, tz, quiet);
-  if (showing === "night") return <KioskNightLight saver={saver} onWake={onWake} />;
-  if (showing === "blank") return <KioskBlank onWake={onWake} />;
+  // The host's QR choice applies whatever shows at rest.
   const qrUrl = saver.rest.clockQr && typeof window !== "undefined" ? `${window.location.origin}/kiosk/${code}?guest=1` : null;
+  if (showing === "night") return <KioskNightLight saver={saver} onWake={onWake} qrUrl={qrUrl} />;
+  if (showing === "blank") return <KioskBlank onWake={onWake} qrUrl={qrUrl} />;
   return <KioskScreensaver name={name} saver={saver} tz={tz} quiet={quiet} qrUrl={qrUrl} onWake={onWake} />;
 }

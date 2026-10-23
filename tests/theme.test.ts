@@ -24,7 +24,10 @@ describe("property themes", () => {
     expect(normaliseTheme({ presetId: "desert-star", logoPreset: "sunburst" }).logoPreset).toBe("sunburst");
     expect(normaliseTheme({ logoPreset: "antique-key" }).logoPreset).toBe("antique-key");
     expect(normaliseTheme({ presetId: "express-green" }).buttonRadius).toBe(PILL);
-    expect(THEME_PRESETS.length).toBeGreaterThanOrEqual(10);
+    // Boutique Heritage (The Hill Suites), the four hotel looks and Atelier Noir.
+    expect(THEME_PRESETS.map((p) => p.presetId)).toEqual(["heritage", "grand-crimson", "express-green", "palace-heritage", "desert-star", "atelier"]);
+    // A property on a retired look keeps it.
+    expect(normaliseTheme({ presetId: "nordic" }).headingFont).toBe("Syne");
   });
 
   it("refuses unsafe or out-of-range values", () => {

@@ -1,17 +1,18 @@
 import { useEffect, useRef } from "react";
 import { Palette, Sun } from "lucide-react";
 
+import { useQrImage } from "@/components/guest/CheckInQr";
 import { SaverBand, useNow, type useSaverLook } from "@/components/guest/KioskClocks";
 import { guest as copy } from "@/content/copy";
 import { quietNow } from "@/lib/kiosk-clock";
-import { BLACK_BAND, NIGHT_LOOK, blackBand, nightFrame, restNow, type KioskRest } from "@/lib/kiosk-rest";
+import { NIGHT_LOOK, carePattern, nightFrame, qrSpot, restNow, type KioskRest } from "@/lib/kiosk-rest";
 import { cn } from "@/lib/utils";
 
 /**
- * The night light's moving colours (nightFrame, tested) with the dark band
- * that sweeps every pixel through black. Drawn straight onto two layers about
- * 15 times a second, so React doesn't re-render. `speedUp` runs it faster
- * for the host's preview.
+ * The night light's moving colours (nightFrame, tested) at full brightness,
+ * with a fine shimmer (carePattern) turning and sliding over them so every
+ * pixel keeps changing. Drawn straight onto two layers about 15 times a
+ * second, so React doesn't re-render.
  */
 export function NightGlow({
   rest,
@@ -27,7 +28,7 @@ export function NightGlow({
   className?: string;
 }) {
   const glow = useRef<HTMLDivElement | null>(null);
-  const band = useRef<HTMLDivElement | null>(null);
+  const care = useRef<HTMLDivElement | null>(null);
   const live = useRef({ rest, depth, brightness, speedUp });
   live.current = { rest, depth, brightness, speedUp };
   useEffect(() => {
@@ -48,7 +49,12 @@ export function NightGlow({
         g.style.backgroundPosition = f.backgroundPosition ?? "";
         g.style.opacity = String(b * f.level);
       }
-      if (band.current) band.current.style.left = `${((blackBand(t) - BLACK_BAND.width / 2) * 100).toFixed(2)}%`;
+      const c = care.current;
+      if (c) {
+        const pattern = carePattern(t, r.speed);
+        c.style.background = pattern.background;
+        c.style.backgroundPosition = pattern.backgroundPosition;
+      }
     };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
@@ -56,21 +62,13 @@ export function NightGlow({
   return (
     <div className={cn("absolute inset-0 overflow-hidden bg-black", className)} aria-hidden>
       <div ref={glow} className="absolute inset-0" style={{ opacity: 0 }} />
-      <div
-        ref={band}
-        className="absolute inset-y-0"
-        style={{
-          width: `${BLACK_BAND.width * 100}%`,
-          left: `${(BLACK_BAND.from - BLACK_BAND.width / 2) * 100}%`,
-          background: `linear-gradient(90deg, transparent 0%, #000 ${BLACK_BAND.solid[0] * 100}%, #000 ${BLACK_BAND.solid[1] * 100}%, transparent 100%)`,
-        }}
-      />
+      <div ref={care} className="absolute inset-0 mix-blend-soft-light" />
     </div>
   );
 }
 
 /** The whole screen as a night light. Any touch wakes the kiosk, except the bands: brightness on the left, colour depth on the right. */
-export function KioskNightLight({ saver, onWake }: { saver: ReturnType<typeof useSaverLook>; onWake: () => void }) {
+export function KioskNightLight({ saver, onWake, qrUrl = null }: { saver: ReturnType<typeof useSaverLook>; onWake: () => void; qrUrl?: string | null }) {
   const { rest, night, setNight, commitNight } = saver;
   return (
     <div
@@ -86,6 +84,7 @@ export function KioskNightLight({ saver, onWake }: { saver: ReturnType<typeof us
       onKeyDown={onWake}
     >
       <NightGlow rest={rest} depth={night.depth} brightness={night.brightness} />
+      {qrUrl ? <RestQr url={qrUrl} on="light" /> : null}
       <SaverBand
         side="left"
         label={copy.saverBrightness}
@@ -114,8 +113,8 @@ export function KioskNightLight({ saver, onWake }: { saver: ReturnType<typeof us
   );
 }
 
-/** Screen off: black until touched. */
-export function KioskBlank({ onWake }: { onWake: () => void }) {
+/** Screen off: black until touched (with the QR code, moving, if the host chose it). */
+export function KioskBlank({ onWake, qrUrl = null }: { onWake: () => void; qrUrl?: string | null }) {
   return (
     <div
       role="button"
@@ -128,7 +127,37 @@ export function KioskBlank({ onWake }: { onWake: () => void }) {
         onWake();
       }}
       onKeyDown={onWake}
-    />
+    >
+      {qrUrl ? <RestQr url={qrUrl} on="dark" /> : null}
+    </div>
+  );
+}
+
+/**
+ * The "check in on your phone" square while the kiosk rests, moving to a new
+ * spot every few minutes (qrSpot) so it never burns in. Never a white block:
+ * on the night light its squares are dark with nothing behind them, so the
+ * light itself is the background; on a dark screen they're a soft grey on
+ * black (inverted), which phone cameras read too.
+ */
+export function RestQr({ url, on }: { url: string; on: "light" | "dark" }) {
+  const now = useNow(30_000);
+  const spot = qrSpot(now);
+  const src = useQrImage(url, on === "light" ? { dark: "#000000e6", light: "#00000000" } : { dark: "#b8b8b8ff", light: "#00000000" });
+  if (!src) return null;
+  return (
+    <figure
+      className={cn(
+        "pointer-events-none absolute flex flex-col items-center gap-2 transition-all duration-1000",
+        // Clear of the edge bands (brightness, colour depth) and the screen's edges.
+        spot.x === "left" ? "left-28" : spot.x === "right" ? "right-28" : "left-1/2 -translate-x-1/2",
+        spot.y === "top" ? "top-10" : "bottom-10",
+      )}
+      aria-label={copy.saverQr}
+    >
+      <img src={src} alt={copy.qrAlt} className="size-[min(11rem,30vmin)]" />
+      <figcaption className={cn("text-center text-xs uppercase tracking-[0.2em]", on === "light" ? "text-black/75" : "text-white/55")}>{copy.saverQr}</figcaption>
+    </figure>
   );
 }
 

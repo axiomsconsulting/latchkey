@@ -10,7 +10,8 @@ import { burnDrift, clockHands, dayProgress, kioskNow, quietNow, worldClocksFor 
 import { zoneCity } from "@/lib/world";
 import { kioskSaverLook, saveKioskNightLook, saveKioskSaverLook } from "@/lib/kiosk.functions";
 import { onKioskPing } from "@/lib/kiosk-ping";
-import { DEFAULT_NIGHT_LOOK, DEFAULT_REST, arrangeClocks, nightLookFor, normaliseRest, type KioskRest, type NightLook } from "@/lib/kiosk-rest";
+import { DEFAULT_NIGHT_LOOK, DEFAULT_REST, arrangeClocks, nightLookFor, normaliseRest, qrSpot, type KioskRest, type NightLook } from "@/lib/kiosk-rest";
+import { cn } from "@/lib/utils";
 import {
   BRIGHTNESS,
   DEFAULT_SAVER,
@@ -135,20 +136,22 @@ function Dial({ city, tz, home, now, here, look, big = false }: { city: string; 
 }
 
 /**
- * The "check in on your phone" square on the clock screensaver: white, dimmed
- * with the screensaver but never below what a phone camera reads, with a line
- * under it. It wanders with the rest of the display, so it never burns in.
+ * The "check in on your phone" square on the clock screensaver: inverted
+ * (light squares on black), dimmed with the screensaver but never below what
+ * a phone camera reads, with a line under it. It wanders with the display and
+ * changes side every few minutes, so it never burns in.
  */
 function SaverQr({ url, look }: { url: string; look: SaverLook }) {
-  const src = useQrImage(url, { dark: "#000000", light: "#ffffff" });
+  // Inverted: light squares on the black screen, nothing white behind them.
+  const src = useQrImage(url, { dark: "#ffffffff", light: "#00000000" });
   if (!src) return null;
   return (
     <figure className="flex flex-col items-center gap-3">
       <img
         src={src}
         alt={copy.qrAlt}
-        className="rounded-2xl p-2"
-        style={{ width: `${10 * look.size}rem`, maxWidth: "36vmin", background: "#ffffff", opacity: Math.min(0.95, Math.max(0.6, glow(0.45, look.brightness))) }}
+        className="p-2"
+        style={{ width: `${10 * look.size}rem`, maxWidth: "36vmin", opacity: Math.min(0.85, Math.max(0.55, glow(0.4, look.brightness))) }}
       />
       <figcaption className="max-w-[14rem] text-center uppercase tracking-[0.2em]" style={text(0.65, 0.4, look)}>
         {copy.saverQr}
@@ -415,6 +418,8 @@ export function KioskScreensaver({
     <Dial key={c.city} city={c.city} tz={c.tz} home={tz} now={now} here={c.home} look={look} big={big} />
   );
   const square = qrUrl ? <SaverQr url={qrUrl} look={look} /> : null;
+  // The square changes side every few minutes (qrSpot), on top of the slow wander.
+  const qrFirst = qrSpot(now).x === "left";
   return (
     <div
       role="button"
@@ -436,14 +441,14 @@ export function KioskScreensaver({
             On its side: here in the middle, cities behind on the left and ahead on the right; with the
             QR square, one either side of home and the square after them. */}
         {main ? (
-          <div className="flex items-center justify-center gap-10 sm:gap-16">
+          <div className={cn("flex items-center justify-center gap-10 sm:gap-16", qrFirst && "flex-row-reverse")}>
             {dial(main, true)}
             {square}
           </div>
         ) : null}
-        <div className="flex items-center justify-center gap-6 sm:gap-10 lg:gap-14">
+        <div className={cn("flex items-center justify-center gap-6 sm:gap-10 lg:gap-14", !main && square && qrFirst && "flex-row-reverse")}>
           {row.map((c) => dial(c))}
-          {!main && square ? <div className="ml-4 sm:ml-8">{square}</div> : null}
+          {!main && square ? <div className="mx-4 sm:mx-8">{square}</div> : null}
         </div>
         <div className="text-center">
           <p className="font-display tracking-wide" style={text(1.5, 0.35, look)}>
