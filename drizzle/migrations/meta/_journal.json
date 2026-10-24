@@ -148,6 +148,13 @@
       "when": 1791749374818,
       "tag": "0020_user_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792882298034,
+      "tag": "0021_site_settings_admin_read",
+      "breakpoints": true
     }
   ]
 }
