@@ -55,7 +55,8 @@ export function WeekSchedule({
   const [busy, setBusy] = useState(false);
   const boardDow = new Date(`${boardDay}T12:00:00Z`).getUTCDay();
   const roomName = (id: string | null) => (id ? (rooms.find((r) => r.id === id)?.display_name ?? s.wholeHouse) : s.wholeHouse);
-  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["housekeeping"] }), qc.invalidateQueries({ queryKey: ["board"] })]);
+  // The housekeeping page reads a range of days; Bookings and Today read the board.
+  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["housekeeping-range"] }), qc.invalidateQueries({ queryKey: ["housekeeping"] }), qc.invalidateQueries({ queryKey: ["board"] })]);
   const oneOff = windows.filter((w) => w.day_of_week === null && w.starts_at && w.ends_at && Date.parse(w.ends_at) > Date.now());
   const zoned = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: timezone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 

@@ -18,6 +18,8 @@ import { rebrand } from "@/lib/brand";
 import { formatUkDate } from "@/lib/dates";
 import { ENQUIRY_STATUSES, nightsBetween, replyMailto, type EnquiryStatus } from "@/lib/direct";
 import { convertEnquiry, listDirect, removeDirectRecord, setEnquiryStatus } from "@/lib/direct.functions";
+import { money } from "@/lib/direct-rates";
+import { DirectRates } from "@/components/host/DirectRates";
 
 export const Route = createFileRoute("/_authenticated/app/direct")({
   head: () => ({ meta: [{ title: rebrand("Direct stays · Latchkey host dashboard") }] }),
@@ -31,6 +33,7 @@ function DirectPage() {
   const { canWrite, loading } = useRole();
   const hostId = ws.data?.hostId ?? null;
   const fn = useServerFn(listDirect);
+  const { selectedId } = useSelectedProperty((ws.data?.properties ?? []) as Array<{ id: string; name: string }>);
   const q = useQuery({ queryKey: ["direct", hostId], enabled: !!hostId && canWrite, queryFn: () => fn({ data: { hostId: hostId! } }) });
 
   if (ws.isLoading || loading) return <Skeleton className="mx-auto h-64 max-w-5xl rounded-2xl" />;
@@ -79,6 +82,9 @@ function DirectPage() {
               })}
             </ul>
           </section>
+
+          {/* Rates and offers for the property chosen in the menu. */}
+          {selectedId ? <DirectRates propertyId={selectedId} /> : null}
 
           <Tabs defaultValue="enquiries">
             <TabsList>
@@ -140,6 +146,7 @@ function EnquiryCard({ e, data, hostId, origin }: { e: Data["enquiries"][number]
           <p className="text-sm text-muted-foreground">
             {copy.dates(formatUkDate(e.check_in), formatUkDate(e.check_out), nightsBetween(e.check_in, e.check_out), e.guests)}
             {property ? ` · ${property.name}` : ""}
+            {e.quoted_pence != null && e.currency ? ` · ${copy.quoted(money(e.quoted_pence, e.currency))}` : ""}
           </p>
         </div>
         {e.is_returning ? <Badge className="gap-1"><Repeat className="size-3" /> {copy.returning}</Badge> : null}

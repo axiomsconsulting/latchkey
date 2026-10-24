@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.65.0",
+    date: "2026-10-24",
+    title: "Stay with us, hotel style",
+    items: [
+      { kind: "new", area: "Website", text: "Your Stay with us page now works like a hotel's: guests pick arrival and leaving dates on a calendar, see each room with its nightly rate, whether it's free those nights and the estimated total with your seasonal offers taken off, then request a room. Nothing is booked or paid there: you confirm each stay." },
+      { kind: "new", area: "Settings", text: "Direct stays → Rates and seasonal offers: set each room's nightly rate and offers (a percentage off from one night to another, for every room or chosen ones). Requests arrive with the room and estimated total." },
+      { kind: "fixed", area: "Housekeeping", text: "Adding or removing a cleaning window now shows straight away in the weekly schedule and on the timeline." },
+    ],
+  },
+  {
     version: "0.64.0",
     date: "2026-10-23",
     title: "Listing links and clearer saving",

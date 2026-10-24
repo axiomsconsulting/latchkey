@@ -23,13 +23,64 @@ async function admin(): Promise<Loose> {
 async function propertyByCode(db: Loose, c: string) {
   const { data } = await db
     .from("properties")
-    .select("id, host_id, name, short_code, timezone, theme_config, active, hosts(business_name)")
+    .select("id, host_id, name, short_code, timezone, theme_config, active, currency, hosts(business_name, currency)")
     .eq("short_code", c.toLowerCase())
     .maybeSingle();
   return data && data.active !== false ? data : null;
 }
 
 const todayIn = (tz: string | null) => new Intl.DateTimeFormat("en-CA", { timeZone: tz ?? "Europe/London" }).format(new Date());
+
+/** The property's currency for its rates: its own, or the business's. */
+const currencyOf = (p: { currency?: string | null; hosts?: { currency?: string | null } | null }) => p.currency || p.hosts?.currency || "GBP";
+
+/**
+ * What the "Stay with us" page offers: each active room with its base rate
+ * (migration 0052), the seasonal offers still to come, and which nights each
+ * room is already taken (dates only, never who), for the next two years.
+ */
+async function pageRooms(db: Loose, propertyId: string, today: string) {
+  const { withLegacy } = await import("./checkin.server");
+  const { addDays } = await import("./dates");
+  const { normaliseOffers, upcomingOffers } = await import("./direct-rates");
+  const roomCols = "id, display_name, public_title, description, max_guests, has_ensuite, cover_image_url, sort_order";
+  const [{ data: rooms }, { data: prop }, { data: stays }] = await Promise.all([
+    withLegacy<any>(
+      () => db.from("rooms").select(`${roomCols}, base_rate_pence`).eq("property_id", propertyId).neq("active", false).order("sort_order"),
+      () => db.from("rooms").select(roomCols).eq("property_id", propertyId).neq("active", false).order("sort_order"),
+    ),
+    withLegacy<any>(
+      () => db.from("properties").select("direct_offers").eq("id", propertyId).maybeSingle(),
+      () => Promise.resolve({ data: null, error: null }),
+    ),
+    db
+      .from("bookings")
+      .select("room_id, check_in_date, check_out_date, status")
+      .eq("property_id", propertyId)
+      .is("mirror_of", null)
+      .neq("status", "cancelled")
+      .gte("check_out_date", today)
+      .lte("check_in_date", addDays(today, 730)),
+  ]);
+  const taken: Record<string, Array<{ from: string; to: string }>> = {};
+  for (const b of (stays ?? []) as Array<{ room_id: string | null; check_in_date: string; check_out_date: string }>) {
+    if (!b.room_id) continue;
+    (taken[b.room_id] ??= []).push({ from: b.check_in_date, to: b.check_out_date });
+  }
+  return {
+    rooms: ((rooms ?? []) as Array<{ id: string; display_name: string; public_title: string | null; description: string | null; max_guests: number | null; has_ensuite: boolean | null; cover_image_url: string | null; base_rate_pence?: number | null }>).map((r) => ({
+      id: r.id,
+      name: r.public_title || r.display_name,
+      description: r.description ?? null,
+      maxGuests: r.max_guests ?? 2,
+      ensuite: r.has_ensuite === true,
+      photo: r.cover_image_url ?? null,
+      ratePence: typeof r.base_rate_pence === "number" ? r.base_rate_pence : null,
+    })),
+    offers: upcomingOffers(normaliseOffers(prop?.direct_offers), today),
+    taken,
+  };
+}
 
 /* ------------------------------- public -------------------------------- */
 
@@ -42,14 +93,17 @@ export const getEnquiryPage = createServerFn({ method: "GET" })
     if (!p) return { found: false as const };
     const { normaliseTheme } = await import("./theme");
     const business = (p.hosts?.business_name as string | undefined) || (p.name as string);
+    const today = todayIn(p.timezone);
     return {
       found: true as const,
       propertyName: p.name as string,
       shortCode: p.short_code as string,
       business,
       theme: await (await import("./group-brand.server")).withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
-      today: todayIn(p.timezone),
+      today,
       consent: consentText(business),
+      currency: currencyOf(p),
+      ...(await pageRooms(db, p.id, today)),
     };
   });
 
@@ -66,6 +120,8 @@ export const submitEnquiry = createServerFn({ method: "POST" })
         guests: z.number().int(),
         message: z.string().max(2000).nullable(),
         futureStays: z.boolean(),
+        /** The room the guest chose, if any: priced and checked again here. */
+        roomId: uuid.nullable().default(null),
         /** Left empty by people; filled by bots. */
         website: z.string().max(200).optional(),
       })
@@ -96,7 +152,20 @@ export const submitEnquiry = createServerFn({ method: "POST" })
       db.from("guest_contacts").select("email").eq("host_id", p.host_id).ilike("email", email).limit(1),
     ]);
     const known = [...((past ?? []) as Array<{ guest_email: string }>).map((x) => x.guest_email), ...((contacts ?? []) as Array<{ email: string }>).map((x) => x.email)];
-    const { error } = await db.from("direct_enquiries").insert({
+    // The room asked for: still free for those nights, and the estimate worked out here, never trusted from the page.
+    let chosen: { room_id: string; quoted_pence: number | null; currency: string } | null = null;
+    let roomName: string | null = null;
+    if (data.roomId) {
+      const { quoteStay, roomTaken } = await import("./direct-rates");
+      const page = await pageRooms(db, p.id, todayIn(p.timezone));
+      const room = page.rooms.find((r) => r.id === data.roomId);
+      if (!room) throw new Error("That room isn't available to request. Please pick another.");
+      if (roomTaken(page.taken[room.id] ?? [], data.checkIn, data.checkOut)) throw new Error("That room has just been taken for some of those nights. Please pick other dates or another room.");
+      if (data.guests > room.maxGuests) throw new Error(`That room sleeps up to ${room.maxGuests}.`);
+      roomName = room.name;
+      chosen = { room_id: room.id, quoted_pence: room.ratePence !== null ? quoteStay(room.ratePence, page.offers, room.id, data.checkIn, data.checkOut).total : null, currency: currencyOf(p) };
+    }
+    const row = {
       host_id: p.host_id,
       property_id: p.id,
       name: data.name.trim(),
@@ -107,7 +176,13 @@ export const submitEnquiry = createServerFn({ method: "POST" })
       guests: data.guests,
       message: data.message?.trim() || null,
       is_returning: isReturning(email, known),
-    });
+    };
+    const { withLegacy } = await import("./checkin.server");
+    // The room and estimate need migration 0052; before it the request still arrives.
+    const { error } = await withLegacy(
+      () => db.from("direct_enquiries").insert({ ...row, ...(chosen ?? {}) }),
+      () => db.from("direct_enquiries").insert(row),
+    );
     if (error) throw new Error("That enquiry couldn't be sent. Please try again.");
     const business = (p.hosts?.business_name as string | undefined) || (p.name as string);
     if (data.futureStays) {
@@ -121,7 +196,7 @@ export const submitEnquiry = createServerFn({ method: "POST" })
       hostId: p.host_id,
       propertyId: p.id,
       kind: "direct_enquiry",
-      message: `${data.name.trim()} asked about ${data.checkIn} to ${data.checkOut} (${data.guests} ${data.guests === 1 ? "guest" : "guests"}) at ${p.name}.`,
+      message: `${data.name.trim()} asked about ${roomName ? `${roomName}, ` : ""}${data.checkIn} to ${data.checkOut} (${data.guests} ${data.guests === 1 ? "guest" : "guests"}) at ${p.name}.`,
     }).catch(() => undefined);
     return { ok: true };
   });
@@ -203,7 +278,7 @@ export const listDirect = createServerFn({ method: "GET" })
       sb.from("properties").select("id, name, short_code").eq("host_id", data.hostId).order("created_at"),
       sb
         .from("direct_enquiries")
-        .select("id, property_id, name, email, phone, check_in, check_out, guests, message, is_returning, status, booking_id, created_at")
+        .select("*")
         .eq("host_id", data.hostId)
         .order("created_at", { ascending: false })
         .limit(200),
@@ -229,6 +304,9 @@ export const listDirect = createServerFn({ method: "GET" })
         status: (typeof ENQUIRY_STATUSES)[number];
         booking_id: string | null;
         created_at: string;
+        room_id?: string | null;
+        quoted_pence?: number | null;
+        currency?: string | null;
       }>,
       contacts: (contacts.error ? [] : (contacts.data ?? [])) as Array<{ id: string; property_id: string | null; name: string | null; email: string; consent_text: string; consent_at: string; source: string; withdraw_token: string }>,
     };
@@ -256,7 +334,7 @@ export const convertEnquiry = createServerFn({ method: "POST" })
       .from("bookings")
       .insert({
         property_id: e.property_id,
-        room_id: data.roomId,
+        room_id: data.roomId ?? (e.room_id as string | null) ?? null,
         channel: "direct",
         source: "manual",
         status: "upcoming",
@@ -282,4 +360,53 @@ export const removeDirectRecord = createServerFn({ method: "POST" })
     const { error } = await (context.supabase as unknown as Loose).from(table).delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/* ----------------------------- rates (host) ----------------------------- */
+
+/** The host's rates for the "Stay with us" page: each room's base nightly rate and the seasonal offers. */
+export const getDirectRates = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as unknown as Loose;
+    const { normaliseOffers } = await import("./direct-rates");
+    const [rooms, prop] = await Promise.all([
+      sb.from("rooms").select("id, display_name, base_rate_pence").eq("property_id", data.propertyId).neq("active", false).order("sort_order"),
+      sb.from("properties").select("direct_offers, currency, short_code, hosts(currency)").eq("id", data.propertyId).maybeSingle(),
+    ]);
+    return {
+      // Before migration 0052 the card explains what's coming.
+      available: !rooms.error && !prop.error,
+      currency: prop.data ? currencyOf(prop.data) : "GBP",
+      shortCode: (prop.data?.short_code as string | null) ?? null,
+      rooms: ((rooms.data ?? []) as Array<{ id: string; display_name: string; base_rate_pence: number | null }>).map((r) => ({ id: r.id, name: r.display_name, ratePence: r.base_rate_pence ?? null })),
+      offers: normaliseOffers(prop.data?.direct_offers),
+    };
+  });
+
+export const saveDirectRates = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        propertyId: uuid,
+        rates: z.array(z.object({ roomId: uuid, ratePence: z.number().int().min(0).max(100_000_000).nullable() })).max(200),
+        offers: z.array(z.record(z.string(), z.unknown())).max(40),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { requireWrite, hostOfProperty } = await import("./roles");
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const { normaliseOffers } = await import("./direct-rates");
+    const sb = context.supabase as unknown as Loose;
+    for (const r of data.rates) {
+      const { error } = await sb.from("rooms").update({ base_rate_pence: r.ratePence }).eq("id", r.roomId).eq("property_id", data.propertyId);
+      if (error) throw new Error(/base_rate/.test(error.message) ? "Rates need the latest update (migration 0052)." : error.message);
+    }
+    const offers = normaliseOffers(data.offers);
+    const { error } = await sb.from("properties").update({ direct_offers: offers }).eq("id", data.propertyId);
+    if (error) throw new Error(error.message);
+    return { ok: true, offers };
   });

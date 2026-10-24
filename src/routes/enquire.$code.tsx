@@ -1,30 +1,36 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarHeart, Check, Loader2 } from "lucide-react";
+import { BedDouble, CalendarHeart, Check, Loader2, Minus, Plus, ShowerHead, Tag, Users } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { enquiryCopy as copy, guest as guestCopy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
-import { addDays } from "@/lib/dates";
-import { enquiryConsentText, enquiryProblem, MAX_GUESTS } from "@/lib/direct";
+import { addDays, formatUkDate, nightsBetween } from "@/lib/dates";
+import { enquiryConsentText, enquiryProblem, MAX_GUESTS, MAX_NIGHTS } from "@/lib/direct";
+import { money, offerOn, quoteStay, roomTaken } from "@/lib/direct-rates";
 import { getEnquiryPage, submitEnquiry } from "@/lib/direct.functions";
+import { cn } from "@/lib/utils";
 
 /**
- * The property's own enquiry page: a past guest (or anyone) asks about dates
- * directly. The host replies from their own mailbox; nothing is booked or
- * paid here, so it never pretends to be a booking engine.
+ * The property's own "Stay with us" page, laid out like a hotel's booking
+ * page: pick arrival and departure on a calendar, see each room with its
+ * nightly rate, whether it's free those nights and the estimated total (with
+ * the host's seasonal offers taken off), then request a room. Nothing is
+ * booked or paid here: the host confirms the stay and how to pay.
  */
 export const Route = createFileRoute("/enquire/$code")({
   loader: ({ params }) => getEnquiryPage({ data: { code: params.code } }),
   head: ({ loaderData }) => ({
     meta: [
-      { title: loaderData?.found ? copy.pageTitle(loaderData.propertyName) : rebrand("Ask about a stay — Latchkey") },
+      { title: loaderData?.found ? copy.pageTitle(loaderData.propertyName) : rebrand("Stay with us — Latchkey") },
       { name: "description", content: copy.metaDescription },
     ],
   }),
@@ -36,24 +42,52 @@ export const Route = createFileRoute("/enquire/$code")({
   component: EnquirePage,
 });
 
+/** ISO date ↔ a local Date for the calendar (no time zone shifts). */
+const toDate = (iso: string) => new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
+const toIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/** Two months side by side on a wide screen, one on a phone. */
+function useMonths() {
+  const [months, setMonths] = useState(1);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => setMonths(mq.matches ? 2 : 1);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return months;
+}
+
 function EnquirePage() {
   const page = Route.useLoaderData();
   const send = useServerFn(submitEnquiry);
-  const [form, setForm] = useState(() => ({
-    name: "",
-    email: "",
-    phone: "",
+  const months = useMonths();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const [range, setRange] = useState<{ checkIn: string; checkOut: string }>(() => ({
     checkIn: page.found ? addDays(page.today, 14) : "",
     checkOut: page.found ? addDays(page.today, 16) : "",
-    guests: 2,
-    message: "",
-    futureStays: false,
-    agree: false,
-    website: "",
   }));
+  const [guests, setGuests] = useState(2);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "", futureStays: false, agree: false, website: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+
+  const nights = range.checkIn && range.checkOut ? nightsBetween(range.checkIn, range.checkOut) : 0;
+  const rooms = page.found ? page.rooms : [];
+  const offers = page.found ? page.offers : [];
+  const currency = page.found ? page.currency : "GBP";
+  const quoteFor = (r: (typeof rooms)[number]) => (r.ratePence !== null && nights > 0 ? quoteStay(r.ratePence, offers, r.id, range.checkIn, range.checkOut) : null);
+  const freeFor = (r: (typeof rooms)[number]) => nights > 0 && !roomTaken(page.found ? (page.taken[r.id] ?? []) : [], range.checkIn, range.checkOut);
+  const chosen = rooms.find((r) => r.id === roomId) ?? null;
+  // Nights any offer covers, marked on the calendar.
+  const offerDays = useMemo(() => {
+    const out: Date[] = [];
+    for (const o of offers) for (let d = o.from; d <= o.to && out.length < 800; d = addDays(d, 1)) out.push(toDate(d));
+    return out;
+  }, [offers]);
 
   if (!page.found) {
     return (
@@ -63,14 +97,26 @@ function EnquirePage() {
     );
   }
 
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  function pickRange(r: DateRange | undefined) {
+    const from = r?.from ? toIso(r.from) : "";
+    const to = r?.to ? toIso(r.to) : "";
+    setRange({ checkIn: from, checkOut: to && to > from ? to : "" });
+  }
+
+  function request(id: string | null) {
+    setRoomId(id);
+    setError(null);
+    window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!page.found) return;
-    const problem = enquiryProblem({ ...form, phone: form.phone || null }, page.today) ?? (form.agree ? null : copy.agreeNeeded);
-    if (problem) {
-      setError(problem);
-      return;
-    }
+    const input = { ...form, phone: form.phone || null, checkIn: range.checkIn, checkOut: range.checkOut, guests };
+    const problem = enquiryProblem(input, page.today) ?? (form.agree ? null : copy.agreeNeeded);
+    if (problem) return setError(problem);
     setBusy(true);
     setError(null);
     try {
@@ -80,11 +126,12 @@ function EnquirePage() {
           name: form.name,
           email: form.email,
           phone: form.phone || null,
-          checkIn: form.checkIn,
-          checkOut: form.checkOut,
-          guests: form.guests,
+          checkIn: range.checkIn,
+          checkOut: range.checkOut,
+          guests,
           message: form.message || null,
           futureStays: form.futureStays,
+          roomId,
           website: form.website,
         },
       });
@@ -96,16 +143,28 @@ function EnquirePage() {
     }
   }
 
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
-
   return (
     <GuestFrame theme={page.theme} name={page.propertyName}>
-      <main className="mx-auto max-w-2xl space-y-6 py-8">
+      <main className="mx-auto max-w-6xl space-y-6 py-6 sm:py-8">
         <header>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">{copy.eyebrow}</p>
           <h1 className="mt-2 text-3xl sm:text-5xl">{copy.title(page.propertyName)}</h1>
-          <p className="mt-2 text-lg text-muted-foreground">{copy.intro(page.business)}</p>
+          <p className="mt-2 max-w-3xl text-lg text-muted-foreground">{copy.intro(page.business)}</p>
         </header>
+
+        {offers.length ? (
+          <section aria-label={copy.offersTitle} className="flex flex-wrap gap-2">
+            {offers.map((o) => (
+              <span key={o.id} className="flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1.5 text-sm">
+                <Tag className="size-4 text-accent" />
+                <span className="font-medium">{o.label}</span>
+                <span className="text-muted-foreground">
+                  {copy.offerLine(o.percent, formatUkDate(o.from), formatUkDate(o.to))}
+                </span>
+              </span>
+            ))}
+          </section>
+        ) : null}
 
         {sent ? (
           <section className="card-soft space-y-3 p-6 text-center" role="status">
@@ -116,64 +175,171 @@ function EnquirePage() {
             <p className="text-muted-foreground">{copy.sentBody(page.business)}</p>
           </section>
         ) : (
-          <form onSubmit={submit} className="card-soft space-y-4 p-5 sm:p-6" noValidate>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="enq-in">{copy.checkIn}</Label>
-                <Input id="enq-in" type="date" className="h-12" min={page.today} value={form.checkIn} onChange={(e) => set("checkIn", e.target.value)} required />
+          <>
+            {/* Dates and guests, like a hotel's booking bar. */}
+            <section className="card-soft grid gap-4 p-4 sm:p-5 lg:grid-cols-[auto_minmax(0,1fr)]">
+              <Calendar
+                mode="range"
+                numberOfMonths={months}
+                defaultMonth={range.checkIn ? toDate(range.checkIn) : toDate(page.today)}
+                selected={{ from: range.checkIn ? toDate(range.checkIn) : undefined, to: range.checkOut ? toDate(range.checkOut) : undefined }}
+                onSelect={pickRange}
+                disabled={[{ before: toDate(page.today) }, { after: toDate(addDays(page.today, 730)) }]}
+                modifiers={{ offer: offerDays }}
+                modifiersClassNames={{ offer: "[&>button]:font-semibold [&>button]:text-accent [&>button]:underline [&>button]:decoration-accent [&>button]:underline-offset-4" }}
+                className="mx-auto rounded-2xl border border-border [--cell-size:2.5rem]"
+              />
+              <div className="flex flex-col justify-center gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-border p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{copy.checkIn}</p>
+                    <p className="mt-1 text-lg font-medium">{range.checkIn ? formatUkDate(range.checkIn) : copy.pickDate}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{copy.checkOut}</p>
+                    <p className="mt-1 text-lg font-medium">{range.checkOut ? formatUkDate(range.checkOut) : copy.pickDate}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-border p-3">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Users className="size-5 text-primary" /> {copy.guests}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="icon" aria-label={copy.fewer} disabled={guests <= 1} onClick={() => setGuests((g) => Math.max(1, g - 1))}>
+                      <Minus className="size-4" />
+                    </Button>
+                    <span className="w-8 text-center text-lg tabular-nums" aria-live="polite">{guests}</span>
+                    <Button type="button" variant="outline" size="icon" aria-label={copy.more} disabled={guests >= MAX_GUESTS} onClick={() => setGuests((g) => Math.min(MAX_GUESTS, g + 1))}>
+                      <Plus className="size-4" />
+                    </Button>
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {nights > 0 ? (nights > MAX_NIGHTS ? copy.tooLong(MAX_NIGHTS) : copy.nights(nights)) : copy.pickBoth}
+                  {offers.length ? ` ${copy.offerDaysHint}` : ""}
+                </p>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="enq-out">{copy.checkOut}</Label>
-                <Input id="enq-out" type="date" className="h-12" min={form.checkIn || page.today} value={form.checkOut} onChange={(e) => set("checkOut", e.target.value)} required />
+            </section>
+
+            {/* The rooms for those dates. */}
+            {rooms.length ? (
+              <section aria-label={copy.roomsTitle} className="space-y-3">
+                <h2 className="text-2xl">{copy.roomsTitle}</h2>
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {rooms.map((r) => {
+                    const q = quoteFor(r);
+                    const free = freeFor(r);
+                    const fits = guests <= r.maxGuests;
+                    const tonight = r.ratePence !== null && range.checkIn ? offerOn(offers, r.id, range.checkIn) : null;
+                    return (
+                      <li key={r.id} className={cn("card-soft flex flex-col overflow-hidden p-0", roomId === r.id && "ring-2 ring-primary")}>
+                        {r.photo ? (
+                          <img src={r.photo} alt="" loading="lazy" className="aspect-[16/7] w-full object-cover sm:aspect-[16/10]" />
+                        ) : (
+                          <div className="grid aspect-[16/7] w-full place-items-center bg-primary/10 text-primary sm:aspect-[16/10]">
+                            <BedDouble className="size-10" />
+                          </div>
+                        )}
+                        <div className="flex flex-1 flex-col gap-2 p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-xl leading-tight">{r.name}</h3>
+                            {r.ratePence !== null ? (
+                              <p className="shrink-0 text-right">
+                                <span className="block text-lg font-semibold">{money(r.ratePence, currency)}</span>
+                                <span className="block text-xs text-muted-foreground">{copy.perNight}</span>
+                              </p>
+                            ) : null}
+                          </div>
+                          <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1"><Users className="size-4" /> {copy.sleeps(r.maxGuests)}</span>
+                            {r.ensuite ? <span className="flex items-center gap-1"><ShowerHead className="size-4" /> {copy.ensuite}</span> : null}
+                          </p>
+                          {r.description ? <p className="line-clamp-3 text-sm">{r.description}</p> : null}
+                          <div className="mt-auto space-y-2 border-t border-border pt-3">
+                            {nights > 0 && nights <= MAX_NIGHTS ? (
+                              !free ? (
+                                <p className="text-sm font-medium text-destructive">{copy.takenForDates}</p>
+                              ) : !fits ? (
+                                <p className="text-sm font-medium text-destructive">{copy.tooMany(r.maxGuests)}</p>
+                              ) : q ? (
+                                <p className="flex flex-wrap items-baseline gap-x-2">
+                                  {q.discount > 0 ? <span className="text-sm text-muted-foreground line-through">{money(q.base, currency)}</span> : null}
+                                  <span className="text-lg font-semibold">{money(q.total, currency)}</span>
+                                  <span className="text-sm text-muted-foreground">{copy.forNights(q.nights)}</span>
+                                  {q.applied.length ? <span className="w-full text-xs text-accent">{q.applied.map((o) => o.label).join(" · ")}</span> : null}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">{copy.freeAskPrice}</p>
+                              )
+                            ) : tonight ? (
+                              <p className="text-xs text-accent">{tonight.label}</p>
+                            ) : null}
+                            <Button type="button" className="w-full" disabled={nights <= 0 || nights > MAX_NIGHTS || !free || !fits} onClick={() => request(r.id)}>
+                              {roomId === r.id ? <Check className="size-4" /> : null} {roomId === r.id ? copy.chosen : copy.requestRoom}
+                            </Button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-sm text-muted-foreground">
+                  {copy.notSure}{" "}
+                  <button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => request(null)}>
+                    {copy.generalEnquiry}
+                  </button>
+                </p>
+              </section>
+            ) : null}
+
+            <form ref={formRef} onSubmit={submit} className="card-soft scroll-mt-6 space-y-4 p-5 sm:p-6" noValidate>
+              <h2 className="text-2xl">{chosen ? copy.requestTitle(chosen.name) : copy.enquiryTitle}</h2>
+              <p className="rounded-xl bg-muted p-3 text-sm">
+                {range.checkIn && range.checkOut ? copy.summary(formatUkDate(range.checkIn), formatUkDate(range.checkOut), nights, guests) : copy.pickBoth}
+                {chosen && quoteFor(chosen) ? ` · ${copy.estimate(money(quoteFor(chosen)!.total, currency))}` : ""}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="enq-name">{copy.name}</Label>
+                  <Input id="enq-name" className="h-12" autoComplete="name" maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} required />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="enq-email">{copy.email}</Label>
+                  <Input id="enq-email" type="email" className="h-12" autoComplete="email" maxLength={254} value={form.email} onChange={(e) => set("email", e.target.value)} required />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="enq-phone">{copy.phone}</Label>
+                  <Input id="enq-phone" type="tel" className="h-12" autoComplete="tel" maxLength={30} value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="enq-msg">{copy.message}</Label>
+                  <Textarea id="enq-msg" rows={2} maxLength={2000} placeholder={copy.messagePlaceholder} value={form.message} onChange={(e) => set("message", e.target.value)} />
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="enq-guests">{copy.guests}</Label>
-              <Input id="enq-guests" type="number" inputMode="numeric" min={1} max={MAX_GUESTS} className="h-12 w-32" value={form.guests} onChange={(e) => set("guests", Number(e.target.value) || 1)} />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="enq-name">{copy.name}</Label>
-                <Input id="enq-name" className="h-12" autoComplete="name" maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} required />
+              {/* Hidden from people; bots fill it in. */}
+              <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                <label>
+                  Website <input tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => set("website", e.target.value)} />
+                </label>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="enq-email">{copy.email}</Label>
-                <Input id="enq-email" type="email" className="h-12" autoComplete="email" maxLength={254} value={form.email} onChange={(e) => set("email", e.target.value)} required />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="enq-phone">{copy.phone}</Label>
-              <Input id="enq-phone" type="tel" className="h-12" autoComplete="tel" maxLength={30} value={form.phone} onChange={(e) => set("phone", e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="enq-msg">{copy.message}</Label>
-              <Textarea id="enq-msg" rows={4} maxLength={2000} placeholder={copy.messagePlaceholder} value={form.message} onChange={(e) => set("message", e.target.value)} />
-            </div>
-            {/* Hidden from people; bots fill it in. */}
-            <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-              <label>
-                Website <input tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => set("website", e.target.value)} />
+              <label className="flex items-start gap-3 rounded-2xl bg-muted p-3 text-sm">
+                <Checkbox checked={form.agree} onCheckedChange={(v) => set("agree", v === true)} className="mt-0.5" />
+                <span>{enquiryConsentText(page.business)}</span>
               </label>
-            </div>
-
-            <label className="flex items-start gap-3 rounded-2xl bg-muted p-3 text-sm">
-              <Checkbox checked={form.agree} onCheckedChange={(v) => set("agree", v === true)} className="mt-0.5" />
-              <span>{enquiryConsentText(page.business)}</span>
-            </label>
-            {/* Separate, unticked, and optional: future stays. */}
-            <label className="flex items-start gap-3 rounded-2xl border border-border p-3 text-sm">
-              <Checkbox checked={form.futureStays} onCheckedChange={(v) => set("futureStays", v === true)} className="mt-0.5" />
-              <span>
-                {page.consent} <span className="text-muted-foreground">{copy.optional}</span>
-              </span>
-            </label>
-
-            {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : <CalendarHeart />} {copy.send}
-            </Button>
-            <p className="text-xs text-muted-foreground">{copy.notBooked}</p>
-          </form>
+              {/* Separate, unticked, and optional: future stays. */}
+              <label className="flex items-start gap-3 rounded-2xl border border-border p-3 text-sm">
+                <Checkbox checked={form.futureStays} onCheckedChange={(v) => set("futureStays", v === true)} className="mt-0.5" />
+                <span>
+                  {page.consent} <span className="text-muted-foreground">{copy.optional}</span>
+                </span>
+              </label>
+              {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+              <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy}>
+                {busy ? <Loader2 className="animate-spin" /> : <CalendarHeart />} {chosen ? copy.sendRequest : copy.send}
+              </Button>
+              <p className="text-xs text-muted-foreground">{copy.notBooked}</p>
+            </form>
+          </>
         )}
       </main>
     </GuestFrame>
