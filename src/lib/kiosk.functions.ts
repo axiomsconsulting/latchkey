@@ -193,6 +193,11 @@ export const saveKioskNightLook = createServerFn({ method: "POST" })
     const night = nightLookFor(data);
     // The shared demo and tour kiosks keep the starting look for every visitor.
     if (!host || host.demo) return { ok: false, night };
+    // Only from a kiosk actually showing the night light, and at most every few seconds.
+    const rest = (host.rest ?? {}) as { nightLight?: boolean };
+    if (rest.nightLight !== true) return { ok: false, night };
+    const { data: prev } = await db.from("kiosk_looks").select("updated_at").eq("host_id", host.hostId).maybeSingle();
+    if (prev?.updated_at && Date.now() - new Date(prev.updated_at).getTime() < 3000) return { ok: false, night };
     const { error } = await db
       .from("kiosk_looks")
       .upsert({ host_id: host.hostId, night_brightness: night.brightness, night_depth: night.depth, updated_at: new Date().toISOString() }, { onConflict: "host_id" });
