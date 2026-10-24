@@ -11,6 +11,7 @@ import { auth as copy, brand } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
 import { LastUsed, SocialButtons } from "@/components/SocialButtons";
+import { AgreeNote } from "@/components/LegalPage";
 import { authExtraCopy as extra } from "@/content/copy";
 import { lastSignIn, signInIntent, type SignInMethod } from "@/lib/social-auth";
 import { lastHost } from "@/lib/last-host";
@@ -224,6 +225,7 @@ function AuthPage() {
                     </Button>
                     {mode === "sign_in" ? <LastUsed method="password" current={last} /> : null}
                   </div>
+                  {mode === "sign_up" ? <AgreeNote className="text-center text-xs text-muted-foreground" /> : null}
                 </form>
 
                 {mode === "sign_in" ? (

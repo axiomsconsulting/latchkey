@@ -18,6 +18,7 @@ import { Route as CheckinRouteImport } from './routes/checkin'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as StartRouteImport } from './routes/start'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TourRouteImport } from './routes/tour'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as DemoIndexRouteImport } from './routes/demo.index'
@@ -114,6 +115,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const StartRoute = StartRouteImport.update({
   id: '/start',
   path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TourRoute = TourRouteImport.update({
@@ -405,6 +411,7 @@ export interface FileRoutesByFullPath {
   '/developers': typeof DevelopersRoute
   '/privacy': typeof PrivacyRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/demo/host': typeof DemoHostRoute
@@ -468,6 +475,7 @@ export interface FileRoutesByTo {
   '/developers': typeof DevelopersRoute
   '/privacy': typeof PrivacyRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
@@ -532,6 +540,7 @@ export interface FileRoutesById {
   '/developers': typeof DevelopersRoute
   '/privacy': typeof PrivacyRoute
   '/start': typeof StartRoute
+  '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/demo/host': typeof DemoHostRoute
@@ -597,6 +606,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/privacy'
     | '/start'
+    | '/terms'
     | '/tour'
     | '/app'
     | '/demo/host'
@@ -660,6 +670,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/privacy'
     | '/start'
+    | '/terms'
     | '/tour'
     | '/demo/host'
     | '/enquire/$code'
@@ -723,6 +734,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/privacy'
     | '/start'
+    | '/terms'
     | '/tour'
     | '/_authenticated/app'
     | '/demo/host'
@@ -788,6 +800,7 @@ export interface RootRouteChildren {
   DevelopersRoute: typeof DevelopersRoute
   PrivacyRoute: typeof PrivacyRoute
   StartRoute: typeof StartRoute
+  TermsRoute: typeof TermsRoute
   TourRoute: typeof TourRoute
   DemoHostRoute: typeof DemoHostRoute
   EnquireCodeRoute: typeof EnquireCodeRoute
@@ -885,6 +898,13 @@ declare module '@tanstack/react-router' {
       path: '/start'
       fullPath: '/start'
       preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tour': {
@@ -1341,6 +1361,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersRoute: DevelopersRoute,
   PrivacyRoute: PrivacyRoute,
   StartRoute: StartRoute,
+  TermsRoute: TermsRoute,
   TourRoute: TourRoute,
   DemoHostRoute: DemoHostRoute,
   EnquireCodeRoute: EnquireCodeRoute,

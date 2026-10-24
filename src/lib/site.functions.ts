@@ -9,6 +9,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normaliseBrand, type Brand } from "@/lib/brand";
 import { normaliseUi, type UiConfig } from "@/lib/ui-config";
+import { missingLegal, normaliseLegal } from "@/lib/legal";
 
 export type SiteContext = { brand: Brand; tenant: { name: string; shortCode: string | null } | null; ui: UiConfig };
 
@@ -144,4 +145,54 @@ export const setStarterSection = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     forgetStarters();
     return { ok: true, ...clean };
+  });
+
+/** Public: the operator's legal details for /terms and /privacy (defaults until migration 0054 or the super admin fills them in). */
+export const getLegalDetails = createServerFn({ method: "GET" }).handler(async () => {
+  // The pages must always open: any problem reading the settings falls back to the defaults.
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin as unknown as Loose).from("site_settings").select("legal").eq("id", 1).maybeSingle();
+    return normaliseLegal(error ? null : data?.legal);
+  } catch {
+    return normaliseLegal(null);
+  }
+});
+
+/** Super admin: the legal details as stored, and what's still missing. */
+export const getLegalSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin as unknown as Loose).from("site_settings").select("legal").eq("id", 1).maybeSingle();
+    const legal = normaliseLegal(error ? null : data?.legal);
+    return { available: !error, legal, missing: missingLegal(legal) };
+  });
+
+export const saveLegalSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        companyName: z.string().max(120),
+        companyNumber: z.string().max(40),
+        registeredAddress: z.string().max(400),
+        contactEmail: z.string().max(200),
+        privacyEmail: z.string().max(200),
+        icoNumber: z.string().max(40),
+        vatNumber: z.string().max(40),
+        governingLaw: z.string().max(80),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    for (const k of ["contactEmail", "privacyEmail"] as const) {
+      if (data[k].trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data[k].trim())) throw new Error("Please check the email addresses.");
+    }
+    const legal = normaliseLegal(data);
+    const { error } = await (context.supabase as unknown as Loose).from("site_settings").update({ legal, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw new Error(/legal/.test(error.message) ? "Legal details can be saved once the latest database update (0054) is applied." : error.message);
+    return { ok: true, legal };
   });

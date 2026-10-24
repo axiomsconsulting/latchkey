@@ -87,7 +87,7 @@ export const marketing = branded({
   trust: "Works alongside",
   trustTail: "and any iCal calendar",
   footer: "© 2026 Latchkey. Guest operations for independent accommodation.",
-  privacyLink: "Privacy and website statistics",
+  privacyLink: "Privacy policy",
   /** The three outcomes, right under the hero. */
   benefits: [
     { title: "Fewer late-night arrivals", body: "Guests check themselves in at your door tablet or on their own phone, at any hour. No waiting up, no key handovers." },
@@ -3798,10 +3798,9 @@ export const funnelCopy = branded({
   columns: ["Source", "Campaign", "Tour views", "Tours finished", "Host demo", "Trials started", "Trials saved", "Demo → trial"],
 });
 
-/** /privacy: the website's own visitor statistics. */
+/** /privacy: the statistics switch inside the Privacy policy (the policy's wording is in src/content/legal.ts). */
 export const privacyPageCopy = branded({
-  title: "Privacy and website statistics",
-  intro: "Latchkey counts visits to this website so we can see what's useful and improve it. Here's exactly what that means, and how to turn it off.",
+  intro: "How Latchkey handles personal data for website visitors, hosts and their guests, and how to switch off website statistics.",
   switchTitle: "Counting this browser",
   switchLabel: "Count my visits",
   checking: "Checking…",
@@ -3809,33 +3808,35 @@ export const privacyPageCopy = branded({
   offNow: "Your visits aren't counted in this browser.",
   browserSignal: "Your browser asks sites not to track it (Global Privacy Control or Do Not Track), so we never count it.",
   switchHint: "This browser remembers your choice. You can also add ?notrack=1 to any of our links.",
-  sections: [
-    {
-      title: "What we count",
-      points: [
-        "Which pages are opened, how long they're looked at, and the page you came from.",
-        "Campaign tags on the link you followed (like utm_source=linkedin), so we know which posts help.",
-        "Your browser type, device type, language, time zone, country and region.",
-        "Steps in our demo and free trial (opened the tour, finished it, started or saved a trial).",
-      ],
-    },
-    {
-      title: "What we don't",
-      points: [
-        "No IP addresses: we keep a scrambled code that changes every day, only to spot automated traffic and limit demo misuse.",
-        "No town or exact location, no advertising, and nothing sold or shared with advertisers.",
-        "No cookies: a random number in your browser's storage tells your visits apart. Clearing site data removes it.",
-      ],
-    },
-    {
-      title: "How long we keep it",
-      points: [
-        "13 months, then it's deleted.",
-        "If you sign in as a host, your visits are linked to your account so we can help you when you ask for support.",
-      ],
-    },
-  ],
-  guests: "Guests' check-in details, ID checks and messages belong to the business you stayed with. Ask them how they handle your data.",
+});
+
+/** /terms and /privacy page frame, footer links and the super admin's legal details form. */
+export const legalPageCopy = branded({
+  updated: (d: string) => `Last updated ${d}`,
+  contents: "Contents",
+  legalNav: "Legal",
+  terms: "Terms of service",
+  privacy: "Privacy policy",
+  statistics: "Website statistics",
+  home: "Home",
+  agree: "By continuing you agree to the",
+  and: "and",
+  adminTitle: "Legal details",
+  adminBody: "Who runs Latchkey, for the Terms of service and Privacy policy. The wording itself is in the code (src/content/legal.ts); have it checked by a solicitor before launch.",
+  missing: (fields: string) => `Still missing on the published pages: ${fields}.`,
+  notReady: "Legal details can be saved once the latest database update (0054) is applied. Until then the pages use the brand name.",
+  saved: "Legal details saved.",
+  view: "View",
+  fields: {
+    companyName: "Company name",
+    companyNumber: "Company number",
+    registeredAddress: "Registered address",
+    contactEmail: "Contact email",
+    privacyEmail: "Privacy email (optional)",
+    icoNumber: "ICO registration number",
+    vatNumber: "VAT number (optional)",
+    governingLaw: "Governing law",
+  } as Record<string, string>,
 });
 
 export const breakfastCopy = branded({

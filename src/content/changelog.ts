@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.68.0",
+    date: "2026-10-24",
+    title: "Terms of service and Privacy policy",
+    items: [
+      { kind: "new", area: "Website", text: "Terms of service (/terms) and a full Privacy policy (/privacy), linked from the home page footer, with a contents list and links to each section. The terms cover trials, billing and cancelling, guest payments through your own Stripe account, your own booking page, your duties as a host and the data processing terms for your guests' details." },
+      { kind: "improved", area: "Website", text: "The Privacy page now covers website visitors, hosts and guests: who is responsible for what, the services we use, how long each kind of data is kept and your rights. Website statistics, and the switch to turn them off, are a section of it (/privacy#statistics). Signing up and saving a trial link to both." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin → Site settings → Legal details: company name and number, registered address, contact and privacy emails, ICO number, VAT number and governing law, shown on the Terms and Privacy policy." },
+    ],
+  },
+  {
     version: "0.67.1",
     date: "2026-10-24",
     title: "Clearer payment errors",

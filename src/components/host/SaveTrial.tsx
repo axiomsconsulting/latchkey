@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { signInIntent } from "@/lib/social-auth";
 import { saveTrialDetails } from "@/lib/team.functions";
 import { saveTrialName } from "@/lib/trial.functions";
+import { AgreeNote } from "@/components/LegalPage";
 
 /**
  * Saving a free trial, once the property is set up: Google, Apple, or an
@@ -101,6 +102,7 @@ export function SaveTrial({ next = "/app/today", onLater }: { next?: string; onL
         </div>
         <p className="text-xs text-muted-foreground">{copy.emailHint}</p>
       </form>
+      <AgreeNote />
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}

@@ -7,6 +7,7 @@ import { ChannelBadge } from "@/components/ChannelBadge";
 import { brand, marketing } from "@/content/copy";
 import { OfferRibbon, PricingSection } from "@/components/PricingSection";
 import { sessionUtm, type Utm } from "@/lib/attribution";
+import { LegalLinks } from "@/components/LegalPage";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkspace } from "@/lib/host.functions";
@@ -316,11 +317,11 @@ function Landing() {
         </div>
       </main>
 
-      <footer className="border-t border-border px-5 py-8">
-        <p className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 text-sm text-muted-foreground">
+      <footer className="border-t border-border px-5 pb-28 pt-8 sm:pb-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 text-sm text-muted-foreground">
           <span>{footerText(marketing.footer)}</span>
-          <Link to="/privacy" className="underline-offset-2 hover:underline">{marketing.privacyLink}</Link>
-        </p>
+          <LegalLinks />
+        </div>
       </footer>
     </div>
   );
