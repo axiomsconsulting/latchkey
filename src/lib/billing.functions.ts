@@ -194,6 +194,7 @@ export const startSubscription = createServerFn({ method: "POST" })
     const trialEnd = h.subscription_status === "trialing" ? stripeTrialEnd(h.trial_ends_at) : null;
     const email = (context.claims?.email as string | undefined) || h.contact_email || undefined;
     const origin = new URL(data.returnTo).origin;
+    const { stripeFailure } = await import("./stripe-identity");
     const session = await stripeCall<{ url: string }>("/checkout/sessions", {
       mode: "subscription",
       client_reference_id: h.id,
@@ -216,6 +217,8 @@ export const startSubscription = createServerFn({ method: "POST" })
       metadata: { host_id: h.id, kind: "latchkey_subscription" },
       success_url: `${origin}/app/billing?done=1`,
       cancel_url: `${origin}/app/billing`,
+    }).catch((e: unknown) => {
+      throw stripeFailure(e, "Adding your card");
     });
     return { url: session.url };
   });
@@ -261,7 +264,7 @@ export const cancelSubscription = createServerFn({ method: "POST" })
         await stripeCall(`/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`, undefined, "DELETE");
       } catch (err) {
         // Already gone at Stripe is fine; anything else must not leave them billed.
-        if (!(err instanceof Error && /No such subscription/i.test(err.message))) throw err;
+        if (!(err instanceof Error && /No such subscription/i.test(err.message))) throw (await import("./stripe-identity")).stripeFailure(err, "Cancelling");
       }
     }
     const { error } = await db

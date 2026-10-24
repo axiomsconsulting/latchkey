@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.67.1",
+    date: "2026-10-24",
+    title: "Clearer payment errors",
+    items: [
+      { kind: "improved", area: "Settings", text: "When connecting Stripe, adding your card or cancelling doesn't work, you now get a box that stays on screen: what happened in plain words, what to do next, the technical details folded away, Copy, and Send to Latchkey support, which sends us the details, your business and the page." },
+    ],
+  },
+  {
     version: "0.67.0",
     date: "2026-10-24",
     title: "See which Stripe account you're using",

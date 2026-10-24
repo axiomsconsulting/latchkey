@@ -1940,6 +1940,7 @@ export const payments = branded({
   synced: (created: number, updated: number) => `Sent to Stripe: ${created} new, ${updated} updated.`,
   syncFailed: "Stripe wouldn't accept that. Please try again.",
   ownerOnly: "Only the owner can connect Stripe.",
+  connectFailed: "Stripe couldn't be connected",
   payNow: "Pay now",
   payFailed: "We couldn't open the payment page. Please try again.",
   paidToast: "Thank you, that's paid and confirmed.",
@@ -1982,6 +1983,19 @@ export const stripeAccountCopy = branded({
   modeNone: "Not connected",
   modePlatform: "Latchkey's account",
   modePending: "Setting up",
+});
+
+/** ErrorReport: errors hosts can act on. */
+export const errorReportCopy = branded({
+  nextSteps: "What to do next",
+  details: "Technical details",
+  copy: "Copy",
+  copied: "Copied. Paste it wherever you need it.",
+  send: "Send to Latchkey support",
+  sent: "Sent to Latchkey support. We'll reply by email.",
+  sendFailed: "Couldn't send that. Use Copy and email it to us instead.",
+  open: "Open",
+  close: "Close",
 });
 
 /** Finding tradespeople for property work. */

@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StripeAccountCard } from "@/components/host/StripeAccountCard";
+import { ErrorReport } from "@/components/host/ErrorReport";
+import { readAppError, type AppError } from "@/lib/app-error";
 import { common, payments as copy, stripeAccountCopy } from "@/content/copy";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
 import {
@@ -37,6 +39,8 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
   const platform = useServerFn(setPlatformStripe);
   const syncFn = useServerFn(syncPriceListToStripe);
   const [busy, setBusy] = useState<string | null>(null);
+  // Errors stay on the card (copyable, sendable to support) instead of a toast that vanishes.
+  const [problem, setProblem] = useState<AppError | null>(null);
   const q = useQuery({ queryKey: ["payment-status", propertyId], queryFn: () => statusFn({ data: { propertyId } }) });
 
   // Back from Stripe's sign-up: check the account and say where things stand.
@@ -55,12 +59,13 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
 
   async function run(key: string, fn: () => Promise<unknown>, done?: string) {
     setBusy(key);
+    setProblem(null);
     try {
       await fn();
       await qc.invalidateQueries({ queryKey: ["payment-status"] });
       if (done) toast.success(done);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : common.errorBody);
+      setProblem(readAppError(e, common.errorTitle));
     } finally {
       setBusy(null);
     }
@@ -68,11 +73,12 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
 
   async function goToStripe() {
     setBusy("connect");
+    setProblem(null);
     try {
       const { url } = await connect({ data: { hostId, returnTo: `${window.location.origin}${window.location.pathname}` } });
       window.location.href = url;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : common.errorBody);
+      setProblem(readAppError(e, copy.connectFailed));
       setBusy(null);
     }
   }
@@ -100,6 +106,12 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
           )
         ) : null}
       </div>
+
+      {problem ? (
+        <div className="mt-4">
+          <ErrorReport error={problem} onClose={() => setProblem(null)} />
+        </div>
+      ) : null}
 
       {q.isLoading || !d ? (
         <Skeleton className="mt-4 h-24 rounded-2xl" />

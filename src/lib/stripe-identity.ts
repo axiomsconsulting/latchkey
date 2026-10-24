@@ -7,6 +7,9 @@
  * statement. Pure: the Stripe calls live in payments.functions.ts.
  */
 
+import { appError } from "@/lib/app-error";
+import { rebrand } from "@/lib/brand";
+
 export type StripeAccountRaw = {
   id: string;
   email?: string | null;
@@ -90,4 +93,25 @@ export function stripeSetupProblem(message: string): "permission" | "connect_off
   if (/does not have the required permissions|connected_account_write|_write'?\)? permissions/i.test(message)) return "permission";
   if (/signed up for Connect|sign up for Connect|platform profile|Connect.*(not|isn't) enabled/i.test(message)) return "connect_off";
   return null;
+}
+
+/**
+ * A Stripe refusal as an error a host can act on: plain words, next steps,
+ * Stripe's own message folded away as the details.
+ */
+export function stripeFailure(e: unknown, action: string): Error {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes("LKERR:")) return e instanceof Error ? e : new Error(msg);
+  const setup = stripeSetupProblem(msg);
+  return appError({
+    code: setup ? `stripe_${setup}` : "stripe_refused",
+    title: `${action} didn't work`,
+    body: setup
+      ? rebrand("This is on Latchkey's side, not yours: Latchkey's Stripe set-up needs a change. Nothing is wrong with your details.")
+      : "Stripe, which handles card payments, didn't accept the request. This usually clears if you try again.",
+    steps: setup
+      ? [{ text: rebrand("Press Send to Latchkey support below so we know.") }, { text: "We'll email you when it's fixed; then try again." }]
+      : [{ text: "Wait a minute and try again." }, { text: rebrand("If it happens again, press Send to Latchkey support below.") }],
+    detail: msg,
+  });
 }

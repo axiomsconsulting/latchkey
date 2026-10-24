@@ -6,6 +6,8 @@ import { CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
+import { ErrorReport } from "@/components/host/ErrorReport";
+import { readAppError, type AppError } from "@/lib/app-error";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,26 +54,29 @@ function BillingPage() {
   const q = useQuery({ queryKey: ["billing", hostId], enabled: !!hostId, queryFn: () => fetchBilling({ data: { hostId } }) });
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [problem, setProblem] = useState<AppError | null>(null);
 
   async function go(key: string, fn: () => Promise<{ url: string }>) {
     setBusy(key);
+    setProblem(null);
     try {
       const { url } = await fn();
       window.location.href = url;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : common.errorBody);
+      setProblem(readAppError(e, common.errorTitle));
       setBusy(null);
     }
   }
 
   async function doCancel() {
     setBusy("cancel");
+    setProblem(null);
     try {
       await cancel({ data: { hostId } });
       await qc.invalidateQueries();
       toast.success(copy.canceledToast);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : common.errorBody);
+      setProblem(readAppError(e, common.errorTitle));
     } finally {
       setBusy(null);
     }
@@ -89,6 +94,7 @@ function BillingPage() {
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader title={copy.title} subtitle={copy.subtitle} />
       {done ? <p className="rounded-2xl bg-success/10 p-4">{copy.done}</p> : null}
+      {problem ? <ErrorReport error={problem} onClose={() => setProblem(null)} /> : null}
 
       <section className="card-soft space-y-4 p-6">
         <div className="flex items-start gap-3">

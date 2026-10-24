@@ -14,7 +14,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireOwner } from "@/lib/roles";
 import { rebrand } from "@/lib/brand";
-import { identityOf, stripeSetupProblem, type StripeAccountRaw, type StripeIdentity } from "@/lib/stripe-identity";
+import { appError } from "@/lib/app-error";
+import { identityOf, stripeFailure, stripeSetupProblem, type StripeAccountRaw, type StripeIdentity } from "@/lib/stripe-identity";
 
 const uuid = z.string().uuid();
 const token = z.string().min(20).max(80);
@@ -150,14 +151,40 @@ export const connectStripe = createServerFn({ method: "POST" })
       call(...(args as Parameters<typeof call>)).catch(async (e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
         const problem = stripeSetupProblem(msg);
-        if (!problem) throw e;
+        if (!problem) throw stripeFailure(e, "Connecting Stripe");
         const { data: isSuper } = await (context.supabase as unknown as { rpc: (f: string) => Promise<{ data: unknown }> }).rpc("is_super_admin");
-        if (isSuper !== true) throw new Error(rebrand("Latchkey's Stripe set-up needs a change before you can connect. Please contact Latchkey support; nothing is wrong with your details."));
-        throw new Error(
-          problem === "permission"
-            ? rebrand(`Latchkey's own Stripe key (in Secrets) isn't allowed to create hosts' accounts. In Stripe, edit that restricted key and set Connect → Accounts to Write (see Latchkey admin → Integrations for the full list), or use a full secret key. Stripe said: ${msg}`)
-            : rebrand(`Stripe Connect isn't switched on for Latchkey's Stripe account yet. In Stripe, open Connect and finish the platform set-up, then try again. Stripe said: ${msg}`),
-        );
+        const code = problem === "permission" ? "stripe_key_permission" : "stripe_connect_off";
+        if (isSuper !== true) {
+          throw appError({
+            code,
+            title: "Card payments can't be connected just yet",
+            body: rebrand("This is on Latchkey's side, not yours: Latchkey's Stripe set-up needs finishing before businesses can connect. Nothing is wrong with your details and nothing has been charged."),
+            steps: [{ text: rebrand("Press Send to Latchkey support below so we know.") }, { text: "We'll email you when it's fixed. Then come back here and press Connect Stripe again." }],
+            detail: msg,
+          });
+        }
+        throw appError({
+          code,
+          title: problem === "permission" ? "Latchkey's Stripe key can't create hosts' accounts" : "Stripe Connect isn't set up on Latchkey's Stripe account",
+          body:
+            problem === "permission"
+              ? rebrand("Connecting a business uses Latchkey's own Stripe key (in Secrets). That key is restricted and isn't allowed to create accounts. Hosts see a plain message asking them to contact support.")
+              : rebrand("Before Latchkey can create Stripe accounts for businesses, Stripe needs Latchkey's platform profile: a short questionnaire about how Latchkey uses Connect. Hosts see a plain message asking them to contact support."),
+          steps:
+            problem === "permission"
+              ? [
+                  { text: "In Stripe, open Developers → API keys and edit the restricted key Latchkey uses.", href: "https://dashboard.stripe.com/apikeys" },
+                  { text: "Set Connect → Accounts to Write (Latchkey admin → Integrations lists everything the key needs), or put a full secret key in Secrets instead." },
+                  { text: "Come back and press Connect Stripe again." },
+                ]
+              : [
+                  { text: "In Stripe, open Connect and answer the platform profile questionnaire.", href: "https://dashboard.stripe.com/connect/accounts/overview" },
+                  { text: "Choose Standard accounts and that hosts are paid directly (Latchkey takes no share of guest payments)." },
+                  { text: "Come back and press Connect Stripe again." },
+                ],
+          detail: msg,
+          support: false,
+        });
       }) as never;
     const db = await admin();
     const { data: h } = await db.from("hosts").select("id, business_name, contact_email, stripe_account_id").eq("id", data.hostId).single();
