@@ -1,50 +1,52 @@
--- Hosts tidy up stays and service jobs: archive hides them from everyday
--- screens (an Archive view still shows them); delete removes a stay with
--- everything about it. Calendar links say when a sync is running.
-
-alter table public.bookings add column if not exists archived_at timestamptz;
-alter table public.service_jobs add column if not exists archived_at timestamptz;
-alter table public.channel_connections add column if not exists sync_started_at timestamptz;
-
--- Archiving and sync markers are bookkeeping, not anyone's edit to log.
-create or replace function public.audit_noise(_key text)
-returns boolean language sql immutable as $$
-  select _key in ('updated_at', 'last_synced_at', 'sync_status', 'last_error', 'feed_status',
-                  'listing_title', 'created_at', 'sync_started_at')
-$$;
-
-/**
- * Deletes stays and everything about them in one go: messages, extras
- * requests, check-in records (by cascade), plus guest service requests and
- * alerts, which would otherwise be left behind unlinked. Stays with payments
- * are refused so money records are never lost; archive those instead.
- */
-create or replace function public.delete_bookings(_ids uuid[])
-returns integer language plpgsql security definer set search_path = public as $$
-declare
-  n integer;
-  visible integer;
-begin
-  select count(*) into visible from public.bookings b
-    where b.id = any(_ids) and public.is_host_member(public.property_host_id(b.property_id));
-  if visible <> coalesce(array_length(_ids, 1), 0) then
-    raise exception 'Some of those stays no longer exist. Refresh and try again.' using errcode = 'P0001';
-  end if;
-  if exists (select 1 from public.bookings b
-             where b.id = any(_ids) and not public.can_write_host(public.property_host_id(b.property_id))) then
-    raise exception 'You have read-only access to this host.' using errcode = 'P0001';
-  end if;
-  if exists (select 1 from public.payments p where p.booking_id = any(_ids)) then
-    raise exception 'Some of these stays have payments. Archive them instead, so the payment records are kept.'
-      using errcode = 'P0001';
-  end if;
-
-  delete from public.service_jobs where booking_id = any(_ids);
-  delete from public.host_alerts where booking_id = any(_ids);
-  delete from public.bookings where id = any(_ids);
-  get diagnostics n = row_count;
-  return n;
-end $$;
-
-revoke all on function public.delete_bookings(uuid[]) from public, anon;
-grant execute on function public.delete_bookings(uuid[]) to authenticated;
+-- Switched off: already applied to the database earlier; kept for history.
+select 1;
+-- -- Hosts tidy up stays and service jobs: archive hides them from everyday
+-- -- screens (an Archive view still shows them); delete removes a stay with
+-- -- everything about it. Calendar links say when a sync is running.
+-- 
+-- alter table public.bookings add column if not exists archived_at timestamptz;
+-- alter table public.service_jobs add column if not exists archived_at timestamptz;
+-- alter table public.channel_connections add column if not exists sync_started_at timestamptz;
+-- 
+-- -- Archiving and sync markers are bookkeeping, not anyone's edit to log.
+-- create or replace function public.audit_noise(_key text)
+-- returns boolean language sql immutable as $$
+--   select _key in ('updated_at', 'last_synced_at', 'sync_status', 'last_error', 'feed_status',
+--                   'listing_title', 'created_at', 'sync_started_at')
+-- $$;
+-- 
+-- /**
+--  * Deletes stays and everything about them in one go: messages, extras
+--  * requests, check-in records (by cascade), plus guest service requests and
+--  * alerts, which would otherwise be left behind unlinked. Stays with payments
+--  * are refused so money records are never lost; archive those instead.
+--  */
+-- create or replace function public.delete_bookings(_ids uuid[])
+-- returns integer language plpgsql security definer set search_path = public as $$
+-- declare
+--   n integer;
+--   visible integer;
+-- begin
+--   select count(*) into visible from public.bookings b
+--     where b.id = any(_ids) and public.is_host_member(public.property_host_id(b.property_id));
+--   if visible <> coalesce(array_length(_ids, 1), 0) then
+--     raise exception 'Some of those stays no longer exist. Refresh and try again.' using errcode = 'P0001';
+--   end if;
+--   if exists (select 1 from public.bookings b
+--              where b.id = any(_ids) and not public.can_write_host(public.property_host_id(b.property_id))) then
+--     raise exception 'You have read-only access to this host.' using errcode = 'P0001';
+--   end if;
+--   if exists (select 1 from public.payments p where p.booking_id = any(_ids)) then
+--     raise exception 'Some of these stays have payments. Archive them instead, so the payment records are kept.'
+--       using errcode = 'P0001';
+--   end if;
+-- 
+--   delete from public.service_jobs where booking_id = any(_ids);
+--   delete from public.host_alerts where booking_id = any(_ids);
+--   delete from public.bookings where id = any(_ids);
+--   get diagnostics n = row_count;
+--   return n;
+-- end $$;
+-- 
+-- revoke all on function public.delete_bookings(uuid[]) from public, anon;
+-- grant execute on function public.delete_bookings(uuid[]) to authenticated;
