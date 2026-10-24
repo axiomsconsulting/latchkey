@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useUi } from "@/hooks/use-site";
 import { arrange } from "@/lib/ui-config";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Maximize2, Minimize2 } from "lucide-react";
 
 import { dashboardCopy as copy } from "@/content/copy";
-import { readLayout, toggleCollapsed, type Layout } from "@/lib/dashboard-layout";
+import { bands, defaultPlaces, placeCard, readLayout, setPlace, toggleCollapsed, type Layout, type Place } from "@/lib/dashboard-layout";
 import { moveItem } from "@/lib/reorder";
 import { cn } from "@/lib/utils";
 
@@ -13,14 +13,22 @@ type Ctx = {
   toggle: (id: string) => void;
   grabProps: (id: string, title: string) => React.ButtonHTMLAttributes<HTMLButtonElement>;
   dragging: string | null;
+  wide: (id: string) => boolean;
+  setWide: (id: string, wide: boolean) => void;
 };
 
 const SectionsContext = createContext<Ctx | null>(null);
 
 /**
- * Today's sections, which the host can move and fold. The same grab bar as
- * the menu: drag it to move a section, tap it to fold or unfold, or use the
- * arrow keys (and Enter to fold). Remembered in this browser.
+ * Today's sections, which the host can move, widen and fold. Each card is
+ * full width or sits in the left or right column; the cards between two
+ * full-width ones form two independent columns, each stacked tightly. The
+ * grab bar works like the menu's: drag it onto another card to take that
+ * place (a column, or full width over a full-width card) or into a column's
+ * empty space, tap it to fold, or use the arrow keys (up/down to move,
+ * left/right for the column) and Enter to fold. The width button switches
+ * between full width and a column. Phones show one column in order.
+ * Remembered in this browser.
  */
 export function DashboardSections({
   storageKey,
@@ -36,16 +44,17 @@ export function DashboardSections({
   const allowed = page ? arrange(ui.pages[page], all.map((i) => i.id)) : all.map((i) => i.id);
   const items = allowed.map((id) => all.find((i) => i.id === id)!).filter(Boolean);
   const defaults = items.map((i) => i.id);
-  const [layout, setLayoutState] = useState<Layout>({ order: defaults, collapsed: [] });
+  const defaultPlace = defaultPlaces(items);
+  const [layout, setLayoutState] = useState<Layout>({ order: defaults, collapsed: [], place: defaultPlace });
   const [dragging, setDragging] = useState<string | null>(null);
-  const listRef = useRef<HTMLUListElement | null>(null);
-  const drag = useRef<{ id: string; x: number; y: number; moved: boolean; order: string[] } | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const drag = useRef<{ id: string; x: number; y: number; moved: boolean; layout: Layout } | null>(null);
 
   useEffect(() => {
     try {
-      setLayoutState(readLayout(window.localStorage.getItem(storageKey), defaults));
+      setLayoutState(readLayout(window.localStorage.getItem(storageKey), defaults, defaultPlace));
     } catch {
-      setLayoutState(readLayout(null, defaults));
+      setLayoutState(readLayout(null, defaults, defaultPlace));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey, defaults.join()]);
@@ -65,53 +74,81 @@ export function DashboardSections({
     if (next !== layout.order) setLayout({ ...layout, order: next });
   };
 
+  /** Where the pointer would drop the card: next to the card under it, or at the end of a column. */
+  function dropAt(id: string, x: number, y: number, l: Layout): Layout {
+    const root = listRef.current;
+    if (!root) return l;
+    const hit = (el: Element) => {
+      const b = el.getBoundingClientRect();
+      return x >= b.left && x <= b.right && y >= b.top && y <= b.bottom ? b : null;
+    };
+    for (const li of root.querySelectorAll<HTMLLIElement>("li[data-section]")) {
+      const target = li.dataset["section"]!;
+      const b = li.offsetParent ? hit(li) : null;
+      if (!b || target === id) continue;
+      const place = (li.dataset["place"] as Place) ?? "l";
+      return placeCard(l, id, target, y < b.top + b.height / 2 ? "before" : "after", place);
+    }
+    for (const col of root.querySelectorAll<HTMLElement>("[data-col]")) {
+      if (!hit(col)) continue;
+      const last = col.dataset["last"]!;
+      return last === id ? setPlace(l, id, col.dataset["col"] as Place) : placeCard(l, id, last, "after", col.dataset["col"] as Place);
+    }
+    return l;
+  }
+
+  // The latest state for window listeners (a card that changes band is mounted afresh mid-drag).
+  const live = useRef({ layout, setLayout, toggle, dropAt });
+  live.current = { layout, setLayout, toggle, dropAt };
+
   const grabProps = (id: string, title: string): React.ButtonHTMLAttributes<HTMLButtonElement> => ({
     type: "button",
     "aria-label": copy.grab(title, layout.collapsed.includes(id)),
     title: copy.grabHint,
     onPointerDown: (e) => {
-      e.currentTarget.setPointerCapture(e.pointerId);
-      drag.current = { id, x: e.clientX, y: e.clientY, moved: false, order: layout.order };
-    },
-    onPointerMove: (e) => {
-      const d = drag.current;
-      if (!d) return;
-      if (!d.moved && Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 6) {
-        d.moved = true;
-        setDragging(id);
-      }
-      if (!d.moved) return;
-      // Whichever section is under the pointer takes this one's place.
-      const over = [...(listRef.current?.querySelectorAll<HTMLLIElement>("li[data-section]") ?? [])].find((li) => {
-        const b = li.getBoundingClientRect();
-        return e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
-      });
-      const target = over?.dataset["section"];
-      if (target && target !== id) {
-        d.order = moveItem(d.order, d.order.indexOf(id), d.order.indexOf(target));
-        setLayoutState((l) => ({ ...l, order: d.order }));
-      }
-    },
-    onPointerUp: () => {
-      const d = drag.current;
-      drag.current = null;
-      setDragging(null);
-      if (!d) return;
-      // A tap folds or unfolds, like the menu's grab bar changes the menu.
-      if (!d.moved) return toggle(id);
-      setLayout({ ...layout, order: d.order });
-    },
-    onPointerCancel: () => {
-      drag.current = null;
-      setDragging(null);
+      if (e.button !== 0) return;
+      e.preventDefault();
+      drag.current = { id, x: e.clientX, y: e.clientY, moved: false, layout };
+      const onMove = (ev: PointerEvent) => {
+        const d = drag.current;
+        if (!d) return;
+        if (!d.moved && Math.abs(ev.clientX - d.x) + Math.abs(ev.clientY - d.y) > 6) {
+          d.moved = true;
+          setDragging(id);
+        }
+        if (!d.moved) return;
+        const next = live.current.dropAt(id, ev.clientX, ev.clientY, d.layout);
+        if (next !== d.layout) {
+          d.layout = next;
+          setLayoutState(next);
+        }
+      };
+      const onEnd = (ev: PointerEvent) => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onEnd);
+        window.removeEventListener("pointercancel", onEnd);
+        const d = drag.current;
+        drag.current = null;
+        setDragging(null);
+        if (!d || ev.type === "pointercancel") return;
+        // A tap folds or unfolds, like the menu's grab bar changes the menu.
+        if (!d.moved) return live.current.toggle(id);
+        live.current.setLayout(d.layout);
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onEnd);
+      window.addEventListener("pointercancel", onEnd);
     },
     onKeyDown: (e) => {
-      if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      if (e.key === "ArrowUp") {
         e.preventDefault();
         move(id, -1);
-      } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+      } else if (e.key === "ArrowDown") {
         e.preventDefault();
         move(id, 1);
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        setLayout(setPlace(layout, id, e.key === "ArrowLeft" ? "l" : "r"));
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         toggle(id);
@@ -120,22 +157,53 @@ export function DashboardSections({
   });
 
   const byId = new Map(items.map((i) => [i.id, i]));
-  const changed = layout.order.join() !== defaults.join() || layout.collapsed.length > 0;
+  const shown = layout.order.filter((id) => {
+    const node = byId.get(id)?.node;
+    return node !== null && node !== false && node !== undefined;
+  });
+  const rank = new Map(shown.map((id, i) => [id, i]));
+  const changed = layout.order.join() !== defaults.join() || layout.collapsed.length > 0 || defaults.some((id) => layout.place[id] !== defaultPlace[id]);
+  const card = (id: string, place: Place) => (
+    <li
+      key={id}
+      data-section={id}
+      data-place={place}
+      // Phones: one column in the page's order (the columns dissolve, so each card's order counts).
+      style={{ order: rank.get(id) }}
+      className={cn("min-w-0 empty:hidden", dragging === id && "opacity-80")}
+    >
+      {byId.get(id)!.node}
+    </li>
+  );
+
   return (
-    <SectionsContext.Provider value={{ collapsed: (id) => layout.collapsed.includes(id), toggle, grabProps, dragging }}>
-      <ul ref={listRef} className="grid items-start gap-5 pt-2 lg:grid-cols-2">
-        {layout.order.map((id) => {
-          const item = byId.get(id);
-          if (!item || item.node === null || item.node === false) return null;
-          return (
-            <li key={id} data-section={id} className={cn("min-w-0", item.wide && "lg:col-span-2", dragging === id && "opacity-80")}>
-              {item.node}
-            </li>
-          );
-        })}
-      </ul>
+    <SectionsContext.Provider
+      value={{
+        collapsed: (id) => layout.collapsed.includes(id),
+        toggle,
+        grabProps,
+        dragging,
+        wide: (id) => layout.place[id] === "w",
+        setWide: (id, w) => setLayout(setPlace(layout, id, w ? "w" : "l")),
+      }}
+    >
+      <div ref={listRef} className="flex flex-col gap-5 pt-2">
+        {bands(layout, shown).map((band) =>
+          band.kind === "wide" ? (
+            <ul key={band.id} className="flex flex-col">{card(band.id, "w")}</ul>
+          ) : (
+            <div key={`cols-${band.last}`} className="flex flex-col gap-5 lg:grid lg:grid-cols-2">
+              {(["l", "r"] as const).map((col) => (
+                <ul key={col} data-col={col} data-last={band.last} className="contents lg:flex lg:min-h-8 lg:flex-col lg:gap-5">
+                  {(col === "l" ? band.left : band.right).map((id) => card(id, col))}
+                </ul>
+              ))}
+            </div>
+          ),
+        )}
+      </div>
       {changed ? (
-        <button type="button" className="text-xs text-muted-foreground underline-offset-4 hover:underline" onClick={() => setLayout({ order: defaults, collapsed: [] })}>
+        <button type="button" className="text-xs text-muted-foreground underline-offset-4 hover:underline" onClick={() => setLayout({ order: defaults, collapsed: [], place: defaultPlace })}>
           {copy.reset}
         </button>
       ) : null}
@@ -176,6 +244,17 @@ export function DashSection({
         <Icon className="size-5 shrink-0 text-primary" />
         <h2 className="mr-auto text-lg">{title}</h2>
         {action ? <span className="text-sm">{action}</span> : null}
+        {ctx ? (
+          <button
+            type="button"
+            onClick={() => ctx.setWide(id, !ctx.wide(id))}
+            aria-label={ctx.wide(id) ? copy.narrow(title) : copy.widen(title)}
+            title={ctx.wide(id) ? copy.narrowHint : copy.widenHint}
+            className="hidden size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted lg:grid"
+          >
+            {ctx.wide(id) ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+          </button>
+        ) : null}
         {ctx ? (
           <button
             type="button"

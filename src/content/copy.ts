@@ -667,8 +667,13 @@ export const whatsNewCopy = branded({
 
 /** Moving and folding Today's sections. */
 export const dashboardCopy = branded({
-  grab: (title: string, folded: boolean) => `${title}: drag to move, tap to ${folded ? "unfold" : "fold"}. Arrow keys move it, Enter ${folded ? "unfolds" : "folds"} it.`,
-  grabHint: "Drag to move · tap to fold",
+  grab: (title: string, folded: boolean) =>
+    `${title}: drag onto another card or a column to move it, tap to ${folded ? "unfold" : "fold"}. Up and down arrows move it, left and right pick the column, Enter ${folded ? "unfolds" : "folds"} it.`,
+  grabHint: "Drag to move (onto a card or into a column) · tap to fold",
+  widen: (title: string) => `Make ${title} full width`,
+  narrow: (title: string) => `Make ${title} one column wide`,
+  widenHint: "Full width",
+  narrowHint: "One column",
   fold: (title: string) => `Fold ${title}`,
   unfold: (title: string) => `Unfold ${title}`,
   reset: "Put Today's sections back in their usual order",
@@ -776,7 +781,9 @@ export const todayDash = branded({
   kioskPeek: "Opens full screen in a new tab. Leave it running on a tablet by the front door.",
   pagePeek: (path: string) => `The page guests reach from the QR code: ${path}`,
   qrPeek: "A printable sign with your QR code and simple steps for guests.",
-  settingsTitle: "Key settings",
+  settingsTitle: "Useful settings",
+  settingsBody: "Shortcuts to the settings you'll change most often.",
+  settingsGroups: { property: "Property and rooms", guests: "Guests and check-in", messages: "Messages and alerts", money: "Payments and billing", team: "Team and connected apps" } as Record<string, string>,
   settingsLinks: {
     property: ["Property details", "Address, check-in and check-out times, wifi, door PIN."],
     checkin: ["Check-in methods", "Kiosk, QR code, PIN and which checks guests go through."],

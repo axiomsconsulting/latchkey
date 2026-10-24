@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.70.0",
+    date: "2026-10-24",
+    title: "Tidier Today",
+    items: [
+      { kind: "new", area: "Settings", text: "Today's cards sit in two independent columns, so a short card never leaves a gap beside a tall one. Any card can be full width or one column wide (the arrows button on its title row), and dragging a card by its grab bar snaps it into a column, next to another card, or full width over a full-width card. Phones still show one column in order." },
+      { kind: "improved", area: "Settings", text: "Key settings on Today is now Useful settings, grouped into Property and rooms, Guests and check-in, Messages and alerts, Payments and billing, and Team and connected apps." },
+    ],
+  },
+  {
     version: "0.69.0",
     date: "2026-10-24",
     title: "A proper booking page",

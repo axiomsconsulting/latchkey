@@ -189,7 +189,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "arrivalGuides", label: "Today's arrivals: guide links" },
       { id: "kiosk", label: "Kiosk" },
       { id: "welcome", label: "Guest welcome on the kiosk" },
-      { id: "settings", label: "Key settings" },
+      { id: "settings", label: "Useful settings" },
       { id: "reviews", label: "Guest reviews" },
     ],
   },

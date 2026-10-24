@@ -34,6 +34,9 @@ import {
   Wrench,
   Hand,
   Send,
+  MessagesSquare,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -1013,41 +1016,86 @@ function ArrivalGuides({ arriving }: { arriving: Stay[] }) {
   );
 }
 
+/** Shortcuts to the settings hosts change most, grouped by what they're about. */
 function KeySettings({ isUk }: { isUk: boolean }) {
   const { isOwner } = useRole();
-  const links: Array<{ key: string; to: string; search?: Record<string, string> }> = [
-    { key: "property", to: "/app/properties", search: { focus: "property" } },
-    { key: "checkin", to: "/app/settings", search: { focus: "checkin" } },
-    { key: "records", to: "/app/settings", search: { focus: "records" } },
-    { key: "rooms", to: "/app/properties", search: { focus: "rooms" } },
-    { key: "cleaning", to: "/app/housekeeping", search: { focus: "schedule" } },
-    { key: "alerts", to: "/app/settings", search: { focus: "alerts" } },
-    { key: "platformMessages", to: "/app/settings", search: { focus: "messages" } },
-    { key: "team", to: "/app/settings", search: { focus: "team" } },
-    ...(isOwner ? [{ key: "payments", to: "/app/settings", search: { focus: "payments" } }] : []),
-    { key: "invoices", to: "/app/settings", search: { focus: "invoices" } },
-    { key: "api", to: "/app/settings", search: { focus: "api" } },
-    { key: "apiGuide", to: "/developers" },
-    ...(isOwner ? [{ key: "billing", to: "/app/billing" }] : []),
-    ...(isUk ? [{ key: "register", to: "/app/register" }] : []),
+  type L = { key: string; to: string; search?: Record<string, string> };
+  const groups: Array<{ key: string; icon: typeof DoorOpen; links: L[] }> = [
+    {
+      key: "property",
+      icon: BedDouble,
+      links: [
+        { key: "property", to: "/app/properties", search: { focus: "property" } },
+        { key: "rooms", to: "/app/properties", search: { focus: "rooms" } },
+        { key: "cleaning", to: "/app/housekeeping", search: { focus: "schedule" } },
+      ],
+    },
+    {
+      key: "guests",
+      icon: DoorOpen,
+      links: [
+        { key: "checkin", to: "/app/settings", search: { focus: "checkin" } },
+        { key: "records", to: "/app/settings", search: { focus: "records" } },
+        ...(isUk ? [{ key: "register", to: "/app/register" }] : []),
+      ],
+    },
+    {
+      key: "messages",
+      icon: MessagesSquare,
+      links: [
+        { key: "alerts", to: "/app/settings", search: { focus: "alerts" } },
+        { key: "platformMessages", to: "/app/settings", search: { focus: "messages" } },
+      ],
+    },
+    {
+      key: "money",
+      icon: Wallet,
+      links: [
+        ...(isOwner ? [{ key: "payments", to: "/app/settings", search: { focus: "payments" } }] : []),
+        { key: "invoices", to: "/app/settings", search: { focus: "invoices" } },
+        ...(isOwner ? [{ key: "billing", to: "/app/billing" }] : []),
+      ],
+    },
+    {
+      key: "team",
+      icon: Users,
+      links: [
+        { key: "team", to: "/app/settings", search: { focus: "team" } },
+        { key: "api", to: "/app/settings", search: { focus: "api" } },
+        { key: "apiGuide", to: "/developers" },
+      ],
+    },
   ];
   return (
     <Card id="settings" icon={Settings2} title={copy.settingsTitle}>
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {links.map((l) => {
-          const [name, about] = copy.settingsLinks[l.key]!;
-          return (
-            <li key={l.key}>
-              <Peek className="block" content={<p>{about}</p>}>
-                <Link to={l.to as never} search={l.search as never} className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium hover:bg-muted">
-                  <span className="flex-1">{name}</span>
-                  <ChevronRight className="size-4 text-muted-foreground" />
-                </Link>
-              </Peek>
-            </li>
-          );
-        })}
-      </ul>
+      <p className="-mt-1 mb-3 text-sm text-muted-foreground">{copy.settingsBody}</p>
+      {/* Columns follow the card's own width, so it reads well full width or in one column. */}
+      <div className="@container">
+        <div className="grid gap-4 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5">
+          {groups.filter((g) => g.links.length).map((g) => (
+            <section key={g.key} aria-labelledby={`settings-group-${g.key}`} className="min-w-0">
+              <h3 id={`settings-group-${g.key}`} className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <g.icon className="size-3.5" /> {copy.settingsGroups[g.key]}
+              </h3>
+              <ul className="space-y-1">
+                {g.links.map((l) => {
+                  const [name, about] = copy.settingsLinks[l.key]!;
+                  return (
+                    <li key={l.key}>
+                      <Peek className="block" content={<p>{about}</p>}>
+                        <Link to={l.to as never} search={l.search as never} className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+                          <span className="min-w-0 flex-1 truncate">{name}</span>
+                          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                        </Link>
+                      </Peek>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </div>
     </Card>
   );
 }
