@@ -19,10 +19,10 @@ const sectionKey = z
   .refine((k) => SECTIONS.some((s) => s.key === k) || isCustom(k), "Unknown section")
   .transform((k) => k as SectionKey);
 
-async function signPaths(paths: string[]): Promise<Record<string, string>> {
+async function signPaths(paths: string[], seconds = 60 * 60 * 6): Promise<Record<string, string>> {
   if (paths.length === 0) return {};
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.storage.from("guides").createSignedUrls(paths, 60 * 60 * 6);
+  const { data } = await supabaseAdmin.storage.from("guides").createSignedUrls(paths, seconds);
   const out: Record<string, string> = {};
   for (const d of data ?? []) if (d.path && d.signedUrl) out[d.path] = d.signedUrl;
   return out;
@@ -204,7 +204,7 @@ export const uploadGuidePhoto = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const up = await supabaseAdmin.storage.from("guides").upload(path, bytes, { contentType: `image/${m[1]}` });
     if (up.error) throw new Error(up.error.message);
-    const signed = await signPaths([path]);
+    const signed = await signPaths([path], 60 * 5);
     return { path, url: signed[path] ?? null };
   });
 

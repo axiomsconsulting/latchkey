@@ -96,7 +96,7 @@ export const listTeam = createServerFn({ method: "GET" })
     const signed: Record<string, string> = {};
     if (paths.length) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: urls } = await supabaseAdmin.storage.from("branding").createSignedUrls(paths, 60 * 60);
+      const { data: urls } = await supabaseAdmin.storage.from("branding").createSignedUrls(paths, 60 * 5);
       for (const u of urls ?? []) if (u.path && u.signedUrl) signed[u.path] = u.signedUrl;
     }
     const { data: props } = await context.supabase
@@ -156,6 +156,14 @@ export const inviteMember = createServerFn({ method: "POST" })
       .eq("host_id", data.hostId)
       .gt("created_at", new Date(Date.now() - 86_400_000).toISOString());
     if ((count ?? 0) >= INVITES_PER_DAY) throw new Error("That's a lot of invitations for one day. Please try again tomorrow.");
+
+    const { count: toAddress } = await db
+      .from("host_invitations")
+      .select("id", { count: "exact", head: true })
+      .eq("host_id", data.hostId)
+      .eq("email", email)
+      .gt("created_at", new Date(Date.now() - 86_400_000).toISOString());
+    if ((toAddress ?? 0) >= 3) throw new Error("That address has had several invitations today. Please try again tomorrow.");
 
     const { data: team } = await db.rpc("host_team", { _host_id: data.hostId });
     if (((team ?? []) as Array<{ email: string }>).some((m) => normaliseEmail(m.email ?? "") === email)) {

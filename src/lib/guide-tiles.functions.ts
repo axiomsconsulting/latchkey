@@ -34,7 +34,7 @@ export const getGuideTiles = createServerFn({ method: "GET" })
     const files: Record<string, string> = {};
     if (paths.length) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: signed } = await supabaseAdmin.storage.from("guides").createSignedUrls(paths, 60 * 60);
+      const { data: signed } = await supabaseAdmin.storage.from("guides").createSignedUrls(paths, 60 * 5);
       for (const s of signed ?? []) if (s.path && s.signedUrl) files[s.path] = s.signedUrl;
     }
     const roomPhotos: Record<string, string | null> = {};

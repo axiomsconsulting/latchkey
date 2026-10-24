@@ -201,11 +201,18 @@ export const connectStripe = createServerFn({ method: "POST" })
       account = made.id;
       await db.from("hosts").update({ stripe_account_id: account, stripe_account_ready: false }).eq("id", h.id);
     }
+    // Only back to this app's own pages, never a caller-chosen site.
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const req = getRequest();
+    const origin = req ? new URL(req.url).origin : null;
+    const back = new URL(data.returnTo);
+    if (!origin || back.origin !== origin || !/^\/[\w\-/.]*$/.test(back.pathname)) throw new Error("Invalid return page.");
+    const returnTo = `${origin}${back.pathname}`;
     const link = await stripeCall<{ url: string }>("/account_links", {
       account,
       type: "account_onboarding",
-      refresh_url: `${data.returnTo}?stripe=retry`,
-      return_url: `${data.returnTo}?stripe=done`,
+      refresh_url: `${returnTo}?stripe=retry`,
+      return_url: `${returnTo}?stripe=done`,
     });
     return { url: link.url };
   });

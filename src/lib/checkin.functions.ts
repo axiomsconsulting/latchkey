@@ -927,7 +927,7 @@ export const checkCompanionId = createServerFn({ method: "POST" })
     if (!ctx.session.confirmed || !plan.everyAdult || data.position >= adults) throw new Error("Not available.");
     const used = ctx.session.companion_attempts ?? 0;
     // Three tries per extra adult, then they're asked to see the host.
-    if (used >= 3 * (adults - 1) || !(await readsLeftThisHour(ctx))) return { status: "skip" as const };
+    if (used >= Math.min(3 * (adults - 1), 12) || !(await readsLeftThisHour(ctx))) return { status: "skip" as const };
     await ctx.db
       .from("checkin_sessions")
       .update({ companion_attempts: used + 1 })

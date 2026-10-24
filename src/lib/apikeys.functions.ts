@@ -29,6 +29,8 @@ export const getApiAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
+    const { data: member } = await (context.supabase as unknown as { rpc: (f: string, a: object) => Promise<{ data: unknown }> }).rpc("is_host_member", { _host_id: data.hostId });
+    if (member !== true) return { available: false as const };
     const db = await admin();
     const [{ data: host, error }, { data: site }, { data: keys }, { data: usage }] = await Promise.all([
       loose(db).from("hosts").select("plan_key, api_addon").eq("id", data.hostId).maybeSingle(),

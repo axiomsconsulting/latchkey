@@ -29,6 +29,8 @@ export const getNotifySettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
+    const { data: member } = await (context.supabase as unknown as { rpc: (f: string, a: object) => Promise<{ data: unknown }> }).rpc("is_host_member", { _host_id: data.hostId });
+    if (member !== true) return { available: false as const };
     const db = await admin();
     const { pushKeys, telegramToken, twilio, telegramCall, integrationSettings } = await import("./integrations.server");
     const { normalisePrefs } = await import("./notify");
