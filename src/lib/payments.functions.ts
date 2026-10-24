@@ -14,6 +14,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireOwner } from "@/lib/roles";
 import { rebrand } from "@/lib/brand";
+import { identityOf, type StripeAccountRaw, type StripeIdentity } from "@/lib/stripe-identity";
 
 const uuid = z.string().uuid();
 const token = z.string().min(20).max(80);
@@ -25,14 +26,20 @@ async function admin() {
 
 type Payee = { mode: "platform" | "connected" | "none"; account: string | null };
 
-type StripeAccount = {
-  id: string;
-  email?: string | null;
-  charges_enabled?: boolean;
-  details_submitted?: boolean;
-  business_profile?: { name?: string | null };
-  settings?: { dashboard?: { display_name?: string | null } };
-};
+type StripeAccount = StripeAccountRaw;
+
+let platformCache: { at: number; identity: StripeIdentity } | null = null;
+
+/** Latchkey's own Stripe account (the key in Secrets), cached for 10 minutes. */
+export async function platformIdentity(fresh = false): Promise<StripeIdentity | null> {
+  const { stripeCall, stripeReady, stripeLiveMode } = await import("./stripe.server");
+  if (!stripeReady()) return null;
+  if (!fresh && platformCache && Date.now() - platformCache.at < 600_000) return platformCache.identity;
+  const acct = await stripeCall<StripeAccount>("/account").catch(() => null);
+  if (!acct) return null;
+  platformCache = { at: Date.now(), identity: identityOf(acct, stripeLiveMode()) };
+  return platformCache.identity;
+}
 
 /** Where a host's guest payments go. */
 async function payeeFor(hostId: string): Promise<Payee & { ready: boolean; checkedAt: string | null }> {
@@ -95,15 +102,33 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
       isSuperAdmin: isSuper === true,
     };
     const payee = await payeeFor(p.host_id);
-    if (payee.mode !== "connected" || !stripeReady()) return { ...base, ...payee, accountName: null as string | null };
-    // Check with Stripe while sign-up is unfinished, and now and then afterwards.
-    const stale = !payee.checkedAt || Date.now() - Date.parse(payee.checkedAt) > 6 * 3_600_000;
-    const acct = !payee.ready || stale ? await refreshAccount(p.host_id, payee.account!) : null;
+    if (payee.mode === "platform") return { ...base, ...payee, identity: await platformIdentity(), checkedAt: new Date().toISOString() };
+    if (payee.mode !== "connected" || !stripeReady()) return { ...base, ...payee, identity: null as StripeIdentity | null };
+    // Ask Stripe each time the card is shown, so the name and ID are always what Stripe says now.
+    const acct = await refreshAccount(p.host_id, payee.account!);
     return {
       ...base,
       ...payee,
       ready: acct ? !!acct.charges_enabled : payee.ready,
-      accountName: acct?.settings?.dashboard?.display_name ?? acct?.business_profile?.name ?? acct?.email ?? null,
+      checkedAt: acct ? new Date().toISOString() : payee.checkedAt,
+      identity: acct ? identityOf(acct, stripeLiveMode()) : null,
+    };
+  });
+
+/** Super admin: Latchkey's own Stripe account, the key's mode and which webhook secrets are set. */
+export const getPlatformStripe = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isSuper } = await (context.supabase as unknown as { rpc: (f: string) => Promise<{ data: unknown }> }).rpc("is_super_admin");
+    if (isSuper !== true) throw new Error("Super admin only.");
+    const { stripeReady, stripeLiveMode, stripeKeyKind } = await import("./stripe.server");
+    return {
+      ready: stripeReady(),
+      live: stripeLiveMode(),
+      keyKind: stripeKeyKind(),
+      identity: await platformIdentity(true),
+      webhook: Boolean(process.env["STRIPE_WEBHOOK_SECRET"]),
+      connectWebhook: Boolean(process.env["STRIPE_CONNECT_WEBHOOK_SECRET"]),
     };
   });
 

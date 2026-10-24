@@ -47,7 +47,10 @@ export type HostStats = {
   is_demo: boolean;
   plan_key?: string | null;
   api_addon?: boolean;
+  stripe?: StripeLink;
 };
+
+export type StripeLink = { mode: "platform" | "connected" | "none"; account: string | null; ready: boolean; checkedAt: string | null };
 
 export const getAdminOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -63,7 +66,17 @@ export const getAdminOverview = createServerFn({ method: "GET" })
     // Plans arrive with migration 0027; before that the column is missing and plans stay blank.
     const { data: plans } = await loose(await admin()).from("hosts").select("id, plan_key, api_addon");
     const byId = new Map(((plans ?? []) as Array<{ id: string; plan_key: string; api_addon: boolean }>).map((p) => [p.id, p]));
-    const merged = ((hosts ?? []) as HostStats[]).map((h) => ({ ...h, plan_key: byId.get(h.host_id)?.plan_key ?? null, api_addon: byId.get(h.host_id)?.api_addon ?? false }));
+    // Which Stripe account takes each business's guest payments.
+    type StripeRow = { id: string; stripe_account_id: string | null; stripe_account_ready: boolean | null; stripe_account_checked_at: string | null; uses_platform_stripe: boolean | null };
+    const { data: stripeRows } = await loose(await admin()).from("hosts").select("id, stripe_account_id, stripe_account_ready, stripe_account_checked_at, uses_platform_stripe");
+    const stripeById = new Map(((stripeRows ?? []) as StripeRow[]).map((r) => [r.id, r]));
+    const stripeOf = (id: string): StripeLink => {
+      const r = stripeById.get(id);
+      if (r?.uses_platform_stripe) return { mode: "platform", account: null, ready: true, checkedAt: null };
+      if (r?.stripe_account_id) return { mode: "connected", account: r.stripe_account_id, ready: !!r.stripe_account_ready, checkedAt: r.stripe_account_checked_at };
+      return { mode: "none", account: null, ready: false, checkedAt: null };
+    };
+    const merged = ((hosts ?? []) as HostStats[]).map((h) => ({ ...h, plan_key: byId.get(h.host_id)?.plan_key ?? null, api_addon: byId.get(h.host_id)?.api_addon ?? false, stripe: stripeOf(h.host_id) }));
     return { hosts: merged, flags: flags ?? [], pricing };
   });
 

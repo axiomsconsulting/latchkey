@@ -13,6 +13,7 @@ import { RoutinesAdmin } from "@/components/host/RoutinesAdmin";
 import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
 import { LaunchFunnel } from "@/components/host/LaunchFunnel";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
+import { PlatformStripeAdmin } from "@/components/host/PlatformStripeAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
@@ -30,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { adminCopy as copy, channels, common, menuAdminCopy } from "@/content/copy";
+import { adminCopy as copy, channels, common, menuAdminCopy, stripeAccountCopy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
 import {
   addSuperAdmin,
@@ -51,7 +52,8 @@ import {
   type HostStats,
 } from "@/lib/admin.functions";
 import { formatUkDate } from "@/lib/dates";
-import { setPlatformStripe } from "@/lib/payments.functions";
+import { getPlatformStripe, setPlatformStripe } from "@/lib/payments.functions";
+import { shortAccount, stripeDashboardUrl } from "@/lib/stripe-identity";
 import { DEFAULT_PRICING, monthlyPence, money, type PricingConfig } from "@/lib/pricing";
 import { rebrand } from "@/lib/brand";
 
@@ -127,7 +129,10 @@ function AdminPage() {
           <RoutinesAdmin />
         </TabsContent>
         <TabsContent value="integrations" className="mt-4">
-          <IntegrationsAdmin />
+          <PlatformStripeAdmin />
+          <div className="mt-6">
+            <IntegrationsAdmin />
+          </div>
           <div className="mt-6">
             <DriveAdmin />
           </div>
@@ -213,6 +218,20 @@ function planLabel(h: HostStats) {
   return { active: "Paying", past_due: "Payment failing", canceled: "Cancelled", comped: "Free" }[h.subscription_status] ?? h.subscription_status;
 }
 
+/** Which Stripe account takes this business's guest payments; the ID opens it in Latchkey's Connect list. */
+function StripeCell({ s, live }: { s: HostStats["stripe"]; live: boolean }) {
+  if (!s || s.mode === "none") return <span className="text-muted-foreground">{stripeAccountCopy.modeNone}</span>;
+  if (s.mode === "platform") return <Badge variant="outline">{stripeAccountCopy.modePlatform}</Badge>;
+  return (
+    <span className="block">
+      <a href={stripeDashboardUrl("connected", s.account, live)} target="_blank" rel="noreferrer" title={s.account ?? ""} className="font-mono text-xs text-primary hover:underline">
+        {shortAccount(s.account)}
+      </a>
+      <span className="block text-xs text-muted-foreground">{s.ready ? stripeAccountCopy.charges : stripeAccountCopy.modePending}</span>
+    </span>
+  );
+}
+
 function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingConfig }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -221,6 +240,9 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
   const platformStripe = useServerFn(setPlatformStripe);
   const pkg = useServerFn(setHostPackage);
   const plans = ["start", "grow", "pro"];
+  const platformFn = useServerFn(getPlatformStripe);
+  const platformQ = useQuery({ queryKey: ["platform-stripe"], queryFn: () => platformFn() });
+  const live = platformQ.data?.live ?? false;
 
   async function act(fn: () => Promise<unknown>, done?: () => Promise<unknown>) {
     try {
@@ -235,7 +257,7 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
 
   return (
     <section className="card-soft overflow-x-auto p-0">
-      <table className="w-full min-w-[56rem] text-left text-sm">
+      <table className="w-full min-w-[64rem] text-left text-sm">
         <thead className="border-b border-border text-xs text-muted-foreground">
           <tr>
             <th className="px-4 py-2 font-medium">{copy.colBusiness}</th>
@@ -243,6 +265,7 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
             <th className="px-4 py-2 font-medium">{copy.colSize}</th>
             <th className="px-4 py-2 font-medium">{copy.colUse}</th>
             <th className="px-4 py-2 font-medium">{copy.colBill}</th>
+            <th className="px-4 py-2 font-medium">{stripeAccountCopy.colStripe}</th>
             <th className="px-4 py-2 font-medium">{copy.colLast}</th>
             <th className="px-4 py-2" />
           </tr>
@@ -275,6 +298,9 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
                 {h.bookings_30d} / {h.bookings_total}
               </td>
               <td className="px-4 py-3 tabular-nums">{money(monthly(h, pricing), pricing.currency)}</td>
+              <td className="px-4 py-3">
+                <StripeCell s={h.stripe} live={live} />
+              </td>
               <td className="px-4 py-3">{day(h.last_sign_in_at)}</td>
               <td className="px-4 py-3 text-right">
                 <div className="flex justify-end gap-1">

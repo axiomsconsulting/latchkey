@@ -1945,6 +1945,43 @@ export const payments = branded({
   paidToast: "Thank you, that's paid and confirmed.",
 });
 
+/** Which Stripe account takes payments (hosts on Settings → Card payments; super admins in Latchkey admin). */
+export const stripeAccountCopy = branded({
+  title: "Your Stripe account",
+  platformTitle: "Latchkey's Stripe account",
+  name: "Name",
+  accountId: "Account ID",
+  email: "Email",
+  country: "Country and currency",
+  statement: "On guests' card statements",
+  status: "Status",
+  live: "Live",
+  test: "Test mode",
+  charges: "Taking payments",
+  noCharges: "Can't take payments yet",
+  payouts: "Paying out to the bank",
+  noPayouts: "Payouts not set up",
+  checked: (when: string) => `Checked with Stripe ${when}`,
+  checkNow: "Check with Stripe",
+  checkedOk: "Stripe confirmed these details.",
+  copied: "Account ID copied.",
+  copyId: "Copy the account ID",
+  openStripe: "Open in Stripe",
+  unreachable: "Stripe didn't answer just now, so these details may be out of date.",
+  howTitle: "How to check it's yours",
+  how: "Sign in to Stripe, open Settings → Business → Account details, and compare the account ID there with the one above. They must match exactly. In your Stripe payments list, guest payments show the same statement name.",
+  howAdmin: "In Latchkey's Stripe dashboard, Connect → Accounts lists every business's account by this ID. Open in Stripe goes straight to it.",
+  keyKind: (kind: string) => (kind === "restricted" ? "Restricted key (rk_)" : "Secret key (sk_)"),
+  key: "Key in Secrets",
+  webhooks: "Webhook secrets",
+  webhookSet: (main: boolean, connect: boolean) => [main ? "platform ✓" : "platform missing", connect ? "connected accounts ✓" : "connected accounts missing"].join(" · "),
+  notSet: "No Stripe key in Secrets yet.",
+  colStripe: "Stripe",
+  modeNone: "Not connected",
+  modePlatform: "Latchkey's account",
+  modePending: "Setting up",
+});
+
 /** Finding tradespeople for property work. */
 export const trades = branded({
   tabLabel: "Local tradespeople",

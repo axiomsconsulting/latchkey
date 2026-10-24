@@ -32,6 +32,12 @@ export function stripeLiveMode(): boolean {
   return (resolveKey() ?? "").includes("_live_");
 }
 
+/** "secret" (sk_) or "restricted" (rk_) key, never the key itself. */
+export function stripeKeyKind(): "secret" | "restricted" | null {
+  const k = resolveKey();
+  return !k ? null : k.startsWith("rk_") ? "restricted" : "secret";
+}
+
 /** Stripe wants form-encoded bodies with bracket notation for nested values. */
 export function form(obj: Record<string, unknown>, prefix = ""): URLSearchParams {
   const out = new URLSearchParams();

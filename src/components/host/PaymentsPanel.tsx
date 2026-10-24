@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, CreditCard, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, CreditCard, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { common, payments as copy } from "@/content/copy";
+import { StripeAccountCard } from "@/components/host/StripeAccountCard";
+import { common, payments as copy, stripeAccountCopy } from "@/content/copy";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
 import {
   connectStripe,
@@ -110,6 +111,7 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
             <CheckCircle2 className="size-4 text-primary" /> {copy.platformTitle}
           </p>
           <p className="text-sm text-muted-foreground">{copy.platformBody}</p>
+          <StripeAccountCard identity={d.identity} title={stripeAccountCopy.platformTitle} checkedAt={d.checkedAt} onCheck={() => void q.refetch()} checking={q.isFetching} linkKind="own" admin={d.isSuperAdmin} />
           <div className="flex flex-wrap gap-2">
             <SyncButton busy={busy} onSync={() => void run("sync", () => syncFn({ data: { propertyId } }).then((r) => toast.success(copy.synced(r.created, r.updated))))} />
             {d.isSuperAdmin && isOwner ? (
@@ -122,17 +124,13 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
       ) : d.mode === "connected" && d.ready ? (
         <div className="mt-4 space-y-3">
           <p className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="size-4 text-primary" /> {d.accountName ? copy.connectedTo(d.accountName) : copy.connectedUnnamed}
+            <CheckCircle2 className="size-4 text-primary" /> {d.identity?.name ? copy.connectedTo(d.identity.name) : copy.connectedUnnamed}
           </p>
+          <StripeAccountCard identity={d.identity} title={stripeAccountCopy.title} checkedAt={d.checkedAt} onCheck={() => void q.refetch()} checking={q.isFetching} linkKind={d.isSuperAdmin ? "connected" : "own"} admin={d.isSuperAdmin} />
           {!d.webhookReady ? <p className="text-sm text-accent">{copy.webhookMissing}</p> : null}
           <p className="text-sm text-muted-foreground">{copy.syncedCount(d.syncedCount)}</p>
           <div className="flex flex-wrap gap-2">
             <SyncButton busy={busy} onSync={() => void run("sync", () => syncFn({ data: { propertyId } }).then((r) => toast.success(copy.synced(r.created, r.updated))))} />
-            <Button asChild variant="outline">
-              <a href="https://dashboard.stripe.com" target="_blank" rel="noreferrer">
-                {copy.openDashboard} <ExternalLink className="size-4" />
-              </a>
-            </Button>
             {isOwner ? (
               <Button variant="ghost" disabled={busy !== null} onClick={() => void run("unlink", () => unlink({ data: { hostId } }), copy.unlinked)}>
                 {copy.unlink}
@@ -143,6 +141,9 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
       ) : (
         <div className="mt-4 space-y-3">
           <p className="font-medium">{d.mode === "connected" ? copy.pendingBody : copy.connectTitle}</p>
+          {d.mode === "connected" && d.identity ? (
+            <StripeAccountCard identity={d.identity} title={stripeAccountCopy.title} checkedAt={d.checkedAt} linkKind={d.isSuperAdmin ? "connected" : "own"} admin={d.isSuperAdmin} />
+          ) : null}
           {d.mode !== "connected" ? <p className="text-sm text-muted-foreground">{copy.connectBody(email)}</p> : null}
           {isOwner ? (
             <div className="flex flex-wrap gap-2">

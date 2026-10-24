@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.67.0",
+    date: "2026-10-24",
+    title: "See which Stripe account you're using",
+    items: [
+      { kind: "new", area: "Settings", text: "Card payments now shows exactly which Stripe account takes your guests' payments: its name, account ID (copy it and compare in Stripe under Settings → Business → Account details), email, country and currency, the name on guests' card statements, live or test, and whether it can take and pay out payments. Check with Stripe asks again at any time." },
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin → Businesses has a Stripe column (own account ID linking to Connect, Latchkey's account, or not connected), and Integrations shows Latchkey's own Stripe account, key type, live or test, and which webhook secrets are set." },
+    ],
+  },
+  {
     version: "0.66.0",
     date: "2026-10-24",
     title: "Book and pay on your own page",
