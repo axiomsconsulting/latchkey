@@ -62,7 +62,7 @@ export const getPriceList = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: p } = await context.supabase.from("properties").select("id, hosts(currency, tax_registered, tax_label, tax_rate_bp, prices_include_tax, bank_details, out_until)").eq("id", data.propertyId).single();
+    const { data: p } = await context.supabase.from("properties").select("id, country_code, host_id, hosts(currency, tax_registered, tax_label, tax_rate_bp, prices_include_tax, bank_details, out_until)").eq("id", data.propertyId).single();
     if (!p) throw new Error("Property not found.");
     const h = (p as any).hosts;
     const currency = await currencyFor(context.supabase, data.propertyId, h?.currency);
@@ -77,6 +77,13 @@ export const getPriceList = createServerFn({ method: "GET" })
       tax: { registered: !!h?.tax_registered, label: h?.tax_label ?? "VAT", rateBp: h?.tax_rate_bp ?? 2000, pricesInclude: h?.prices_include_tax ?? true },
       bankDetails: (h?.bank_details as string | null) ?? "",
       outUntil: (h?.out_until as string | null) ?? null,
+      country: ((p as any).country_code as string | null) ?? "GB",
+      // Structured bank details (migration 0053); before it, the text box only.
+      bankAccount: await (async () => {
+        const { normaliseBankAccount } = await import("./bank-details");
+        const { data: b, error } = await (context.supabase as any).from("hosts").select("bank_account").eq("id", (p as any).host_id).maybeSingle();
+        return error ? null : normaliseBankAccount(b?.bank_account, ((p as any).country_code as string | null) ?? "GB");
+      })(),
     };
   });
 
@@ -212,6 +219,8 @@ export const saveMoneySettings = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({
     hostId: uuid, registered: z.boolean(), label: z.string().trim().min(1).max(20), rateBp: z.number().int().min(0).max(5000),
     pricesInclude: z.boolean(), bankDetails: z.string().max(500), outUntil: z.string().datetime().nullable(),
+    /** Structured for the bank's country (migration 0053). */
+    bankAccount: z.record(z.string(), z.unknown()).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     await requireOwner(context.supabase, data.hostId);
@@ -220,6 +229,14 @@ export const saveMoneySettings = createServerFn({ method: "POST" })
       bank_details: data.bankDetails.trim() || null, out_until: data.outUntil,
     }).eq("id", data.hostId);
     if (error) throw new Error("Couldn't save your settings.");
+    if (data.bankAccount) {
+      const { normaliseBankAccount, bankProblems } = await import("./bank-details");
+      const acct = normaliseBankAccount(data.bankAccount);
+      const problems = bankProblems(acct).filter((p) => acct[p.key]);
+      if (problems.length) throw new Error(problems[0]!.message);
+      const { error: bankError } = await (context.supabase as any).from("hosts").update({ bank_account: acct }).eq("id", data.hostId);
+      if (bankError && !/bank_account/.test(bankError.message)) throw new Error("Couldn't save your bank details.");
+    }
     return { ok: true };
   });
 
@@ -353,6 +370,14 @@ export const getStayExtras = createServerFn({ method: "GET" })
       hostName: (p.hosts?.business_name as string | null) ?? "your host",
       hostPhone: (p.hosts?.contact_phone as string | null) ?? null,
       bankDetails: (p.hosts?.bank_details as string | null) ?? "",
+      // The host's structured bank details (migration 0053), local to the host's bank.
+      bankLines: await (async () => {
+        const { normaliseBankAccount, bankLinesFor, bankReady } = await import("./bank-details");
+        const { data: hb, error } = await (db as any).from("hosts").select("bank_account").eq("id", p.host_id).maybeSingle();
+        if (error) return [] as Array<{ label: string; value: string }>;
+        const acct = normaliseBankAccount(hb?.bank_account);
+        return bankReady(acct) ? bankLinesFor(acct, null) : [];
+      })(),
       guestName: (b.guest_full_name as string | null) ?? null,
       guestEmail: (b.guest_email as string | null) ?? null,
       tax: {

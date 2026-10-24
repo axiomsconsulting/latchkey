@@ -17,6 +17,10 @@ import { addDays, formatUkDate, nightsBetween } from "@/lib/dates";
 import { enquiryConsentText, enquiryProblem, MAX_GUESTS, MAX_NIGHTS } from "@/lib/direct";
 import { money, offerOn, quoteStay, roomTaken } from "@/lib/direct-rates";
 import { getEnquiryPage, submitEnquiry } from "@/lib/direct.functions";
+import { convert, countryOfLocale, currencyOfCountry, freeCancelUntil, normaliseDirectBooking, planRates, quotePlan, type PayMethod, type RatePlan } from "@/lib/direct-booking";
+import { getFxRate, reserveDirect } from "@/lib/direct-booking.functions";
+import { phoneCountries } from "@/lib/world";
+import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 /**
@@ -74,6 +78,25 @@ function EnquirePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  // Booking and paying here (when the host allows it): the room and rate chosen, and how to pay.
+  const reserve = useServerFn(reserveDirect);
+  const fxFn = useServerFn(getFxRate);
+  const navigate = useNavigate();
+  const [checkout, setCheckout] = useState<{ roomId: string; plan: RatePlan } | null>(null);
+  const [method, setMethod] = useState<PayMethod | null>(null);
+  const [guestCountry, setGuestCountry] = useState<string>("");
+  const [fx, setFx] = useState<{ currency: string; rate: number; date: string | null } | null>(null);
+  // The guest's own country and currency, from their browser (they can change the country).
+  useEffect(() => {
+    const c = countryOfLocale(navigator.language) ?? (page.found ? page.country : "GB");
+    setGuestCountry(c);
+  }, [page]);
+  useEffect(() => {
+    if (!page.found) return;
+    const theirs = currencyOfCountry(guestCountry);
+    if (!theirs || theirs === page.currency) return setFx(null);
+    void fxFn({ data: { from: page.currency, to: theirs } }).then((r) => setFx(r ? { currency: theirs, rate: r.rate, date: r.date } : null)).catch(() => setFx(null));
+  }, [guestCountry, page, fxFn]);
 
   const nights = range.checkIn && range.checkOut ? nightsBetween(range.checkIn, range.checkOut) : 0;
   const rooms = page.found ? page.rooms : [];
@@ -82,6 +105,14 @@ function EnquirePage() {
   const quoteFor = (r: (typeof rooms)[number]) => (r.ratePence !== null && nights > 0 ? quoteStay(r.ratePence, offers, r.id, range.checkIn, range.checkOut) : null);
   const freeFor = (r: (typeof rooms)[number]) => nights > 0 && !roomTaken(page.found ? (page.taken[r.id] ?? []) : [], range.checkIn, range.checkOut);
   const chosen = rooms.find((r) => r.id === roomId) ?? null;
+  const booking = page.found ? page.booking : null;
+  const bookingSettings = booking ? normaliseDirectBooking({ instant: booking.instant, freeCancelDays: booking.freeCancelDays, nonRef: booking.nonRef }) : null;
+  const canBook = !!booking?.instant && !!bookingSettings;
+  const planQuote = (r: (typeof rooms)[number], plan: RatePlan) => (canBook && r.ratePence !== null && nights > 0 ? quotePlan(r.ratePence, plan, bookingSettings!, offers, r.id, range.checkIn, range.checkOut) : null);
+  const approx = (pence: number) => (fx ? copy.approx(money(convert(pence, fx.rate), fx.currency)) : null);
+  const cancelBy = canBook && range.checkIn ? freeCancelUntil(range.checkIn, bookingSettings!, page.found ? page.today : "") : null;
+  const checkoutRoom = checkout ? (rooms.find((r) => r.id === checkout.roomId) ?? null) : null;
+  const checkoutQuote = checkoutRoom && checkout ? planQuote(checkoutRoom, checkout.plan) : null;
   // Nights any offer covers, marked on the calendar.
   const offerDays = useMemo(() => {
     const out: Date[] = [];
@@ -109,6 +140,41 @@ function EnquirePage() {
     setRoomId(id);
     setError(null);
     window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  async function book(e: React.FormEvent) {
+    e.preventDefault();
+    if (!page.found || !checkout || !method) return;
+    const problem = enquiryProblem({ ...form, phone: form.phone || null, checkIn: range.checkIn, checkOut: range.checkOut, guests }, page.today) ?? (form.agree ? null : copy.bookingAgreeNeeded);
+    if (problem) return setError(problem);
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await reserve({
+        data: {
+          code: page.shortCode,
+          roomId: checkout.roomId,
+          checkIn: range.checkIn,
+          checkOut: range.checkOut,
+          guests,
+          plan: checkout.plan,
+          method,
+          name: form.name,
+          email: form.email,
+          phone: form.phone || null,
+          guestCountry: /^[A-Z]{2}$/.test(guestCountry) ? guestCountry : null,
+          message: form.message || null,
+          origin: window.location.origin,
+          website: form.website,
+        },
+      });
+      // Card: on to the host's Stripe checkout; otherwise straight to the confirmation.
+      if (r.url) window.location.assign(r.url);
+      else await navigate({ to: "/reserve/$token", params: { token: r.token } });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : copy.failed);
+      setBusy(false);
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -149,7 +215,7 @@ function EnquirePage() {
         <header>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">{copy.eyebrow}</p>
           <h1 className="mt-2 text-3xl sm:text-5xl">{copy.title(page.propertyName)}</h1>
-          <p className="mt-2 max-w-3xl text-lg text-muted-foreground">{copy.intro(page.business)}</p>
+          <p className="mt-2 max-w-3xl text-lg text-muted-foreground">{canBook ? copy.introBook(page.business) : copy.intro(page.business)}</p>
         </header>
 
         {offers.length ? (
@@ -261,6 +327,41 @@ function EnquirePage() {
                                 <p className="text-sm font-medium text-destructive">{copy.takenForDates}</p>
                               ) : !fits ? (
                                 <p className="text-sm font-medium text-destructive">{copy.tooMany(r.maxGuests)}</p>
+                              ) : canBook && r.ratePence !== null ? (
+                                // Booking.com style: each rate with what it includes, its total and Reserve.
+                                <ul className="space-y-2">
+                                  {(["flex", "nonref"] as const).map((plan) => {
+                                    const pq = planQuote(r, plan);
+                                    if (!pq) return null;
+                                    return (
+                                      <li key={plan} className="rounded-xl border border-border p-2.5">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="min-w-0 text-sm">
+                                            <p className="font-medium">{plan === "flex" ? copy.planFlex : copy.planNonRef}</p>
+                                            <p className={cn("text-xs", plan === "flex" && cancelBy ? "text-success" : "text-muted-foreground")}>
+                                              {plan === "flex" ? (cancelBy ? copy.freeCancel(formatUkDate(cancelBy)) : copy.noFreeCancel) : copy.nonRefNote(bookingSettings!.nonRef.kind === "percent" ? `${bookingSettings!.nonRef.value}%` : money(planRates(r.ratePence!, bookingSettings!).flex - (planRates(r.ratePence!, bookingSettings!).nonref ?? 0), currency))}
+                                            </p>
+                                          </div>
+                                          <div className="shrink-0 text-right">
+                                            {pq.discount > 0 ? <p className="text-xs text-muted-foreground line-through">{money(pq.base, currency)}</p> : null}
+                                            <p className="font-semibold">{money(pq.total, currency)}</p>
+                                            {approx(pq.total) ? <p className="text-[11px] text-muted-foreground">{approx(pq.total)}</p> : null}
+                                          </div>
+                                        </div>
+                                        <Button type="button" size="sm" className="mt-2 w-full" variant={checkout?.roomId === r.id && checkout.plan === plan ? "secondary" : "default"} onClick={() => {
+                                          setCheckout({ roomId: r.id, plan });
+                                          setMethod(booking!.methods[0] ?? null);
+                                          setRoomId(r.id);
+                                          setError(null);
+                                          window.setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                                        }}>
+                                          {copy.reserve}
+                                        </Button>
+                                      </li>
+                                    );
+                                  })}
+                                  {q?.applied.length ? <li className="text-xs text-accent">{q.applied.map((o) => o.label).join(" · ")}</li> : null}
+                                </ul>
                               ) : q ? (
                                 <p className="flex flex-wrap items-baseline gap-x-2">
                                   {q.discount > 0 ? <span className="text-sm text-muted-foreground line-through">{money(q.base, currency)}</span> : null}
@@ -274,9 +375,14 @@ function EnquirePage() {
                             ) : tonight ? (
                               <p className="text-xs text-accent">{tonight.label}</p>
                             ) : null}
-                            <Button type="button" className="w-full" disabled={nights <= 0 || nights > MAX_NIGHTS || !free || !fits} onClick={() => request(r.id)}>
-                              {roomId === r.id ? <Check className="size-4" /> : null} {roomId === r.id ? copy.chosen : copy.requestRoom}
-                            </Button>
+                            {canBook && r.ratePence !== null && nights > 0 && nights <= MAX_NIGHTS && free && fits ? null : (
+                              <Button type="button" className="w-full" disabled={nights <= 0 || nights > MAX_NIGHTS || !free || !fits} onClick={() => {
+                                setCheckout(null);
+                                request(r.id);
+                              }}>
+                                {roomId === r.id && !checkout ? <Check className="size-4" /> : null} {roomId === r.id && !checkout ? copy.chosen : copy.requestRoom}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </li>
@@ -285,13 +391,88 @@ function EnquirePage() {
                 </ul>
                 <p className="text-sm text-muted-foreground">
                   {copy.notSure}{" "}
-                  <button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => request(null)}>
+                  <button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => {
+                    setCheckout(null);
+                    request(null);
+                  }}>
                     {copy.generalEnquiry}
                   </button>
                 </p>
               </section>
             ) : null}
 
+            {checkout && checkoutRoom && checkoutQuote ? (
+              <form ref={formRef} onSubmit={(e) => void book(e)} className="card-soft scroll-mt-6 space-y-5 p-5 sm:p-6" noValidate>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <h2 className="text-2xl">{copy.checkoutTitle}</h2>
+                  <button type="button" className="text-sm text-primary hover:underline" onClick={() => setCheckout(null)}>{copy.changeRoom}</button>
+                </div>
+                {/* What they're booking, like a hotel's summary. */}
+                <div className="grid gap-3 rounded-2xl border border-border p-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <div className="space-y-1 text-sm">
+                    <p className="text-lg font-medium">{checkoutRoom.name}</p>
+                    <p>{copy.summary(formatUkDate(range.checkIn), formatUkDate(range.checkOut), nights, guests)}</p>
+                    <p className={checkout.plan === "flex" && cancelBy ? "text-success" : "text-muted-foreground"}>
+                      {checkout.plan === "flex" ? (cancelBy ? copy.freeCancel(formatUkDate(cancelBy)) : copy.noFreeCancel) : copy.planNonRefLong}
+                    </p>
+                    {checkoutQuote.applied.length ? <p className="text-accent">{checkoutQuote.applied.map((o) => o.label).join(" · ")}</p> : null}
+                  </div>
+                  <div className="text-right">
+                    {checkoutQuote.discount > 0 ? <p className="text-sm text-muted-foreground line-through">{money(checkoutQuote.base, currency)}</p> : null}
+                    <p className="text-2xl font-semibold">{money(checkoutQuote.total, currency)}</p>
+                    {fx ? <p className="text-xs text-muted-foreground">{copy.fxLine(money(convert(checkoutQuote.total, fx.rate), fx.currency), currency, fx.rate, fx.currency)}</p> : null}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="bk-name">{copy.name}</Label>
+                    <Input id="bk-name" className="h-12" autoComplete="name" maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} required />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="bk-email">{copy.email}</Label>
+                    <Input id="bk-email" type="email" className="h-12" autoComplete="email" maxLength={254} value={form.email} onChange={(e) => set("email", e.target.value)} required />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="bk-phone">{copy.phone}</Label>
+                    <Input id="bk-phone" type="tel" className="h-12" autoComplete="tel" maxLength={30} value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="bk-country">{copy.country}</Label>
+                    <select id="bk-country" className="h-12 w-full rounded-xl border border-input bg-surface px-3" value={guestCountry} onChange={(e) => setGuestCountry(e.target.value)}>
+                      {phoneCountries().map((c) => <option key={c.iso} value={c.iso}>{c.flag} {c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">{copy.howToPay}</legend>
+                  <div role="radiogroup" className="grid gap-2 sm:grid-cols-3">
+                    {booking!.methods.map((m) => (
+                      <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => setMethod(m)} className={cn("rounded-xl border p-3 text-left text-sm", method === m ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary")}>
+                        <span className="block font-medium">{copy.methods[m].label}</span>
+                        <span className="block text-xs text-muted-foreground">{m === "bank" ? copy.methods.bank.help(booking!.bankPayDays) : copy.methods[m].help}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div className="space-y-1">
+                  <Label htmlFor="bk-msg">{copy.message}</Label>
+                  <Textarea id="bk-msg" rows={2} maxLength={2000} placeholder={copy.messagePlaceholder} value={form.message} onChange={(e) => set("message", e.target.value)} />
+                </div>
+                <label className="flex items-start gap-3 rounded-2xl bg-muted p-3 text-sm">
+                  <Checkbox checked={form.agree} onCheckedChange={(v) => set("agree", v === true)} className="mt-0.5" />
+                  <span>{copy.bookingAgree(page.business)}</span>
+                </label>
+                {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+                <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={busy || !method}>
+                  {busy ? <Loader2 className="animate-spin" /> : <CalendarHeart />}{" "}
+                  {method === "card" ? copy.bookAndPay(money(checkoutQuote.total, currency)) : copy.bookNow}
+                </Button>
+                <p className="text-xs text-muted-foreground">{method === "card" ? copy.cardNote : copy.bookingNote}</p>
+              </form>
+            ) : (
             <form ref={formRef} onSubmit={submit} className="card-soft scroll-mt-6 space-y-4 p-5 sm:p-6" noValidate>
               <h2 className="text-2xl">{chosen ? copy.requestTitle(chosen.name) : copy.enquiryTitle}</h2>
               <p className="rounded-xl bg-muted p-3 text-sm">
@@ -339,6 +520,7 @@ function EnquirePage() {
               </Button>
               <p className="text-xs text-muted-foreground">{copy.notBooked}</p>
             </form>
+            )}
           </>
         )}
       </main>

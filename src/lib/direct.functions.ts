@@ -23,7 +23,7 @@ async function admin(): Promise<Loose> {
 async function propertyByCode(db: Loose, c: string) {
   const { data } = await db
     .from("properties")
-    .select("id, host_id, name, short_code, timezone, theme_config, active, currency, hosts(business_name, currency)")
+    .select("id, host_id, name, short_code, timezone, theme_config, active, currency, country_code, hosts(business_name, currency)")
     .eq("short_code", c.toLowerCase())
     .maybeSingle();
   return data && data.active !== false ? data : null;
@@ -103,7 +103,14 @@ export const getEnquiryPage = createServerFn({ method: "GET" })
       today,
       consent: consentText(business),
       currency: currencyOf(p),
+      country: (p.country_code as string | null) ?? "GB",
       ...(await pageRooms(db, p.id, today)),
+      // Booking and paying here, when the host has turned it on (migration 0053).
+      booking: await (async () => {
+        const { bookingSetup } = await import("./direct-booking.functions");
+        const s = await bookingSetup(db, p);
+        return { instant: s.settings.instant && s.methods.length > 0, methods: s.methods, freeCancelDays: s.settings.freeCancelDays, nonRef: s.settings.nonRef, bankPayDays: s.settings.bankPayDays };
+      })(),
     };
   });
 
@@ -274,7 +281,7 @@ export const listDirect = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as Loose;
-    const [{ data: props }, enquiries, contacts, { data: host }] = await Promise.all([
+    const [{ data: props }, enquiries, contacts, { data: host }, reservations] = await Promise.all([
       sb.from("properties").select("id, name, short_code").eq("host_id", data.hostId).order("created_at"),
       sb
         .from("direct_enquiries")
@@ -284,6 +291,8 @@ export const listDirect = createServerFn({ method: "GET" })
         .limit(200),
       sb.from("guest_contacts").select("id, property_id, name, email, consent_text, consent_at, source, withdraw_token").eq("host_id", data.hostId).order("consent_at", { ascending: false }).limit(500),
       sb.from("hosts").select("business_name").eq("id", data.hostId).maybeSingle(),
+      // Bookings made on the Stay with us page (migration 0053).
+      sb.from("direct_reservations").select("*, rooms(display_name)").eq("host_id", data.hostId).order("created_at", { ascending: false }).limit(200),
     ]);
     return {
       // Before migration 0043 the page explains what's coming.
@@ -309,6 +318,27 @@ export const listDirect = createServerFn({ method: "GET" })
         currency?: string | null;
       }>,
       contacts: (contacts.error ? [] : (contacts.data ?? [])) as Array<{ id: string; property_id: string | null; name: string | null; email: string; consent_text: string; consent_at: string; source: string; withdraw_token: string }>,
+      reservations: (reservations.error ? [] : (reservations.data ?? [])) as Array<{
+        id: string;
+        property_id: string;
+        booking_id: string | null;
+        reference: string;
+        name: string;
+        email: string;
+        phone: string | null;
+        check_in: string;
+        check_out: string;
+        guests: number;
+        plan: "flex" | "nonref";
+        method: "card" | "bank" | "property";
+        total_pence: number;
+        currency: string;
+        free_cancel_until: string | null;
+        status: "pending" | "confirmed" | "paid" | "cancelled" | "expired";
+        pay_by: string | null;
+        created_at: string;
+        rooms: { display_name: string } | null;
+      }>,
     };
   });
 

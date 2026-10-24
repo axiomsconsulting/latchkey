@@ -38,6 +38,14 @@ export function taxTerms(country: string | null | undefined): TaxTerms {
   return { name: "Tax", numberLabel: "Tax registration number", title: "Invoice" };
 }
 
+/** A country's standard rate for accommodation-type sales tax, in basis points, as a starting point the host can change. */
+const STANDARD_RATES: Record<string, number> = {
+  GB: 2000, IE: 2300, FR: 2000, DE: 1900, ES: 2100, IT: 2200, NL: 2100, BE: 2100, PT: 2300, AT: 2000, SE: 2500, DK: 2500, FI: 2550, NO: 2500, CH: 810,
+  PL: 2300, CZ: 2100, GR: 2400, HU: 2700, RO: 1900, HR: 2500, SI: 2200, SK: 2300, LU: 1700, MT: 1800, CY: 1900, EE: 2200, LV: 2100, LT: 2100, BG: 2000,
+  AU: 1000, NZ: 1500, CA: 500, IN: 1200, SG: 900, MY: 800, ZA: 1500, AE: 500, SA: 1500, JP: 1000, US: 0,
+};
+export const standardTaxRate = (country: string | null | undefined): number | null => STANDARD_RATES[(country ?? "").toUpperCase()] ?? null;
+
 export type Totals = { net: number; tax: number; total: number; rateBp: number };
 
 /**

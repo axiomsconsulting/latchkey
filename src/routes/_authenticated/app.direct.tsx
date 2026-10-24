@@ -18,8 +18,10 @@ import { rebrand } from "@/lib/brand";
 import { formatUkDate } from "@/lib/dates";
 import { ENQUIRY_STATUSES, nightsBetween, replyMailto, type EnquiryStatus } from "@/lib/direct";
 import { convertEnquiry, listDirect, removeDirectRecord, setEnquiryStatus } from "@/lib/direct.functions";
+import { setReservationStatus } from "@/lib/direct-booking.functions";
 import { money } from "@/lib/direct-rates";
 import { DirectRates } from "@/components/host/DirectRates";
+import { DirectBookingSettings } from "@/components/host/DirectBookingSettings";
 
 export const Route = createFileRoute("/_authenticated/app/direct")({
   head: () => ({ meta: [{ title: rebrand("Direct stays · Latchkey host dashboard") }] }),
@@ -83,14 +85,19 @@ function DirectPage() {
             </ul>
           </section>
 
-          {/* Rates and offers for the property chosen in the menu. */}
-          {selectedId ? <DirectRates propertyId={selectedId} /> : null}
-
-          <Tabs defaultValue="enquiries">
+          <Tabs defaultValue={d.reservations.length ? "bookings" : "enquiries"}>
             <TabsList>
+              <TabsTrigger value="bookings">{copy.bookingsTab(d.reservations.filter((r) => r.status === "pending").length)}</TabsTrigger>
               <TabsTrigger value="enquiries">{copy.enquiriesTab(fresh)}</TabsTrigger>
               <TabsTrigger value="guests">{copy.guestsTab(d.contacts.length)}</TabsTrigger>
             </TabsList>
+            <TabsContent value="bookings" className="mt-4 space-y-3">
+              {d.reservations.length === 0 ? (
+                <EmptyState icon={CalendarHeart} title={copy.noBookings} body={copy.noBookingsBody} />
+              ) : (
+                d.reservations.map((r) => <ReservationRow key={r.id} r={r} hostId={hostId!} />)
+              )}
+            </TabsContent>
             <TabsContent value="enquiries" className="mt-4 space-y-3">
               {d.enquiries.length === 0 ? (
                 <EmptyState icon={CalendarHeart} title={copy.noEnquiries} body={copy.noEnquiriesBody} />
@@ -107,6 +114,10 @@ function DirectPage() {
               )}
             </TabsContent>
           </Tabs>
+
+          {/* The page's settings for the property chosen in the menu: rates and offers, then booking and paying. */}
+          {selectedId ? <DirectRates propertyId={selectedId} /> : null}
+          {selectedId ? <DirectBookingSettings propertyId={selectedId} /> : null}
         </>
       ) : null}
     </div>
@@ -241,3 +252,57 @@ function ContactRow({ c, data, hostId, origin }: { c: Data["contacts"][number]; 
     </article>
   );
 }
+
+/** A booking made on the Stay with us page: what, when, how it's paid, and the host's next step. */
+function ReservationRow({ r, hostId }: { r: Data["reservations"][number]; hostId: string }) {
+  const fn = useServerFn(setReservationStatus);
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  async function act(status: "paid" | "cancelled") {
+    if (status === "cancelled" && !window.confirm(copy.cancelConfirm)) return;
+    setBusy(true);
+    try {
+      await fn({ data: { id: r.id, status } });
+      await Promise.all([qc.invalidateQueries({ queryKey: ["direct", hostId] }), qc.invalidateQueries({ queryKey: ["board"] })]);
+      toast.success(status === "paid" ? copy.markedPaid : copy.cancelled);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const tone = r.status === "paid" || r.status === "confirmed" ? "default" : r.status === "pending" ? "secondary" : "outline";
+  return (
+    <article className="card-soft flex flex-wrap items-start gap-3 p-4">
+      <div className="min-w-0 flex-1 basis-64 space-y-0.5">
+        <p className="flex flex-wrap items-center gap-2">
+          <span className="font-display text-lg leading-tight">{r.name}</span>
+          <span className="font-mono text-xs text-muted-foreground">{r.reference}</span>
+          <Badge variant={tone}>{copy.resStatus[r.status === "pending" && r.method === "bank" ? "awaitingTransfer" : r.status]}</Badge>
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {r.rooms?.display_name ? `${r.rooms.display_name} · ` : ""}
+          {copy.dates(formatUkDate(r.check_in), formatUkDate(r.check_out), nightsBetween(r.check_in, r.check_out), r.guests)}
+        </p>
+        <p className="text-sm">
+          <span className="font-semibold">{money(r.total_pence, r.currency)}</span> · {copy.resMethod[r.method]} · {r.plan === "flex" ? copy.resFlex(r.free_cancel_until ? formatUkDate(r.free_cancel_until) : null) : copy.resNonRef}
+          {r.status === "pending" && r.pay_by ? ` · ${copy.payBy(new Date(r.pay_by).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}` : ""}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {r.booking_id ? (
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/app/bookings" search={{ guest: r.booking_id }}>{copy.openBooking}</Link>
+          </Button>
+        ) : null}
+        {r.status === "pending" && r.method === "bank" ? (
+          <Button size="sm" disabled={busy} onClick={() => void act("paid")}>{copy.markPaid}</Button>
+        ) : null}
+        {r.status !== "cancelled" && r.status !== "expired" ? (
+          <Button size="sm" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void act("cancelled")}>{copy.cancel}</Button>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+

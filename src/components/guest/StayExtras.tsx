@@ -192,9 +192,19 @@ export function StayExtras({ token }: { token: string }) {
                     <p className="text-sm">{copy.payTroubleBody}</p>
                     <div>
                       <p className="font-medium">{copy.payBankTitle}</p>
-                      {d.bankDetails ? (
+                      {d.bankDetails || d.bankLines.length ? (
                         <>
-                          <p className="whitespace-pre-line text-sm">{d.bankDetails}</p>
+                          {d.bankLines.length ? (
+                            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 text-sm">
+                              {d.bankLines.map((l) => (
+                                <div key={l.label} className="contents">
+                                  <dt className="text-muted-foreground">{l.label}</dt>
+                                  <dd className="break-all font-mono">{l.value}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          ) : null}
+                          {d.bankDetails ? <p className="whitespace-pre-line text-sm">{d.bankDetails}</p> : null}
                           <p className="text-sm text-muted-foreground">{copy.payRefNote(r.receiptNumber ?? r.id.slice(0, 8).toUpperCase())}</p>
                           <Button className="mt-2" size="touch" variant="outline" onClick={() => act(() => offline({ data: { token, id: r.id, method: "bank" } }))}>
                             {copy.payBank}

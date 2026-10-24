@@ -27,6 +27,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
+import { Route as ReserveTokenRouteImport } from './routes/reserve.$token'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
 import { Route as TourRegionRouteImport } from './routes/tour_.$region'
@@ -158,6 +159,11 @@ const KioskCodeRoute = KioskCodeRouteImport.update({
 const PCodeRoute = PCodeRouteImport.update({
   id: '/p/$code',
   path: '/p/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReserveTokenRoute = ReserveTokenRouteImport.update({
+  id: '/reserve/$token',
+  path: '/reserve/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoomCodeRoute = RoomCodeRouteImport.update({
@@ -407,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/tour/$region': typeof TourRegionRoute
@@ -468,6 +475,7 @@ export interface FileRoutesByTo {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/tour/$region': typeof TourRegionRoute
@@ -532,6 +540,7 @@ export interface FileRoutesById {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
   '/tour_/$region': typeof TourRegionRoute
@@ -596,6 +605,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
     | '/tour/$region'
@@ -657,6 +667,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
     | '/tour/$region'
@@ -720,6 +731,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
     | '/tour_/$region'
@@ -783,6 +795,7 @@ export interface RootRouteChildren {
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
   PCodeRoute: typeof PCodeRoute
+  ReserveTokenRoute: typeof ReserveTokenRoute
   RoomCodeRoute: typeof RoomCodeRoute
   StayTokenRoute: typeof StayTokenRoute
   TourRegionRoute: typeof TourRegionRoute
@@ -935,6 +948,13 @@ declare module '@tanstack/react-router' {
       path: '/p/$code'
       fullPath: '/p/$code'
       preLoaderRoute: typeof PCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reserve/$token': {
+      id: '/reserve/$token'
+      path: '/reserve/$token'
+      fullPath: '/reserve/$token'
+      preLoaderRoute: typeof ReserveTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/room/$code': {
@@ -1328,6 +1348,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
   PCodeRoute: PCodeRoute,
+  ReserveTokenRoute: ReserveTokenRoute,
   RoomCodeRoute: RoomCodeRoute,
   StayTokenRoute: StayTokenRoute,
   TourRegionRoute: TourRegionRoute,

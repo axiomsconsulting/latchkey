@@ -1,6 +1,7 @@
 /**
  * Stripe webhook. Marks an extras request paid once the guest completes
- * checkout, and keeps each host's Latchkey subscription in step with Stripe
+ * checkout, confirms (or, unpaid, releases) direct bookings from the "Stay
+ * with us" page, and keeps each host's Latchkey subscription in step with Stripe
  * (started, renewed, payment failing, cancelled). Events from hosts' own
  * Stripe accounts arrive through the Connect webhook: guest payments, and
  * whether a newly linked account can take payments yet. The signature is
@@ -58,6 +59,23 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
             const { stripeCall } = await import("@/lib/stripe.server");
             const { applyStripeSubscription } = await import("@/lib/billing.functions");
             await applyStripeSubscription(await stripeCall(`/subscriptions/${encodeURIComponent(subId)}`));
+          }
+          return new Response("ok");
+        }
+
+        // Direct bookings from the "Stay with us" page: paid confirms it; a checkout left to expire releases the room.
+        if (event.data?.object?.metadata?.kind === "direct_reservation") {
+          const session = event.data.object;
+          const reservationId = session.metadata?.reservation_id;
+          if (typeof reservationId === "string") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { markReservationPaid, expireReservation } = await import("@/lib/direct-booking.functions");
+            const db = supabaseAdmin as unknown as { from: (t: string) => any };
+            if ((event.type === "checkout.session.completed" && session.payment_status === "paid") || event.type === "checkout.session.async_payment_succeeded") {
+              await markReservationPaid(db, reservationId, typeof session.payment_intent === "string" ? session.payment_intent : null);
+            } else if (event.type === "checkout.session.expired") {
+              await expireReservation(db, reservationId);
+            }
           }
           return new Response("ok");
         }

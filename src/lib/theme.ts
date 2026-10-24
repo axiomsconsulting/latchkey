@@ -462,7 +462,7 @@ export const RESERVED_SLUGS = new Set([
   "app", "auth", "api", "stay", "kiosk", "checkin", "p", "assets", "favicon.ico", "robots.txt",
   "about", "developers", "invite", "invoice", "lovable", "room", "start", "icons", "offline", "sw", "manifest",
   "pricing", "help", "support", "admin", "login", "signin", "signup", "register", "terms", "privacy", "www", "mail", "static",
-  "enquire", "stay-again", "brand", "partners",
+  "enquire", "reserve", "stay-again", "brand", "partners",
   // The shared public demo owns these.
   "tour", "demo", "showcase", "desert-star-texas", "ashcombe-mayfair", "maison-vermeil-paris", "aoba-tokyo",
 ]);

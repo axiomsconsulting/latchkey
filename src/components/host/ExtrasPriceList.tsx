@@ -14,6 +14,9 @@ import { extrasCopy as copy, priceListUi as ui } from "@/content/copy";
 import type { ExtraItem } from "@/lib/extras";
 import { addPriceItem, deletePriceItem, getPriceList, saveMoneySettings, savePriceItem, setPriceOrder, setPropertyCurrency } from "@/lib/extras.functions";
 import { BreakfastMenuEditor } from "@/components/host/BreakfastMenuEditor";
+import { BankDetailsFields } from "@/components/host/BankDetailsFields";
+import { normaliseBankAccount, type BankAccount } from "@/lib/bank-details";
+import { standardTaxRate, taxTerms } from "@/lib/invoice";
 import { CurrencyPicker } from "@/components/WorldPickers";
 import { moveItem } from "@/lib/reorder";
 import { currencySymbol } from "@/lib/world";
@@ -37,7 +40,7 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
   const removeItem = useServerFn(deletePriceItem);
   const saveOrderFn = useServerFn(setPriceOrder);
   const q = useQuery({ queryKey: ["price-list", propertyId], queryFn: () => fn({ data: { propertyId } }) });
-  const [money, setMoney] = useState({ registered: false, label: "VAT", rate: "20", pricesInclude: true, bank: "", outUntil: "" });
+  const [money, setMoney] = useState({ registered: false, label: "VAT", rate: "20", pricesInclude: true, bank: "", outUntil: "", bankAccount: normaliseBankAccount(null) as BankAccount | null });
   const [draft, setDraft] = useState<typeof BLANK | null>(null);
   // The running order, changed live while dragging and saved on drop.
   const [order, setOrder] = useState<string[]>([]);
@@ -97,7 +100,7 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
 
   // The money settings as saved: Save stays grey until one differs.
   const savedMoney = q.data
-    ? { registered: q.data.tax.registered, label: q.data.tax.label, rate: String(q.data.tax.rateBp / 100), pricesInclude: q.data.tax.pricesInclude, bank: q.data.bankDetails, outUntil: q.data.outUntil ? q.data.outUntil.slice(0, 16) : "" }
+    ? { registered: q.data.tax.registered, label: q.data.tax.label, rate: String(q.data.tax.rateBp / 100), pricesInclude: q.data.tax.pricesInclude, bank: q.data.bankDetails, outUntil: q.data.outUntil ? q.data.outUntil.slice(0, 16) : "", bankAccount: q.data.bankAccount }
     : null;
   useEffect(() => {
     if (savedMoney) setMoney(savedMoney);
@@ -121,6 +124,7 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
       await saveMoney({ data: {
         hostId, registered: money.registered, label: money.label, rateBp: Math.round(Number(money.rate || 0) * 100),
         pricesInclude: money.pricesInclude, bankDetails: money.bank, outUntil: money.outUntil ? new Date(money.outUntil).toISOString() : null,
+        ...(money.bankAccount ? { bankAccount: money.bankAccount } : {}),
       } });
       toast.success(copy.saved);
       await qc.invalidateQueries({ queryKey: ["price-list", propertyId] });
@@ -268,16 +272,44 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
           <h2 className="text-lg">{copy.money}</h2>
           <SaveButton dirty={!!savedMoney && changed(money, savedMoney)} busy={moneyBusy} label={copy.save} onClick={() => void submitMoney()} />
         </div>
-        <label className="flex items-center gap-3"><Switch checked={money.registered} onCheckedChange={(v) => setMoney({ ...money, registered: v })} />{copy.taxRegistered}</label>
-        {money.registered ? (
-          <div className="flex flex-wrap gap-4">
-            <div><Label>{copy.taxLabel}</Label><Input value={money.label} onChange={(e) => setMoney({ ...money, label: e.target.value })} className="w-28" /></div>
-            <div><Label>{copy.taxRate}</Label><Input type="number" value={money.rate} onChange={(e) => setMoney({ ...money, rate: e.target.value })} className="w-24" /></div>
-            <label className="flex items-center gap-3 self-end pb-2"><Switch checked={money.pricesInclude} onCheckedChange={(v) => setMoney({ ...money, pricesInclude: v })} />{copy.pricesInclude}</label>
+        {/* Sales tax, with the country's usual name and rate as a starting point. */}
+        <div className="space-y-2 rounded-xl border border-border p-3">
+          <p className="text-sm font-medium">{copy.taxTitle}</p>
+          <label className="flex items-center gap-3 text-sm"><Switch checked={money.registered} onCheckedChange={(v) => setMoney({ ...money, registered: v })} />{copy.taxRegistered}</label>
+          {money.registered ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1"><Label className="text-xs">{copy.taxLabel}</Label><Input value={money.label} onChange={(e) => setMoney({ ...money, label: e.target.value })} className="h-10 w-28" /></div>
+              <div className="space-y-1"><Label className="text-xs">{copy.taxRate}</Label><Input inputMode="decimal" value={money.rate} onChange={(e) => setMoney({ ...money, rate: e.target.value })} className="h-10 w-24" /></div>
+              {standardTaxRate(q.data.country) !== null && (money.label !== taxTerms(q.data.country).name || Number(money.rate) * 100 !== standardTaxRate(q.data.country)) ? (
+                <Button type="button" size="sm" variant="outline" onClick={() => setMoney({ ...money, label: taxTerms(q.data!.country).name, rate: String(standardTaxRate(q.data!.country)! / 100) })}>
+                  {copy.taxStandard(taxTerms(q.data.country).name, String(standardTaxRate(q.data.country)! / 100))}
+                </Button>
+              ) : null}
+              <label className="flex items-center gap-3 pb-2 text-sm"><Switch checked={money.pricesInclude} onCheckedChange={(v) => setMoney({ ...money, pricesInclude: v })} />{copy.pricesInclude}</label>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Bank details in the shape the bank's country uses, checked as typed. */}
+        <div className="space-y-2 rounded-xl border border-border p-3">
+          <p className="text-sm font-medium">{copy.bankTitle}</p>
+          {money.bankAccount ? <BankDetailsFields value={money.bankAccount} onChange={(bankAccount) => setMoney({ ...money, bankAccount })} /> : null}
+          <div className="space-y-1">
+            <Label className="text-xs">{copy.bank}</Label>
+            <Textarea rows={2} value={money.bank} onChange={(e) => setMoney({ ...money, bank: e.target.value })} placeholder={copy.bankNotesPlaceholder} />
           </div>
-        ) : null}
-        <div><Label>{copy.bank}</Label><Textarea value={money.bank} onChange={(e) => setMoney({ ...money, bank: e.target.value })} placeholder="Name, sort code, account number" /></div>
-        <div><Label>{copy.outUntil}</Label><Input type="datetime-local" value={money.outUntil} onChange={(e) => setMoney({ ...money, outUntil: e.target.value })} className="w-64" /></div>
+        </div>
+
+        {/* Away: a date and time, not a free-form box. */}
+        <div className="space-y-2 rounded-xl border border-border p-3">
+          <p className="text-sm font-medium">{copy.awayTitle}</p>
+          <p className="text-xs text-muted-foreground">{copy.outUntil}</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1"><Label className="text-xs">{copy.awayDate}</Label><Input type="date" className="h-10 w-44" value={money.outUntil.slice(0, 10)} onChange={(e) => setMoney({ ...money, outUntil: e.target.value ? `${e.target.value}T${money.outUntil.slice(11, 16) || "09:00"}` : "" })} /></div>
+            <div className="space-y-1"><Label className="text-xs">{copy.awayTime}</Label><Input type="time" className="h-10 w-32" disabled={!money.outUntil} value={money.outUntil.slice(11, 16)} onChange={(e) => setMoney({ ...money, outUntil: `${money.outUntil.slice(0, 10)}T${e.target.value || "09:00"}` })} /></div>
+            {money.outUntil ? <Button type="button" size="sm" variant="ghost" onClick={() => setMoney({ ...money, outUntil: "" })}>{copy.awayClear}</Button> : null}
+          </div>
+        </div>
       </section>
     </div>
   );

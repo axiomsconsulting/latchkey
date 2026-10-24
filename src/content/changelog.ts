@@ -32,6 +32,17 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.66.0",
+    date: "2026-10-24",
+    title: "Book and pay on your own page",
+    items: [
+      { kind: "new", area: "Website", text: "Book and pay here (turn it on in Direct stays): guests book a free room straight from your Stay with us page, Booking.com style, at a refundable rate (free cancellation until the days you choose before arrival) or a cheaper non-refundable one (a percentage or an amount a night off). They pay by card through your Stripe account, by bank transfer to you, or at the property if you allow it, and get a confirmation page with their reference." },
+      { kind: "new", area: "Website", text: "Guests from another country see an approximate total in their own currency at today's rate; they're charged in yours." },
+      { kind: "new", area: "Bookings", text: "Bookings made on your page appear in Direct stays → Bookings made here, and on Bookings straight away so the room is held. Mark bank transfers paid, or cancel. An unpaid card booking releases the room after 30 minutes." },
+      { kind: "improved", area: "Settings", text: "Bank details are now set out the way your bank's country uses them (sort code and account number, IBAN and BIC, routing number, BSB and more), checked as you type. Guests in your country see your local details; guests abroad see IBAN and SWIFT. Sales tax offers your country's standard rate, and Away is a date and time." },
+    ],
+  },
+  {
     version: "0.65.0",
     date: "2026-10-24",
     title: "Stay with us, hotel style",
