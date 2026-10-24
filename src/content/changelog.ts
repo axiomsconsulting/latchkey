@@ -37,6 +37,8 @@ export const RELEASES: Release[] = branded([
     title: "See which Stripe account you're using",
     items: [
       { kind: "new", area: "Settings", text: "Card payments now shows exactly which Stripe account takes your guests' payments: its name, account ID (copy it and compare in Stripe under Settings → Business → Account details), email, country and currency, the name on guests' card statements, live or test, and whether it can take and pay out payments. Check with Stripe asks again at any time." },
+      { kind: "improved", area: "Settings", text: "If Latchkey's own Stripe set-up stops you connecting, Card payments now says so plainly instead of showing Stripe's technical message." },
+      { kind: "new", area: "Settings", admin: true, text: "Integrations lists the permissions Latchkey's Stripe key needs when it's a restricted key, and connecting a host explains a missing permission or Connect not being switched on." },
       { kind: "new", area: "Settings", admin: true, text: "Latchkey admin → Businesses has a Stripe column (own account ID linking to Connect, Latchkey's account, or not connected), and Integrations shows Latchkey's own Stripe account, key type, live or test, and which webhook secrets are set." },
     ],
   },

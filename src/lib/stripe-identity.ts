@@ -69,3 +69,25 @@ export function stripeDashboardUrl(kind: "connected" | "own", id: string | null,
   if (kind === "connected" && id) return `https://dashboard.stripe.com${test}/connect/accounts/${encodeURIComponent(id)}`;
   return `https://dashboard.stripe.com${test}/settings/account`;
 }
+
+/**
+ * What Latchkey's own Stripe key must be allowed to do when it's a restricted
+ * key (rk_). Hosts never paste keys: connecting a host creates their account
+ * and its sign-up link with this key, and guest payments are made in the
+ * host's account with it too.
+ */
+export const RESTRICTED_KEY_NEEDS: Array<{ resource: string; access: "Read" | "Write"; why: string }> = [
+  { resource: "Connect → Accounts", access: "Write", why: "create each host's Stripe account and its sign-up link, and check it" },
+  { resource: "Checkout Sessions", access: "Write", why: "guest card payments (in the host's account) and subscriptions" },
+  { resource: "Products", access: "Write", why: "price lists sent to hosts' accounts" },
+  { resource: "Prices", access: "Write", why: "price lists sent to hosts' accounts" },
+  { resource: "Subscriptions", access: "Write", why: "hosts' Latchkey plans" },
+  { resource: "Customer portal", access: "Write", why: "hosts managing their plan" },
+];
+
+/** Stripe refusing because of Latchkey's own set-up, not anything the host did. */
+export function stripeSetupProblem(message: string): "permission" | "connect_off" | null {
+  if (/does not have the required permissions|connected_account_write|_write'?\)? permissions/i.test(message)) return "permission";
+  if (/signed up for Connect|sign up for Connect|platform profile|Connect.*(not|isn't) enabled/i.test(message)) return "connect_off";
+  return null;
+}

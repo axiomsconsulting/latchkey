@@ -1976,6 +1976,8 @@ export const stripeAccountCopy = branded({
   webhooks: "Webhook secrets",
   webhookSet: (main: boolean, connect: boolean) => [main ? "platform ✓" : "platform missing", connect ? "connected accounts ✓" : "connected accounts missing"].join(" · "),
   notSet: "No Stripe key in Secrets yet.",
+  needsTitle: "This restricted key must allow",
+  needsBody: "Hosts never paste keys: Latchkey's key creates each host's Stripe account and takes guest payments in it. In Stripe → Developers → API keys, edit this key and give it these permissions (or use a full secret key), and switch on Connect for the account.",
   colStripe: "Stripe",
   modeNone: "Not connected",
   modePlatform: "Latchkey's account",

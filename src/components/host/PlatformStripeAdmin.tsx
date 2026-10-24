@@ -5,6 +5,7 @@ import { StripeAccountCard } from "@/components/host/StripeAccountCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { stripeAccountCopy as copy } from "@/content/copy";
 import { getPlatformStripe } from "@/lib/payments.functions";
+import { RESTRICTED_KEY_NEEDS } from "@/lib/stripe-identity";
 
 /**
  * Latchkey admin → Integrations: which Stripe account the key in Secrets
@@ -30,6 +31,19 @@ export function PlatformStripeAdmin() {
             <dt className="text-muted-foreground">{copy.webhooks}</dt>
             <dd>{copy.webhookSet(d.webhook, d.connectWebhook)}</dd>
           </dl>
+          {d.keyKind === "restricted" ? (
+            <div className="rounded-xl bg-muted p-3 text-sm">
+              <p className="font-medium">{copy.needsTitle}</p>
+              <p className="text-muted-foreground">{copy.needsBody}</p>
+              <ul className="mt-2 space-y-1">
+                {RESTRICTED_KEY_NEEDS.map((n) => (
+                  <li key={n.resource}>
+                    <span className="font-medium">{n.resource}: {n.access}</span> <span className="text-muted-foreground">({n.why})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </>
       )}
     </section>

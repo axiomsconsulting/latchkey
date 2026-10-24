@@ -14,7 +14,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireOwner } from "@/lib/roles";
 import { rebrand } from "@/lib/brand";
-import { identityOf, type StripeAccountRaw, type StripeIdentity } from "@/lib/stripe-identity";
+import { identityOf, stripeSetupProblem, type StripeAccountRaw, type StripeIdentity } from "@/lib/stripe-identity";
 
 const uuid = z.string().uuid();
 const token = z.string().min(20).max(80);
@@ -143,8 +143,22 @@ export const connectStripe = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
-    const { stripeCall, stripeReady } = await import("./stripe.server");
+    const { stripeCall: call, stripeReady } = await import("./stripe.server");
     if (!stripeReady()) throw new Error(rebrand("Card payments aren't available yet. Please contact Latchkey support."));
+    // Refusals caused by Latchkey's own Stripe set-up: tell the super admin what to change, the host who to ask.
+    const stripeCall: typeof call = (...args) =>
+      call(...(args as Parameters<typeof call>)).catch(async (e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        const problem = stripeSetupProblem(msg);
+        if (!problem) throw e;
+        const { data: isSuper } = await (context.supabase as unknown as { rpc: (f: string) => Promise<{ data: unknown }> }).rpc("is_super_admin");
+        if (isSuper !== true) throw new Error(rebrand("Latchkey's Stripe set-up needs a change before you can connect. Please contact Latchkey support; nothing is wrong with your details."));
+        throw new Error(
+          problem === "permission"
+            ? rebrand(`Latchkey's own Stripe key (in Secrets) isn't allowed to create hosts' accounts. In Stripe, edit that restricted key and set Connect → Accounts to Write (see Latchkey admin → Integrations for the full list), or use a full secret key. Stripe said: ${msg}`)
+            : rebrand(`Stripe Connect isn't switched on for Latchkey's Stripe account yet. In Stripe, open Connect and finish the platform set-up, then try again. Stripe said: ${msg}`),
+        );
+      }) as never;
     const db = await admin();
     const { data: h } = await db.from("hosts").select("id, business_name, contact_email, stripe_account_id").eq("id", data.hostId).single();
     if (!h) throw new Error("Business not found.");
