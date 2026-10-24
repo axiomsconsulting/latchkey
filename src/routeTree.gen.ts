@@ -21,6 +21,7 @@ import { Route as StartRouteImport } from './routes/start'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TourRouteImport } from './routes/tour'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as BookCodeRouteImport } from './routes/book.$code'
 import { Route as DemoIndexRouteImport } from './routes/demo.index'
 import { Route as DemoHostRouteImport } from './routes/demo.host'
 import { Route as EnquireCodeRouteImport } from './routes/enquire.$code'
@@ -131,6 +132,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const BookCodeRoute = BookCodeRouteImport.update({
+  id: '/book/$code',
+  path: '/book/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DemoIndexRoute = DemoIndexRouteImport.update({
   id: '/demo/',
@@ -414,6 +420,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -477,6 +484,7 @@ export interface FileRoutesByTo {
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
+  '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -543,6 +551,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -609,6 +618,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/tour'
     | '/app'
+    | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
     | '/invite/$token'
@@ -672,6 +682,7 @@ export interface FileRouteTypes {
     | '/start'
     | '/terms'
     | '/tour'
+    | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
     | '/invite/$token'
@@ -737,6 +748,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/tour'
     | '/_authenticated/app'
+    | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
     | '/invite/$token'
@@ -802,6 +814,7 @@ export interface RootRouteChildren {
   StartRoute: typeof StartRoute
   TermsRoute: typeof TermsRoute
   TourRoute: typeof TourRoute
+  BookCodeRoute: typeof BookCodeRoute
   DemoHostRoute: typeof DemoHostRoute
   EnquireCodeRoute: typeof EnquireCodeRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -920,6 +933,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/book/$code': {
+      id: '/book/$code'
+      path: '/book/$code'
+      fullPath: '/book/$code'
+      preLoaderRoute: typeof BookCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/demo/': {
       id: '/demo/'
@@ -1363,6 +1383,7 @@ const rootRouteChildren: RootRouteChildren = {
   StartRoute: StartRoute,
   TermsRoute: TermsRoute,
   TourRoute: TourRoute,
+  BookCodeRoute: BookCodeRoute,
   DemoHostRoute: DemoHostRoute,
   EnquireCodeRoute: EnquireCodeRoute,
   InviteTokenRoute: InviteTokenRoute,

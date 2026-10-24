@@ -53,4 +53,14 @@ describe("direct booking", () => {
     expect(currencyOfCountry("XX")).toBeNull();
     expect(convert(16_000, 1.1576)).toBe(18_522);
   });
+
+  it("spreads a party over several rooms", async () => {
+    const { splitGuests, partyText } = await import("@/lib/direct-booking");
+    expect(splitGuests(5, [2, 4])).toEqual([2, 3]);
+    expect(splitGuests(2, [2, 2])).toEqual([1, 1]);
+    expect(splitGuests(7, [2, 4])).toBeNull();
+    expect(splitGuests(1, [2, 2])).toBeNull();
+    expect(partyText(2, 1)).toBe("2 adults, 1 child");
+    expect(partyText(1, 0)).toBe("1 adult");
+  });
 });

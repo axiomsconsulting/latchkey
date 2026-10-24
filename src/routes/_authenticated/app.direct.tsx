@@ -62,7 +62,7 @@ function DirectPage() {
             <p className="text-sm text-muted-foreground">{copy.linkBody}</p>
             <ul className="space-y-2">
               {d.properties.filter((p) => p.short_code).map((p) => {
-                const url = `${origin}/enquire/${p.short_code}`;
+                const url = `${origin}/book/${p.short_code}`;
                 return (
                   <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-muted p-3">
                     <span className="min-w-0 flex-1 basis-48">
@@ -281,7 +281,7 @@ function ReservationRow({ r, hostId }: { r: Data["reservations"][number]; hostId
           <Badge variant={tone}>{copy.resStatus[r.status === "pending" && r.method === "bank" ? "awaitingTransfer" : r.status]}</Badge>
         </p>
         <p className="text-sm text-muted-foreground">
-          {r.rooms?.display_name ? `${r.rooms.display_name} · ` : ""}
+          {r.room_list && r.room_list.length > 1 ? `${r.room_list.map((x) => x.name).join(", ")} · ` : r.rooms?.display_name ? `${r.rooms.display_name} · ` : ""}
           {copy.dates(formatUkDate(r.check_in), formatUkDate(r.check_out), nightsBetween(r.check_in, r.check_out), r.guests)}
         </p>
         <p className="text-sm">

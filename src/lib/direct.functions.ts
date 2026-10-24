@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ENQUIRY_STATUSES, consentText, enquiryProblem, isReturning, normaliseEmail } from "./direct";
+import { partyText } from "./direct-booking";
 
 type Loose = { from: (t: string) => any };
 const uuid = z.string().uuid();
@@ -109,7 +110,7 @@ export const getEnquiryPage = createServerFn({ method: "GET" })
       booking: await (async () => {
         const { bookingSetup } = await import("./direct-booking.functions");
         const s = await bookingSetup(db, p);
-        return { instant: s.settings.instant && s.methods.length > 0, methods: s.methods, freeCancelDays: s.settings.freeCancelDays, nonRef: s.settings.nonRef, bankPayDays: s.settings.bankPayDays };
+        return { instant: s.settings.instant && s.methods.length > 0, methods: s.methods, freeCancelDays: s.settings.freeCancelDays, nonRef: s.settings.nonRef, bankPayDays: s.settings.bankPayDays, children: s.settings.children };
       })(),
     };
   });
@@ -125,6 +126,8 @@ export const submitEnquiry = createServerFn({ method: "POST" })
         checkIn: z.string().max(10),
         checkOut: z.string().max(10),
         guests: z.number().int(),
+        /** How many of the guests are children, when the host asks. */
+        children: z.number().int().min(0).max(19).default(0),
         message: z.string().max(2000).nullable(),
         futureStays: z.boolean(),
         /** The room the guest chose, if any: priced and checked again here. */
@@ -181,7 +184,8 @@ export const submitEnquiry = createServerFn({ method: "POST" })
       check_in: data.checkIn,
       check_out: data.checkOut,
       guests: data.guests,
-      message: data.message?.trim() || null,
+      // Children are noted in the message (the enquiry keeps one guest count).
+      message: [data.children > 0 && data.children < data.guests ? `${partyText(data.guests - data.children, data.children)}.` : null, data.message?.trim() || null].filter(Boolean).join(" ") || null,
       is_returning: isReturning(email, known),
     };
     const { withLegacy } = await import("./checkin.server");
@@ -338,6 +342,8 @@ export const listDirect = createServerFn({ method: "GET" })
         pay_by: string | null;
         created_at: string;
         rooms: { display_name: string } | null;
+        /** Every room in the booking (migration 0055). */
+        room_list?: Array<{ name: string }> | null;
       }>,
     };
   });

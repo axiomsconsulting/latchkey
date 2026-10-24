@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.69.0",
+    date: "2026-10-24",
+    title: "A proper booking page",
+    items: [
+      { kind: "new", area: "Website", text: "Your booking page is now at /book/<your link> (old /enquire links still work). Arrive, Leave and Guests sit across the top like a hotel's site, and the calendar folds out underneath: tap the arrival then the leaving day, drag across days to pick them in one go, or drag the stay itself to new dates keeping the same nights. Nights with no rooms free are struck through." },
+      { kind: "new", area: "Website", text: "Guests can book several rooms in one booking: free rooms come first as tiles, and the booking (rooms, refundable or non-refundable, details and payment) sits in the right-hand third. On a phone it's two steps: rooms, then book and pay. Each room has its own Enquire button, which opens a box with the dates and guests already filled in." },
+      { kind: "new", area: "Website", text: "Ask about children (Direct stays → Book and pay here): guests choose adults and children, and children count towards how many each room sleeps." },
+      { kind: "improved", area: "Website", text: "Guests must give a phone number as well as an email when they enquire or book." },
+      { kind: "fixed", area: "Website", text: "The logo on the booking page lines up with the page, and seasonal offers no longer repeat their name." },
+    ],
+  },
+  {
     version: "0.68.0",
     date: "2026-10-24",
     title: "Terms of service and Privacy policy",

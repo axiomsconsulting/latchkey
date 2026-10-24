@@ -59,7 +59,7 @@ export function StayAgain({ token }: { token: string }) {
       </div>
       {d.shortCode ? (
         <Button asChild variant="outline" className="w-full sm:w-auto">
-          <a href={`/enquire/${d.shortCode}`}>{copy.ask}</a>
+          <a href={`/book/${d.shortCode}`}>{copy.ask}</a>
         </Button>
       ) : null}
       {withdraw ? (

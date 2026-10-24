@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { consentText, enquiryProblem, isReturning, nightsBetween, replyMailto } from "../src/lib/direct";
 
-const ok = { name: "Priya Shah", email: "priya@example.com", checkIn: "2026-11-02", checkOut: "2026-11-05", guests: 2 };
+const ok = { name: "Priya Shah", email: "priya@example.com", phone: "+447700900123", checkIn: "2026-11-02", checkOut: "2026-11-05", guests: 2 };
 const TODAY = "2026-10-21";
 
 describe("repeat direct stays", () => {
@@ -15,6 +15,8 @@ describe("repeat direct stays", () => {
     expect(enquiryProblem(ok, TODAY)).toBeNull();
     expect(enquiryProblem({ ...ok, name: " " }, TODAY)).toMatch(/name/);
     expect(enquiryProblem({ ...ok, email: "not-an-email" }, TODAY)).toMatch(/email/);
+    expect(enquiryProblem({ ...ok, phone: null }, TODAY)).toMatch(/phone/);
+    expect(enquiryProblem({ ...ok, phone: "07700 900123" }, TODAY)).toMatch(/phone/);
     expect(enquiryProblem({ ...ok, checkIn: "2026-10-01" }, TODAY)).toMatch(/passed/);
     expect(enquiryProblem({ ...ok, checkOut: "2026-11-02" }, TODAY)).toMatch(/after/);
     expect(enquiryProblem({ ...ok, checkOut: "2027-02-01" }, TODAY)).toMatch(/60 nights/);

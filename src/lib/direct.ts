@@ -2,7 +2,7 @@
  * Repeat direct stays: a guest who enjoyed their stay can leave their
  * details for the business to get in touch about future stays (consent kept
  * with its exact wording, withdrawn with one link), and anyone can ask about
- * dates on the property's own enquiry page (/enquire/$code). The host answers
+ * dates on the property's own booking page (/book/$code; /enquire/$code redirects). The host answers
  * from their own mailbox and can turn an enquiry into a direct stay. Not a
  * booking engine, and no marketing automation: nothing is sent for the host.
  * Pure: no network or database.
@@ -41,6 +41,8 @@ const EMAIL = /^[^\s@<>"]{1,64}@[^\s@<>"]{1,190}\.[^\s@<>"]{2,24}$/;
 export function enquiryProblem(e: EnquiryInput, today: string): string | null {
   if (!e.name.trim()) return "Please add your name.";
   if (!EMAIL.test(e.email.trim())) return "Please check your email address.";
+  // A phone number in full international form (+44…), so the host can reach the guest.
+  if (!e.phone || !/^\+[1-9]\d{6,14}$/.test(e.phone.trim())) return "Please add a phone number we can reach you on.";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(e.checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(e.checkOut)) return "Please pick your dates.";
   if (e.checkIn < today) return "Your arrival date has passed.";
   if (e.checkOut <= e.checkIn) return "Your leaving date must be after your arrival.";

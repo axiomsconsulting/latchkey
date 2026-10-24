@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { guest as guestCopy, reservationCopy as copy } from "@/content/copy";
 import { formatUkDate, nightsBetween } from "@/lib/dates";
 import { money } from "@/lib/direct-rates";
+import { partyText } from "@/lib/direct-booking";
 import { confirmReservationPayment, getReservation } from "@/lib/direct-booking.functions";
 import { cn } from "@/lib/utils";
 
@@ -85,13 +86,13 @@ function ReservationPage() {
           </div>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <dt className="text-muted-foreground">{copy.room}</dt>
-            <dd>{r.roomName}</dd>
+            <dd>{r.roomNames.length > 1 ? r.roomNames.join(", ") : r.roomName}</dd>
             <dt className="text-muted-foreground">{copy.dates}</dt>
             <dd>
               {formatUkDate(r.checkIn)} – {formatUkDate(r.checkOut)} · {copy.nights(nights)}
             </dd>
             <dt className="text-muted-foreground">{copy.guests}</dt>
-            <dd>{r.guests}</dd>
+            <dd>{partyText(r.guests - r.children, r.children)}</dd>
             <dt className="text-muted-foreground">{copy.rate}</dt>
             <dd>{r.plan === "flex" ? (r.freeCancelUntil ? copy.flexUntil(formatUkDate(r.freeCancelUntil)) : copy.flex) : copy.nonRef}</dd>
             <dt className="text-muted-foreground">{copy.total}</dt>

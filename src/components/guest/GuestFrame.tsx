@@ -15,21 +15,25 @@ export function GuestFrame({
   theme,
   name,
   switchable = false,
+  wide = false,
 }: {
   children: ReactNode;
   theme?: ThemeConfig | null;
   name?: string | undefined;
   /** Offer "checking in somewhere else?", which goes to PIN entry. Never on the kiosk. */
   switchable?: boolean;
+  /** Wide pages (the booking page): the header, band and footer line up with the wider content. */
+  wide?: boolean;
 }) {
   const band = !!(theme?.headerBand && name);
+  const width = wide ? "max-w-6xl" : "max-w-4xl";
   return (
     <ThemeScope theme={theme} global full className="relative min-h-screen px-4 sm:px-8">
       {theme ? <ThemeBackdrop theme={theme} /> : null}
       {/* The property's band of colour across the top, when the theme has one. */}
       {band && theme && name ? (
         <div className="relative -mx-4 bg-primary px-4 text-primary-foreground sm:-mx-8 sm:px-8">
-          <div className="mx-auto flex max-w-4xl items-center gap-4 py-5">
+          <div className={`mx-auto flex ${width} items-center gap-4 py-5`}>
             <LogoMark theme={theme} name={name} className="size-14 bg-transparent text-2xl" />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-2xl uppercase leading-tight tracking-[0.08em] sm:text-3xl">{name}</p>
@@ -43,7 +47,7 @@ export function GuestFrame({
           </div>
         </div>
       ) : null}
-      <header className={band ? "hidden" : "relative mx-auto flex max-w-4xl items-center gap-3 pt-6 text-sm font-medium text-muted-foreground"}>
+      <header className={band ? "hidden" : `relative mx-auto flex ${width} items-center gap-3 pt-6 text-sm font-medium text-muted-foreground`}>
         {theme && name ? (
           <>
             <LogoMark theme={theme} name={name} />
@@ -69,7 +73,7 @@ export function GuestFrame({
         ) : null}
       </header>
       <div className="relative">{children}</div>
-      {theme ? <ThemeFooter theme={theme} className="relative mx-auto mt-6 max-w-4xl pb-8" /> : null}
+      {theme ? <ThemeFooter theme={theme} className={`relative mx-auto mt-6 ${width} pb-8`} /> : null}
     </ThemeScope>
   );
 }

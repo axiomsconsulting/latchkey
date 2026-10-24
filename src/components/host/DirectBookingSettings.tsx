@@ -89,6 +89,14 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
         <Switch id="db-instant" checked={form.instant} onCheckedChange={(v) => set({ instant: v })} />
       </div>
 
+      <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
+        <div className="text-sm">
+          <Label htmlFor="db-children" className="text-base">{copy.children}</Label>
+          <p className="text-muted-foreground">{copy.childrenHelp}</p>
+        </div>
+        <Switch id="db-children" checked={form.children} onCheckedChange={(v) => set({ children: v })} />
+      </div>
+
       {/* Other sites only see a direct booking if they import the room's Latchkey calendar. */}
       {form.instant && d.roomsNotShared.length ? (
         <p className="flex items-start gap-2 rounded-xl bg-accent/15 p-3 text-sm">

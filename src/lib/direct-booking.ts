@@ -27,6 +27,8 @@ export type DirectBooking = {
   nonRef: { enabled: boolean; kind: "percent" | "amount"; value: number };
   /** Bank transfers must arrive within this many days, or the host may release the room. */
   bankPayDays: number;
+  /** Ask how many children as well as adults (they count towards each room's sleeps). */
+  children: boolean;
 };
 
 export const DEFAULT_DIRECT_BOOKING: DirectBooking = {
@@ -37,6 +39,7 @@ export const DEFAULT_DIRECT_BOOKING: DirectBooking = {
   freeCancelDays: 7,
   nonRef: { enabled: true, kind: "percent", value: 10 },
   bankPayDays: 3,
+  children: false,
 };
 
 const int = (v: unknown, lo: number, hi: number, fb: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : fb);
@@ -57,6 +60,7 @@ export function normaliseDirectBooking(raw: unknown): DirectBooking {
       value: kind === "percent" ? int(n["value"], 1, 50, 10) : int(n["value"], 0, 10_000_000, 1000),
     },
     bankPayDays: int(r["bankPayDays"], 1, 14, DEFAULT_DIRECT_BOOKING.bankPayDays),
+    children: r["children"] === true,
   };
 }
 
@@ -116,3 +120,26 @@ export function countryOfLocale(locale: string | null | undefined): string | nul
 
 /** An amount in another currency at a rate (1 unit of ours = `rate` of theirs), in their hundredths. */
 export const convert = (pence: number, rate: number) => Math.round(pence * rate);
+
+/**
+ * Spreads a party over the rooms chosen, filling each in turn up to what it
+ * sleeps (every room gets at least one guest); null when they don't fit or
+ * there are more rooms than guests.
+ */
+export function splitGuests(total: number, sleeps: number[]): number[] | null {
+  if (!sleeps.length || total < sleeps.length || total > sleeps.reduce((a, b) => a + b, 0)) return null;
+  const out = sleeps.map(() => 1);
+  let left = total - sleeps.length;
+  for (let i = 0; i < sleeps.length && left > 0; i++) {
+    const add = Math.min(left, sleeps[i]! - 1);
+    out[i]! += add;
+    left -= add;
+  }
+  return left === 0 ? out : null;
+}
+
+/** "2 adults, 1 child" for notes and summaries. */
+export function partyText(adults: number, children: number): string {
+  const a = `${adults} ${adults === 1 ? "adult" : "adults"}`;
+  return children > 0 ? `${a}, ${children} ${children === 1 ? "child" : "children"}` : a;
+}
