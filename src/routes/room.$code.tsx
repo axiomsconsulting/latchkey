@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
-import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarX, Check, Loader2, MapPin } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,7 +7,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { sectionIcon } from "@/components/guest/guide-icons";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { GuideTiles, StayCover } from "@/components/guest/StayHero";
 import { shownTiles } from "@/lib/guide-tiles";
 import { guideCopy as gcopy, guest as copy, roomGuideCopy as rcopy } from "@/content/copy";
@@ -19,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { stayProgressCopy as pcopy } from "@/content/copy";
 import { readFix } from "@/lib/kiosk-presence";
 import { openRoomStay } from "@/lib/stay-access.functions";
+import { GuideSections } from "@/components/guest/GuideSections";
 import { useScrollOpen } from "@/hooks/use-scroll-open";
 import { rebrand } from "@/lib/brand";
 
@@ -53,8 +52,8 @@ function RoomGuide() {
   const { code } = Route.useParams();
   const [stay, setStay] = useState<string | null>(null);
   const [open, setOpen] = useState<string[]>(() => (g.found && g.guide[0] ? [g.guide[0].key] : []));
-  // Sections open as the guest scrolls to them, and fold again once read.
-  const onOpenChange = useScrollOpen(open, setOpen);
+  // The section in the middle of the screen is open and highlighted, either way the guest scrolls.
+  const { onOpenChange, active } = useScrollOpen(open, setOpen);
   // Opening the guest's own guide from here (when the host allows it): trying, offering the location check, or not here.
   const [own, setOwn] = useState<"idle" | "trying" | "locate" | "locating" | "notHere">("idle");
   const tryOpen = useServerFn(openRoomStay);
@@ -187,41 +186,7 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        <Accordion type="multiple" value={open} onValueChange={onOpenChange} className="space-y-3">
-          {g.guide.map((sec) => {
-            const Icon = sectionIcon(sec.key);
-            return (
-              <AccordionItem key={sec.key} id={`guide-${sec.key}`} value={sec.key} data-scroll-open={sec.key} className="card-soft scroll-mt-6 border-0 px-5">
-                <AccordionTrigger className="min-h-16 text-left font-display text-xl hover:no-underline">
-                  <span className="flex items-center gap-3">
-                    <Icon className="size-6 text-primary" aria-hidden />
-                    {sec.title}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-4 pb-5 text-base data-[state=closed]:animate-none">
-                  {sec.summary ? <ExpandableText text={sec.summary} className="text-lg" /> : null}
-                  {sec.steps.length ? (
-                    <ol className="space-y-4">
-                      {sec.steps.map((st, i) => (
-                        <li key={i} className="flex gap-4">
-                          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary font-semibold text-primary-foreground">{i + 1}</span>
-                          <div className="min-w-0 flex-1 space-y-2">
-                            {st.heading ? <p className="text-lg font-medium">{st.heading}</p> : null}
-                            {st.body ? <ExpandableText text={st.body} className="text-muted-foreground" /> : null}
-                            {st.imageUrl ? (
-                              <img src={st.imageUrl} alt={gcopy.photoAlt(st.heading || sec.title)} loading="lazy" className="max-h-80 w-full rounded-2xl object-cover" />
-                            ) : null}
-                  <GuideAttachments items={(sec as { attachments?: Attachment[] }).attachments} />
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : null}
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
-        </Accordion>
+        <GuideSections sections={g.guide as never} open={open} onOpenChange={onOpenChange} active={active} />
         <p className="text-center text-sm text-muted-foreground">{rcopy.footer}</p>
       </main>
     </GuestFrame>

@@ -32,7 +32,10 @@ export type StayAccess = {
 export const DEFAULT_REVIEW_TEXT =
   "Enjoyed your stay? A quick review means the world to a small place like ours: it helps us stay in business and helps other guests find us.";
 
-export const DEFAULT_STAY_MESSAGE = "We hope your stay has been comfortable so far. If anything would make it better, just send us a message.";
+/** "Need something else?" on the guide: questions the guide doesn't answer (feedback has its own card). */
+export const DEFAULT_STAY_MESSAGE = "Anything you'd like to ask that isn't covered in this guide? Send us a message and we'll get back to you.";
+/** The earlier default, which read like feedback: replaced wherever it was kept unchanged. */
+const OLD_STAY_MESSAGE = "We hope your stay has been comfortable so far. If anything would make it better, just send us a message.";
 
 export const DEFAULT_STAY_ACCESS: StayAccess = {
   roomQrEarly: false,
@@ -50,7 +53,7 @@ export function normaliseStayAccess(raw: unknown): StayAccess {
   return {
     roomQrEarly: r["roomQrEarly"] === true,
     presence: r["presence"] === "network" ? "network" : "network_or_location",
-    stayMessage: clean(r["stayMessage"]) || DEFAULT_STAY_MESSAGE,
+    stayMessage: (clean(r["stayMessage"]) !== OLD_STAY_MESSAGE && clean(r["stayMessage"])) || DEFAULT_STAY_MESSAGE,
     wifiAfterCheckIn: r["wifiAfterCheckIn"] === true,
     askReview: r["askReview"] === true,
     reviewText: clean(r["reviewText"]) || DEFAULT_REVIEW_TEXT,

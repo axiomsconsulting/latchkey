@@ -253,7 +253,7 @@ export function StayExtras({ token }: { token: string }) {
         }}
       />
 
-      <div className="grid gap-3 pb-24 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {regular.map((it) => {
           const l = lineOf(it.key);
           const qty = l?.qty ?? 0;

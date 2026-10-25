@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
-import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
-import { CalendarX, Check, KeyRound, Loader2, MessageCircle, Moon, X } from "lucide-react";
+import { CalendarX, Check, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, KeyRound, Loader2, MessageCircle, Moon, Sun } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { GuideSections } from "@/components/guest/GuideSections";
+import { getStayWeather } from "@/lib/weather.functions";
+import { describeWeather, type WeatherIcon } from "@/lib/weather";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
@@ -11,7 +14,7 @@ import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { StayExtras } from "@/components/guest/StayExtras";
 import { StayInbox, openStayInbox } from "@/components/guest/StayInbox";
-import { GuideTiles, StayCover, StayHelp, StaySummary } from "@/components/guest/StayHero";
+import { GuideTiles, StayCover, StaySummary } from "@/components/guest/StayHero";
 import { shownTiles } from "@/lib/guide-tiles";
 import { cn } from "@/lib/utils";
 import { StayInvoice } from "@/components/guest/StayInvoice";
@@ -19,7 +22,6 @@ import { StayReview } from "@/components/guest/StayReview";
 import { StayAgain } from "@/components/guest/StayAgain";
 import { StayServices } from "@/components/guest/StayServices";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { sectionIcon } from "@/components/guest/guide-icons";
 import { guideCopy as gcopy, guest as copy, stayHeroCopy } from "@/content/copy";
 import { getStay, startCheckInFromStay } from "@/lib/checkin.functions";
@@ -88,8 +90,8 @@ function jumpTo(id: string) {
 function StayPage({ s, token, theme }: { s: StayData; token: string; theme: StayData["theme"] }) {
   const p = s.property;
   const [open, setOpen] = useState<string[]>([s.guide[0]?.key ?? ""]);
-  // Sections open as the guest scrolls to them, and fold again once read.
-  const onOpenChange = useScrollOpen(open, setOpen);
+  // The section in the middle of the screen is open and highlighted, either way the guest scrolls.
+  const { onOpenChange, active } = useScrollOpen(open, setOpen);
   // Quick ways in, in the theme's icon style: the host's chosen tiles, or Wi-Fi, the first guide sections, extras and messages.
   const tiles = shownTiles(
     s.tiles.tiles,
@@ -104,12 +106,24 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           <div className="min-w-0">
             {theme.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{theme.eyebrow}</p> : null}
             <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
-            <p className="mt-2 text-lg text-muted-foreground">
-              {s.room ? copy.roomLine(s.room.display_name, s.room.public_title) : p?.name}
-            </p>
-            <StayProgressLine s={s} />
+            {/* Today, where they are: the date and the weather. */}
+            <StayToday token={token} timeZone={p?.timezone ?? "Europe/London"} />
           </div>
           <StayInbox token={token} />
+        </div>
+
+        {/* Their stay (which night it is) and their room, straight under the welcome. */}
+        <div id="stay-times" className="scroll-mt-6">
+          <StaySummary
+            theme={theme}
+            checkInDate={s.checkInDate}
+            checkInTime={s.checkInTime}
+            checkOutDate={s.checkOutDate}
+            checkOutTime={s.checkOutTime}
+            wifi={null}
+            room={s.room ? { name: s.room.display_name, title: s.room.public_title } : null}
+            progress={s.progress}
+          />
         </div>
 
         {/* The last day: a gentle ask for a review, where they booked (or here, for a direct stay). */}
@@ -133,20 +147,6 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
 
         {/* The cover photo with the extras invitation, the stay at a glance, and help: in every template's own look. */}
         <StayCover theme={theme} name={p?.name ?? ""} photo={s.roomPhoto} extras={!s.readOnly} onExtras={() => jumpTo("stay-extras")} />
-        <div id="stay-times" className="scroll-mt-6">
-        <StaySummary
-          theme={theme}
-          checkInDate={s.checkInDate}
-          checkInTime={s.checkInTime}
-          checkOutDate={s.checkOutDate}
-          checkOutTime={s.checkOutTime}
-          wifi={null}
-          room={s.room ? { name: s.room.display_name, title: s.room.public_title } : null}
-        />
-        </div>
-        {s.readOnly ? null : <StayHelp theme={theme} onMessage={openStayInbox} />}
-
-
         <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">
           <h2 id="forget" className="text-xl">{gcopy.forgetTitle}</h2>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -179,48 +179,18 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
 
         {s.wifi ? <WifiCard id="stay-wifi" wifi={s.wifi} profileUrl={`/api/public/wifi/stay/${token}`} checkInHref={`/kiosk/${p?.short_code ?? ""}?guest=1`} /> : null}
 
-        <Accordion type="multiple" value={open} onValueChange={onOpenChange} className="space-y-3">
-          {s.guide.map((sec) => {
-            const Icon = sectionIcon(sec.key);
-            return (
-              <AccordionItem key={sec.key} id={`guide-${sec.key}`} value={sec.key} data-scroll-open={sec.key} className="card-soft scroll-mt-6 border-0 px-5">
-                <AccordionTrigger className="min-h-16 text-left font-display text-xl hover:no-underline">
-                  <span className="flex items-center gap-3">
-                    <Icon className="size-6 text-primary" aria-hidden />
-                    {sec.title}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-4 pb-5 text-base data-[state=closed]:animate-none">
-                  {sec.summary === "DOOR_LOCKED" ? (
-                    <p className="text-lg">{gcopy.doorLocked(new Intl.DateTimeFormat("en-GB", { timeZone: p?.timezone ?? "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(s.doorOpensAt)))}</p>
-                  ) : sec.summary ? <ExpandableText text={sec.summary} className="text-lg" /> : null}
-                  {sec.steps.length ? (
-                    <ol className="space-y-4">
-                      {sec.steps.map((st, i) => (
-                        <li key={i} className="flex gap-4">
-                          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary font-semibold text-primary-foreground">{i + 1}</span>
-                          <div className="min-w-0 flex-1 space-y-2">
-                            {st.heading ? <p className="text-lg font-medium">{st.heading}</p> : null}
-                            {st.body ? <ExpandableText text={st.body} className="text-muted-foreground" /> : null}
-                            {st.imageUrl ? (
-                              <img src={st.imageUrl} alt={gcopy.photoAlt(st.heading || sec.title)} loading="lazy" className="max-h-80 w-full rounded-2xl object-cover" />
-                            ) : null}
-                  <GuideAttachments items={(sec as { attachments?: Attachment[] }).attachments} />
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  ) : null}
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
-        </Accordion>
+        <GuideSections
+          sections={s.guide as never}
+          open={open}
+          onOpenChange={onOpenChange}
+          active={active}
+          lockedText={gcopy.doorLocked(new Intl.DateTimeFormat("en-GB", { timeZone: p?.timezone ?? "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(s.doorOpensAt)))}
+        />
 
         {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><div id="stay-extras" className="scroll-mt-6"><StayExtras token={token} /></div><StayServices token={token} /></>)}
         <StayInvoice token={token} place={p?.name ?? ""} />
-        {/* The host's own words during the stay, with a way to reply, just before "How was your stay?". */}
-        {!s.readOnly && (s.progress.phase === "during" || s.progress.phase === "leaving") ? <HostNote text={s.stayMessage} /> : null}
+        {/* The second of the guide's two ways to message (the first is at the top): anything not covered here, before the feedback. */}
+        {s.readOnly ? null : <NeedSomethingElse text={s.stayMessage} />}
         {/* A direct guest asked on the last day reviews there; otherwise the private note to the host stays here. */}
         {s.review?.direct && reviewDay(s.progress.phase) ? null : <StayReview token={token} />}
         {s.readOnly ? null : <StayAgain token={token} />}
@@ -230,28 +200,15 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   );
 }
 
-/** Their dates and nights, and from the second day where they are in the stay with the host's message. */
-function StayProgressLine({ s }: { s: StayData }) {
-  const pr = s.progress;
-  const line =
-    pr.phase === "before" ? pcopy.before(pr.nights) : pr.phase === "arrival" ? pcopy.arrival(pr.nights) : pr.phase === "during" ? pcopy.during(pr.night, pr.nights, pr.left) : pr.phase === "leaving" ? pcopy.leaving : null;
+/** "Need something else?": a question that isn't answered in the guide, straight to the host. */
+function NeedSomethingElse({ text }: { text: string }) {
   return (
-    <div className="mt-3 space-y-1">
-      <p className="flex flex-wrap items-center gap-x-2 text-base">
-        <Moon className="size-4 text-accent" aria-hidden />
-        <span className="font-medium">{pcopy.dates(formatUkDate(s.checkInDate), formatUkDate(s.checkOutDate))}</span>
-        {line ? <span className="text-muted-foreground">· {line}</span> : null}
-      </p>
-    </div>
-  );
-}
-
-/** The host's message from the second day, with a button to reply (the stay's own messages). */
-function HostNote({ text }: { text: string }) {
-  return (
-    <section className="card-soft flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
-      <p className="min-w-0 flex-1 text-lg">{text}</p>
-      <Button variant="outline" onClick={openStayInbox} className="shrink-0">
+    <section aria-labelledby="need-else" className="card-soft flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <h2 id="need-else" className="text-xl">{pcopy.needElse}</h2>
+        <p className="text-muted-foreground">{text}</p>
+      </div>
+      <Button onClick={openStayInbox} className="shrink-0">
         <MessageCircle /> {pcopy.messageUs}
       </Button>
     </section>
@@ -260,30 +217,13 @@ function HostNote({ text }: { text: string }) {
 
 /**
  * Until their check-in (and in the UK the guest register) is done, even when
- * the host has marked the stay as checked in: a banner along the bottom of
- * the screen, by name, that slides away while they scroll and comes back
- * when they stop. "Finish checking in" opens check-in on their phone already
- * at "Is this you?". The cross hides it until the guide is opened again.
+ * the host has marked the stay as checked in: a banner by name along the
+ * bottom of the screen, always there until it's done. "Finish now" opens
+ * check-in on their phone already at "Is this you?".
  */
 function CheckInNudge({ token, firstName }: { token: string; firstName: string | null }) {
   const start = useServerFn(startCheckInFromStay);
-  const [hidden, setHidden] = useState(false);
-  const [scrolling, setScrolling] = useState(false);
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    let timer = 0;
-    const onScroll = () => {
-      setScrolling(true);
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => setScrolling(false), 700);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.clearTimeout(timer);
-    };
-  }, []);
-  if (hidden) return null;
   async function go() {
     setBusy(true);
     try {
@@ -298,10 +238,7 @@ function CheckInNudge({ token, firstName }: { token: string; firstName: string |
     <div
       role="region"
       aria-label={pcopy.nudgeTitle(firstName)}
-      className={cn(
-        "fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-primary/30 bg-surface p-3 shadow-lg transition-all duration-300",
-        scrolling ? "pointer-events-none translate-y-[150%] opacity-0" : "translate-y-0 opacity-100",
-      )}
+      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-primary/30 bg-surface p-3 shadow-lg"
     >
       <KeyRound className="size-6 shrink-0 text-primary" aria-hidden />
       <span className="min-w-0 flex-1">
@@ -311,9 +248,41 @@ function CheckInNudge({ token, firstName }: { token: string; firstName: string |
       <Button onClick={() => void go()} disabled={busy} className="shrink-0">
         {busy ? <Loader2 className="animate-spin" /> : null} {pcopy.nudgeCta}
       </Button>
-      <button type="button" onClick={() => setHidden(true)} aria-label={pcopy.nudgeLater} className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary">
-        <X className="size-4" />
-      </button>
     </div>
   );
 }
+
+/** Under the welcome: today's day and date where they're staying, and the weather there now. */
+function StayToday({ token, timeZone }: { token: string; timeZone: string }) {
+  const fetchWeather = useServerFn(getStayWeather);
+  const q = useQuery({ queryKey: ["stay-weather", token], queryFn: () => fetchWeather({ data: { token } }), staleTime: 15 * 60_000 });
+  const [today, setToday] = useState<string | null>(null);
+  useEffect(() => setToday(new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "long", day: "numeric", month: "long" }).format(new Date())), [timeZone]);
+  const w = q.data;
+  const d = w ? describeWeather(w.code, w.isDay) : null;
+  const Icon = d ? WEATHER_ICONS[d.icon] : null;
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-lg text-muted-foreground">
+      <span className="text-foreground">{today ?? "\u00a0"}</span>
+      {w && d && Icon ? (
+        <span className="flex items-center gap-1.5">
+          <Icon className="size-5 text-accent" aria-hidden />
+          <span>{pcopy.weather(w.temp, d.label, w.high, w.low)}</span>
+        </span>
+      ) : null}
+    </p>
+  );
+}
+
+const WEATHER_ICONS: Record<WeatherIcon, typeof Sun> = {
+  sun: Sun,
+  moon: Moon,
+  "cloud-sun": CloudSun,
+  "cloud-moon": CloudMoon,
+  cloud: Cloud,
+  fog: CloudFog,
+  drizzle: CloudDrizzle,
+  rain: CloudRain,
+  snow: CloudSnow,
+  storm: CloudLightning,
+};

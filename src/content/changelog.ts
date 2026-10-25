@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.74.0",
+    date: "2026-10-25",
+    title: "A calmer stay guide",
+    items: [
+      { kind: "improved", area: "Guest guide", text: "Under the guest's welcome: today's day and date where they're staying, and the weather there now (free weather data, no AI credits). Their stay (\"Night 2 of 3 · 1 night to go\") and their room sit straight underneath." },
+      { kind: "improved", area: "Guest guide", text: "The guide follows the guest as they scroll, either way: the section in the middle of the screen is open and highlighted, and the page never jumps. Every section shows its top line even when folded, and the text is the same size as the extras list." },
+      { kind: "improved", area: "Guest guide", text: "Two ways to message you, no more: the inbox at the top, and \"Need something else?\" for questions the guide doesn't answer, just before the feedback. Your text for it is in Settings → Guests." },
+      { kind: "improved", area: "Guest guide", text: "\"Finish checking in\" stays on screen until check-in is done." },
+      { kind: "fixed", area: "Guest guide", text: "No more large gap between the extras and \"Need something?\"." },
+    ],
+  },
+  {
     version: "0.73.0",
     date: "2026-10-25",
     title: "Finish checking in, and come back direct",

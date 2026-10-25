@@ -9,6 +9,8 @@ import { stayHeroCopy as copy } from "@/content/copy";
 import { formatUkDate, nightsBetween } from "@/lib/dates";
 import { luminance, type ThemeConfig } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { stayProgressCopy as pcopy } from "@/content/copy";
+import type { StayProgress } from "@/lib/stay-access";
 import { coverFor } from "@/lib/theme-covers";
 import { tilesPerRow, type GuideTile, type ShownTile } from "@/lib/guide-tiles";
 
@@ -104,6 +106,7 @@ export function StaySummary({
   checkOutTime,
   wifi,
   room,
+  progress,
 }: {
   theme: ThemeConfig;
   checkInDate: string;
@@ -112,6 +115,8 @@ export function StaySummary({
   checkOutTime: string;
   wifi: string | null;
   room: { name: string; title: string | null } | null;
+  /** Where they are in the stay: "Night 2 of 3 · 2 nights to go" instead of the count. */
+  progress?: StayProgress;
 }) {
   const nights = nightsBetween(checkInDate, checkOutDate);
   const pill = [copy.inFrom(checkInTime), copy.outBy(checkOutTime, formatUkDate(checkOutDate)), wifi ? copy.wifi(wifi) : null].filter(Boolean) as string[];
@@ -135,7 +140,7 @@ export function StaySummary({
             <p className="text-lg">
               {formatUkDate(checkInDate)} – {formatUkDate(checkOutDate, { withYear: true })}
             </p>
-            <p className="text-sm text-muted-foreground">{copy.nights(nights)}</p>
+            <p className="text-sm text-muted-foreground">{progress ? progressLine(progress) : copy.nights(nights)}</p>
           </div>
         </div>
         {room ? (
@@ -153,20 +158,11 @@ export function StaySummary({
   );
 }
 
-/** "Need something?": straight to a message to the host. */
-export function StayHelp({ theme, onMessage }: { theme: ThemeConfig; onMessage: () => void }) {
-  return (
-    <section className="card-soft flex flex-wrap items-center gap-4 p-5">
-      <ThemeIcon theme={theme} icon="message-circle" className={theme.iconFrame === "none" ? "size-9" : undefined} />
-      <div className="min-w-[12rem] flex-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent">{copy.helpEyebrow}</p>
-        <p>{copy.helpBody}</p>
-      </div>
-      <Button size="lg" className="h-12 w-full sm:w-auto" onClick={onMessage}>
-        {copy.helpCta}
-      </Button>
-    </section>
-  );
+/** The stay's night, in guest words. */
+function progressLine(p: StayProgress): string {
+  if (p.phase === "during" || p.phase === "arrival") return pcopy.during(p.night, p.nights, p.left);
+  if (p.phase === "leaving") return pcopy.leaving;
+  return pcopy.before(p.nights);
 }
 
 /**

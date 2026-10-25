@@ -7,6 +7,8 @@ describe("stay access", () => {
     const s = normaliseStayAccess({ roomQrEarly: true, presence: "network", stayMessage: "  Hope all's <well>  ", wifiAfterCheckIn: true, askReview: true, reviewText: " Please review ", showDirectReviews: true });
     expect(s).toEqual({ roomQrEarly: true, presence: "network", stayMessage: "Hope all's well", wifiAfterCheckIn: true, askReview: true, reviewText: "Please review", showDirectReviews: true });
     expect(normaliseStayAccess({ reviewText: "  " }).reviewText).toBe(DEFAULT_REVIEW_TEXT);
+    // The old default read like feedback: it becomes the new "anything else?" wording.
+    expect(normaliseStayAccess({ stayMessage: "We hope your stay has been comfortable so far. If anything would make it better, just send us a message." }).stayMessage).toBe(DEFAULT_STAY_MESSAGE);
   });
   it("turns scores into stars and picks the review day", () => {
     expect([1, 2, 5, 9, 10].map(starsOf)).toEqual([1, 1, 3, 5, 5]);
