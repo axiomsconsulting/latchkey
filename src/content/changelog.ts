@@ -32,7 +32,7 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
-    version: "0.77.0",
+    version: "0.78.0",
     date: "2026-10-25",
     title: "Faint background photos and a clearer kiosk welcome",
     items: [
