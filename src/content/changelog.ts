@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.73.0",
+    date: "2026-10-25",
+    title: "Finish checking in, and come back direct",
+    items: [
+      { kind: "fixed", area: "Check-in", text: "A stay you marked as checked in still asks the guest for their guest register details: their check-in now asks who's staying and fills in the register instead of skipping straight to the end." },
+      { kind: "new", area: "Guest guide", text: "Until a guest's check-in and register details are done (even if you marked them as checked in), a banner by name along the bottom of their guide asks them to finish. It slides away while they scroll and comes back when they stop, and opens check-in on their phone already at \"Is this you?\"." },
+      { kind: "improved", area: "Guest guide", text: "The kiosk's welcome line no longer shows under the guest's name. Your message from the second day sits just before \"How was your stay?\", with a Message us button." },
+      { kind: "improved", area: "Guest guide", text: "\"Stay with us again\" is now an invitation to book direct next time, leading with your best offer running now (or the next one coming up), or your non-refundable saving, with a Book direct button. Hearing about offers stays a separate, optional choice." },
+      { kind: "new", area: "Guest guide", text: "Guide sections open by themselves as the guest scrolls down to them, and fold again once read, without the page jumping. Anything the guest opens or closes by hand stays as they left it." },
+    ],
+  },
+  {
     version: "0.72.0",
     date: "2026-10-25",
     title: "Review nudges and home page pictures",

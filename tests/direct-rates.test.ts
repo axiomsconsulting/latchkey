@@ -55,3 +55,15 @@ describe("direct booking rates", () => {
     expect(money(1_200_000, "JPY")).toBe("JP¥12,000");
   });
 });
+
+describe("the offer to mention when inviting guests back", () => {
+  it("prefers the best running offer, then the next one soon", async () => {
+    const { offerToMention } = await import("../src/lib/direct-rates");
+    const o = (id: string, from: string, to: string, percent: number, roomIds: string[] | null = null) => ({ id, label: id, from, to, percent, roomIds });
+    const offers = [o("a", "2026-10-01", "2026-11-30", 10), o("b", "2026-10-20", "2026-10-31", 15, ["r1"]), o("c", "2026-12-20", "2027-01-05", 20)];
+    expect(offerToMention(offers, "2026-10-25")).toMatchObject({ id: "b", running: true });
+    expect(offerToMention(offers, "2026-12-01")).toMatchObject({ id: "c", running: false });
+    expect(offerToMention(offers, "2027-02-01")).toBeNull();
+    expect(offerToMention([o("far", "2027-09-01", "2027-09-30", 30)], "2026-10-25")).toBeNull();
+  });
+});

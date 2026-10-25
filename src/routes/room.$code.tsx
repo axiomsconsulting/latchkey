@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { stayProgressCopy as pcopy } from "@/content/copy";
 import { readFix } from "@/lib/kiosk-presence";
 import { openRoomStay } from "@/lib/stay-access.functions";
+import { useScrollOpen } from "@/hooks/use-scroll-open";
 import { rebrand } from "@/lib/brand";
 
 /**
@@ -52,6 +53,8 @@ function RoomGuide() {
   const { code } = Route.useParams();
   const [stay, setStay] = useState<string | null>(null);
   const [open, setOpen] = useState<string[]>(() => (g.found && g.guide[0] ? [g.guide[0].key] : []));
+  // Sections open as the guest scrolls to them, and fold again once read.
+  const onOpenChange = useScrollOpen(open, setOpen);
   // Opening the guest's own guide from here (when the host allows it): trying, offering the location check, or not here.
   const [own, setOwn] = useState<"idle" | "trying" | "locate" | "locating" | "notHere">("idle");
   const tryOpen = useServerFn(openRoomStay);
@@ -184,18 +187,18 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        <Accordion type="multiple" value={open} onValueChange={setOpen} className="space-y-3">
+        <Accordion type="multiple" value={open} onValueChange={onOpenChange} className="space-y-3">
           {g.guide.map((sec) => {
             const Icon = sectionIcon(sec.key);
             return (
-              <AccordionItem key={sec.key} id={`guide-${sec.key}`} value={sec.key} className="card-soft scroll-mt-6 border-0 px-5">
+              <AccordionItem key={sec.key} id={`guide-${sec.key}`} value={sec.key} data-scroll-open={sec.key} className="card-soft scroll-mt-6 border-0 px-5">
                 <AccordionTrigger className="min-h-16 text-left font-display text-xl hover:no-underline">
                   <span className="flex items-center gap-3">
                     <Icon className="size-6 text-primary" aria-hidden />
                     {sec.title}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="space-y-4 pb-5 text-base">
+                <AccordionContent className="space-y-4 pb-5 text-base data-[state=closed]:animate-none">
                   {sec.summary ? <ExpandableText text={sec.summary} className="text-lg" /> : null}
                   {sec.steps.length ? (
                     <ol className="space-y-4">

@@ -480,6 +480,13 @@ async function sessionContext(t: string, opts: { join?: boolean; share?: boolean
   const register = registerApplies(p.country_code)
     ? !(await db.from("guest_register").select("id", { head: true }).limit(1)).error
     : false;
+  // Formalities are done when the guest finished a check-in before, or (in the UK) is already on the register.
+  // A stay the host simply marked as checked in still has them to do.
+  const [{ count: doneBefore }, { count: onRegister }] = await Promise.all([
+    db.from("checkin_sessions").select("id", { count: "exact", head: true }).eq("booking_id", b.id).not("completed_at", "is", null).neq("id", session.id),
+    register ? db.from("guest_register").select("id", { count: "exact", head: true }).eq("booking_id", b.id) : Promise.resolve({ count: 0 }),
+  ]);
+  const formalitiesDone = (doneBefore ?? 0) > 0 && (!register || (onRegister ?? 0) > 0);
   // AI ID reading can be switched off site-wide; demo mode and the tour never call it.
   const { hostModes } = await srv();
   const { jobAllowed } = await import("./usage.server");
@@ -493,6 +500,7 @@ async function sessionContext(t: string, opts: { join?: boolean; share?: boolean
     register,
     aiOff,
     join,
+    formalitiesDone,
   };
 }
 
@@ -509,7 +517,8 @@ function partyPlan(ctx: Ctx) {
   // Someone popping back to reread the rules isn't asked again, and nothing
   // new is asked until the database has the columns to keep the answers.
   // A guest's own phone that joined is still filling in, even once the lead has finished.
-  const finished = ctx.booking.status === "checked_in" && !ctx.join;
+  // Marked as checked in by the host isn't finished: the guest still gives their details for the register.
+  const finished = ctx.booking.status === "checked_in" && ctx.formalitiesDone && !ctx.join;
   const returning = finished || ctx.property.guest_records === undefined;
   // The register needs to know who's here, so it always asks in the UK.
   const register = ctx.register && !finished;
@@ -1335,7 +1344,7 @@ export const getStay = createServerFn({ method: "GET" })
     const [{ data: p }, { data: room }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("name, host_id, is_demo, short_code, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config")
+        .select("name, host_id, is_demo, short_code, timezone, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, country_code")
         .eq("id", b.property_id)
         .single(),
       b.room_id
@@ -1359,6 +1368,11 @@ export const getStay = createServerFn({ method: "GET" })
     const checkOutTime = (b.check_out_time ?? p?.default_check_out_time ?? "11:00").slice(0, 5);
     // Room QR and Wi-Fi settings (migration 0057): the room's own network, the password after check-in if the host asks.
     const checkedIn = b.status === "checked_in" || b.status === "checked_out";
+    // Still to do: check-in itself, or (in the UK) the guest register, even when the host has marked the stay as checked in.
+    const { count: onRegister, error: regError } = registerApplies((p as { country_code?: string | null } | null)?.country_code ?? null)
+      ? await db.from("guest_register").select("id", { count: "exact", head: true }).eq("booking_id", t.booking_id)
+      : { count: 1, error: null };
+    const registerMissing = !regError && (onRegister ?? 0) === 0;
     const { stayAccessFor, guestWifi } = await import("./stay-access.server");
     const { stayProgress } = await import("./stay-access");
     const access = await stayAccessFor(db as never, b.property_id);
@@ -1435,6 +1449,7 @@ export const getStay = createServerFn({ method: "GET" })
       room,
       wifi,
       checkedIn,
+      needsCheckIn: b.status !== "checked_out" && (!checkedIn || registerMissing),
       progress: stayProgress(b.check_in_date, b.check_out_date, today),
       stayMessage: access.stayMessage,
       // The last day's review nudge: the site they booked with (its logo and name), or here for direct stays.
@@ -1468,6 +1483,25 @@ export const getStay = createServerFn({ method: "GET" })
       tiles,
       roomPhoto: photo,
     };
+  });
+
+/**
+ * "Finish checking in" from the guest's own stay guide: a check-in for their
+ * stay, so the kiosk screen on their phone starts at "Is this you?" instead
+ * of finding the booking. They still confirm who they are as usual.
+ */
+export const startCheckInFromStay = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const { admin, sha256 } = await srv();
+    const db = await admin();
+    const { data: t } = await db.from("stay_tokens").select("booking_id, expires_at").eq("token_hash", sha256(data.token)).maybeSingle();
+    if (!t || Date.parse(t.expires_at) < Date.now()) throw new Error("This guide link has ended.");
+    const { data: b } = await db.from("bookings").select("id, property_id, status, properties(short_code)").eq("id", t.booking_id).maybeSingle();
+    if (!b || b.status === "cancelled") throw new Error("This stay can't be checked in.");
+    const code = (b as { properties?: { short_code: string } | null }).properties?.short_code;
+    if (!code) throw new Error("This stay can't be checked in.");
+    return { code, session: await startSession(b.property_id, b.id) };
   });
 
 /* ------------------------------- handover -------------------------------- */

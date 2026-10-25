@@ -262,9 +262,22 @@ export const getStayAgain = createServerFn({ method: "GET" })
     if (!b) return { found: false as const };
     const business = (b.properties?.hosts?.business_name as string | undefined) || (b.properties?.name as string);
     const { data: c, error } = await db.from("guest_contacts").select("withdraw_token").eq("booking_id", b.id).maybeSingle();
+    // What to tempt them back with: the best offer running now (or the next one soon), else the non-refundable saving.
+    const { withLegacy } = await import("./checkin.server");
+    const { data: prop } = await withLegacy<any>(
+      () => db.from("properties").select("timezone, direct_offers, direct_booking").eq("id", b.property_id).maybeSingle(),
+      () => db.from("properties").select("timezone").eq("id", b.property_id).maybeSingle(),
+    );
+    const { normaliseOffers, offerToMention } = await import("./direct-rates");
+    const { normaliseDirectBooking } = await import("./direct-booking");
+    const offer = offerToMention(normaliseOffers(prop?.direct_offers), todayIn(prop?.timezone ?? null));
+    const booking = normaliseDirectBooking(prop?.direct_booking);
     return {
       // Before migration 0043, no card.
       found: !error,
+      offer: offer ? { label: offer.label, percent: offer.percent, from: offer.from, to: offer.to, running: offer.running, someRooms: !!offer.roomIds } : null,
+      nonRef: booking.instant && booking.nonRef.enabled && booking.nonRef.kind === "percent" ? booking.nonRef.value : null,
+      canBook: booking.instant,
       business,
       shortCode: (b.properties?.short_code as string | null) ?? null,
       email: (b.guest_email as string | null) ?? "",

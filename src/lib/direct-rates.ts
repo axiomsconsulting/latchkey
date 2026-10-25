@@ -106,3 +106,17 @@ export function money(pence: number, currency: string): string {
   const digits = zero || pence % 100 === 0 ? 0 : 2;
   return new Intl.NumberFormat("en-GB", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(pence / 100);
 }
+
+/**
+ * The offer to mention when inviting a guest back to book direct: the best
+ * one running today (whole-property offers first), else the next one to
+ * start within six months; null when there's none.
+ */
+export function offerToMention(offers: SeasonalOffer[], today: string): (SeasonalOffer & { running: boolean }) | null {
+  const horizon = new Date(Date.parse(`${today}T00:00:00Z`) + 183 * 86_400_000).toISOString().slice(0, 10);
+  const rank = (o: SeasonalOffer) => o.percent + (o.roomIds ? 0 : 0.5);
+  const running = offers.filter((o) => o.from <= today && o.to >= today).sort((a, b) => rank(b) - rank(a))[0];
+  if (running) return { ...running, running: true };
+  const next = offers.filter((o) => o.from > today && o.from <= horizon).sort((a, b) => a.from.localeCompare(b.from) || rank(b) - rank(a))[0];
+  return next ? { ...next, running: false } : null;
+}
