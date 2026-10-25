@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.79.0",
+    date: "2026-10-25",
+    title: "Glass boxes on the home page",
+    items: [
+      { kind: "improved", area: "Website", admin: true, text: "The home page's boxes are frosted glass, like an iPhone: each keeps its own colour as a light tint and the photo behind shows through softly. Latchkey admin → Site settings → Home page pictures → Glass boxes sets how see-through, how blurred and how colourful, or turns it off for solid boxes, with a preview." },
+    ],
+  },
+  {
     version: "0.78.0",
     date: "2026-10-25",
     title: "Faint background photos and a clearer kiosk welcome",

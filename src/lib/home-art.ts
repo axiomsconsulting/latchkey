@@ -99,13 +99,46 @@ export function normaliseHomeArtStyle(raw: unknown): HomeArtStyle {
   };
 }
 
-/** What's stored (a list from older saves, or { items, style }) → the pictures and how they look. */
-export function normaliseHomeArtConfig(raw: unknown): { items: HomeArtItem[]; style: HomeArtStyle } {
+/**
+ * The home page's boxes as frosted glass, iOS style: each keeps its own
+ * colour as a light tint, lets the photo behind show through blurred, with
+ * a bright edge. Off = solid boxes as before.
+ */
+export type HomeGlass = {
+  on: boolean;
+  /** How see-through a box is: 0 (solid) to 0.85. */
+  clear: number;
+  /** Blur of what's behind, in pixels: 0 to 40. */
+  blur: number;
+  /** Colour boost of what's behind: 1 (none) to 2. */
+  saturate: number;
+};
+
+export const DEFAULT_HOME_GLASS: HomeGlass = { on: true, clear: 0.4, blur: 18, saturate: 1.6 };
+
+export function normaliseHomeGlass(raw: unknown): HomeGlass {
+  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
+  const d = DEFAULT_HOME_GLASS;
+  return {
+    on: typeof r["on"] === "boolean" ? r["on"] : d.on,
+    clear: clamp(r["clear"], 0, 0.85, d.clear),
+    blur: Math.round(clamp(r["blur"], 0, 40, d.blur)),
+    saturate: clamp(r["saturate"], 1, 2, d.saturate),
+  };
+}
+
+/** The CSS variables the home page's glass rule reads (styles.css, [data-home-glass]). */
+export function glassVars(g: HomeGlass): Record<string, string> {
+  return { "--glass-fill": `${Math.round((1 - g.clear) * 100)}%`, "--glass-blur": `${g.blur}px`, "--glass-sat": String(g.saturate) };
+}
+
+/** What's stored (a list from older saves, or { items, style, glass }) → the pictures, how faint they are, and the glass. */
+export function normaliseHomeArtConfig(raw: unknown): { items: HomeArtItem[]; style: HomeArtStyle; glass: HomeGlass } {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     const r = raw as Record<string, unknown>;
-    return { items: normaliseHomeArt(r["items"] ?? null), style: normaliseHomeArtStyle(r["style"]) };
+    return { items: normaliseHomeArt(r["items"] ?? null), style: normaliseHomeArtStyle(r["style"]), glass: normaliseHomeGlass(r["glass"]) };
   }
-  return { items: normaliseHomeArt(raw), style: DEFAULT_HOME_ART_STYLE };
+  return { items: normaliseHomeArt(raw), style: DEFAULT_HOME_ART_STYLE, glass: DEFAULT_HOME_GLASS };
 }
 
 /** The pictures for one place on the page; the headline takes only one. */

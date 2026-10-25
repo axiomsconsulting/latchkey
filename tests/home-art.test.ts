@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { artFor, DEFAULT_HOME_ART, DEFAULT_HOME_ART_STYLE, normaliseHomeArt, normaliseHomeArtConfig, normaliseHomeArtStyle } from "@/lib/home-art";
+import { artFor, DEFAULT_HOME_GLASS, glassVars, normaliseHomeGlass, DEFAULT_HOME_ART, DEFAULT_HOME_ART_STYLE, normaliseHomeArt, normaliseHomeArtConfig, normaliseHomeArtStyle } from "@/lib/home-art";
 
 describe("home page pictures", () => {
   it("uses the defaults until the admin saves a list (an empty list means none)", () => {
@@ -29,6 +29,12 @@ describe("home page pictures", () => {
     expect(both.items[0]!.slot).toBe("why");
     expect(both.style.opacity).toBe(0.1);
     expect(normaliseHomeArt({ items: [] })).toEqual([]);
+  });
+  it("reads the glass settings and turns them into CSS variables", () => {
+    expect(normaliseHomeGlass(null)).toEqual(DEFAULT_HOME_GLASS);
+    expect(normaliseHomeGlass({ on: false, clear: 2, blur: 99.4, saturate: 0 })).toEqual({ on: false, clear: 0.85, blur: 40, saturate: 1 });
+    expect(glassVars({ on: true, clear: 0.4, blur: 18, saturate: 1.6 })).toEqual({ "--glass-fill": "60%", "--glass-blur": "18px", "--glass-sat": "1.6" });
+    expect(normaliseHomeArtConfig({ items: [], glass: { on: false } }).glass.on).toBe(false);
   });
   it("shows one picture in each place", () => {
     const many = normaliseHomeArt(Array.from({ length: 4 }, () => ({ src: "/home/guest-house.jpg", slot: "hero" })));

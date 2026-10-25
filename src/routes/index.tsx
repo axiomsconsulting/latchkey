@@ -9,7 +9,8 @@ import { OfferRibbon, PricingSection } from "@/components/PricingSection";
 import { sessionUtm, type Utm } from "@/lib/attribution";
 import { LegalLinks } from "@/components/LegalPage";
 import { HomeArt } from "@/components/HomeArt";
-import { HOME_ART_SLOTS, type HomeArtSlot } from "@/lib/home-art";
+import { DEFAULT_HOME_GLASS, glassVars, HOME_ART_SLOTS, type HomeArtSlot } from "@/lib/home-art";
+import { useSite } from "@/hooks/use-site";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkspace } from "@/lib/host.functions";
@@ -56,6 +57,8 @@ function Landing() {
   // The session's utm_* on the demo and trial links, read after hydration.
   const [utm, setUtm] = useState<Utm>({});
   useEffect(() => setUtm(sessionUtm()), []);
+  // The boxes as frosted glass over the background photos, as the Latchkey admin set it.
+  const glass = useSite()?.homeGlass ?? DEFAULT_HOME_GLASS;
 
   // Hosts and managers who are signed in go straight to their dashboard.
   useEffect(() => {
@@ -77,7 +80,8 @@ function Landing() {
   }, [home, navigate]);
   return (
     // isolate: the home page's background photos sit behind everything; overflow-x-clip: their full width never scrolls sideways.
-    <div className="isolate min-h-screen overflow-x-clip bg-background">
+    // data-home-glass: the boxes as frosted glass over the photos (Latchkey admin's choice; styles.css).
+    <div className="isolate min-h-screen overflow-x-clip bg-background" data-home-glass={glass.on ? "on" : "off"} style={glassVars(glass) as React.CSSProperties}>
       <SiteHeader />
 
       <main className="mx-auto max-w-6xl px-5 pb-24">

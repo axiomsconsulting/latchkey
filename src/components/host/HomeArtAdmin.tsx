@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { common, homeArtCopy as copy } from "@/content/copy";
-import { DEFAULT_HOME_ART, DEFAULT_HOME_ART_STYLE, HOME_ART_LIBRARY, HOME_ART_SLOTS, MAX_HOME_ART, type HomeArtItem, type HomeArtSlot, type HomeArtStyle } from "@/lib/home-art";
+import { DEFAULT_HOME_ART, DEFAULT_HOME_ART_STYLE, DEFAULT_HOME_GLASS, glassVars, HOME_ART_LIBRARY, HOME_ART_SLOTS, MAX_HOME_ART, type HomeArtItem, type HomeArtSlot, type HomeArtStyle, type HomeGlass } from "@/lib/home-art";
 import { getHomeArtSettings, saveHomeArt, uploadHomeArt } from "@/lib/site.functions";
 
 /**
@@ -33,6 +33,8 @@ export function HomeArtAdmin() {
   const [items, setItems] = useState<HomeArtItem[]>([]);
   // How faint every photo is: transparency, dimming, tint and greyness (one setting for the whole page).
   const [style, setStyle] = useState<HomeArtStyle>(DEFAULT_HOME_ART_STYLE);
+  // The home page's boxes as frosted glass (or solid).
+  const [glass, setGlass] = useState<HomeGlass>(DEFAULT_HOME_GLASS);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const file = useRef<HTMLInputElement | null>(null);
@@ -40,6 +42,7 @@ export function HomeArtAdmin() {
     if (q.data) {
       setItems(q.data.items);
       setStyle(q.data.style);
+      setGlass(q.data.glass);
     }
   }, [q.data]);
 
@@ -53,7 +56,7 @@ export function HomeArtAdmin() {
   async function save(list: HomeArtItem[] | null) {
     setBusy(true);
     try {
-      await saveFn({ data: { items: list, style } });
+      await saveFn({ data: { items: list, style, glass } });
       await qc.invalidateQueries({ queryKey: ["home-art"] });
       await router.invalidate();
       toast.success(copy.saved);
@@ -90,7 +93,7 @@ export function HomeArtAdmin() {
           <h3 className="text-lg">{copy.title}</h3>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
-        {d.available ? <SaveButton dirty={changed(items, d.items) || changed(style, d.style)} busy={busy} onClick={() => void save(items)} /> : null}
+        {d.available ? <SaveButton dirty={changed(items, d.items) || changed(style, d.style) || changed(glass, d.glass)} busy={busy} onClick={() => void save(items)} /> : null}
       </div>
       {!d.available ? <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p> : null}
 
@@ -124,12 +127,41 @@ export function HomeArtAdmin() {
           </div>
           <button type="button" className="text-xs text-primary hover:underline" onClick={() => setStyle(DEFAULT_HOME_ART_STYLE)}>{copy.lookReset}</button>
         </div>
-        <div className="relative isolate overflow-hidden rounded-xl border border-border bg-background p-5">
+        <div className="relative isolate overflow-hidden rounded-xl border border-border bg-background p-5" data-home-glass={glass.on ? "on" : "off"} style={glassVars(glass) as React.CSSProperties}>
           <ArtBackdrop item={items[0] ?? DEFAULT_HOME_ART[0]!} style={style} contained />
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">{copy.previewEyebrow}</p>
           <p className="mt-1 font-display text-2xl leading-tight">{copy.previewTitle}</p>
           <p className="mt-2 text-sm text-muted-foreground">{copy.previewBody}</p>
+          {/* A box as it looks on the home page, glass or solid. */}
+          <div className="card-soft mt-4 p-4 text-sm">{copy.previewBox}</div>
         </div>
+      </div>
+
+      {/* The boxes on the home page as frosted glass, iOS style; off = solid. */}
+      <div className="space-y-3 rounded-xl border border-border p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span>
+            <span className="block font-medium">{copy.glassTitle}</span>
+            <span className="block text-xs text-muted-foreground">{copy.glassBody}</span>
+          </span>
+          <Switch checked={glass.on} onCheckedChange={(v) => setGlass({ ...glass, on: v })} aria-label={copy.glassTitle} />
+        </div>
+        {glass.on ? (
+          <>
+            {([
+              ["clear", copy.glassClear, 0, 85, 1, (v: number) => `${v}%`, 100],
+              ["blur", copy.glassBlur, 0, 40, 1, (v: number) => `${v}px`, 1],
+              ["saturate", copy.glassSaturate, 100, 200, 5, (v: number) => `${v}%`, 100],
+            ] as const).map(([key, label, lo, hi, step, show, scale]) => (
+              <label key={key} className="flex items-center gap-2">
+                <span className="w-28 shrink-0 text-xs text-muted-foreground">{label}</span>
+                <input type="range" min={lo} max={hi} step={step} value={Math.round(glass[key] * scale)} onChange={(e) => setGlass({ ...glass, [key]: Number(e.target.value) / scale })} className="flex-1 accent-primary" aria-label={label} />
+                <span className="w-12 text-right text-xs tabular-nums">{show(Math.round(glass[key] * scale))}</span>
+              </label>
+            ))}
+            <button type="button" className="text-xs text-primary hover:underline" onClick={() => setGlass(DEFAULT_HOME_GLASS)}>{copy.lookReset}</button>
+          </>
+        ) : null}
       </div>
 
       {items.length ? (
