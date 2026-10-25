@@ -74,7 +74,7 @@ function RoomQrCards() {
   if (board.isLoading || q.isLoading) return <Skeleton className="mx-auto h-[600px] w-full max-w-md rounded-2xl" />;
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4">
+    <div className="mx-auto w-full max-w-2xl space-y-4 print:max-w-none print:space-y-0">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Button asChild variant="ghost">
           <Link to="/app/guides">
@@ -97,7 +97,7 @@ function RoomQrCards() {
       {!q.data?.available ? <p className="card-soft p-5">{copy.notReady}</p> : null}
       {q.data?.available && !rooms.length ? <p className="card-soft p-5">{copy.none}</p> : null}
       {rooms.map((r) => (
-        <div key={r.id} className="space-y-2">
+        <div key={r.id} className="print-sheet-wrap space-y-2 print:space-y-0">
           <RoomCard place={property?.name ?? ""} name={r.name} code={r.code!} text={shown} />
           <NewWords roomId={r.id} name={r.name} propertyId={propertyId} />
         </div>
@@ -114,17 +114,17 @@ function RoomCard({ place, name, code, text }: { place: string; name: string; co
   }, [url]);
   return (
     // Always on white paper, whatever the dashboard's theme.
-    <article className="mx-auto flex aspect-[148/210] w-full max-w-md break-after-page flex-col items-center justify-between rounded-2xl border border-neutral-200 bg-white p-8 text-center text-neutral-900 shadow-sm print:rounded-none print:border-0 print:shadow-none">
+    <article className="print-sheet mx-auto flex aspect-[148/210] w-full max-w-md flex-col items-center justify-between rounded-2xl border border-neutral-200 bg-white p-8 text-center text-neutral-900 shadow-sm print:p-16">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-700">{place}</p>
-        <h1 className="mt-2 text-3xl text-neutral-900">{name}</h1>
-        <p className="mt-2 text-lg text-neutral-600">{copy.headline}</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-700 print:text-lg">{place}</p>
+        <h1 className="mt-2 text-3xl text-neutral-900 print:text-5xl">{name}</h1>
+        <p className="mt-2 text-lg text-neutral-600 print:text-2xl">{copy.headline}</p>
       </div>
-      {qr ? <img src={qr} alt={copy.qrAlt(name)} className="w-3/4" /> : <Skeleton className="aspect-square w-3/4" />}
+      {qr ? <img src={qr} alt={copy.qrAlt(name)} className="w-3/4 print:w-[60%]" /> : <Skeleton className="aspect-square w-3/4" />}
       <div className="space-y-1">
-        <p className="text-sm text-neutral-600">{text}</p>
+        <p className="text-sm text-neutral-600 print:text-lg">{text}</p>
         {/* Three words anyone can type if the camera won't scan. */}
-        <p className="text-sm font-medium text-neutral-800">{url.replace(/^https?:\/\//, "")}</p>
+        <p className="text-sm font-medium text-neutral-800 print:text-xl">{url.replace(/^https?:\/\//, "")}</p>
       </div>
     </article>
   );

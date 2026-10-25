@@ -273,13 +273,16 @@ export function HostShell() {
       <main
         data-host-main
         className={cn(
-          "px-4 py-6 pb-32 transition-[margin,padding] duration-300 ease-out sm:px-6 md:pb-10",
+          // On paper: none of the dashboard's spacing around what's printed.
+          "px-4 py-6 pb-32 transition-[margin,padding] duration-300 ease-out sm:px-6 md:pb-10 print:!m-0 print:!p-0",
           navMode === "full" ? "md:ml-72 md:py-10" : navMode === "rail" ? "md:ml-28 md:py-10" : "md:pb-10 md:pt-32",
         )}
       >
-        <ShellBanners />
-        <TrialBanner />
-        <SetPasswordPrompt />
+        <div className="print:hidden">
+          <ShellBanners />
+          <TrialBanner />
+          <SetPasswordPrompt />
+        </div>
         <AccessGate>
           <Outlet />
         </AccessGate>

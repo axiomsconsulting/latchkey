@@ -34,7 +34,7 @@ function PrintCard() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4">
+    <div className="mx-auto w-full max-w-2xl space-y-4 print:max-w-none print:space-y-0">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Button asChild variant="ghost">
           <Link to="/app/properties">
@@ -46,18 +46,19 @@ function PrintCard() {
         </Button>
       </div>
 
-      <article className="card-soft mx-auto flex aspect-[148/210] w-full max-w-md flex-col items-center justify-between p-8 text-center print:shadow-none">
+      {/* White on screen and paper; on paper it fills one A4 page (print-sheet in styles.css). */}
+      <article className="print-sheet mx-auto flex aspect-[148/210] w-full max-w-md flex-col items-center justify-between rounded-2xl border border-neutral-200 bg-white p-8 text-center text-neutral-900 shadow-sm print:p-16">
         <div>
-          <h1 className="text-3xl">{property.name}</h1>
-          <p className="mt-2 text-lg text-muted-foreground">{copy.cardHeadline}</p>
+          <h1 className="text-3xl text-neutral-900 print:text-5xl">{property.name}</h1>
+          <p className="mt-2 text-lg text-neutral-600 print:text-2xl">{copy.cardHeadline}</p>
         </div>
-        {qr ? <img src={qr} alt={copy.qrAlt} className="w-3/4" /> : <Skeleton className="aspect-square w-3/4" />}
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{copy.cardOrVisit}</p>
-          <p className="font-medium">{url.replace(/^https?:\/\//, "")}</p>
+        {qr ? <img src={qr} alt={copy.qrAlt} className="w-3/4 print:w-[60%]" /> : <Skeleton className="aspect-square w-3/4" />}
+        <div className="space-y-1 print:space-y-2">
+          <p className="text-sm text-neutral-600 print:text-lg">{copy.cardOrVisit}</p>
+          <p className="font-medium text-neutral-900 print:text-xl">{url.replace(/^https?:\/\//, "")}</p>
           {property.check_in_pin ? (
-            <p className="text-sm text-muted-foreground">
-              {copy.cardPin} <span className="font-mono text-base font-semibold text-foreground">{property.check_in_pin}</span>
+            <p className="text-sm text-neutral-600 print:text-lg">
+              {copy.cardPin} <span className="font-mono text-base font-semibold text-neutral-900 print:text-2xl">{property.check_in_pin}</span>
             </p>
           ) : null}
         </div>

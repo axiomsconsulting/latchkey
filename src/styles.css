@@ -502,11 +502,35 @@ html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] [
   height: auto;
 }
 
-/* Printing (room QR cards, invoices): white paper, whatever the theme. */
+/* Printing (room QR cards, the check-in card, invoices): white paper, whatever the theme. */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
   html,
   body,
   [data-host-main] {
     background: #fff !important;
+  }
+  /* "At least a screen tall" means a whole extra page on paper. */
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+  /* A sheet fills one page exactly; several sheets go one to a page with no blank page after the last. */
+  .print-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    height: 270mm !important;
+    aspect-ratio: auto !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    break-inside: avoid;
+  }
+  .print-sheet-wrap:not(:last-child) {
+    break-after: page;
   }
 }
