@@ -15,6 +15,7 @@ import { LaunchFunnel } from "@/components/host/LaunchFunnel";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { PlatformStripeAdmin } from "@/components/host/PlatformStripeAdmin";
 import { LegalAdmin } from "@/components/host/LegalAdmin";
+import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
@@ -144,6 +145,7 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="settings" className="mt-4 space-y-6">
           <BrandAdmin />
+          <HomeArtAdmin />
           <LegalAdmin />
           <SiteSettings />
           <DomainsAdmin />

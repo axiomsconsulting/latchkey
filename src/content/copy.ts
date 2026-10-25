@@ -2077,6 +2077,39 @@ export const roomWifiCopy = branded({
   password: "Password",
 });
 
+/** Latchkey admin → Site settings → Home page pictures. */
+export const homeArtCopy = branded({
+  title: "Home page pictures",
+  body: "Light illustrations of guests arriving and hosts welcoming them. The headline's picture sits beside the words under it from laptop width up; the others sit in the margin beside a section on very wide screens only, so none is ever behind text. Phones show none.",
+  notReady: "Home page pictures can be changed once the latest database update (migration 0058) is applied. Until then the defaults show.",
+  where: "Where",
+  side: "Side",
+  right: "Right",
+  left: "Left",
+  strength: "Strength",
+  alt: "Description",
+  altPlaceholder: "What it shows (for your own reference)",
+  remove: "Remove this picture",
+  none: "No pictures: the home page shows text only.",
+  addTitle: "Add a picture",
+  upload: "Upload your own",
+  uploadHint: "PNG, WebP or SVG with a transparent background, under 2 MB. Latchkey's own set is from unDraw (free to use, no credit needed), in Latchkey's colours.",
+  reset: "Back to Latchkey's pictures",
+  saved: "Home page pictures saved.",
+  slots: {
+    hero: "Beside the headline",
+    benefits: "By: three outcomes",
+    audience: "By: who it's for",
+    journey: "By: the guest journey",
+    pillars: "By: four pillars",
+    beforeAfter: "By: before and after",
+    pricing: "By: pricing",
+    why: "By: booking sites vs Latchkey",
+    next: "By: on the way",
+    developers: "By: developers",
+  } as Record<string, string>,
+});
+
 /** Finding tradespeople for property work. */
 export const trades = branded({
   tabLabel: "Local tradespeople",

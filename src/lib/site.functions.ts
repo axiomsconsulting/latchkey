@@ -9,17 +9,20 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normaliseBrand, type Brand } from "@/lib/brand";
 import { normaliseUi, type UiConfig } from "@/lib/ui-config";
+import { normaliseHomeArt, type HomeArtItem } from "@/lib/home-art";
 import { missingLegal, normaliseLegal } from "@/lib/legal";
 
-export type SiteContext = { brand: Brand; tenant: { name: string; shortCode: string | null } | null; ui: UiConfig };
+export type SiteContext = { brand: Brand; tenant: { name: string; shortCode: string | null } | null; ui: UiConfig; homeArt: HomeArtItem[] };
 
 export const getSiteContext = createServerFn({ method: "GET" }).handler(async (): Promise<SiteContext> => {
-  const { currentSite, platformBrand, platformUi } = await import("./brand.server");
+  const { currentSite, platformBrand, platformUi, platformHomeArt } = await import("./brand.server");
   const site = currentSite();
   return {
     brand: site?.brand ?? (await platformBrand()),
     tenant: site?.tenant ? { name: site.tenant.name, shortCode: site.tenant.shortCode } : null,
     ui: normaliseUi(await platformUi()),
+    // A host's own domain shows their property page, never Latchkey's home pictures.
+    homeArt: site?.tenant ? [] : normaliseHomeArt(await platformHomeArt()),
   };
 });
 
@@ -195,4 +198,53 @@ export const saveLegalSettings = createServerFn({ method: "POST" })
     const { error } = await (context.supabase as unknown as Loose).from("site_settings").update({ legal, updated_at: new Date().toISOString() }).eq("id", 1);
     if (error) throw new Error(/legal/.test(error.message) ? "Legal details can be saved once the latest database update (0054) is applied." : error.message);
     return { ok: true, legal };
+  });
+
+/* ---------------------------- home page pictures ---------------------------- */
+
+/** Super admin: the home page's pictures as stored (null = the defaults). */
+export const getHomeArtSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin as unknown as Loose).from("site_settings").select("home_art").eq("id", 1).maybeSingle();
+    return { available: !error, items: normaliseHomeArt(error ? null : (data?.home_art ?? null)), custom: !error && Array.isArray(data?.home_art) };
+  });
+
+/** Super admin: save the list, or null to go back to the defaults. */
+export const saveHomeArt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ items: z.array(z.record(z.string(), z.unknown())).max(20).nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const home_art = data.items === null ? null : normaliseHomeArt(data.items);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as unknown as Loose).from("site_settings").update({ home_art, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (error) throw new Error(/home_art/.test(error.message) ? "Home page pictures need the latest database update (migration 0058)." : error.message);
+    const { forgetBrand } = await import("./brand.server");
+    forgetBrand();
+    return { ok: true };
+  });
+
+/** Super admin: upload a picture for the home page (PNG, WebP or SVG with a transparent background, under 2 MB). */
+export const uploadHomeArt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ filename: z.string().max(120), dataUrl: z.string().max(2_800_000) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(data.dataUrl);
+    if (!m) throw new Error("That file couldn't be read.");
+    const ext = data.filename.split(".").pop()?.toLowerCase() ?? "";
+    if (!["png", "webp", "svg"].includes(ext)) throw new Error("Please upload a PNG, WebP or SVG with a transparent background.");
+    const bytes = Buffer.from(m[2]!, "base64");
+    if (bytes.length > 2 * 1024 * 1024) throw new Error("Pictures must be under 2 MB.");
+    const contentType = ext === "svg" ? "image/svg+xml" : `image/${ext}`;
+    const path = `site/home-${Date.now()}.${ext}`;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const up = await supabaseAdmin.storage.from("branding").upload(path, bytes, { contentType, upsert: true });
+    if (up.error) throw new Error(up.error.message);
+    const signed = await supabaseAdmin.storage.from("branding").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    if (signed.error) throw new Error(signed.error.message);
+    return { url: signed.data.signedUrl };
   });

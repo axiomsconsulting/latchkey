@@ -14,6 +14,7 @@ export function PageSections({
   children,
   only,
   anchors = false,
+  decorate,
 }: {
   page: string;
   children: ReactNode;
@@ -21,6 +22,8 @@ export function PageSections({
   only?: (id: string) => boolean;
   /** Give each block an anchor (#section-<id>) that links can land on. */
   anchors?: boolean;
+  /** Something drawn around a block (the home page's pictures in the margins). */
+  decorate?: (id: string) => ReactNode;
 }) {
   const ui = useUi();
   const items = Children.toArray(children).filter((c): c is ReactElement<{ id: string }> => isValidElement(c) && typeof (c.props as { id?: unknown }).id === "string");
@@ -29,7 +32,12 @@ export function PageSections({
   return (
     <>
       {ids.map((id) =>
-        anchors ? (
+        decorate ? (
+          <div key={id} className="relative">
+            {decorate(id)}
+            {byId.get(id)}
+          </div>
+        ) : anchors ? (
           <div key={id} id={`section-${id}`} className="scroll-mt-24 empty:hidden">
             {byId.get(id)}
           </div>

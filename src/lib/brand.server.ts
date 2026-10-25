@@ -23,6 +23,21 @@ async function db(): Promise<Loose> {
 const TTL = 60_000;
 let platformCache: { at: number; brand: Brand } | null = null;
 let uiCache: { at: number; ui: unknown } | null = null;
+let artCache: { at: number; art: unknown } | null = null;
+
+/** The home page's pictures (site_settings.home_art, migration 0058; null = defaults), re-read at most once a minute. */
+export async function platformHomeArt(): Promise<unknown> {
+  if (artCache && Date.now() - artCache.at < TTL) return artCache.art;
+  let art: unknown = null;
+  try {
+    const { data, error } = await (await db()).from("site_settings").select("home_art").eq("id", 1).maybeSingle();
+    if (!error) art = data?.home_art ?? null;
+  } catch {
+    art = null;
+  }
+  artCache = { at: Date.now(), art };
+  return art;
+}
 
 /** The super admin's menu and page layouts (site_settings.ui), re-read at most once a minute. */
 export async function platformUi(): Promise<unknown> {
@@ -57,6 +72,7 @@ export async function platformBrand(): Promise<Brand> {
 export function forgetBrand() {
   platformCache = null;
   uiCache = null;
+  artCache = null;
   tenantCache.clear();
 }
 
