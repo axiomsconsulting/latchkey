@@ -6,19 +6,22 @@ import { ImagePlus, Loader2, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SaveButton, changed } from "@/components/host/SaveButton";
+import { ArtBackdrop } from "@/components/HomeArt";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { common, homeArtCopy as copy } from "@/content/copy";
-import { DEFAULT_HOME_ART, HOME_ART_LIBRARY, HOME_ART_SLOTS, MAX_HOME_ART, type HomeArtItem, type HomeArtSlot } from "@/lib/home-art";
+import { DEFAULT_HOME_ART, DEFAULT_HOME_ART_STYLE, HOME_ART_LIBRARY, HOME_ART_SLOTS, MAX_HOME_ART, type HomeArtItem, type HomeArtSlot, type HomeArtStyle } from "@/lib/home-art";
 import { getHomeArtSettings, saveHomeArt, uploadHomeArt } from "@/lib/site.functions";
 
 /**
  * Latchkey admin → Site settings → Home page pictures: which illustrations
  * show on the home page, where (beside the headline, or in the margin by a
- * section), on which side and how strongly. Add from Latchkey's set or
- * upload a transparent PNG, WebP or SVG; remove; or go back to the defaults.
+ * section), which side of the photo to keep in view, and how faint all of
+ * them are (transparency, dimming, tint colour and greyness, previewed live).
+ * Add from Latchkey's set or upload a photo; remove; or go back to the defaults.
  */
 export function HomeArtAdmin() {
   const fetchFn = useServerFn(getHomeArtSettings);
@@ -28,11 +31,16 @@ export function HomeArtAdmin() {
   const router = useRouter();
   const q = useQuery({ queryKey: ["home-art"], queryFn: () => fetchFn() });
   const [items, setItems] = useState<HomeArtItem[]>([]);
+  // How faint every photo is: transparency, dimming, tint and greyness (one setting for the whole page).
+  const [style, setStyle] = useState<HomeArtStyle>(DEFAULT_HOME_ART_STYLE);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const file = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
-    if (q.data) setItems(q.data.items);
+    if (q.data) {
+      setItems(q.data.items);
+      setStyle(q.data.style);
+    }
   }, [q.data]);
 
   if (q.isLoading || !q.data) return <Skeleton className="h-64 rounded-2xl" />;
@@ -45,7 +53,7 @@ export function HomeArtAdmin() {
   async function save(list: HomeArtItem[] | null) {
     setBusy(true);
     try {
-      await saveFn({ data: { items: list } });
+      await saveFn({ data: { items: list, style } });
       await qc.invalidateQueries({ queryKey: ["home-art"] });
       await router.invalidate();
       toast.success(copy.saved);
@@ -82,9 +90,47 @@ export function HomeArtAdmin() {
           <h3 className="text-lg">{copy.title}</h3>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
-        {d.available ? <SaveButton dirty={changed(items, d.items)} busy={busy} onClick={() => void save(items)} /> : null}
+        {d.available ? <SaveButton dirty={changed(items, d.items) || changed(style, d.style)} busy={busy} onClick={() => void save(items)} /> : null}
       </div>
       {!d.available ? <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p> : null}
+
+      {/* How faint the photos are, with a live preview over sample words. */}
+      <div className="grid gap-4 rounded-xl border border-border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-3 text-sm">
+          <p className="font-medium">{copy.lookTitle}</p>
+          {([
+            ["opacity", copy.transparency, 5, 60],
+            ["dim", copy.dimming, 0, 90],
+            ["grey", copy.greyness, 0, 100],
+          ] as const).map(([key, label, lo, hi]) => (
+            <label key={key} className="flex items-center gap-2">
+              <span className="w-28 shrink-0 text-xs text-muted-foreground">{label}</span>
+              <input type="range" min={lo} max={hi} step={1} value={Math.round(style[key] * 100)} onChange={(e) => setStyle({ ...style, [key]: Number(e.target.value) / 100 })} className="flex-1 accent-primary" aria-label={label} />
+              <span className="w-10 text-right text-xs tabular-nums">{Math.round(style[key] * 100)}%</span>
+            </label>
+          ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-28 shrink-0 text-xs text-muted-foreground">{copy.tint}</span>
+            <label className="flex items-center gap-2 text-xs">
+              <Switch checked={style.tint !== null} onCheckedChange={(v) => setStyle({ ...style, tint: v ? (DEFAULT_HOME_ART_STYLE.tint ?? "#183b2b") : null })} aria-label={copy.tint} />
+            </label>
+            {style.tint ? (
+              <>
+                <input type="color" value={style.tint} onChange={(e) => setStyle({ ...style, tint: e.target.value })} className="h-8 w-10 cursor-pointer rounded border border-input bg-surface" aria-label={copy.tintColour} />
+                <input type="range" min={0} max={100} step={1} value={Math.round(style.tintStrength * 100)} onChange={(e) => setStyle({ ...style, tintStrength: Number(e.target.value) / 100 })} className="min-w-24 flex-1 accent-primary" aria-label={copy.tintStrength} />
+                <span className="w-10 text-right text-xs tabular-nums">{Math.round(style.tintStrength * 100)}%</span>
+              </>
+            ) : null}
+          </div>
+          <button type="button" className="text-xs text-primary hover:underline" onClick={() => setStyle(DEFAULT_HOME_ART_STYLE)}>{copy.lookReset}</button>
+        </div>
+        <div className="relative isolate overflow-hidden rounded-xl border border-border bg-background p-5">
+          <ArtBackdrop item={items[0] ?? DEFAULT_HOME_ART[0]!} style={style} contained />
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">{copy.previewEyebrow}</p>
+          <p className="mt-1 font-display text-2xl leading-tight">{copy.previewTitle}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{copy.previewBody}</p>
+        </div>
+      </div>
 
       {items.length ? (
         <ul className="grid gap-3 md:grid-cols-2">

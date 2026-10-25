@@ -1,10 +1,11 @@
 /**
  * The pictures on the home page (site_settings.home_art, migration 0058;
- * null = Latchkey's defaults). Light, transparent-background illustrations
- * of guests arriving and hosts welcoming them: the main one beside the
- * headline from laptop width up, the rest in the side margins next to a
- * section on very wide screens only, never behind text. The super admin
- * adds, removes and moves them in Latchkey admin → Site settings. Pure.
+ * null = Latchkey's defaults): photos of guests arriving and hosts
+ * welcoming them, each one a full-width background behind the headline or
+ * a section, made faint so the words stay easy to read. How faint is the
+ * super admin's choice (HomeArtStyle): transparency, a wash of the page's
+ * own colour (dimming), a colour tint and how grey. Stored as a list (older
+ * saves) or { items, style }. Pure.
  */
 
 export const HOME_ART_SLOTS = ["hero", "benefits", "audience", "journey", "pillars", "beforeAfter", "pricing", "why", "next", "developers"] as const;
@@ -47,6 +48,7 @@ export const isPhoto = (src: string) => !/\.svg$/i.test(src);
 
 /** Stored value → the pictures to show; null or anything unreadable means the defaults. */
 export function normaliseHomeArt(raw: unknown): HomeArtItem[] {
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && "items" in raw) return normaliseHomeArt((raw as { items: unknown }).items);
   if (!Array.isArray(raw)) return DEFAULT_HOME_ART;
   const out: HomeArtItem[] = [];
   for (const r of raw) {
@@ -68,8 +70,47 @@ export function normaliseHomeArt(raw: unknown): HomeArtItem[] {
   return out;
 }
 
+export type HomeArtStyle = {
+  /** How much of the photo shows through: 0.05 (barely) to 0.6. */
+  opacity: number;
+  /** A wash of the page's own colour over the photo: 0 to 0.9. */
+  dim: number;
+  /** A colour laid over the photo (hex), or null for its own colours. */
+  tint: string | null;
+  /** How strongly the tint colours the photo: 0 to 1. */
+  tintStrength: number;
+  /** How much colour is taken out: 0 (full colour) to 1 (black and white). */
+  grey: number;
+};
+
+export const DEFAULT_HOME_ART_STYLE: HomeArtStyle = { opacity: 0.22, dim: 0.35, tint: "#183b2b", tintStrength: 0.3, grey: 0.4 };
+
+const clamp = (v: unknown, lo: number, hi: number, fb: number) => (typeof v === "number" && Number.isFinite(v) ? Math.round(Math.min(hi, Math.max(lo, v)) * 100) / 100 : fb);
+
+export function normaliseHomeArtStyle(raw: unknown): HomeArtStyle {
+  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
+  const d = DEFAULT_HOME_ART_STYLE;
+  return {
+    opacity: clamp(r["opacity"], 0.05, 0.6, d.opacity),
+    dim: clamp(r["dim"], 0, 0.9, d.dim),
+    tint: r["tint"] === null ? null : typeof r["tint"] === "string" && /^#[0-9a-f]{6}$/i.test(r["tint"]) ? r["tint"].toLowerCase() : d.tint,
+    tintStrength: clamp(r["tintStrength"], 0, 1, d.tintStrength),
+    grey: clamp(r["grey"], 0, 1, d.grey),
+  };
+}
+
+/** What's stored (a list from older saves, or { items, style }) → the pictures and how they look. */
+export function normaliseHomeArtConfig(raw: unknown): { items: HomeArtItem[]; style: HomeArtStyle } {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const r = raw as Record<string, unknown>;
+    return { items: normaliseHomeArt(r["items"] ?? null), style: normaliseHomeArtStyle(r["style"]) };
+  }
+  return { items: normaliseHomeArt(raw), style: DEFAULT_HOME_ART_STYLE };
+}
+
 /** The pictures for one place on the page; the headline takes only one. */
 export function artFor(items: HomeArtItem[], slot: HomeArtSlot): HomeArtItem[] {
   const here = items.filter((i) => i.slot === slot);
-  return slot === "hero" ? here.slice(0, 1) : here.slice(0, 2);
+  // Each picture is a background: one per place.
+  return here.slice(0, 1);
 }

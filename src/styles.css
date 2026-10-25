@@ -534,3 +534,26 @@ html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] [
     break-after: page;
   }
 }
+
+/* A gentle "tap me": a slight swell, then a few seconds' rest. */
+@keyframes nudge-pulse {
+  0%,
+  24%,
+  100% {
+    transform: scale(1);
+  }
+  8% {
+    transform: scale(1.05);
+  }
+  16% {
+    transform: scale(0.99);
+  }
+}
+.nudge-pulse {
+  animation: nudge-pulse 4.5s ease-in-out 1.5s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nudge-pulse {
+    animation: none;
+  }
+}

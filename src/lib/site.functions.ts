@@ -9,10 +9,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normaliseBrand, type Brand } from "@/lib/brand";
 import { normaliseUi, type UiConfig } from "@/lib/ui-config";
-import { normaliseHomeArt, type HomeArtItem } from "@/lib/home-art";
+import { normaliseHomeArtConfig, type HomeArtItem, type HomeArtStyle } from "@/lib/home-art";
 import { missingLegal, normaliseLegal } from "@/lib/legal";
 
-export type SiteContext = { brand: Brand; tenant: { name: string; shortCode: string | null } | null; ui: UiConfig; homeArt: HomeArtItem[] };
+export type SiteContext = { brand: Brand; tenant: { name: string; shortCode: string | null } | null; ui: UiConfig; homeArt: HomeArtItem[]; homeArtStyle: HomeArtStyle };
 
 export const getSiteContext = createServerFn({ method: "GET" }).handler(async (): Promise<SiteContext> => {
   const { currentSite, platformBrand, platformUi, platformHomeArt } = await import("./brand.server");
@@ -22,7 +22,10 @@ export const getSiteContext = createServerFn({ method: "GET" }).handler(async ()
     tenant: site?.tenant ? { name: site.tenant.name, shortCode: site.tenant.shortCode } : null,
     ui: normaliseUi(await platformUi()),
     // A host's own domain shows their property page, never Latchkey's home pictures.
-    homeArt: site?.tenant ? [] : normaliseHomeArt(await platformHomeArt()),
+    ...(await (async () => {
+      const cfg = normaliseHomeArtConfig(site?.tenant ? [] : await platformHomeArt());
+      return { homeArt: cfg.items, homeArtStyle: cfg.style };
+    })()),
   };
 });
 
@@ -209,16 +212,19 @@ export const getHomeArtSettings = createServerFn({ method: "GET" })
     await requireSuperAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await (supabaseAdmin as unknown as Loose).from("site_settings").select("home_art").eq("id", 1).maybeSingle();
-    return { available: !error, items: normaliseHomeArt(error ? null : (data?.home_art ?? null)), custom: !error && Array.isArray(data?.home_art) };
+    const cfg = normaliseHomeArtConfig(error ? null : (data?.home_art ?? null));
+    return { available: !error, items: cfg.items, style: cfg.style, custom: !error && data?.home_art != null };
   });
 
-/** Super admin: save the list, or null to go back to the defaults. */
+/** Super admin: save the pictures and how faint they are, or null to go back to Latchkey's defaults. */
 export const saveHomeArt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ items: z.array(z.record(z.string(), z.unknown())).max(20).nullable() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ items: z.array(z.record(z.string(), z.unknown())).max(20).nullable(), style: z.record(z.string(), z.unknown()).optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
-    const home_art = data.items === null ? null : normaliseHomeArt(data.items);
+    const home_art = data.items === null ? null : normaliseHomeArtConfig({ items: data.items, style: data.style ?? {} });
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await (supabaseAdmin as unknown as Loose).from("site_settings").update({ home_art, updated_at: new Date().toISOString() }).eq("id", 1);
     if (error) throw new Error(/home_art/.test(error.message) ? "Home page pictures need the latest database update (migration 0058)." : error.message);

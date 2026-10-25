@@ -76,17 +76,17 @@ function Landing() {
     };
   }, [home, navigate]);
   return (
-    <div className="min-h-screen bg-background">
+    // isolate: the home page's background photos sit behind everything; overflow-x-clip: their full width never scrolls sideways.
+    <div className="isolate min-h-screen overflow-x-clip bg-background">
       <SiteHeader />
 
       <main className="mx-auto max-w-6xl px-5 pb-24">
         {/* Above the fold: what it does, for whom, and the two ways in. Nothing else. */}
-        <section className="pb-14 pt-8 sm:pb-20 sm:pt-14">
+        <section className="relative pb-14 pt-8 sm:pb-20 sm:pt-14">
+          {/* The super admin's photo, faint, behind the headline (Latchkey admin → Site settings → Home page pictures). */}
+          <HomeArt slot="hero" />
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">{brand.tagline}</p>
           <h1 className="mt-4 max-w-4xl text-balance text-4xl leading-[1.05] sm:text-6xl lg:text-7xl">{marketing.headline}</h1>
-          {/* Below the headline: the words and ways in, with the super admin's picture beside them (never behind text). */}
-          <div className="lg:flex lg:items-end lg:gap-8">
-          <div className="min-w-0 flex-1">
           <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">{marketing.subhead}</p>
           {/* See it first: the guest journey, then the host's side; the trial for anyone ready. */}
           <div className="mt-9 flex flex-wrap gap-3">
@@ -112,9 +112,6 @@ function Landing() {
             <ChannelBadge channel="homestay" />
             <ChannelBadge channel="direct" />
             <span className="text-sm text-muted-foreground">{marketing.trustTail}</span>
-          </div>
-          </div>
-          <HomeArt slot="hero" />
           </div>
         </section>
 

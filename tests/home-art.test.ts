@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { artFor, DEFAULT_HOME_ART, normaliseHomeArt } from "@/lib/home-art";
+import { artFor, DEFAULT_HOME_ART, DEFAULT_HOME_ART_STYLE, normaliseHomeArt, normaliseHomeArtConfig, normaliseHomeArtStyle } from "@/lib/home-art";
 
 describe("home page pictures", () => {
   it("uses the defaults until the admin saves a list (an empty list means none)", () => {
@@ -20,7 +20,17 @@ describe("home page pictures", () => {
       { id: "a2", src: "https://cdn.example.com/a.png", alt: "", slot: "hero", side: "right", opacity: 0.1 },
     ]);
   });
-  it("shows one picture by the headline and up to two by a section", () => {
+  it("reads the faintness settings, and older saved lists", () => {
+    expect(normaliseHomeArtStyle({ opacity: 2, dim: -1, tint: "#AABBCC", tintStrength: 0.5, grey: 0.25 })).toEqual({ opacity: 0.6, dim: 0, tint: "#aabbcc", tintStrength: 0.5, grey: 0.25 });
+    expect(normaliseHomeArtStyle({ tint: null }).tint).toBeNull();
+    expect(normaliseHomeArtStyle({ tint: "red" }).tint).toBe(DEFAULT_HOME_ART_STYLE.tint);
+    expect(normaliseHomeArtConfig([]).style).toEqual(DEFAULT_HOME_ART_STYLE);
+    const both = normaliseHomeArtConfig({ items: [{ src: "/home/guest-house.jpg", slot: "why" }], style: { opacity: 0.1 } });
+    expect(both.items[0]!.slot).toBe("why");
+    expect(both.style.opacity).toBe(0.1);
+    expect(normaliseHomeArt({ items: [] })).toEqual([]);
+  });
+  it("shows one picture in each place", () => {
     const many = normaliseHomeArt(Array.from({ length: 4 }, () => ({ src: "/home/guest-house.jpg", slot: "hero" })));
     expect(artFor(many, "hero")).toHaveLength(1);
     expect(artFor(DEFAULT_HOME_ART, "journey")).toHaveLength(1);

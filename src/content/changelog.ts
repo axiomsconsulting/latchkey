@@ -34,6 +34,15 @@ export const RELEASES: Release[] = branded([
   {
     version: "0.77.0",
     date: "2026-10-25",
+    title: "Faint background photos and a clearer kiosk welcome",
+    items: [
+      { kind: "improved", area: "Website", admin: true, text: "Home page photos are now faint full-width backgrounds behind the headline and sections, on every screen size. Latchkey admin → Site settings → Home page pictures sets how faint they are (photo strength, dimming, a colour tint and its strength, less colour), with a live preview." },
+      { kind: "fixed", area: "Check-in", text: "The kiosk welcome's button now shows \"Tap here to check in\" on every tablet (older tablet browsers showed it as a blank white pill) and pulses gently every few seconds to catch the eye." },
+    ],
+  },
+  {
+    version: "0.77.0",
+    date: "2026-10-25",
     title: "Photos of real arrivals on the home page",
     items: [
       { kind: "improved", area: "Website", text: "The home page now shows photos of happy guests checking in, arriving and settling in, instead of drawings, framed beside the headline and by the sections they relate to." },
