@@ -120,7 +120,7 @@ export const omniSearch = createServerFn({ method: "GET" })
       seen.add(k);
       hits.push({ kind: "guide", id: k, title: s.heading || g.title || g.section_key, subtitle: (s.body ?? "").slice(0, 80), href: guideHref(g.section_key, g.room_id), propertyId: g.property_id });
     }
-    for (const x of extras) hits.push({ kind: "extra", id: x.id, title: x.name, subtitle: nameOf.get(x.property_id) ?? "", href: "/app/settings?focus=extras", propertyId: x.property_id });
+    for (const x of extras) hits.push({ kind: "extra", id: x.id, title: x.name, subtitle: nameOf.get(x.property_id) ?? "", href: "/app/properties?tab=extras", propertyId: x.property_id });
     for (const j of jobs) hits.push({ kind: "job", id: j.id, title: j.title, subtitle: j.status.replace(/_/g, " "), href: `/app/services?job=${j.id}`, ...(j.property_id ? { propertyId: j.property_id } : {}) });
     for (const t of trades) hits.push({ kind: "trade", id: t.id, title: t.name, subtitle: [t.company_name, t.category].filter(Boolean).join(" · "), href: "/app/services?tab=trades" });
     for (const l of links) hits.push({ kind: "connection", id: l.id, title: l.listing_name || l.channel, subtitle: `${l.channel} · ${nameOf.get(l.property_id) ?? ""}`, href: `/app/connections?link=${l.id}`, propertyId: l.property_id });

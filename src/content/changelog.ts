@@ -32,6 +32,17 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.75.0",
+    date: "2026-10-25",
+    title: "Early check-in and late check-out, done properly",
+    items: [
+      { kind: "new", area: "Settings", text: "Early check-in and late check-out (Properties → Extras): sell extra time in blocks of 1, 2 or 3 hours at your price a block, up to your latest check-out or back to your earliest check-in. Guests are only offered times that leave your buffer free before the next guest arrives in the room (their own early check-in included) or after the last one leaves." },
+      { kind: "new", area: "Bookings", text: "Approved or paid early check-ins and late check-outs move the stay's own times, so the guest's guide, Today, Bookings, Housekeeping and the next guest's choices all follow. Change a time on a stay yourself and the guest is told in their messages, with a warning if it eats into your buffer." },
+      { kind: "improved", area: "Settings", text: "Extras has its own tab in Properties. Settings has clearer tabs: Business, Check-in and records, Room QR and Wi-Fi, Reviews, Payments (with tax, bank details and away), Look, and Alerts and apps (now with Airbnb and Booking.com messages and booking sites)." },
+      { kind: "fixed", area: "Guest guide", text: "\"Finish now\" no longer keeps spinning when a guest goes back without finishing check-in." },
+    ],
+  },
+  {
     version: "0.74.0",
     date: "2026-10-25",
     title: "A calmer stay guide",

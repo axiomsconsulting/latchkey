@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
 import { CalendarX, Check, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, KeyRound, Loader2, MessageCircle, Moon, Sun } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -223,7 +223,33 @@ function NeedSomethingElse({ text }: { text: string }) {
  */
 function CheckInNudge({ token, firstName }: { token: string; firstName: string | null }) {
   const start = useServerFn(startCheckInFromStay);
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // Back from check-in without finishing (the browser restores this page as it was): stop spinning and look again.
+  useEffect(() => {
+    const back = () => {
+      setBusy(false);
+      void router.invalidate();
+    };
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) back();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") setBusy(false);
+    };
+    window.addEventListener("pageshow", onShow);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("pageshow", onShow);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [router]);
+  // Never spin for ever: if check-in hasn't opened after a while, the button works again.
+  useEffect(() => {
+    if (!busy) return;
+    const t = window.setTimeout(() => setBusy(false), 20_000);
+    return () => window.clearTimeout(t);
+  }, [busy]);
   async function go() {
     setBusy(true);
     try {

@@ -209,7 +209,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "stayAccess", label: "Room QR codes and Wi-Fi" },
       { id: "reviews", label: "Reviews" },
       { id: "privacy", label: "Privacy" },
-      { id: "extras", label: "Extras price list" },
+      { id: "money", label: "Tax, bank details and away" },
       { id: "payments", label: "Card payments" },
       { id: "invoices", label: "Invoices" },
       { id: "theme", label: "Look and feel" },

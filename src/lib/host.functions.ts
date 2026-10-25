@@ -537,8 +537,48 @@ export const saveBooking = createServerFn({ method: "POST" })
       () => supabase.from("bookings").update({ ...fields, manual_fields: Array.from(manual) }).eq("id", id).select("*").single(),
     );
     if (error) throw new Error(error.message);
-    return row;
+    const timeWarning = await afterTimeChange(supabase, existing as never, row as never);
+    return { ...row, timeWarning };
   });
+
+/**
+ * The host moved a stay's check-in or check-out time (an early check-in or
+ * late check-out of their own): the guest is told in their messages, and the
+ * host is warned if it leaves less than their buffer next to another stay in
+ * the room. The timelines, housekeeping and the next guest's choices follow
+ * from the stay's times by themselves.
+ */
+async function afterTimeChange(
+  db: any,
+  before: { check_in_time: string | null; check_out_time: string | null },
+  b: { id: string; room_id: string | null; property_id: string; status: string; check_in_date: string; check_out_date: string; check_in_time: string | null; check_out_time: string | null },
+): Promise<string | null> {
+  const t = (v: string | null) => (v ?? "").slice(0, 5);
+  const inChanged = t(before.check_in_time) !== t(b.check_in_time) && !!b.check_in_time;
+  const outChanged = t(before.check_out_time) !== t(b.check_out_time) && !!b.check_out_time;
+  if ((!inChanged && !outChanged) || ["cancelled", "checked_out", "blocked"].includes(b.status)) return null;
+  const { formatUkDate } = await import("./dates");
+  const lines = [
+    inChanged ? `Your check-in time is now ${t(b.check_in_time)} on ${formatUkDate(b.check_in_date)}.` : null,
+    outChanged ? `Your check-out time is now ${t(b.check_out_time)} on ${formatUkDate(b.check_out_date)}.` : null,
+  ].filter(Boolean);
+  await db.from("messages").insert({ booking_id: b.id, direction: "outbound", channel: "stay_page", body: lines.join(" "), sent_at: new Date().toISOString() });
+  if (!b.room_id) return null;
+  const { data: p } = await db.from("properties").select("default_check_in_time, default_check_out_time").eq("id", b.property_id).maybeSingle();
+  const [{ data: next }, { data: prev }] = await Promise.all([
+    db.from("bookings").select("check_in_time").eq("room_id", b.room_id).eq("check_in_date", b.check_out_date).neq("id", b.id).neq("status", "cancelled").is("mirror_of", null).limit(1).maybeSingle(),
+    db.from("bookings").select("check_out_time").eq("room_id", b.room_id).eq("check_out_date", b.check_in_date).neq("id", b.id).neq("status", "cancelled").is("mirror_of", null).limit(1).maybeSingle(),
+  ]);
+  const { stayAccessFor } = await import("./stay-access.server");
+  const { bufferClash } = await import("./stay-times");
+  return bufferClash({
+    checkOut: outChanged ? t(b.check_out_time) : null,
+    nextArrival: next ? t(next.check_in_time ?? p?.default_check_in_time ?? "15:00") : null,
+    checkIn: inChanged ? t(b.check_in_time) : null,
+    prevDeparture: prev ? t(prev.check_out_time ?? p?.default_check_out_time ?? "11:00") : null,
+    bufferMinutes: (await stayAccessFor(db, b.property_id)).bufferMinutes,
+  });
+}
 
 export const importBookings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

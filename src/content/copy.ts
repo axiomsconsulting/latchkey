@@ -849,6 +849,9 @@ export const properties = branded({
   title: "Properties",
   subtitle: "Your property, its details and its rooms.",
   addProperty: "Add property",
+  tabsLabel: "Property sections",
+  tabProperty: "Property and rooms",
+  tabExtras: "Extras",
   elsewhereTitle: "Also for this property",
   elsewhere: {
     checkin: ["How guests check in", "Settings → Guests"],
@@ -2151,6 +2154,30 @@ export const pageReviewsCopy = branded({
   guest: "A guest",
 });
 
+/** Properties → Extras → Early check-in and late check-out. */
+export const stayTimesCopy = branded({
+  title: "Early check-in and late check-out",
+  body: "Guests buy extra time in blocks from their guide. They're only offered times that leave your buffer free before the next guest arrives in the room, or after the last one leaves.",
+  earlyTitle: "Early check-in",
+  lateTitle: "Late check-out",
+  block: "Sold in blocks of",
+  hours: (h: number) => `${h} ${h === 1 ? "hour" : "hours"}`,
+  pricePerBlock: (symbol: string) => `Price a block (${symbol})`,
+  latest: "Latest check-out",
+  earliest: "Earliest check-in",
+  maxBlocks: "Most blocks a guest can buy",
+  autoApprove: "Confirm straight away (otherwise you approve each one)",
+  previewLate: "With nobody arriving that day, a guest leaving at 11:00 can pick:",
+  previewEarly: "With nobody leaving that day, a guest arriving at 15:00 can pick:",
+  noneOffered: "nothing (the limit leaves no whole block)",
+  free: "free",
+  buffer: "Buffer between guests",
+  bufferHelp: "Kept free in a room between one guest leaving and the next arriving, for cleaning. Applies to everything guests can buy, and warns you if you set a time by hand that eats into it.",
+  minutes: (m: number) => (m === 0 ? "None" : m < 60 ? `${m} minutes` : m % 60 === 0 ? `${m / 60} ${m === 60 ? "hour" : "hours"}` : `${Math.floor(m / 60)} h ${m % 60} min`),
+  override: "To give one guest a different time, edit their stay in Bookings and change the check-in or check-out time: they're told in their messages, and the timelines, housekeeping and the next guest's choices all follow.",
+  saved: "Saved.",
+});
+
 /** Finding tradespeople for property work. */
 export const trades = branded({
   tabLabel: "Local tradespeople",
@@ -3447,7 +3474,7 @@ export const roomPhotoCopy = branded({
 /** The Settings menu: its groups (tabs) and which section sits in which. */
 export const settingsMenuCopy = branded({
   label: "Settings menu",
-  groups: { business: "Business", guests: "Guests", money: "Money", look: "Look", apps: "Alerts and apps" } as Record<string, string>,
+  groups: { business: "Business", checkin: "Check-in and records", rooms: "Room QR and Wi-Fi", reviews: "Reviews", money: "Payments", look: "Look", apps: "Alerts and apps" } as Record<string, string>,
   sections: {
     business: ["Business details", "business"],
     group: ["Group brand", "business"],
@@ -3455,14 +3482,14 @@ export const settingsMenuCopy = branded({
     support: ["Support access", "business"],
     domain: ["Own web address", "business"],
     demo: ["Sample data", "business"],
-    messages: ["Booking-site messages", "guests"],
-    labels: ["Booking sites", "guests"],
-    checkin: ["How guests check in", "guests"],
-    records: ["Who's staying and ID records", "guests"],
-    stayAccess: ["Room QR codes and Wi-Fi", "guests"],
-    reviews: ["Reviews", "guests"],
-    privacy: ["Privacy and retention", "guests"],
-    extras: ["Extras price list", "money"],
+    messages: ["Airbnb and Booking.com messages", "apps"],
+    labels: ["Booking sites", "apps"],
+    checkin: ["How guests check in", "checkin"],
+    records: ["Who's staying and ID records", "checkin"],
+    stayAccess: ["Room QR codes and Wi-Fi", "rooms"],
+    reviews: ["Reviews", "reviews"],
+    privacy: ["Privacy and retention", "checkin"],
+    money: ["Tax, bank details and away", "money"],
     payments: ["Card payments", "money"],
     invoices: ["Invoices", "money"],
     theme: ["Look and feel", "look"],
@@ -3531,7 +3558,7 @@ export const omniCopy = branded({
     messages: "email forward inbox platform",
     labels: "channels airbnb booking.com sites names icons",
     privacy: "retention gdpr delete data keep",
-    extras: "price list items products add-ons",
+    money: "tax vat bank details sort code iban away",
     payments: "stripe card payments connect",
     invoices: "vat tax receipts numbers",
     theme: "look feel colours fonts logo template cover photo",

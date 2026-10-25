@@ -401,6 +401,8 @@ export const confirmExtrasPayment = createServerFn({ method: "POST" })
       if (!s || s.payment_status !== "paid" || s.client_reference_id !== r.id) continue;
       const now = new Date().toISOString();
       await db.from("requests").update({ status: "confirmed", paid_at: now, pay_by: null, payment_method: "card", stripe_payment_intent: s.payment_intent }).eq("id", r.id).eq("status", "awaiting_payment");
+      // A paid early check-in or late check-out moves the stay's times.
+      await (await import("./extras.functions")).applyStayTimes(db, r.id);
       await db.from("messages").insert({ booking_id: r.booking_id, direction: "outbound", channel: "stay_page", body: "Payment received, thank you. You're all booked.", sent_at: now });
       confirmed = true;
     }

@@ -4,10 +4,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { DEFAULT_SLOT, earlyChoices, lateChoices, normaliseSlot } from "./stay-times";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireOwner } from "@/lib/roles";
 import {
-  DEFAULT_EXTRAS, availableWindows, basketAutoApproves, breakfastMornings, breakfastProblem, breakfastTimes, earlyCheckinOptions, lateCheckoutOptions,
+  DEFAULT_EXTRAS, availableWindows, basketAutoApproves, breakfastMornings, breakfastProblem, breakfastTimes,
   normaliseBreakfast, priceBasket, BREAKFAST_STYLES,
   type ExtraItem, type ExtraUnit, type WindowKey,
 } from "./extras";
@@ -23,14 +24,68 @@ type Row = {
 };
 
 function toItem(r: Row): ExtraItem {
-  const options = (r.options ?? {}) as { sizes?: ExtraItem["sizes"]; breakfast?: unknown };
+  const options = (r.options ?? {}) as { sizes?: ExtraItem["sizes"]; breakfast?: unknown; slot?: unknown };
   const breakfast = normaliseBreakfast(options.breakfast);
+  const slotKind = r.item_key === "late_checkout" ? "late" : r.item_key === "early_checkin" ? "early" : null;
   return {
     key: r.item_key ?? r.name, name: r.name, pricePence: r.price_pence, unit: r.unit as ExtraUnit, maxQty: r.max_qty,
     isFree: r.is_free, autoApprove: r.auto_approve, active: r.active, isLoan: r.is_loan, ...(options.sizes ? { sizes: options.sizes } : {}),
     ...(r.description ? { description: r.description } : {}),
     ...(breakfast ? { breakfast } : {}),
+    ...(slotKind ? { slot: normaliseSlot(options.slot, slotKind) } : {}),
   };
+}
+
+/**
+ * The guests either side of a stay in its room, at their own times (which
+ * already include early check-in / late check-out they've had approved):
+ * who arrives on the day this stay leaves, and who leaves on the day it arrives.
+ */
+async function roomNeighbours(db: any, b: { id: string; room_id: string | null; check_in_date: string; check_out_date: string }, defaults: { checkIn: string; checkOut: string }) {
+  if (!b.room_id) return { nextArrival: null as string | null, prevDeparture: null as string | null, unknownRoom: true };
+  const [{ data: next }, { data: prev }] = await Promise.all([
+    db.from("bookings").select("check_in_time").eq("room_id", b.room_id).eq("check_in_date", b.check_out_date).neq("id", b.id).neq("status", "cancelled").is("mirror_of", null).limit(1).maybeSingle(),
+    db.from("bookings").select("check_out_time").eq("room_id", b.room_id).eq("check_out_date", b.check_in_date).neq("id", b.id).neq("status", "cancelled").is("mirror_of", null).limit(1).maybeSingle(),
+  ]);
+  return {
+    nextArrival: next ? ((next.check_in_time as string | null) ?? defaults.checkIn).slice(0, 5) : null,
+    prevDeparture: prev ? ((prev.check_out_time as string | null) ?? defaults.checkOut).slice(0, 5) : null,
+    unknownRoom: false,
+  };
+}
+
+/** The early check-in and late check-out choices for a stay, priced, within the host's limits and buffer. */
+async function timeChoices(db: any, b: any, items: ExtraItem[]) {
+  const p = b.properties;
+  const defaults = { checkIn: (p.default_check_in_time ?? "15:00").slice(0, 5), checkOut: (p.default_check_out_time ?? "11:00").slice(0, 5) };
+  const n = await roomNeighbours(db, b, defaults);
+  const { stayAccessFor } = await import("./stay-access.server");
+  const { bufferMinutes } = await stayAccessFor(db, b.property_id);
+  const late = items.find((i) => i.key === "late_checkout" && i.active);
+  const early = items.find((i) => i.key === "early_checkin" && i.active);
+  // Without a room we can't tell who's next: nothing is offered, the guest can still ask.
+  return {
+    late: late && !n.unknownRoom
+      ? lateChoices({ checkOut: (b.check_out_time ?? defaults.checkOut).slice(0, 5), slot: late.slot ?? DEFAULT_SLOT.late, pricePence: late.isFree ? 0 : late.pricePence, maxSteps: late.maxQty, nextArrival: n.nextArrival, bufferMinutes })
+      : [],
+    early: early && !n.unknownRoom
+      ? earlyChoices({ checkIn: (b.check_in_time ?? defaults.checkIn).slice(0, 5), slot: early.slot ?? DEFAULT_SLOT.early, pricePence: early.isFree ? 0 : early.pricePence, maxSteps: early.maxQty, prevDeparture: n.prevDeparture, bufferMinutes })
+      : [],
+  };
+}
+
+/**
+ * An early check-in or late check-out that's been approved (free) or paid
+ * moves the stay's own times, so the guide, the door details, Today,
+ * Bookings, Housekeeping and the next guest's choices all follow.
+ */
+export async function applyStayTimes(db: any, requestId: string) {
+  const { data: r } = await db.from("requests").select("booking_id, status, late_until, early_from").eq("id", requestId).maybeSingle();
+  if (!r || !["approved", "confirmed", "delivered"].includes(r.status) || (!r.late_until && !r.early_from)) return;
+  await db
+    .from("bookings")
+    .update({ ...(r.late_until ? { check_out_time: r.late_until } : {}), ...(r.early_from ? { check_in_time: r.early_from } : {}) })
+    .eq("id", r.booking_id);
 }
 
 const COLS = "item_key, name, description, price_pence, unit, max_qty, is_free, auto_approve, active, is_loan, options, sort_order";
@@ -118,6 +173,57 @@ export const savePriceItem = createServerFn({ method: "POST" })
     }).eq("property_id", data.propertyId).eq("item_key", i.key);
     if (error) throw new Error("Couldn't save that item.");
     return { ok: true };
+  });
+
+const timeRule = z.object({
+  active: z.boolean(),
+  pricePence: z.number().int().min(0).max(100000),
+  stepHours: z.number().int().min(1).max(3),
+  limit: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  maxSteps: z.number().int().min(1).max(12),
+  autoApprove: z.boolean(),
+});
+
+/**
+ * Properties → Extras → Early check-in and late check-out: blocks of hours,
+ * the price a block, the latest check-out / earliest check-in, the most
+ * blocks, whether it's confirmed straight away, and the buffer kept between
+ * guests (properties.stay_access.bufferMinutes).
+ */
+export const saveStayTimes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, late: timeRule, early: timeRule, bufferMinutes: z.number().int().min(0).max(240) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { requireWrite, hostOfProperty } = await import("./roles");
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const sb = context.supabase as any;
+    const { data: p } = await sb.from("properties").select("hosts(currency)").eq("id", data.propertyId).single();
+    const currency = await currencyFor(sb, data.propertyId, p?.hosts?.currency);
+    await loadItems(sb, data.propertyId, currency, true);
+    for (const [key, r] of [["late_checkout", data.late], ["early_checkin", data.early]] as const) {
+      const { data: before } = await sb.from("extras_catalogue").select("options").eq("property_id", data.propertyId).eq("item_key", key).maybeSingle();
+      const options = { ...((before?.options && typeof before.options === "object" ? before.options : {}) as Record<string, unknown>), slot: { stepHours: r.stepHours, limit: r.limit } };
+      const { error } = await sb
+        .from("extras_catalogue")
+        .update({ price_pence: r.pricePence, is_free: r.pricePence === 0, unit: "hour", max_qty: r.maxSteps, active: r.active, auto_approve: r.autoApprove, requires_approval: !r.autoApprove, options })
+        .eq("property_id", data.propertyId)
+        .eq("item_key", key);
+      if (error) throw new Error("Couldn't save those times.");
+    }
+    const { normaliseStayAccess } = await import("./stay-access");
+    const { data: cur } = await sb.from("properties").select("stay_access").eq("id", data.propertyId).maybeSingle();
+    const { error } = await sb.from("properties").update({ stay_access: normaliseStayAccess({ ...normaliseStayAccess(cur?.stay_access), bufferMinutes: data.bufferMinutes }) }).eq("id", data.propertyId);
+    if (error && !/stay_access/.test(error.message)) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** The buffer kept between guests in a room (Properties → Extras). */
+export const getStayBuffer = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { stayAccessFor } = await import("./stay-access.server");
+    return { bufferMinutes: (await stayAccessFor(context.supabase as any, data.propertyId)).bufferMinutes };
   });
 
 /** Add a new item the host has invented (key derived from the name). */
@@ -288,6 +394,7 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
     if (data.note) patch["host_note"] = data.note;
     const { error } = await context.supabase.from("requests").update(patch as never).eq("id", data.id);
     if (error) throw new Error("Couldn't update that request.");
+    if (data.action === "approve" || data.action === "mark_paid") await applyStayTimes(context.supabase, data.id);
     const body =
       data.action === "approve" ? (r.total_pence > 0 ? "Your request is approved. Please pay within 2 hours to confirm it." : "Your request is approved.")
       : data.action === "decline" ? "Sorry, your host can't do that request this time."
@@ -324,15 +431,6 @@ function receiptNumber(id: string, createdAt: string) {
   return `LK-${ymd}-${id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
 }
 
-async function roomDayFlags(db: any, b: any) {
-  if (!b.room_id) return { sameDayArrival: true, sameDayDeparture: true };
-  const [{ count: arr }, { count: dep }] = await Promise.all([
-    db.from("bookings").select("id", { count: "exact", head: true }).eq("room_id", b.room_id).eq("check_in_date", b.check_out_date).neq("id", b.id).not("status", "in", "(cancelled)").is("mirror_of", null),
-    db.from("bookings").select("id", { count: "exact", head: true }).eq("room_id", b.room_id).eq("check_out_date", b.check_in_date).neq("id", b.id).not("status", "in", "(cancelled)").is("mirror_of", null),
-  ]);
-  return { sameDayArrival: (arr ?? 0) > 0, sameDayDeparture: (dep ?? 0) > 0 };
-}
-
 export const getStayExtras = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ token }).parse(d))
   .handler(async ({ data }) => {
@@ -344,9 +442,7 @@ export const getStayExtras = createServerFn({ method: "GET" })
     const now = new Date();
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
     const nowTime = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
-    const flags = await roomDayFlags(db, b);
-    const late = items.find((i) => i.key === "late_checkout");
-    const early = items.find((i) => i.key === "early_checkin");
+    const choices = await timeChoices(db, b, items);
     const { data: reqs } = await db
       .from("requests").select("id, status, items, time_window, total_pence, pay_by, suggested_window, suggestion_expires_at, created_at, host_note, late_until, early_from, payment_method, receipt_number, paid_at")
       .eq("booking_id", b.id).eq("kind", "extras").order("created_at", { ascending: false }).limit(20);
@@ -389,8 +485,9 @@ export const getStayExtras = createServerFn({ method: "GET" })
       // Breakfast: the mornings and times it can be ordered for, in the property's time.
       breakfastMornings: breakfastMornings({ today, nowTime, checkIn: b.check_in_date, checkOut: b.check_out_date }),
       breakfastTimes: breakfastTimes(),
-      lateOptions: late ? lateCheckoutOptions({ checkOutTime: (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5), maxHours: late.maxQty, sameDayArrival: flags.sameDayArrival, blocked: [] }) : [],
-      earlyOptions: early ? earlyCheckinOptions({ checkInTime: (b.check_in_time ?? p.default_check_in_time ?? "15:00").slice(0, 5), maxHours: early.maxQty, sameDayDeparture: flags.sameDayDeparture, blocked: [] }) : [],
+      // Early check-in and late check-out: blocks within the host's limits, the buffer and the neighbouring stays.
+      lateOptions: choices.late.map((c) => ({ steps: c.steps, hours: c.hours, until: c.time, pricePence: c.pricePence })),
+      earlyOptions: choices.early.map((c) => ({ steps: c.steps, hours: c.hours, from: c.time, pricePence: c.pricePence })),
       requests: (reqs ?? []).map((r: any) => ({
         id: r.id, status: r.status as string, items: r.items as { name: string; qty: number; totalPence?: number }[], totalPence: r.total_pence as number,
         payBy: r.pay_by as string | null, suggested: r.suggested_window as string | null, window: r.time_window as string | null,
@@ -431,23 +528,21 @@ export const createExtrasRequest = createServerFn({ method: "POST" })
       const { zonedToUtc } = await import("./guide");
       breakfastAt = zonedToUtc(data.breakfast.date, data.breakfast.time, tz).toISOString();
     }
-    const flags = await roomDayFlags(db, b);
-
+    // Early check-in and late check-out: the number of blocks must be one still on offer (checked again here).
     let lateUntil: string | null = null;
     let earlyFrom: string | null = null;
+    const choices = await timeChoices(db, b, items);
     const lateLine = data.lines.find((l) => l.key === "late_checkout");
     if (lateLine) {
-      const opts = lateCheckoutOptions({ checkOutTime: (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5), maxHours: 2, sameDayArrival: flags.sameDayArrival, blocked: [] });
-      const o = opts.find((x) => x.hours === lateLine.qty);
-      if (!o) throw new Error("Late check-out isn't available for that time.");
-      lateUntil = o.until;
+      const o = choices.late.find((x) => x.steps === lateLine.qty);
+      if (!o) throw new Error("Late check-out isn't available for that time any more. Please pick another.");
+      lateUntil = o.time;
     }
     const earlyLine = data.lines.find((l) => l.key === "early_checkin");
     if (earlyLine) {
-      const opts = earlyCheckinOptions({ checkInTime: (b.check_in_time ?? p.default_check_in_time ?? "15:00").slice(0, 5), maxHours: 3, sameDayDeparture: flags.sameDayDeparture, blocked: [] });
-      const o = opts.find((x) => x.hours === earlyLine.qty);
-      if (!o) throw new Error("Early check-in isn't available for that time.");
-      earlyFrom = o.from;
+      const o = choices.early.find((x) => x.steps === earlyLine.qty);
+      if (!o) throw new Error("Early check-in isn't available for that time any more. Please pick another.");
+      earlyFrom = o.time;
     }
 
     const since = new Date(Date.now() - 3600_000).toISOString();
@@ -470,6 +565,7 @@ export const createExtrasRequest = createServerFn({ method: "POST" })
       () => db.from("requests").insert({ ...base, message: [breakfastLine, data.note].filter(Boolean).join(" ") || null } as never).select("id").single(),
     );
     if (error || !row) throw new Error("We couldn't send that. Please try again.");
+    if (status === "approved") await applyStayTimes(db, row.id);
 
     const { raiseAlert } = await import("./checkin.server");
     await raiseAlert({

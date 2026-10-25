@@ -31,7 +31,18 @@ const UNITS = ["item", "hour", "pack", "bag_day"] as const;
 
 const BLANK = { name: "", price: "3.00", unit: "item" as (typeof UNITS)[number], maxQty: 4, isFree: false, isLoan: false, autoApprove: false };
 
-export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; hostId: string }) {
+export function ExtrasPriceList({
+  propertyId,
+  hostId,
+  parts = "all",
+}: {
+  propertyId: string;
+  hostId: string;
+  /** "items": the price list and breakfast (Properties → Extras); "money": tax, bank details and away (Settings → Payments). */
+  parts?: "all" | "items" | "money";
+}) {
+  const showItems = parts !== "money";
+  const showMoney = parts !== "items";
   const qc = useQueryClient();
   const fn = useServerFn(getPriceList);
   const saveItem = useServerFn(savePriceItem);
@@ -48,7 +59,8 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
   const listRef = useRef<HTMLUListElement | null>(null);
   useEffect(() => {
     // Breakfast dishes have their own menu below.
-    if (q.data && !dragging) setOrder(q.data.items.filter((i) => !i.breakfast).map((i) => i.key));
+    // Early check-in and late check-out have their own card (StayTimesSettings).
+    if (q.data && !dragging) setOrder(q.data.items.filter((i) => !i.breakfast && i.key !== "late_checkout" && i.key !== "early_checkin").map((i) => i.key));
   }, [q.data, dragging]);
   const setCurrencyFn = useServerFn(setPropertyCurrency);
   const symbol = currencySymbol(q.data?.currency ?? "GBP");
@@ -139,6 +151,8 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
 
   return (
     <div className="space-y-6">
+      {showItems ? (
+      <>
       <section className="card-soft p-5">
         <h2 className="text-lg">{copy.priceList}</h2>
         <p className="text-sm text-muted-foreground">{copy.priceListSub}</p>
@@ -266,8 +280,11 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
       </section>
 
       <BreakfastMenuEditor propertyId={propertyId} items={q.data.items.filter((i) => i.breakfast)} currency={q.data.currency} />
+      </>
+      ) : null}
 
-      <section className="card-soft space-y-4 p-5">
+      {showMoney ? (
+      <section id="settings-money" className="card-soft scroll-mt-24 space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-lg">{copy.money}</h2>
           <SaveButton dirty={!!savedMoney && changed(money, savedMoney)} busy={moneyBusy} label={copy.save} onClick={() => void submitMoney()} />
@@ -311,6 +328,7 @@ export function ExtrasPriceList({ propertyId, hostId }: { propertyId: string; ho
           </div>
         </div>
       </section>
+      ) : null}
     </div>
   );
 }

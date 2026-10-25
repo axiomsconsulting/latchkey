@@ -153,7 +153,7 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{copy.payTitle}</legend>
         {methodRow("card", d.ready.card, copy.cardHelp, { to: "/app/settings", search: { focus: "payments" }, label: copy.connectStripe })}
-        {methodRow("bank", d.ready.bank, copy.bankHelp(form.bankPayDays), { to: "/app/settings", search: { focus: "extras" }, label: copy.addBank })}
+        {methodRow("bank", d.ready.bank, copy.bankHelp(form.bankPayDays), { to: "/app/settings", search: { focus: "money" }, label: copy.addBank })}
         {methodRow("atProperty", true, copy.propertyHelp)}
         {form.bank ? (
           <label className="flex items-center gap-2 text-sm">

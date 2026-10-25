@@ -21,6 +21,8 @@ export type ExtraItem = {
   description?: string;
   /** On the breakfast menu: how it's served and which part of the menu (options.breakfast). */
   breakfast?: BreakfastInfo;
+  /** Early check-in / late check-out: blocks of hours and the latest (or earliest) time (options.slot, src/lib/stay-times.ts). */
+  slot?: { stepHours: number; limit: string };
 };
 
 /* ------------------------------- breakfast ------------------------------- */
@@ -157,47 +159,6 @@ export function taxBreakdown(subtotalPence: number, t: TaxSettings) {
 }
 
 const toMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
-const toHhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-
-/**
- * Late check-out hours on offer: none if another stay arrives in the room that
- * day; otherwise 1..maxHours, skipping any that run into an unavailability window.
- */
-export function lateCheckoutOptions(opts: {
-  checkOutTime: string;
-  maxHours: number;
-  sameDayArrival: boolean;
-  blocked: { start: string; end: string }[];
-}): { hours: number; until: string }[] {
-  if (opts.sameDayArrival) return [];
-  const base = toMin(opts.checkOutTime);
-  const out: { hours: number; until: string }[] = [];
-  for (let h = 1; h <= opts.maxHours; h++) {
-    const end = base + h * 60;
-    if (opts.blocked.some((b) => toMin(b.start) < end && toMin(b.end) > base)) break;
-    out.push({ hours: h, until: toHhmm(end) });
-  }
-  return out;
-}
-
-/** Early check-in hours: none if the room has a guest leaving that day. */
-export function earlyCheckinOptions(opts: {
-  checkInTime: string;
-  maxHours: number;
-  sameDayDeparture: boolean;
-  blocked: { start: string; end: string }[];
-}): { hours: number; from: string }[] {
-  if (opts.sameDayDeparture) return [];
-  const base = toMin(opts.checkInTime);
-  const out: { hours: number; from: string }[] = [];
-  for (let h = 1; h <= opts.maxHours; h++) {
-    const start = base - h * 60;
-    if (start < 8 * 60) break;
-    if (opts.blocked.some((b) => toMin(b.start) < base && toMin(b.end) > start)) break;
-    out.push({ hours: h, from: toHhmm(start) });
-  }
-  return out;
-}
 
 export type WindowKey = "asap" | "evening" | "morning" | "door";
 

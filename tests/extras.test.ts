@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_EXTRAS, availableWindows, basketAutoApproves, cleaningGapMinutes, earlyCheckinOptions,
-  lateCheckoutOptions, priceBasket, taxBreakdown,
+  DEFAULT_EXTRAS, availableWindows, basketAutoApproves, cleaningGapMinutes, priceBasket, taxBreakdown,
 } from "../src/lib/extras";
 
 describe("priceBasket", () => {
@@ -35,26 +34,6 @@ describe("taxBreakdown", () => {
   });
   it("exclusive 20%", () => {
     expect(taxBreakdown(1000, { registered: true, label: "VAT", rateBp: 2000, pricesInclude: false }).totalPence).toBe(1200);
-  });
-});
-
-describe("late check-out", () => {
-  it("offers up to 2 hours when free", () => {
-    expect(lateCheckoutOptions({ checkOutTime: "11:00", maxHours: 2, sameDayArrival: false, blocked: [] })).toEqual([
-      { hours: 1, until: "12:00" }, { hours: 2, until: "13:00" },
-    ]);
-  });
-  it("none with same-day arrival", () => {
-    expect(lateCheckoutOptions({ checkOutTime: "11:00", maxHours: 2, sameDayArrival: true, blocked: [] })).toEqual([]);
-  });
-  it("stops at an unavailability window", () => {
-    expect(lateCheckoutOptions({ checkOutTime: "11:00", maxHours: 2, sameDayArrival: false, blocked: [{ start: "12:00", end: "14:00" }] })).toHaveLength(1);
-  });
-});
-
-describe("early check-in", () => {
-  it("offers hours before check-in, not before 08:00", () => {
-    expect(earlyCheckinOptions({ checkInTime: "10:00", maxHours: 3, sameDayDeparture: false, blocked: [] }).map((o) => o.from)).toEqual(["09:00", "08:00"]);
   });
 });
 

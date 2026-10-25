@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BedDouble, Home, Loader2, Plus, Trash2 } from "lucide-react";
+import { BedDouble, Home, Loader2, Plus, ShoppingBasket, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
@@ -38,15 +38,20 @@ import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFiel
 import { deleteRoom, saveListingLinks, saveProperty, saveRoom, saveRoomWifi } from "@/lib/host.functions";
 import { ListingLinkIcons, ListingLinksField, linksText } from "@/components/host/ListingLinks";
 import { normaliseListingLinks } from "@/lib/listing-links";
+import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
+import { cn } from "@/lib/utils";
+import { StayTimesSettings } from "@/components/host/StayTimesSettings";
 import { rebrand } from "@/lib/brand";
 
 // "checkin", "records" and "cleaning" moved (Settings, Housekeeping); old links still open the page.
 const FOCUS = ["property", "checkin", "records", "rooms", "cleaning"] as const;
 
 export const Route = createFileRoute("/_authenticated/app/properties")({
-  // ?focus=<section> lands on that part of the property (e.g. cleaning times).
-  validateSearch: (s: Record<string, unknown>): { focus?: (typeof FOCUS)[number] } =>
-    typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {},
+  // ?focus=<section> lands on that part of the property (e.g. cleaning times); ?tab=extras opens the Extras tab.
+  validateSearch: (s: Record<string, unknown>): { focus?: (typeof FOCUS)[number]; tab?: "extras" } => ({
+    ...(typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {}),
+    ...(s["tab"] === "extras" ? { tab: "extras" as const } : {}),
+  }),
   head: () => ({
     meta: [
       { title: rebrand("Properties · Latchkey host dashboard") },
@@ -512,7 +517,7 @@ function PropertiesPage() {
   const propertyList = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(propertyList);
   const board = usePropertyBoard(selectedId);
-  const { focus } = Route.useSearch();
+  const { focus, tab } = Route.useSearch();
   useLandOn(focus ? `property-${focus}` : null, !board.isLoading && !!board.data);
   const removeRoom = useServerFn(deleteRoom);
   const qc = useQueryClient();
@@ -572,6 +577,31 @@ function PropertiesPage() {
         }
       />
 
+      {/* Two parts: the property and its rooms, and what guests can add to their stay. */}
+      <nav aria-label={copy.tabsLabel} className="flex gap-1 rounded-2xl bg-muted p-1">
+        {([
+          [undefined, copy.tabProperty, Home],
+          ["extras", copy.tabExtras, ShoppingBasket],
+        ] as const).map(([key, label, Icon]) => (
+          <Link
+            key={label}
+            to="/app/properties"
+            search={key ? { tab: key } : {}}
+            aria-current={tab === key ? "page" : undefined}
+            className={cn("flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium", tab === key ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
+          >
+            <Icon className="size-4" /> {label}
+          </Link>
+        ))}
+      </nav>
+
+      {tab === "extras" ? (
+        <div className="space-y-6">
+          <StayTimesSettings propertyId={selectedId} />
+          {workspace.data ? <ExtrasPriceList propertyId={selectedId} hostId={workspace.data.hostId} parts="items" /> : null}
+        </div>
+      ) : (
+      <>
       {property ? (
         <section id="property-property" className="card-soft scroll-mt-24 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -689,7 +719,8 @@ function PropertiesPage() {
           </ul>
         )}
       </section>
-
+      </>
+      )}
 
       {roomDialog.open ? (
         <RoomDialog

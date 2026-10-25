@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { PageSections, Section } from "@/components/PageSections";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomDomainSettings } from "@/components/host/CustomDomainSettings";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useLandOn } from "@/hooks/use-land-on";
 import { CurrencyPicker, PhoneInput, TimeZonePicker } from "@/components/WorldPickers";
 import { AlertSettings } from "@/components/host/AlertSettings";
@@ -11,7 +11,7 @@ import { checkPhone, splitPhone } from "@/lib/world";
 import { worldCopy } from "@/content/copy";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Building2, CreditCard, History, Loader2, NotebookPen, Palette, Plus, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Bell, Building2, CreditCard, History, IdCard, Loader2, NotebookPen, Palette, Plus, QrCode, ShieldCheck, Sparkles, Star, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
@@ -51,17 +51,19 @@ import { SaveButton, changed } from "@/components/host/SaveButton";
 import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
-const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest", "extras", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
+const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest", "extras", "money", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
 /** The menu's groups, in order, with their icons (names in settingsMenuCopy). */
 const SETTINGS_GROUPS = [
   { id: "business", icon: Building2 },
-  { id: "guests", icon: Users },
+  { id: "checkin", icon: IdCard },
+  { id: "rooms", icon: QrCode },
+  { id: "reviews", icon: Star },
   { id: "money", icon: CreditCard },
   { id: "look", icon: Palette },
   { id: "apps", icon: Bell },
 ] as const;
 // Latchkey-wide and per-business admin switches (demo / live, sample data) live in Latchkey admin → Businesses.
-const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest"]);
+const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest", "money"]);
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   // ?focus=<section> lands on that part of Settings.
@@ -100,6 +102,11 @@ function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, superAdmin]);
   useLandOn(focus ? (OWN_CARD.has(focus) ? `settings-${focus}` : `section-${focus}`) : null, !workspace.isLoading && !!focus && tab === groupOf(focus));
+  // The price list moved to Properties → Extras; old links still find it.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (focus === "extras") void navigate({ to: "/app/properties", search: { tab: "extras" }, replace: true });
+  }, [focus, navigate]);
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
   const drop = useServerFn(removeDemoData);
@@ -349,7 +356,8 @@ function SettingsPage() {
       </>
       </Section>
 
-      <Section id="extras">{themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} /> : null}</Section>
+      {/* Tax, bank details and away (the price list itself is under Properties → Extras). */}
+      <Section id="money">{themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} parts="money" /> : null}</Section>
       <Section id="payments">
       {demo ? null : (<>
       {themedProperty && isOwner ? (

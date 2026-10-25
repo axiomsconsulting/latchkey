@@ -10,6 +10,7 @@
  * close to the tablet's location. Otherwise the guest checks in first.
  */
 import { addDays, nightsBetween } from "./dates";
+import { normaliseBuffer } from "./stay-times";
 
 export type Presence = "network" | "network_or_location";
 
@@ -27,6 +28,8 @@ export type StayAccess = {
   reviewText: string;
   /** Direct guests' reviews scoring 9 or more out of 10 (with their agreement) on the property's booking page. */
   showDirectReviews: boolean;
+  /** Minutes kept free between one guest leaving a room and the next arriving (early check-in and late check-out respect it). */
+  bufferMinutes: number;
 };
 
 export const DEFAULT_REVIEW_TEXT =
@@ -45,6 +48,7 @@ export const DEFAULT_STAY_ACCESS: StayAccess = {
   askReview: false,
   reviewText: DEFAULT_REVIEW_TEXT,
   showDirectReviews: false,
+  bufferMinutes: 60,
 };
 
 export function normaliseStayAccess(raw: unknown): StayAccess {
@@ -58,6 +62,7 @@ export function normaliseStayAccess(raw: unknown): StayAccess {
     askReview: r["askReview"] === true,
     reviewText: clean(r["reviewText"]) || DEFAULT_REVIEW_TEXT,
     showDirectReviews: r["showDirectReviews"] === true,
+    bufferMinutes: normaliseBuffer(r["bufferMinutes"]),
   };
 }
 

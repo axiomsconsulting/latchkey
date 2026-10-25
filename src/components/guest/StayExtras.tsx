@@ -124,20 +124,22 @@ export function StayExtras({ token }: { token: string }) {
   const nameOf = (k: string) => d.items.find((i) => i.key === k)?.name ?? k;
   const receiptReq = d.requests.find((r) => r.id === receiptId) ?? null;
 
-  const hourPicker = (key: string, title: string, opts: { hours: number; label: string }[], none: string) => {
+  // Early check-in / late check-out: each choice is a number of blocks (the basket quantity), with its time and price.
+  const hourPicker = (key: string, title: string, opts: { steps: number; label: string; pricePence: number }[], none: string) => {
     const it = d.items.find((i) => i.key === key);
     if (!it) return null;
     return (
       <div className="card-soft p-4">
-        <p className="font-medium">{title} · {formatPence(it.pricePence, cur)} {copy.units[it.unit]}</p>
-        {opts.length === 0 ? <p className="mt-1 text-muted-foreground">{none}</p> : (
+        <p className="font-medium">{title}</p>
+        {opts.length === 0 ? <p className="mt-1 text-sm text-muted-foreground">{none}</p> : (
           <div className="mt-3 flex flex-wrap gap-2">
             {opts.map((o) => {
-              const on = lineOf(key)?.qty === o.hours;
+              const on = lineOf(key)?.qty === o.steps;
               return (
-                <button key={o.hours} type="button" onClick={() => setQty(key, on ? 0 : o.hours)}
-                  className={cn("spring min-h-14 rounded-2xl border-2 px-5 text-lg font-medium", on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface")}>
-                  {o.label}
+                <button key={o.steps} type="button" onClick={() => setQty(key, on ? 0 : o.steps)} aria-pressed={on}
+                  className={cn("spring min-h-14 rounded-2xl border-2 px-4 text-left", on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface")}>
+                  <span className="block font-medium">{o.label}</span>
+                  <span className={cn("block text-sm", on ? "opacity-90" : "text-muted-foreground")}>{o.pricePence > 0 ? formatPence(o.pricePence, cur) : copy.free}</span>
                 </button>
               );
             })}
@@ -237,8 +239,8 @@ export function StayExtras({ token }: { token: string }) {
         </div>
       ) : null}
 
-      {hourPicker("late_checkout", copy.lateTitle, d.lateOptions.map((o) => ({ hours: o.hours, label: copy.until(o.until) })), copy.lateNone)}
-      {hourPicker("early_checkin", copy.earlyTitle, d.earlyOptions.map((o) => ({ hours: o.hours, label: copy.from(o.from) })), copy.earlyNone)}
+      {hourPicker("late_checkout", copy.lateTitle, d.lateOptions.map((o) => ({ steps: o.steps, label: copy.until(o.until), pricePence: o.pricePence })), copy.lateNone)}
+      {hourPicker("early_checkin", copy.earlyTitle, d.earlyOptions.map((o) => ({ steps: o.steps, label: copy.from(o.from), pricePence: o.pricePence })), copy.earlyNone)}
 
       <BreakfastOrder
         items={d.items}

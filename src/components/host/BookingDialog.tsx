@@ -201,7 +201,7 @@ export function BookingDialog({
     }
     setBusy(true);
     try {
-      await save({
+      const saved = await save({
         data: {
           ...(booking ? { id: booking.id } : {}),
           property_id: propertyId,
@@ -238,6 +238,9 @@ export function BookingDialog({
         qc.invalidateQueries({ queryKey: ["booking-invoice"] }),
       ]);
       toast.success(common.save === "Save" ? "Booking saved" : common.save);
+      // A time moved by hand that leaves less than the buffer next to another stay in the room.
+      const warning = (saved as { timeWarning?: string | null } | null)?.timeWarning;
+      if (warning) toast.warning(warning, { duration: 10_000 });
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);

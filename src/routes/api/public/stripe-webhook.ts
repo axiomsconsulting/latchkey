@@ -106,6 +106,8 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
             stripe_payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : null,
           })
           .eq("id", requestId);
+        // A paid early check-in or late check-out moves the stay's times.
+        await (await import("@/lib/extras.functions")).applyStayTimes(supabaseAdmin, requestId);
 
         await supabaseAdmin.from("messages").insert({
           booking_id: r.booking_id,
