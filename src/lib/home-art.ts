@@ -20,27 +20,30 @@ export type HomeArtItem = {
   opacity: number;
 };
 
-/** Bundled with the app (public/home): unDraw illustrations (free to use, no attribution needed), in Latchkey's colours. */
+/** Bundled with the app (public/home): Latchkey's own photos of guests arriving and settling in (no licence fees or credit needed). The older illustrations stay valid for saved lists. */
 export const HOME_ART_LIBRARY: Array<Pick<HomeArtItem, "src" | "alt">> = [
-  { src: "/home/host-greets-guest.svg", alt: "A host greeting a guest at the door" },
-  { src: "/home/self-check-in.svg", alt: "Checking in with a phone" },
-  { src: "/home/guests-arriving.svg", alt: "Two guests arriving with a suitcase and a map" },
-  { src: "/home/at-the-door.svg", alt: "A guest arriving at the front door" },
-  { src: "/home/guest-with-luggage.svg", alt: "A guest arriving with their luggage" },
+  { src: "/home/guests-check-in.jpg", alt: "A happy couple checking in on the door tablet" },
+  { src: "/home/arriving-at-door.jpg", alt: "A guest arriving at the guest house door" },
+  { src: "/home/host-welcome.jpg", alt: "A host welcoming a family with their luggage" },
+  { src: "/home/settled-in.jpg", alt: "A guest settled in, reading the stay guide on his phone" },
+  { src: "/home/guest-house.jpg", alt: "An independent guest house front door" },
 ];
 
 export const DEFAULT_HOME_ART: HomeArtItem[] = [
-  { id: "d1", src: "/home/host-greets-guest.svg", alt: "A host greeting a guest at the door", slot: "hero", side: "right", opacity: 0.85 },
-  { id: "d2", src: "/home/self-check-in.svg", alt: "Checking in with a phone", slot: "journey", side: "left", opacity: 0.7 },
-  { id: "d3", src: "/home/guests-arriving.svg", alt: "Two guests arriving with a suitcase and a map", slot: "audience", side: "right", opacity: 0.7 },
-  { id: "d4", src: "/home/at-the-door.svg", alt: "A guest arriving at the front door", slot: "pricing", side: "left", opacity: 0.7 },
-  { id: "d5", src: "/home/guest-with-luggage.svg", alt: "A guest arriving with their luggage", slot: "why", side: "right", opacity: 0.7 },
+  { id: "d1", src: "/home/guests-check-in.jpg", alt: "A happy couple checking in on the door tablet", slot: "hero", side: "right", opacity: 1 },
+  { id: "d2", src: "/home/settled-in.jpg", alt: "A guest settled in, reading the stay guide on his phone", slot: "journey", side: "left", opacity: 1 },
+  { id: "d3", src: "/home/host-welcome.jpg", alt: "A host welcoming a family with their luggage", slot: "audience", side: "right", opacity: 1 },
+  { id: "d4", src: "/home/guest-house.jpg", alt: "An independent guest house front door", slot: "pricing", side: "left", opacity: 1 },
+  { id: "d5", src: "/home/arriving-at-door.jpg", alt: "A guest arriving at the guest house door", slot: "why", side: "right", opacity: 1 },
 ];
 
 export const MAX_HOME_ART = 10;
 
 /** Our own files, or an https image (an upload to Latchkey's storage). */
-const okSrc = (s: unknown): s is string => typeof s === "string" && s.length <= 2000 && (/^\/home\/[a-z0-9-]+\.(svg|png|webp)$/.test(s) || /^https:\/\/[^\s"'<>]+$/.test(s));
+const okSrc = (s: unknown): s is string => typeof s === "string" && s.length <= 2000 && (/^\/home\/[a-z0-9-]+\.(svg|png|webp|jpe?g)$/.test(s) || /^https:\/\/[^\s"'<>]+$/.test(s));
+
+/** Photos get a rounded, framed look; illustrations float as before. */
+export const isPhoto = (src: string) => !/\.svg$/i.test(src);
 
 /** Stored value → the pictures to show; null or anything unreadable means the defaults. */
 export function normaliseHomeArt(raw: unknown): HomeArtItem[] {
