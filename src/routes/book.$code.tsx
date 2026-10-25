@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, BedDouble, CalendarHeart, Check, Loader2, MessageCircleQuestion, Plus, ShowerHead, Tag, Users, X } from "lucide-react";
+import { ArrowLeft, BedDouble, CalendarHeart, Check, Loader2, MessageCircleQuestion, Plus, ShowerHead, Star, Tag, Users, X } from "lucide-react";
 
 import { BookingBar } from "@/components/guest/BookingBar";
 import { ContactFields, EnquiryDialog, emptyContact, type Contact } from "@/components/guest/EnquiryDialog";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { bookPageCopy as copy, enquiryCopy, guest as guestCopy } from "@/content/copy";
+import { bookPageCopy as copy, enquiryCopy, guest as guestCopy, pageReviewsCopy as reviewsCopy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
 import { addDays, formatUkDate, nightsBetween } from "@/lib/dates";
 import type { Stay } from "@/lib/date-pick";
@@ -422,6 +422,30 @@ function Booking({ page }: { page: Page }) {
             </div>
           </aside>
         </div>
+
+        {/* Direct guests' reviews scoring 9+ out of 10, shared with their agreement (when the host shows them). */}
+        {page.reviews.length ? (
+          <section aria-labelledby="page-reviews" className={cn("space-y-3", step === "book" && "hidden lg:block")}>
+            <div>
+              <h2 id="page-reviews" className="text-2xl">{reviewsCopy.title}</h2>
+              <p className="text-sm text-muted-foreground">{reviewsCopy.note}</p>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {page.reviews.map((r, i) => (
+                <li key={i} className="card-soft space-y-2 p-4">
+                  <p className="flex items-center justify-between gap-2">
+                    <span className="flex gap-0.5" aria-hidden>
+                      {Array.from({ length: 5 }, (_, k) => <Star key={k} className="size-4 fill-amber-400 text-amber-400" />)}
+                    </span>
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-sm font-semibold text-primary-foreground tabular-nums">{reviewsCopy.score(r.score)}</span>
+                  </p>
+                  {r.text ? <p className="line-clamp-5 text-sm">“{r.text}”</p> : null}
+                  <p className="text-xs text-muted-foreground">{r.name ?? reviewsCopy.guest} · {r.month}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </main>
 
       {/* Phones: what's chosen so far, and on to booking. */}

@@ -86,6 +86,32 @@ async function pageRooms(db: Loose, propertyId: string, today: string) {
 /* ------------------------------- public -------------------------------- */
 
 /** The property's own enquiry page. */
+/** What the booking page shows of direct guests' reviews: first name, month, score and words. */
+async function publicReviews(db: Loose, propertyId: string): Promise<Array<{ name: string | null; month: string; score: number; text: string | null }>> {
+  const { stayAccessFor } = await import("./stay-access.server");
+  const { PUBLIC_REVIEW_MIN } = await import("./stay-access");
+  if (!(await stayAccessFor(db, propertyId)).showDirectReviews) return [];
+  const { data, error } = await db
+    .from("feedback")
+    .select("score, message, display_name, created_at, bookings!inner(channel)")
+    .eq("property_id", propertyId)
+    .eq("kind", "guest_review")
+    .eq("public_ok", true)
+    .eq("host_hidden", false)
+    .gte("score", PUBLIC_REVIEW_MIN)
+    .eq("bookings.channel", "direct")
+    .gte("created_at", new Date(Date.now() - 2 * 365 * 86_400_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(6);
+  if (error) return [];
+  return ((data ?? []) as Array<{ score: number; message: string | null; display_name: string | null; created_at: string }>).map((r) => ({
+    name: r.display_name,
+    month: new Date(r.created_at).toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
+    score: r.score,
+    text: r.message,
+  }));
+}
+
 export const getEnquiryPage = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
@@ -112,6 +138,8 @@ export const getEnquiryPage = createServerFn({ method: "GET" })
         const s = await bookingSetup(db, p);
         return { instant: s.settings.instant && s.methods.length > 0, methods: s.methods, freeCancelDays: s.settings.freeCancelDays, nonRef: s.settings.nonRef, bankPayDays: s.settings.bankPayDays, children: s.settings.children };
       })(),
+      // Direct guests' reviews scoring 9 or more out of 10, when the host shows them and the guest agreed (migration 0058).
+      reviews: await publicReviews(db, p.id),
     };
   });
 

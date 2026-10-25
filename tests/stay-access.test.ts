@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_STAY_MESSAGE, distanceMetres, inStayWindow, joinKind, nearKiosk, networkKey, normaliseStayAccess, stayProgress, wifiFor, wifiProfile, wifiQrText } from "@/lib/stay-access";
+import { DEFAULT_REVIEW_TEXT, DEFAULT_STAY_MESSAGE, reviewDay, starsOf, distanceMetres, inStayWindow, joinKind, nearKiosk, networkKey, normaliseStayAccess, stayProgress, wifiFor, wifiProfile, wifiQrText } from "@/lib/stay-access";
 
 describe("stay access", () => {
   it("normalises the host's settings", () => {
-    expect(normaliseStayAccess(null)).toEqual({ roomQrEarly: false, presence: "network_or_location", stayMessage: DEFAULT_STAY_MESSAGE, wifiAfterCheckIn: false });
-    const s = normaliseStayAccess({ roomQrEarly: true, presence: "network", stayMessage: "  Hope all's <well>  ", wifiAfterCheckIn: true });
-    expect(s).toEqual({ roomQrEarly: true, presence: "network", stayMessage: "Hope all's well", wifiAfterCheckIn: true });
+    expect(normaliseStayAccess(null)).toMatchObject({ roomQrEarly: false, presence: "network_or_location", stayMessage: DEFAULT_STAY_MESSAGE, wifiAfterCheckIn: false, askReview: false, showDirectReviews: false });
+    const s = normaliseStayAccess({ roomQrEarly: true, presence: "network", stayMessage: "  Hope all's <well>  ", wifiAfterCheckIn: true, askReview: true, reviewText: " Please review ", showDirectReviews: true });
+    expect(s).toEqual({ roomQrEarly: true, presence: "network", stayMessage: "Hope all's well", wifiAfterCheckIn: true, askReview: true, reviewText: "Please review", showDirectReviews: true });
+    expect(normaliseStayAccess({ reviewText: "  " }).reviewText).toBe(DEFAULT_REVIEW_TEXT);
+  });
+  it("turns scores into stars and picks the review day", () => {
+    expect([1, 2, 5, 9, 10].map(starsOf)).toEqual([1, 1, 3, 5, 5]);
+    expect(reviewDay("leaving")).toBe(true);
+    expect(reviewDay("during")).toBe(false);
   });
   it("counts the nights of a stay", () => {
     expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-24")).toMatchObject({ phase: "before", nights: 3 });

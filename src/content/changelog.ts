@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.72.0",
+    date: "2026-10-25",
+    title: "Review nudges and home page pictures",
+    items: [
+      { kind: "new", area: "Guest guide", text: "Ask for reviews (Settings → Guests → Reviews): on the last day of a stay the guide shows five stars beside the logo of the site the guest booked with, and your own words on why reviews matter. Guests who booked directly score their stay out of 10 right there." },
+      { kind: "new", area: "Website", text: "Show direct guests' reviews on your booking page: only those scoring 9 or more out of 10, from guests who ticked to share theirs, with their first name and the month. You can hide any of them from Reviews on Today." },
+      { kind: "new", area: "Website", admin: true, text: "Home page pictures: light illustrations of guests arriving and hosts welcoming them, beside the headline and in the margins of very wide screens, never behind text. Add, upload, move or remove them in Latchkey admin → Site settings → Home page pictures." },
+    ],
+  },
+  {
     version: "0.71.0",
     date: "2026-10-25",
     title: "Room QR codes open the guest's own guide",

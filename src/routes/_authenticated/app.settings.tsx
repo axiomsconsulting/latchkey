@@ -43,6 +43,7 @@ import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { removeDemoData, saveHost } from "@/lib/host.functions";
 import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
 import { StayAccessSettings } from "@/components/host/StayAccessSettings";
+import { ReviewSettings } from "@/components/host/ReviewSettings";
 import { CheckinSettings } from "@/components/host/CheckinSettings";
 import { KioskRestSettings } from "@/components/host/KioskRestSettings";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
@@ -50,7 +51,7 @@ import { SaveButton, changed } from "@/components/host/SaveButton";
 import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
-const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "kioskRest", "extras", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
+const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest", "extras", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
 /** The menu's groups, in order, with their icons (names in settingsMenuCopy). */
 const SETTINGS_GROUPS = [
   { id: "business", icon: Building2 },
@@ -60,7 +61,7 @@ const SETTINGS_GROUPS = [
   { id: "apps", icon: Bell },
 ] as const;
 // Latchkey-wide and per-business admin switches (demo / live, sample data) live in Latchkey admin → Businesses.
-const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "kioskRest"]);
+const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest"]);
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   // ?focus=<section> lands on that part of Settings.
@@ -457,6 +458,13 @@ function SettingsPage() {
       {themedProperty ? (
         <div id="settings-stayAccess" className="scroll-mt-24 rounded-2xl">
           <StayAccessSettings propertyId={(themedProperty as { id: string }).id} />
+        </div>
+      ) : null}
+      </Section>
+      <Section id="reviews">
+      {themedProperty ? (
+        <div id="settings-reviews" className="scroll-mt-24 rounded-2xl">
+          <ReviewSettings propertyId={(themedProperty as { id: string }).id} />
         </div>
       ) : null}
       </Section>

@@ -24,6 +24,8 @@ import { getStay } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
 import { ThemeIcon } from "@/components/theme/ThemeDecor";
 import { WifiCard } from "@/components/guest/WifiCard";
+import { ReviewNudge } from "@/components/guest/ReviewNudge";
+import { reviewDay } from "@/lib/stay-access";
 import { Button } from "@/components/ui/button";
 import { stayProgressCopy as pcopy } from "@/content/copy";
 import { formatUkDate } from "@/lib/dates";
@@ -105,6 +107,9 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           </div>
           <StayInbox token={token} />
         </div>
+
+        {/* The last day: a gentle ask for a review, where they booked (or here, for a direct stay). */}
+        {s.review && reviewDay(s.progress.phase) ? <ReviewNudge token={token} ask={s.review} place={p?.name ?? ""} /> : null}
 
         <GuideTiles
           theme={theme}
@@ -210,7 +215,8 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
 
         {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><div id="stay-extras" className="scroll-mt-6"><StayExtras token={token} /></div><StayServices token={token} /></>)}
         <StayInvoice token={token} place={p?.name ?? ""} />
-        <StayReview token={token} />
+        {/* A direct guest asked on the last day reviews there; otherwise the private note to the host stays here. */}
+        {s.review?.direct && reviewDay(s.progress.phase) ? null : <StayReview token={token} />}
         {s.readOnly ? null : <StayAgain token={token} />}
       </main>
       {!s.checkedIn && !s.readOnly && p?.short_code ? <CheckInNudge href={`/kiosk/${p.short_code}?guest=1`} /> : null}

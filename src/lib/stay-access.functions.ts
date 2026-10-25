@@ -184,8 +184,11 @@ export const saveStayAccess = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const { normaliseStayAccess } = await import("./stay-access");
-    const settings = normaliseStayAccess(data.settings);
-    const { error } = await (context.supabase as unknown as Loose).from("properties").update({ stay_access: settings }).eq("id", data.propertyId);
+    // Each settings card sends only its own fields, so two cards never undo each other.
+    const sb = context.supabase as unknown as Loose;
+    const { data: cur } = await sb.from("properties").select("stay_access").eq("id", data.propertyId).maybeSingle();
+    const settings = normaliseStayAccess({ ...normaliseStayAccess(cur?.stay_access), ...data.settings });
+    const { error } = await sb.from("properties").update({ stay_access: settings }).eq("id", data.propertyId);
     if (error) throw new Error(/stay_access/.test(error.message) ? "This needs the latest database update (migration 0057)." : error.message);
     return { ok: true, settings };
   });

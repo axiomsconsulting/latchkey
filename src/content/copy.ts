@@ -2110,6 +2110,43 @@ export const homeArtCopy = branded({
   } as Record<string, string>,
 });
 
+/** The last day's review nudge on the stay guide. */
+export const reviewNudgeCopy = branded({
+  title: (site: string) => `A review on ${site} would mean a lot`,
+  titleDirect: "How was your stay?",
+  onSite: (site: string) => `${site} will send you a short email or app message after you leave: that's where your review goes. Thank you!`,
+  scoreLabel: "Your score out of 10",
+  low: "1 · not good",
+  high: "10 · loved it",
+  comment: "What made your stay? Anything we could do better? (optional)",
+  publicOk: (place: string) => `Show my score and words, with my first name, on ${place}'s booking page.`,
+  optional: "(optional)",
+  send: "Send my review",
+  thanks: "Thank you! Your review means a lot to us.",
+});
+
+/** Settings → Guests → Reviews. */
+export const reviewSettingsCopy = branded({
+  title: "Reviews",
+  body: "On the last day of a stay, guests see a short, friendly ask for a review next to the logo of the site they booked with.",
+  notReady: "These settings appear once the latest database update (migration 0057) is applied.",
+  ask: "Ask guests for a review on their last day",
+  askHelp: "Booked on a site: we remind them that site will ask for their review. Booked directly: they score their stay out of 10 right on their guide, and only you see it unless they agree to share it.",
+  text: "What it says",
+  textHelp: "Shown under the five stars. Keep it warm and short.",
+  show: "Show direct guests' reviews on your booking page",
+  showHelp: "Only reviews scoring 9 or more out of 10, from guests who booked directly and ticked to share theirs, with their first name and the month. You can hide any review from the list on Today.",
+  saved: "Saved.",
+});
+
+/** The booking page's reviews from direct guests. */
+export const pageReviewsCopy = branded({
+  title: "What our guests say",
+  note: "From guests who booked directly with us.",
+  score: (n: number) => `${n}/10`,
+  guest: "A guest",
+});
+
 /** Finding tradespeople for property work. */
 export const trades = branded({
   tabLabel: "Local tradespeople",
@@ -2777,6 +2814,7 @@ export const feedbackCopy = branded({
   guestThanks: "Thank you. Your host has your feedback.",
   // Host
   reviewsTitle: "What guests said",
+  reviewOnPage: "Shown on your booking page (the guest agreed)",
   reviewsEmpty: "No guest feedback yet. Guests can rate their stay from their guest guide.",
   reviewsAverage: (avg: string, n: number) => `${avg} average from ${n} ${n === 1 ? "guest" : "guests"}`,
 });
@@ -3418,6 +3456,7 @@ export const settingsMenuCopy = branded({
     checkin: ["How guests check in", "guests"],
     records: ["Who's staying and ID records", "guests"],
     stayAccess: ["Room QR codes and Wi-Fi", "guests"],
+    reviews: ["Reviews", "guests"],
     privacy: ["Privacy and retention", "guests"],
     extras: ["Extras price list", "money"],
     payments: ["Card payments", "money"],
@@ -3500,6 +3539,7 @@ export const omniCopy = branded({
     checkin: "check-in methods photo id last digits phone self declare kiosk qr print",
     records: "who's staying adults children id photo face register keep days",
     stayAccess: "room qr code wifi wi-fi password network door tablet presence location guide before check-in message",
+    reviews: "reviews review stars score ask last day booking page feedback",
     kioskRest: "night light screensaver clock qr screen off tablet",
   } as Record<string, string>,
 });

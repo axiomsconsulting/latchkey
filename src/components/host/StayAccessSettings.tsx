@@ -41,7 +41,9 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
   async function save() {
     setBusy(true);
     try {
-      await saveFn({ data: { propertyId, settings: next } });
+      // Only this card's fields (reviews have their own card).
+      const { roomQrEarly, presence, stayMessage, wifiAfterCheckIn } = next;
+      await saveFn({ data: { propertyId, settings: { roomQrEarly, presence, stayMessage, wifiAfterCheckIn } } });
       await qc.invalidateQueries({ queryKey: ["stay-access", propertyId] });
       toast.success(copy.saved);
     } catch (e) {
@@ -68,7 +70,7 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
           <h2 className="flex items-center gap-2 text-lg"><QrCode className="size-5 text-primary" /> {copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
-        {d.available ? <SaveButton dirty={changed(next, d.settings)} busy={busy} onClick={() => void save()} /> : null}
+        {d.available ? <SaveButton dirty={changed([next.roomQrEarly, next.presence, next.stayMessage, next.wifiAfterCheckIn], [d.settings.roomQrEarly, d.settings.presence, d.settings.stayMessage, d.settings.wifiAfterCheckIn])} busy={busy} onClick={() => void save()} /> : null}
       </div>
       {!d.available ? <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p> : null}
 

@@ -22,7 +22,15 @@ export type StayAccess = {
   stayMessage: string;
   /** Wi-Fi password only once the guest has checked in. */
   wifiAfterCheckIn: boolean;
+  /** On the last day, ask for a review (on the site they booked with, or here for direct stays). */
+  askReview: boolean;
+  reviewText: string;
+  /** Direct guests' reviews scoring 9 or more out of 10 (with their agreement) on the property's booking page. */
+  showDirectReviews: boolean;
 };
+
+export const DEFAULT_REVIEW_TEXT =
+  "Enjoyed your stay? A quick review means the world to a small place like ours: it helps us stay in business and helps other guests find us.";
 
 export const DEFAULT_STAY_MESSAGE = "We hope your stay has been comfortable so far. If anything would make it better, just send us a message.";
 
@@ -31,16 +39,22 @@ export const DEFAULT_STAY_ACCESS: StayAccess = {
   presence: "network_or_location",
   stayMessage: DEFAULT_STAY_MESSAGE,
   wifiAfterCheckIn: false,
+  askReview: false,
+  reviewText: DEFAULT_REVIEW_TEXT,
+  showDirectReviews: false,
 };
 
 export function normaliseStayAccess(raw: unknown): StayAccess {
   const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
-  const msg = typeof r["stayMessage"] === "string" ? r["stayMessage"].replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 280) : "";
+  const clean = (v: unknown) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 280) : "");
   return {
     roomQrEarly: r["roomQrEarly"] === true,
     presence: r["presence"] === "network" ? "network" : "network_or_location",
-    stayMessage: msg || DEFAULT_STAY_MESSAGE,
+    stayMessage: clean(r["stayMessage"]) || DEFAULT_STAY_MESSAGE,
     wifiAfterCheckIn: r["wifiAfterCheckIn"] === true,
+    askReview: r["askReview"] === true,
+    reviewText: clean(r["reviewText"]) || DEFAULT_REVIEW_TEXT,
+    showDirectReviews: r["showDirectReviews"] === true,
   };
 }
 
@@ -171,3 +185,12 @@ export function wifiProfile(name: string, password: string | null, org: string, 
 }
 
 export { addDays };
+
+/** A score out of 10 as the 1-5 stars the host's review list uses. */
+export const starsOf = (score: number) => Math.min(5, Math.max(1, Math.round(score / 2)));
+
+/** Shown on the booking page: 9 or more out of 10. */
+export const PUBLIC_REVIEW_MIN = 9;
+
+/** When the review nudge shows: the last day of the stay, and the day after while the guide still opens. */
+export const reviewDay = (phase: StayProgress["phase"]) => phase === "leaving" || phase === "after";

@@ -1328,7 +1328,7 @@ export const getStay = createServerFn({ method: "GET" })
     }
     const { data: b } = await db
       .from("bookings")
-      .select("guest_full_name, check_in_date, check_out_date, check_in_time, check_out_time, room_id, property_id, status")
+      .select("guest_full_name, check_in_date, check_out_date, check_in_time, check_out_time, room_id, property_id, status, channel, site_key")
       .eq("id", t.booking_id)
       .single();
     if (!b || b.status === "cancelled") return { found: false as const };
@@ -1437,6 +1437,22 @@ export const getStay = createServerFn({ method: "GET" })
       checkedIn,
       progress: stayProgress(b.check_in_date, b.check_out_date, today),
       stayMessage: access.stayMessage,
+      // The last day's review nudge: the site they booked with (its logo and name), or here for direct stays.
+      review: access.askReview
+        ? {
+            text: access.reviewText,
+            direct: b.channel === "direct",
+            showsOnPage: access.showDirectReviews,
+            site: await (async () => {
+              const { resolveSites, platformKey } = await import("./booking-sites");
+              const { channels } = await import("@/content/copy");
+              const { data: h } = await db.from("hosts").select("channel_labels, booking_sites").eq("id", (p as { host_id?: string } | null)?.host_id ?? "").maybeSingle();
+              const key = platformKey(b as { channel: string; site_key?: string | null });
+              const site = resolveSites((h as { channel_labels?: Record<string, string> } | null)?.channel_labels, (h as { booking_sites?: unknown } | null)?.booking_sites, channels as Record<string, string>).find((x) => x.key === key);
+              return { key: b.channel as string, label: site?.label ?? (channels as Record<string, string>)[b.channel] ?? "", iconUrl: site?.iconUrl ?? null };
+            })(),
+          }
+        : null,
       amenities: Array.isArray((room as { amenities?: unknown } | null)?.amenities)
         ? ((room as { amenities: unknown[] }).amenities.filter((a): a is string => typeof a === "string"))
         : [],
