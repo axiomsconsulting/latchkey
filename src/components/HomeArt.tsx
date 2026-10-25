@@ -1,29 +1,33 @@
 import { useSite } from "@/hooks/use-site";
-import { artFor, DEFAULT_HOME_ART, type HomeArtSlot } from "@/lib/home-art";
+import { artFor, DEFAULT_HOME_ART, isPhoto, type HomeArtSlot } from "@/lib/home-art";
 import { cn } from "@/lib/utils";
 
 /**
  * The super admin's pictures for one place on the home page (src/lib/home-art.ts).
- * By the headline: one picture beside the words and buttons under it (its
- * own column, so never behind text), from laptop width up. By a section: in the empty margin beside it, on very
- * wide screens only, so a picture never sits behind text. Decoration only:
- * hidden from screen readers and never in the way of a click.
+ * By the headline: one picture in its own column beside the words (laptop width up;
+ * on phones and tablets a wide photo under them). By a section: in the empty margin
+ * beside it on very wide screens only, never behind text. Photos are framed
+ * (rounded, soft shadow); illustrations float. Decoration only.
  */
 export function HomeArt({ slot }: { slot: HomeArtSlot }) {
-  // No site settings to hand (offline, or not read yet): Latchkey's own pictures.
   const items = artFor(useSite()?.homeArt ?? DEFAULT_HOME_ART, slot);
   if (!items.length) return null;
   if (slot === "hero") {
     const a = items[0]!;
+    const photo = isPhoto(a.src);
     return (
       <img
         src={a.src}
         alt=""
         aria-hidden
         decoding="async"
+        fetchPriority="high"
         style={{ "--art-opacity": a.opacity } as React.CSSProperties}
         className={cn(
-          "pointer-events-none hidden max-h-[22rem] w-[32%] shrink-0 select-none object-contain object-bottom opacity-[var(--art-opacity)] lg:block dark:opacity-[calc(var(--art-opacity)*0.55)]",
+          "pointer-events-none shrink-0 select-none opacity-[var(--art-opacity)]",
+          photo
+            ? "mt-8 aspect-[4/3] w-full rounded-3xl object-cover shadow-xl ring-1 ring-border lg:mt-0 lg:aspect-[4/5] lg:w-[38%] lg:self-center"
+            : "hidden max-h-[22rem] w-[32%] object-contain object-bottom lg:block",
           a.side === "left" && "lg:order-first",
         )}
       />
@@ -41,8 +45,8 @@ export function HomeArt({ slot }: { slot: HomeArtSlot }) {
           decoding="async"
           style={{ "--art-opacity": a.opacity, top: `${50 + i * 8}%` } as React.CSSProperties}
           className={cn(
-            // Sits in the page margin: shown only where there's room beside the 72rem content.
-            "pointer-events-none absolute hidden max-h-72 w-[min(17rem,calc((100vw-72rem)/2-4rem))] -translate-y-1/2 select-none object-contain opacity-[var(--art-opacity)] min-[1600px]:block dark:opacity-[calc(var(--art-opacity)*0.55)]",
+            "pointer-events-none absolute hidden w-[min(17rem,calc((100vw-72rem)/2-4rem))] -translate-y-1/2 select-none opacity-[var(--art-opacity)] min-[1600px]:block",
+            isPhoto(a.src) ? "aspect-[4/5] rounded-3xl object-cover shadow-lg ring-1 ring-border" : "max-h-72 object-contain",
             a.side === "left" ? "right-full mr-12" : "left-full ml-12",
           )}
         />
