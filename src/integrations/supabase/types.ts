@@ -3092,6 +3092,7 @@ export type Database = {
           feed_token: string | null
           guide_code: string | null
           guide_mode: string
+          guide_words: string | null
           has_ensuite: boolean
           id: string
           is_demo: boolean
@@ -3118,6 +3119,7 @@ export type Database = {
           feed_token?: string | null
           guide_code?: string | null
           guide_mode?: string
+          guide_words?: string | null
           has_ensuite?: boolean
           id?: string
           is_demo?: boolean
@@ -3144,6 +3146,7 @@ export type Database = {
           feed_token?: string | null
           guide_code?: string | null
           guide_mode?: string
+          guide_words?: string | null
           has_ensuite?: boolean
           id?: string
           is_demo?: boolean
