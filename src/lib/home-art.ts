@@ -20,7 +20,7 @@ export type HomeArtItem = {
   opacity: number;
 };
 
-/** Bundled with the app (public/home): Latchkey's own photos of guests arriving and settling in (no licence fees or credit needed). The older illustrations stay valid for saved lists. */
+/** Bundled with the app (public/home): Latchkey's own photos of guests arriving and settling in (no licence fees or credit needed). The older bundled illustrations were removed, so saved lists skip them. */
 export const HOME_ART_LIBRARY: Array<Pick<HomeArtItem, "src" | "alt">> = [
   { src: "/home/guests-check-in.jpg", alt: "A happy couple checking in on the door tablet" },
   { src: "/home/arriving-at-door.jpg", alt: "A guest arriving at the guest house door" },
@@ -52,7 +52,7 @@ export function normaliseHomeArt(raw: unknown): HomeArtItem[] {
   for (const r of raw) {
     if (!r || typeof r !== "object") continue;
     const v = r as Record<string, unknown>;
-    if (!okSrc(v["src"])) continue;
+    if (!okSrc(v["src"]) || /^\/home\/.*\.svg$/.test(v["src"])) continue;
     const slot = HOME_ART_SLOTS.includes(v["slot"] as HomeArtSlot) ? (v["slot"] as HomeArtSlot) : "hero";
     const op = typeof v["opacity"] === "number" && Number.isFinite(v["opacity"]) ? Math.min(1, Math.max(0.1, v["opacity"])) : 0.7;
     out.push({

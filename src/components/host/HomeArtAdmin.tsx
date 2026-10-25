@@ -39,7 +39,7 @@ export function HomeArtAdmin() {
   const d = q.data;
   const set = (id: string, patch: Partial<HomeArtItem>) => setItems((list) => list.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   const add = (src: string, alt: string) =>
-    setItems((list) => (list.length >= MAX_HOME_ART ? list : [...list, { id: `a${Date.now().toString(36)}`, src, alt, slot: list.some((i) => i.slot === "hero") ? "audience" : "hero", side: "right", opacity: 0.7 }]));
+    setItems((list) => (list.length >= MAX_HOME_ART ? list : [...list, { id: `a${Date.now().toString(36)}`, src, alt, slot: list.some((i) => i.slot === "hero") ? "audience" : "hero", side: "right", opacity: 1 }]));
   const unused = HOME_ART_LIBRARY.filter((l) => !items.some((i) => i.src === l.src));
 
   async function save(list: HomeArtItem[] | null) {
@@ -90,7 +90,7 @@ export function HomeArtAdmin() {
         <ul className="grid gap-3 md:grid-cols-2">
           {items.map((a) => (
             <li key={a.id} className="flex gap-3 rounded-xl border border-border p-3">
-              <img src={a.src} alt="" className="size-24 shrink-0 rounded-lg bg-muted object-contain p-1" />
+              <img src={a.src} alt="" className="size-24 shrink-0 rounded-lg bg-muted object-cover" />
               <div className="min-w-0 flex-1 space-y-2 text-sm">
                 <div className="grid grid-cols-2 gap-2">
                   <label className="space-y-1">
@@ -131,11 +131,11 @@ export function HomeArtAdmin() {
         <div className="flex flex-wrap gap-2">
           {unused.map((l) => (
             <button key={l.src} type="button" onClick={() => add(l.src, l.alt)} disabled={items.length >= MAX_HOME_ART} title={l.alt} className="flex items-center gap-2 rounded-xl border border-border p-1.5 pr-3 text-xs hover:bg-secondary disabled:opacity-50">
-              <img src={l.src} alt="" className="size-12 rounded-lg bg-muted object-contain" />
+              <img src={l.src} alt="" className="size-12 rounded-lg bg-muted object-cover" />
               <Plus className="size-3.5" /> {l.alt}
             </button>
           ))}
-          <input ref={file} type="file" accept="image/png,image/webp,image/svg+xml" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
+          <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && void upload(e.target.files[0])} />
           <Button type="button" variant="outline" disabled={uploading || items.length >= MAX_HOME_ART} onClick={() => file.current?.click()}>
             {uploading ? <Loader2 className="animate-spin" /> : <ImagePlus />} {copy.upload}
           </Button>
