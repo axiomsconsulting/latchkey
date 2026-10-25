@@ -44,9 +44,24 @@ export async function bootDb(): Promise<Db> {
   const pg = new PGlite();
   await pg.exec(SUPABASE_STUB);
   const dir = join(__dirname, "../drizzle/migrations");
+  // Lovable comments out migrations it has already applied (0017-0020), and numbers its own fixes after
+  // its journal (0021_site_settings_admin_read, before the table exists). The live database has all of
+  // them, so here: a fully commented-out file runs as written, and one that needs a later table runs at the end.
+  const later: string[] = [];
   for (const f of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
-    await pg.exec(readFileSync(join(dir, f), "utf8"));
+    let sql = readFileSync(join(dir, f), "utf8").replace(/\r/g, "");
+    const lines = sql.split("\n").filter((l) => l.trim());
+    if (lines.length && lines.every((l) => l.startsWith("--") || /^select 1;?$/i.test(l.trim()))) {
+      sql = sql.replace(/^-- Switched off:.*$/m, "").replace(/^select 1;?$/im, "").replace(/^-- ?/gm, "");
+    }
+    try {
+      await pg.exec(sql);
+    } catch (e) {
+      if (!/does not exist/.test(String(e))) throw e;
+      later.push(sql);
+    }
   }
+  for (const sql of later) await pg.exec(sql);
   await pg.exec(`grant select, insert, update, delete on all tables in schema public to authenticated, service_role;
                  grant usage, select on all sequences in schema public to authenticated, service_role;`);
   for (const u of Object.values(USERS)) {

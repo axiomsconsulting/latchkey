@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.70.1",
+    date: "2026-10-25",
+    title: "Security follow-up",
+    items: [
+      { kind: "fixed", area: "Check-in", text: "Night light brightness and colour changed quickly one after the other on the door tablet are both kept (they're saved together once you stop adjusting)." },
+      { kind: "fixed", area: "Security", admin: true, text: "Latchkey-wide settings stay readable by super admins only even when the database is rebuilt from its migrations (migration 0056); the database tests run again with Lovable's switched-off migrations." },
+    ],
+  },
+  {
     version: "0.70.0",
     date: "2026-10-24",
     title: "Tidier Today",

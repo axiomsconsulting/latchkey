@@ -365,11 +365,17 @@ export function useSaverLook(code: string, live = true) {
     keep({ defaults, look: l, rest, night: current.current.night });
     void saveLook({ data: { code, ...l } }).catch(() => {});
   }, [code, defaults, rest, keep, saveLook]);
+  // The server takes one night-look save every few seconds, so quick changes (brightness, then colour) are saved together once they settle.
+  const nightTimer = useRef<number | null>(null);
   const commitNight = useCallback(() => {
     sliding.current = false;
     const n = current.current.night;
     keep({ defaults, look: current.current.look, rest, night: n });
-    void saveNight({ data: { code, ...n } }).catch(() => {});
+    if (nightTimer.current) window.clearTimeout(nightTimer.current);
+    nightTimer.current = window.setTimeout(() => {
+      nightTimer.current = null;
+      void saveNight({ data: { code, ...current.current.night } }).catch(() => {});
+    }, 3200);
   }, [code, defaults, rest, keep, saveNight]);
   const change = useCallback((next: SaverLook | ((l: SaverLook) => SaverLook)) => {
     sliding.current = true;
