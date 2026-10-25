@@ -32,6 +32,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.71.0",
+    date: "2026-10-25",
+    title: "Room QR codes open the guest's own guide",
+    items: [
+      { kind: "new", area: "Guest guide", text: "Turn on Settings → Guests → Room QR codes and Wi-Fi, and the QR code in each room opens the guide of whoever is booked into that room today, before they've checked in: their name, dates, messages and extras. It only opens when their phone is shown to be at the property (on your Wi-Fi, even a separate guest network, or close to your door tablet if you allow it); otherwise they check in first. A banner along the bottom keeps asking them to finish checking in for the guest register." },
+      { kind: "new", area: "Check-in", text: "Door tablets pair with the property the first time you enter your PIN on them (or open the kiosk while signed in), and tell Latchkey where they are every few minutes, without keeping any address. Your paired tablets are listed in the same settings." },
+      { kind: "new", area: "Guest guide", text: "The guide shows the guest's dates and nights, and from the second day which night it is and how many are left, with your own message (\"We hope your stay has been comfortable so far…\", which you can change)." },
+      { kind: "new", area: "Guest guide", text: "Wi-Fi appears once, with Join Wi-Fi: on an iPhone it installs the network, on Android it copies the password and opens the Wi-Fi panel, and on a computer it shows a code to scan. Rooms can have their own network (set on each room). You can keep the password until the guest has checked in." },
+      { kind: "improved", area: "Guest guide", text: "\"Things people usually forget\" is now \"Good to know for a comfortable stay\"." },
+    ],
+  },
+  {
     version: "0.70.1",
     date: "2026-10-25",
     title: "Security follow-up",

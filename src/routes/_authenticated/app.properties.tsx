@@ -30,12 +30,12 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { common, listingLinksCopy as linksCopy, properties as copy } from "@/content/copy";
+import { common, listingLinksCopy as linksCopy, properties as copy, roomWifiCopy } from "@/content/copy";
 import { COUNTRY_CHOICES, region } from "@/lib/regions";
 import { usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { formatUkTime } from "@/lib/dates";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
-import { deleteRoom, saveListingLinks, saveProperty, saveRoom } from "@/lib/host.functions";
+import { deleteRoom, saveListingLinks, saveProperty, saveRoom, saveRoomWifi } from "@/lib/host.functions";
 import { ListingLinkIcons, ListingLinksField, linksText } from "@/components/host/ListingLinks";
 import { normaliseListingLinks } from "@/lib/listing-links";
 import { rebrand } from "@/lib/brand";
@@ -73,6 +73,8 @@ type Room = {
   sort_order: number;
   active: boolean;
   listing_links?: unknown;
+  wifi_name?: string | null;
+  wifi_password?: string | null;
 };
 
 type Property = {
@@ -111,9 +113,12 @@ function RoomDialog({
 }) {
   const save = useServerFn(saveRoom);
   const saveLinks = useServerFn(saveListingLinks);
+  const saveWifi = useServerFn(saveRoomWifi);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [links, setLinks] = useState(() => linksText(room?.listing_links));
+  // The room's own network; empty uses the property's.
+  const [wifi, setWifi] = useState({ name: room?.wifi_name ?? "", password: room?.wifi_password ?? "" });
   const [form, setForm] = useState({
     display_name: room?.display_name ?? "",
     room_number: room?.room_number ?? "",
@@ -146,6 +151,10 @@ function RoomDialog({
       if (links !== linksText(room?.listing_links)) {
         const roomId = room?.id ?? (saved as { id?: string } | null)?.id;
         if (roomId) await saveLinks({ data: { propertyId, roomId, urls: normaliseListingLinks(links).map((l) => l.url) } });
+      }
+      if (wifi.name !== (room?.wifi_name ?? "") || wifi.password !== (room?.wifi_password ?? "")) {
+        const roomId = room?.id ?? (saved as { id?: string } | null)?.id;
+        if (roomId) await saveWifi({ data: { roomId, name: wifi.name, password: wifi.password } });
       }
       await qc.invalidateQueries({ queryKey: ["board"] });
       onOpenChange(false);
@@ -237,6 +246,20 @@ function RoomDialog({
             />
             Children welcome (they give their age at check-in, no ID)
           </label>
+          <fieldset className="space-y-2 rounded-xl border border-border p-3">
+            <legend className="px-1 text-sm font-medium">{roomWifiCopy.title}</legend>
+            <p className="text-xs text-muted-foreground">{roomWifiCopy.hint}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="rw-name" className="text-xs">{roomWifiCopy.name}</Label>
+                <Input id="rw-name" className="h-11" maxLength={64} autoComplete="off" value={wifi.name} onChange={(e) => setWifi((w) => ({ ...w, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rw-pass" className="text-xs">{roomWifiCopy.password}</Label>
+                <Input id="rw-pass" className="h-11" maxLength={128} autoComplete="off" disabled={!wifi.name.trim()} value={wifi.password} onChange={(e) => setWifi((w) => ({ ...w, password: e.target.value }))} />
+              </div>
+            </div>
+          </fieldset>
           <ListingLinksField id="room-links" value={links} onChange={setLinks} hint={linksCopy.roomHint} />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -601,6 +624,7 @@ function PropertiesPage() {
           {([
             ["checkin", "/app/settings", { focus: "checkin" }],
             ["records", "/app/settings", { focus: "records" }],
+            ["stayAccess", "/app/settings", { focus: "stayAccess" }],
             ["kioskRest", "/app/settings", { focus: "kioskRest" }],
             ["schedule", "/app/housekeeping", { focus: "schedule" }],
             ["calendars", "/app/connections", {}],

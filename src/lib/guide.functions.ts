@@ -392,9 +392,13 @@ export const getRoomGuide = createServerFn({ method: "GET" })
         .sort((a: any, c: any) => a.sort_order - c.sort_order)
         .map((s: any) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
     }));
+    // The room's own network, else the property's; no password before check-in when the host asks (anyone in the room can scan this code).
+    const { stayAccessFor, guestWifi } = await import("./stay-access.server");
+    const access = await stayAccessFor(db, p.id);
+    const wifi = await guestWifi(db, p, room.id, false, access);
     const facts = {
-      wifiName: p.wifi_name ?? null,
-      wifiPassword: p.wifi_password ?? null,
+      wifiName: wifi?.name ?? null,
+      wifiPassword: wifi?.password ?? null,
       quietStart: (p.quiet_hours_start ?? "22:00").slice(0, 5),
       quietEnd: (p.quiet_hours_end ?? "07:00").slice(0, 5),
       checkOutTime: (p.default_check_out_time ?? "11:00").slice(0, 5),
@@ -438,7 +442,9 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       tiles,
       roomPhoto: photo,
       room: { name: room.display_name as string, title: (room.public_title as string | null) ?? null },
-      wifi: p.wifi_name ? { name: p.wifi_name as string, password: (p.wifi_password as string | null) ?? null } : null,
+      wifi,
+      // The host lets this QR open the guest's own guide before check-in (when their phone is shown to be here).
+      early: access.roomQrEarly,
       amenities: Array.isArray(room.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [],
       theme: await (await import("./group-brand.server")).withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
       forget,

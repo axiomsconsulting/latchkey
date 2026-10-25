@@ -3,7 +3,7 @@ import { GuestDemoDock } from "@/components/DemoDock";
 import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
-import { CalendarX, Check, Wifi } from "lucide-react";
+import { CalendarX, Check, KeyRound, Moon, X } from "lucide-react";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { ExpandableText } from "@/components/guest/ExpandableText";
@@ -23,6 +23,10 @@ import { guideCopy as gcopy, guest as copy, stayHeroCopy } from "@/content/copy"
 import { getStay } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
 import { ThemeIcon } from "@/components/theme/ThemeDecor";
+import { WifiCard } from "@/components/guest/WifiCard";
+import { Button } from "@/components/ui/button";
+import { stayProgressCopy as pcopy } from "@/content/copy";
+import { formatUkDate } from "@/lib/dates";
 
 export const Route = createFileRoute("/stay/$token")({
   loader: ({ params }) => getStay({ data: { token: params.token } }),
@@ -82,13 +86,13 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   // Quick ways in, in the theme's icon style: the host's chosen tiles, or Wi-Fi, the first guide sections, extras and messages.
   const tiles = shownTiles(
     s.tiles.tiles,
-    { page: "stay", sections: [...s.guide, ...s.pinnedSections].map((g) => ({ key: g.key, title: g.title })), hasWifi: !!p?.wifi_name, canOrder: !s.readOnly },
+    { page: "stay", sections: [...s.guide, ...s.pinnedSections].map((g) => ({ key: g.key, title: g.title })), hasWifi: !!s.wifi, canOrder: !s.readOnly },
     { wifi: copy.stayNetwork, extras: gcopy.quickExtras, messages: stayHeroCopy.messageTile, times: stayHeroCopy.tileTimes },
   );
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
       <GuestDemoDock code={s.demoCode} />
-      <main className="mx-auto max-w-4xl space-y-6 py-6 sm:py-8">
+      <main className={cn("mx-auto max-w-4xl space-y-6 py-6 sm:py-8", !s.checkedIn && !s.readOnly && "pb-32")}>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             {theme.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{theme.eyebrow}</p> : null}
@@ -97,6 +101,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
               {s.room ? copy.roomLine(s.room.display_name, s.room.public_title) : p?.name}
             </p>
             {theme.welcomeBody ? <p className="mt-1 text-base text-muted-foreground">{theme.welcomeBody.replace("{property}", p?.name ?? "")}</p> : null}
+            <StayProgressLine s={s} />
           </div>
           <StayInbox token={token} />
         </div>
@@ -126,7 +131,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           checkInTime={s.checkInTime}
           checkOutDate={s.checkOutDate}
           checkOutTime={s.checkOutTime}
-          wifi={p?.wifi_name ?? null}
+          wifi={null}
           room={s.room ? { name: s.room.display_name, title: s.room.public_title } : null}
         />
         </div>
@@ -163,19 +168,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           </section>
         ) : null}
 
-        {p?.wifi_name ? (
-          <section id="stay-wifi" className="card-soft flex scroll-mt-6 flex-wrap items-center gap-3 p-5">
-            <Wifi className="size-6 text-primary" aria-hidden />
-            <span className="text-lg">
-              {copy.stayNetwork}: <span className="font-medium">{p.wifi_name}</span>
-            </span>
-            {p.wifi_password ? (
-              <span className="text-lg">
-                {copy.stayPassword}: <span className="font-mono font-medium">{p.wifi_password}</span>
-              </span>
-            ) : null}
-          </section>
-        ) : null}
+        {s.wifi ? <WifiCard id="stay-wifi" wifi={s.wifi} profileUrl={`/api/public/wifi/stay/${token}`} checkInHref={`/kiosk/${p?.short_code ?? ""}?guest=1`} /> : null}
 
         <Accordion type="multiple" value={open} onValueChange={setOpen} className="space-y-3">
           {s.guide.map((sec) => {
@@ -220,6 +213,49 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         <StayReview token={token} />
         {s.readOnly ? null : <StayAgain token={token} />}
       </main>
+      {!s.checkedIn && !s.readOnly && p?.short_code ? <CheckInNudge href={`/kiosk/${p.short_code}?guest=1`} /> : null}
     </GuestFrame>
+  );
+}
+
+/** Their dates and nights, and from the second day where they are in the stay with the host's message. */
+function StayProgressLine({ s }: { s: StayData }) {
+  const pr = s.progress;
+  const line =
+    pr.phase === "before" ? pcopy.before(pr.nights) : pr.phase === "arrival" ? pcopy.arrival(pr.nights) : pr.phase === "during" ? pcopy.during(pr.night, pr.nights, pr.left) : pr.phase === "leaving" ? pcopy.leaving : null;
+  return (
+    <div className="mt-3 space-y-1">
+      <p className="flex flex-wrap items-center gap-x-2 text-base">
+        <Moon className="size-4 text-accent" aria-hidden />
+        <span className="font-medium">{pcopy.dates(formatUkDate(s.checkInDate), formatUkDate(s.checkOutDate))}</span>
+        {line ? <span className="text-muted-foreground">· {line}</span> : null}
+      </p>
+      {pr.phase === "during" ? <p className="text-base text-muted-foreground">{s.stayMessage}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Until they've checked in: a banner along the bottom of the screen asking
+ * them to finish (their guest register details), on every visit. "Later"
+ * hides it until the page is opened again.
+ */
+function CheckInNudge({ href }: { href: string }) {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+  return (
+    <div role="region" aria-label={pcopy.nudgeTitle} className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-border bg-surface p-3 shadow-lg">
+      <KeyRound className="size-6 shrink-0 text-primary" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">{pcopy.nudgeTitle}</span>
+        <span className="block text-sm text-muted-foreground">{pcopy.nudgeBody}</span>
+      </span>
+      <Button asChild>
+        <a href={href}>{pcopy.nudgeCta}</a>
+      </Button>
+      <button type="button" onClick={() => setHidden(true)} aria-label={pcopy.nudgeLater} className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary">
+        <X className="size-4" />
+      </button>
+    </div>
   );
 }

@@ -351,6 +351,20 @@ export const saveListingLinks = createServerFn({ method: "POST" })
     return { ok: true, listing_links };
   });
 
+/** A room's own Wi-Fi network (migration 0057); empty means the property's. */
+export const saveRoomWifi = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ roomId: uuid, name: z.string().trim().max(64), password: z.string().trim().max(128) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as unknown as { from: (t: string) => any };
+    const { error } = await sb
+      .from("rooms")
+      .update({ wifi_name: data.name || null, wifi_password: data.name ? data.password || null : null })
+      .eq("id", data.roomId);
+    if (error) throw new Error(/wifi_name/.test(error.message) ? "Room Wi-Fi needs the latest update (migration 0057)." : error.message);
+    return { ok: true };
+  });
+
 export const deleteRoom = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: uuid }).parse(input))

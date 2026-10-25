@@ -1357,9 +1357,15 @@ export const getStay = createServerFn({ method: "GET" })
     const tz = p?.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const checkOutTime = (b.check_out_time ?? p?.default_check_out_time ?? "11:00").slice(0, 5);
+    // Room QR and Wi-Fi settings (migration 0057): the room's own network, the password after check-in if the host asks.
+    const checkedIn = b.status === "checked_in" || b.status === "checked_out";
+    const { stayAccessFor, guestWifi } = await import("./stay-access.server");
+    const { stayProgress } = await import("./stay-access");
+    const access = await stayAccessFor(db as never, b.property_id);
+    const wifi = p ? await guestWifi(db as never, { id: b.property_id, wifi_name: p.wifi_name, wifi_password: p.wifi_password }, b.room_id, checkedIn, access) : null;
     const facts = {
-      wifiName: p?.wifi_name ?? null,
-      wifiPassword: p?.wifi_password ?? null,
+      wifiName: wifi?.name ?? null,
+      wifiPassword: wifi?.password ?? null,
       quietStart: (p?.quiet_hours_start ?? "22:00").slice(0, 5),
       quietEnd: (p?.quiet_hours_end ?? "07:00").slice(0, 5),
       checkOutTime,
@@ -1424,8 +1430,13 @@ export const getStay = createServerFn({ method: "GET" })
       checkInTime: ((b as { check_in_time?: string | null }).check_in_time ?? (p as { default_check_in_time?: string } | null)?.default_check_in_time ?? "15:00").slice(0, 5),
       checkOutDate: b.check_out_date,
       checkOutTime,
-      property: p,
+      // The Wi-Fi is sent once, in `wifi`, never as the property's own columns.
+      property: p ? { ...p, wifi_name: null, wifi_password: null } : p,
       room,
+      wifi,
+      checkedIn,
+      progress: stayProgress(b.check_in_date, b.check_out_date, today),
+      stayMessage: access.stayMessage,
       amenities: Array.isArray((room as { amenities?: unknown } | null)?.amenities)
         ? ((room as { amenities: unknown[] }).amenities.filter((a): a is string => typeof a === "string"))
         : [],
@@ -1506,10 +1517,17 @@ export const askHostToCheckIn = createServerFn({ method: "POST" })
 /* -------------------------------- kiosk --------------------------------- */
 
 export const kioskUnlock = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ code, pin: z.string().regex(/^\d{4,8}$/) }).parse(d))
+  .inputValidator((d) => z.object({ code, pin: z.string().regex(/^\d{4,8}$/), pair: z.boolean().optional() }).parse(d))
   .handler(async ({ data }) => {
-    const { loadPropertyByCode } = await srv();
+    const { loadPropertyByCode, admin } = await srv();
     await new Promise((r) => setTimeout(r, 600));
     const p = await loadPropertyByCode(data.code);
-    return { ok: Boolean(p && p.check_in_pin && p.check_in_pin === data.pin) };
+    const ok = Boolean(p && p.check_in_pin && p.check_in_pin === data.pin);
+    // The host's PIN on a door tablet also pairs it, so room QR codes can tell a guest is here (src/lib/stay-access.functions.ts).
+    let device: string | null = null;
+    if (ok && data.pair && p && !isTour(p)) {
+      const { pairDevice } = await import("./stay-access.functions");
+      device = await pairDevice((await admin()) as never, p.id, "pin").catch(() => null);
+    }
+    return { ok, device };
   });

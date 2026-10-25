@@ -30,6 +30,8 @@ import { FIT, calibrationKey, fitFontSize, fitted, keyboardLikely, orientedScree
 import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
 import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
+import { deviceToken, keepDeviceToken, readFix } from "@/lib/kiosk-presence";
+import { kioskHere, pairKioskAsHost } from "@/lib/stay-access.functions";
 import { rebrand } from "@/lib/brand";
 
 // Press and hold the top-right corner this long for the host's exit.
@@ -388,6 +390,8 @@ function Kiosk() {
   }, [p.code, shared, tour]);
   const navigate = useNavigate();
   const unlock = useServerFn(kioskUnlock);
+  const sayHere = useServerFn(kioskHere);
+  useKioskPresence(p.code, shared && !tour);
   const [session, setSession] = useState(0);
   const [exitOpen, setExitOpen] = useState(false);
   const [pin, setPin] = useState("");
@@ -493,8 +497,13 @@ function Kiosk() {
 
   async function tryUnlock(e: React.FormEvent) {
     e.preventDefault();
-    const res = await unlock({ data: { code: p.code, pin } }).catch(() => ({ ok: false }));
+    const res = await unlock({ data: { code: p.code, pin, pair: !tour && !deviceToken(p.code) } }).catch(() => ({ ok: false, device: null }));
     if (!res.ok) return setPinError(true);
+    // Paired as this property's door tablet: its location is asked for now, while the host is here, never in front of a guest.
+    if (res.device) {
+      keepDeviceToken(p.code, res.device);
+      await readFix(true).then((fix) => sayHere({ data: { code: p.code, device: res.device!, fix } })).catch(() => {});
+    }
     if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
     await navigate({ to: "/app/today" });
   }
@@ -640,4 +649,36 @@ function KioskAtRest({
   if (showing === "night") return <KioskNightLight saver={saver} onWake={onWake} qrUrl={qrUrl} />;
   if (showing === "blank") return <KioskBlank onWake={onWake} qrUrl={qrUrl} />;
   return <KioskScreensaver name={name} saver={saver} tz={tz} quiet={quiet} qrUrl={qrUrl} onWake={onWake} />;
+}
+
+/**
+ * A door tablet tells the server where it is every few minutes (its
+ * connection, and its location when the browser allows it), so a guest
+ * scanning their room's QR on the same Wi-Fi can be recognised as here. An
+ * unpaired tablet pairs itself if the host is signed in on it; otherwise the
+ * host's PIN pairs it (see the exit dialog).
+ */
+function useKioskPresence(code: string, enabled: boolean) {
+  const here = useServerFn(kioskHere);
+  const pair = useServerFn(pairKioskAsHost);
+  useEffect(() => {
+    if (!enabled) return;
+    let stopped = false;
+    const beat = async () => {
+      let device = deviceToken(code);
+      if (!device) {
+        device = (await pair({ data: { code } }).catch(() => null))?.device ?? null;
+        if (device) keepDeviceToken(code, device);
+      }
+      if (!device || stopped) return;
+      const fix = await readFix(false);
+      await here({ data: { code, device, fix } }).catch(() => {});
+    };
+    void beat();
+    const id = window.setInterval(() => void beat(), 5 * 60_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+  }, [code, enabled, here, pair]);
 }

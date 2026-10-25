@@ -2,17 +2,23 @@ import { useEffect, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarX, Check, Wifi } from "lucide-react";
+import { CalendarX, Check, Loader2, MapPin } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { sectionIcon } from "@/components/guest/guide-icons";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { GuideTiles, InfoPill, StayCover } from "@/components/guest/StayHero";
+import { GuideTiles, StayCover } from "@/components/guest/StayHero";
 import { shownTiles } from "@/lib/guide-tiles";
 import { guideCopy as gcopy, guest as copy, roomGuideCopy as rcopy } from "@/content/copy";
 import { getRoomGuide } from "@/lib/guide.functions";
-import { rememberedStay } from "@/lib/stay-link";
+import { rememberedStay, rememberStay } from "@/lib/stay-link";
+import { WifiCard } from "@/components/guest/WifiCard";
+import { Button } from "@/components/ui/button";
+import { stayProgressCopy as pcopy } from "@/content/copy";
+import { readFix } from "@/lib/kiosk-presence";
+import { openRoomStay } from "@/lib/stay-access.functions";
 import { rebrand } from "@/lib/brand";
 
 /**
@@ -43,11 +49,38 @@ function forgetIcon(key: string) {
 
 function RoomGuide() {
   const g = Route.useLoaderData();
+  const { code } = Route.useParams();
   const [stay, setStay] = useState<string | null>(null);
   const [open, setOpen] = useState<string[]>(() => (g.found && g.guide[0] ? [g.guide[0].key] : []));
+  // Opening the guest's own guide from here (when the host allows it): trying, offering the location check, or not here.
+  const [own, setOwn] = useState<"idle" | "trying" | "locate" | "locating" | "notHere">("idle");
+  const tryOpen = useServerFn(openRoomStay);
   useEffect(() => {
-    if (g.found) setStay(rememberedStay(g.propertyId));
-  }, [g]);
+    if (!g.found) return;
+    const known = rememberedStay(g.propertyId);
+    setStay(known);
+    if (known || !g.early) return;
+    setOwn("trying");
+    void tryOpen({ data: { code } })
+      .then((r) => {
+        if (r.status === "open") return go(r.token, r.checkOut);
+        setOwn(r.status === "away" && r.locate ? "locate" : "idle");
+      })
+      .catch(() => setOwn("idle"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [g, code]);
+  function go(token: string, checkOut: string) {
+    if (g.found) rememberStay(g.propertyId, token, checkOut);
+    window.location.href = `/stay/${token}`;
+  }
+  async function locate() {
+    setOwn("locating");
+    const fix = await readFix(true);
+    if (!fix) return setOwn("notHere");
+    const r = await tryOpen({ data: { code, fix } }).catch(() => null);
+    if (r?.status === "open") return go(r.token, r.checkOut);
+    setOwn("notHere");
+  }
 
   if (!g.found) {
     return (
@@ -99,7 +132,24 @@ function RoomGuide() {
                 : { eyebrow: rcopy.stayingHere, title: rcopy.checkInTitle, body: rcopy.checkInBody, cta: rcopy.checkIn, href: `/kiosk/${g.shortCode}?guest=1`, icon: "key" }
           }
         />
-        {g.wifi ? <InfoPill theme={g.theme} items={[`${copy.stayNetwork}: ${g.wifi.name}`, ...(g.wifi.password ? [`${copy.stayPassword}: ${g.wifi.password}`] : [])]} /> : null}
+        {own !== "idle" ? (
+          <section aria-live="polite" className="card-soft space-y-3 p-5">
+            <h2 className="text-xl">{pcopy.roomTitle}</h2>
+            {own === "trying" ? (
+              <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-4 animate-spin" /> {pcopy.roomBody}</p>
+            ) : own === "notHere" ? (
+              <p className="text-muted-foreground">{pcopy.roomNotHere}</p>
+            ) : (
+              <>
+                <p className="text-muted-foreground">{pcopy.roomAway}</p>
+                <Button type="button" onClick={() => void locate()} disabled={own === "locating"}>
+                  {own === "locating" ? <Loader2 className="animate-spin" /> : <MapPin />} {own === "locating" ? pcopy.roomLocating : pcopy.roomLocate}
+                </Button>
+                <p className="text-xs text-muted-foreground">{pcopy.roomLocateHelp}</p>
+              </>
+            )}
+          </section>
+        ) : null}
 
         {g.forget.length ? (
           <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">
@@ -118,19 +168,7 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        {g.wifi ? (
-          <section id="room-wifi" className="card-soft flex scroll-mt-6 flex-wrap items-center gap-3 p-5">
-            <Wifi className="size-6 text-primary" aria-hidden />
-            <span className="text-lg">
-              {copy.stayNetwork}: <span className="font-medium">{g.wifi.name}</span>
-            </span>
-            {g.wifi.password ? (
-              <span className="text-lg">
-                {copy.stayPassword}: <span className="font-mono font-medium">{g.wifi.password}</span>
-              </span>
-            ) : null}
-          </section>
-        ) : null}
+        {g.wifi ? <WifiCard id="room-wifi" wifi={g.wifi} profileUrl={`/api/public/wifi/room/${code}`} checkInHref={stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`} /> : null}
 
         {g.amenities.length ? (
           <section aria-labelledby="amenities" className="card-soft p-5">

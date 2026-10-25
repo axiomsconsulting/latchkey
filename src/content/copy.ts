@@ -853,6 +853,7 @@ export const properties = branded({
   elsewhere: {
     checkin: ["How guests check in", "Settings → Guests"],
     records: ["Who's staying and ID records", "Settings → Guests"],
+    stayAccess: ["Room QR codes and Wi-Fi", "Settings → Guests"],
     kioskRest: ["Screen saver (night light, clocks, screen off)", "Settings → Look"],
     schedule: ["Cleaning and unavailable times", "Housekeeping → Schedule"],
     calendars: ["Calendar links and each room's shared calendar", "Connections"],
@@ -1643,7 +1644,7 @@ export const guideCopy = branded({
   starterAdded: (n: number) => `Starter text added to ${n} sections`,
   doorLocked: (when: string) => `Door and lock details appear here from ${when}.`,
   readOnly: "Your stay has ended. This guide stays open for 24 hours in case you left something behind.",
-  forgetTitle: "Things people usually forget",
+  forgetTitle: "Good to know for a comfortable stay",
   guideLink: "Copy guide link",
   guideLinkCopied: "Guide link copied. It opens on arrival day and stops at check-out.",
   notYet: (when: string) => `Your guide opens on ${when}. See you soon!`,
@@ -1652,10 +1653,10 @@ export const guideCopy = branded({
   showLess: "Less",
   amenitiesTitle: "Already in your room",
   amenitiesBody: "No need to ask for these — they're waiting for you.",
-  pinLabel: "Show on the reminder card",
+  pinLabel: "Show on \"Good to know\"",
   pinHelp:
-    "Pick the few things guests always forget. Whatever you pin appears in the card at the top of the guide, and is left out of the list below so it's never said twice.",
-  pinnedBadge: "On the reminder card",
+    "Pick the few things that matter most for a comfortable stay. Whatever you pin appears in the \"Good to know for a comfortable stay\" card at the top of the guide, and is left out of the list below so it's never said twice.",
+  pinnedBadge: "On \"Good to know\"",
   pinLimit: "Four reminders is about as many as anyone reads.",
   orderTitle: "Running order",
   orderHelp: "Move sections so the guide reads the way you'd explain it in person.",
@@ -2003,6 +2004,77 @@ export const errorReportCopy = branded({
   sendFailed: "Couldn't send that. Use Copy and email it to us instead.",
   open: "Open",
   close: "Close",
+});
+
+/** The guest pages' Wi-Fi card. */
+export const wifiCopy = branded({
+  title: "Wi-Fi",
+  network: "Network",
+  password: "Password",
+  open: "No password needed",
+  copy: "Copy the password",
+  copied: "Password copied. Paste it when your phone asks.",
+  join: "Join Wi-Fi",
+  iosHelp: "Tap Join, then Allow. Open Settings, tap Profile Downloaded and Install: your phone joins straight away and whenever you're here.",
+  androidHelp: "We'll copy the password and open your Wi-Fi: pick the network and paste it.",
+  androidOpenHelp: "We'll open your Wi-Fi: pick the network.",
+  qrHelp: "Point your phone's camera at this code and tap the Wi-Fi prompt to join.",
+  qrAlt: (name: string) => `Code to join ${name}`,
+  locked: "The Wi-Fi password appears here once you've checked in. It only takes a couple of minutes.",
+  checkIn: "Check in",
+});
+
+/** The stay guide's "your stay" line, the host's mid-stay message and the check-in nudge. */
+export const stayProgressCopy = branded({
+  before: (nights: number) => `${nights} ${nights === 1 ? "night" : "nights"} with us`,
+  arrival: (nights: number) => `Welcome! ${nights} ${nights === 1 ? "night" : "nights"} with us, starting tonight`,
+  during: (night: number, nights: number, left: number) => `Night ${night} of ${nights} · ${left === 1 ? "this is your last night" : `${left} nights to go, tonight included`}`,
+  leaving: "Today's your last day: safe travels",
+  dates: (from: string, to: string) => `${from} to ${to}`,
+  nudgeTitle: "Finish checking in",
+  nudgeBody: "A couple of minutes on your phone: your details for the guest register.",
+  nudgeCta: "Check in now",
+  nudgeLater: "Later",
+  roomTitle: "Staying in this room?",
+  roomBody: "Opening your own guide…",
+  roomAway: "To open your own guide, connect to the Wi-Fi here, or let us check you're at the property.",
+  roomLocate: "Check I'm here",
+  roomLocating: "Checking…",
+  roomNotHere: "We couldn't tell you're at the property. Please check in to open your guide.",
+  roomLocateHelp: "Your location is only compared with the property's and isn't kept.",
+});
+
+/** Settings → Guests → Room QR codes and Wi-Fi. */
+export const stayAccessCopy = branded({
+  title: "Room QR codes and Wi-Fi",
+  body: "What guests can open from the QR code in their room, and how they get on the Wi-Fi.",
+  notReady: "These settings appear once the latest database update (migration 0057) is applied.",
+  early: "Open the guest's own guide from their room's QR code before they've checked in",
+  earlyHelp: "Whoever is booked into that room today (with a name on the stay) gets their own guide: their name, dates, messages and extras. A banner keeps asking them to finish checking in for the guest register. It only opens when their phone is shown to be here; otherwise they check in first.",
+  presence: "How a phone is shown to be here",
+  presenceNetwork: "On your Wi-Fi",
+  presenceNetworkHelp: "Same internet connection as your door tablet. Works on a separate guest network too. Nothing to tap for the guest.",
+  presenceBoth: "On your Wi-Fi, or close by",
+  presenceBothHelp: "Also lets a guest on mobile data confirm they're within about 150 m of the door tablet. Locations can be faked by someone determined, so choose Wi-Fi only if that matters to you.",
+  tablets: "Door tablets",
+  tabletsNone: "No door tablet is paired yet. On the tablet, press and hold the top-right corner and enter your PIN once (or open the kiosk while signed in). Allow its location when asked if you'd like the \"close by\" check.",
+  tabletLine: (seen: string | null, located: boolean, by: string) => `${seen ? `Last seen ${seen}` : "Not seen yet"} · ${located ? "location known" : "no location"} · paired ${by}`,
+  pairedBy: { pin: "with your PIN", host: "while signed in" } as Record<string, string>,
+  forget: "Remove",
+  forgotten: "Tablet removed.",
+  message: "Message from the second day of a stay",
+  messageHelp: "Shown under \"Night 2 of 3\" on the guest's guide.",
+  wifiTitle: "Wi-Fi",
+  wifiAfter: "Show the Wi-Fi password only after check-in",
+  wifiAfterHelp: "Guests see the network and a Check in button; the password (and one-tap join) appears once their details are in. Room networks are set on each room in Properties.",
+  saved: "Saved.",
+});
+
+export const roomWifiCopy = branded({
+  title: "This room's own Wi-Fi (optional)",
+  hint: "Leave empty to use the property's network. Guests in this room see only one network.",
+  name: "Network name",
+  password: "Password",
 });
 
 /** Finding tradespeople for property work. */
@@ -3312,6 +3384,7 @@ export const settingsMenuCopy = branded({
     labels: ["Booking sites", "guests"],
     checkin: ["How guests check in", "guests"],
     records: ["Who's staying and ID records", "guests"],
+    stayAccess: ["Room QR codes and Wi-Fi", "guests"],
     privacy: ["Privacy and retention", "guests"],
     extras: ["Extras price list", "money"],
     payments: ["Card payments", "money"],
@@ -3393,6 +3466,7 @@ export const omniCopy = branded({
     demo: "sample data demo rooms",
     checkin: "check-in methods photo id last digits phone self declare kiosk qr print",
     records: "who's staying adults children id photo face register keep days",
+    stayAccess: "room qr code wifi wi-fi password network door tablet presence location guide before check-in message",
     kioskRest: "night light screensaver clock qr screen off tablet",
   } as Record<string, string>,
 });

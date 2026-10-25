@@ -73,6 +73,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as ApiPublicManifestKioskCodeRouteImport } from './routes/api/public/manifest/kiosk.$code'
+import { Route as ApiPublicWifiKindKeyRouteImport } from './routes/api/public/wifi/$kind.$key'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -407,6 +408,11 @@ const ApiPublicManifestKioskCodeRoute =
     path: '/api/public/manifest/kiosk/$code',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWifiKindKeyRoute = ApiPublicWifiKindKeyRouteImport.update({
+  id: '/api/public/wifi/$kind/$key',
+  path: '/api/public/wifi/$kind/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -472,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/api/public/manifest/kiosk/$code': typeof ApiPublicManifestKioskCodeRoute
+  '/api/public/wifi/$kind/$key': typeof ApiPublicWifiKindKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -536,6 +543,7 @@ export interface FileRoutesByTo {
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/api/public/manifest/kiosk/$code': typeof ApiPublicManifestKioskCodeRoute
+  '/api/public/wifi/$kind/$key': typeof ApiPublicWifiKindKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -603,6 +611,7 @@ export interface FileRoutesById {
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/api/public/manifest/kiosk/$code': typeof ApiPublicManifestKioskCodeRoute
+  '/api/public/wifi/$kind/$key': typeof ApiPublicWifiKindKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -670,6 +679,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
     | '/api/public/manifest/kiosk/$code'
+    | '/api/public/wifi/$kind/$key'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -734,6 +744,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
     | '/api/public/manifest/kiosk/$code'
+    | '/api/public/wifi/$kind/$key'
   id:
     | '__root__'
     | '/'
@@ -800,6 +811,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
     | '/api/public/manifest/kiosk/$code'
+    | '/api/public/wifi/$kind/$key'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -846,6 +858,7 @@ export interface RootRouteChildren {
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
   ApiPublicManifestKioskCodeRoute: typeof ApiPublicManifestKioskCodeRoute
+  ApiPublicWifiKindKeyRoute: typeof ApiPublicWifiKindKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1298,6 +1311,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicManifestKioskCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/wifi/$kind/$key': {
+      id: '/api/public/wifi/$kind/$key'
+      path: '/api/public/wifi/$kind/$key'
+      fullPath: '/api/public/wifi/$kind/$key'
+      preLoaderRoute: typeof ApiPublicWifiKindKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1415,6 +1435,7 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
   ApiPublicManifestKioskCodeRoute: ApiPublicManifestKioskCodeRoute,
+  ApiPublicWifiKindKeyRoute: ApiPublicWifiKindKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
