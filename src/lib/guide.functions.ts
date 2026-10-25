@@ -329,11 +329,10 @@ export const getRoomGuideCodes = createServerFn({ method: "POST" })
       // Only people who can change the property make codes; viewers just see what's there.
       try {
         await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
-        const { newRoomWords } = await import("./room-words");
         for (const r of missing) {
           // Words are unique across every room everywhere: try again on the rare clash.
           for (let tries = 0; tries < 6; tries++) {
-            const code = hasWords ? newRoomWords() : newRoomCode();
+            const code = hasWords ? await freshRoomWords() : newRoomCode();
             const col = hasWords ? "guide_words" : "guide_code";
             const { error: e } = await sb.from("rooms").update({ [col]: code }).eq("id", r.id).is(col, null);
             if (!e) {
@@ -351,6 +350,50 @@ export const getRoomGuideCodes = createServerFn({ method: "POST" })
       available: true as const,
       rooms: list.filter((r) => r.active !== false).map((r) => ({ id: r.id, name: r.display_name, code: r.guide_words ?? r.guide_code })),
     };
+  });
+
+async function retiredWords() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return (supabaseAdmin as any).from("retired_room_words");
+}
+
+/** Three new words that no room has, and no card ever carried (retired words are skipped; the unique index catches the rest). */
+async function freshRoomWords(): Promise<string> {
+  const { newRoomWords } = await import("./room-words");
+  for (let i = 0; i < 6; i++) {
+    const words = newRoomWords();
+    const { data, error } = await (await retiredWords()).select("words").eq("words", words).maybeSingle();
+    if (error || !data) return words;
+  }
+  return newRoomWords();
+}
+
+/**
+ * New words for a room's QR code, when the host wants the old ones to stop
+ * working (a card went missing, a past guest kept a photo). Its previous
+ * words and any older random code stop opening the room at once.
+ */
+export const resetRoomWords = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ roomId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as any;
+    const { data: room } = await sb.from("rooms").select("id, property_id").eq("id", data.roomId).maybeSingle();
+    if (!room) throw new Error("Room not found.");
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, room.property_id));
+    const { data: before } = await sb.from("rooms").select("guide_words").eq("id", room.id).maybeSingle();
+    // Unique across every room, and never words another card once carried: draw again on the rare clash.
+    for (let tries = 0; tries < 8; tries++) {
+      const words = await freshRoomWords();
+      const { error } = await sb.from("rooms").update({ guide_words: words, guide_code: null }).eq("id", room.id);
+      if (!error) {
+        // The old words are retired for good (migration 0060), so no other room can ever get them.
+        if (before?.guide_words) await retiredWords().then((t) => t.insert({ words: before.guide_words })).catch(() => undefined);
+        return { code: words };
+      }
+      if (/guide_words/.test(error.message) && !/duplicate|unique/i.test(error.message)) throw new Error("New words need the latest update (migration 0059).");
+    }
+    throw new Error("Couldn't make new words just now. Please try again.");
   });
 
 /**

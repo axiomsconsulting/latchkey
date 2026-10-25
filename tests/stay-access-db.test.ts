@@ -40,4 +40,10 @@ describe("door tablets and room Wi-Fi", () => {
     await expect(db.as("owner", "insert into rooms (property_id, display_name, guide_words) values ($1, 'Two', 'amber-otter-harbour')", [propertyId])).rejects.toThrow();
     await expect(db.as("owner", "insert into rooms (property_id, display_name, guide_words) values ($1, 'Three', 'not three words')", [propertyId])).rejects.toThrow();
   });
+
+  it("keeps retired room words away from signed-in users", async () => {
+    await db.system("insert into retired_room_words (words) values ('amber-otter-harbour')");
+    expect(await db.as("owner", "select words from retired_room_words")).toEqual([]);
+    await expect(db.system("insert into retired_room_words (words) values ('nope')")).rejects.toThrow();
+  });
 });

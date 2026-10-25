@@ -3,13 +3,24 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import QRCode from "qrcode";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Loader2, Printer, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { common, roomQrCopy as copy } from "@/content/copy";
 import { usePropertyBoard } from "@/hooks/use-host-data";
-import { getRoomGuideCodes } from "@/lib/guide.functions";
+import { getRoomGuideCodes, resetRoomWords } from "@/lib/guide.functions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { getStayAccess, saveStayAccess } from "@/lib/stay-access.functions";
 import { DEFAULT_ROOM_CARD_TEXT } from "@/lib/stay-access";
 import { SaveButton } from "@/components/host/SaveButton";
@@ -86,7 +97,10 @@ function RoomQrCards() {
       {!q.data?.available ? <p className="card-soft p-5">{copy.notReady}</p> : null}
       {q.data?.available && !rooms.length ? <p className="card-soft p-5">{copy.none}</p> : null}
       {rooms.map((r) => (
-        <RoomCard key={r.id} place={property?.name ?? ""} name={r.name} code={r.code!} text={shown} />
+        <div key={r.id} className="space-y-2">
+          <RoomCard place={property?.name ?? ""} name={r.name} code={r.code!} text={shown} />
+          <NewWords roomId={r.id} name={r.name} propertyId={propertyId} />
+        </div>
       ))}
     </div>
   );
@@ -113,5 +127,51 @@ function RoomCard({ place, name, code, text }: { place: string; name: string; co
         <p className="text-sm font-medium text-neutral-800">{url.replace(/^https?:\/\//, "")}</p>
       </div>
     </article>
+  );
+}
+
+/**
+ * New words for one room's code (Latchkey makes them): the card's previous
+ * words, and any older code, stop working straight away, so it needs printing again.
+ */
+function NewWords({ roomId, name, propertyId }: { roomId: string; name: string; propertyId: string }) {
+  const reset = useServerFn(resetRoomWords);
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="mx-auto flex max-w-md justify-end print:hidden">
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="ghost" size="sm" disabled={busy}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} {copy.newWords}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{copy.newWordsTitle(name)}</AlertDialogTitle>
+            <AlertDialogDescription>{copy.newWordsBody}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const r = await reset({ data: { roomId } });
+                  await qc.invalidateQueries({ queryKey: ["room-guide-codes", propertyId] });
+                  toast.success(copy.newWordsDone(r.code));
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : common.errorBody);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {copy.newWordsConfirm}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
