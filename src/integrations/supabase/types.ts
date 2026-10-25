@@ -1232,39 +1232,51 @@ export type Database = {
         Row: {
           booking_id: string | null
           created_at: string
+          display_name: string | null
+          host_hidden: boolean
           host_id: string | null
           id: string
           kind: string
           message: string | null
           page: string | null
           property_id: string | null
+          public_ok: boolean
           rating: number | null
+          score: number | null
           status: string
           user_id: string | null
         }
         Insert: {
           booking_id?: string | null
           created_at?: string
+          display_name?: string | null
+          host_hidden?: boolean
           host_id?: string | null
           id?: string
           kind: string
           message?: string | null
           page?: string | null
           property_id?: string | null
+          public_ok?: boolean
           rating?: number | null
+          score?: number | null
           status?: string
           user_id?: string | null
         }
         Update: {
           booking_id?: string | null
           created_at?: string
+          display_name?: string | null
+          host_hidden?: boolean
           host_id?: string | null
           id?: string
           kind?: string
           message?: string | null
           page?: string | null
           property_id?: string | null
+          public_ok?: boolean
           rating?: number | null
+          score?: number | null
           status?: string
           user_id?: string | null
         }
@@ -2331,6 +2343,59 @@ export type Database = {
         }
         Relationships: []
       }
+      kiosk_devices: {
+        Row: {
+          accuracy_m: number | null
+          created_at: string
+          id: string
+          last_seen_at: string | null
+          lat: number | null
+          lng: number | null
+          located_at: string | null
+          net_day: string | null
+          net_hash: string | null
+          paired_by: string
+          property_id: string
+          token_hash: string
+        }
+        Insert: {
+          accuracy_m?: number | null
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          located_at?: string | null
+          net_day?: string | null
+          net_hash?: string | null
+          paired_by?: string
+          property_id: string
+          token_hash: string
+        }
+        Update: {
+          accuracy_m?: number | null
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          located_at?: string | null
+          net_day?: string | null
+          net_hash?: string | null
+          paired_by?: string
+          property_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_devices_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kiosk_looks: {
         Row: {
           brightness: number | null
@@ -2673,6 +2738,7 @@ export type Database = {
           quiet_hours_end: string
           quiet_hours_start: string
           short_code: string
+          stay_access: Json
           theme_config: Json
           timezone: string | null
           trades_ai_at: string | null
@@ -2706,6 +2772,7 @@ export type Database = {
           quiet_hours_end?: string
           quiet_hours_start?: string
           short_code: string
+          stay_access?: Json
           theme_config?: Json
           timezone?: string | null
           trades_ai_at?: string | null
@@ -2739,6 +2806,7 @@ export type Database = {
           quiet_hours_end?: string
           quiet_hours_start?: string
           short_code?: string
+          stay_access?: Json
           theme_config?: Json
           timezone?: string | null
           trades_ai_at?: string | null
@@ -3034,6 +3102,8 @@ export type Database = {
           public_title: string | null
           room_number: string | null
           sort_order: number
+          wifi_name: string | null
+          wifi_password: string | null
         }
         Insert: {
           active?: boolean
@@ -3058,6 +3128,8 @@ export type Database = {
           public_title?: string | null
           room_number?: string | null
           sort_order?: number
+          wifi_name?: string | null
+          wifi_password?: string | null
         }
         Update: {
           active?: boolean
@@ -3082,6 +3154,8 @@ export type Database = {
           public_title?: string | null
           room_number?: string | null
           sort_order?: number
+          wifi_name?: string | null
+          wifi_password?: string | null
         }
         Relationships: [
           {
@@ -3215,6 +3289,7 @@ export type Database = {
           brand: Json
           cost_model: Json | null
           guide_starters: Json
+          home_art: Json | null
           id: number
           integrations: Json
           invoice_nightly_lines: boolean
@@ -3233,6 +3308,7 @@ export type Database = {
           brand?: Json
           cost_model?: Json | null
           guide_starters?: Json
+          home_art?: Json | null
           id?: number
           integrations?: Json
           invoice_nightly_lines?: boolean
@@ -3251,6 +3327,7 @@ export type Database = {
           brand?: Json
           cost_model?: Json | null
           guide_starters?: Json
+          home_art?: Json | null
           id?: number
           integrations?: Json
           invoice_nightly_lines?: boolean
