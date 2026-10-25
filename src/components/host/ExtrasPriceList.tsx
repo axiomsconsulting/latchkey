@@ -153,7 +153,7 @@ export function ExtrasPriceList({
     <div className="space-y-6">
       {showItems ? (
       <>
-      <section className="card-soft p-5">
+      <section className="card-soft p-5" data-tour="extras-price-list">
         <h2 className="text-lg">{copy.priceList}</h2>
         <p className="text-sm text-muted-foreground">{copy.priceListSub}</p>
         {/* Regional pricing: a property abroad can charge in its own currency. */}

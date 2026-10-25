@@ -70,7 +70,7 @@ export function DirectRates({ propertyId }: { propertyId: string }) {
   }
 
   return (
-    <section className="card-soft space-y-5 p-5">
+    <section className="card-soft space-y-5 p-5" data-tour="direct-rates">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg">{copy.title}</h2>

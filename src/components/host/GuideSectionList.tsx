@@ -143,7 +143,7 @@ export function GuideSectionList({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour="guides-sections">
         {pinnedCount > 4 ? <p className="text-sm text-accent">{copy.pinLimit}</p> : null}
         <ul ref={listRef} className="space-y-2">
           {order.map((key, index) => {

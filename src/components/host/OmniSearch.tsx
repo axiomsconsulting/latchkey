@@ -148,6 +148,7 @@ export function OmniSearch({ pages, className }: { pages: Array<{ id: string; la
   return (
     <>
       <button
+        data-tour="search"
         type="button"
         aria-label={copy.open}
         title={copy.openHint}

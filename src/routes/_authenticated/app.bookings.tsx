@@ -330,7 +330,7 @@ function BookingsPage() {
               <Upload className="size-4" />
               {copy.importCsv}
             </Button>
-            <Button onClick={openNew}>
+            <Button onClick={openNew} data-tour="bookings-add">
               <Plus className="size-4" />
               {copy.addBooking}
             </Button>
@@ -358,7 +358,7 @@ function BookingsPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-1 rounded-xl border border-border bg-surface p-1 sm:flex-none">
+        <div className="flex flex-1 rounded-xl border border-border bg-surface p-1 sm:flex-none" data-tour="bookings-view">
           {(["list", "timeline"] as const).map((v) => (
             <button
               key={v}
@@ -483,7 +483,7 @@ function BookingsPage() {
           )}
         />
       ) : view === "list" ? (
-        <div id="bookings-list" className="scroll-mt-24 rounded-2xl">
+        <div id="bookings-list" className="scroll-mt-24 rounded-2xl" data-tour="bookings-main">
         <BookingsTable
           rows={visible}
           allRows={everything}
@@ -502,6 +502,7 @@ function BookingsPage() {
         </div>
       ) : (
         // One day in hours up to a month: swipe through time, pinch to zoom (the same timeline as Housekeeping).
+        <div data-tour="bookings-main">
         <BookingsTimeline
           rooms={rooms}
           stays={filtered}
@@ -516,6 +517,7 @@ function BookingsPage() {
           activity={activity}
           onOpen={(id) => openGuest(id)}
         />
+        </div>
       )}
 
       <GuestSheet

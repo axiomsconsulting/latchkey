@@ -69,13 +69,13 @@ function ReportsPage() {
         title={copy.title}
         subtitle={copy.subtitle}
         actions={
-          <Button variant="outline" onClick={download} disabled={!r}>
+          <Button variant="outline" onClick={download} disabled={!r} data-tour="reports-download">
             <Download className="size-4" /> {copy.download}
           </Button>
         }
       />
 
-      <div className="card-soft grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="card-soft grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="reports-range">
         <div className="space-y-1">
           <Label>{copy.property}</Label>
           <Select value={propertyId} onValueChange={setPropertyId}>

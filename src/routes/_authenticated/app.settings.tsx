@@ -230,7 +230,7 @@ function SettingsPage() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList aria-label={settingsMenuCopy.label} className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
           {groups.map((g) => (
-            <TabsTrigger key={g.id} value={g.id} className="h-10 gap-2 rounded-xl px-4">
+            <TabsTrigger key={g.id} value={g.id} className="h-10 gap-2 rounded-xl px-4" data-tour={`settings-tab-${g.id}`}>
               <g.icon className="size-4" aria-hidden /> {settingsMenuCopy.groups[g.id]}
             </TabsTrigger>
           ))}

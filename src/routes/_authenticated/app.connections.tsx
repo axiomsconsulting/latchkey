@@ -542,7 +542,7 @@ function RoomCard({
       <div className="flex items-center gap-2">
         <h3 className="mr-auto text-lg">{title}</h3>
         {canWrite ? (
-          <Button variant="ghost" size="sm" onClick={onAdd}>
+          <Button variant="ghost" size="sm" onClick={onAdd} data-tour="connections-add">
             <Plus className="size-4" /> {linkTools.addLink}
           </Button>
         ) : null}

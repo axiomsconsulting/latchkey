@@ -131,7 +131,7 @@ function ServicesPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <PropertyPicker properties={properties} value={selectedId} onChange={select} />
-            <Button onClick={() => setNewOpen(true)}>
+            <Button onClick={() => setNewOpen(true)} data-tour="services-new">
               <CalendarPlus className="size-4" /> {copy.bookMaintenance}
             </Button>
           </div>
@@ -142,7 +142,7 @@ function ServicesPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         {/* Phones: two rows of two, so no tab runs off the screen. */}
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl p-1 sm:inline-flex sm:h-12 sm:w-auto">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl p-1 sm:inline-flex sm:h-12 sm:w-auto" data-tour="services-tabs">
           <TabsTrigger value="inbox" className="h-10 rounded-xl px-4">
             {copy.tabInbox} {inbox.filter((j) => j.status === "new").length ? <Badge className="ml-2">{inbox.filter((j) => j.status === "new").length}</Badge> : null}
           </TabsTrigger>

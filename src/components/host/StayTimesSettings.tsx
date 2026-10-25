@@ -119,7 +119,7 @@ export function StayTimesSettings({ propertyId }: { propertyId: string }) {
   };
 
   return (
-    <section id="property-times" className="card-soft scroll-mt-24 space-y-4 p-5">
+    <section id="property-times" data-tour="property-times" className="card-soft scroll-mt-24 space-y-4 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-lg"><Clock className="size-5 text-primary" /> {copy.title}</h2>

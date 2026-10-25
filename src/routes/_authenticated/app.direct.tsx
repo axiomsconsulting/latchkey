@@ -57,7 +57,7 @@ function DirectPage() {
       ) : d ? (
         <>
           {/* The link to share: on the website, in the guide, in a thank-you email. */}
-          <section className="card-soft space-y-3 p-5">
+          <section className="card-soft space-y-3 p-5" data-tour="direct-page-link">
             <h2 className="text-lg">{copy.linkTitle}</h2>
             <p className="text-sm text-muted-foreground">{copy.linkBody}</p>
             <ul className="space-y-2">
@@ -86,7 +86,7 @@ function DirectPage() {
           </section>
 
           <Tabs defaultValue={d.reservations.length ? "bookings" : "enquiries"}>
-            <TabsList>
+            <TabsList data-tour="direct-tabs">
               <TabsTrigger value="bookings">{copy.bookingsTab(d.reservations.filter((r) => r.status === "pending").length)}</TabsTrigger>
               <TabsTrigger value="enquiries">{copy.enquiriesTab(fresh)}</TabsTrigger>
               <TabsTrigger value="guests">{copy.guestsTab(d.contacts.length)}</TabsTrigger>

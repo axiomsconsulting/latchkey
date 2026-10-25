@@ -419,7 +419,7 @@ function InRoomGuides({ propertyId }: { propertyId: string }) {
   const rooms = q.data?.rooms ?? [];
   const [why, setWhy] = useState(false);
   return (
-    <section className="rounded-3xl border-2 border-primary/30 bg-primary/5 p-5">
+    <section data-tour="guides-room-qr" className="rounded-3xl border-2 border-primary/30 bg-primary/5 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div className="flex min-w-0 flex-1 items-start gap-4">
           <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">

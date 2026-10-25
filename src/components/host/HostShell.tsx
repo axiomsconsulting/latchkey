@@ -4,7 +4,7 @@ import { DEFAULT_GROUP_BRAND, effectiveLogo } from "@/lib/group-brand";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MessageSquareHeart, MoreHorizontal } from "lucide-react";
+import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MessageSquareHeart, MoreHorizontal, Compass } from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
@@ -13,6 +13,7 @@ import { AccessGate, AnnouncementPopup, FeedbackButton, FeedbackDialog, ShellBan
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
+import { GuidedTour, openTour } from "@/components/host/GuidedTour";
 import { whatsNewCopy } from "@/content/copy";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
@@ -29,7 +30,7 @@ import { rememberHost } from "@/lib/last-host";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
-import { adminCopy, auth, billingCopy, brand, feedbackCopy, hostNav, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
+import { adminCopy, auth, billingCopy, brand, feedbackCopy, hostNav, tourCopy, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
 import { useAlerts, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { getWorkspace } from "@/lib/host.functions";
 import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
@@ -62,13 +63,13 @@ function MenuLink({ item, className, activeProps, onClick, title, ariaLabel, chi
 }) {
   if (item.external) {
     return (
-      <a href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClick} title={title} aria-label={ariaLabel} className={className}>
+      <a href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClick} title={title} aria-label={ariaLabel} className={className} data-tour={`nav-${item.id}`}>
         {children}
       </a>
     );
   }
   return (
-    <Link to={item.href as never} onClick={onClick} title={title} aria-label={ariaLabel} className={className} activeProps={activeProps as never}>
+    <Link to={item.href as never} onClick={onClick} title={title} aria-label={ariaLabel} className={className} activeProps={activeProps as never} data-tour={`nav-${item.id}`}>
       {children}
     </Link>
   );
@@ -205,7 +206,7 @@ export function HostShell() {
                 {it.external ? (
                   <a href={it.href} target="_blank" rel="noreferrer"><NavIcon icon={it.icon} className="size-5" /> {it.label}</a>
                 ) : (
-                  <Link to={it.href}><NavIcon icon={it.icon} className="size-5" /> {it.label}</Link>
+                  <Link to={it.href} data-tour={`nav-${it.id}`}><NavIcon icon={it.icon} className="size-5" /> {it.label}</Link>
                 )}
               </DropdownMenuItem>
             ))}
@@ -228,6 +229,9 @@ export function HostShell() {
                 <Link to="/app/billing"><CreditCard className="size-5" /> {billingCopy.navLabel}</Link>
               </DropdownMenuItem>
             ) : null}
+            <DropdownMenuItem className="min-h-11 gap-3 rounded-xl" onSelect={() => openTour()}>
+              <Compass className="size-5" /> {tourCopy.navLabel}
+            </DropdownMenuItem>
             <DropdownMenuItem className="min-h-11 gap-3 rounded-xl" onSelect={() => setFeedbackOpen(true)}>
               <MessageSquareHeart className="size-5" /> {feedbackCopy.button}
             </DropdownMenuItem>
@@ -257,6 +261,17 @@ export function HostShell() {
           }}
         >
           {(done) => (
+            <>
+            <button
+              type="button"
+              onClick={() => {
+                done();
+                openTour();
+              }}
+              className="inline-flex h-[36px] w-full items-center justify-center gap-[6px] rounded-full bg-primary px-[14px] text-[13px] font-semibold text-primary-foreground"
+            >
+              <Compass className="size-[14px]" /> {tourCopy.navLabel}
+            </button>
             <HostDemoSwitch
               properties={properties}
               value={selectedId ?? null}
@@ -266,6 +281,7 @@ export function HostShell() {
                 void navigate({ to: "/app/today" });
               }}
             />
+            </>
           )}
         </DemoDock>
       ) : null}
@@ -287,6 +303,7 @@ export function HostShell() {
           <Outlet />
         </AccessGate>
         <AnnouncementPopup />
+        <GuidedTour autoOffer={isSharedDemo} />
         <WhatsNewPopup
           admin={data?.isSuperAdmin === true}
           skip={!data || (host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL}
@@ -488,6 +505,10 @@ function DesktopNav({
         {canWrite ? one("/app/register", hostNav.register, NotebookPen) : null}
         {isOwner ? one("/app/activity", hostNav.activity, History) : null}
         {one("/app/whats-new", whatsNewCopy.navLabel, Sparkles)}
+        <button type="button" onClick={() => openTour()} title={tourCopy.navLabel} className={cls}>
+          <Compass className="size-5 shrink-0" />
+          <span className={text}>{tourCopy.navLabel}</span>
+        </button>
         {isOwner && !isSharedDemo ? one("/app/billing", billingCopy.navLabel, CreditCard) : null}
         <FeedbackButton compact={!inDrawer && (narrow || top)} {...(inDrawer ? { className: "w-full" } : {})} />
       </>

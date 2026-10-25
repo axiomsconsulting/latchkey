@@ -124,6 +124,7 @@ export function BookingsTimeline({
             </>
           ),
           onClick: () => onOpen(b.id),
+          tour: "booking-row",
         });
       });
       // Closed nights, only where no guest is staying.

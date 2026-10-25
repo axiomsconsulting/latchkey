@@ -588,6 +588,7 @@ function PropertiesPage() {
             to="/app/properties"
             search={key ? { tab: key } : {}}
             aria-current={tab === key ? "page" : undefined}
+            data-tour={key === "extras" ? "properties-extras-tab" : undefined}
             className={cn("flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium", tab === key ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
           >
             <Icon className="size-4" /> {label}

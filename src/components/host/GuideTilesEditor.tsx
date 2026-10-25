@@ -126,7 +126,7 @@ export function GuideTilesEditor({
   const preview = shownTiles(tiles, ctx, copy.kindLabels);
 
   return (
-    <section id="guide-tiles" className="card-soft scroll-mt-24 space-y-4 p-5">
+    <section id="guide-tiles" data-tour="guide-tiles" className="card-soft scroll-mt-24 space-y-4 p-5">
       <div className="flex items-start gap-3">
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
           <LayoutGrid className="size-5" />

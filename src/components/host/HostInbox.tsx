@@ -92,6 +92,7 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
         <button
           ref={trigger}
           type="button"
+          data-tour="inbox"
           aria-label={unread > 0 ? (unread === 1 ? copy.unreadOne : copy.unreadMany(unread)) : copy.open}
           className={cn("relative grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground", className)}
         >

@@ -592,3 +592,15 @@ html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] [
     box-shadow: none;
   }
 }
+
+/* Guided tour (GuidedTour.tsx): the pointer nudges towards the part it's showing. */
+@keyframes tour-point {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.tour-point {
+  animation: tour-point 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-point { animation: none; }
+}

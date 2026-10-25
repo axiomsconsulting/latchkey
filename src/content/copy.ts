@@ -4199,3 +4199,30 @@ export const demoDockCopy = branded({
   leaveGuest: "Back to Latchkey",
 });
 
+
+export const tourCopy = branded({
+  navLabel: "Guided tour",
+  pickerTitle: "Take a guided tour",
+  pickerBody: "Pick a journey and we'll walk you through it on the real dashboard: what you're looking at, where to tap, and what else to notice. You can stop at any time and carry on later.",
+  modeLabel: "How long",
+  quick: "Quick (a few steps)",
+  full: "Comprehensive",
+  coverage: (done: number, total: number) => `${done} of ${total} journeys done`,
+  doneLabel: "Done",
+  steps: (n: number) => `${n} steps`,
+  resume: (at: number, n: number) => `Carry on: step ${at} of ${n}`,
+  again: (n: number) => `Done · take it again (${n} steps)`,
+  stepOf: (at: number, n: number) => `Step ${at} of ${n}`,
+  journeys: "Journeys",
+  close: "Stop the tour",
+  elsewhere: "This step is on another page.",
+  missing: "This part isn't showing right now (it may be empty in the demo, or need a wider screen). Read on, then tap Next.",
+  clickIt: "Tap the highlighted part to carry on.",
+  back: "Back",
+  next: "Next",
+  finish: "Finish",
+  takeMe: "Take me there",
+  finishedTitle: (j: string) => `${j}: done`,
+  allJourneys: "All journeys",
+  nextJourney: (j: string) => `Next: ${j}`,
+});

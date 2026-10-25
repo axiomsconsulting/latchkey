@@ -187,6 +187,7 @@ function HousekeepingPage() {
         <EmptyState icon={SprayCan} title={copy.noRooms} body={copy.noRoomsBody} />
       ) : (
         <RoomTimeline
+          tourName="housekeeping-timeline"
           rooms={rooms}
           view={view}
           onView={changeView}
@@ -233,7 +234,7 @@ function HousekeepingPage() {
       )}
 
       {b ? (
-        <section className="card-soft p-0">
+        <section className="card-soft p-0" data-tour="housekeeping-schedule">
           <button type="button" aria-expanded={scheduleOpen} onClick={() => setScheduleOpen((o) => !o)} className="flex w-full items-center gap-3 p-4 text-left">
             <CalendarClock className="size-5 text-primary" />
             <span className="min-w-0 flex-1">

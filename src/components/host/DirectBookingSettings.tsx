@@ -71,7 +71,7 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
   );
 
   return (
-    <section className="card-soft space-y-4 p-5">
+    <section className="card-soft space-y-4 p-5" data-tour="direct-booking-settings">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-lg"><CreditCard className="size-5 text-primary" /> {copy.title}</h2>

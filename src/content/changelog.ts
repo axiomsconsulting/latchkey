@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.80.0",
+    date: "2026-10-25",
+    title: "A guided tour of the dashboard",
+    items: [
+      { kind: "new", area: "Demo", text: "A guided tour walks you through the dashboard one journey at a time (your day, a guest arriving, self check-in, the stay guide, housekeeping, extras, direct bookings, requests, calendars and reports). Pick quick or comprehensive; each step lights up the part it's about with a pointer, says what it is and where to tap, and outlines related parts to notice. Finished journeys get a tick, and you carry on where you left off. It opens by itself in the demo, and from Guided tour in the menu." },
+    ],
+  },
+  {
     version: "0.79.0",
     date: "2026-10-25",
     title: "Glass boxes on the home page",

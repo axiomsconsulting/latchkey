@@ -249,6 +249,7 @@ export function BookingsTable({
               <BookingRowGroup key={b.id} heading={heading} span={COLUMNS.length + (selecting ? 1 : 0)}>
                 <tr
                   id={`stay-${b.id}`}
+                  data-tour="booking-row"
                   className={cn("cursor-pointer border-b border-border last:border-0 hover:bg-muted", picked.has(b.id) && "bg-primary/5")}
                   onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
                 >
@@ -295,6 +296,7 @@ export function BookingsTable({
                 {guestCell(b)}
                 <button
                   type="button"
+                  data-tour="booking-row"
                   onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
                   className="block w-full truncate text-left text-sm text-muted-foreground"
                   aria-label={`${name(b)}: ${stayDates(b.check_in_date, b.check_out_date, today)}`}

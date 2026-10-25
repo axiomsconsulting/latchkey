@@ -211,9 +211,11 @@ export function GuestSheet({
               </div>
               {/* Reaching the guest: their guide link, and a welcome on the kiosk written for them. */}
               <div className="flex flex-wrap gap-2">
-                <GuideLinkButton bookingId={b.id} size="sm" />
+                <span data-tour="guest-guide-link" className="inline-flex">
+                  <GuideLinkButton bookingId={b.id} size="sm" />
+                </span>
                 {shortCode ? (
-                  <Button variant={welcomeOpen ? "secondary" : "outline"} size="sm" aria-expanded={welcomeOpen} onClick={() => setWelcomeOpen((o) => !o)}>
+                  <Button variant={welcomeOpen ? "secondary" : "outline"} size="sm" aria-expanded={welcomeOpen} onClick={() => setWelcomeOpen((o) => !o)} data-tour="guest-kiosk-welcome">
                     <MonitorUp className="size-4" /> {welcomeOpen ? copy.kioskWelcomeHide : copy.kioskWelcome}
                   </Button>
                 ) : null}

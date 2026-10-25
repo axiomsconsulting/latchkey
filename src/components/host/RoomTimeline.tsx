@@ -22,6 +22,8 @@ export type TimelineItem = {
   className?: string;
   style?: CSSProperties;
   onClick?: () => void;
+  /** A name the guided tour can point at (src/lib/tour.ts). */
+  tour?: string;
 };
 
 const LANE = { normal: 34, dense: 26 } as const;
@@ -43,6 +45,7 @@ export function RoomTimeline({
   roomLabel,
   toolbar,
   maxHeight = "calc(100dvh - 15rem)",
+  tourName,
 }: {
   rooms: Array<{ id: string; display_name: string }>;
   view: View;
@@ -55,6 +58,8 @@ export function RoomTimeline({
   /** Filters and the like, after the zoom buttons. */
   toolbar?: ReactNode;
   maxHeight?: string;
+  /** A name the guided tour can point at (src/lib/tour.ts). */
+  tourName?: string;
 }) {
   const track = useRef<HTMLDivElement | null>(null);
   const scroller = useRef<HTMLDivElement | null>(null);
@@ -114,7 +119,7 @@ export function RoomTimeline({
   const zoom = zoomOf(view.span);
 
   return (
-    <section className="card-soft overflow-hidden p-0">
+    <section className="card-soft overflow-hidden p-0" data-tour={tourName}>
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-2 sm:px-3">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" aria-label={copy.earlier} onClick={() => onView(step(view, -1))}>
@@ -257,7 +262,7 @@ export function RoomTimeline({
                     );
                     const content = wide ? it.label : null;
                     return it.onClick ? (
-                      <button key={it.id} type="button" title={it.title} aria-label={it.title} className={cls} style={style} onClick={it.onClick}>
+                      <button key={it.id} type="button" title={it.title} aria-label={it.title} className={cls} style={style} onClick={it.onClick} data-tour={it.tour}>
                         {content}
                       </button>
                     ) : (
