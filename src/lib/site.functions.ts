@@ -236,10 +236,10 @@ export const uploadHomeArt = createServerFn({ method: "POST" })
     const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(data.dataUrl);
     if (!m) throw new Error("That file couldn't be read.");
     const ext = data.filename.split(".").pop()?.toLowerCase() ?? "";
-    if (!["png", "webp", "svg"].includes(ext)) throw new Error("Please upload a PNG, WebP or SVG with a transparent background.");
+    if (!["jpg", "jpeg", "png", "webp", "svg"].includes(ext)) throw new Error("Please upload a JPEG, PNG or WebP photo.");
     const bytes = Buffer.from(m[2]!, "base64");
     if (bytes.length > 2 * 1024 * 1024) throw new Error("Pictures must be under 2 MB.");
-    const contentType = ext === "svg" ? "image/svg+xml" : `image/${ext}`;
+    const contentType = ext === "svg" ? "image/svg+xml" : ext === "jpg" ? "image/jpeg" : `image/${ext}`;
     const path = `site/home-${Date.now()}.${ext}`;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const up = await supabaseAdmin.storage.from("branding").upload(path, bytes, { contentType, upsert: true });

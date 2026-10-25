@@ -2094,7 +2094,7 @@ export const roomWifiCopy = branded({
 /** Latchkey admin → Site settings → Home page pictures. */
 export const homeArtCopy = branded({
   title: "Home page pictures",
-  body: "Light illustrations of guests arriving and hosts welcoming them. The headline's picture sits beside the words under it from laptop width up; the others sit in the margin beside a section on very wide screens only, so none is ever behind text. Phones show none.",
+  body: "Photos of happy guests arriving, checking in and settling in. The headline's photo sits beside the words from laptop width up (under them on phones); the others sit in the margin beside a section on very wide screens only, so none is ever behind text.",
   notReady: "Home page pictures can be changed once the latest database update (migration 0058) is applied. Until then the defaults show.",
   where: "Where",
   side: "Side",
@@ -2107,7 +2107,7 @@ export const homeArtCopy = branded({
   none: "No pictures: the home page shows text only.",
   addTitle: "Add a picture",
   upload: "Upload your own",
-  uploadHint: "PNG, WebP or SVG with a transparent background, under 2 MB. Latchkey's own set is from unDraw (free to use, no credit needed), in Latchkey's colours.",
+  uploadHint: "JPEG, PNG or WebP photo (royalty-free or your own), under 2 MB. Portrait shapes look best. Latchkey's own set is free to use with no credit needed.",
   reset: "Back to Latchkey's pictures",
   saved: "Home page pictures saved.",
   slots: {
