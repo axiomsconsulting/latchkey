@@ -4,6 +4,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
+import { ROOM_CODE } from "./room-words";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -295,7 +296,8 @@ export const saveRoomAmenities = createServerFn({ method: "POST" })
 
 /* ---------------------------- in-room guides ----------------------------- */
 
-const roomCode = z.string().regex(/^[a-z0-9]{10,24}$/);
+// Three words, or an older random code (src/lib/room-words.ts).
+const roomCode = z.string().max(40).regex(ROOM_CODE);
 
 function newRoomCode(): string {
   const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -311,22 +313,35 @@ export const getRoomGuideCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rooms, error } = await (context.supabase as any)
-      .from("rooms")
-      .select("id, display_name, public_title, guide_code, active")
-      .eq("property_id", data.propertyId)
-      .order("sort_order");
+    type R = { id: string; display_name: string; public_title: string | null; guide_code: string | null; guide_words?: string | null; active: boolean };
+    const sb = context.supabase as any;
+    const { withLegacy } = await import("./checkin.server");
+    // Three-word codes come with migration 0059; before it, the random codes.
+    const { data: rooms, error } = await withLegacy<any>(
+      () => sb.from("rooms").select("id, display_name, public_title, guide_code, guide_words, active").eq("property_id", data.propertyId).order("sort_order"),
+      () => sb.from("rooms").select("id, display_name, public_title, guide_code, active").eq("property_id", data.propertyId).order("sort_order"),
+    );
     if (error) return { available: false as const, rooms: [] as Array<{ id: string; name: string; code: string | null }> };
-    const list = (rooms ?? []) as Array<{ id: string; display_name: string; public_title: string | null; guide_code: string | null; active: boolean }>;
-    const missing = list.filter((r) => !r.guide_code);
+    const list = (rooms ?? []) as R[];
+    const hasWords = list.length === 0 || list.some((r) => "guide_words" in r);
+    const missing = list.filter((r) => (hasWords ? !r.guide_words : !r.guide_code));
     if (missing.length) {
       // Only people who can change the property make codes; viewers just see what's there.
       try {
         await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+        const { newRoomWords } = await import("./room-words");
         for (const r of missing) {
-          const code = newRoomCode();
-          const { error: e } = await (context.supabase as any).from("rooms").update({ guide_code: code }).eq("id", r.id).is("guide_code", null);
-          if (!e) r.guide_code = code;
+          // Words are unique across every room everywhere: try again on the rare clash.
+          for (let tries = 0; tries < 6; tries++) {
+            const code = hasWords ? newRoomWords() : newRoomCode();
+            const col = hasWords ? "guide_words" : "guide_code";
+            const { error: e } = await sb.from("rooms").update({ [col]: code }).eq("id", r.id).is(col, null);
+            if (!e) {
+              if (hasWords) r.guide_words = code;
+              else r.guide_code = code;
+              break;
+            }
+          }
         }
       } catch {
         // Read-only: leave them for someone who can.
@@ -334,7 +349,7 @@ export const getRoomGuideCodes = createServerFn({ method: "POST" })
     }
     return {
       available: true as const,
-      rooms: list.filter((r) => r.active !== false).map((r) => ({ id: r.id, name: r.display_name, code: r.guide_code })),
+      rooms: list.filter((r) => r.active !== false).map((r) => ({ id: r.id, name: r.display_name, code: r.guide_words ?? r.guide_code })),
     };
   });
 
@@ -348,12 +363,9 @@ export const getRoomGuide = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { admin } = await import("./checkin.server");
     const db = (await admin()) as any;
-    const { data: room, error } = await db
-      .from("rooms")
-      .select("id, property_id, display_name, public_title, guide_mode, amenities, active")
-      .eq("guide_code", data.code)
-      .maybeSingle();
-    if (error || !room || room.active === false) return { found: false as const };
+    const { roomByCode } = await import("./room-code.server");
+    const room = await roomByCode<any>(db, data.code, "id, property_id, display_name, public_title, guide_mode, amenities, active");
+    if (!room || room.active === false) return { found: false as const };
     const [{ data: p }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")

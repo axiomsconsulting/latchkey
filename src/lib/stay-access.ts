@@ -30,7 +30,11 @@ export type StayAccess = {
   showDirectReviews: boolean;
   /** Minutes kept free between one guest leaving a room and the next arriving (early check-in and late check-out respect it). */
   bufferMinutes: number;
+  /** The line under the QR code on the printed room cards. */
+  roomCardText: string;
 };
+
+export const DEFAULT_ROOM_CARD_TEXT = "Wi-Fi, heating, shower, quiet hours, check-out, and a way to message your host. No app needed.";
 
 export const DEFAULT_REVIEW_TEXT =
   "Enjoyed your stay? A quick review means the world to a small place like ours: it helps us stay in business and helps other guests find us.";
@@ -49,6 +53,7 @@ export const DEFAULT_STAY_ACCESS: StayAccess = {
   reviewText: DEFAULT_REVIEW_TEXT,
   showDirectReviews: false,
   bufferMinutes: 60,
+  roomCardText: DEFAULT_ROOM_CARD_TEXT,
 };
 
 export function normaliseStayAccess(raw: unknown): StayAccess {
@@ -63,6 +68,7 @@ export function normaliseStayAccess(raw: unknown): StayAccess {
     reviewText: clean(r["reviewText"]) || DEFAULT_REVIEW_TEXT,
     showDirectReviews: r["showDirectReviews"] === true,
     bufferMinutes: normaliseBuffer(r["bufferMinutes"]),
+    roomCardText: clean(r["roomCardText"]).slice(0, 160) || DEFAULT_ROOM_CARD_TEXT,
   };
 }
 

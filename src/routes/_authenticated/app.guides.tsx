@@ -461,7 +461,7 @@ function InRoomGuides({ propertyId }: { propertyId: string }) {
               {r.code ? (
                 <>
                   <Button asChild size="sm" variant="ghost">
-                    <a href={`/room/${r.code}`} target="_blank" rel="noreferrer">
+                    <a href={`/room/${r.code}?preview=1`} target="_blank" rel="noreferrer">
                       <ExternalLink className="size-4" /> {roomCopy.preview}
                     </a>
                   </Button>

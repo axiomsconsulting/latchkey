@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_REVIEW_TEXT, DEFAULT_STAY_MESSAGE, reviewDay, starsOf, distanceMetres, inStayWindow, joinKind, nearKiosk, networkKey, normaliseStayAccess, stayProgress, wifiFor, wifiProfile, wifiQrText } from "@/lib/stay-access";
+import { DEFAULT_REVIEW_TEXT, DEFAULT_ROOM_CARD_TEXT, DEFAULT_STAY_MESSAGE, reviewDay, starsOf, distanceMetres, inStayWindow, joinKind, nearKiosk, networkKey, normaliseStayAccess, stayProgress, wifiFor, wifiProfile, wifiQrText } from "@/lib/stay-access";
 
 describe("stay access", () => {
   it("normalises the host's settings", () => {
     expect(normaliseStayAccess(null)).toMatchObject({ roomQrEarly: false, presence: "network_or_location", stayMessage: DEFAULT_STAY_MESSAGE, wifiAfterCheckIn: false, askReview: false, showDirectReviews: false });
     const s = normaliseStayAccess({ roomQrEarly: true, presence: "network", stayMessage: "  Hope all's <well>  ", wifiAfterCheckIn: true, askReview: true, reviewText: " Please review ", showDirectReviews: true });
-    expect(s).toEqual({ roomQrEarly: true, presence: "network", stayMessage: "Hope all's well", wifiAfterCheckIn: true, askReview: true, reviewText: "Please review", showDirectReviews: true, bufferMinutes: 60 });
+    expect(s).toEqual({ roomQrEarly: true, presence: "network", stayMessage: "Hope all's well", wifiAfterCheckIn: true, askReview: true, reviewText: "Please review", showDirectReviews: true, bufferMinutes: 60, roomCardText: DEFAULT_ROOM_CARD_TEXT });
     expect(normaliseStayAccess({ reviewText: "  " }).reviewText).toBe(DEFAULT_REVIEW_TEXT);
     // The old default read like feedback: it becomes the new "anything else?" wording.
     expect(normaliseStayAccess({ stayMessage: "We hope your stay has been comfortable so far. If anything would make it better, just send us a message." }).stayMessage).toBe(DEFAULT_STAY_MESSAGE);

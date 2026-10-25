@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.76.0",
+    date: "2026-10-25",
+    title: "Three-word room codes",
+    items: [
+      { kind: "new", area: "Guest guide", text: "Room QR codes now use three everyday words (like /room/amber-otter-harbour), unique to each room everywhere, easy to read off the card or type. Cards you've already printed keep working." },
+      { kind: "improved", area: "Guest guide", text: "Scanning a room's QR code goes straight to the guest's own stay when their phone has one (or when you let the room code open it for the guest booked in today), without the room guide loading first. Otherwise it shows the room guide." },
+      { kind: "improved", area: "Settings", text: "Write your own line under the code on the room cards, right on the print page. Cards always print on white." },
+    ],
+  },
+  {
     version: "0.75.0",
     date: "2026-10-25",
     title: "Early check-in and late check-out, done properly",

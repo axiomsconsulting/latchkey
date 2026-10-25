@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { CalendarX, Check, Loader2, MapPin } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -16,7 +16,7 @@ import { WifiCard } from "@/components/guest/WifiCard";
 import { Button } from "@/components/ui/button";
 import { stayProgressCopy as pcopy } from "@/content/copy";
 import { readFix } from "@/lib/kiosk-presence";
-import { openRoomStay } from "@/lib/stay-access.functions";
+import { openRoomStay, roomEntry } from "@/lib/stay-access.functions";
 import { GuideSections } from "@/components/guest/GuideSections";
 import { useScrollOpen } from "@/hooks/use-scroll-open";
 import { rebrand } from "@/lib/brand";
@@ -27,6 +27,14 @@ import { rebrand } from "@/lib/brand";
  * offered their own stay (messages, extras); anyone else can check in.
  */
 export const Route = createFileRoute("/room/$code")({
+  // Straight to the guest's own stay when there is one for this phone (decided on the server, before anything loads).
+  // ?preview=1: the host looking at the room guide itself (never sent on to a guest's stay).
+  validateSearch: (s: Record<string, unknown>): { preview?: boolean } => (s["preview"] === "1" || s["preview"] === 1 || s["preview"] === true ? { preview: true } : {}),
+  beforeLoad: async ({ params, search }) => {
+    if (search.preview) return;
+    const r = await roomEntry({ data: { code: params.code } }).catch(() => ({ to: "room" as const }));
+    if (r.to === "stay") throw redirect({ to: "/stay/$token", params: { token: r.token }, replace: true });
+  },
   loader: ({ params }) => getRoomGuide({ data: { code: params.code } }),
   head: () => ({
     meta: [
@@ -50,6 +58,7 @@ function forgetIcon(key: string) {
 function RoomGuide() {
   const g = Route.useLoaderData();
   const { code } = Route.useParams();
+  const { preview } = Route.useSearch();
   const [stay, setStay] = useState<string | null>(null);
   const [open, setOpen] = useState<string[]>(() => (g.found && g.guide[0] ? [g.guide[0].key] : []));
   // The section in the middle of the screen is open and highlighted, either way the guest scrolls.
@@ -60,17 +69,12 @@ function RoomGuide() {
   useEffect(() => {
     if (!g.found) return;
     const known = rememberedStay(g.propertyId);
+    // Remembered here from before the stay cookie existed: on to the stay (it leaves the cookie, so next time is direct).
+    if (known && !preview) return void window.location.replace(`/stay/${known}`);
     setStay(known);
-    if (known || !g.early) return;
-    setOwn("trying");
-    void tryOpen({ data: { code } })
-      .then((r) => {
-        if (r.status === "open") return go(r.token, r.checkOut);
-        setOwn(r.status === "away" && r.locate ? "locate" : "idle");
-      })
-      .catch(() => setOwn("idle"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [g, code]);
+    // The server already tried this phone's connection; what's left is checking by location, if the host allows it.
+    if (!known && g.early) setOwn("locate");
+  }, [g, preview]);
   function go(token: string, checkOut: string) {
     if (g.found) rememberStay(g.propertyId, token, checkOut);
     window.location.href = `/stay/${token}`;

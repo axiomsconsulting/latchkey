@@ -33,4 +33,11 @@ describe("door tablets and room Wi-Fi", () => {
     expect(await db.as("owner", "select wifi_name from rooms where id = $1", [room!.id])).toEqual([{ wifi_name: "Garden-5G" }]);
     await expect(db.as("owner", "update rooms set wifi_name = $2 where id = $1", [room!.id, "x".repeat(65)])).rejects.toThrow();
   });
+
+  it("gives each room three words, unique across every property", async () => {
+    const [a] = await db.as<{ id: string }>("owner", "insert into rooms (property_id, display_name, guide_words) values ($1, 'One', 'amber-otter-harbour') returning id", [propertyId]);
+    expect(a?.id).toBeTruthy();
+    await expect(db.as("owner", "insert into rooms (property_id, display_name, guide_words) values ($1, 'Two', 'amber-otter-harbour')", [propertyId])).rejects.toThrow();
+    await expect(db.as("owner", "insert into rooms (property_id, display_name, guide_words) values ($1, 'Three', 'not three words')", [propertyId])).rejects.toThrow();
+  });
 });

@@ -17,8 +17,10 @@ export const Route = createFileRoute("/api/public/wifi/$kind/$key")({
         const { guestWifi } = await import("@/lib/stay-access.server");
         let wifi: Awaited<ReturnType<typeof guestWifi>> = null;
         let org = "";
-        if (params.kind === "room" && /^[a-z0-9]{8,24}$/.test(params.key)) {
-          const { data: room } = await db.from("rooms").select("id, property_id, active").eq("guide_code", params.key).maybeSingle();
+        const { ROOM_CODE } = await import("@/lib/room-words");
+        if (params.kind === "room" && ROOM_CODE.test(params.key)) {
+          const { roomByCode } = await import("@/lib/room-code.server");
+          const room = await roomByCode<{ id: string; property_id: string; active: boolean }>(db, params.key, "id, property_id, active");
           if (!room || room.active === false) return none();
           const { data: p } = await db.from("properties").select("id, name, wifi_name, wifi_password").eq("id", room.property_id).maybeSingle();
           if (!p) return none();
