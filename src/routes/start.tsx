@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getSiteSettings } from "@/lib/admin.functions";
 import { DEMO_EMAIL, markDemo, signOut } from "@/lib/demo-session";
 import { rebrand } from "@/lib/brand";
+import { clearPartnerIntent } from "@/lib/partner-intent";
 
 export const Route = createFileRoute("/start")({
   ssr: false,
@@ -28,6 +29,8 @@ function StartTrial() {
 
   useEffect(() => {
     let live = true;
+    // Here to run rooms after all, not as a Commission Partner.
+    clearPartnerIntent();
     void (async () => {
       const { data } = await supabase.auth.getSession();
       const user = data.session?.user;

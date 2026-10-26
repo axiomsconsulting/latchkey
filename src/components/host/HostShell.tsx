@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getGroupBrand } from "@/lib/group-brand.functions";
 import { DEFAULT_GROUP_BRAND, effectiveLogo } from "@/lib/group-brand";
-import { Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { Link, Navigate, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MessageSquareHeart, MoreHorizontal, Compass } from "lucide-react";
@@ -153,6 +153,8 @@ export function HostShell() {
   }
 
   if (data?.pendingInvite) return <PendingInvite onSignOut={() => void leave()} />;
+  // A Commission Partner has no rooms to run: their own account instead of an empty "My rooms".
+  if (data && "partnerOnly" in data) return <Navigate to="/partners" replace />;
 
   const readOnly = data && !canWrite ? (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">

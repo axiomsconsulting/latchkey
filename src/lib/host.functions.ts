@@ -38,15 +38,39 @@ const HOST_COLUMNS = "id, business_name, contact_email, contact_phone, currency,
 
 type Membership = { host_id: string; role: string; hosts: { business_name: string } | null };
 
+/** Signed in to be a Commission Partner rather than to run rooms. */
+async function partnerOnly(
+  supabase: unknown,
+  userId: string,
+  claims: unknown,
+  asPartner: boolean | undefined,
+): Promise<boolean> {
+  if (asPartner) return true;
+  const meta = (claims as { user_metadata?: { signup_as?: unknown } } | undefined)?.user_metadata;
+  if (meta?.signup_as === "partner") return true;
+  // partners arrives with migration 0061; until then nobody is one.
+  const { data } = await (supabase as { from: (t: string) => any })
+    .from("partners")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
 /**
  * The signed-in user's active host workspace and their role in it. People
  * can belong to several hosts; the last one they switched to is remembered.
  * A first-time user gets a new workspace, unless an invitation is waiting
- * for them (they would otherwise get an empty "My rooms" before accepting).
+ * for them (they would otherwise get an empty "My rooms" before accepting),
+ * or they came to be a Commission Partner (a host account would stop them
+ * applying): asPartner from the join page, the partner sign-up's
+ * signup_as, or a partners row.
  */
 export const getWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ create: z.boolean().optional() }).optional().parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ create: z.boolean().optional(), asPartner: z.boolean().optional() }).optional().parse(input),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const rpc = supabase as unknown as RpcClient;
@@ -113,6 +137,24 @@ export const getWorkspace = createServerFn({ method: "GET" })
             trialDaysLeft: null,
           };
         }
+      }
+      if (!data?.create && (await partnerOnly(supabase, userId, context.claims, data?.asPartner))) {
+        // The app sends them to their Commission Partner account instead.
+        return {
+          hostId: "",
+          role: "viewer",
+          host: null,
+          properties: [],
+          hasDemo: false,
+          memberships: [],
+          pendingInvite: false,
+          partnerOnly: true as const,
+          isSuperAdmin,
+          support: null,
+          access: true,
+          billingPhase: "trial" as const,
+          trialDaysLeft: null,
+        };
       }
       // Atomic, server-side: creates the host and owner membership together
       // (a plain insert+select fails RLS because the user isn't a member yet).

@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.81.1",
+    date: "2026-10-26",
+    title: "Commission Partner sign-up keeps partners separate from hosts",
+    items: [
+      { kind: "fixed", area: "Settings", admin: true, text: "Signing up from /partners/join now makes a Commission Partner account with its own wording (\"Create your Commission Partner account\") and returns to the application, instead of the host sign-up. The dashboard and home page no longer quietly make an empty \"My rooms\" host account for a partner, which used to stop them applying; partners who open the dashboard go to their partner account instead. Signing in from a partner page also comes back to it." },
+    ],
+  },
+  {
     version: "0.81.0",
     date: "2026-10-26",
     title: "Commission Partner programme (test mode)",

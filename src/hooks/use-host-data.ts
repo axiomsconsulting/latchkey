@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { channels } from "@/content/copy";
 import { resolveSites, type Site } from "@/lib/booking-sites";
 import { getPropertyBoard, getWorkspace, listAlerts, listConnections } from "@/lib/host.functions";
+import { partnerIntent } from "@/lib/partner-intent";
 import { canWrite, isOwner } from "@/lib/roles";
 import { linkState } from "@/lib/sync-status";
 
@@ -14,7 +15,7 @@ export function useWorkspace() {
   const fn = useServerFn(getWorkspace);
   return useQuery({
     queryKey: ["workspace"],
-    queryFn: () => fn(),
+    queryFn: () => fn({ data: { asPartner: partnerIntent() } }),
   });
 }
 

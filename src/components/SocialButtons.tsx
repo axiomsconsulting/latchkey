@@ -38,7 +38,18 @@ export function LastUsed({ method, current }: { method: SignInMethod; current: S
  * Continue with Google / Apple. From a free trial, the trial's business goes
  * with the account they sign in with.
  */
-export function SocialButtons({ next, className, signUp = false }: { next?: string; className?: string; signUp?: boolean }) {
+export function SocialButtons({
+  next,
+  className,
+  signUp = false,
+  trialClaim = true,
+}: {
+  next?: string;
+  className?: string;
+  signUp?: boolean;
+  /** false: never move a free trial's business to the account (Commission Partners). */
+  trialClaim?: boolean;
+}) {
   const claim = useServerFn(startTrialClaim);
   const [busy, setBusy] = useState<"google" | "apple" | null>(null);
   const [last, setLast] = useState<SignInMethod | null>(null);
@@ -47,7 +58,7 @@ export function SocialButtons({ next, className, signUp = false }: { next?: stri
   async function go(provider: "google" | "apple") {
     setBusy(provider);
     try {
-      const r = await continueWith(provider, { next, makeClaim: () => claim() });
+      const r = await continueWith(provider, { next, ...(trialClaim ? { makeClaim: () => claim() } : {}) });
       if (r === "signed_in") window.location.assign(next ?? "/app/today");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : copy.socialFailed);

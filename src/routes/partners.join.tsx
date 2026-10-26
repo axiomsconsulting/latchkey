@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { partnerCopy as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { deviceId } from "@/lib/attribution";
+import { markPartnerIntent } from "@/lib/partner-intent";
 import { rebrand } from "@/lib/brand";
 import { applyAsPartner } from "@/lib/partners.functions";
 import { phoneCountries } from "@/lib/world";
@@ -69,12 +70,20 @@ function JoinPage() {
         ) : (
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link to="/auth" search={{ mode: "sign_up", next: "/partners/join" }}>
+              <Link
+                to="/auth"
+                search={{ mode: "sign_up", next: "/partners/join", for: "partner" }}
+                onClick={markPartnerIntent}
+              >
                 {copy.joinSignUp}
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/auth" search={{ next: "/partners/join" }}>
+              <Link
+                to="/auth"
+                search={{ next: "/partners/join", for: "partner" }}
+                onClick={markPartnerIntent}
+              >
                 {copy.joinSignIn}
               </Link>
             </Button>

@@ -14,6 +14,7 @@ import { useSite } from "@/hooks/use-site";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkspace } from "@/lib/host.functions";
+import { partnerIntent } from "@/lib/partner-intent";
 import { canWrite } from "@/lib/roles";
 import { HOME_REDIRECT_SCRIPT, rememberDashboard } from "@/lib/home-redirect";
 import { footerText } from "@/lib/brand";
@@ -67,7 +68,7 @@ function Landing() {
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session || !live) return;
       try {
-        const ws = await getWorkspace();
+        const ws = await getWorkspace({ data: { asPartner: partnerIntent() } });
         rememberDashboard(canWrite(ws.role));
         if (live && canWrite(ws.role)) await navigate({ to: "/app/today", replace: true });
       } catch {

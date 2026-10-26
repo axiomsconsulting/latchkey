@@ -20,11 +20,19 @@ async function resumeDemo() {
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
     if (!error && data.user) return { user: data.user };
     const user = await resumeDemo();
-    if (!user) throw redirect({ to: "/auth" });
+    // Back to the page they asked for once signed in; partners get their own sign-in.
+    if (!user)
+      throw redirect({
+        to: "/auth",
+        search: {
+          next: location.href,
+          ...(location.pathname.startsWith("/partners") ? { for: "partner" as const } : {}),
+        },
+      });
     return { user };
   },
   component: AuthenticatedLayout,

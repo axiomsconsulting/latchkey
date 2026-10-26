@@ -26,13 +26,17 @@ function safeNext(value: unknown): string | undefined {
 }
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>): { next?: string; email?: string; mode?: "sign_up" } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { next?: string; email?: string; mode?: "sign_up"; for?: "partner" } => {
     const next = safeNext(search["next"]);
     const email = typeof search["email"] === "string" ? search["email"].slice(0, 254) : undefined;
     return {
       ...(next ? { next } : {}),
       ...(email ? { email } : {}),
       ...(search["mode"] === "sign_up" ? { mode: "sign_up" as const } : {}),
+      // A Commission Partner's account: partner wording, no host trial.
+      ...(search["for"] === "partner" ? { for: "partner" as const } : {}),
     };
   },
   head: () => ({
@@ -58,7 +62,8 @@ function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   // Where to go after signing in, e.g. back to an invitation link.
-  const next = search.next ?? "/app/today";
+  const partner = search.for === "partner";
+  const next = search.next ?? (partner ? "/partners/join" : "/app/today");
   const [mode, setMode] = useState<"sign_in" | "sign_up">(search.mode ?? "sign_in");
   const [email, setEmail] = useState(search.email ?? "");
   const [password, setPassword] = useState("");
@@ -99,7 +104,11 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}${next}` },
+          options: {
+            emailRedirectTo: `${window.location.origin}${next}`,
+            // getWorkspace never makes a host account for a partner sign-up.
+            ...(partner ? { data: { signup_as: "partner" } } : {}),
+          },
         });
         if (error) throw error;
         if (!data.session) {
@@ -167,14 +176,27 @@ function AuthPage() {
         <Card className="card-soft">
           <CardHeader>
             <CardTitle className="font-display text-2xl">
-              {mode === "sign_in" ? copy.signInTitle : copy.signUpTitle}
+              {partner
+                ? mode === "sign_in"
+                  ? copy.partnerSignInTitle
+                  : copy.partnerSignUpTitle
+                : mode === "sign_in"
+                  ? copy.signInTitle
+                  : copy.signUpTitle}
             </CardTitle>
             <CardDescription>
-              {mode === "sign_in" ? copy.signInBody : copy.signUpBody}
+              {partner
+                ? mode === "sign_in"
+                  ? copy.partnerSignInBody
+                  : copy.partnerSignUpBody
+                : mode === "sign_in"
+                  ? copy.signInBody
+                  : copy.signUpBody}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SocialButtons next={next} signUp={mode === "sign_up"} />
+            {/* Partners never take over a free trial's business. */}
+            <SocialButtons next={next} signUp={mode === "sign_up"} trialClaim={!partner} />
 
             {/* Email is one more option, folded until chosen. */}
             {!emailOpen ? (
@@ -247,9 +269,20 @@ function AuthPage() {
               className="mt-5 w-full text-sm text-muted-foreground underline-offset-4 hover:underline"
               // New hosts go straight into the guided trial (no form, no password);
               // the sign-up form is only the fallback when trials can't start anonymously.
-              onClick={() => (mode === "sign_in" ? void navigate({ to: "/start" }) : setMode("sign_in"))}
+              // Partners sign up here instead (a trial would make them a host).
+              onClick={() =>
+                mode === "sign_in"
+                  ? partner
+                    ? setMode("sign_up")
+                    : void navigate({ to: "/start" })
+                  : setMode("sign_in")
+              }
             >
-              {mode === "sign_in" ? copy.switchToSignUp : copy.switchToSignIn}
+              {mode === "sign_in"
+                ? partner
+                  ? copy.partnerSwitchToSignUp
+                  : copy.switchToSignUp
+                : copy.switchToSignIn}
             </button>
           </CardContent>
         </Card>

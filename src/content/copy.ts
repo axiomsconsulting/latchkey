@@ -226,6 +226,11 @@ export const auth = branded({
   magicSent: (email: string) => `We've sent a magic link to ${email}. Open it on this device to sign in.`,
   magicNeedsEmail: "Type your email address first.",
   orPassword: "or sign in with your password",
+  partnerSignInTitle: "Commission Partner sign in",
+  partnerSignInBody: "Sign in to your Commission Partner account to apply, share your link or see your commission.",
+  partnerSignUpTitle: "Create your Commission Partner account",
+  partnerSignUpBody: "This account is only for introducing hosts. It isn't a host account and has no rooms. Next you'll fill in your application.",
+  partnerSwitchToSignUp: "New Commission Partner? Create an account",
 });
 
 /** The free trial: straight into setting up, account saved at the end. */
