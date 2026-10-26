@@ -250,6 +250,13 @@ async function ownPartner(db: import("./partner-data.server").AnyDb, userId: str
   return p;
 }
 
+/** A short, stable fingerprint of a Stripe request body, for its idempotency key. */
+function bodyKey(body: unknown): string {
+  let h = 5381;
+  for (const c of JSON.stringify(body)) h = ((h << 5) + h + c.charCodeAt(0)) >>> 0;
+  return h.toString(36);
+}
+
 /**
  * Stripe payouts set-up: makes the partner's Stripe account (matching the
  * platform profile, transfers only) the first time, then a
@@ -293,17 +300,19 @@ export const startPartnerPayouts = createServerFn({ method: "POST" })
       throw e;
     };
     if (!account) {
+      const body = partnerAccountBody({
+        id: p["id"],
+        country: p["country"],
+        email: p["email"],
+        kind: p["kind"],
+        name: p["business_name"] || p["legal_name"],
+      });
       const created = await v1<{ id: string }>(
         "/accounts",
-        partnerAccountBody({
-          id: p["id"],
-          country: p["country"],
-          email: p["email"],
-          kind: p["kind"],
-          name: p["business_name"] || p["legal_name"],
-        }),
-        // A fresh key: Stripe keeps refused attempts under the earlier keys.
-        { idempotencyKey: `partner_account_profile_${p["id"]}` },
+        body,
+        // Same request, same key (no double accounts); a changed request gets
+        // a new key, since Stripe refuses a key reused with other parameters.
+        { idempotencyKey: `partner_account_${p["id"]}_${bodyKey(body)}` },
       ).catch((e) => plain(e, "create_account"));
       account = created.id;
       check(
