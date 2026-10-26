@@ -33,6 +33,11 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
           return new Response("Bad payload", { status: 400 });
         }
 
+        // Commission Partner events first (src/lib/partner-webhook.ts); anything else carries on below unchanged.
+        { const { handlePartnerEvent } = await import("@/lib/partner-webhook.server");
+          const partner = await handlePartnerEvent(event);
+          if (partner) return partner === true ? new Response("ok") : partner; }
+
         // A host's linked account finished (or lost) the ability to take payments.
         if (event.type === "account.updated") {
           const acct = event.data?.object ?? {};

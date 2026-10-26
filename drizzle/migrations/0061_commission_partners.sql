@@ -191,6 +191,18 @@ create table if not exists public.stripe_events (
   error text
 );
 
+-- Each referred host's payment, so refunds and disputes find their referral and
+-- only the newly refunded amount is clawed back (Stripe reports the running total).
+create table if not exists public.partner_charges (
+  charge_id text primary key,
+  referral_id uuid not null references public.referrals(id) on delete restrict,
+  invoice_id text,
+  amount_pence int not null,
+  refunded_pence int not null default 0,
+  dispute_status text check (dispute_status in ('open', 'won', 'lost')),
+  created_at timestamptz not null default now()
+);
+
 -- ------------------------------------------------------- commission_ledger
 create table if not exists public.commission_ledger (
   id uuid primary key default gen_random_uuid(),
@@ -225,6 +237,9 @@ create table if not exists public.commission_ledger (
 create unique index if not exists commission_ledger_one_per_invoice on public.commission_ledger (stripe_invoice_id) where kind = 'commission';
 create unique index if not exists commission_ledger_one_bonus on public.commission_ledger (referral_id) where kind = 'launch_bonus';
 create index if not exists commission_ledger_partner on public.commission_ledger (partner_id, state);
+-- A retried webhook can't add the same clawback or dispute marker twice.
+create unique index if not exists commission_ledger_one_clawback_per_event on public.commission_ledger (reverses_ledger_id, source_event_id) where kind = 'clawback' and source_event_id is not null;
+create unique index if not exists commission_ledger_one_marker_per_event on public.commission_ledger (stripe_charge_id, kind, source_event_id) where kind in ('dispute_hold', 'dispute_release') and source_event_id is not null;
 create index if not exists commission_ledger_charge on public.commission_ledger (stripe_charge_id) where stripe_charge_id is not null;
 
 -- Add-only: corrections are new rows. Only state, payable_after and payout_id may change; nothing is deleted.
@@ -299,8 +314,10 @@ create table if not exists public.clawbacks (
   recovered_pence int not null default 0,
   status text not null default 'open' check (status in ('open', 'offset', 'reversed', 'repayment_requested', 'written_off', 'closed')),
   repayment_requested_at timestamptz,
+  source_event_id text,
   created_at timestamptz not null default now()
 );
+create unique index if not exists clawbacks_one_per_event on public.clawbacks (ledger_id, source_event_id) where source_event_id is not null;
 create index if not exists clawbacks_partner on public.clawbacks (partner_id, status);
 
 -- ---------------------------------------------------- audit and fraud flags
@@ -367,6 +384,7 @@ alter table public.host_identity_keys enable row level security;
 alter table public.referral_clicks enable row level security;
 alter table public.referrals enable row level security;
 alter table public.stripe_events enable row level security;
+alter table public.partner_charges enable row level security;
 alter table public.commission_ledger enable row level security;
 alter table public.launch_bonus_claims enable row level security;
 alter table public.payouts enable row level security;
@@ -393,6 +411,9 @@ create policy referrals_admin on public.referrals for all to authenticated using
 
 drop policy if exists stripe_events_admin on public.stripe_events;
 create policy stripe_events_admin on public.stripe_events for select to authenticated using (public.is_super_admin());
+
+drop policy if exists partner_charges_admin on public.partner_charges;
+create policy partner_charges_admin on public.partner_charges for select to authenticated using (public.is_super_admin());
 
 drop policy if exists commission_ledger_admin on public.commission_ledger;
 create policy commission_ledger_admin on public.commission_ledger for all to authenticated using (public.is_super_admin()) with check (public.is_super_admin());
