@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.81.3",
+    date: "2026-10-26",
+    title: "Commission Partner payouts match Latchkey's Stripe set-up",
+    items: [
+      { kind: "fixed", area: "Settings", admin: true, text: "\"Set up payouts with Stripe\" no longer waits for Stripe Accounts v2. Partner Stripe accounts now match Latchkey's Connect platform profile: Stripe covers losses, the partner has their own full Stripe dashboard, and the account only receives transfers. Onboarding stays on Stripe's own page, and \"Open your Stripe dashboard\" opens Stripe's sign-in." },
+    ],
+  },
+  {
     version: "0.81.2",
     date: "2026-10-26",
     title: "Commission Partner payouts use Stripe Accounts v2",

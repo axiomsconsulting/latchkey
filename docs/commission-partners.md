@@ -29,7 +29,7 @@ Tests: `tests/partner-guards`, `partner-db` (PGlite + RLS), `commission`, `partn
    - **Platform endpoint** (`/api/public/stripe-webhook`): `invoice.paid`, `invoice.payment_failed`, `charge.succeeded`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `transfer.reversed`.
    - **Connect endpoint:** `account.updated` (already there for hosts), `payout.failed`.
    - **Locally:** `stripe listen --forward-to localhost:<port>/api/public/stripe-webhook --events invoice.paid,invoice.payment_failed,charge.succeeded,charge.refunded,charge.dispute.created,charge.dispute.closed,account.updated,transfer.reversed,payout.failed`.
-4. **Stripe platform profile (test mode first, then live).** Partner accounts are made with **Accounts v2**: Express dashboard, recipient only (`stripe_transfers`, never `card_payments`), with `fees_collector` and `losses_collector` both `application`. Stripe won't let "stripe" be the losses collector on accounts paid by transfers, and refuses v1 Express accounts with the platform liable unless the profile is done (the error "Use Accounts v2 and set `losses_collector` to `stripe`" means this). In the Stripe Dashboard, in test mode/sandbox: open [Connect → Platform profile](https://dashboard.stripe.com/settings/connect/platform-profile), complete the **loss-liability acknowledgement** and any verification it asks for, and make sure Accounts v2 is available. If set-up still fails, the partner sees a plain message and the partner's log in Latchkey admin has `stripe_platform_setup_needed` with Stripe's code. Live needs the same in live mode, plus `stripePlatformProfileConfirmed` (D1).
+4. **Stripe platform profile (test mode first, then live).** Partner accounts must match Latchkey's Connect platform profile ([Settings → Connect → Platform setup](https://dashboard.stripe.com/settings/connect/platform-profile)). Today that profile says Stripe is responsible for losses (`losses.payments: stripe`), the account pays its own fees (`fees.payer: account`), full Stripe dashboard, and Stripe-hosted onboarding. So partner accounts are v1 accounts with exactly that `controller`, asking only for the `transfers` capability. If the profile is changed, `partnerAccountBody` must change with it, or Stripe refuses new accounts. Accounts v2 is "Requested" and isn't needed. Transfers cross borders only where Stripe allows it for full-dashboard accounts (UK, EEA and Switzerland); US and Canadian partners may be refused until Accounts v2 or Global Payouts is in place. If set-up fails, the partner sees a plain message, and the partner's log in Latchkey admin has `stripe_platform_setup_needed` with Stripe's code. Live needs the same in live mode, plus `stripePlatformProfileConfirmed` (D1).
 
 ## Manual test checklist (test mode)
 
@@ -37,7 +37,7 @@ Tests: `tests/partner-guards`, `partner-db` (PGlite + RLS), `commission`, `partn
 - [ ] With only the seed terms, no Launch Bonus is ever created. Add a test terms row in Latchkey admin → Commission Partners → Commission terms with a £5 bonus and an end date.
 
 **Commission Partners**
-- [ ] Apply as a UK partner and as an Irish one; approve them; complete Express onboarding with Stripe test data. "Stripe can pay" should show after `account.updated` or "Check again". Every screen should say "Commission Partner".
+- [ ] Apply as a UK partner and as an Irish one; approve them; complete Stripe onboarding with Stripe test data. "Stripe can pay" should show after `account.updated` or "Check again". Every screen should say "Commission Partner".
 - [ ] Apply from India: the partner is waitlisted (default D2).
 - [ ] Set only a live key: onboarding and payouts refuse.
 
@@ -72,7 +72,7 @@ Tests: `tests/partner-guards`, `partner-db` (PGlite + RLS), `commission`, `partn
 
 | # | Decision | Default |
 |---|---|---|
-| D1 | Stripe platform profile (loss liability for Accounts v2 recipient accounts); UK→overseas Global Payouts | not confirmed (live accounts blocked) |
+| D1 | Stripe platform profile (Stripe-liable, full dashboard partner accounts); UK→overseas Global Payouts | not confirmed (live accounts blocked) |
 | D2 | Partners outside UK/EEA/US/CA/CH | waitlist; Global Payouts off |
 | D3 | Who bears Stripe Connect fees (9.4) | OMS (never deducted); quarterly/fee-ratio blocked |
 | D6 | Adding a code after set-up | never |

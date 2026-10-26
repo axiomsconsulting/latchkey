@@ -12,7 +12,7 @@ import {
   makeReferralCode,
   onboardingLinkBody,
   platformSetupProblem,
-  recipientAccountBody,
+  partnerAccountBody,
 } from "../src/lib/partner-eligibility";
 
 describe("partner eligibility", () => {
@@ -65,37 +65,37 @@ describe("partner eligibility", () => {
     expect(code).toMatch(/^OMS-[A-HJKMNP-Z2-9]{5}$/);
   });
 
-  it("asks Stripe for a recipient account paid by transfers only (Accounts v2)", () => {
-    const b = recipientAccountBody({
+  it("asks Stripe for a transfers-only account matching the platform profile", () => {
+    const b = partnerAccountBody({
       id: "p1",
-      country: "IE",
+      country: "ie",
       email: "a@b.ie",
       kind: "business",
       name: "Acme",
     });
-    expect(b.dashboard).toBe("express");
-    expect(b.identity).toEqual({ country: "ie", entity_type: "company" });
-    expect(b.defaults.responsibilities).toEqual({
-      fees_collector: "application",
-      losses_collector: "application",
+    expect(b.country).toBe("IE");
+    expect(b.business_type).toBe("company");
+    expect(b.controller).toEqual({
+      losses: { payments: "stripe" },
+      fees: { payer: "account" },
+      stripe_dashboard: { type: "full" },
+      requirement_collection: "stripe",
     });
-    expect(b.configuration).toEqual({
-      recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } },
-    });
+    expect(b.capabilities).toEqual({ transfers: { requested: true } });
     const json = JSON.stringify(b);
-    expect(json).not.toContain("merchant");
     expect(json).not.toContain("card_payments");
-    expect(json).not.toContain("on_behalf_of");
-    expect(
-      recipientAccountBody({ id: "p2", country: "GB", email: "x@y.uk" }).identity.entity_type,
-    ).toBe("individual");
+    expect(json).not.toContain('"type":"express"');
+    expect(json).not.toContain('"application"');
+    expect(partnerAccountBody({ id: "p2", country: "GB", email: "x@y.uk" }).business_type).toBe(
+      "individual",
+    );
   });
 
-  it("onboards the recipient configuration and comes back to /partners", () => {
+  it("onboards on Stripe's page and comes back to /partners", () => {
     const l = onboardingLinkBody("acct_1", "https://x.test");
-    expect(l.use_case.type).toBe("account_onboarding");
-    expect(l.use_case.account_onboarding.configurations).toEqual(["recipient"]);
-    expect(l.use_case.account_onboarding.return_url).toBe("https://x.test/partners?stripe=done");
+    expect(l.type).toBe("account_onboarding");
+    expect(l.return_url).toBe("https://x.test/partners?stripe=done");
+    expect(l.refresh_url).toBe("https://x.test/partners?stripe=refresh");
   });
 
   it("is payable once transfers are active, in either the v2 or the v1 view", () => {
@@ -118,7 +118,7 @@ describe("partner eligibility", () => {
     expect(platformSetupProblem("account_creation_liability_unacknowledged")).toMatch(
       /Connect set-up/,
     );
-    expect(platformSetupProblem("accounts_v2_access_blocked")).toMatch(/Accounts v2/);
+    expect(platformSetupProblem("accounts_v2_access_blocked")).toMatch(/set-up/);
     expect(platformSetupProblem("email_invalid")).toBeNull();
     expect(platformSetupProblem(null)).toBeNull();
   });

@@ -60,19 +60,13 @@ export function makeReferralCode(random: () => number, prefix = "OMS"): string {
 }
 
 /**
- * Stripe Accounts v2 version for the partner account calls. Check against
- * https://docs.stripe.com/api/v2/core/accounts/create before changing.
+ * A Commission Partner's Stripe account (Accounts v1), matching Latchkey's
+ * Connect platform profile: Stripe covers losses, the account pays its own
+ * Stripe fees, full Stripe dashboard, Stripe-hosted onboarding. It only asks
+ * for the transfers capability (receives /v1/transfers, never takes card
+ * payments). The controller must match the profile, or Stripe refuses it.
  */
-export const ACCOUNTS_V2_VERSION = "2026-09-30.endive";
-
-/**
- * A Commission Partner's Stripe account (Accounts v2): Express dashboard,
- * recipient only (receives /v1/transfers, never takes card payments), with
- * Latchkey collecting fees and covering losses. Stripe refuses "stripe" as
- * the losses collector for accounts paid by transfers, so the platform
- * profile's loss-liability acknowledgement is needed (D1).
- */
-export function recipientAccountBody(p: {
+export function partnerAccountBody(p: {
   id: string;
   country: string;
   email: string;
@@ -80,36 +74,28 @@ export function recipientAccountBody(p: {
   name?: string | null;
 }) {
   return {
-    contact_email: p.email,
-    ...(p.name ? { display_name: p.name.slice(0, 100) } : {}),
-    identity: {
-      country: p.country.toLowerCase(),
-      entity_type: p.kind === "business" ? "company" : "individual",
+    country: p.country.toUpperCase(),
+    email: p.email,
+    business_type: p.kind === "business" ? "company" : "individual",
+    ...(p.name ? { business_profile: { name: p.name.slice(0, 100) } } : {}),
+    controller: {
+      losses: { payments: "stripe" },
+      fees: { payer: "account" },
+      stripe_dashboard: { type: "full" },
+      requirement_collection: "stripe",
     },
-    dashboard: "express",
-    defaults: {
-      responsibilities: { fees_collector: "application", losses_collector: "application" },
-    },
-    configuration: {
-      recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } },
-    },
+    capabilities: { transfers: { requested: true } },
     metadata: { partner_id: p.id, kind: "commission_partner" },
-    include: ["configuration.recipient", "requirements"],
   };
 }
 
-/** Stripe-hosted onboarding (Accounts v2) for the recipient configuration. */
+/** Stripe-hosted onboarding for the partner's account, coming back to /partners. */
 export function onboardingLinkBody(account: string, origin: string) {
   return {
     account,
-    use_case: {
-      type: "account_onboarding",
-      account_onboarding: {
-        configurations: ["recipient"],
-        refresh_url: `${origin}/partners?stripe=refresh`,
-        return_url: `${origin}/partners?stripe=done`,
-      },
-    },
+    type: "account_onboarding",
+    refresh_url: `${origin}/partners?stripe=refresh`,
+    return_url: `${origin}/partners?stripe=done`,
   };
 }
 
@@ -143,10 +129,7 @@ export function platformSetupProblem(code: string | null | undefined): string | 
   if (!code) return null;
   if (
     code === "accounts_v2_access_blocked" ||
-    code === "non_connect_platform_accounts_v2_access_blocked"
-  )
-    return "Latchkey's Stripe account can't create Commission Partner accounts yet (Accounts v2 isn't on). Please let Latchkey know.";
-  if (
+    code === "non_connect_platform_accounts_v2_access_blocked" ||
     code.startsWith("account_creation_liability_unacknowledged") ||
     code.startsWith("account_creation_requirement_collection") ||
     code === "connect_profile_not_submitted" ||

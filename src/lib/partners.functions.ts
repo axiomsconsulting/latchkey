@@ -20,13 +20,12 @@ import {
 } from "./commission";
 import { PARTNER_DEFAULTS, partnerConfig, trialDaysWarning } from "./partner-config";
 import {
-  ACCOUNTS_V2_VERSION,
   canReceiveTransfers,
   eligibilityFor,
   makeReferralCode,
   onboardingLinkBody,
   platformSetupProblem,
-  recipientAccountBody,
+  partnerAccountBody,
 } from "./partner-eligibility";
 
 type Ctx = { userId: string };
@@ -252,8 +251,8 @@ async function ownPartner(db: import("./partner-data.server").AnyDb, userId: str
 }
 
 /**
- * Stripe payouts set-up: makes the partner's Stripe account (Accounts v2,
- * Express dashboard, recipient of transfers only) the first time, then a
+ * Stripe payouts set-up: makes the partner's Stripe account (matching the
+ * platform profile, transfers only) the first time, then a
  * Stripe-hosted onboarding link. Test mode only unless live payouts are allowed, and never
  * live before Stripe has confirmed the platform profile (D1).
  */
@@ -261,7 +260,7 @@ export const startPartnerPayouts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { adminDb, check, loadPartnerConfig, logPartnerEvent } = await data();
-    const { PartnerStripeError, partnerStripeMode, v2 } = await import("./partner-stripe.server");
+    const { PartnerStripeError, partnerStripeMode, v1 } = await import("./partner-stripe.server");
     const db = await adminDb();
     const config = await loadPartnerConfig(db);
     const p = await ownPartner(db, (context as Ctx).userId);
@@ -294,17 +293,17 @@ export const startPartnerPayouts = createServerFn({ method: "POST" })
       throw e;
     };
     if (!account) {
-      const created = await v2<{ id: string }>(
-        "/core/accounts",
-        recipientAccountBody({
+      const created = await v1<{ id: string }>(
+        "/accounts",
+        partnerAccountBody({
           id: p["id"],
           country: p["country"],
           email: p["email"],
           kind: p["kind"],
           name: p["business_name"] || p["legal_name"],
         }),
-        // v2 keys: the earlier v1 attempt's key must not be reused.
-        { version: ACCOUNTS_V2_VERSION, idempotencyKey: `partner_account_v2_${p["id"]}` },
+        // A fresh key: Stripe keeps refused attempts under the earlier keys.
+        { idempotencyKey: `partner_account_profile_${p["id"]}` },
       ).catch((e) => plain(e, "create_account"));
       account = created.id;
       check(
@@ -324,30 +323,21 @@ export const startPartnerPayouts = createServerFn({ method: "POST" })
         details: { mode },
       });
     }
-    const link = await v2<{ url: string }>(
-      "/core/account_links",
+    const link = await v1<{ url: string }>(
+      "/account_links",
       onboardingLinkBody(account, siteOrigin()),
-      { version: ACCOUNTS_V2_VERSION },
     ).catch((e) => plain(e, "account_link"));
     return { url: link.url };
   });
 
-/** A sign-in link to the partner's own Stripe Express dashboard. */
+/** The partner's own Stripe dashboard (a full dashboard: they sign in to Stripe themselves). */
 export const partnerStripeDashboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { adminDb } = await data();
-    const { v1 } = await import("./partner-stripe.server");
     const p = await ownPartner(await adminDb(), (context as Ctx).userId);
     if (!p["stripe_account_id"]) throw new Error("Set up payouts first.");
-    return {
-      url: (
-        await v1<{ url: string }>(
-          `/accounts/${encodeURIComponent(p["stripe_account_id"])}/login_links`,
-          {},
-        )
-      ).url,
-    };
+    return { url: "https://dashboard.stripe.com/" };
   });
 
 /** Asks Stripe whether the partner's account can be paid yet (also kept up to date by account.updated). */
@@ -355,15 +345,13 @@ export const refreshPartnerStripe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { adminDb, check } = await data();
-    const { v1, v2 } = await import("./partner-stripe.server");
+    const { v1 } = await import("./partner-stripe.server");
     const db = await adminDb();
     const p = await ownPartner(db, (context as Ctx).userId);
     if (!p["stripe_account_id"]) return { payoutsEnabled: false };
     const id = encodeURIComponent(p["stripe_account_id"]);
-    const acct = await v2<Parameters<typeof canReceiveTransfers>[0] & { requirements?: unknown }>(
-      `/core/accounts/${id}?include=configuration.recipient&include=requirements`,
-      undefined,
-      { version: ACCOUNTS_V2_VERSION },
+    const acct = await v1<Parameters<typeof canReceiveTransfers>[0] & { requirements?: unknown }>(
+      `/accounts/${id}`,
     );
     const ready = canReceiveTransfers(acct);
     check(
