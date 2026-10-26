@@ -62,7 +62,8 @@ function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   // Where to go after signing in, e.g. back to an invitation link.
-  const partner = search.for === "partner";
+  // Also when coming back to a partner page, so older links and bookmarks read right.
+  const partner = search.for === "partner" || !!search.next?.startsWith("/partners");
   const next = search.next ?? (partner ? "/partners/join" : "/app/today");
   const [mode, setMode] = useState<"sign_in" | "sign_up">(search.mode ?? "sign_in");
   const [email, setEmail] = useState(search.email ?? "");
