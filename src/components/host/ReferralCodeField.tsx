@@ -8,7 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { partnerCopy as copy } from "@/content/copy";
 import { deviceId, storedReferral } from "@/lib/attribution";
-import { attachReasonText, attachReferral, myReferral, type AttachResult } from "@/lib/partner-referrals.functions";
+import {
+  attachReasonText,
+  attachReferral,
+  myReferral,
+  type AttachResult,
+} from "@/lib/partner-referrals.functions";
 
 /**
  * Set-up's optional Commission Partner code. A code from a partner's link
@@ -19,7 +24,11 @@ import { attachReasonText, attachReferral, myReferral, type AttachResult } from 
 export function ReferralCodeField({ hostId }: { hostId: string }) {
   const attach = useServerFn(attachReferral);
   const mine = useServerFn(myReferral);
-  const status = useQuery({ queryKey: ["my-referral", hostId], queryFn: () => mine({ data: { hostId } }), staleTime: 60_000 });
+  const status = useQuery({
+    queryKey: ["my-referral", hostId],
+    queryFn: () => mine({ data: { hostId } }),
+    staleTime: 60_000,
+  });
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<AttachResult | null>(null);
@@ -28,7 +37,11 @@ export function ReferralCodeField({ hostId }: { hostId: string }) {
   async function send(c: string, source: "cookie" | "typed", clickedAt?: string) {
     setBusy(true);
     try {
-      setResult(await attach({ data: { hostId, code: c, source, clickedAt: clickedAt ?? null, deviceId: deviceId() } }));
+      setResult(
+        await attach({
+          data: { hostId, code: c, source, clickedAt: clickedAt ?? null, deviceId: deviceId() },
+        }),
+      );
     } catch {
       setResult({ ok: false, reason: "not_set_up" });
     } finally {
@@ -66,12 +79,28 @@ export function ReferralCodeField({ hostId }: { hostId: string }) {
     >
       <Label htmlFor="partner-code">{copy.codeLabel}</Label>
       <div className="flex gap-2">
-        <Input id="partner-code" className="h-11 uppercase" value={code} onChange={(e) => setCode(e.target.value)} maxLength={32} autoComplete="off" placeholder="OMS-XXXXX" />
-        <Button type="submit" variant="outline" className="h-11 shrink-0" disabled={busy || !code.trim()}>
+        <Input
+          id="partner-code"
+          className="h-11 uppercase"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          maxLength={32}
+          autoComplete="off"
+          placeholder="OMS-XXXXX"
+        />
+        <Button
+          type="submit"
+          variant="outline"
+          className="h-11 shrink-0"
+          disabled={busy || !code.trim()}
+        >
           {busy ? <Loader2 className="size-4 animate-spin" /> : copy.codeAdd}
         </Button>
       </div>
-      <p className={problem ? "text-sm text-destructive" : "text-xs text-muted-foreground"} role={problem ? "alert" : undefined}>
+      <p
+        className={problem ? "text-sm text-destructive" : "text-xs text-muted-foreground"}
+        role={problem ? "alert" : undefined}
+      >
         {problem ?? copy.codeHint}
       </p>
     </form>

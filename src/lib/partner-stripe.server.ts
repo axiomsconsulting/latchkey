@@ -19,7 +19,9 @@ const V2 = "https://api.stripe.com/v2";
 
 export class PartnerStripeLiveBlocked extends Error {
   constructor() {
-    super("Commission Partner payouts only run in Stripe test mode. Add STRIPE_TEST_API_KEY (a test key), or have Latchkey's admin allow live payouts.");
+    super(
+      "Commission Partner payouts only run in Stripe test mode. Add STRIPE_TEST_API_KEY (a test key), or have Latchkey's admin allow live payouts.",
+    );
     this.name = "PartnerStripeLiveBlocked";
   }
 }
@@ -42,7 +44,8 @@ export class PartnerStripeError extends Error {
   }
 }
 
-const isLiveKey = (k: string | undefined): k is string => !!k && (k.startsWith("sk_live_") || k.startsWith("rk_live_") || k.includes("_live_"));
+const isLiveKey = (k: string | undefined): k is string =>
+  !!k && (k.startsWith("sk_live_") || k.startsWith("rk_live_") || k.includes("_live_"));
 const isTestKey = (k: string | undefined): k is string => !!k && k.includes("_test_");
 
 export function liveAllowed(): boolean {
@@ -56,7 +59,9 @@ export function liveAllowed(): boolean {
  */
 export function partnerStripeKey(): string {
   const test = process.env["STRIPE_TEST_API_KEY"];
-  const live = [process.env["STRIPE_LIVE_API_KEY"], process.env["STRIPE_SECRET_KEY"]].find(isLiveKey);
+  const live = [process.env["STRIPE_LIVE_API_KEY"], process.env["STRIPE_SECRET_KEY"]].find(
+    isLiveKey,
+  );
   if (liveAllowed() && live) return live;
   if (isTestKey(test)) return test;
   if (live || test) throw new PartnerStripeLiveBlocked();
@@ -67,17 +72,32 @@ export function partnerStripeMode(): "test" | "live" {
   return isTestKey(partnerStripeKey()) ? "test" : "live";
 }
 
-type CallOptions = { method?: "GET" | "POST" | "DELETE"; idempotencyKey?: string; account?: string | null };
+type CallOptions = {
+  method?: "GET" | "POST" | "DELETE";
+  idempotencyKey?: string;
+  account?: string | null;
+};
 
 async function send<T>(url: string, init: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, signal: AbortSignal.timeout(15_000) });
-  const json = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string } };
-  if (!res.ok) throw new PartnerStripeError(json?.error?.message ?? "Stripe didn't accept that request.", res.status, json?.error?.code ?? null);
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: { message?: string; code?: string };
+  };
+  if (!res.ok)
+    throw new PartnerStripeError(
+      json?.error?.message ?? "Stripe didn't accept that request.",
+      res.status,
+      json?.error?.code ?? null,
+    );
   return json as T;
 }
 
 /** Stripe's v1 API (form-encoded). `account` makes the call on a connected account. */
-export async function v1<T>(path: string, body?: Record<string, unknown>, opts: CallOptions = {}): Promise<T> {
+export async function v1<T>(
+  path: string,
+  body?: Record<string, unknown>,
+  opts: CallOptions = {},
+): Promise<T> {
   const method = opts.method ?? (body ? "POST" : "GET");
   return send<T>(`${V1}${path}`, {
     method,
@@ -92,7 +112,11 @@ export async function v1<T>(path: string, body?: Record<string, unknown>, opts: 
 }
 
 /** Stripe's v2 API (JSON, a pinned preview version), used by Global Payouts. */
-export async function v2<T>(path: string, json?: Record<string, unknown>, opts: CallOptions & { version: string } = { version: "" }): Promise<T> {
+export async function v2<T>(
+  path: string,
+  json?: Record<string, unknown>,
+  opts: CallOptions & { version: string } = { version: "" },
+): Promise<T> {
   const method = opts.method ?? (json ? "POST" : "GET");
   if (!opts.version) throw new Error("A Stripe-Version is needed for v2 calls.");
   return send<T>(`${V2}${path}`, {

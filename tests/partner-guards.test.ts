@@ -6,9 +6,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PARTNER_DEFAULTS, partnerConfig, trialDaysWarning } from "../src/lib/partner-config";
-import { PartnerStripeLiveBlocked, PartnerStripeNotSetUp, partnerStripeKey, partnerStripeMode, v1, v2 } from "../src/lib/partner-stripe.server";
+import {
+  PartnerStripeLiveBlocked,
+  PartnerStripeNotSetUp,
+  partnerStripeKey,
+  partnerStripeMode,
+  v1,
+  v2,
+} from "../src/lib/partner-stripe.server";
 
-const ENV = ["STRIPE_TEST_API_KEY", "STRIPE_LIVE_API_KEY", "STRIPE_SECRET_KEY", "PARTNER_PAYOUTS_ALLOW_LIVE"] as const;
+const ENV = [
+  "STRIPE_TEST_API_KEY",
+  "STRIPE_LIVE_API_KEY",
+  "STRIPE_SECRET_KEY",
+  "PARTNER_PAYOUTS_ALLOW_LIVE",
+] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -75,9 +87,15 @@ describe("partner Stripe calls", () => {
   });
 
   it("sends the Idempotency-Key and connected account on v1", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: "tr_1" }), { status: 200 }));
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ id: "tr_1" }), { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
-    const out = await v1<{ id: string }>("/transfers", { amount: 1000, currency: "gbp", destination: "acct_1" }, { idempotencyKey: "payout_1" });
+    const out = await v1<{ id: string }>(
+      "/transfers",
+      { amount: 1000, currency: "gbp", destination: "acct_1" },
+      { idempotencyKey: "payout_1" },
+    );
     expect(out.id).toBe("tr_1");
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.stripe.com/v1/transfers");
@@ -86,15 +104,24 @@ describe("partner Stripe calls", () => {
     expect(h["Authorization"]).toBe("Bearer sk_test_abc");
     expect(String(init.body)).toBe("amount=1000&currency=gbp&destination=acct_1");
     await v1("/balance", undefined, { account: "acct_9" });
-    const h2 = (fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].headers as Record<string, string>;
+    const h2 = (fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].headers as Record<
+      string,
+      string
+    >;
     expect(h2["Stripe-Account"]).toBe("acct_9");
     expect(h2["Idempotency-Key"]).toBeUndefined();
   });
 
   it("sends JSON with the Stripe-Version on v2", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: "obp_1" }), { status: 200 }));
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ id: "obp_1" }), { status: 200 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
-    await v2("/money_management/outbound_payments", { amount: { value: 1000, currency: "gbp" } }, { version: "2026-09-30.preview", idempotencyKey: "gp_1" });
+    await v2(
+      "/money_management/outbound_payments",
+      { amount: { value: 1000, currency: "gbp" } },
+      { version: "2026-09-30.preview", idempotencyKey: "gp_1" },
+    );
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.stripe.com/v2/money_management/outbound_payments");
     const h = init.headers as Record<string, string>;
@@ -105,7 +132,16 @@ describe("partner Stripe calls", () => {
   });
 
   it("raises Stripe's message without the key", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { message: "No such destination", code: "resource_missing" } }), { status: 400 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ error: { message: "No such destination", code: "resource_missing" } }),
+            { status: 400 },
+          ),
+      ),
+    );
     await expect(v1("/transfers", { amount: 1 })).rejects.toThrow("No such destination");
   });
 
@@ -114,7 +150,9 @@ describe("partner Stripe calls", () => {
     process.env["STRIPE_LIVE_API_KEY"] = "sk_live_abc";
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    await expect(v1("/transfers", { amount: 1 }, { idempotencyKey: "x" })).rejects.toThrow(PartnerStripeLiveBlocked);
+    await expect(v1("/transfers", { amount: 1 }, { idempotencyKey: "x" })).rejects.toThrow(
+      PartnerStripeLiveBlocked,
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -131,7 +169,16 @@ describe("partner config", () => {
   });
 
   it("takes valid overrides and ignores bad or fixed ones", () => {
-    const c = partnerConfig({ holdDays: 30, nonExpressRoute: "hold", payoutCadence: "weekly", currency: "usd", raisesApplyToExisting: true, maxFeeRatioBps: -5, nope: 1, minPayoutPence: "5" });
+    const c = partnerConfig({
+      holdDays: 30,
+      nonExpressRoute: "hold",
+      payoutCadence: "weekly",
+      currency: "usd",
+      raisesApplyToExisting: true,
+      maxFeeRatioBps: -5,
+      nope: 1,
+      minPayoutPence: "5",
+    });
     expect(c.holdDays).toBe(30);
     expect(c.nonExpressRoute).toBe("hold");
     expect(c.payoutCadence).toBe("monthly");

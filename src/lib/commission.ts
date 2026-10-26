@@ -33,9 +33,25 @@ const iso = (m: number) => new Date(m).toISOString();
 
 /** The UTC offset (ms) of a time zone at an instant. */
 function zoneOffset(at: number, tz: string): number {
-  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date(at));
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(at));
   const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  const local = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  const local = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
   return local - Math.floor(at / 1000) * 1000;
 }
 
@@ -59,8 +75,20 @@ export function dayEnd(date: string, tz = "Europe/London"): number {
 export function addMonths(at: number, n: number): number {
   const d = new Date(at);
   const day = d.getUTCDate();
-  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1, d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()));
-  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const target = new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth() + n,
+      1,
+      d.getUTCHours(),
+      d.getUTCMinutes(),
+      d.getUTCSeconds(),
+      d.getUTCMilliseconds(),
+    ),
+  );
+  const last = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
   target.setUTCDate(Math.min(day, last));
   return target.getTime();
 }
@@ -114,7 +142,10 @@ export function snapshotOf(row: TermsRow, deadlineDays: number): TermsSnapshot {
     rate_bps: row.rate_bps,
     paid_months_cap: row.paid_months_cap,
     bonus_amount_pence: row.bonus_amount_pence,
-    bonus_tiers: row.bonus_tiers && row.bonus_tiers.length ? [...row.bonus_tiers].sort((a, b) => a.from_nth - b.from_nth) : null,
+    bonus_tiers:
+      row.bonus_tiers && row.bonus_tiers.length
+        ? [...row.bonus_tiers].sort((a, b) => a.from_nth - b.from_nth)
+        : null,
     bonus_end_date: row.bonus_end_date,
     bonus_first_payment_deadline_days: row.bonus_first_payment_deadline_days ?? deadlineDays,
   };
@@ -124,11 +155,19 @@ export function snapshotOf(row: TermsRow, deadlineDays: number): TermsSnapshot {
  * The terms for a host: the latest row in effect at its Sign-up Date (not
  * the click date), a partner's own terms winning over the programme's.
  */
-export function termsFor(signUpAt: string, partnerId: string, rows: TermsRow[], deadlineDays: number): TermsSnapshot | null {
+export function termsFor(
+  signUpAt: string,
+  partnerId: string,
+  rows: TermsRow[],
+  deadlineDays: number,
+): TermsSnapshot | null {
   const at = ms(signUpAt)!;
   const inForce = rows.filter((r) => (ms(r.effective_from) ?? Infinity) <= at);
-  const latest = (list: TermsRow[]) => [...list].sort((a, b) => ms(b.effective_from)! - ms(a.effective_from)!)[0];
-  const row = latest(inForce.filter((r) => r.partner_id === partnerId)) ?? latest(inForce.filter((r) => r.partner_id === null));
+  const latest = (list: TermsRow[]) =>
+    [...list].sort((a, b) => ms(b.effective_from)! - ms(a.effective_from)!)[0];
+  const row =
+    latest(inForce.filter((r) => r.partner_id === partnerId)) ??
+    latest(inForce.filter((r) => r.partner_id === null));
   return row ? snapshotOf(row, deadlineDays) : null;
 }
 
@@ -136,21 +175,42 @@ const tiersBelow = (prev: BonusTier[] | null, next: BonusTier[] | null): boolean
   if (!prev?.length) return false;
   if (!next?.length) return true;
   // A tier is lower if, for any host number, the new terms pay less.
-  const at = (t: BonusTier[], n: number) => [...t].sort((a, b) => a.from_nth - b.from_nth).filter((x) => x.from_nth <= n).pop()?.pence ?? 0;
+  const at = (t: BonusTier[], n: number) =>
+    [...t]
+      .sort((a, b) => a.from_nth - b.from_nth)
+      .filter((x) => x.from_nth <= n)
+      .pop()?.pence ?? 0;
   const points = new Set([...prev, ...next].map((t) => t.from_nth));
   return [...points].some((n) => at(next, n) < at(prev, n));
 };
 
 /** Whether new terms take anything away from the current ones (6.5 needs 30 days' notice for that). */
-type TermsMoney = Pick<TermsRow, "rate_bps" | "paid_months_cap" | "bonus_amount_pence" | "bonus_tiers" | "bonus_end_date" | "bonus_first_payment_deadline_days">;
+type TermsMoney = Pick<
+  TermsRow,
+  | "rate_bps"
+  | "paid_months_cap"
+  | "bonus_amount_pence"
+  | "bonus_tiers"
+  | "bonus_end_date"
+  | "bonus_first_payment_deadline_days"
+>;
 
 export function isReduction(prev: TermsMoney, next: TermsMoney): boolean {
   if (next.rate_bps < prev.rate_bps) return true;
   if (next.paid_months_cap < prev.paid_months_cap) return true;
-  if ((next.bonus_first_payment_deadline_days ?? 60) < (prev.bonus_first_payment_deadline_days ?? 60)) return true;
-  if (prev.bonus_amount_pence !== null && (next.bonus_amount_pence === null || next.bonus_amount_pence < prev.bonus_amount_pence) && !next.bonus_tiers?.length) return true;
+  if (
+    (next.bonus_first_payment_deadline_days ?? 60) < (prev.bonus_first_payment_deadline_days ?? 60)
+  )
+    return true;
+  if (
+    prev.bonus_amount_pence !== null &&
+    (next.bonus_amount_pence === null || next.bonus_amount_pence < prev.bonus_amount_pence) &&
+    !next.bonus_tiers?.length
+  )
+    return true;
   if (tiersBelow(prev.bonus_tiers, next.bonus_tiers)) return true;
-  if (prev.bonus_end_date && (!next.bonus_end_date || next.bonus_end_date < prev.bonus_end_date)) return true;
+  if (prev.bonus_end_date && (!next.bonus_end_date || next.bonus_end_date < prev.bonus_end_date))
+    return true;
   return false;
 }
 
@@ -162,24 +222,35 @@ export const TERMS_NOTICE_DAYS = 30;
  * increases may start at once. Applying to existing referrals needs a
  * written-notice reference and is for pure increases only.
  */
-export function newTermsProblem(prev: TermsRow | null, next: Omit<TermsRow, "id">, now: number): string | null {
+export function newTermsProblem(
+  prev: TermsRow | null,
+  next: Omit<TermsRow, "id">,
+  now: number,
+): string | null {
   if (next.rate_bps < 0 || next.rate_bps > 10_000) return "The rate must be between 0% and 100%.";
-  if (next.paid_months_cap < 1 || next.paid_months_cap > 12) return "Paid Months must be between 1 and 12.";
-  if (next.bonus_amount_pence !== null && next.bonus_amount_pence < 0) return "The Launch Bonus can't be negative.";
-  if (next.bonus_tiers?.some((t) => !Number.isInteger(t.from_nth) || t.from_nth < 1 || t.pence < 0)) return "Each bonus tier needs a host number from 1 and an amount.";
+  if (next.paid_months_cap < 1 || next.paid_months_cap > 12)
+    return "Paid Months must be between 1 and 12.";
+  if (next.bonus_amount_pence !== null && next.bonus_amount_pence < 0)
+    return "The Launch Bonus can't be negative.";
+  if (next.bonus_tiers?.some((t) => !Number.isInteger(t.from_nth) || t.from_nth < 1 || t.pence < 0))
+    return "Each bonus tier needs a host number from 1 and an amount.";
   const from = ms(next.effective_from);
   if (from === null) return "Choose when the terms take effect.";
-  if (prev && from <= (ms(prev.effective_from) ?? 0)) return "New terms must start after the current ones.";
+  if (prev && from <= (ms(prev.effective_from) ?? 0))
+    return "New terms must start after the current ones.";
   const reduces = !!prev && isReduction(prev, next);
   if (reduces) {
     const notice = ms(next.notice_sent_at ?? null);
-    if (notice === null) return "These terms reduce or remove something: record when the 30 days' notice was emailed first.";
-    if (from < notice + TERMS_NOTICE_DAYS * DAY) return "Reduced terms can only take effect 30 days or more after the notice was emailed.";
+    if (notice === null)
+      return "These terms reduce or remove something: record when the 30 days' notice was emailed first.";
+    if (from < notice + TERMS_NOTICE_DAYS * DAY)
+      return "Reduced terms can only take effect 30 days or more after the notice was emailed.";
   } else if (from < now - 60_000) {
     return "New terms can't start in the past.";
   }
   if (next.applies_to_existing) {
-    if (!next.written_notice_ref?.trim()) return "Applying terms to hosts already referred needs the written notice's reference.";
+    if (!next.written_notice_ref?.trim())
+      return "Applying terms to hosts already referred needs the written notice's reference.";
     if (reduces) return "Only increases can apply to hosts already referred.";
   }
   return null;
@@ -190,7 +261,13 @@ export function raisedSnapshot(snap: TermsSnapshot, row: TermsRow): TermsSnapsho
   if (!row.applies_to_existing || !row.written_notice_ref) return null;
   const next = snapshotOf(row, snap.bonus_first_payment_deadline_days);
   if (isReduction(snap, next)) return null;
-  return { ...next, bonus_first_payment_deadline_days: Math.max(next.bonus_first_payment_deadline_days, snap.bonus_first_payment_deadline_days) };
+  return {
+    ...next,
+    bonus_first_payment_deadline_days: Math.max(
+      next.bonus_first_payment_deadline_days,
+      snap.bonus_first_payment_deadline_days,
+    ),
+  };
 }
 
 /* ------------------------------------------------------------ invoices */
@@ -233,7 +310,8 @@ export type StripeCharge = {
 
 export type HostBilling = { trialEndsAt: string | null; comped: boolean };
 
-const subLine = (inv: StripeInvoice) => inv.lines?.data.find((l) => l.price?.recurring || l.plan) ?? inv.lines?.data[0];
+const subLine = (inv: StripeInvoice) =>
+  inv.lines?.data.find((l) => l.price?.recurring || l.plan) ?? inv.lines?.data[0];
 
 /** "month", "year", or "other" (weekly, every 3 months…), which earns nothing and is flagged. */
 export function billingInterval(inv: StripeInvoice): "month" | "year" | "other" {
@@ -256,7 +334,8 @@ export function invoicePeriod(inv: StripeInvoice): { start: number; end: number 
 
 /** VAT in the invoice (Latchkey charges none today). */
 export function invoiceTax(inv: StripeInvoice): number {
-  if (typeof inv.total === "number" && typeof inv.total_excluding_tax === "number") return Math.max(0, inv.total - inv.total_excluding_tax);
+  if (typeof inv.total === "number" && typeof inv.total_excluding_tax === "number")
+    return Math.max(0, inv.total - inv.total_excluding_tax);
   if (inv.total_taxes?.length) return inv.total_taxes.reduce((s, t) => s + (t.amount || 0), 0);
   return Math.max(0, inv.tax ?? 0);
 }
@@ -275,7 +354,11 @@ export function netReceipts(inv: StripeInvoice, refundedPence = 0, lostDisputePe
   return Math.max(0, exTax - share(refundedPence) - share(lostDisputePence));
 }
 
-const COUNTED_REASONS = new Set(["subscription_create", "subscription_cycle", "subscription_update"]);
+const COUNTED_REASONS = new Set([
+  "subscription_create",
+  "subscription_cycle",
+  "subscription_update",
+]);
 // A minute's leeway: Stripe starts the first paid period at the trial's last second.
 const TRIAL_LEEWAY = 60_000;
 
@@ -350,7 +433,13 @@ export type QualifyingPayment = {
  * trial, once settled. Kept once found: a later payment never replaces it,
  * unless D26 says a fully reversed one may be replaced.
  */
-export function qualifyingPayment(r: ReferralState, inv: StripeInvoice, host: HostBilling, charge: StripeCharge | null, config: Pick<PartnerConfig, "qpReplacedAfterReversal">): QualifyingPayment | null {
+export function qualifyingPayment(
+  r: ReferralState,
+  inv: StripeInvoice,
+  host: HostBilling,
+  charge: StripeCharge | null,
+  config: Pick<PartnerConfig, "qpReplacedAfterReversal">,
+): QualifyingPayment | null {
   if (r.qualifying_invoice_id && !(config.qpReplacedAfterReversal && r.qp_reversed)) return null;
   const monthly = isPaidMonth(inv, host);
   if (!monthly && !isAnnualPayment(inv, host)) return null;
@@ -358,7 +447,13 @@ export function qualifyingPayment(r: ReferralState, inv: StripeInvoice, host: Ho
   const at = paidAt(inv, charge);
   const fpme = firstPaidMonthEnd(inv);
   if (at === null || fpme === null) return null;
-  return { invoice_id: inv.id, charge_id: charge?.id ?? null, paid_at: iso(at), interval: monthly ? "month" : "year", first_paid_month_end: iso(fpme) };
+  return {
+    invoice_id: inv.id,
+    charge_id: charge?.id ?? null,
+    paid_at: iso(at),
+    interval: monthly ? "month" : "year",
+    first_paid_month_end: iso(fpme),
+  };
 }
 
 /* ------------------------------------------------------------ stopping */
@@ -376,7 +471,10 @@ export type PartnerState = { terminated_at: string | null; termination_for_breac
 export function postStopAllowed(
   r: Pick<ReferralState, "qualifying_payment_at" | "sign_up_at" | "post_stop_gap_at">,
   p: PartnerState,
-  config: Pick<PartnerConfig, "postStopSignupCounts" | "postStopPaymentDeadlineDays" | "postStopResumeCounts">,
+  config: Pick<
+    PartnerConfig,
+    "postStopSignupCounts" | "postStopPaymentDeadlineDays" | "postStopResumeCounts"
+  >,
   kind: "commission" | "bonus",
   at: number = Date.now(),
 ): boolean {
@@ -393,7 +491,11 @@ export function postStopAllowed(
 }
 
 /** A gap in paying after the stop date (11.2(a)): a new period starting more than a day after the last paid one ended. */
-export function postStopGap(r: Pick<ReferralState, "last_paid_period_end">, p: PartnerState, periodStart: number): boolean {
+export function postStopGap(
+  r: Pick<ReferralState, "last_paid_period_end">,
+  p: PartnerState,
+  periodStart: number,
+): boolean {
   const stop = ms(p.terminated_at);
   const last = ms(r.last_paid_period_end ?? null);
   if (stop === null || last === null) return false;
@@ -419,7 +521,9 @@ export type CommissionLine = {
   hold_reason: string | null;
 };
 
-export type CommissionResult = { line: CommissionLine; capReached: boolean } | { line: null; reason: string; flag?: "other_interval" };
+export type CommissionResult =
+  | { line: CommissionLine; capReached: boolean }
+  | { line: null; reason: string; flag?: "other_interval" };
 
 /**
  * The commission for one paid invoice, or why there's none. A pending
@@ -433,7 +537,14 @@ export function commissionFor(input: {
   referral: ReferralState;
   partner: PartnerState;
   snapshot: TermsSnapshot;
-  config: Pick<PartnerConfig, "holdDays" | "annualAfterMonthly" | "postStopSignupCounts" | "postStopPaymentDeadlineDays" | "postStopResumeCounts">;
+  config: Pick<
+    PartnerConfig,
+    | "holdDays"
+    | "annualAfterMonthly"
+    | "postStopSignupCounts"
+    | "postStopPaymentDeadlineDays"
+    | "postStopResumeCounts"
+  >;
   netReceiptsPence: number;
   settled: boolean;
   strongFlagOpen: boolean;
@@ -442,7 +553,8 @@ export function commissionFor(input: {
   const { invoice, host, referral, partner, snapshot, config } = input;
   if (host.comped) return { line: null, reason: "comped" };
   const interval = billingInterval(invoice);
-  if (interval === "other" && invoice.status === "paid" && invoice.amount_paid > 0) return { line: null, reason: "other_interval", flag: "other_interval" };
+  if (interval === "other" && invoice.status === "paid" && invoice.amount_paid > 0)
+    return { line: null, reason: "other_interval", flag: "other_interval" };
   const monthly = isPaidMonth(invoice, host);
   const annual = !monthly && isAnnualPayment(invoice, host);
   if (!monthly && !annual) return { line: null, reason: "not_a_paid_month" };
@@ -450,7 +562,8 @@ export function commissionFor(input: {
   const cap = Math.min(12, snapshot.paid_months_cap);
   const used = referral.paid_months_used;
   if (used >= cap) return { line: null, reason: "cap_reached" };
-  if (!postStopAllowed(referral, partner, config, "commission", input.paidAtMs)) return { line: null, reason: "partner_stopped" };
+  if (!postStopAllowed(referral, partner, config, "commission", input.paidAtMs))
+    return { line: null, reason: "partner_stopped" };
   const period = invoicePeriod(invoice)!;
   const net = Math.max(0, input.netReceiptsPence);
   const remaining = cap - used;
@@ -468,7 +581,13 @@ export function commissionFor(input: {
   } else {
     return { line: null, reason: "annual_after_monthly" };
   }
-  const holdReason = !input.settled ? "payment_processing" : referral.status === "pending_review" ? "under_review" : input.strongFlagOpen ? "fraud_check" : null;
+  const holdReason = !input.settled
+    ? "payment_processing"
+    : referral.status === "pending_review"
+      ? "under_review"
+      : input.strongFlagOpen
+        ? "fraud_check"
+        : null;
   return {
     line: {
       kind: "commission",
@@ -496,7 +615,12 @@ export type BonusDecision =
 
 /** The tier amount for the n-th earned bonus (1-based). */
 export function tierAmount(tiers: BonusTier[], nth: number): number {
-  return [...tiers].sort((a, b) => a.from_nth - b.from_nth).filter((t) => t.from_nth <= nth).pop()?.pence ?? 0;
+  return (
+    [...tiers]
+      .sort((a, b) => a.from_nth - b.from_nth)
+      .filter((t) => t.from_nth <= nth)
+      .pop()?.pence ?? 0
+  );
 }
 
 /**
@@ -516,33 +640,55 @@ export function bonusEligibility(input: {
   priorClaim: boolean;
   strongFlagOpen: boolean;
   partner: PartnerState;
-  config: Pick<PartnerConfig, "bonusPartialRefund" | "postStopSignupCounts" | "postStopPaymentDeadlineDays" | "postStopResumeCounts">;
+  config: Pick<
+    PartnerConfig,
+    | "bonusPartialRefund"
+    | "postStopSignupCounts"
+    | "postStopPaymentDeadlineDays"
+    | "postStopResumeCounts"
+  >;
   /** How many of this partner's bonuses were earned before this one (reversed ones don't count). */
   earnedBefore: number;
 }): BonusDecision {
   const { referral: r, snapshot: s, now } = input;
-  const no = (reason: string): BonusDecision => ({ status: "not_eligible", amount_pence: 0, reason });
-  const wait = (status: "pending" | "withheld", reason: string): BonusDecision => ({ status, amount_pence: 0, reason });
+  const no = (reason: string): BonusDecision => ({
+    status: "not_eligible",
+    amount_pence: 0,
+    reason,
+  });
+  const wait = (status: "pending" | "withheld", reason: string): BonusDecision => ({
+    status,
+    amount_pence: 0,
+    reason,
+  });
   if (s.bonus_amount_pence === null && !s.bonus_tiers?.length) return no("no_bonus_in_terms");
   if (!s.bonus_end_date) return no("no_bonus_end_date");
   const signUp = ms(r.sign_up_at)!;
   if (signUp >= dayEnd(s.bonus_end_date)) return no("signed_up_after_end_date");
   const deadline = signUp + s.bonus_first_payment_deadline_days * DAY;
   const qp = ms(r.qualifying_payment_at ?? null);
-  if (qp === null) return now > deadline ? no("qualifying_payment_too_late") : wait("pending", "waiting_for_qualifying_payment");
+  if (qp === null)
+    return now > deadline
+      ? no("qualifying_payment_too_late")
+      : wait("pending", "waiting_for_qualifying_payment");
   if (qp > deadline) return no("qualifying_payment_too_late");
   if (r.status === "rejected") return no("referral_rejected");
   if (!postStopAllowed(r, input.partner, input.config, "bonus", qp)) return no("post_stop");
   if (input.priorClaim) return no("prior_claim");
   const paid = Math.max(0, input.qpPaidPence);
   const refunded = Math.max(0, r.qp_refunded_pence ?? 0);
-  if (r.qp_reversed || r.qp_dispute === "lost" || (paid > 0 && refunded >= paid)) return no("qualifying_payment_refunded");
-  if (refunded > 0 && input.config.bonusPartialRefund === "full") return no("qualifying_payment_refunded");
+  if (r.qp_reversed || r.qp_dispute === "lost" || (paid > 0 && refunded >= paid))
+    return no("qualifying_payment_refunded");
+  if (refunded > 0 && input.config.bonusPartialRefund === "full")
+    return no("qualifying_payment_refunded");
   const fpme = ms(r.first_paid_month_end ?? null);
   if (fpme === null || now < fpme) return wait("pending", "first_month_not_complete");
   if (r.qp_dispute === "open") return wait("withheld", "open_dispute");
-  if (r.status === "pending_review" || input.strongFlagOpen) return wait("withheld", "under_review");
-  const full = s.bonus_tiers?.length ? tierAmount(s.bonus_tiers, input.earnedBefore + 1) : (s.bonus_amount_pence ?? 0);
+  if (r.status === "pending_review" || input.strongFlagOpen)
+    return wait("withheld", "under_review");
+  const full = s.bonus_tiers?.length
+    ? tierAmount(s.bonus_tiers, input.earnedBefore + 1)
+    : (s.bonus_amount_pence ?? 0);
   const amount = refunded > 0 && paid > 0 ? roundHalfUp((full * (paid - refunded)) / paid) : full;
   if (amount <= 0) return no("no_bonus_in_terms");
   return { status: "earned", amount_pence: amount, reason: null };
@@ -565,7 +711,14 @@ export type LedgerLine = {
   id: string;
   partner_id: string;
   referral_id: string | null;
-  kind: "commission" | "launch_bonus" | "clawback" | "dispute_hold" | "dispute_release" | "adjustment" | "write_off";
+  kind:
+    | "commission"
+    | "launch_bonus"
+    | "clawback"
+    | "dispute_hold"
+    | "dispute_release"
+    | "adjustment"
+    | "write_off";
   state: LedgerState;
   amount_pence: number;
   months_covered?: number | null;
@@ -577,7 +730,12 @@ export type LedgerLine = {
 };
 
 /** Held lines whose Hold Period has passed, with no open dispute on their charge and no open fraud flag on their referral. */
-export function releaseHeld(lines: LedgerLine[], now: number, openDisputeCharges: ReadonlySet<string>, flaggedReferrals: ReadonlySet<string>): string[] {
+export function releaseHeld(
+  lines: LedgerLine[],
+  now: number,
+  openDisputeCharges: ReadonlySet<string>,
+  flaggedReferrals: ReadonlySet<string>,
+): string[] {
   return lines
     .filter((l) => l.state === "held" && (ms(l.payable_after) ?? Infinity) <= now)
     .filter((l) => !(l.stripe_charge_id && openDisputeCharges.has(l.stripe_charge_id)))
@@ -587,23 +745,95 @@ export function releaseHeld(lines: LedgerLine[], now: number, openDisputeCharges
 
 /* ---------------------------------------------------------------- fees */
 
-const EEA_UK = new Set(["GB", "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "IS", "LI", "NO"]);
-const MAJOR_FX = new Set(["US", "AT", "BE", "HR", "CY", "EE", "FI", "FR", "DE", "GR", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PT", "SK", "SI", "ES"]);
+const EEA_UK = new Set([
+  "GB",
+  "AT",
+  "BE",
+  "BG",
+  "HR",
+  "CY",
+  "CZ",
+  "DK",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "HU",
+  "IE",
+  "IT",
+  "LV",
+  "LT",
+  "LU",
+  "MT",
+  "NL",
+  "PL",
+  "PT",
+  "RO",
+  "SK",
+  "SI",
+  "ES",
+  "SE",
+  "IS",
+  "LI",
+  "NO",
+]);
+const MAJOR_FX = new Set([
+  "US",
+  "AT",
+  "BE",
+  "HR",
+  "CY",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "IE",
+  "IT",
+  "LV",
+  "LT",
+  "LU",
+  "MT",
+  "NL",
+  "PT",
+  "SK",
+  "SI",
+  "ES",
+]);
 
 export type FeeEstimate = { total_pence: number; parts: Array<{ label: string; pence: number }> };
 
 /** Stripe's fees for a payout, an estimate only: never charged by Latchkey and never taken from the partner (9.4). */
-export function estimateFees(route: "express" | "global_payouts" | "manual", amountPence: number, country: string, t: FeeTable): FeeEstimate {
+export function estimateFees(
+  route: "express" | "global_payouts" | "manual",
+  amountPence: number,
+  country: string,
+  t: FeeTable,
+): FeeEstimate {
   const parts: FeeEstimate["parts"] = [];
   if (route === "express") {
     parts.push({ label: "Active account (monthly)", pence: t.connect.activeAccountPence });
-    parts.push({ label: "Payout", pence: pct(amountPence, t.connect.payoutBps) + t.connect.payoutFixedPence });
-    if (!EEA_UK.has(country)) parts.push({ label: "Cross-border", pence: pct(amountPence, t.connect.crossBorderBps) });
+    parts.push({
+      label: "Payout",
+      pence: pct(amountPence, t.connect.payoutBps) + t.connect.payoutFixedPence,
+    });
+    if (!EEA_UK.has(country))
+      parts.push({ label: "Cross-border", pence: pct(amountPence, t.connect.crossBorderBps) });
   } else if (route === "global_payouts") {
     parts.push({ label: "Payout", pence: t.globalPayouts.payoutFixedPence });
     if (country !== "GB") {
-      parts.push({ label: "Cross-border (up to)", pence: pct(amountPence, t.globalPayouts.crossBorderBpsMax) });
-      parts.push({ label: "Currency conversion", pence: pct(amountPence, MAJOR_FX.has(country) ? t.globalPayouts.fxMajorBps : t.globalPayouts.fxOtherBps) });
+      parts.push({
+        label: "Cross-border (up to)",
+        pence: pct(amountPence, t.globalPayouts.crossBorderBpsMax),
+      });
+      parts.push({
+        label: "Currency conversion",
+        pence: pct(
+          amountPence,
+          MAJOR_FX.has(country) ? t.globalPayouts.fxMajorBps : t.globalPayouts.fxOtherBps,
+        ),
+      });
     }
   }
   return { total_pence: parts.reduce((s, p) => s + p.pence, 0), parts };
@@ -651,12 +881,25 @@ export class PayoutPlanRefused extends Error {}
 export function planPayouts(
   partners: PayoutPartner[],
   payableLines: LedgerLine[],
-  config: Pick<PartnerConfig, "minPayoutPence" | "payoutCadence" | "maxFeeRatioBps" | "agreementAllowsNonMonthly" | "payoutDueDaysAfterMonthEnd" | "globalPayoutsEnabled">,
+  config: Pick<
+    PartnerConfig,
+    | "minPayoutPence"
+    | "payoutCadence"
+    | "maxFeeRatioBps"
+    | "agreementAllowsNonMonthly"
+    | "payoutDueDaysAfterMonthEnd"
+    | "globalPayoutsEnabled"
+  >,
   fees: FeeTable,
   asOf: number,
 ): { payouts: PlannedPayout[]; carried: CarryForward[] } {
-  if ((config.payoutCadence !== "monthly" || config.maxFeeRatioBps !== null) && !config.agreementAllowsNonMonthly) {
-    throw new PayoutPlanRefused("The agreement (9.4) says payouts are monthly from £10: quarterly payouts and holding for fees need the agreement changed first.");
+  if (
+    (config.payoutCadence !== "monthly" || config.maxFeeRatioBps !== null) &&
+    !config.agreementAllowsNonMonthly
+  ) {
+    throw new PayoutPlanRefused(
+      "The agreement (9.4) says payouts are monthly from £10: quarterly payouts and holding for fees need the agreement changed first.",
+    );
   }
   const payouts: PlannedPayout[] = [];
   const carried: CarryForward[] = [];
@@ -665,7 +908,8 @@ export function planPayouts(
     const lines = payableLines.filter((l) => l.partner_id === p.id && l.state === "payable");
     if (!lines.length) continue;
     const amount = lines.reduce((s, l) => s + l.amount_pence, 0);
-    const carry = (reason: string) => carried.push({ partner_id: p.id, amount_pence: amount, reason });
+    const carry = (reason: string) =>
+      carried.push({ partner_id: p.id, amount_pence: amount, reason });
     if (amount <= 0) {
       carry("negative_balance");
       continue;
@@ -710,8 +954,17 @@ export function planPayouts(
       carry("fees_too_high");
       continue;
     }
-    const oldest = Math.min(...lines.filter((l) => l.amount_pence > 0).map((l) => ms(l.payable_after) ?? asOf));
-    payouts.push({ partner_id: p.id, route, amount_pence: amount, ledger_ids: lines.map((l) => l.id), est_fee_pence: est, due_by: dueBy(oldest, config.payoutDueDaysAfterMonthEnd) });
+    const oldest = Math.min(
+      ...lines.filter((l) => l.amount_pence > 0).map((l) => ms(l.payable_after) ?? asOf),
+    );
+    payouts.push({
+      partner_id: p.id,
+      route,
+      amount_pence: amount,
+      ledger_ids: lines.map((l) => l.id),
+      est_fee_pence: est,
+      due_by: dueBy(oldest, config.payoutDueDaysAfterMonthEnd),
+    });
   }
   return { payouts, carried };
 }
@@ -738,30 +991,81 @@ export type ClawbackPlan = {
   /** Unpaid lines cancelled outright. */
   voids: string[];
   /** Negative lines to add: against unpaid lines they take that line's state; against paid ones they're payable (offset). */
-  lines: Array<{ kind: "clawback"; amount_pence: number; reverses_ledger_id: string; state: LedgerState; payable_after: string | null; stripe_charge_id: string }>;
+  lines: Array<{
+    kind: "clawback";
+    amount_pence: number;
+    reverses_ledger_id: string;
+    state: LedgerState;
+    payable_after: string | null;
+    stripe_charge_id: string;
+  }>;
   /** Clawbacks rows for the record (paid lines, and voided ones for the audit). */
-  clawbacks: Array<{ ledger_id: string; cause: "refund" | "chargeback" | "reversed_payment" | "fraud"; amount_pence: number; method: "offset" | "reversal"; status: "open" | "closed" }>;
+  clawbacks: Array<{
+    ledger_id: string;
+    cause: "refund" | "chargeback" | "reversed_payment" | "fraud";
+    amount_pence: number;
+    method: "offset" | "reversal";
+    status: "open" | "closed";
+  }>;
   /** Paid Months to take back (full refunds and lost chargebacks only). */
   monthsUncounted: number;
   bonus: null | { status: "reversed" | "not_eligible"; reason: string };
 };
 
-const already = (line: LedgerLine, all: LedgerLine[]) => all.filter((l) => l.reverses_ledger_id === line.id && l.state !== "void").reduce((s, l) => s - l.amount_pence, 0);
+const already = (line: LedgerLine, all: LedgerLine[]) =>
+  all
+    .filter((l) => l.reverses_ledger_id === line.id && l.state !== "void")
+    .reduce((s, l) => s - l.amount_pence, 0);
 
-function reverseLine(line: LedgerLine, all: LedgerLine[], amount: number, full: boolean, cause: ClawbackPlan["clawbacks"][number]["cause"], method: "offset" | "reversal", chargeId: string, plan: ClawbackPlan) {
+function reverseLine(
+  line: LedgerLine,
+  all: LedgerLine[],
+  amount: number,
+  full: boolean,
+  cause: ClawbackPlan["clawbacks"][number]["cause"],
+  method: "offset" | "reversal",
+  chargeId: string,
+  plan: ClawbackPlan,
+) {
   if (line.state === "void") return;
   const left = line.amount_pence - already(line, all);
   const take = Math.min(left, full ? left : amount);
   if (take <= 0) return;
   if (line.state === "paid") {
-    plan.lines.push({ kind: "clawback", amount_pence: -take, reverses_ledger_id: line.id, state: "payable", payable_after: null, stripe_charge_id: chargeId });
+    plan.lines.push({
+      kind: "clawback",
+      amount_pence: -take,
+      reverses_ledger_id: line.id,
+      state: "payable",
+      payable_after: null,
+      stripe_charge_id: chargeId,
+    });
     plan.clawbacks.push({ ledger_id: line.id, cause, amount_pence: take, method, status: "open" });
   } else if (take === line.amount_pence) {
     plan.voids.push(line.id);
-    plan.clawbacks.push({ ledger_id: line.id, cause, amount_pence: take, method: "offset", status: "closed" });
+    plan.clawbacks.push({
+      ledger_id: line.id,
+      cause,
+      amount_pence: take,
+      method: "offset",
+      status: "closed",
+    });
   } else {
-    plan.lines.push({ kind: "clawback", amount_pence: -take, reverses_ledger_id: line.id, state: line.state, payable_after: line.payable_after, stripe_charge_id: chargeId });
-    plan.clawbacks.push({ ledger_id: line.id, cause, amount_pence: take, method: "offset", status: "closed" });
+    plan.lines.push({
+      kind: "clawback",
+      amount_pence: -take,
+      reverses_ledger_id: line.id,
+      state: line.state,
+      payable_after: line.payable_after,
+      stripe_charge_id: chargeId,
+    });
+    plan.clawbacks.push({
+      ledger_id: line.id,
+      cause,
+      amount_pence: take,
+      method: "offset",
+      status: "closed",
+    });
   }
 }
 
@@ -780,10 +1084,24 @@ export function applyClawback(
   config: Pick<PartnerConfig, "bonusPartialRefund" | "clawbackMethod">,
   opts: { reversalPossible?: boolean } = {},
 ): ClawbackPlan {
-  const plan: ClawbackPlan = { voids: [], lines: [], clawbacks: [], monthsUncounted: 0, bonus: null };
-  const method = config.clawbackMethod === "offset_then_reversal" && opts.reversalPossible ? "reversal" : "offset";
-  const share = (amount: number) => (ev.paid_pence > 0 ? roundHalfUp((amount * Math.min(ev.amount_pence, ev.paid_pence)) / ev.paid_pence) : 0);
-  for (const l of lines.filter((x) => x.kind === "commission" && x.stripe_charge_id === ev.charge_id && x.state !== "void")) {
+  const plan: ClawbackPlan = {
+    voids: [],
+    lines: [],
+    clawbacks: [],
+    monthsUncounted: 0,
+    bonus: null,
+  };
+  const method =
+    config.clawbackMethod === "offset_then_reversal" && opts.reversalPossible
+      ? "reversal"
+      : "offset";
+  const share = (amount: number) =>
+    ev.paid_pence > 0
+      ? roundHalfUp((amount * Math.min(ev.amount_pence, ev.paid_pence)) / ev.paid_pence)
+      : 0;
+  for (const l of lines.filter(
+    (x) => x.kind === "commission" && x.stripe_charge_id === ev.charge_id && x.state !== "void",
+  )) {
     reverseLine(l, lines, share(l.amount_pence), ev.full, ev.cause, method, ev.charge_id, plan);
     if (ev.full) plan.monthsUncounted += l.months_covered ?? 1;
   }
@@ -791,7 +1109,16 @@ export function applyClawback(
     const bonus = lines.find((x) => x.kind === "launch_bonus" && x.state !== "void");
     const whole = ev.full || config.bonusPartialRefund === "full";
     if (bonus) {
-      reverseLine(bonus, lines, share(bonus.amount_pence), whole, ev.cause, method, ev.charge_id, plan);
+      reverseLine(
+        bonus,
+        lines,
+        share(bonus.amount_pence),
+        whole,
+        ev.cause,
+        method,
+        ev.charge_id,
+        plan,
+      );
       if (whole) plan.bonus = { status: "reversed", reason: "qualifying_payment_refunded" };
     } else if (whole && referral.bonus_status !== "reversed") {
       plan.bonus = { status: "not_eligible", reason: "qualifying_payment_refunded" };
@@ -806,16 +1133,43 @@ export function applyClawback(
  * Ending the arrangement is the admin's decision, never automatic.
  */
 export function applyFraudOutcome(lines: LedgerLine[]): ClawbackPlan {
-  const plan: ClawbackPlan = { voids: [], lines: [], clawbacks: [], monthsUncounted: 0, bonus: { status: "reversed", reason: "fraud" } };
-  for (const l of lines.filter((x) => (x.kind === "commission" || x.kind === "launch_bonus") && x.state !== "void")) {
+  const plan: ClawbackPlan = {
+    voids: [],
+    lines: [],
+    clawbacks: [],
+    monthsUncounted: 0,
+    bonus: { status: "reversed", reason: "fraud" },
+  };
+  for (const l of lines.filter(
+    (x) => (x.kind === "commission" || x.kind === "launch_bonus") && x.state !== "void",
+  )) {
     const left = l.amount_pence - already(l, lines);
     if (left <= 0) continue;
     if (l.state === "paid") {
-      plan.lines.push({ kind: "clawback", amount_pence: -left, reverses_ledger_id: l.id, state: "payable", payable_after: null, stripe_charge_id: l.stripe_charge_id ?? "" });
-      plan.clawbacks.push({ ledger_id: l.id, cause: "fraud", amount_pence: left, method: "offset", status: "open" });
+      plan.lines.push({
+        kind: "clawback",
+        amount_pence: -left,
+        reverses_ledger_id: l.id,
+        state: "payable",
+        payable_after: null,
+        stripe_charge_id: l.stripe_charge_id ?? "",
+      });
+      plan.clawbacks.push({
+        ledger_id: l.id,
+        cause: "fraud",
+        amount_pence: left,
+        method: "offset",
+        status: "open",
+      });
     } else {
       plan.voids.push(l.id);
-      plan.clawbacks.push({ ledger_id: l.id, cause: "fraud", amount_pence: left, method: "offset", status: "closed" });
+      plan.clawbacks.push({
+        ledger_id: l.id,
+        cause: "fraud",
+        amount_pence: left,
+        method: "offset",
+        status: "closed",
+      });
     }
   }
   return plan;
@@ -826,11 +1180,17 @@ export function applyFraudOutcome(lines: LedgerLine[]): ClawbackPlan {
  * is due; after 3 months with nothing due, ask for repayment; written off
  * only below the threshold (never, by default).
  */
-export function clawbackNext(c: { amount_pence: number; recovered_pence: number; created_at: string; status: string }, nothingDue: boolean, now: number, config: Pick<PartnerConfig, "repaymentRequestAfterDays" | "writeOffBelowPence">): "offset" | "repayment_requested" | "written_off" | "closed" {
+export function clawbackNext(
+  c: { amount_pence: number; recovered_pence: number; created_at: string; status: string },
+  nothingDue: boolean,
+  now: number,
+  config: Pick<PartnerConfig, "repaymentRequestAfterDays" | "writeOffBelowPence">,
+): "offset" | "repayment_requested" | "written_off" | "closed" {
   const left = c.amount_pence - c.recovered_pence;
   if (left <= 0) return "closed";
   if (left < config.writeOffBelowPence) return "written_off";
-  if (nothingDue && now - ms(c.created_at)! >= config.repaymentRequestAfterDays * DAY) return "repayment_requested";
+  if (nothingDue && now - ms(c.created_at)! >= config.repaymentRequestAfterDays * DAY)
+    return "repayment_requested";
   return "offset";
 }
 

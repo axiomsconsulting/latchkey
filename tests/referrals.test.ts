@@ -5,7 +5,17 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { businessDomain, hostLabel, identityValues, normaliseAddress, normaliseCompanyNumber, normaliseEmail, normaliseName, normalisePhone, normaliseUrl } from "../src/lib/partner-identity";
+import {
+  businessDomain,
+  hostLabel,
+  identityValues,
+  normaliseAddress,
+  normaliseCompanyNumber,
+  normaliseEmail,
+  normaliseName,
+  normalisePhone,
+  normaliseUrl,
+} from "../src/lib/partner-identity";
 
 describe("identity normalisation", () => {
   it("matches emails however they're typed", () => {
@@ -22,13 +32,23 @@ describe("identity normalisation", () => {
     expect(normaliseName("Café Rouge")).toBe("cafe rouge");
     expect(normaliseCompanyNumber("1234 567")).toBe("01234567");
     expect(normaliseCompanyNumber("sc123456")).toBe("SC123456");
-    expect(normaliseAddress("12, High Street", "hp6 5aa")).toBe(normaliseAddress("12 High St", "HP65AA"));
-    expect(normaliseUrl("https://www.airbnb.co.uk/rooms/123/?check_in=2026-11-01")).toBe("airbnb.co.uk/rooms/123");
+    expect(normaliseAddress("12, High Street", "hp6 5aa")).toBe(
+      normaliseAddress("12 High St", "HP65AA"),
+    );
+    expect(normaliseUrl("https://www.airbnb.co.uk/rooms/123/?check_in=2026-11-01")).toBe(
+      "airbnb.co.uk/rooms/123",
+    );
     expect(normaliseUrl("javascript:alert(1)")).toBeNull();
   });
 
   it("builds de-duplicated identity values", () => {
-    const v = identityValues({ emails: ["pat@oms.uk", "PAT@oms.uk", null], phones: ["+447700900123"], businessNames: ["Hill Suites"], ipHash: "ip", deviceHash: null });
+    const v = identityValues({
+      emails: ["pat@oms.uk", "PAT@oms.uk", null],
+      phones: ["+447700900123"],
+      businessNames: ["Hill Suites"],
+      ipHash: "ip",
+      deviceHash: null,
+    });
     expect(v).toEqual([
       { kind: "email", value: "pat@oms.uk" },
       { kind: "email_domain", value: "oms.uk" },

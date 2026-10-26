@@ -29,6 +29,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
+import { Route as PartnersJoinRouteImport } from './routes/partners.join'
 import { Route as ReserveTokenRouteImport } from './routes/reserve.$token'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
@@ -50,6 +51,7 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticated/app.setup'
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
 import { Route as AuthenticatedAppWhatsNewRouteImport } from './routes/_authenticated/app.whats-new'
+import { Route as AuthenticatedPartnersIndexRouteImport } from './routes/_authenticated/partners.index'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
@@ -174,6 +176,11 @@ const PCodeRoute = PCodeRouteImport.update({
   path: '/p/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PartnersJoinRoute = PartnersJoinRouteImport.update({
+  id: '/partners/join',
+  path: '/partners/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReserveTokenRoute = ReserveTokenRouteImport.update({
   id: '/reserve/$token',
   path: '/reserve/$token',
@@ -287,6 +294,12 @@ const AuthenticatedAppWhatsNewRoute =
     id: '/whats-new',
     path: '/whats-new',
     getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedPartnersIndexRoute =
+  AuthenticatedPartnersIndexRouteImport.update({
+    id: '/partners/',
+    path: '/partners/',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const ApiPublicMcpRoute = ApiPublicMcpRouteImport.update({
   id: '/api/public/mcp',
@@ -433,6 +446,7 @@ export interface FileRoutesByFullPath {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/partners/join': typeof PartnersJoinRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
@@ -460,6 +474,7 @@ export interface FileRoutesByFullPath {
   '/demo/host/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/partners/': typeof AuthenticatedPartnersIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
@@ -498,6 +513,7 @@ export interface FileRoutesByTo {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/partners/join': typeof PartnersJoinRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
@@ -525,6 +541,7 @@ export interface FileRoutesByTo {
   '/demo/host/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/partners': typeof AuthenticatedPartnersIndexRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
@@ -566,6 +583,7 @@ export interface FileRoutesById {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/partners/join': typeof PartnersJoinRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
@@ -593,6 +611,7 @@ export interface FileRoutesById {
   '/demo/host_/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/partners/': typeof AuthenticatedPartnersIndexRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/_authenticated/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
@@ -634,6 +653,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/partners/join'
     | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
@@ -661,6 +681,7 @@ export interface FileRouteTypes {
     | '/demo/host/$region'
     | '/stay-again/withdraw/$token'
     | '/app/'
+    | '/partners/'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
@@ -699,6 +720,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/partners/join'
     | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
@@ -726,6 +748,7 @@ export interface FileRouteTypes {
     | '/demo/host/$region'
     | '/stay-again/withdraw/$token'
     | '/app'
+    | '/partners'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
@@ -766,6 +789,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/partners/join'
     | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
@@ -793,6 +817,7 @@ export interface FileRouteTypes {
     | '/demo/host_/$region'
     | '/stay-again/withdraw/$token'
     | '/_authenticated/app/'
+    | '/_authenticated/partners/'
     | '/_authenticated/app/print/$propertyId'
     | '/_authenticated/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
@@ -833,6 +858,7 @@ export interface RootRouteChildren {
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
   PCodeRoute: typeof PCodeRoute
+  PartnersJoinRoute: typeof PartnersJoinRoute
   ReserveTokenRoute: typeof ReserveTokenRoute
   RoomCodeRoute: typeof RoomCodeRoute
   StayTokenRoute: typeof StayTokenRoute
@@ -1003,6 +1029,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/partners/join': {
+      id: '/partners/join'
+      path: '/partners/join'
+      fullPath: '/partners/join'
+      preLoaderRoute: typeof PartnersJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reserve/$token': {
       id: '/reserve/$token'
       path: '/reserve/$token'
@@ -1149,6 +1182,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/whats-new'
       preLoaderRoute: typeof AuthenticatedAppWhatsNewRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/partners/': {
+      id: '/_authenticated/partners/'
+      path: '/partners'
+      fullPath: '/partners/'
+      preLoaderRoute: typeof AuthenticatedPartnersIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/mcp': {
       id: '/api/public/mcp'
@@ -1370,10 +1410,12 @@ const AuthenticatedAppRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+  AuthenticatedPartnersIndexRoute: typeof AuthenticatedPartnersIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+  AuthenticatedPartnersIndexRoute: AuthenticatedPartnersIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -1410,6 +1452,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
   PCodeRoute: PCodeRoute,
+  PartnersJoinRoute: PartnersJoinRoute,
   ReserveTokenRoute: ReserveTokenRoute,
   RoomCodeRoute: RoomCodeRoute,
   StayTokenRoute: StayTokenRoute,

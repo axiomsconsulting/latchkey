@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, ChartLine, Eye, Flag, LayoutDashboard, ListTree, Loader2, Megaphone, MessageSquareHeart, Plug, Settings, ShieldCheck, Tag, Timer } from "lucide-react";
+import { Building2, ChartLine, Handshake, Eye, Flag, LayoutDashboard, ListTree, Loader2, Megaphone, MessageSquareHeart, Plug, Settings, ShieldCheck, Tag, Timer } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
@@ -21,6 +21,7 @@ import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
 import { DriveAdmin, StarterSectionsAdmin } from "@/components/host/GuideAdmin";
 import { MenuPagesAdmin } from "@/components/host/MenuPagesAdmin";
+import { PartnerAdmin } from "@/components/host/PartnerAdmin";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,6 +98,7 @@ function AdminPage() {
           <TabsTrigger value="messages" className="h-10 gap-2 rounded-xl px-4"><Megaphone className="size-4" aria-hidden />{copy.tabMessages}</TabsTrigger>
           <TabsTrigger value="visitors" className="h-10 gap-2 rounded-xl px-4"><ChartLine className="size-4" aria-hidden />{copy.tabVisitors}</TabsTrigger>
           <TabsTrigger value="pricing" className="h-10 gap-2 rounded-xl px-4"><Tag className="size-4" aria-hidden />{copy.tabPricing}</TabsTrigger>
+          <TabsTrigger value="partners" className="h-10 gap-2 rounded-xl px-4"><Handshake className="size-4" aria-hidden />Commission Partners</TabsTrigger>
           <TabsTrigger value="routines" className="h-10 gap-2 rounded-xl px-4"><Timer className="size-4" aria-hidden />{copy.tabRoutines}</TabsTrigger>
           <TabsTrigger value="integrations" className="h-10 gap-2 rounded-xl px-4"><Plug className="size-4" aria-hidden />{copy.tabIntegrations}</TabsTrigger>
           <TabsTrigger value="menu" className="h-10 gap-2 rounded-xl px-4"><ListTree className="size-4" aria-hidden />{menuAdminCopy.tab}</TabsTrigger>
@@ -126,6 +128,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="pricing" className="mt-4">
           <PricingStudio />
+        </TabsContent>
+        <TabsContent value="partners" className="mt-4">
+          <PartnerAdmin />
         </TabsContent>
         <TabsContent value="routines" className="mt-4">
           <RoutinesAdmin />

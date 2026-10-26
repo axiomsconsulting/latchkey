@@ -22,9 +22,40 @@ export const AGREEMENT_TRIAL_DAYS = 30;
 
 /** UK, US, Canada, Switzerland and the EEA (EU-27 + Iceland, Liechtenstein, Norway): Stripe Express with a full service agreement. */
 export const EXPRESS_COUNTRIES: readonly string[] = [
-  "GB", "US", "CA", "CH",
-  "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
-  "IS", "LI", "NO",
+  "GB",
+  "US",
+  "CA",
+  "CH",
+  "AT",
+  "BE",
+  "BG",
+  "HR",
+  "CY",
+  "CZ",
+  "DK",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "HU",
+  "IE",
+  "IT",
+  "LV",
+  "LT",
+  "LU",
+  "MT",
+  "NL",
+  "PL",
+  "PT",
+  "RO",
+  "SK",
+  "SI",
+  "ES",
+  "SE",
+  "IS",
+  "LI",
+  "NO",
 ];
 
 /**
@@ -167,7 +198,13 @@ const ENUMS: Partial<Record<keyof PartnerConfig, readonly string[]>> = {
 };
 
 /** Settings an override may never change: fixed by the agreement, Stripe, or the hard rules of the build. */
-const FIXED = new Set<keyof PartnerConfig>(["currency", "expressCountries", "blockedCountries", "raisesApplyToExisting", "globalPayoutsApiVersion"]);
+const FIXED = new Set<keyof PartnerConfig>([
+  "currency",
+  "expressCountries",
+  "blockedCountries",
+  "raisesApplyToExisting",
+  "globalPayoutsApiVersion",
+]);
 
 /**
  * The programme's settings: the defaults, with any valid overrides from the
@@ -185,11 +222,13 @@ export function partnerConfig(overrides?: unknown): PartnerConfig {
     if (allowed) {
       if (typeof v === "string" && allowed.includes(v)) (out as Record<string, unknown>)[key] = v;
     } else if (key === "maxFeeRatioBps") {
-      if (v === null || (typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 10_000)) out.maxFeeRatioBps = v;
+      if (v === null || (typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 10_000))
+        out.maxFeeRatioBps = v;
     } else if (typeof base === "boolean") {
       if (typeof v === "boolean") (out as Record<string, unknown>)[key] = v;
     } else if (typeof base === "number") {
-      if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 1_000_000) (out as Record<string, unknown>)[key] = v;
+      if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 1_000_000)
+        (out as Record<string, unknown>)[key] = v;
     }
   }
   return out;

@@ -24,9 +24,32 @@ export type IdentityValue = { kind: IdentityKind; value: string };
 
 /** Free-mail domains: sharing one says nothing about who you are. */
 export const FREE_MAIL = new Set([
-  "gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "hotmail.co.uk", "live.com", "live.co.uk", "msn.com",
-  "yahoo.com", "yahoo.co.uk", "ymail.com", "icloud.com", "me.com", "mac.com", "aol.com", "proton.me", "protonmail.com",
-  "gmx.com", "gmx.co.uk", "mail.com", "btinternet.com", "sky.com", "virginmedia.com", "talktalk.net", "zoho.com", "yandex.com",
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "hotmail.com",
+  "hotmail.co.uk",
+  "live.com",
+  "live.co.uk",
+  "msn.com",
+  "yahoo.com",
+  "yahoo.co.uk",
+  "ymail.com",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "aol.com",
+  "proton.me",
+  "protonmail.com",
+  "gmx.com",
+  "gmx.co.uk",
+  "mail.com",
+  "btinternet.com",
+  "sky.com",
+  "virginmedia.com",
+  "talktalk.net",
+  "zoho.com",
+  "yandex.com",
 ]);
 
 /** An email's mailbox, lower case; Gmail dots and any +tag dropped (they reach the same inbox). */
@@ -127,15 +150,17 @@ export function identityValues(src: {
   const add = (kind: IdentityKind, v: string | null | undefined) => {
     if (v && !out.some((x) => x.kind === kind && x.value === v)) out.push({ kind, value: v });
   };
-  for (const e of src.emails ?? []) if (e) {
-    add("email", normaliseEmail(e));
-    add("email_domain", businessDomain(e));
-  }
+  for (const e of src.emails ?? [])
+    if (e) {
+      add("email", normaliseEmail(e));
+      add("email_domain", businessDomain(e));
+    }
   for (const p of src.phones ?? []) if (p) add("phone", normalisePhone(p));
   for (const n of src.legalNames ?? []) if (n) add("legal_name", normaliseName(n));
   for (const n of src.businessNames ?? []) if (n) add("business_name", normaliseName(n));
   if (src.companyNumber) add("company_number", normaliseCompanyNumber(src.companyNumber));
-  for (const a of src.addresses ?? []) add("property_address", normaliseAddress(a.line, a.postcode));
+  for (const a of src.addresses ?? [])
+    add("property_address", normaliseAddress(a.line, a.postcode));
   for (const p of src.postcodes ?? []) if (p) add("business_postcode", normalisePostcode(p));
   for (const u of src.listingUrls ?? []) if (u) add("listing_url", normaliseUrl(u));
   for (const c of src.cardFingerprints ?? []) if (c) add("card_fingerprint", c);
@@ -146,8 +171,20 @@ export function identityValues(src: {
 }
 
 /** Strong matches say "the same person or business"; weak ones only "worth a look" (8.4). */
-export const STRONG_KINDS: ReadonlySet<IdentityKind> = new Set(["email", "phone", "card_fingerprint", "company_number", "bank_fingerprint"]);
-export const WEAK_KINDS: ReadonlySet<IdentityKind> = new Set(["ip_hash", "device_hash", "email_domain", "legal_name", "business_name"]);
+export const STRONG_KINDS: ReadonlySet<IdentityKind> = new Set([
+  "email",
+  "phone",
+  "card_fingerprint",
+  "company_number",
+  "bank_fingerprint",
+]);
+export const WEAK_KINDS: ReadonlySet<IdentityKind> = new Set([
+  "ip_hash",
+  "device_hash",
+  "email_domain",
+  "legal_name",
+  "business_name",
+]);
 
 /** Initials and town for a partner's view of a host: never the business's name. */
 export function hostLabel(businessName: string, town?: string | null): string {

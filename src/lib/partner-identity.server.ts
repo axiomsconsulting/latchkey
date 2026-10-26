@@ -26,7 +26,9 @@ export function identityHash(kind: string, value: string): string {
   return createHmac("sha256", secret()).update(`${kind}|${value}`).digest("hex");
 }
 
-export function hashValues(values: IdentityValue[]): Array<{ kind: IdentityValue["kind"]; value_hash: string }> {
+export function hashValues(
+  values: IdentityValue[],
+): Array<{ kind: IdentityValue["kind"]; value_hash: string }> {
   return values.map((v) => ({ kind: v.kind, value_hash: identityHash(v.kind, v.value) }));
 }
 
