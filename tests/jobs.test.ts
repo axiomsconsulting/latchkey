@@ -24,6 +24,12 @@ describe("routines", () => {
     expect(jobDue(listing, undefined, now)).toBe(false);
     expect(jobDue(listing, { key: "listing_import", enabled: true, every_minutes: null, last_run_at: null }, now)).toBe(true);
   });
+  it("keeps the Commission Partner month close off until switched on", () => {
+    const close = JOBS.find((j) => j.key === "commission_close")!;
+    expect(jobDue(close, undefined, now)).toBe(false);
+    expect(jobDue(close, { key: "commission_close", enabled: true, every_minutes: 1440, last_run_at: null }, now)).toBe(true);
+    expect(jobDue(close, { key: "commission_close", enabled: true, every_minutes: 1440, last_run_at: ago(60) }, now)).toBe(false);
+  });
   it("lists each routine once", () => {
     expect(new Set(JOBS.map((j) => j.key)).size).toBe(JOBS.length);
   });

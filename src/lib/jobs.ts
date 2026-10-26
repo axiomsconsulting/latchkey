@@ -47,6 +47,17 @@ export const JOBS: Job[] = branded([
     runnable: true,
   },
   {
+    key: "commission_close",
+    name: "Commission Partner month close",
+    kind: "scheduled",
+    what: "Checks Launch Bonuses, releases commission after its hold, re-runs fraud checks, clears old IP hashes and drafts Commission Partner payouts for approval. Nothing is ever sent without Latchkey admin's approval.",
+    wakes: "Daily",
+    defaultEvery: 1440,
+    metric: "job:commission_close",
+    runnable: true,
+    startsOff: true,
+  },
+  {
     key: "ai_id_reading",
     name: "AI photo ID reading",
     kind: "on_use",
@@ -143,6 +154,8 @@ export type JobSetting = { key: string; enabled: boolean; every_minutes: number 
 export function jobDue(job: Job, s: JobSetting | undefined, now: Date = new Date()): boolean {
   if (s && !s.enabled) return false;
   if (job.kind !== "scheduled") return s ? s.enabled : !job.startsOff;
+  // A scheduled routine that starts off waits for the super admin's switch.
+  if (!s && job.startsOff) return false;
   const every = s?.every_minutes ?? job.defaultEvery ?? 0;
   if (!s?.last_run_at) return true;
   // A minute's grace so a run every 30 minutes isn't skipped by a few seconds.
