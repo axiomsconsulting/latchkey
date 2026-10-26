@@ -19,7 +19,15 @@ import {
   type TermsRow,
 } from "./commission";
 import { PARTNER_DEFAULTS, partnerConfig, trialDaysWarning } from "./partner-config";
-import { eligibilityFor, expressAccountBody, makeReferralCode } from "./partner-eligibility";
+import {
+  ACCOUNTS_V2_VERSION,
+  canReceiveTransfers,
+  eligibilityFor,
+  makeReferralCode,
+  onboardingLinkBody,
+  platformSetupProblem,
+  recipientAccountBody,
+} from "./partner-eligibility";
 
 type Ctx = { userId: string };
 
@@ -244,16 +252,16 @@ async function ownPartner(db: import("./partner-data.server").AnyDb, userId: str
 }
 
 /**
- * Stripe payouts set-up: makes the partner's Express account (full service
- * agreement, transfers only) the first time, then a Stripe-hosted
- * onboarding link. Test mode only unless live payouts are allowed, and never
+ * Stripe payouts set-up: makes the partner's Stripe account (Accounts v2,
+ * Express dashboard, recipient of transfers only) the first time, then a
+ * Stripe-hosted onboarding link. Test mode only unless live payouts are allowed, and never
  * live before Stripe has confirmed the platform profile (D1).
  */
 export const startPartnerPayouts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { adminDb, check, loadPartnerConfig, logPartnerEvent } = await data();
-    const { partnerStripeMode, v1 } = await import("./partner-stripe.server");
+    const { PartnerStripeError, partnerStripeMode, v2 } = await import("./partner-stripe.server");
     const db = await adminDb();
     const config = await loadPartnerConfig(db);
     const p = await ownPartner(db, (context as Ctx).userId);
@@ -269,12 +277,35 @@ export const startPartnerPayouts = createServerFn({ method: "POST" })
       throw new Error(
         "Your Stripe account was set up in the other Stripe mode: ask Latchkey's admin to reset it.",
       );
+    // Latchkey's own Connect set-up refused by Stripe: plain words for the
+    // partner, Stripe's code in the partner's log for the admin.
+    const plain = async (e: unknown, step: string): Promise<never> => {
+      const code = e instanceof PartnerStripeError ? e.code : null;
+      const words = platformSetupProblem(code);
+      if (words) {
+        await logPartnerEvent(db, {
+          partner_id: p["id"],
+          actor: (context as Ctx).userId,
+          action: "stripe_platform_setup_needed",
+          details: { step, code, mode },
+        });
+        throw new Error(words);
+      }
+      throw e;
+    };
     if (!account) {
-      const created = await v1<{ id: string }>(
-        "/accounts",
-        expressAccountBody({ id: p["id"], country: p["country"], email: p["email"] }),
-        { idempotencyKey: `partner_account_${p["id"]}` },
-      );
+      const created = await v2<{ id: string }>(
+        "/core/accounts",
+        recipientAccountBody({
+          id: p["id"],
+          country: p["country"],
+          email: p["email"],
+          kind: p["kind"],
+          name: p["business_name"] || p["legal_name"],
+        }),
+        // v2 keys: the earlier v1 attempt's key must not be reused.
+        { version: ACCOUNTS_V2_VERSION, idempotencyKey: `partner_account_v2_${p["id"]}` },
+      ).catch((e) => plain(e, "create_account"));
       account = created.id;
       check(
         await db
@@ -293,13 +324,11 @@ export const startPartnerPayouts = createServerFn({ method: "POST" })
         details: { mode },
       });
     }
-    const origin = siteOrigin();
-    const link = await v1<{ url: string }>("/account_links", {
-      account,
-      type: "account_onboarding",
-      refresh_url: `${origin}/partners?stripe=refresh`,
-      return_url: `${origin}/partners?stripe=done`,
-    });
+    const link = await v2<{ url: string }>(
+      "/core/account_links",
+      onboardingLinkBody(account, siteOrigin()),
+      { version: ACCOUNTS_V2_VERSION },
+    ).catch((e) => plain(e, "account_link"));
     return { url: link.url };
   });
 
@@ -326,29 +355,34 @@ export const refreshPartnerStripe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { adminDb, check } = await data();
-    const { v1 } = await import("./partner-stripe.server");
+    const { v1, v2 } = await import("./partner-stripe.server");
     const db = await adminDb();
     const p = await ownPartner(db, (context as Ctx).userId);
     if (!p["stripe_account_id"]) return { payoutsEnabled: false };
-    const acct = await v1<{
-      payouts_enabled?: boolean;
-      requirements?: unknown;
-      external_accounts?: { data?: Array<{ fingerprint?: string }> };
-    }>(`/accounts/${encodeURIComponent(p["stripe_account_id"])}`);
+    const id = encodeURIComponent(p["stripe_account_id"]);
+    const acct = await v2<Parameters<typeof canReceiveTransfers>[0] & { requirements?: unknown }>(
+      `/core/accounts/${id}?include=configuration.recipient&include=requirements`,
+      undefined,
+      { version: ACCOUNTS_V2_VERSION },
+    );
+    const ready = canReceiveTransfers(acct);
     check(
       await db
         .from("partners")
         .update({
-          payouts_enabled: !!acct.payouts_enabled,
-          stripe_requirements: acct.requirements ?? null,
+          payouts_enabled: ready,
+          stripe_requirements: acct?.requirements ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", p["id"]),
     );
     // The bank account's fingerprint, where Stripe shares it, for self-referral checks.
-    const fp = acct.external_accounts?.data?.[0]?.fingerprint;
+    const banks = await v1<{ data?: Array<{ fingerprint?: string }> }>(
+      `/accounts/${id}/external_accounts?object=bank_account&limit=1`,
+    ).catch(() => null);
+    const fp = banks?.data?.[0]?.fingerprint;
     if (fp) await savePartnerKeys(db, p["id"], { bankFingerprint: fp });
-    return { payoutsEnabled: !!acct.payouts_enabled };
+    return { payoutsEnabled: ready };
   });
 
 /* --------------------------------------------------------------- admin */

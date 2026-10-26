@@ -11,6 +11,7 @@
  * branches (host Connect accounts, subscriptions, guest payments) run
  * exactly as before.
  */
+import { canReceiveTransfers } from "./partner-eligibility";
 import {
   applyClawback,
   billingInterval,
@@ -576,8 +577,10 @@ async function onAccountUpdated(event: StripeObj, s: PartnerStore): Promise<Outc
   if (typeof acct.id !== "string") return "not_ours";
   const p = await s.partnerByAccount(acct.id);
   if (!p) return "not_ours";
+  // Accounts v2 partners show up here in their v1 form: transfers active means payable.
+  const ready = canReceiveTransfers(acct as Parameters<typeof canReceiveTransfers>[0]);
   await s.updatePartner(p.id, {
-    payouts_enabled: !!acct.payouts_enabled,
+    payouts_enabled: ready,
     stripe_requirements: acct.requirements ?? null,
     updated_at: new Date().toISOString(),
   });
@@ -585,7 +588,7 @@ async function onAccountUpdated(event: StripeObj, s: PartnerStore): Promise<Outc
     partner_id: p.id,
     action: "stripe_account_updated",
     details: {
-      payouts_enabled: !!acct.payouts_enabled,
+      payouts_enabled: ready,
       due: acct.requirements?.currently_due ?? [],
     },
   });

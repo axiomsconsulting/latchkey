@@ -1,14 +1,18 @@
 /**
  * Commission Partner countries and payout routes (9.3, D2), readable codes,
- * and the Express account body (full service agreement, no on_behalf_of).
+ * and the Stripe account (Accounts v2 recipient, Express dashboard, Latchkey
+ * liable for fees and losses: Stripe won't take losses on transfer-only accounts).
  */
 import { describe, expect, it } from "vitest";
 
 import { PARTNER_DEFAULTS, partnerConfig } from "../src/lib/partner-config";
 import {
+  canReceiveTransfers,
   eligibilityFor,
-  expressAccountBody,
   makeReferralCode,
+  onboardingLinkBody,
+  platformSetupProblem,
+  recipientAccountBody,
 } from "../src/lib/partner-eligibility";
 
 describe("partner eligibility", () => {
@@ -61,11 +65,61 @@ describe("partner eligibility", () => {
     expect(code).toMatch(/^OMS-[A-HJKMNP-Z2-9]{5}$/);
   });
 
-  it("asks Stripe for a full service agreement and transfers only", () => {
-    const b = expressAccountBody({ id: "p1", country: "IE", email: "a@b.ie" });
-    expect(b.tos_acceptance.service_agreement).toBe("full");
-    expect(b.capabilities).toEqual({ transfers: { requested: true } });
-    expect(b.controller.stripe_dashboard.type).toBe("express");
-    expect(JSON.stringify(b)).not.toContain("on_behalf_of");
+  it("asks Stripe for a recipient account paid by transfers only (Accounts v2)", () => {
+    const b = recipientAccountBody({
+      id: "p1",
+      country: "IE",
+      email: "a@b.ie",
+      kind: "business",
+      name: "Acme",
+    });
+    expect(b.dashboard).toBe("express");
+    expect(b.identity).toEqual({ country: "ie", entity_type: "company" });
+    expect(b.defaults.responsibilities).toEqual({
+      fees_collector: "application",
+      losses_collector: "application",
+    });
+    expect(b.configuration).toEqual({
+      recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } },
+    });
+    const json = JSON.stringify(b);
+    expect(json).not.toContain("merchant");
+    expect(json).not.toContain("card_payments");
+    expect(json).not.toContain("on_behalf_of");
+    expect(
+      recipientAccountBody({ id: "p2", country: "GB", email: "x@y.uk" }).identity.entity_type,
+    ).toBe("individual");
+  });
+
+  it("onboards the recipient configuration and comes back to /partners", () => {
+    const l = onboardingLinkBody("acct_1", "https://x.test");
+    expect(l.use_case.type).toBe("account_onboarding");
+    expect(l.use_case.account_onboarding.configurations).toEqual(["recipient"]);
+    expect(l.use_case.account_onboarding.return_url).toBe("https://x.test/partners?stripe=done");
+  });
+
+  it("is payable once transfers are active, in either the v2 or the v1 view", () => {
+    const v2 = (status: string) => ({
+      configuration: {
+        recipient: { capabilities: { stripe_balance: { stripe_transfers: { status } } } },
+      },
+    });
+    expect(canReceiveTransfers(v2("active"))).toBe(true);
+    expect(canReceiveTransfers(v2("pending"))).toBe(false);
+    expect(canReceiveTransfers({ capabilities: { transfers: "active" } })).toBe(true);
+    expect(
+      canReceiveTransfers({ capabilities: { transfers: "inactive" }, payouts_enabled: false }),
+    ).toBe(false);
+    expect(canReceiveTransfers({ payouts_enabled: true })).toBe(true);
+    expect(canReceiveTransfers(null)).toBe(false);
+  });
+
+  it("explains refusals caused by Latchkey's own Connect set-up", () => {
+    expect(platformSetupProblem("account_creation_liability_unacknowledged")).toMatch(
+      /Connect set-up/,
+    );
+    expect(platformSetupProblem("accounts_v2_access_blocked")).toMatch(/Accounts v2/);
+    expect(platformSetupProblem("email_invalid")).toBeNull();
+    expect(platformSetupProblem(null)).toBeNull();
   });
 });

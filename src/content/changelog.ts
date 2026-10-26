@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.81.2",
+    date: "2026-10-26",
+    title: "Commission Partner payouts use Stripe Accounts v2",
+    items: [
+      { kind: "fixed", area: "Settings", admin: true, text: "\"Set up payouts with Stripe\" no longer fails with Stripe's \"Use Accounts v2\" error: partner accounts are now Stripe Accounts v2 recipients (Express dashboard, transfers only), onboarded with Stripe's v2 links and counted as payable once Stripe turns transfers on. If Latchkey's Stripe Connect set-up still needs finishing, the partner sees a plain message and the admin log shows Stripe's reason." },
+    ],
+  },
+  {
     version: "0.81.1",
     date: "2026-10-26",
     title: "Commission Partner sign-up keeps partners separate from hosts",
