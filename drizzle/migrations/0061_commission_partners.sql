@@ -7,6 +7,9 @@
 -- subscription or guest payment tables. Partners read only their own rows;
 -- identity hashes and the bonus register are server-only (service role).
 
+-- The super admin's programme settings (src/lib/partner-config.ts); read only on the server.
+alter table public.site_settings add column if not exists commission_partner_programme jsonb;
+
 -- ------------------------------------------------------------------ partners
 create table if not exists public.partners (
   id uuid primary key default gen_random_uuid(),

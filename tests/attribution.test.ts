@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appendUtm, attributionFrom, mergeAttribution, pickUtm } from "../src/lib/attribution";
+import { appendUtm, attributionFrom, cleanRefCode, mergeAttribution, nextRefCookie, pickUtm, readRefCookie } from "../src/lib/attribution";
 
 const NOW = new Date("2026-10-21T10:00:00Z");
 
@@ -32,5 +32,38 @@ describe("attribution", () => {
     expect(appendUtm("/kiosk/tour", { utm_source: "linkedin", utm_campaign: "launch" })).toBe("/kiosk/tour?utm_source=linkedin&utm_campaign=launch");
     expect(appendUtm("/app/today?x=1&utm_source=mine#top", { utm_source: "linkedin" })).toBe("/app/today?x=1&utm_source=mine#top");
     expect(appendUtm("/start", {})).toBe("/start");
+  });
+});
+
+describe("Commission Partner referral cookie", () => {
+  const now = Date.parse("2026-11-01T10:00:00Z");
+  const cookieFrom = (set: string) => set.split(";")[0]!;
+
+  it("cleans codes and refuses junk", () => {
+    expect(cleanRefCode(" oms-ab12 ")).toBe("OMS-AB12");
+    expect(cleanRefCode("<script>")).toBeNull();
+    expect(cleanRefCode("ab")).toBeNull();
+  });
+
+  it("sets the cookie for the window, secure, lax", () => {
+    const set = nextRefCookie(null, "oms-ab12", now, 60)!;
+    expect(set).toContain("Max-Age=5184000");
+    expect(set).toContain("SameSite=Lax");
+    expect(set).toContain("Secure");
+    expect(readRefCookie(`other=1; ${cookieFrom(set)}`, now + 1000, 60)).toEqual({ code: "OMS-AB12", clicked_at: new Date(now).toISOString() });
+  });
+
+  it("keeps the first valid code (8.2)", () => {
+    const first = readRefCookie(cookieFrom(nextRefCookie(null, "OMS-FIRST", now, 60)!), now, 60);
+    expect(nextRefCookie(first, "OMS-SECOND", now + 1000, 60)).toBeNull();
+    // An invalid code never replaces anything either.
+    expect(nextRefCookie(null, "x", now, 60)).toBeNull();
+  });
+
+  it("expires after the window", () => {
+    const c = cookieFrom(nextRefCookie(null, "OMS-AB12", now, 60)!);
+    expect(readRefCookie(c, now + 59 * 86_400_000, 60)).not.toBeNull();
+    expect(readRefCookie(c, now + 61 * 86_400_000, 60)).toBeNull();
+    expect(readRefCookie("lk_ref=%7Bbroken", now, 60)).toBeNull();
   });
 });

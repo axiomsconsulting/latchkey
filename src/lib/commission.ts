@@ -142,7 +142,9 @@ const tiersBelow = (prev: BonusTier[] | null, next: BonusTier[] | null): boolean
 };
 
 /** Whether new terms take anything away from the current ones (6.5 needs 30 days' notice for that). */
-export function isReduction(prev: Omit<TermsRow, "id" | "label" | "effective_from">, next: Omit<TermsRow, "id" | "label" | "effective_from">): boolean {
+type TermsMoney = Pick<TermsRow, "rate_bps" | "paid_months_cap" | "bonus_amount_pence" | "bonus_tiers" | "bonus_end_date" | "bonus_first_payment_deadline_days">;
+
+export function isReduction(prev: TermsMoney, next: TermsMoney): boolean {
   if (next.rate_bps < prev.rate_bps) return true;
   if (next.paid_months_cap < prev.paid_months_cap) return true;
   if ((next.bonus_first_payment_deadline_days ?? 60) < (prev.bonus_first_payment_deadline_days ?? 60)) return true;

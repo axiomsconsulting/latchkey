@@ -17,6 +17,7 @@ import { useWorkspace } from "@/hooks/use-host-data";
 import { recordSignupSource, loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
 import { cn } from "@/lib/utils";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
+import { ReferralCodeField } from "@/components/host/ReferralCodeField";
 import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/setup")({
@@ -184,6 +185,8 @@ function SetupPage() {
           </li>
         ))}
       </ol>
+
+      {step === 0 && setupHostId && workspace.data?.role === "owner" ? <ReferralCodeField hostId={setupHostId} /> : null}
 
       <div className="card-soft grid gap-4 p-5">
         {step === 0 ? (

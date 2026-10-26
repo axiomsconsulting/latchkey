@@ -4226,3 +4226,12 @@ export const tourCopy = branded({
   allJourneys: "All journeys",
   nextJourney: (j: string) => `Next: ${j}`,
 });
+
+/** Commission Partner programme: the user-facing name is always "Commission Partner". */
+export const partnerCopy = branded({
+  codeLabel: "Referral code (from your Commission Partner)",
+  codeHint: "Optional. If an independent Latchkey Commission Partner told you about Latchkey, enter their code.",
+  codeAdd: "Add code",
+  codeAdded: "Thanks: we've noted your Commission Partner.",
+  codeFromLink: "Code from the link you followed",
+});

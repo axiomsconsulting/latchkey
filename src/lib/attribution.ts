@@ -83,6 +83,12 @@ function read(): Attribution | null {
 export function captureAttribution(search: Record<string, unknown> | URLSearchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : {}): Attribution | null {
   if (typeof window === "undefined") return null;
   const next = mergeAttribution(read(), attributionFrom(search, window.location.pathname));
+  // A Commission Partner's link: kept in a cookie for the window and reported once (server checks the code).
+  captureReferral(search, (code, device) => {
+    void import("@/lib/partner-referrals.functions")
+      .then(({ recordReferralClick }) => recordReferralClick({ data: { code, path: window.location.pathname.slice(0, 200), deviceId: device } }))
+      .catch(() => undefined);
+  });
   try {
     if (next) window.sessionStorage.setItem(KEY, JSON.stringify(next));
   } catch {
@@ -126,4 +132,100 @@ export function sessionUtm(): Utm {
 
 export function withAttribution(url: string): string {
   return appendUtm(url, sessionUtm());
+}
+
+/* ---------------------------------------------------- Commission Partners */
+
+/**
+ * A Commission Partner's referral link (?ref=CODE) is kept in a first-party
+ * cookie, lk_ref, for the attribution window (60 days), so a host who comes
+ * back in a new tab still signs up through it. The first valid code wins: a
+ * later link doesn't take over an unexpired one (agreement 8.2). lk_dev is a
+ * random device id (no fingerprinting) used only for fraud checks. Neither is
+ * set when the visitor has asked not to be tracked (GPC, Do Not Track or
+ * ?notrack=1); they can still type the code at set-up.
+ * TODO(legal): PECR consent for the referral cookie.
+ */
+export const REF_COOKIE = "lk_ref";
+export const DEVICE_COOKIE = "lk_dev";
+
+export type RefCookie = { code: string; clicked_at: string };
+
+/** A referral code as people type or link it: letters, digits and dashes, 3-32 long, upper case. */
+export function cleanRefCode(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim().toUpperCase();
+  return /^[A-Z0-9][A-Z0-9-]{2,31}$/.test(t) ? t : null;
+}
+
+/** The referral cookie's value, if it's still within the window. */
+export function readRefCookie(cookieHeader: string, now: number, windowDays: number): RefCookie | null {
+  const raw = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${REF_COOKIE}=`));
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(decodeURIComponent(raw.slice(REF_COOKIE.length + 1))) as Partial<RefCookie>;
+    const code = cleanRefCode(v.code);
+    const at = Date.parse(String(v.clicked_at));
+    if (!code || Number.isNaN(at) || now - at > windowDays * 86_400_000 || at > now + 60_000) return null;
+    return { code, clicked_at: new Date(at).toISOString() };
+  } catch {
+    return null;
+  }
+}
+
+/** The Set-Cookie value for a new referral, or null to keep the one there (first valid code wins). */
+export function nextRefCookie(existing: RefCookie | null, code: string, now: number, windowDays: number, secure = true): string | null {
+  const clean = cleanRefCode(code);
+  if (!clean || existing) return null;
+  const value = encodeURIComponent(JSON.stringify({ code: clean, clicked_at: new Date(now).toISOString() }));
+  return `${REF_COOKIE}=${value}; Max-Age=${windowDays * 86_400}; Path=/; SameSite=Lax${secure ? "; Secure" : ""}`;
+}
+
+function noTracking(): boolean {
+  const flag = new URLSearchParams(window.location.search).get("notrack");
+  let stored: string | null = null;
+  try {
+    stored = window.localStorage.getItem("lk_no_track");
+  } catch {
+    // Storage blocked.
+  }
+  const n = navigator as Navigator & { globalPrivacyControl?: boolean };
+  return flag === "1" || stored === "1" || n.globalPrivacyControl === true || n.doNotTrack === "1";
+}
+
+/** This browser's random device id for fraud checks (made once, kept for the window). */
+export function deviceId(windowDays = 60): string | null {
+  if (typeof document === "undefined" || noTracking()) return null;
+  const found = document.cookie
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${DEVICE_COOKIE}=`));
+  if (found) return found.slice(DEVICE_COOKIE.length + 1);
+  const id = crypto.randomUUID();
+  document.cookie = `${DEVICE_COOKIE}=${id}; Max-Age=${windowDays * 86_400}; Path=/; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+  return id;
+}
+
+/** The referral this browser came through, if any (within the window). */
+export function storedReferral(windowDays = 60): RefCookie | null {
+  if (typeof document === "undefined") return null;
+  return readRefCookie(document.cookie, Date.now(), windowDays);
+}
+
+/**
+ * Keeps ?ref=CODE in the referral cookie (first valid code wins) and reports
+ * the click once. Called from captureAttribution on every landing.
+ */
+export function captureReferral(search: Record<string, unknown> | URLSearchParams, onNewClick?: (code: string, deviceId: string | null) => void, windowDays = 60) {
+  if (typeof document === "undefined" || noTracking()) return;
+  const get = (k: string) => (search instanceof URLSearchParams ? search.get(k) : search[k]);
+  const code = cleanRefCode(get("ref"));
+  if (!code) return;
+  const set = nextRefCookie(storedReferral(windowDays), code, Date.now(), windowDays, location.protocol === "https:");
+  if (!set) return;
+  document.cookie = set;
+  onNewClick?.(code, deviceId(windowDays));
 }
