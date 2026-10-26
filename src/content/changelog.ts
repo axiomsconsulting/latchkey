@@ -32,6 +32,14 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.81.4",
+    date: "2026-10-26",
+    title: "Commission Partner Stripe accounts ask for card payments too",
+    items: [
+      { kind: "fixed", area: "Settings", admin: true, text: "\"Set up payouts with Stripe\" no longer fails with \"You cannot request the transfers capability without the card_payments capability\": Stripe only lets full-dashboard accounts receive transfers when they can also take card payments, so partner accounts now ask for both. Latchkey still only ever sends partners transfers." },
+    ],
+  },
+  {
     version: "0.81.3",
     date: "2026-10-26",
     title: "Commission Partner payouts match Latchkey's Stripe set-up",

@@ -62,9 +62,10 @@ export function makeReferralCode(random: () => number, prefix = "OMS"): string {
 /**
  * A Commission Partner's Stripe account (Accounts v1), matching Latchkey's
  * Connect platform profile: Stripe covers losses, the account pays its own
- * Stripe fees, full Stripe dashboard, Stripe-hosted onboarding. It only asks
- * for the transfers capability (receives /v1/transfers, never takes card
- * payments). The controller must match the profile, or Stripe refuses it.
+ * Stripe fees, full Stripe dashboard, Stripe-hosted onboarding. Latchkey only
+ * ever sends it /v1/transfers, but Stripe won't give a full-dashboard account
+ * transfers without card_payments too, so both are asked for. The controller
+ * must match the profile, or Stripe refuses it.
  */
 export function partnerAccountBody(p: {
   id: string;
@@ -84,7 +85,7 @@ export function partnerAccountBody(p: {
       stripe_dashboard: { type: "full" },
       requirement_collection: "stripe",
     },
-    capabilities: { transfers: { requested: true } },
+    capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
     metadata: { partner_id: p.id, kind: "commission_partner" },
   };
 }

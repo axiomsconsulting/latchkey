@@ -65,7 +65,7 @@ describe("partner eligibility", () => {
     expect(code).toMatch(/^OMS-[A-HJKMNP-Z2-9]{5}$/);
   });
 
-  it("asks Stripe for a transfers-only account matching the platform profile", () => {
+  it("asks Stripe for an account matching the platform profile", () => {
     const b = partnerAccountBody({
       id: "p1",
       country: "ie",
@@ -81,9 +81,12 @@ describe("partner eligibility", () => {
       stripe_dashboard: { type: "full" },
       requirement_collection: "stripe",
     });
-    expect(b.capabilities).toEqual({ transfers: { requested: true } });
+    // Full-dashboard accounts only get transfers alongside card_payments.
+    expect(b.capabilities).toEqual({
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    });
     const json = JSON.stringify(b);
-    expect(json).not.toContain("card_payments");
     expect(json).not.toContain('"type":"express"');
     expect(json).not.toContain('"application"');
     expect(partnerAccountBody({ id: "p2", country: "GB", email: "x@y.uk" }).business_type).toBe(
