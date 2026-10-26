@@ -158,6 +158,11 @@ create table if not exists public.referrals (
   billing_interval text check (billing_interval in ('month', 'year')),
   first_paid_month_end timestamptz,
   paid_months_used int not null default 0 check (paid_months_used between 0 and 12),
+  -- End of the last paid billing period, to spot a missed month after the partner stops (11.2(a)).
+  last_paid_period_end timestamptz,
+  -- Refunds and lost disputes recorded against the Qualifying Payment's charge (6.7(b)).
+  qp_refunded_pence int not null default 0,
+  qp_dispute text check (qp_dispute in ('open', 'won', 'lost')),
   status_detail text not null default 'trial' check (status_detail in ('trial', 'paying', 'paused', 'cap_reached', 'ended')),
   bonus_status text not null default 'pending' check (bonus_status in ('not_eligible', 'pending', 'earned', 'withheld', 'reversed', 'paid')),
   bonus_ineligible_reason text,
