@@ -1373,6 +1373,14 @@ export const getStay = createServerFn({ method: "GET" })
       ? await db.from("guest_register").select("id", { count: "exact", head: true }).eq("booking_id", t.booking_id)
       : { count: 1, error: null };
     const registerMissing = !regError && (onRegister ?? 0) === 0;
+    // The public tour keeps no register and puts today's arrival back for the next
+    // visitor, so there a finished check-in session for the stay is what counts.
+    const tour = p ? isTour(p as { is_demo?: boolean | null; short_code?: string | null }) : false;
+    const tourDone = tour
+      ? ((
+          await db.from("checkin_sessions").select("id", { count: "exact", head: true }).eq("booking_id", t.booking_id).not("completed_at", "is", null)
+        ).count ?? 0) > 0
+      : false;
     const { stayAccessFor, guestWifi } = await import("./stay-access.server");
     const { stayProgress } = await import("./stay-access");
     const access = await stayAccessFor(db as never, b.property_id);
@@ -1449,7 +1457,7 @@ export const getStay = createServerFn({ method: "GET" })
       room,
       wifi,
       checkedIn,
-      needsCheckIn: b.status !== "checked_out" && (!checkedIn || registerMissing),
+      needsCheckIn: tour ? !tourDone && !checkedIn : b.status !== "checked_out" && (!checkedIn || registerMissing),
       progress: stayProgress(b.check_in_date, b.check_out_date, today),
       stayMessage: access.stayMessage,
       // The last day's review nudge: the site they booked with (its logo and name), or here for direct stays.

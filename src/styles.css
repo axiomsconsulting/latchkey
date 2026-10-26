@@ -342,6 +342,37 @@
 }
 
 /*
+ * Check-in buttons on any screen: long words (a theme's spaced capitals,
+ * a long translation) wrap inside the button and it grows taller, instead
+ * of one line pushing the card wider than a phone. Each keeps its usual
+ * height as a minimum. Choice grids and the number pad keep their tiles.
+ * :where() keeps them weaker than the expanded-button rules below, while
+ * being unlayered still beats the size utilities.
+ */
+:where([data-kiosk-flow] [data-slot="button"]:is([data-size="default"], [data-size="lg"], [data-size="touch"], [data-size="touch-xl"]):not([data-kx="grid"] *, [data-kx="pad"] *)) {
+  max-width: 100%;
+  height: auto;
+  padding-block: 0.5rem;
+  line-height: 1.2;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+:where([data-kiosk-flow] [data-slot="button"][data-size="default"]:not([data-kx="grid"] *, [data-kx="pad"] *)) {
+  min-height: 2.5rem;
+}
+:where([data-kiosk-flow] [data-slot="button"][data-size="lg"]:not([data-kx="grid"] *, [data-kx="pad"] *)) {
+  min-height: 3rem;
+}
+:where([data-kiosk-flow] [data-slot="button"][data-size="touch"]:not([data-kx="grid"] *, [data-kx="pad"] *)) {
+  min-height: 4rem;
+}
+:where([data-kiosk-flow] [data-slot="button"][data-size="touch-xl"]:not([data-kx="grid"] *, [data-kx="pad"] *)) {
+  min-height: 5rem;
+}
+
+/*
  * Kiosk door tablets with expanded buttons (Latchkey admin → kiosk settings,
  * site_settings.kiosk_saver.touch; the kiosk sets data-kiosk-touch on <html>
  * so its dialogs follow too). Unlayered, so these win over the utilities.

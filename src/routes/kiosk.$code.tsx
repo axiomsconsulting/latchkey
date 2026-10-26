@@ -516,6 +516,8 @@ function Kiosk() {
       className={cn(
         "relative min-h-screen select-none bg-background [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]",
         expanded ? "px-[0.5rem]" : "px-[var(--kiosk-header,16px)] sm:px-[calc(var(--kiosk-header,16px)*2)]",
+        // A theme's frame is drawn 8-14px in from the edges (ThemeBackdrop): keep the page inside it.
+        p.theme.frame !== "none" && !expanded && "px-[max(var(--kiosk-header,16px),24px)] pb-[20px] sm:px-[max(calc(var(--kiosk-header,16px)*2),32px)]",
       )}
       onPointerDown={goFullscreen}
     >
