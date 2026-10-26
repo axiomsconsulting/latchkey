@@ -32,6 +32,16 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.81.0",
+    date: "2026-10-26",
+    title: "Commission Partner programme (test mode)",
+    items: [
+      { kind: "new", area: "Settings", admin: true, text: "Commission Partners: independent partners apply at /partners/join, get a referral link and code, and see the hosts they've referred (initials and town only), paid months, Launch Bonus status and balances at /partners. Latchkey admin → Commission Partners approves partners, reviews referrals and fraud checks, sets effective-dated commission terms (10% for 12 paid months; Launch Bonus amount and end date to be set), runs the month close and approves each payout. Stripe test mode only." },
+      { kind: "new", area: "Settings", admin: true, text: "Referral links are kept for 60 days in a first-party cookie (first link wins), and set-up has an optional Commission Partner code field. Self-referrals, returning hosts, repeat Launch Bonuses and trial cycling are checked using hashed identity details only." },
+      { kind: "new", area: "Settings", admin: true, text: "The Stripe webhook now records commission from host subscription payments, and claws it back on refunds and lost disputes, without changing how host subscriptions or guest payments are handled. A new routine, Commission Partner month close, starts switched off." },
+    ],
+  },
+  {
     version: "0.80.1",
     date: "2026-10-26",
     title: "Check-in fits every phone, and the demo guide knows you've checked in",
