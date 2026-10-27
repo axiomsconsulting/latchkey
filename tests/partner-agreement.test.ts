@@ -27,7 +27,8 @@ import { activationBlockers, activationMissing, canRefer } from "../src/lib/part
 import { judgePartnerId, partnerIdStatus } from "../src/lib/partner-id";
 import type { IdRead } from "../src/lib/guest-records";
 
-const TEXT = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.0.md"), "utf8");
+const TEXT = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.1.md"), "utf8");
+const TEXT_1_0 = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.0.md"), "utf8");
 const NO_BONUS = {
   label: "v0.5-launch",
   effective_from: "2026-10-26T00:00:00Z",
@@ -121,8 +122,10 @@ describe("agreement text", () => {
     const ticks = signingTicks(parseMarkdown(TEXT));
     expect(ticks).toHaveLength(7);
     expect(ticks[0]).toBe(
-      "I have read the whole of the Latchkey Commission Partner Agreement version 1.0 and agree to it.",
+      "I have read the whole of the Latchkey Commission Partner Agreement version 1.1 and agree to it.",
     );
+    expect(signingTicks(parseMarkdown(TEXT_1_0))).toHaveLength(7);
+    expect(() => fillAgreement(TEXT_1_0, values())).not.toThrow();
   });
 
   it("needs a full legal name of at least two words", () => {

@@ -575,7 +575,7 @@ export async function partnerStatement(
     await db
       .from("partners")
       .select(
-        "id, legal_name, business_name, referral_code, postal_address, vat_number, self_billing_opt_out",
+        "id, kind, country, legal_name, business_name, referral_code, postal_address, vat_number, self_billing_opt_out",
       )
       .eq("id", partnerId)
       .single(),
@@ -587,6 +587,8 @@ export async function partnerStatement(
     postal_address: string | null;
     vat_number: string | null;
     self_billing_opt_out: boolean | null;
+    kind: "individual" | "business";
+    country: string;
   };
   const { data: refs } = await db
     .from("referrals")
@@ -688,6 +690,8 @@ export async function partnerStatement(
         name: partner.business_name || partner.legal_name,
         address: partner.postal_address,
         vatNumber: partner.vat_number,
+        country: partner.country,
+        kind: partner.kind,
       },
       selfBilled: !partner.self_billing_opt_out,
       setOffPence: -L.filter((l) => l.kind === "set_off" && l.state !== "void").reduce(

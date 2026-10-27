@@ -46,6 +46,35 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.83.1",
+    date: "2026-10-27",
+    title: "Wi-Fi QR fix, and the Commission Partner agreement v1.1",
+    items: [
+      {
+        kind: "fixed",
+        area: "Guest guide",
+        text: "Wi-Fi QR codes now work when the network name or password contains a backslash; before, phones could read the password wrongly.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The door tablet decides whether it's a guest's own phone the same way every time, so it can't trip up if the page's address changes while it's open.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        admin: true,
+        text: "Commission Partner agreement v1.1 replaces v1.0 (nobody had signed it): statements become final 60 days after they're issued unless queried, payouts wait while requested tax or sanctions information is outstanding, full self-billing and VAT terms, unfinished applications close after 60 days, the final small balance is paid on request or after 12 months, records count as evidence, and concerns are raised with OMS first.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        admin: true,
+        text: 'Partner statements are proper self-billed invoices: the self-billing wording, an invoice total, and for UK VAT-registered partners the VAT included (one sixth at 20%) with "The VAT shown is your output tax due to HMRC"; reverse charge for businesses outside the UK; no VAT otherwise.',
+      },
+    ],
+  },
+  {
     version: "0.83.0",
     date: "2026-10-27",
     title: "Private records in Google Drive, and the Commission Partner agreement online",

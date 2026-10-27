@@ -17,6 +17,7 @@ import {
   sendPayout,
   statementCsv,
   statementNumber,
+  vatTreatment,
   type BonusCandidate,
   type PayoutToSend,
 } from "../src/lib/partner-close";
@@ -301,7 +302,13 @@ describe("statements and retention", () => {
         address: "49 Trinity Circle, High Wycombe, HP11 1FB",
         vatNumber: "",
       },
-      partner: { name: "Pat Partner", address: "1 High Street", vatNumber: "GB123" },
+      partner: {
+        name: "Pat Partner",
+        address: "1 High Street",
+        vatNumber: "GB123",
+        country: "GB",
+        kind: "business" as const,
+      },
       selfBilled: true,
       setOffPence: 500,
       payablePence: 1200,
@@ -310,7 +317,17 @@ describe("statements and retention", () => {
     const csv = statementCsv([row], meta);
     expect(csv.split("\n")[0]).toBe("Self-billed invoice,SB-OMS-AB12C-202611");
     expect(csv).toContain("Partner VAT number,GB123");
-    expect(csv).toContain("to be confirmed by OMS's accountant");
+    expect(csv).toContain("under the self-billing agreement in clause 12.7");
+    // £2.90 commission including VAT: 1/6 is VAT.
+    expect(csv).toContain("Of which VAT at 20% (£),0.48");
+    expect(csv).toContain("The VAT shown is your output tax due to HMRC.");
+    expect(vatTreatment({ vatNumber: null, country: "IE", kind: "business" }, 600).note).toMatch(
+      /Reverse charge/,
+    );
+    expect(vatTreatment({ vatNumber: null, country: "GB", kind: "individual" }, 600)).toEqual({
+      vatPence: null,
+      note: "No VAT: the partner has told OMS they are not VAT-registered.",
+    });
     expect(csv).toContain("Payment dispute open");
     expect(csv).toContain("Set-off this month (£),5.00");
     expect(csv).toContain("Payable balance after clawbacks and set-off (£),12.00");

@@ -22,7 +22,7 @@ Written for Dev (the AI agent that reviews this repo and writes build prompts fo
    - Visitor profiles for statistics are wanted, as long as they're legal and disclosed. The privacy policy now says what's collected.
    - Raise anything that might need consent, for example under PECR, as a question for the solicitor. Don't decide it in code.
 5. **Swapnil wants to take real payments.** Give a clear go-live checklist. Live Stripe stays behind secrets that only Swapnil sets: the code never switches to live by itself, and prompts shouldn't ask Claude Code to.
-6. **Agreement wording.** Claude Code may edit the agreement when Swapnil asks, or when the text can't be built as written. Every change is listed in the summary and in `docs/commission-partners.md`.
+6. **No solicitor or accountant at this stage.** Swapnil asked Claude Code to take both roles: draft agreements in OMS's favour but enforceable (fair to consumer partners), and set VAT and self-billing rules. Claude Code may edit the agreement when Swapnil asks, or when the text can't be built as written, by publishing a new version (published text is locked). Every change is listed in the summary and in `docs/commission-partners.md`. v1.1 is in force.
 7. **Read-only database checks on the live project are allowed** (Lovable `query_database`, `SELECT` only). Never write to the live database, never publish, and never trigger a Lovable build.
 
 ## 2. Corrections to the last prompt
@@ -32,7 +32,7 @@ Written for Dev (the AI agent that reviews this repo and writes build prompts fo
    - Pushing to `main` updates Lovable's editor. The live site (latchkey.omsestates.uk) changes only when Swapnil presses Publish.
    - Swapnil ran migration 0061 themselves.
    - Migrations from a merge can still reach the live database, so they must be additive.
-3. **"Merge only if build, typecheck, lint and tests all pass."** Lint fails on `main` today: about 12,000 formatting errors in files nobody touched. Gate on the type check and tests, and lint only new or changed files.
+3. **"Merge only if build, typecheck, lint and tests all pass."** Lint used to fail on `main` (about 12,000 old formatting errors). Since 27 October it passes with 0 errors, so lint is now a merge check like the others.
 4. **`gh pr create`.** `gh` wasn't installed on 27 October. It is now, but it needs signing in once.
 
 ## 3. Where Claude Code deliberately departed from the prompt

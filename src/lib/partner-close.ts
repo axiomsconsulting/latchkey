@@ -210,7 +210,14 @@ export type StatementMeta = {
   number: string;
   issuedOn: string;
   oms: { name: string; companyNumber: string; address: string; vatNumber: string };
-  partner: { name: string; address: string | null; vatNumber: string | null };
+  partner: {
+    name: string;
+    address: string | null;
+    vatNumber: string | null;
+    /** ISO country, for the VAT treatment (13.2). */
+    country: string;
+    kind: "individual" | "business";
+  };
   /** 12.7(a): a self-billed invoice unless the partner opted out. */
   selfBilled: boolean;
   /** 10.6: set-offs this month (positive pence owed by the partner). */
@@ -234,8 +241,8 @@ export const HOLD_WORDS: Record<string, string> = {
  * A partner's monthly statement (agreement v1.0 12.1, 12.7, 13.1) as CSV:
  * one row per Referred Host (initials and town only), amounts held and why,
  * clawbacks, set-offs and the payable balance. Never any Stripe fee (13.1).
- * With `meta`, the header carries what a self-billed invoice needs; the
- * exact self-billing and VAT wording is for OMS's accountant (placeholders).
+ * With `meta`, the header carries what a self-billed invoice needs
+ * (HMRC VAT Notice 700/62; agreement 12.7, 13.2): see vatTreatment().
  */
 export function statementCsv(
   rows: Array<{
@@ -314,16 +321,12 @@ export function statementCsv(
       ? [
           kv(
             "Self-billing",
-            "[Self-billing statement wording: to be confirmed by OMS's accountant]",
+            `Self-billed invoice issued by ${meta.oms.name} on behalf of ${meta.partner.name} under the self-billing agreement in clause 12.7 of the Commission Partner Agreement.`,
           ),
-          ...(meta.partner.vatNumber
-            ? [
-                kv(
-                  "VAT",
-                  "[VAT wording for self-billed invoices: to be confirmed by OMS's accountant]",
-                ),
-              ]
-            : []),
+          kv(
+            "Supply",
+            "Introductions of hosts to Latchkey (commission and any Launch Bonus) in the month shown",
+          ),
         ]
       : [
           kv(
@@ -333,8 +336,12 @@ export function statementCsv(
         ]),
     "",
   ];
+  const vat = vatTreatment(meta.partner, total.c + total.b - total.k);
   const bottom = [
     "",
+    kv("Invoice total, including any VAT (£)", pounds(total.c + total.b - total.k)),
+    ...(vat.vatPence !== null ? [kv("Of which VAT at 20% (£)", pounds(vat.vatPence))] : []),
+    kv("VAT", vat.note),
     kv("Set-off this month (£)", pounds(meta.setOffPence)),
     kv("Payable balance after clawbacks and set-off (£)", pounds(meta.payablePence)),
     kv("Paid this month (£)", pounds(meta.paidPence)),
@@ -355,4 +362,29 @@ export function statementNumber(
 /** The cut-off before which IP and device hashes are cleared (D21, 8.5). */
 export function hashPurgeBefore(now: number, days: number): string {
   return new Date(now - days * 86_400_000).toISOString();
+}
+
+/**
+ * The VAT line on a statement (agreement 13.2: amounts include any VAT).
+ * A UK VAT-registered partner: VAT is 1/6 of the amount at 20%, and a
+ * self-billed invoice must say the VAT is their output tax (Notice 700/62).
+ * A business outside the UK: OMS accounts for any UK VAT by reverse charge.
+ * Anyone else: no VAT.
+ */
+export function vatTreatment(
+  p: { vatNumber: string | null; country: string; kind: "individual" | "business" },
+  grossPence: number,
+): { vatPence: number | null; note: string } {
+  const ukRegistered = !!p.vatNumber?.trim() && p.country.toUpperCase() === "GB";
+  if (ukRegistered)
+    return {
+      vatPence: Math.round(grossPence / 6),
+      note: "The VAT shown is your output tax due to HMRC.",
+    };
+  if (p.country.toUpperCase() !== "GB" && (p.kind === "business" || !!p.vatNumber?.trim()))
+    return {
+      vatPence: null,
+      note: "Reverse charge: the customer (OMS) accounts for any UK VAT. No VAT is charged.",
+    };
+  return { vatPence: null, note: "No VAT: the partner has told OMS they are not VAT-registered." };
 }

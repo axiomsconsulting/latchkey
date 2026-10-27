@@ -178,13 +178,23 @@ New columns: `partners.postal_address`, `self_billing_opt_out`, `stop_source`, `
 - 17.3: Google named for Drive storage of these files.
 - Annex B explanation: "[the amount]" and "[the Bonus End Date]" instead of live placeholders.
 
+### Agreement v1.1 (migration 0063, in force; v1.0 retired before anyone signed)
+Drafted for OMS, with no solicitor or accountant engaged at this stage. Kept fair, so it stays enforceable against consumer partners (Consumer Rights Act 2015) and reasonable for business partners (UCTA 1977):
+- 3.8 unfinished applications close after 60 days without ID verification.
+- 12.1 statements are accepted unless queried within 60 days (except obvious error, fraud, or later recovery under clause 10).
+- 12.4(e) payouts wait while requested tax forms or sanctions information is outstanding.
+- 12.7(d), (e) self-billing invoice contents (HMRC Notice 700/62) and the partner's duty to tell OMS about VAT registration.
+- 13.2 amounts don't increase if the partner becomes VAT-registered.
+- 20.7 the final small balance is paid on request or 12 months after the Stop Date (no forfeiture: forfeiting earned money would risk being unfair).
+- 23.9 OMS's records are evidence unless shown wrong; 23.10 concerns are raised with OMS first, with 30 days before court.
+
 ### Open decisions
 1. US and Canadian partners on full-dashboard accounts (Stripe may refuse cross-border transfers): waitlist or not.
 2. Launch Bonus amount, tiers, Bonus End Date: still none (a new `commission_terms` row).
 3. Launch date and notice email: set before opening sign-ups.
 4. Host price wording ("£1 for your first month" in the launch offer copy, `copy.ts` offer section). Not in any partner copy, the agreement or partner emails.
 5. Switching on `commission_close`, and scheduling the routines.
-6. Self-billing and VAT wording on statements (placeholders for the accountant).
+6. Self-billing and VAT wording: done (statementCsv / vatTreatment). If OMS registers for VAT, add its VAT number in Site settings → Legal; it then shows on statements.
 7. Whether the visitor-profile statistics and the `lk_ref`/`lk_dev` cookies need consent under PECR or fit the UK statistics exemption: for the solicitor.
 8. Site settings → Legal is incomplete on the live site (company name "OMSEstates", no company number, address or ICO number): fill it in; the privacy policy and statements read it.
 
