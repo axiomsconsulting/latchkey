@@ -11,7 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { adminCopy as copy, common } from "@/content/copy";
 import { getKioskSaverDefaults, saveKioskSaverDefaults } from "@/lib/admin.functions";
-import { BRIGHTNESS, DEFAULT_SAVER, SIZE, TIMING, glow, normaliseDefaults, type SaverDefaults } from "@/lib/kiosk-saver";
+import {
+  BRIGHTNESS,
+  DEFAULT_SAVER,
+  SIZE,
+  TIMING,
+  glow,
+  normaliseDefaults,
+  type SaverDefaults,
+} from "@/lib/kiosk-saver";
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -31,7 +39,8 @@ export function KioskSaverAdmin() {
   }, [q.data]);
 
   // Moving one limit past the other, or the starting size outside them, is tidied as you go.
-  const set = (patch: Partial<SaverDefaults>) => setForm((f) => normaliseDefaults({ ...f, ...patch }));
+  const set = (patch: Partial<SaverDefaults>) =>
+    setForm((f) => normaliseDefaults({ ...f, ...patch }));
 
   async function save() {
     setBusy(true);
@@ -46,18 +55,39 @@ export function KioskSaverAdmin() {
     }
   }
 
-  const row = (id: string, label: string, value: number, lo: number, hi: number, onValue: (v: number) => void) => (
+  const row = (
+    id: string,
+    label: string,
+    value: number,
+    lo: number,
+    hi: number,
+    onValue: (v: number) => void,
+  ) => (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor={id}>{label}</Label>
         <span className="text-sm tabular-nums text-muted-foreground">{pct(value)}</span>
       </div>
-      <Slider id={id} min={lo} max={hi} step={SIZE.step} value={[value]} onValueChange={([v]) => v !== undefined && onValue(v)} />
+      <Slider
+        id={id}
+        min={lo}
+        max={hi}
+        step={SIZE.step}
+        value={[value]}
+        onValueChange={([v]) => v !== undefined && onValue(v)}
+      />
     </div>
   );
 
   // Typed freely, tidied (whole minutes, in range) when the field is left.
-  const minutes = (id: string, label: string, key: "resetMinutes" | "saverMinutes" | "welcomeMinutes", lo: number, hi: number, help?: string) => (
+  const minutes = (
+    id: string,
+    label: string,
+    key: "resetMinutes" | "saverMinutes" | "welcomeMinutes",
+    lo: number,
+    hi: number,
+    help?: string,
+  ) => (
     <div className="space-y-1">
       <Label htmlFor={id}>{label}</Label>
       <Input
@@ -69,7 +99,9 @@ export function KioskSaverAdmin() {
         step={1}
         className="h-10 w-28"
         value={form[key]}
-        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value === "" ? lo : Number(e.target.value) }))}
+        onChange={(e) =>
+          setForm((f) => ({ ...f, [key]: e.target.value === "" ? lo : Number(e.target.value) }))
+        }
         onBlur={() => set({})}
       />
       {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
@@ -85,33 +117,109 @@ export function KioskSaverAdmin() {
           </h2>
           <p className="text-sm text-muted-foreground">{copy.kioskSaverHelp}</p>
         </div>
-        <SaveButton dirty={!!q.data?.available && changed(normaliseDefaults(form), q.data.defaults)} busy={busy} onClick={() => void save()} />
+        <SaveButton
+          dirty={!!q.data?.available && changed(normaliseDefaults(form), q.data.defaults)}
+          busy={busy}
+          onClick={() => void save()}
+        />
       </div>
-      {q.data && !q.data.available ? <p className="text-sm text-muted-foreground">{copy.kioskSaverNotReady}</p> : null}
+      {q.data && !q.data.available ? (
+        <p className="text-sm text-muted-foreground">{copy.kioskSaverNotReady}</p>
+      ) : null}
       <div className="grid gap-5 md:grid-cols-[1fr_14rem]">
         <div className="space-y-5">
-          {row("ks-bright", copy.kioskSaverBrightness, form.brightness, BRIGHTNESS.min, BRIGHTNESS.max, (brightness) => set({ brightness }))}
-          {row("ks-size", copy.kioskSaverSize, form.size, form.sizeMin, form.sizeMax, (size) => set({ size }))}
-          {row("ks-min", copy.kioskSaverSizeMin, form.sizeMin, SIZE.min, SIZE.max, (sizeMin) => set({ sizeMin: Math.min(sizeMin, form.sizeMax) }))}
-          {row("ks-max", copy.kioskSaverSizeMax, form.sizeMax, SIZE.min, SIZE.max, (sizeMax) => set({ sizeMax: Math.max(sizeMax, form.sizeMin) }))}
+          {row(
+            "ks-bright",
+            copy.kioskSaverBrightness,
+            form.brightness,
+            BRIGHTNESS.min,
+            BRIGHTNESS.max,
+            (brightness) => set({ brightness }),
+          )}
+          {row("ks-size", copy.kioskSaverSize, form.size, form.sizeMin, form.sizeMax, (size) =>
+            set({ size }),
+          )}
+          {row("ks-min", copy.kioskSaverSizeMin, form.sizeMin, SIZE.min, SIZE.max, (sizeMin) =>
+            set({ sizeMin: Math.min(sizeMin, form.sizeMax) }),
+          )}
+          {row("ks-max", copy.kioskSaverSizeMax, form.sizeMax, SIZE.min, SIZE.max, (sizeMax) =>
+            set({ sizeMax: Math.max(sizeMax, form.sizeMin) }),
+          )}
         </div>
         {/* How the screensaver's text and a clock hand look at these settings. */}
-        <div className="grid place-items-center gap-2 rounded-xl bg-black p-4 text-center" aria-hidden>
+        <div
+          className="grid place-items-center gap-2 rounded-xl bg-black p-4 text-center"
+          aria-hidden
+        >
           <svg viewBox="0 0 100 100" className="size-24">
-            <circle cx="50" cy="50" r="47" fill="none" stroke="white" strokeOpacity={glow(0.22, form.brightness)} strokeWidth={0.8 * form.size} />
-            <line x1="50" y1="50" x2="50" y2="27" stroke="white" strokeOpacity={glow(0.55, form.brightness)} strokeWidth={2.2 * form.size} strokeLinecap="round" transform="rotate(300 50 50)" />
-            <line x1="50" y1="50" x2="50" y2="15" stroke="white" strokeOpacity={glow(0.45, form.brightness)} strokeWidth={1.2 * form.size} strokeLinecap="round" transform="rotate(60 50 50)" />
+            <circle
+              cx="50"
+              cy="50"
+              r="47"
+              fill="none"
+              stroke="white"
+              strokeOpacity={glow(0.22, form.brightness)}
+              strokeWidth={0.8 * form.size}
+            />
+            <line
+              x1="50"
+              y1="50"
+              x2="50"
+              y2="27"
+              stroke="white"
+              strokeOpacity={glow(0.55, form.brightness)}
+              strokeWidth={2.2 * form.size}
+              strokeLinecap="round"
+              transform="rotate(300 50 50)"
+            />
+            <line
+              x1="50"
+              y1="50"
+              x2="50"
+              y2="15"
+              stroke="white"
+              strokeOpacity={glow(0.45, form.brightness)}
+              strokeWidth={1.2 * form.size}
+              strokeLinecap="round"
+              transform="rotate(60 50 50)"
+            />
           </svg>
-          <span className="uppercase tracking-[0.3em]" style={{ fontSize: `${0.7 * form.size}rem`, color: `rgb(255 255 255 / ${glow(0.28, form.brightness)})` }}>
+          <span
+            className="uppercase tracking-[0.3em]"
+            style={{
+              fontSize: `${0.7 * form.size}rem`,
+              color: `rgb(255 255 255 / ${glow(0.28, form.brightness)})`,
+            }}
+          >
             London
           </span>
         </div>
       </div>
       <div className="space-y-4 border-t border-border pt-4">
         <h3 className="font-medium">{copy.kioskTimingsTitle}</h3>
-        {minutes("ks-reset", copy.kioskResetMinutes, "resetMinutes", TIMING.reset.min, TIMING.reset.max)}
-        {minutes("ks-saver", copy.kioskSaverMinutes, "saverMinutes", form.resetMinutes, TIMING.saver.max, copy.kioskSaverMinutesHelp)}
-        {minutes("ks-welcome", copy.kioskWelcomeMinutes, "welcomeMinutes", TIMING.welcome.min, TIMING.welcome.max, copy.kioskWelcomeMinutesHelp)}
+        {minutes(
+          "ks-reset",
+          copy.kioskResetMinutes,
+          "resetMinutes",
+          TIMING.reset.min,
+          TIMING.reset.max,
+        )}
+        {minutes(
+          "ks-saver",
+          copy.kioskSaverMinutes,
+          "saverMinutes",
+          form.resetMinutes,
+          TIMING.saver.max,
+          copy.kioskSaverMinutesHelp,
+        )}
+        {minutes(
+          "ks-welcome",
+          copy.kioskWelcomeMinutes,
+          "welcomeMinutes",
+          TIMING.welcome.min,
+          TIMING.welcome.max,
+          copy.kioskWelcomeMinutesHelp,
+        )}
       </div>
       <div className="space-y-2 border-t border-border pt-4">
         <h3 className="font-medium">{copy.kioskQrTitle}</h3>

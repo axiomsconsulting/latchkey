@@ -24,10 +24,20 @@ export function PlatformStripeAdmin() {
         <p className="text-sm text-muted-foreground">{copy.notSet}</p>
       ) : (
         <>
-          <StripeAccountCard identity={d.identity} title={copy.platformTitle} checkedAt={q.dataUpdatedAt ? new Date(q.dataUpdatedAt).toISOString() : null} onCheck={() => void q.refetch()} checking={q.isFetching} linkKind="own" admin />
+          <StripeAccountCard
+            identity={d.identity}
+            title={copy.platformTitle}
+            checkedAt={q.dataUpdatedAt ? new Date(q.dataUpdatedAt).toISOString() : null}
+            onCheck={() => void q.refetch()}
+            checking={q.isFetching}
+            linkKind="own"
+            admin
+          />
           <dl className="grid gap-1 text-sm sm:grid-cols-[10rem_1fr]">
             <dt className="text-muted-foreground">{copy.key}</dt>
-            <dd>{d.keyKind ? copy.keyKind(d.keyKind) : "—"} · {d.live ? copy.live : copy.test}</dd>
+            <dd>
+              {d.keyKind ? copy.keyKind(d.keyKind) : "—"} · {d.live ? copy.live : copy.test}
+            </dd>
             <dt className="text-muted-foreground">{copy.webhooks}</dt>
             <dd>{copy.webhookSet(d.webhook, d.connectWebhook)}</dd>
           </dl>
@@ -38,7 +48,10 @@ export function PlatformStripeAdmin() {
               <ul className="mt-2 space-y-1">
                 {RESTRICTED_KEY_NEEDS.map((n) => (
                   <li key={n.resource}>
-                    <span className="font-medium">{n.resource}: {n.access}</span> <span className="text-muted-foreground">({n.why})</span>
+                    <span className="font-medium">
+                      {n.resource}: {n.access}
+                    </span>{" "}
+                    <span className="text-muted-foreground">({n.why})</span>
                   </li>
                 ))}
               </ul>

@@ -28,7 +28,8 @@ export type TimelineStay = {
 export type Activity = Record<string, { messages: number; requests: number }>;
 
 // Cleaning and unavailable windows: striped behind the stays.
-export const WINDOW_STRIPES = "repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, transparent) 0 5px, transparent 5px 10px)";
+export const WINDOW_STRIPES =
+  "repeating-linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, transparent) 0 5px, transparent 5px 10px)";
 
 /** Starts on a week on wide screens, three days on a phone. */
 export function useStartView(today: string): [View, (v: View) => void] {
@@ -81,7 +82,9 @@ export function BookingsTimeline({
     rooms.forEach((room, roomIndex) => {
       const hue = roomHue(roomIndex);
       const mine = stays.filter((b) => b.room_id === room.id && b.status !== "cancelled");
-      const guests = mine.filter((b) => b.status !== "blocked" && !b.mirror_of).sort((a, b) => a.check_in_date.localeCompare(b.check_in_date));
+      const guests = mine
+        .filter((b) => b.status !== "blocked" && !b.mirror_of)
+        .sort((a, b) => a.check_in_date.localeCompare(b.check_in_date));
       guests.forEach((b, shade) => {
         const t = stayTimes(b, times);
         const site = sites.find((s) => s.key === platformKey(b)) ?? null;
@@ -99,14 +102,26 @@ export function BookingsTimeline({
           title: `${name}. ${calCopy.stayDates(formatUkDate(b.check_in_date), formatUkDate(b.check_out_date))} · ${calCopy.nights(nightsBetween(b.check_in_date, b.check_out_date))} · ${label}${echoes.length ? ` · ${copy.alsoClosedOn} ${echoes.map((e) => channels[e.channel as Channel]).join(", ")}` : ""}`,
           className: [
             "border-l-4 text-foreground",
-            b.status === "needs_details" ? "outline-2 outline-dashed outline-offset-[-2px] outline-accent" : "",
+            b.status === "needs_details"
+              ? "outline-2 outline-dashed outline-offset-[-2px] outline-accent"
+              : "",
             b.status === "flagged" ? "outline-2 outline-offset-[-2px] outline-destructive" : "",
           ].join(" "),
-          style: { background: `linear-gradient(${c.background}, ${c.background}), var(--surface)`, borderLeftColor: c.borderColor },
+          style: {
+            background: `linear-gradient(${c.background}, ${c.background}), var(--surface)`,
+            borderLeftColor: c.borderColor,
+          },
           label: (
             <>
-              <ChannelIcon channel={b.channel} iconUrl={site?.iconUrl ?? null} label={label} size="1rem" />
-              {b.status === "checked_in" ? <Check className="size-3.5 shrink-0" aria-label={calCopy.checkedIn} /> : null}
+              <ChannelIcon
+                channel={b.channel}
+                iconUrl={site?.iconUrl ?? null}
+                label={label}
+                size="1rem"
+              />
+              {b.status === "checked_in" ? (
+                <Check className="size-3.5 shrink-0" aria-label={calCopy.checkedIn} />
+              ) : null}
               <span className="min-w-0 flex-1 truncate">{name}</span>
               {a?.messages ? (
                 <span className="flex shrink-0 items-center rounded bg-background/80 px-1 text-[10px]">
@@ -120,7 +135,11 @@ export function BookingsTimeline({
                   {a.requests}
                 </span>
               ) : null}
-              {echoes.length ? <span className="shrink-0 rounded bg-background/70 px-1 text-[10px]">+{echoes.length}</span> : null}
+              {echoes.length ? (
+                <span className="shrink-0 rounded bg-background/70 px-1 text-[10px]">
+                  +{echoes.length}
+                </span>
+              ) : null}
             </>
           ),
           onClick: () => onOpen(b.id),
@@ -130,10 +149,13 @@ export function BookingsTimeline({
       // Closed nights, only where no guest is staying.
       for (const b of mine.filter((x) => x.status === "blocked" || !!x.mirror_of)) {
         const t = stayTimes(b, times);
-        if (guests.some((g) => {
-          const gt = stayTimes(g, times);
-          return gt.start < t.end && t.start < gt.end;
-        })) continue;
+        if (
+          guests.some((g) => {
+            const gt = stayTimes(g, times);
+            return gt.start < t.end && t.start < gt.end;
+          })
+        )
+          continue;
         out.push({
           id: b.id,
           roomId: room.id,
@@ -152,12 +174,29 @@ export function BookingsTimeline({
       for (const w of windowsForDay(windows, d, timezone)) {
         for (const room of rooms) {
           if (w.roomId && w.roomId !== room.id) continue;
-          out.push({ id: `${w.id}-${d}-${room.id}`, roomId: room.id, start: at(d, w.start), end: at(d, w.end), layer: "back", title: `${w.reason ?? calCopy.cleaning} ${w.start}–${w.end}`, style: { backgroundImage: WINDOW_STRIPES } });
+          out.push({
+            id: `${w.id}-${d}-${room.id}`,
+            roomId: room.id,
+            start: at(d, w.start),
+            end: at(d, w.end),
+            layer: "back",
+            title: `${w.reason ?? calCopy.cleaning} ${w.start}–${w.end}`,
+            style: { backgroundImage: WINDOW_STRIPES },
+          });
         }
       }
     }
     return out;
   }, [rooms, stays, allStays, windows, times, timezone, activity, sites, view, onOpen]);
 
-  return <RoomTimeline rooms={rooms} view={view} onView={setView} today={today} now={now} items={items} />;
+  return (
+    <RoomTimeline
+      rooms={rooms}
+      view={view}
+      onView={setView}
+      today={today}
+      now={now}
+      items={items}
+    />
+  );
 }

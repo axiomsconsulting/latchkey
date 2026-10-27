@@ -6,7 +6,12 @@ import { toast } from "sonner";
 
 import { authExtraCopy as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
-import { clearTrialClaim, confirmSignIn, pendingTrialClaim, takeTokensFromUrl } from "@/lib/social-auth";
+import {
+  clearTrialClaim,
+  confirmSignIn,
+  pendingTrialClaim,
+  takeTokensFromUrl,
+} from "@/lib/social-auth";
 import { completeTrialClaim } from "@/lib/trial.functions";
 import { rememberDashboard } from "@/lib/home-redirect";
 
@@ -21,7 +26,12 @@ export function AuthSession() {
 
   useEffect(() => {
     let handled = false;
-    const onSession = async (user: { is_anonymous?: boolean; email?: string | null; app_metadata?: { provider?: string } } | null | undefined) => {
+    const onSession = async (
+      user:
+        | { is_anonymous?: boolean; email?: string | null; app_metadata?: { provider?: string } }
+        | null
+        | undefined,
+    ) => {
       if (!user || user.is_anonymous) return;
       confirmSignIn(user);
       const code = pendingTrialClaim();
@@ -40,7 +50,9 @@ export function AuthSession() {
         handled = false;
       }
     };
-    void takeTokensFromUrl().then(() => supabase.auth.getSession().then(({ data }) => onSession(data.session?.user)));
+    void takeTokensFromUrl().then(() =>
+      supabase.auth.getSession().then(({ data }) => onSession(data.session?.user)),
+    );
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "USER_UPDATED") void onSession(session?.user);
       // Signed out: "/" shows the home page again on this device.

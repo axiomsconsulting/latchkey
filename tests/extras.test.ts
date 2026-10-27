@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_EXTRAS, availableWindows, basketAutoApproves, cleaningGapMinutes, priceBasket, taxBreakdown,
+  DEFAULT_EXTRAS,
+  availableWindows,
+  basketAutoApproves,
+  cleaningGapMinutes,
+  priceBasket,
+  taxBreakdown,
 } from "../src/lib/extras";
 
 describe("priceBasket", () => {
   it("prices towels and luggage by size", () => {
-    const p = priceBasket(DEFAULT_EXTRAS, [{ key: "bath_towel", qty: 2 }, { key: "luggage", qty: 1, size: "large" }]);
+    const p = priceBasket(DEFAULT_EXTRAS, [
+      { key: "bath_towel", qty: 2 },
+      { key: "luggage", qty: 1, size: "large" },
+    ]);
     expect(p.map((l) => l.totalPence)).toEqual([600, 700]);
   });
   it("rejects over max and inactive items", () => {
@@ -21,19 +29,32 @@ describe("priceBasket", () => {
 describe("auto-approve", () => {
   it("needs every line to auto-approve", () => {
     expect(basketAutoApproves(DEFAULT_EXTRAS, [{ key: "bath_towel", qty: 1 }])).toBe(true);
-    expect(basketAutoApproves(DEFAULT_EXTRAS, [{ key: "bath_towel", qty: 1 }, { key: "linen_change", qty: 1 }])).toBe(false);
+    expect(
+      basketAutoApproves(DEFAULT_EXTRAS, [
+        { key: "bath_towel", qty: 1 },
+        { key: "linen_change", qty: 1 },
+      ]),
+    ).toBe(false);
   });
 });
 
 describe("taxBreakdown", () => {
   it("no tax when not registered", () => {
-    expect(taxBreakdown(1000, { registered: false, label: "VAT", rateBp: 2000, pricesInclude: true }).taxPence).toBe(0);
+    expect(
+      taxBreakdown(1000, { registered: false, label: "VAT", rateBp: 2000, pricesInclude: true })
+        .taxPence,
+    ).toBe(0);
   });
   it("inclusive 20%", () => {
-    expect(taxBreakdown(1200, { registered: true, label: "VAT", rateBp: 2000, pricesInclude: true })).toEqual({ netPence: 1000, taxPence: 200, totalPence: 1200 });
+    expect(
+      taxBreakdown(1200, { registered: true, label: "VAT", rateBp: 2000, pricesInclude: true }),
+    ).toEqual({ netPence: 1000, taxPence: 200, totalPence: 1200 });
   });
   it("exclusive 20%", () => {
-    expect(taxBreakdown(1000, { registered: true, label: "VAT", rateBp: 2000, pricesInclude: false }).totalPence).toBe(1200);
+    expect(
+      taxBreakdown(1000, { registered: true, label: "VAT", rateBp: 2000, pricesInclude: false })
+        .totalPence,
+    ).toBe(1200);
   });
 });
 

@@ -25,6 +25,10 @@ export default {
       html: parsed.html ?? null,
       messageId: parsed.messageId ?? null,
     };
-    await fetch(env.LATCHKEY_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    await fetch(env.LATCHKEY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
   },
 };

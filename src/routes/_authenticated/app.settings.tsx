@@ -11,7 +11,22 @@ import { checkPhone, splitPhone } from "@/lib/world";
 import { worldCopy } from "@/content/copy";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Building2, CreditCard, History, IdCard, Loader2, NotebookPen, Palette, Plus, QrCode, ShieldCheck, Sparkles, Star, Users } from "lucide-react";
+import {
+  Bell,
+  Building2,
+  CreditCard,
+  History,
+  IdCard,
+  Loader2,
+  NotebookPen,
+  Palette,
+  Plus,
+  QrCode,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
@@ -51,7 +66,32 @@ import { SaveButton, changed } from "@/components/host/SaveButton";
 import { rebrand } from "@/lib/brand";
 
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
-const FOCUS = ["business", "group", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest", "extras", "money", "theme", "labels", "domain", "support", "shortcuts", "shortcuts2", "adminLink"] as const;
+const FOCUS = [
+  "business",
+  "group",
+  "alerts",
+  "messages",
+  "team",
+  "payments",
+  "invoices",
+  "api",
+  "demo",
+  "privacy",
+  "checkin",
+  "records",
+  "stayAccess",
+  "reviews",
+  "kioskRest",
+  "extras",
+  "money",
+  "theme",
+  "labels",
+  "domain",
+  "support",
+  "shortcuts",
+  "shortcuts2",
+  "adminLink",
+] as const;
 /** The menu's groups, in order, with their icons (names in settingsMenuCopy). */
 const SETTINGS_GROUPS = [
   { id: "business", icon: Building2 },
@@ -63,12 +103,30 @@ const SETTINGS_GROUPS = [
   { id: "apps", icon: Bell },
 ] as const;
 // Latchkey-wide and per-business admin switches (demo / live, sample data) live in Latchkey admin → Businesses.
-const OWN_CARD = new Set(["business", "alerts", "messages", "team", "payments", "invoices", "api", "demo", "privacy", "checkin", "records", "stayAccess", "reviews", "kioskRest", "money"]);
+const OWN_CARD = new Set([
+  "business",
+  "alerts",
+  "messages",
+  "team",
+  "payments",
+  "invoices",
+  "api",
+  "demo",
+  "privacy",
+  "checkin",
+  "records",
+  "stayAccess",
+  "reviews",
+  "kioskRest",
+  "money",
+]);
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   // ?focus=<section> lands on that part of Settings.
   validateSearch: (s: Record<string, unknown>): { focus?: (typeof FOCUS)[number] } =>
-    typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {},
+    typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"])
+      ? { focus: s["focus"] as (typeof FOCUS)[number] }
+      : {},
   head: () => ({
     meta: [
       { title: rebrand("Settings · Latchkey host dashboard") },
@@ -96,16 +154,21 @@ function SettingsPage() {
   // The menu at the top: one tab per group; a link to a section opens its tab, then lands on it.
   const superAdmin = workspace.data?.isSuperAdmin === true;
   const groupOf = (id: string): string => settingsMenuCopy.sections[id]?.[1] ?? "business";
-  const [tab, setTab] = useState<string>(() => (focus ? (settingsMenuCopy.sections[focus]?.[1] ?? "business") : "business"));
+  const [tab, setTab] = useState<string>(() =>
+    focus ? (settingsMenuCopy.sections[focus]?.[1] ?? "business") : "business",
+  );
   useEffect(() => {
     if (focus) setTab(groupOf(focus));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, superAdmin]);
-  useLandOn(focus ? (OWN_CARD.has(focus) ? `settings-${focus}` : `section-${focus}`) : null, !workspace.isLoading && !!focus && tab === groupOf(focus));
+  useLandOn(
+    focus ? (OWN_CARD.has(focus) ? `settings-${focus}` : `section-${focus}`) : null,
+    !workspace.isLoading && !!focus && tab === groupOf(focus),
+  );
   // The price list moved to Properties → Extras; old links still find it.
   const navigate = useNavigate();
   useEffect(() => {
-    if (focus === "extras") void navigate({ to: "/app/properties", search: { tab: "extras" }, replace: true });
+    if (focus === "extras")
+      void navigate({ to: "/app/properties", search: { tab: "extras" }, replace: true });
   }, [focus, navigate]);
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
@@ -121,9 +184,20 @@ function SettingsPage() {
     timezone: "Europe/London",
   });
   const [busy, setBusy] = useState(false);
-  const propsList = (workspace.data?.properties ?? []) as Array<{ id: string; name: string; short_code: string; theme_config: unknown; country_code?: string | null }>;
+  const propsList = (workspace.data?.properties ?? []) as Array<{
+    id: string;
+    name: string;
+    short_code: string;
+    theme_config: unknown;
+    country_code?: string | null;
+  }>;
   const homeCountry = propsList[0]?.country_code ?? "GB";
-  const [phone, setPhone] = useState<{ country: string; national: string; valid: boolean; e164: string | null }>({ country: "GB", national: "", valid: true, e164: null });
+  const [phone, setPhone] = useState<{
+    country: string;
+    national: string;
+    valid: boolean;
+    e164: string | null;
+  }>({ country: "GB", national: "", valid: true, e164: null });
   const { selectedId, select } = useSelectedProperty(propsList);
   const [demoBusy, setDemoBusy] = useState<"remove" | null>(null);
 
@@ -138,7 +212,11 @@ function SettingsPage() {
     });
     const split = splitPhone(host.contact_phone, homeCountry);
     const parsed = split.national ? checkPhone(split.national, split.country) : null;
-    setPhone({ ...split, valid: !parsed || parsed.ok, e164: parsed && parsed.ok ? parsed.e164 : null });
+    setPhone({
+      ...split,
+      valid: !parsed || parsed.ok,
+      e164: parsed && parsed.ok ? parsed.e164 : null,
+    });
   }, [host, homeCountry]);
 
   // Save stays grey until a detail differs from what's saved.
@@ -146,7 +224,13 @@ function SettingsPage() {
     !!host &&
     changed(
       { ...form, contact_phone: phone.national.trim() ? phone.e164 : null },
-      { business_name: host.business_name ?? "", contact_email: host.contact_email ?? "", contact_phone: host.contact_phone ?? null, currency: host.currency ?? "GBP", timezone: host.timezone ?? "Europe/London" },
+      {
+        business_name: host.business_name ?? "",
+        contact_email: host.contact_email ?? "",
+        contact_phone: host.contact_phone ?? null,
+        currency: host.currency ?? "GBP",
+        timezone: host.timezone ?? "Europe/London",
+      },
     );
 
   async function submit(e: React.FormEvent) {
@@ -216,7 +300,9 @@ function SettingsPage() {
         actions={
           <>
             {/* Look and feel, extras, payments, guest records and the kiosk are set per property. */}
-            {propsList.length > 1 ? <PropertyPicker properties={propsList} value={selectedId} onChange={select} /> : null}
+            {propsList.length > 1 ? (
+              <PropertyPicker properties={propsList} value={selectedId} onChange={select} />
+            ) : null}
             <Button asChild variant="outline">
               <Link to="/app/setup">
                 <Plus className="size-4" />
@@ -228,9 +314,17 @@ function SettingsPage() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList aria-label={settingsMenuCopy.label} className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
+        <TabsList
+          aria-label={settingsMenuCopy.label}
+          className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1"
+        >
           {groups.map((g) => (
-            <TabsTrigger key={g.id} value={g.id} className="h-10 gap-2 rounded-xl px-4" data-tour={`settings-tab-${g.id}`}>
+            <TabsTrigger
+              key={g.id}
+              value={g.id}
+              className="h-10 gap-2 rounded-xl px-4"
+              data-tour={`settings-tab-${g.id}`}
+            >
               <g.icon className="size-4" aria-hidden /> {settingsMenuCopy.groups[g.id]}
             </TabsTrigger>
           ))}
@@ -238,251 +332,347 @@ function SettingsPage() {
       </Tabs>
 
       <PageSections page="settings" anchors only={(id) => groupOf(id) === tab}>
-      <Section id="business">
-      <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
-        {/* Business details and billing are the owner's; others can read them. */}
-        <fieldset disabled={!isOwner} className="grid gap-4 sm:grid-cols-2">
-        <div className="flex items-start justify-between gap-3 sm:col-span-2">
-          <h2 className="text-lg">{copy.business}</h2>
-          {isOwner ? <SaveButton type="submit" dirty={businessDirty} busy={busy} label={copy.save} /> : null}
-        </div>
+        <Section id="business">
+          <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
+            {/* Business details and billing are the owner's; others can read them. */}
+            <fieldset disabled={!isOwner} className="grid gap-4 sm:grid-cols-2">
+              <div className="flex items-start justify-between gap-3 sm:col-span-2">
+                <h2 className="text-lg">{copy.business}</h2>
+                {isOwner ? (
+                  <SaveButton type="submit" dirty={businessDirty} busy={busy} label={copy.save} />
+                ) : null}
+              </div>
 
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="bn">{copy.businessName}</Label>
-          <Input
-            id="bn"
-            className="h-12"
-            required
-            value={form.business_name}
-            onChange={(e) => setForm((f) => ({ ...f, business_name: e.target.value }))}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="ce">{copy.contactEmail}</Label>
-          <Input
-            id="ce"
-            type="email"
-            className="h-12"
-            value={form.contact_email}
-            onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="cp">{copy.contactPhone}</Label>
-          <PhoneInput id="cp" country={phone.country} national={phone.national} onChange={setPhone} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="cu">{copy.currency}</Label>
-          <CurrencyPicker id="cu" value={form.currency} onChange={(v) => setForm((f) => ({ ...f, currency: v }))} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="tz">{copy.timezone}</Label>
-          <TimeZonePicker id="tz" value={form.timezone} onChange={(v) => setForm((f) => ({ ...f, timezone: v }))} />
-        </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="bn">{copy.businessName}</Label>
+                <Input
+                  id="bn"
+                  className="h-12"
+                  required
+                  value={form.business_name}
+                  onChange={(e) => setForm((f) => ({ ...f, business_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ce">{copy.contactEmail}</Label>
+                <Input
+                  id="ce"
+                  type="email"
+                  className="h-12"
+                  value={form.contact_email}
+                  onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cp">{copy.contactPhone}</Label>
+                <PhoneInput
+                  id="cp"
+                  country={phone.country}
+                  national={phone.national}
+                  onChange={setPhone}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cu">{copy.currency}</Label>
+                <CurrencyPicker
+                  id="cu"
+                  value={form.currency}
+                  onChange={(v) => setForm((f) => ({ ...f, currency: v }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tz">{copy.timezone}</Label>
+                <TimeZonePicker
+                  id="tz"
+                  value={form.timezone}
+                  onChange={(v) => setForm((f) => ({ ...f, timezone: v }))}
+                />
+              </div>
+            </fieldset>
+          </form>
+        </Section>
 
-
-        </fieldset>
-      </form>
-      </Section>
-
-      <Section id="alerts">
-      {workspace.data ? (
-        <div id="settings-alerts" className="scroll-mt-24 rounded-2xl">
-          <AlertSettings hostId={workspace.data.hostId} canWrite={canWriteHost} />
-        </div>
-      ) : null}
-      </Section>
-      <Section id="messages">
-      {workspace.data ? (
-        <div id="settings-messages" className="scroll-mt-24 rounded-2xl">
-          <PlatformMessagesSettings hostId={workspace.data.hostId} isOwner={isOwner} />
-        </div>
-      ) : null}
-      </Section>
-      <Section id="group">{workspace.data && !demo ? <GroupBrandSettings hostId={workspace.data.hostId} isOwner={isOwner} themeConfig={themedProperty?.theme_config} /> : null}</Section>
-      <Section id="team">
-      {demo ? null : (<>
-      {workspace.data ? (
-        <div id="settings-team" className="scroll-mt-24 rounded-2xl">
-          <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} />
-        </div>
-      ) : null}
-      </>)}
-      </Section>
-      <Section id="shortcuts">
-      <>
-      {isOwner ? (
-        <Link to="/app/billing" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
-          <CreditCard className="size-5 text-primary" />
-          <span>
-            <span className="block text-lg">{billingCopy.title}</span>
-            <span className="block text-sm text-muted-foreground">{billingCopy.subtitle}</span>
-          </span>
-        </Link>
-      ) : null}
-      </>
-      </Section>
-      <Section id="adminLink">
-      {workspace.data?.isSuperAdmin ? (
-        <Link to="/app/admin" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
-          <ShieldCheck className="size-5 text-primary" />
-          <span>
-            <span className="block text-lg">{adminCopy.title}</span>
-            <span className="block text-sm text-muted-foreground">{adminCopy.subtitle}</span>
-          </span>
-        </Link>
-      ) : null}
-      </Section>
-      <Section id="shortcuts2">
-      <>
-      {canWriteHost ? (
-        <Link to="/app/register" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
-          <NotebookPen className="size-5 text-primary" />
-          <span>
-            <span className="block text-lg">{registerCopy.title}</span>
-            <span className="block text-sm text-muted-foreground">{registerCopy.subtitle}</span>
-          </span>
-        </Link>
-      ) : null}
-      {isOwner ? (
-        <Link to="/app/activity" className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden">
-          <History className="size-5 text-primary" />
-          <span>
-            <span className="block text-lg">{activityCopy.title}</span>
-            <span className="block text-sm text-muted-foreground">{activityCopy.subtitle}</span>
-          </span>
-        </Link>
-      ) : null}
-      </>
-      </Section>
-
-      {/* Tax, bank details and away (the price list itself is under Properties → Extras). */}
-      <Section id="money">{themedProperty && workspace.data ? <ExtrasPriceList propertyId={themedProperty.id} hostId={workspace.data.hostId} parts="money" /> : null}</Section>
-      <Section id="payments">
-      {demo ? null : (<>
-      {themedProperty && isOwner ? (
-        <div id="settings-payments" className="scroll-mt-24 rounded-2xl">
-          <PaymentsPanel propertyId={themedProperty.id} />
-        </div>
-      ) : null}
-      </>)}
-      </Section>
-      <Section id="invoices">
-      {workspace.data ? (
-        <div id="settings-invoices" className="scroll-mt-24 rounded-2xl">
-          <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} />
-        </div>
-      ) : null}
-      </Section>
-      <Section id="domain">
-      {demo ? null : (<>
-      {workspace.data ? (
-        <div id="settings-domain" className="scroll-mt-24 rounded-2xl">
-          <CustomDomainSettings
-            hostId={workspace.data.hostId}
-            isOwner={isOwner}
-            properties={(workspace.data.properties ?? []) as Array<{ id: string; name: string }>}
-          />
-        </div>
-      ) : null}
-      </>)}
-      </Section>
-      <Section id="api">
-      {demo ? null : (<>
-      {workspace.data ? (
-        <div id="settings-api" className="scroll-mt-24 rounded-2xl">
-          <ApiAccessPanel hostId={workspace.data.hostId} canWrite={canWriteHost} />
-        </div>
-      ) : null}
-      </>)}
-      </Section>
-      <Section id="support">
-      {demo ? null : (<>
-      {workspace.data && !workspace.data.support ? (
-        <SupportAccess
-          hostId={workspace.data.hostId}
-          until={(host as { support_access_until?: string | null } | null)?.support_access_until}
-          isOwner={isOwner}
-        />
-      ) : null}
-      </>)}
-      </Section>
-      <Section id="theme">{themedProperty ? <ThemeStudio property={themedProperty} /> : null}</Section>
-      <Section id="labels">
-      {workspace.data ? (
-        <ChannelLabels
-          hostId={workspace.data.hostId}
-          labels={((host as { channel_labels?: Record<string, string> } | null)?.channel_labels ?? {}) as Record<string, string>}
-          sites={(host as { booking_sites?: unknown } | null)?.booking_sites}
-        />
-      ) : null}
-      </Section>
-
-      <Section id="demo">
-      {/* Owners can remove sample data; Latchkey admins load it from Latchkey admin → Businesses. */}
-      {isOwner && hasDemo ? (
-      <section id="settings-demo" className="card-soft scroll-mt-24 p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
-            <Sparkles className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-lg">{copy.demoTitle}</h2>
-            <p className="text-sm text-muted-foreground">{copy.demoOwnerBody}</p>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {hasDemo ? (
-            <Button
-              variant="outline"
-              onClick={() => runDemo("remove")}
-              disabled={demoBusy !== null}
-            >
-              {demoBusy === "remove" ? <Loader2 className="size-4 animate-spin" /> : null}
-              {demoBusy === "remove" ? copy.removing : copy.removeDemo}
-            </Button>
+        <Section id="alerts">
+          {workspace.data ? (
+            <div id="settings-alerts" className="scroll-mt-24 rounded-2xl">
+              <AlertSettings hostId={workspace.data.hostId} canWrite={canWriteHost} />
+            </div>
           ) : null}
-        </div>
-      </section>
-      ) : null}
-      </Section>
+        </Section>
+        <Section id="messages">
+          {workspace.data ? (
+            <div id="settings-messages" className="scroll-mt-24 rounded-2xl">
+              <PlatformMessagesSettings hostId={workspace.data.hostId} isOwner={isOwner} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="group">
+          {workspace.data && !demo ? (
+            <GroupBrandSettings
+              hostId={workspace.data.hostId}
+              isOwner={isOwner}
+              themeConfig={themedProperty?.theme_config}
+            />
+          ) : null}
+        </Section>
+        <Section id="team">
+          {demo ? null : (
+            <>
+              {workspace.data ? (
+                <div id="settings-team" className="scroll-mt-24 rounded-2xl">
+                  <TeamPanel hostId={workspace.data.hostId} isOwner={isOwner} demo={demo} />
+                </div>
+              ) : null}
+            </>
+          )}
+        </Section>
+        <Section id="shortcuts">
+          <>
+            {isOwner ? (
+              <Link
+                to="/app/billing"
+                className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden"
+              >
+                <CreditCard className="size-5 text-primary" />
+                <span>
+                  <span className="block text-lg">{billingCopy.title}</span>
+                  <span className="block text-sm text-muted-foreground">
+                    {billingCopy.subtitle}
+                  </span>
+                </span>
+              </Link>
+            ) : null}
+          </>
+        </Section>
+        <Section id="adminLink">
+          {workspace.data?.isSuperAdmin ? (
+            <Link
+              to="/app/admin"
+              className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden"
+            >
+              <ShieldCheck className="size-5 text-primary" />
+              <span>
+                <span className="block text-lg">{adminCopy.title}</span>
+                <span className="block text-sm text-muted-foreground">{adminCopy.subtitle}</span>
+              </span>
+            </Link>
+          ) : null}
+        </Section>
+        <Section id="shortcuts2">
+          <>
+            {canWriteHost ? (
+              <Link
+                to="/app/register"
+                className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden"
+              >
+                <NotebookPen className="size-5 text-primary" />
+                <span>
+                  <span className="block text-lg">{registerCopy.title}</span>
+                  <span className="block text-sm text-muted-foreground">
+                    {registerCopy.subtitle}
+                  </span>
+                </span>
+              </Link>
+            ) : null}
+            {isOwner ? (
+              <Link
+                to="/app/activity"
+                className="card-soft flex items-center gap-3 p-5 hover:bg-secondary md:hidden"
+              >
+                <History className="size-5 text-primary" />
+                <span>
+                  <span className="block text-lg">{activityCopy.title}</span>
+                  <span className="block text-sm text-muted-foreground">
+                    {activityCopy.subtitle}
+                  </span>
+                </span>
+              </Link>
+            ) : null}
+          </>
+        </Section>
 
-      <Section id="privacy">{workspace.data ? <PrivacySettings hostId={workspace.data.hostId} isOwner={isOwner} /> : null}</Section>
-      <Section id="checkin">
-      {themedProperty ? (
-        <div id="settings-checkin" className="scroll-mt-24 rounded-2xl">
-          <CheckinSettings property={themedProperty as unknown as { id: string; short_code: string; checkin_methods: unknown }} />
-        </div>
-      ) : null}
-      </Section>
-      <Section id="records">
-      {themedProperty ? (
-        <div id="settings-records" className="scroll-mt-24 rounded-2xl">
-          <GuestRecordsSettings property={themedProperty as unknown as { id: string; guest_records?: unknown; country_code?: string | null }} />
-        </div>
-      ) : null}
-      </Section>
-      <Section id="stayAccess">
-      {themedProperty ? (
-        <div id="settings-stayAccess" className="scroll-mt-24 rounded-2xl">
-          <StayAccessSettings propertyId={(themedProperty as { id: string }).id} />
-        </div>
-      ) : null}
-      </Section>
-      <Section id="reviews">
-      {themedProperty ? (
-        <div id="settings-reviews" className="scroll-mt-24 rounded-2xl">
-          <ReviewSettings propertyId={(themedProperty as { id: string }).id} />
-        </div>
-      ) : null}
-      </Section>
-      <Section id="kioskRest">
-      {themedProperty ? (
-        <div id="settings-kioskRest" className="scroll-mt-24 rounded-2xl">
-          <KioskRestSettings property={themedProperty as unknown as { id: string; short_code: string; kiosk_rest?: unknown; quiet_hours_start?: string | null; quiet_hours_end?: string | null }} />
-        </div>
-      ) : null}
-      </Section>
+        {/* Tax, bank details and away (the price list itself is under Properties → Extras). */}
+        <Section id="money">
+          {themedProperty && workspace.data ? (
+            <ExtrasPriceList
+              propertyId={themedProperty.id}
+              hostId={workspace.data.hostId}
+              parts="money"
+            />
+          ) : null}
+        </Section>
+        <Section id="payments">
+          {demo ? null : (
+            <>
+              {themedProperty && isOwner ? (
+                <div id="settings-payments" className="scroll-mt-24 rounded-2xl">
+                  <PaymentsPanel propertyId={themedProperty.id} />
+                </div>
+              ) : null}
+            </>
+          )}
+        </Section>
+        <Section id="invoices">
+          {workspace.data ? (
+            <div id="settings-invoices" className="scroll-mt-24 rounded-2xl">
+              <InvoiceSettings hostId={workspace.data.hostId} isOwner={isOwner} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="domain">
+          {demo ? null : (
+            <>
+              {workspace.data ? (
+                <div id="settings-domain" className="scroll-mt-24 rounded-2xl">
+                  <CustomDomainSettings
+                    hostId={workspace.data.hostId}
+                    isOwner={isOwner}
+                    properties={
+                      (workspace.data.properties ?? []) as Array<{ id: string; name: string }>
+                    }
+                  />
+                </div>
+              ) : null}
+            </>
+          )}
+        </Section>
+        <Section id="api">
+          {demo ? null : (
+            <>
+              {workspace.data ? (
+                <div id="settings-api" className="scroll-mt-24 rounded-2xl">
+                  <ApiAccessPanel hostId={workspace.data.hostId} canWrite={canWriteHost} />
+                </div>
+              ) : null}
+            </>
+          )}
+        </Section>
+        <Section id="support">
+          {demo ? null : (
+            <>
+              {workspace.data && !workspace.data.support ? (
+                <SupportAccess
+                  hostId={workspace.data.hostId}
+                  until={
+                    (host as { support_access_until?: string | null } | null)?.support_access_until
+                  }
+                  isOwner={isOwner}
+                />
+              ) : null}
+            </>
+          )}
+        </Section>
+        <Section id="theme">
+          {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
+        </Section>
+        <Section id="labels">
+          {workspace.data ? (
+            <ChannelLabels
+              hostId={workspace.data.hostId}
+              labels={
+                ((host as { channel_labels?: Record<string, string> } | null)?.channel_labels ??
+                  {}) as Record<string, string>
+              }
+              sites={(host as { booking_sites?: unknown } | null)?.booking_sites}
+            />
+          ) : null}
+        </Section>
+
+        <Section id="demo">
+          {/* Owners can remove sample data; Latchkey admins load it from Latchkey admin → Businesses. */}
+          {isOwner && hasDemo ? (
+            <section id="settings-demo" className="card-soft scroll-mt-24 p-5">
+              <div className="flex items-start gap-3">
+                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
+                  <Sparkles className="size-5" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-lg">{copy.demoTitle}</h2>
+                  <p className="text-sm text-muted-foreground">{copy.demoOwnerBody}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {hasDemo ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => runDemo("remove")}
+                    disabled={demoBusy !== null}
+                  >
+                    {demoBusy === "remove" ? <Loader2 className="size-4 animate-spin" /> : null}
+                    {demoBusy === "remove" ? copy.removing : copy.removeDemo}
+                  </Button>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+        </Section>
+
+        <Section id="privacy">
+          {workspace.data ? (
+            <PrivacySettings hostId={workspace.data.hostId} isOwner={isOwner} />
+          ) : null}
+        </Section>
+        <Section id="checkin">
+          {themedProperty ? (
+            <div id="settings-checkin" className="scroll-mt-24 rounded-2xl">
+              <CheckinSettings
+                property={
+                  themedProperty as unknown as {
+                    id: string;
+                    short_code: string;
+                    checkin_methods: unknown;
+                  }
+                }
+              />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="records">
+          {themedProperty ? (
+            <div id="settings-records" className="scroll-mt-24 rounded-2xl">
+              <GuestRecordsSettings
+                property={
+                  themedProperty as unknown as {
+                    id: string;
+                    guest_records?: unknown;
+                    country_code?: string | null;
+                  }
+                }
+              />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="stayAccess">
+          {themedProperty ? (
+            <div id="settings-stayAccess" className="scroll-mt-24 rounded-2xl">
+              <StayAccessSettings propertyId={(themedProperty as { id: string }).id} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="reviews">
+          {themedProperty ? (
+            <div id="settings-reviews" className="scroll-mt-24 rounded-2xl">
+              <ReviewSettings propertyId={(themedProperty as { id: string }).id} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="kioskRest">
+          {themedProperty ? (
+            <div id="settings-kioskRest" className="scroll-mt-24 rounded-2xl">
+              <KioskRestSettings
+                property={
+                  themedProperty as unknown as {
+                    id: string;
+                    short_code: string;
+                    kiosk_rest?: unknown;
+                    quiet_hours_start?: string | null;
+                    quiet_hours_end?: string | null;
+                  }
+                }
+              />
+            </div>
+          ) : null}
+        </Section>
       </PageSections>
     </div>
   );

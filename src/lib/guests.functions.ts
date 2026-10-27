@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * One place for everything about a guest's stay, plus the tidy-up tools:
  * archive (hide from everyday screens), delete (remove the stay and all
@@ -15,12 +16,18 @@ const ids = z.array(uuid).min(1).max(200);
 /** Columns and functions from migration 0019, before the generated types know them. */
 type Untyped = {
   from: (table: string) => any;
-  rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: any; error: { message: string } | null }>;
+  rpc: (
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => PromiseLike<{ data: any; error: { message: string } | null }>;
 };
 const untyped = (client: unknown) => client as Untyped;
 
 /** Every stay in the list must belong to one host the caller can write to. */
-async function requireWriteForBookings(supabase: Parameters<typeof requireWrite>[0], bookingIds: string[]) {
+async function requireWriteForBookings(
+  supabase: Parameters<typeof requireWrite>[0],
+  bookingIds: string[],
+) {
   const { data } = await supabase.from("bookings").select("property_id").in("id", bookingIds);
   const properties = [...new Set((data ?? []).map((b) => b.property_id))];
   if (properties.length === 0 || (data ?? []).length !== bookingIds.length) {
@@ -78,26 +85,40 @@ export const getGuestDetails = createServerFn({ method: "GET" })
       // The UK guest register entries for this stay (staff only by RLS).
       sb
         .from("guest_register")
-        .select("position, full_name, nationality, document_number, place_of_issue, next_destination, next_address")
+        .select(
+          "position, full_name, nationality, document_number, place_of_issue, next_destination, next_address",
+        )
         .eq("booking_id", data.bookingId),
     ]);
     const registerAt = new Map((register.data ?? []).map((r) => [r.position, r]));
     const peopleRows = people.data ?? [];
     // A closed night says why it's closed instead of showing a guest name.
     let closed: string | null = null;
-    const raw = booking as { mirror_of?: string | null; status: string; notes?: string | null; channel: string };
+    const raw = booking as {
+      mirror_of?: string | null;
+      status: string;
+      notes?: string | null;
+      channel: string;
+    };
     if (raw.mirror_of || raw.status === "blocked") {
       const { closedReason } = await import("./booking-list");
       const { channels } = await import("@/content/copy");
-      const label = (x: { channel: string }) => (channels as Record<string, string>)[x.channel] ?? x.channel;
+      const label = (x: { channel: string }) =>
+        (channels as Record<string, string>)[x.channel] ?? x.channel;
       const { data: original } = raw.mirror_of
-        ? await sb.from("bookings").select("id, channel, guest_full_name, status, check_in_date, check_out_date, room_id").eq("id", raw.mirror_of).maybeSingle()
+        ? await sb
+            .from("bookings")
+            .select("id, channel, guest_full_name, status, check_in_date, check_out_date, room_id")
+            .eq("id", raw.mirror_of)
+            .maybeSingle()
         : { data: null };
       closed = closedReason(raw as never, original ? [original as never] : [], label as never);
     }
     const { signGuestPhotos } = await import("./checkin.server");
     const signed = await signGuestPhotos(
-      peopleRows.flatMap((p) => [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x)),
+      peopleRows.flatMap((p) =>
+        [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x),
+      ),
     );
 
     const b = booking as typeof booking & {
@@ -175,7 +196,10 @@ export const getGuestDetails = createServerFn({ method: "GET" })
       requests: ((requests.data ?? []) as Array<Record<string, unknown>>).map((r) => ({
         id: r["id"] as string,
         status: r["status"] as string,
-        items: ((r["items"] as Array<{ name: string; qty: number }> | null) ?? []).map((i) => ({ name: i.name, qty: i.qty })),
+        items: ((r["items"] as Array<{ name: string; qty: number }> | null) ?? []).map((i) => ({
+          name: i.name,
+          qty: i.qty,
+        })),
         totalPence: (r["total_pence"] as number | null) ?? 0,
         note: (r["message"] as string | null) ?? null,
         createdAt: r["created_at"] as string,
@@ -187,7 +211,11 @@ export const getGuestDetails = createServerFn({ method: "GET" })
         urgency: j.urgency,
         createdAt: j.created_at,
       })),
-      presence: (presence.data ?? []).map((p) => ({ id: p.id, event: p.event as string, createdAt: p.at })),
+      presence: (presence.data ?? []).map((p) => ({
+        id: p.id,
+        event: p.event as string,
+        createdAt: p.at,
+      })),
     };
   });
 
@@ -212,15 +240,30 @@ export const archiveBookings = createServerFn({ method: "POST" })
  */
 export const setBookingStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["blocked", "needs_details"]) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), status: z.enum(["blocked", "needs_details"]) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireWriteForBookings(context.supabase, [data.id]);
-    const { data: b, error: readErr } = await context.supabase.from("bookings").select("id, status, mirror_of, manual_fields").eq("id", data.id).maybeSingle();
+    const { data: b, error: readErr } = await context.supabase
+      .from("bookings")
+      .select("id, status, mirror_of, manual_fields")
+      .eq("id", data.id)
+      .maybeSingle();
     if (readErr || !b) throw new Error("That stay no longer exists. Refresh and try again.");
-    if (b.mirror_of) throw new Error("These nights mirror a booking on another site. They open again when that booking changes.");
-    if (!["blocked", "needs_details", "upcoming"].includes(b.status)) throw new Error("This stay has moved on (checked in, out or cancelled), so it can't be changed here.");
+    if (b.mirror_of)
+      throw new Error(
+        "These nights mirror a booking on another site. They open again when that booking changes.",
+      );
+    if (!["blocked", "needs_details", "upcoming"].includes(b.status))
+      throw new Error(
+        "This stay has moved on (checked in, out or cancelled), so it can't be changed here.",
+      );
     const manual = Array.from(new Set([...(b.manual_fields ?? []), "status"]));
-    const { error } = await context.supabase.from("bookings").update({ status: data.status, manual_fields: manual }).eq("id", data.id);
+    const { error } = await context.supabase
+      .from("bookings")
+      .update({ status: data.status, manual_fields: manual })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -235,10 +278,16 @@ export const deleteBookings = createServerFn({ method: "POST" })
       .from("guest_ids")
       .select("id_photo_path, face_photo_path")
       .in("booking_id", data.ids);
-    const { data: count, error } = await untyped(context.supabase).rpc("delete_bookings", { _ids: data.ids });
+    const { data: count, error } = await untyped(context.supabase).rpc("delete_bookings", {
+      _ids: data.ids,
+    });
     if (error) throw new Error(error.message);
     const { removeGuestPhotos } = await import("./checkin.server");
-    await removeGuestPhotos((people ?? []).flatMap((p) => [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x)));
+    await removeGuestPhotos(
+      (people ?? []).flatMap((p) =>
+        [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x),
+      ),
+    );
     return { count: (count as number | null) ?? 0 };
   });
 
@@ -264,7 +313,9 @@ export const syncPropertyNow = createServerFn({ method: "POST" })
         updated += res.updated;
         cancelled += res.cancelled;
       } catch (err) {
-        failed.push(`${link.listing_name ?? link.channel}: ${err instanceof Error ? err.message : "failed"}`);
+        failed.push(
+          `${link.listing_name ?? link.channel}: ${err instanceof Error ? err.message : "failed"}`,
+        );
       }
     }
     return { links: (links ?? []).length, created, updated, cancelled, failed };
@@ -289,7 +340,11 @@ export const deleteJobs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ ids }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase.from("service_jobs").delete().in("id", data.ids).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("service_jobs")
+      .delete()
+      .in("id", data.ids)
+      .select("id");
     if (error) throw new Error(error.message);
     if (!rows?.length) throw new Error("Those jobs no longer exist. Refresh and try again.");
     return { count: rows.length };

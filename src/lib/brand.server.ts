@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Server only: which brand a request is shown under. The platform's own
  * (site_settings.brand, set by the super admin), or, on a host's own domain
@@ -30,7 +31,13 @@ export async function platformHomeArt(): Promise<unknown> {
   if (artCache && Date.now() - artCache.at < TTL) return artCache.art;
   let art: unknown = null;
   try {
-    const { data, error } = await (await db()).from("site_settings").select("home_art").eq("id", 1).maybeSingle();
+    const { data, error } = await (
+      await db()
+    )
+      .from("site_settings")
+      .select("home_art")
+      .eq("id", 1)
+      .maybeSingle();
     if (!error) art = data?.home_art ?? null;
   } catch {
     art = null;
@@ -44,7 +51,13 @@ export async function platformUi(): Promise<unknown> {
   if (uiCache && Date.now() - uiCache.at < TTL) return uiCache.ui;
   let ui: unknown = null;
   try {
-    const { data, error } = await (await db()).from("site_settings").select("ui").eq("id", 1).maybeSingle();
+    const { data, error } = await (
+      await db()
+    )
+      .from("site_settings")
+      .select("ui")
+      .eq("id", 1)
+      .maybeSingle();
     if (!error) ui = data?.ui ?? null;
   } catch {
     ui = null;
@@ -59,7 +72,13 @@ export async function platformBrand(): Promise<Brand> {
   if (platformCache && Date.now() - platformCache.at < TTL) return platformCache.brand;
   let brand = normaliseBrand(null);
   try {
-    const { data, error } = await (await db()).from("site_settings").select("brand").eq("id", 1).maybeSingle();
+    const { data, error } = await (
+      await db()
+    )
+      .from("site_settings")
+      .select("brand")
+      .eq("id", 1)
+      .maybeSingle();
     if (!error) brand = normaliseBrand(data?.brand);
   } catch {
     // Before migration 0038, or offline: the default name.
@@ -87,16 +106,30 @@ export async function tenantFor(hostname: string | null | undefined): Promise<Te
     const sb = await db();
     const { data } = await sb
       .from("host_domains")
-      .select("domain, host_id, property_id, live_at, verified_at, hosts(business_name), properties(short_code)")
+      .select(
+        "domain, host_id, property_id, live_at, verified_at, hosts(business_name), properties(short_code)",
+      )
       .eq("domain", domain)
       .maybeSingle();
     if (data?.live_at && data?.verified_at) {
       let shortCode = (data.properties?.short_code as string | undefined) ?? null;
       if (!shortCode) {
-        const { data: p } = await sb.from("properties").select("short_code").eq("host_id", data.host_id).eq("active", true).order("created_at").limit(1).maybeSingle();
+        const { data: p } = await sb
+          .from("properties")
+          .select("short_code")
+          .eq("host_id", data.host_id)
+          .eq("active", true)
+          .order("created_at")
+          .limit(1)
+          .maybeSingle();
         shortCode = (p?.short_code as string | undefined) ?? null;
       }
-      tenant = { domain, hostId: data.host_id, name: (data.hosts?.business_name as string | undefined) || "", shortCode };
+      tenant = {
+        domain,
+        hostId: data.host_id,
+        name: (data.hosts?.business_name as string | undefined) || "",
+        shortCode,
+      };
     }
   } catch {
     // No table yet: no custom domains.
@@ -108,9 +141,21 @@ export async function tenantFor(hostname: string | null | undefined): Promise<Te
 /** Works out the brand for this request, then runs it under that brand. */
 export async function withSiteBrand<T>(request: Request, run: () => T | Promise<T>): Promise<T> {
   const platform = await platformBrand();
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? new URL(request.url).host;
+  const host =
+    request.headers.get("x-forwarded-host") ??
+    request.headers.get("host") ??
+    new URL(request.url).host;
   const tenant = await tenantFor(host);
-  const brand = tenant?.name ? { ...platform, name: tenant.name, logoMark: "initial" as const, logoUrl: "", tagline: "", footer: `© ${new Date().getFullYear()} ${tenant.name}` } : platform;
+  const brand = tenant?.name
+    ? {
+        ...platform,
+        name: tenant.name,
+        logoMark: "initial" as const,
+        logoUrl: "",
+        tagline: "",
+        footer: `© ${new Date().getFullYear()} ${tenant.name}`,
+      }
+    : platform;
   return store.run({ brand, platform, tenant }, async () => run());
 }
 

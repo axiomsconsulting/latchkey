@@ -4,11 +4,24 @@
  * This works out what each stay is waiting on, for Today. Pure, tested.
  */
 
-export type Msg = { direction: "inbound" | "outbound" | string; created_at: string; read_by_host_at: string | null; read_by_guest_at: string | null; body: string | null };
-export type Req = { id: string; status: string; total_pence: number; items: unknown; created_at: string };
+export type Msg = {
+  direction: "inbound" | "outbound" | string;
+  created_at: string;
+  read_by_host_at: string | null;
+  read_by_guest_at: string | null;
+  body: string | null;
+};
+export type Req = {
+  id: string;
+  status: string;
+  total_pence: number;
+  items: unknown;
+  created_at: string;
+};
 export type Job = { id: string; status: string; title: string; created_at: string };
 
-export type ChipKey = "unread" | "reply" | "approve" | "unpaid" | "deliver" | "jobs" | "unseen" | "sorted";
+export type ChipKey =
+  "unread" | "reply" | "approve" | "unpaid" | "deliver" | "jobs" | "unseen" | "sorted";
 export type Chip = { key: ChipKey; count: number };
 
 export type Conversation = {
@@ -47,7 +60,11 @@ export function summarise(msgs: Msg[], reqs: Req[], jobs: Job[]): Conversation {
   const anything = sorted.length + reqs.length + jobs.length > 0;
   if (!chips.length && anything) chips.push({ key: "sorted", count: 0 });
 
-  const lastActivity = [last?.created_at, ...reqs.map((r) => r.created_at), ...jobs.map((j) => j.created_at)].filter(Boolean).sort().pop() ?? null;
+  const lastActivity =
+    [last?.created_at, ...reqs.map((r) => r.created_at), ...jobs.map((j) => j.created_at)]
+      .filter(Boolean)
+      .sort()
+      .pop() ?? null;
   return {
     messages: sorted.length,
     lastBody: last?.body ?? null,
@@ -71,7 +88,10 @@ export function byAttention<T extends { conversation: Conversation }>(list: T[])
 export type Scope = "now" | "upcoming" | "past";
 
 /** Which list a stay belongs in, by its dates in the property's own day. */
-export function scopeOf(b: { check_in_date: string; check_out_date: string }, today: string): Scope {
+export function scopeOf(
+  b: { check_in_date: string; check_out_date: string },
+  today: string,
+): Scope {
   if (b.check_out_date < today) return "past";
   if (b.check_in_date > today) return "upcoming";
   return "now";

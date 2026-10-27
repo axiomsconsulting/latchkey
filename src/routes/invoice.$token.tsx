@@ -50,7 +50,11 @@ function InvoicePage() {
   const money = (p: number) => formatMoney(p, i.currency);
   // One line per night when the invoice was made that way; older ones have a single line.
   const lines = Array.isArray((i as { lines?: unknown }).lines)
-    ? ((i as unknown as { lines: Array<{ date: string; description: string; amount_pence: number }> }).lines)
+    ? (
+        i as unknown as {
+          lines: Array<{ date: string; description: string; amount_pence: number }>;
+        }
+      ).lines
     : [];
   const url = typeof window === "undefined" ? "" : window.location.href;
   const mail = `mailto:${encodeURIComponent(i.buyer_email ?? "")}?subject=${encodeURIComponent(
@@ -78,12 +82,20 @@ function InvoicePage() {
           <div>
             {header ? (
               <div className="mb-3 flex items-center gap-3">
-                <LogoMark theme={{ logoUrl: header.logoUrl, logoPreset: header.logoPreset as LogoPreset }} name={header.name} className="size-12" />
-                {header.name !== i.seller_name ? <span className="font-display text-xl">{header.name}</span> : null}
+                <LogoMark
+                  theme={{ logoUrl: header.logoUrl, logoPreset: header.logoPreset as LogoPreset }}
+                  name={header.name}
+                  className="size-12"
+                />
+                {header.name !== i.seller_name ? (
+                  <span className="font-display text-xl">{header.name}</span>
+                ) : null}
               </div>
             ) : null}
             <h1 className="font-display text-2xl">{i.seller_name}</h1>
-            {i.seller_address ? <p className="mt-1 whitespace-pre-line text-sm text-black/70">{i.seller_address}</p> : null}
+            {i.seller_address ? (
+              <p className="mt-1 whitespace-pre-line text-sm text-black/70">{i.seller_address}</p>
+            ) : null}
             {i.seller_tax_number ? (
               <p className="mt-2 text-sm">
                 {i.seller_tax_label}: {i.seller_tax_number}
@@ -101,24 +113,35 @@ function InvoicePage() {
                 <dt className="inline text-black/60">{copy.date}: </dt>
                 <dd className="inline">{formatUkDate(i.issued_on, { withYear: true })}</dd>
               </div>
-              {i.amended_at ? <div className="text-black/60">{copy.amended(formatUkDate(i.amended_at.slice(0, 10), { withYear: true }))}</div> : null}
+              {i.amended_at ? (
+                <div className="text-black/60">
+                  {copy.amended(formatUkDate(i.amended_at.slice(0, 10), { withYear: true }))}
+                </div>
+              ) : null}
             </dl>
           </div>
         </header>
 
         <section className="grid gap-6 py-6 sm:grid-cols-2">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-black/60">{copy.billedTo}</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-black/60">
+              {copy.billedTo}
+            </h2>
             <p className="mt-1 font-medium">{i.buyer_name}</p>
-            {i.buyer_address ? <p className="whitespace-pre-line text-sm">{i.buyer_address}</p> : null}
+            {i.buyer_address ? (
+              <p className="whitespace-pre-line text-sm">{i.buyer_address}</p>
+            ) : null}
             {i.buyer_email ? <p className="text-sm">{i.buyer_email}</p> : null}
           </div>
           <div className="sm:text-right">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-black/60">{copy.stay}</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-black/60">
+              {copy.stay}
+            </h2>
             {i.seller_room ? <p className="mt-1 font-medium">{i.seller_room}</p> : null}
             {i.check_in_date && i.check_out_date ? (
               <p className="text-sm">
-                {formatUkDate(i.check_in_date, { withYear: true })} – {formatUkDate(i.check_out_date, { withYear: true })}
+                {formatUkDate(i.check_in_date, { withYear: true })} –{" "}
+                {formatUkDate(i.check_out_date, { withYear: true })}
               </p>
             ) : null}
           </div>
@@ -158,7 +181,9 @@ function InvoicePage() {
           {i.tax_pence > 0 ? (
             <>
               <div className="flex justify-between">
-                <dt className="text-black/60">{copy.taxLine(i.tax_name ?? "Tax", (i.tax_rate_bp / 100).toString())}</dt>
+                <dt className="text-black/60">
+                  {copy.taxLine(i.tax_name ?? "Tax", (i.tax_rate_bp / 100).toString())}
+                </dt>
                 <dd className="tabular-nums">{money(i.tax_pence)}</dd>
               </div>
             </>

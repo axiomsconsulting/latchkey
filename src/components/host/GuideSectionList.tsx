@@ -21,7 +21,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { common, guideCopy as copy } from "@/content/copy";
 import { DEFAULT_PINNED, type EditorSection, type SectionKey } from "@/lib/guide";
-import { addGuideSection, removeGuideSection, reorderSections, setSectionPin } from "@/lib/guide.functions";
+import {
+  addGuideSection,
+  removeGuideSection,
+  reorderSections,
+  setSectionPin,
+} from "@/lib/guide.functions";
 import { moveItem } from "@/lib/reorder";
 import { cn } from "@/lib/utils";
 
@@ -96,7 +101,8 @@ export function GuideSectionList({
       setBusy(null);
     }
   }
-  const save = (keys: SectionKey[]) => run("order", () => reorder({ data: { propertyId, order: keys } }));
+  const save = (keys: SectionKey[]) =>
+    run("order", () => reorder({ data: { propertyId, order: keys } }));
 
   function startDrag(e: React.PointerEvent<HTMLButtonElement>, key: SectionKey) {
     e.preventDefault();
@@ -133,10 +139,13 @@ export function GuideSectionList({
     if (!anyPinned && !isPinned(key)) {
       const keep = order.filter((k) => DEFAULT_PINNED.includes(k));
       return run(`pin-${key}`, async () => {
-        for (const k of [...keep, key]) await pin({ data: { propertyId, sectionKey: k, pinned: true } });
+        for (const k of [...keep, key])
+          await pin({ data: { propertyId, sectionKey: k, pinned: true } });
       });
     }
-    return run(`pin-${key}`, () => pin({ data: { propertyId, sectionKey: key, pinned: !isPinned(key) } }));
+    return run(`pin-${key}`, () =>
+      pin({ data: { propertyId, sectionKey: key, pinned: !isPinned(key) } }),
+    );
   }
 
   const pinnedCount = order.filter(isPinned).length;
@@ -152,7 +161,15 @@ export function GuideSectionList({
             const Icon = sectionIcon(key);
             const isOpen = open === key;
             return (
-              <li key={key} data-key={key} id={`guide-${key}`} className={cn("card-soft scroll-mt-24 overflow-hidden", dragging === key && "relative z-10 shadow-lifted ring-2 ring-primary/40")}>
+              <li
+                key={key}
+                data-key={key}
+                id={`guide-${key}`}
+                className={cn(
+                  "card-soft scroll-mt-24 overflow-hidden",
+                  dragging === key && "relative z-10 shadow-lifted ring-2 ring-primary/40",
+                )}
+              >
                 <div className="flex items-center gap-1 px-2 py-1.5">
                   <Tip label={copy.dragTip}>
                     <button
@@ -191,13 +208,20 @@ export function GuideSectionList({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className={cn("size-9 shrink-0", isPinned(key) ? "text-accent" : "text-muted-foreground")}
+                          className={cn(
+                            "size-9 shrink-0",
+                            isPinned(key) ? "text-accent" : "text-muted-foreground",
+                          )}
                           aria-pressed={isPinned(key)}
                           aria-label={isPinned(key) ? copy.unpinTip : copy.pinTip}
                           disabled={busy !== null}
                           onClick={() => void togglePin(key)}
                         >
-                          {busy === `pin-${key}` ? <Loader2 className="size-4 animate-spin" /> : <Pin className={cn("size-4", isPinned(key) && "fill-current")} />}
+                          {busy === `pin-${key}` ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Pin className={cn("size-4", isPinned(key) && "fill-current")} />
+                          )}
                         </Button>
                       </Tip>
                       <Tip label={s.custom ? copy.deleteTip : copy.removeTip}>
@@ -210,7 +234,11 @@ export function GuideSectionList({
                           onClick={() =>
                             s.custom || attachmentCount(key) > 0
                               ? setConfirm(s)
-                              : void run(`rm-${key}`, () => remove({ data: { propertyId, sectionKey: key } }), copy.removedToast(s.title))
+                              : void run(
+                                  `rm-${key}`,
+                                  () => remove({ data: { propertyId, sectionKey: key } }),
+                                  copy.removedToast(s.title),
+                                )
                           }
                         >
                           {s.custom ? <Trash2 className="size-4" /> : <EyeOff className="size-4" />}
@@ -224,10 +252,14 @@ export function GuideSectionList({
                     aria-label={isOpen ? copy.foldTip(s.title) : copy.openTip(s.title)}
                     className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
                   >
-                    <ChevronDown className={cn("size-4 transition-transform", isOpen && "rotate-180")} />
+                    <ChevronDown
+                      className={cn("size-4 transition-transform", isOpen && "rotate-180")}
+                    />
                   </button>
                 </div>
-                {isOpen ? <div className="border-t border-border px-4 pb-4 pt-3">{children(s)}</div> : null}
+                {isOpen ? (
+                  <div className="border-t border-border px-4 pb-4 pt-3">{children(s)}</div>
+                ) : null}
               </li>
             );
           })}
@@ -259,7 +291,12 @@ export function GuideSectionList({
               >
                 <p className="text-sm font-medium">{copy.ownSection}</p>
                 <div className="flex gap-2">
-                  <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} maxLength={80} placeholder={copy.ownSectionPlaceholder} />
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    maxLength={80}
+                    placeholder={copy.ownSectionPlaceholder}
+                  />
                   <Button type="submit" disabled={!newTitle.trim() || busy !== null}>
                     {copy.add}
                   </Button>
@@ -277,7 +314,13 @@ export function GuideSectionList({
                             type="button"
                             disabled={busy !== null}
                             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted"
-                            onClick={() => void run(`add-${s.key}`, () => add({ data: { propertyId, sectionKey: s.key } }), copy.addedBack(s.title))}
+                            onClick={() =>
+                              void run(
+                                `add-${s.key}`,
+                                () => add({ data: { propertyId, sectionKey: s.key } }),
+                                copy.addedBack(s.title),
+                              )
+                            }
                           >
                             <Icon className="size-4 text-primary" /> {s.title}
                           </button>
@@ -298,7 +341,9 @@ export function GuideSectionList({
             <AlertDialogTitle>{copy.deleteTitle(confirm?.title ?? "")}</AlertDialogTitle>
             <AlertDialogDescription>
               {confirm?.custom ? copy.deleteBody : copy.removeWithFiles}
-              {confirm && attachmentCount(confirm.key) > 0 ? ` ${copy.filesGoToo(attachmentCount(confirm.key))}` : ""}
+              {confirm && attachmentCount(confirm.key) > 0
+                ? ` ${copy.filesGoToo(attachmentCount(confirm.key))}`
+                : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -307,7 +352,11 @@ export function GuideSectionList({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() =>
                 confirm &&
-                void run(`rm-${confirm.key}`, () => remove({ data: { propertyId, sectionKey: confirm.key } }), confirm.custom ? copy.deletedToast : copy.removedToast(confirm.title))
+                void run(
+                  `rm-${confirm.key}`,
+                  () => remove({ data: { propertyId, sectionKey: confirm.key } }),
+                  confirm.custom ? copy.deletedToast : copy.removedToast(confirm.title),
+                )
               }
             >
               {confirm?.custom ? copy.deleteConfirm : copy.removeConfirm}

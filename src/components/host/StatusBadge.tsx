@@ -1,4 +1,16 @@
-import { Ban, BedDouble, CalendarClock, CheckCheck, CircleHelp, CircleX, DoorOpen, Link2, LogOut, TriangleAlert, type LucideIcon } from "lucide-react";
+import {
+  Ban,
+  BedDouble,
+  CalendarClock,
+  CheckCheck,
+  CircleHelp,
+  CircleX,
+  DoorOpen,
+  Link2,
+  LogOut,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -39,14 +51,25 @@ const ICONS: Record<string, { icon: LucideIcon; tone: string }> = {
 };
 
 /** The status as a small icon pill, with the words in a tooltip (and for screen readers). */
-export function StatusIcon({ state, detail }: { state: StayState | string; detail?: string | null }) {
+export function StatusIcon({
+  state,
+  detail,
+}: {
+  state: StayState | string;
+  detail?: string | null;
+}) {
   const label = (statuses as Record<string, string>)[state] ?? state;
   const { icon: Icon, tone } = ICONS[state] ?? { icon: CircleHelp, tone: "text-muted-foreground" };
   const text = detail ? `${label}: ${detail}` : label;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span role="img" aria-label={text} tabIndex={0} className={`inline-flex h-7 min-w-9 items-center justify-center rounded-full px-2 ${tone}`}>
+        <span
+          role="img"
+          aria-label={text}
+          tabIndex={0}
+          className={`inline-flex h-7 min-w-9 items-center justify-center rounded-full px-2 ${tone}`}
+        >
           <Icon className="size-4" aria-hidden />
         </span>
       </TooltipTrigger>

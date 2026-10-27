@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * The room QR opening a guest's own guide before check-in is finished, and
  * the door tablets that show a phone is at the property (src/lib/stay-access.ts,
@@ -298,14 +299,12 @@ async function openFromRoom(
     (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5),
     p.timezone ?? "Europe/London",
   );
-  const { error } = await db
-    .from("stay_tokens")
-    .insert({
-      token_hash: stay.hash,
-      booking_id: b.id,
-      valid_from: win.validFrom.toISOString(),
-      expires_at: win.expiresAt.toISOString(),
-    });
+  const { error } = await db.from("stay_tokens").insert({
+    token_hash: stay.hash,
+    booking_id: b.id,
+    valid_from: win.validFrom.toISOString(),
+    expires_at: win.expiresAt.toISOString(),
+  });
   if (error) return { status: "away" as const, locate: false };
   return {
     status: "open" as const,

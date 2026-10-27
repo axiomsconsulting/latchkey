@@ -28,7 +28,9 @@ const tradeShape = {
 
 export const listTrades = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, propertyId: uuid.nullable().default(null) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: uuid, propertyId: uuid.nullable().default(null) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("trades")
@@ -116,7 +118,9 @@ export const importTrades = createServerFn({ method: "POST" })
       property_id: data.propertyId,
       source: "import",
     }));
-    const { error, count } = await context.supabase.from("trades").insert(payload, { count: "exact" });
+    const { error, count } = await context.supabase
+      .from("trades")
+      .insert(payload, { count: "exact" });
     if (error) throw new Error(error.message);
     return { added: count ?? payload.length };
   });
@@ -124,7 +128,9 @@ export const importTrades = createServerFn({ method: "POST" })
 /** One AI shortlist per property, refreshable by hand when the host wants. */
 export const suggestPropertyTrades = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid, force: z.boolean().default(false) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ propertyId: uuid, force: z.boolean().default(false) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { data: property, error } = await context.supabase
       .from("properties")
@@ -132,7 +138,8 @@ export const suggestPropertyTrades = createServerFn({ method: "POST" })
       .eq("id", data.propertyId)
       .single();
     if (error || !property) throw new Error("We could not find that property.");
-    if (property.trades_ai_at && !data.force) return { suggestions: [], alreadyDone: true as const };
+    if (property.trades_ai_at && !data.force)
+      return { suggestions: [], alreadyDone: true as const };
 
     const { count } = await context.supabase
       .from("rooms")
@@ -141,7 +148,8 @@ export const suggestPropertyTrades = createServerFn({ method: "POST" })
       .eq("active", true);
 
     const { jobAllowed, bumpUsage } = await import("./usage.server");
-    if (!(await jobAllowed("ai_trades"))) return { suggestions: [], alreadyDone: false as const, paused: true as const };
+    if (!(await jobAllowed("ai_trades")))
+      return { suggestions: [], alreadyDone: false as const, paused: true as const };
     await bumpUsage(property.host_id ?? null, "ai:trades");
     const { suggestTrades } = await import("./trades-ai.server");
     const suggestions = await suggestTrades({
@@ -195,7 +203,13 @@ export const addSuggestedTrade = createServerFn({ method: "POST" })
 export const assignTradeToJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ jobId: uuid, tradeId: uuid, etaIso: z.string().datetime().nullable().default(null) }).parse(d),
+    z
+      .object({
+        jobId: uuid,
+        tradeId: uuid,
+        etaIso: z.string().datetime().nullable().default(null),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { data: trade, error: tradeError } = await context.supabase

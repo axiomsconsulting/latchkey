@@ -203,12 +203,28 @@ describe("outcomes and late codes", () => {
     expect(lateCodeAllowed(C, created, at(0.2), false, true)).toBe(false);
     expect(lateCodeAllowed(C, created, at(30), false, false)).toBe(false);
     expect(
-      lateCodeAllowed({ ...C, lateCodeEntry: "until_first_paid_invoice" }, created, at(24 * 40), false, true),
+      lateCodeAllowed(
+        { ...C, lateCodeEntry: "until_first_paid_invoice" },
+        created,
+        at(24 * 40),
+        false,
+        true,
+      ),
     ).toBe(true);
     expect(
-      lateCodeAllowed({ ...C, lateCodeEntry: "until_first_paid_invoice" }, created, at(24 * 40), true, true),
+      lateCodeAllowed(
+        { ...C, lateCodeEntry: "until_first_paid_invoice" },
+        created,
+        at(24 * 40),
+        true,
+        true,
+      ),
     ).toBe(false);
-    expect(lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 59), true, true)).toBe(true);
-    expect(lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 61), false, true)).toBe(false);
+    expect(
+      lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 59), true, true),
+    ).toBe(true);
+    expect(
+      lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 61), false, true),
+    ).toBe(false);
   });
 });

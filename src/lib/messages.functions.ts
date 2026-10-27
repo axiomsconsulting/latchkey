@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * The one message thread per stay, shared by the guest's stay page and the
  * host's inbox. "outbound" is the host talking to the guest; "inbound" is the
@@ -30,7 +31,12 @@ async function stayBooking(t: string) {
     .eq("id", st.booking_id)
     .single();
   if (!b || b.status === "cancelled") throw new Error("This stay link has expired.");
-  return { db, booking: b as typeof b & { properties: { name: string; host_id: string; timezone: string | null } } };
+  return {
+    db,
+    booking: b as typeof b & {
+      properties: { name: string; host_id: string; timezone: string | null };
+    },
+  };
 }
 
 export const getStayInbox = createServerFn({ method: "GET" })
@@ -199,10 +205,27 @@ export const getHostThread = createServerFn({ method: "GET" })
           .in("channel", ["stay_page", "platform"])
           .order("created_at", { ascending: true })
           .limit(200),
-      () => sb.from("messages").select("id, body, direction, created_at, channel").eq("booking_id", data.bookingId).eq("channel", "stay_page").order("created_at", { ascending: true }).limit(200),
+      () =>
+        sb
+          .from("messages")
+          .select("id, body, direction, created_at, channel")
+          .eq("booking_id", data.bookingId)
+          .eq("channel", "stay_page")
+          .order("created_at", { ascending: true })
+          .limit(200),
     );
     if (error) throw new Error(error.message);
-    return ((msgs ?? []) as Array<{ id: string; body: string | null; direction: string; created_at: string; channel: string; platform?: string | null; reply_to?: string | null }>).map((m) => ({
+    return (
+      (msgs ?? []) as Array<{
+        id: string;
+        body: string | null;
+        direction: string;
+        created_at: string;
+        channel: string;
+        platform?: string | null;
+        reply_to?: string | null;
+      }>
+    ).map((m) => ({
       id: m.id,
       body: m.body ?? "",
       fromHost: m.direction === "outbound",
@@ -249,10 +272,16 @@ export const markHostRead = createServerFn({ method: "POST" })
  */
 export const listStayConversations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid, scope: z.enum(["now", "upcoming", "past"]) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ propertyId: uuid, scope: z.enum(["now", "upcoming", "past"]) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const { data: prop } = await sb.from("properties").select("timezone").eq("id", data.propertyId).maybeSingle();
+    const { data: prop } = await sb
+      .from("properties")
+      .select("timezone")
+      .eq("id", data.propertyId)
+      .maybeSingle();
     const tz = prop?.timezone ?? "Europe/London";
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
     const shift = (days: number) => {
@@ -262,7 +291,9 @@ export const listStayConversations = createServerFn({ method: "GET" })
     };
     let q = sb
       .from("bookings")
-      .select("id, guest_full_name, check_in_date, check_out_date, status, channel, mirror_of, archived_at, rooms(display_name)")
+      .select(
+        "id, guest_full_name, check_in_date, check_out_date, status, channel, mirror_of, archived_at, rooms(display_name)",
+      )
       .eq("property_id", data.propertyId)
       .not("status", "in", "(cancelled,blocked)")
       .is("mirror_of", null)
@@ -273,21 +304,56 @@ export const listStayConversations = createServerFn({ method: "GET" })
         : data.scope === "upcoming"
           ? q.gt("check_in_date", today).lte("check_in_date", shift(30))
           : q.lt("check_out_date", today).gte("check_out_date", shift(-30));
-    const { data: bookings, error } = await q.order("check_in_date", { ascending: data.scope !== "past" }).limit(80);
+    const { data: bookings, error } = await q
+      .order("check_in_date", { ascending: data.scope !== "past" })
+      .limit(80);
     if (error) throw new Error(error.message);
     const ids = (bookings ?? []).map((b) => b.id);
     if (!ids.length) return { today, stays: [] };
 
     const [{ data: msgs }, { data: reqs }, { data: jobs }] = await Promise.all([
-      sb.from("messages").select("booking_id, direction, created_at, read_by_host_at, read_by_guest_at, body").in("booking_id", ids).in("channel", ["stay_page", "platform"]).order("created_at", { ascending: true }).limit(2000),
-      sb.from("requests").select("id, booking_id, status, total_pence, items, created_at").in("booking_id", ids).limit(1000),
-      sb.from("service_jobs").select("id, booking_id, status, title, created_at, source").in("booking_id", ids).eq("source", "guest").limit(1000),
+      sb
+        .from("messages")
+        .select("booking_id, direction, created_at, read_by_host_at, read_by_guest_at, body")
+        .in("booking_id", ids)
+        .in("channel", ["stay_page", "platform"])
+        .order("created_at", { ascending: true })
+        .limit(2000),
+      sb
+        .from("requests")
+        .select("id, booking_id, status, total_pence, items, created_at")
+        .in("booking_id", ids)
+        .limit(1000),
+      sb
+        .from("service_jobs")
+        .select("id, booking_id, status, title, created_at, source")
+        .in("booking_id", ids)
+        .eq("source", "guest")
+        .limit(1000),
     ]);
     const { summarise, byAttention } = await import("./conversations");
     const stays = (bookings ?? []).map((b) => {
-      const mine = <T extends { booking_id: string | null }>(rows: T[] | null) => (rows ?? []).filter((r) => r.booking_id === b.id);
-      const r = mine(reqs as Array<{ id: string; booking_id: string; status: string; total_pence: number; items: unknown; created_at: string }> | null);
-      const j = mine(jobs as Array<{ id: string; booking_id: string; status: string; title: string; created_at: string }> | null);
+      const mine = <T extends { booking_id: string | null }>(rows: T[] | null) =>
+        (rows ?? []).filter((r) => r.booking_id === b.id);
+      const r = mine(
+        reqs as Array<{
+          id: string;
+          booking_id: string;
+          status: string;
+          total_pence: number;
+          items: unknown;
+          created_at: string;
+        }> | null,
+      );
+      const j = mine(
+        jobs as Array<{
+          id: string;
+          booking_id: string;
+          status: string;
+          title: string;
+          created_at: string;
+        }> | null,
+      );
       return {
         bookingId: b.id,
         guest: b.guest_full_name,
@@ -300,10 +366,25 @@ export const listStayConversations = createServerFn({ method: "GET" })
           id: x.id,
           status: x.status,
           totalPence: x.total_pence,
-          label: (Array.isArray(x.items) ? (x.items as Array<{ name?: string; qty?: number }>) : []).map((i) => `${i.qty ?? 1}× ${i.name ?? "Item"}`).join(", "),
+          label: (Array.isArray(x.items) ? (x.items as Array<{ name?: string; qty?: number }>) : [])
+            .map((i) => `${i.qty ?? 1}× ${i.name ?? "Item"}`)
+            .join(", "),
         })),
         jobs: j.map((x) => ({ id: x.id, status: x.status, title: x.title })),
-        conversation: summarise(mine(msgs as Array<{ booking_id: string; direction: string; created_at: string; read_by_host_at: string | null; read_by_guest_at: string | null; body: string | null }> | null), r, j),
+        conversation: summarise(
+          mine(
+            msgs as Array<{
+              booking_id: string;
+              direction: string;
+              created_at: string;
+              read_by_host_at: string | null;
+              read_by_guest_at: string | null;
+              body: string | null;
+            }> | null,
+          ),
+          r,
+          j,
+        ),
       };
     });
     return { today, stays: byAttention(stays) };

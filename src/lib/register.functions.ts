@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * The UK guest register for hosts: read it, download it for an inspecting
  * officer, correct an entry, or add someone who checked in with you in
@@ -37,7 +38,13 @@ export type RegisterRow = {
   updated_at: string;
 };
 
-async function rowsBetween(supabase: any, hostId: string, from: string, to: string, propertyId?: string | null) {
+async function rowsBetween(
+  supabase: any,
+  hostId: string,
+  from: string,
+  to: string,
+  propertyId?: string | null,
+) {
   let q = supabase
     .from("guest_register")
     .select(COLUMNS)
@@ -49,13 +56,20 @@ async function rowsBetween(supabase: any, hostId: string, from: string, to: stri
     .limit(5000);
   if (propertyId) q = q.eq("property_id", propertyId);
   const { data, error } = await q;
-  if (error) throw new Error(error.code === "42P01" ? "The guest register is being set up. Please try again shortly." : error.message);
+  if (error)
+    throw new Error(
+      error.code === "42P01"
+        ? "The guest register is being set up. Please try again shortly."
+        : error.message,
+    );
   return (data ?? []) as RegisterRow[];
 }
 
 export const listRegister = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, from: day, to: day, propertyId: uuid.nullish() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: uuid, from: day, to: day, propertyId: uuid.nullish() }).parse(d),
+  )
   .handler(async ({ data, context }) => ({
     rows: await rowsBetween(context.supabase, data.hostId, data.from, data.to, data.propertyId),
   }));
@@ -63,9 +77,17 @@ export const listRegister = createServerFn({ method: "GET" })
 /** A spreadsheet of the register for the dates asked, ready to hand over. */
 export const exportRegister = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, from: day, to: day, propertyId: uuid.nullish() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: uuid, from: day, to: day, propertyId: uuid.nullish() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
-    const rows = await rowsBetween(context.supabase, data.hostId, data.from, data.to, data.propertyId);
+    const rows = await rowsBetween(
+      context.supabase,
+      data.hostId,
+      data.from,
+      data.to,
+      data.propertyId,
+    );
     return { csv: registerCsv([...rows].reverse()), count: rows.length };
   });
 
@@ -93,7 +115,11 @@ export const saveRegisterEntry = createServerFn({ method: "POST" })
     const clean = cleanRegisterEntry(data);
     if (!clean.ok) return { ok: false as const, missing: clean.missing };
     const e = clean.entry;
-    const { data: property } = await context.supabase.from("properties").select("name").eq("id", data.propertyId).single();
+    const { data: property } = await context.supabase
+      .from("properties")
+      .select("name")
+      .eq("id", data.propertyId)
+      .single();
     const fields = {
       property_id: data.propertyId,
       property_name: property?.name ?? "",
@@ -109,8 +135,14 @@ export const saveRegisterEntry = createServerFn({ method: "POST" })
       keep_until: registerKeepUntil(data.arrivalDate),
     };
     const { error } = data.id
-      ? await context.supabase.from("guest_register").update(fields).eq("id", data.id).eq("host_id", hostId)
-      : await context.supabase.from("guest_register").insert({ ...fields, host_id: hostId, source: "host" });
+      ? await context.supabase
+          .from("guest_register")
+          .update(fields)
+          .eq("id", data.id)
+          .eq("host_id", hostId)
+      : await context.supabase
+          .from("guest_register")
+          .insert({ ...fields, host_id: hostId, source: "host" });
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });

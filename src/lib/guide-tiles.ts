@@ -10,7 +10,15 @@
 
 export const MAX_TILES = 8;
 
-export const TILE_KINDS = ["wifi", "section", "extras", "messages", "times", "checkin", "custom"] as const;
+export const TILE_KINDS = [
+  "wifi",
+  "section",
+  "extras",
+  "messages",
+  "times",
+  "checkin",
+  "custom",
+] as const;
 export type TileKind = (typeof TILE_KINDS)[number];
 
 export const CONTENT_TYPES = ["text", "link", "image", "doc"] as const;
@@ -18,8 +26,30 @@ export type ContentType = (typeof CONTENT_TYPES)[number];
 
 /** Icons a host can give a tile (keys of NAV_ICONS in src/components/NavIcon.tsx). */
 export const TILE_ICONS = [
-  "wifi", "book-open", "key", "door-open", "bed-double", "bath", "car", "map-pin", "coffee", "utensils-crossed", "shopping-bag", "gift",
-  "message-circle", "phone", "help-circle", "file-text", "star", "heart", "leaf", "sparkles", "globe", "link", "calendar-days", "tag",
+  "wifi",
+  "book-open",
+  "key",
+  "door-open",
+  "bed-double",
+  "bath",
+  "car",
+  "map-pin",
+  "coffee",
+  "utensils-crossed",
+  "shopping-bag",
+  "gift",
+  "message-circle",
+  "phone",
+  "help-circle",
+  "file-text",
+  "star",
+  "heart",
+  "leaf",
+  "sparkles",
+  "globe",
+  "link",
+  "calendar-days",
+  "tag",
 ] as const;
 
 export type TileContent = {
@@ -46,8 +76,10 @@ export type GuideTile = {
   content?: TileContent;
 };
 
-const clean = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
-const id = (v: unknown, i: number) => (typeof v === "string" && /^[a-z0-9-]{1,40}$/i.test(v) ? v : `tile-${i + 1}`);
+const clean = (v: unknown, max: number) =>
+  typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
+const id = (v: unknown, i: number) =>
+  typeof v === "string" && /^[a-z0-9-]{1,40}$/i.test(v) ? v : `tile-${i + 1}`;
 
 function content(raw: unknown): TileContent | undefined {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
@@ -58,11 +90,15 @@ function content(raw: unknown): TileContent | undefined {
     return body ? { type, body } : undefined;
   }
   if (type === "link") {
-    const url = typeof r["url"] === "string" && /^https:\/\/[^\s<>"]{3,1990}$/.test(r["url"]) ? r["url"] : "";
+    const url =
+      typeof r["url"] === "string" && /^https:\/\/[^\s<>"]{3,1990}$/.test(r["url"]) ? r["url"] : "";
     return url ? { type, url } : undefined;
   }
   // Only paths Latchkey made: "<property id>/tiles/<file>".
-  const path = typeof r["path"] === "string" && /^[0-9a-f-]{36}\/tiles\/[\w.-]{1,120}$/.test(r["path"]) ? r["path"] : "";
+  const path =
+    typeof r["path"] === "string" && /^[0-9a-f-]{36}\/tiles\/[\w.-]{1,120}$/.test(r["path"])
+      ? r["path"]
+      : "";
   if (!path) return undefined;
   const name = clean(r["name"], 120);
   return name ? { type, path, name } : { type, path };
@@ -70,7 +106,11 @@ function content(raw: unknown): TileContent | undefined {
 
 /** Stored tiles, made safe: at most eight, known kinds, custom ones with content. null = automatic. */
 export function normaliseTiles(raw: unknown): GuideTile[] | null {
-  const list = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as { tiles?: unknown }).tiles) ? (raw as { tiles: unknown[] }).tiles : null;
+  const list = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === "object" && Array.isArray((raw as { tiles?: unknown }).tiles)
+      ? (raw as { tiles: unknown[] }).tiles
+      : null;
   if (!list) return null;
   const out: GuideTile[] = [];
   const seen = new Set<string>();
@@ -84,9 +124,13 @@ export function normaliseTiles(raw: unknown): GuideTile[] | null {
     const tile: GuideTile = { id: tid, kind };
     const title = clean(r["title"], 40);
     if (title) tile.title = title;
-    if (typeof r["icon"] === "string" && (TILE_ICONS as readonly string[]).includes(r["icon"])) tile.icon = r["icon"];
+    if (typeof r["icon"] === "string" && (TILE_ICONS as readonly string[]).includes(r["icon"]))
+      tile.icon = r["icon"];
     if (kind === "section") {
-      const key = typeof r["section"] === "string" && /^[a-z0-9_-]{1,60}$/.test(r["section"]) ? r["section"] : "";
+      const key =
+        typeof r["section"] === "string" && /^[a-z0-9_-]{1,60}$/.test(r["section"])
+          ? r["section"]
+          : "";
       if (!key) continue;
       tile.section = key;
     }
@@ -114,7 +158,12 @@ export type ShownTile = {
   icon: string;
   label: string;
   /** What a tap does. */
-  action: { kind: "jump"; target: string; section?: string } | { kind: "extras" } | { kind: "messages" } | { kind: "checkin" } | { kind: "open"; tileId: string };
+  action:
+    | { kind: "jump"; target: string; section?: string }
+    | { kind: "extras" }
+    | { kind: "messages" }
+    | { kind: "checkin" }
+    | { kind: "open"; tileId: string };
 };
 
 export const TILE_LABELS: Record<Exclude<TileKind, "section" | "custom">, string> = {
@@ -142,8 +191,15 @@ export function autoTiles(ctx: TilePage): GuideTile[] {
   const first = ctx.page === "room" ? 5 : Math.max(0, 6 - extra - (ctx.hasWifi ? 1 : 0));
   return [
     ...(ctx.hasWifi ? [{ id: "auto-wifi", kind: "wifi" as const }] : []),
-    ...ctx.sections.slice(0, first).map((s) => ({ id: `auto-${s.key}`, kind: "section" as const, section: s.key })),
-    ...(extra ? [{ id: "auto-extras", kind: "extras" as const }, { id: "auto-messages", kind: "messages" as const }] : []),
+    ...ctx.sections
+      .slice(0, first)
+      .map((s) => ({ id: `auto-${s.key}`, kind: "section" as const, section: s.key })),
+    ...(extra
+      ? [
+          { id: "auto-extras", kind: "extras" as const },
+          { id: "auto-messages", kind: "messages" as const },
+        ]
+      : []),
   ];
 }
 
@@ -152,35 +208,62 @@ export function autoTiles(ctx: TilePage): GuideTile[] {
  * out any whose target isn't here (a removed section, no Wi-Fi, extras on a
  * room guide), each with its label, icon and what a tap does.
  */
-export function shownTiles(stored: GuideTile[] | null, ctx: TilePage, labels: Partial<Record<TileKind, string>> = {}): ShownTile[] {
+export function shownTiles(
+  stored: GuideTile[] | null,
+  ctx: TilePage,
+  labels: Partial<Record<TileKind, string>> = {},
+): ShownTile[] {
   const titles = new Map(ctx.sections.map((s) => [s.key, s.title]));
   const out: ShownTile[] = [];
   for (const t of stored ?? autoTiles(ctx)) {
     const icon = t.icon ?? DEFAULT_ICONS[t.kind];
-    const fallback = t.kind === "section" || t.kind === "custom" ? "" : (labels[t.kind] ?? TILE_LABELS[t.kind]);
+    const fallback =
+      t.kind === "section" || t.kind === "custom" ? "" : (labels[t.kind] ?? TILE_LABELS[t.kind]);
     switch (t.kind) {
       case "wifi":
-        if (ctx.hasWifi) out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "jump", target: ctx.page === "stay" ? "stay-wifi" : "room-wifi" } });
+        if (ctx.hasWifi)
+          out.push({
+            id: t.id,
+            icon,
+            label: t.title || fallback,
+            action: { kind: "jump", target: ctx.page === "stay" ? "stay-wifi" : "room-wifi" },
+          });
         break;
       case "section": {
         const title = titles.get(t.section ?? "");
-        if (title) out.push({ id: t.id, icon, label: t.title || title, action: { kind: "jump", target: `guide-${t.section}`, section: t.section! } });
+        if (title)
+          out.push({
+            id: t.id,
+            icon,
+            label: t.title || title,
+            action: { kind: "jump", target: `guide-${t.section}`, section: t.section! },
+          });
         break;
       }
       case "extras":
-        if (ctx.page === "stay" && ctx.canOrder) out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "extras" } });
+        if (ctx.page === "stay" && ctx.canOrder)
+          out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "extras" } });
         break;
       case "messages":
-        if (ctx.page === "stay" && ctx.canOrder) out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "messages" } });
+        if (ctx.page === "stay" && ctx.canOrder)
+          out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "messages" } });
         break;
       case "times":
-        if (ctx.page === "stay") out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "jump", target: "stay-times" } });
+        if (ctx.page === "stay")
+          out.push({
+            id: t.id,
+            icon,
+            label: t.title || fallback,
+            action: { kind: "jump", target: "stay-times" },
+          });
         break;
       case "checkin":
-        if (ctx.page === "room") out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "checkin" } });
+        if (ctx.page === "room")
+          out.push({ id: t.id, icon, label: t.title || fallback, action: { kind: "checkin" } });
         break;
       case "custom":
-        if (t.content && t.title) out.push({ id: t.id, icon, label: t.title, action: { kind: "open", tileId: t.id } });
+        if (t.content && t.title)
+          out.push({ id: t.id, icon, label: t.title, action: { kind: "open", tileId: t.id } });
         break;
     }
     if (out.length >= MAX_TILES) break;

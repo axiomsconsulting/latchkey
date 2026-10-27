@@ -29,7 +29,9 @@ export const getRoomFeed = createServerFn({ method: "GET" })
 export const setRoomFeed = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ roomId: uuid, enabled: z.boolean(), regenerate: z.boolean().default(false) }).parse(d),
+    z
+      .object({ roomId: uuid, enabled: z.boolean(), regenerate: z.boolean().default(false) })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { data: room } = await context.supabase
@@ -37,8 +39,7 @@ export const setRoomFeed = createServerFn({ method: "POST" })
       .select("id, feed_token")
       .eq("id", data.roomId)
       .single();
-    const token =
-      data.regenerate || !room?.feed_token ? newToken() : (room.feed_token as string);
+    const token = data.regenerate || !room?.feed_token ? newToken() : (room.feed_token as string);
     const { error } = await context.supabase
       .from("rooms")
       .update({ export_feed_enabled: data.enabled, feed_token: token })

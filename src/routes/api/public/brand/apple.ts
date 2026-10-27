@@ -7,7 +7,11 @@ import { appleIcon } from "@/lib/brand-icons";
 export const Route = createFileRoute("/api/public/brand/apple")({
   server: {
     handlers: {
-      GET: async () => new Response(null, { status: 302, headers: { Location: appleIcon(currentBrand()), "Cache-Control": "public, max-age=300" } }),
+      GET: async () =>
+        new Response(null, {
+          status: 302,
+          headers: { Location: appleIcon(currentBrand()), "Cache-Control": "public, max-age=300" },
+        }),
     },
   },
 });

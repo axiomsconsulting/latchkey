@@ -7,7 +7,9 @@ describe("local tradespeople", () => {
     const url = mapsSearch("plumber", "HP13 5AA");
     expect(url.startsWith("https://www.google.com/maps/search/")).toBe(true);
     expect(decodeURIComponent(url)).toContain("plumber near HP13 5AA");
-    expect(decodeURIComponent(mapsLink("heating", "Amersham").url)).toContain(`${tradeTerm("heating")} near Amersham`);
+    expect(decodeURIComponent(mapsLink("heating", "Amersham").url)).toContain(
+      `${tradeTerm("heating")} near Amersham`,
+    );
   });
 
   it("lists researched sites for every supported country, all https, each saying what it's best for", () => {

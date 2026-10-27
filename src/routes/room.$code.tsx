@@ -29,17 +29,24 @@ import { rebrand } from "@/lib/brand";
 export const Route = createFileRoute("/room/$code")({
   // Straight to the guest's own stay when there is one for this phone (decided on the server, before anything loads).
   // ?preview=1: the host looking at the room guide itself (never sent on to a guest's stay).
-  validateSearch: (s: Record<string, unknown>): { preview?: boolean } => (s["preview"] === "1" || s["preview"] === 1 || s["preview"] === true ? { preview: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { preview?: boolean } =>
+    s["preview"] === "1" || s["preview"] === 1 || s["preview"] === true ? { preview: true } : {},
   beforeLoad: async ({ params, search }) => {
     if (search.preview) return;
-    const r = await roomEntry({ data: { code: params.code } }).catch(() => ({ to: "room" as const }));
-    if (r.to === "stay") throw redirect({ to: "/stay/$token", params: { token: r.token }, replace: true });
+    const r = await roomEntry({ data: { code: params.code } }).catch(() => ({
+      to: "room" as const,
+    }));
+    if (r.to === "stay")
+      throw redirect({ to: "/stay/$token", params: { token: r.token }, replace: true });
   },
   loader: ({ params }) => getRoomGuide({ data: { code: params.code } }),
   head: () => ({
     meta: [
       { title: rebrand("Your room guide — Latchkey") },
-      { name: "description", content: "How this room works: wifi, heating, shower, quiet hours and check-out." },
+      {
+        name: "description",
+        content: "How this room works: wifi, heating, shower, quiet hours and check-out.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -101,7 +108,9 @@ function RoomGuide() {
       <GuestDemoDock code={g.demoCode} />
       <main className="mx-auto max-w-4xl space-y-6 py-8">
         <header>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">{rcopy.eyebrow}</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+            {rcopy.eyebrow}
+          </p>
           <h1 className="mt-2 text-3xl sm:text-5xl">{g.room.title || g.room.name}</h1>
           <p className="mt-2 text-lg text-muted-foreground">{rcopy.subtitle(g.propertyName)}</p>
         </header>
@@ -110,7 +119,16 @@ function RoomGuide() {
         <GuideTiles
           theme={g.theme}
           label={gcopy.quickTitle}
-          tiles={shownTiles(g.tiles.tiles, { page: "room", sections: g.guide.map((sec) => ({ key: sec.key, title: sec.title })), hasWifi: !!g.wifi, canOrder: false }, { wifi: copy.stayNetwork, checkin: rcopy.checkIn })}
+          tiles={shownTiles(
+            g.tiles.tiles,
+            {
+              page: "room",
+              sections: g.guide.map((sec) => ({ key: sec.key, title: sec.title })),
+              hasWifi: !!g.wifi,
+              canOrder: false,
+            },
+            { wifi: copy.stayNetwork, checkin: rcopy.checkIn },
+          )}
           stored={g.tiles.tiles}
           files={g.tiles.files}
           onAction={(a) => {
@@ -121,7 +139,14 @@ function RoomGuide() {
             if (a.kind !== "jump") return;
             const key = a.section;
             if (key) setOpen((o) => (o.includes(key) ? o : [...o, key]));
-            window.setTimeout(() => (document.getElementById(a.target) ?? (key ? document.getElementById("forget") : null))?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+            window.setTimeout(
+              () =>
+                (
+                  document.getElementById(a.target) ??
+                  (key ? document.getElementById("forget") : null)
+                )?.scrollIntoView({ behavior: "smooth", block: "start" }),
+              60,
+            );
           }}
         />
         <StayCover
@@ -132,24 +157,41 @@ function RoomGuide() {
           // This device's own stay: open it. Someone already checked in to this room today: no invite. Otherwise: check in.
           invite={
             stay
-              ? { eyebrow: rcopy.stayEyebrow, title: rcopy.openStay, body: rcopy.yourStay, cta: rcopy.openStay, href: `/stay/${stay}`, icon: "key" }
+              ? {
+                  eyebrow: rcopy.stayEyebrow,
+                  title: rcopy.openStay,
+                  body: rcopy.yourStay,
+                  cta: rcopy.openStay,
+                  href: `/stay/${stay}`,
+                  icon: "key",
+                }
               : g.occupied
                 ? undefined
-                : { eyebrow: rcopy.stayingHere, title: rcopy.checkInTitle, body: rcopy.checkInBody, cta: rcopy.checkIn, href: `/kiosk/${g.shortCode}?guest=1`, icon: "key" }
+                : {
+                    eyebrow: rcopy.stayingHere,
+                    title: rcopy.checkInTitle,
+                    body: rcopy.checkInBody,
+                    cta: rcopy.checkIn,
+                    href: `/kiosk/${g.shortCode}?guest=1`,
+                    icon: "key",
+                  }
           }
         />
         {own !== "idle" ? (
           <section aria-live="polite" className="card-soft space-y-3 p-5">
             <h2 className="text-xl">{pcopy.roomTitle}</h2>
             {own === "trying" ? (
-              <p className="flex items-center gap-2 text-muted-foreground"><Loader2 className="size-4 animate-spin" /> {pcopy.roomBody}</p>
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" /> {pcopy.roomBody}
+              </p>
             ) : own === "notHere" ? (
               <p className="text-muted-foreground">{pcopy.roomNotHere}</p>
             ) : (
               <>
                 <p className="text-muted-foreground">{pcopy.roomAway}</p>
                 <Button type="button" onClick={() => void locate()} disabled={own === "locating"}>
-                  {own === "locating" ? <Loader2 className="animate-spin" /> : <MapPin />} {own === "locating" ? pcopy.roomLocating : pcopy.roomLocate}
+                  {own === "locating" ? <Loader2 className="animate-spin" /> : <MapPin />}{" "}
+                  {own === "locating" ? pcopy.roomLocating : pcopy.roomLocate}
                 </Button>
                 <p className="text-xs text-muted-foreground">{pcopy.roomLocateHelp}</p>
               </>
@@ -158,13 +200,21 @@ function RoomGuide() {
         ) : null}
 
         {g.forget.length ? (
-          <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">
-            <h2 id="forget" className="text-xl">{gcopy.forgetTitle}</h2>
+          <section
+            aria-labelledby="forget"
+            className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5"
+          >
+            <h2 id="forget" className="text-xl">
+              {gcopy.forgetTitle}
+            </h2>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {g.forget.map((f, i) => {
                 const Icon = forgetIcon(f.key);
                 return (
-                  <li key={i} className="flex min-h-12 items-start gap-3 rounded-2xl bg-surface px-4 py-3 text-lg">
+                  <li
+                    key={i}
+                    className="flex min-h-12 items-start gap-3 rounded-2xl bg-surface px-4 py-3 text-lg"
+                  >
                     <Icon className="mt-0.5 size-6 shrink-0 text-accent" aria-hidden />
                     <ExpandableText text={f.text} className="text-lg" />
                   </li>
@@ -174,14 +224,26 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        {g.wifi ? <WifiCard id="room-wifi" wifi={g.wifi} profileUrl={`/api/public/wifi/room/${code}`} checkInHref={stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`} /> : null}
+        {g.wifi ? (
+          <WifiCard
+            id="room-wifi"
+            wifi={g.wifi}
+            profileUrl={`/api/public/wifi/room/${code}`}
+            checkInHref={stay ? `/stay/${stay}` : `/kiosk/${g.shortCode}?guest=1`}
+          />
+        ) : null}
 
         {g.amenities.length ? (
           <section aria-labelledby="amenities" className="card-soft p-5">
-            <h2 id="amenities" className="text-xl">{gcopy.amenitiesTitle}</h2>
+            <h2 id="amenities" className="text-xl">
+              {gcopy.amenitiesTitle}
+            </h2>
             <ul className="mt-3 flex flex-wrap gap-2">
               {g.amenities.map((a) => (
-                <li key={a} className="flex min-h-11 items-center gap-2 rounded-full bg-secondary px-4 py-2 text-base">
+                <li
+                  key={a}
+                  className="flex min-h-11 items-center gap-2 rounded-full bg-secondary px-4 py-2 text-base"
+                >
                   <Check className="size-4 text-primary" aria-hidden />
                   {a}
                 </li>
@@ -190,7 +252,12 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        <GuideSections sections={g.guide as never} open={open} onOpenChange={onOpenChange} active={active} />
+        <GuideSections
+          sections={g.guide as never}
+          open={open}
+          onOpenChange={onOpenChange}
+          active={active}
+        />
         <p className="text-center text-sm text-muted-foreground">{rcopy.footer}</p>
       </main>
     </GuestFrame>

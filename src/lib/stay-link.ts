@@ -9,7 +9,10 @@ export const stayKey = (propertyId: string) => `latchkey.stay.${propertyId}`;
 
 export function rememberStay(propertyId: string, token: string, checkOutDate: string) {
   try {
-    window.localStorage.setItem(stayKey(propertyId), JSON.stringify({ token, until: `${checkOutDate}T23:59:59` }));
+    window.localStorage.setItem(
+      stayKey(propertyId),
+      JSON.stringify({ token, until: `${checkOutDate}T23:59:59` }),
+    );
   } catch {
     // Private browsing: the room guide just won't offer the shortcut.
   }
@@ -30,7 +33,10 @@ export const stayCookie = (propertyId: string) => `lk_stay_${propertyId.replace(
 /** The stay link for this property, if this browser has one that hasn't ended. */
 export function rememberedStay(propertyId: string, now = new Date()): string | null {
   try {
-    const v = JSON.parse(window.localStorage.getItem(stayKey(propertyId)) ?? "null") as { token?: string; until?: string } | null;
+    const v = JSON.parse(window.localStorage.getItem(stayKey(propertyId)) ?? "null") as {
+      token?: string;
+      until?: string;
+    } | null;
     if (!v?.token || !v.until || Date.parse(v.until) < now.getTime()) return null;
     return v.token;
   } catch {

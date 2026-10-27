@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Team access: owners invite people by email as owner, manager or viewer.
  * Everyone signs in with their own account and can belong to several hosts.
@@ -21,7 +22,10 @@ const INVITES_PER_DAY = 20;
 /** Tables and functions from migration 0017, before the generated types know them. */
 type Untyped = {
   from: (table: string) => any;
-  rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: any; error: { code?: string; message: string } | null }>;
+  rpc: (
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => PromiseLike<{ data: any; error: { code?: string; message: string } | null }>;
 };
 const untyped = (client: unknown) => client as Untyped;
 
@@ -47,7 +51,13 @@ async function newInviteToken() {
   return { token, hash: createHash("sha256").update(token, "utf8").digest("hex") };
 }
 
-async function sendInvite(args: { to: string; hostName: string; inviter: string; role: z.infer<typeof inviteRole>; token: string }) {
+async function sendInvite(args: {
+  to: string;
+  hostName: string;
+  inviter: string;
+  role: z.infer<typeof inviteRole>;
+  token: string;
+}) {
   const { sendTemplateEmail } = await import("./email-templates/send-email");
   try {
     const res = await sendTemplateEmail("team-invite", args.to, {
@@ -96,7 +106,9 @@ export const listTeam = createServerFn({ method: "GET" })
     const signed: Record<string, string> = {};
     if (paths.length) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: urls } = await supabaseAdmin.storage.from("branding").createSignedUrls(paths, 60 * 5);
+      const { data: urls } = await supabaseAdmin.storage
+        .from("branding")
+        .createSignedUrls(paths, 60 * 5);
       for (const u of urls ?? []) if (u.path && u.signedUrl) signed[u.path] = u.signedUrl;
     }
     const { data: props } = await context.supabase
@@ -108,16 +120,31 @@ export const listTeam = createServerFn({ method: "GET" })
     const scope = new Map<string, string[] | null>();
     const inviteScope = new Map<string, string[] | null>();
     {
-      const { data: m, error: mErr } = await db.from("host_members").select("user_id, property_ids").eq("host_id", data.hostId);
-      if (!mErr) for (const r of (m ?? []) as Array<{ user_id: string; property_ids: string[] | null }>) scope.set(r.user_id, r.property_ids);
-      const { data: iv, error: iErr } = await db.from("host_invitations").select("id, property_ids").eq("host_id", data.hostId).is("accepted_at", null);
-      if (!iErr) for (const r of (iv ?? []) as Array<{ id: string; property_ids: string[] | null }>) inviteScope.set(r.id, r.property_ids);
+      const { data: m, error: mErr } = await db
+        .from("host_members")
+        .select("user_id, property_ids")
+        .eq("host_id", data.hostId);
+      if (!mErr)
+        for (const r of (m ?? []) as Array<{ user_id: string; property_ids: string[] | null }>)
+          scope.set(r.user_id, r.property_ids);
+      const { data: iv, error: iErr } = await db
+        .from("host_invitations")
+        .select("id, property_ids")
+        .eq("host_id", data.hostId)
+        .is("accepted_at", null);
+      if (!iErr)
+        for (const r of (iv ?? []) as Array<{ id: string; property_ids: string[] | null }>)
+          inviteScope.set(r.id, r.property_ids);
       if (mErr) scope.set("__unavailable", null);
     }
     return {
       /** Per-property access can be set (after migration 0048). */
       scopable: !scope.has("__unavailable"),
-      properties: (props ?? []).map((p) => ({ id: p.id as string, name: p.name, rooms: (p.rooms as unknown[] | null)?.length ?? 0 })),
+      properties: (props ?? []).map((p) => ({
+        id: p.id as string,
+        name: p.name,
+        rooms: (p.rooms as unknown[] | null)?.length ?? 0,
+      })),
       members: rows.map((m) => ({
         userId: m.user_id,
         email: m.email,
@@ -129,7 +156,15 @@ export const listTeam = createServerFn({ method: "GET" })
         lastSignIn: m.last_sign_in_at ?? null,
         propertyIds: scope.get(m.user_id) ?? null,
       })),
-      invites: ((invites ?? []) as Array<{ id: string; email: string; role: string; created_at: string; expires_at: string }>).map((i) => ({
+      invites: (
+        (invites ?? []) as Array<{
+          id: string;
+          email: string;
+          role: string;
+          created_at: string;
+          expires_at: string;
+        }>
+      ).map((i) => ({
         id: i.id,
         email: i.email,
         role: displayRole(i.role),
@@ -142,7 +177,14 @@ export const listTeam = createServerFn({ method: "GET" })
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ hostId: uuid, email: z.string().trim().email().max(254), role: inviteRole, propertyIds: z.array(uuid).max(200).nullable().optional() }).parse(d),
+    z
+      .object({
+        hostId: uuid,
+        email: z.string().trim().email().max(254),
+        role: inviteRole,
+        propertyIds: z.array(uuid).max(200).nullable().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
@@ -155,7 +197,8 @@ export const inviteMember = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("host_id", data.hostId)
       .gt("created_at", new Date(Date.now() - 86_400_000).toISOString());
-    if ((count ?? 0) >= INVITES_PER_DAY) throw new Error("That's a lot of invitations for one day. Please try again tomorrow.");
+    if ((count ?? 0) >= INVITES_PER_DAY)
+      throw new Error("That's a lot of invitations for one day. Please try again tomorrow.");
 
     const { count: toAddress } = await db
       .from("host_invitations")
@@ -163,10 +206,15 @@ export const inviteMember = createServerFn({ method: "POST" })
       .eq("host_id", data.hostId)
       .eq("email", email)
       .gt("created_at", new Date(Date.now() - 86_400_000).toISOString());
-    if ((toAddress ?? 0) >= 3) throw new Error("That address has had several invitations today. Please try again tomorrow.");
+    if ((toAddress ?? 0) >= 3)
+      throw new Error("That address has had several invitations today. Please try again tomorrow.");
 
     const { data: team } = await db.rpc("host_team", { _host_id: data.hostId });
-    if (((team ?? []) as Array<{ email: string }>).some((m) => normaliseEmail(m.email ?? "") === email)) {
+    if (
+      ((team ?? []) as Array<{ email: string }>).some(
+        (m) => normaliseEmail(m.email ?? "") === email,
+      )
+    ) {
       throw new Error("That person is already on your team.");
     }
 
@@ -180,9 +228,18 @@ export const inviteMember = createServerFn({ method: "POST" })
       .is("revoked_at", null);
 
     const t = await newInviteToken();
-    const row = { host_id: data.hostId, email, role: data.role, token_hash: t.hash, invited_by: context.userId };
+    const row = {
+      host_id: data.hostId,
+      email,
+      role: data.role,
+      token_hash: t.hash,
+      invited_by: context.userId,
+    };
     // Only some properties (a property's own manager): owners always cover everything.
-    const ids = data.role !== "owner" && data.propertyIds?.length ? await ownPropertyIds(context.supabase, data.hostId, data.propertyIds) : null;
+    const ids =
+      data.role !== "owner" && data.propertyIds?.length
+        ? await ownPropertyIds(context.supabase, data.hostId, data.propertyIds)
+        : null;
     const { withLegacy } = await import("./checkin.server");
     const { error } = await withLegacy(
       () => db.from("host_invitations").insert({ ...row, property_ids: ids }),
@@ -190,7 +247,11 @@ export const inviteMember = createServerFn({ method: "POST" })
     );
     if (error) throw new Error(error.message);
 
-    const { data: host } = await context.supabase.from("hosts").select("business_name").eq("id", data.hostId).single();
+    const { data: host } = await context.supabase
+      .from("hosts")
+      .select("business_name")
+      .eq("id", data.hostId)
+      .single();
     const emailed = await sendInvite({
       to: email,
       hostName: host?.business_name ?? "a host",
@@ -220,10 +281,17 @@ export const resendInvite = createServerFn({ method: "POST" })
     const t = await newInviteToken();
     const { error } = await db
       .from("host_invitations")
-      .update({ token_hash: t.hash, expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString() })
+      .update({
+        token_hash: t.hash,
+        expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+      })
       .eq("id", inv.id);
     if (error) throw new Error(error.message);
-    const { data: host } = await context.supabase.from("hosts").select("business_name").eq("id", inv.host_id).single();
+    const { data: host } = await context.supabase
+      .from("hosts")
+      .select("business_name")
+      .eq("id", inv.host_id)
+      .single();
     const emailed = await sendInvite({
       to: inv.email,
       hostName: host?.business_name ?? "a host",
@@ -250,7 +318,9 @@ export const revokeInvite = createServerFn({ method: "POST" })
 
 export const changeRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, userId: uuid, role: inviteRole }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: uuid, userId: uuid, role: inviteRole }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireOwner(context.supabase, data.hostId);
     // The database keeps at least one owner and says so in the error.
@@ -267,7 +337,11 @@ export const changeRole = createServerFn({ method: "POST" })
 
 /** Only properties of this business, in case a list was tampered with. */
 async function ownPropertyIds(supabase: unknown, hostId: string, ids: string[]): Promise<string[]> {
-  const { data } = await (supabase as { from: (t: string) => any }).from("properties").select("id").eq("host_id", hostId).in("id", ids);
+  const { data } = await (supabase as { from: (t: string) => any })
+    .from("properties")
+    .select("id")
+    .eq("host_id", hostId)
+    .in("id", ids);
   const ok = ((data ?? []) as Array<{ id: string }>).map((p) => p.id);
   if (!ok.length) throw new Error("Pick at least one of your properties.");
   return ok;
@@ -276,18 +350,29 @@ async function ownPropertyIds(supabase: unknown, hostId: string, ids: string[]):
 /** Which properties a team member covers: all of them (null) or only some (a property's own manager). Owners always cover all. */
 export const setMemberProperties = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, userId: uuid, propertyIds: z.array(uuid).max(200).nullable() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({ hostId: uuid, userId: uuid, propertyIds: z.array(uuid).max(200).nullable() })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
-    const ids = data.propertyIds?.length ? await ownPropertyIds(context.supabase, data.hostId, data.propertyIds) : null;
+    const ids = data.propertyIds?.length
+      ? await ownPropertyIds(context.supabase, data.hostId, data.propertyIds)
+      : null;
     const { data: rows, error } = await untyped(context.supabase)
       .from("host_members")
       .update({ property_ids: ids })
       .eq("host_id", data.hostId)
       .eq("user_id", data.userId)
       .select("id");
-    if (error) throw new Error(error.message.includes("property_ids") ? "Per-property access needs the latest update (migration 0048)." : error.message);
+    if (error)
+      throw new Error(
+        error.message.includes("property_ids")
+          ? "Per-property access needs the latest update (migration 0048)."
+          : error.message,
+      );
     if (!rows?.length) throw new Error("That person isn't on this team.");
     return { ok: true };
   });
@@ -363,8 +448,17 @@ export const peekInvite = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ token: inviteToken }).parse(d))
   .handler(async ({ data }) => {
     const { admin } = await import("./checkin.server");
-    const { data: rows } = await untyped(await admin()).rpc("peek_invitation", { _token: data.token });
-    const row = (rows as Array<{ business_name: string; role: string; email_masked: string; status: string }> | null)?.[0];
+    const { data: rows } = await untyped(await admin()).rpc("peek_invitation", {
+      _token: data.token,
+    });
+    const row = (
+      rows as Array<{
+        business_name: string;
+        role: string;
+        email_masked: string;
+        status: string;
+      }> | null
+    )?.[0];
     if (!row) return { found: false as const };
     return {
       found: true as const,
@@ -398,7 +492,9 @@ type AuditRecord = {
 /** Owner-only change history, newest first, 50 at a time. */
 export const listActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, before: z.number().int().positive().optional() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: uuid, before: z.number().int().positive().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireOwner(context.supabase, data.hostId);
     let q = untyped(context.supabase)
@@ -429,7 +525,11 @@ export const saveMyProfile = createServerFn({ method: "POST" })
     assertNotSharedDemo(context.claims);
     const { error } = await untyped(context.supabase)
       .from("user_profiles")
-      .upsert({ user_id: context.userId, display_name: data.displayName || null, updated_at: new Date().toISOString() });
+      .upsert({
+        user_id: context.userId,
+        display_name: data.displayName || null,
+        updated_at: new Date().toISOString(),
+      });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -442,16 +542,27 @@ export const saveMyProfile = createServerFn({ method: "POST" })
 export const saveTrialDetails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ hostId: z.string().uuid(), name: z.string().trim().min(1).max(80), email: z.string().trim().email().max(254) }).parse(d),
+    z
+      .object({
+        hostId: z.string().uuid(),
+        name: z.string().trim().min(1).max(80),
+        email: z.string().trim().email().max(254),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
     const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      untyped(context.supabase)
-        .from("user_profiles")
-        .upsert({ user_id: context.userId, display_name: data.name, updated_at: new Date().toISOString() }),
-      context.supabase.from("hosts").update({ contact_email: normaliseEmail(data.email) }).eq("id", data.hostId),
+      untyped(context.supabase).from("user_profiles").upsert({
+        user_id: context.userId,
+        display_name: data.name,
+        updated_at: new Date().toISOString(),
+      }),
+      context.supabase
+        .from("hosts")
+        .update({ contact_email: normaliseEmail(data.email) })
+        .eq("id", data.hostId),
     ]);
     if (e1 || e2) throw new Error((e1 ?? e2)!.message);
     return { ok: true };
@@ -461,7 +572,14 @@ export const saveTrialDetails = createServerFn({ method: "POST" })
 export const uploadMyAvatar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ dataUrl: z.string().max(3_000_000).regex(/^data:image\/(jpeg|png|webp);base64,/) }).parse(d),
+    z
+      .object({
+        dataUrl: z
+          .string()
+          .max(3_000_000)
+          .regex(/^data:image\/(jpeg|png|webp);base64,/),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
@@ -471,7 +589,9 @@ export const uploadMyAvatar = createServerFn({ method: "POST" })
     const ext = m[1] === "jpeg" ? "jpg" : m[1]!;
     const path = `avatars/${context.userId}-${Date.now()}.${ext}`;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const up = await supabaseAdmin.storage.from("branding").upload(path, bytes, { contentType: `image/${m[1]}` });
+    const up = await supabaseAdmin.storage
+      .from("branding")
+      .upload(path, bytes, { contentType: `image/${m[1]}` });
     if (up.error) throw new Error(up.error.message);
     const { error } = await untyped(context.supabase)
       .from("user_profiles")

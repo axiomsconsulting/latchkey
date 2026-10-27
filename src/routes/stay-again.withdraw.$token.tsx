@@ -15,21 +15,30 @@ import { withdrawContact } from "@/lib/direct.functions";
  * someone by accident.
  */
 export const Route = createFileRoute("/stay-again/withdraw/$token")({
-  head: () => ({ meta: [{ title: rebrand("Stop hearing about future stays — Latchkey") }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: rebrand("Stop hearing about future stays — Latchkey") },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: Withdraw,
 });
 
 function Withdraw() {
   const { token } = Route.useParams();
   const run = useServerFn(withdrawContact);
-  const [state, setState] = useState<"ask" | "busy" | "done" | "bad">(/^[0-9a-f]{32,80}$/.test(token) ? "ask" : "bad");
+  const [state, setState] = useState<"ask" | "busy" | "done" | "bad">(
+    /^[0-9a-f]{32,80}$/.test(token) ? "ask" : "bad",
+  );
   return (
     <GuestFrame>
       <main className="mx-auto max-w-xl py-16">
         <section className="card-soft space-y-4 p-8 text-center">
           {state === "done" ? (
             <>
-              <span className="mx-auto grid size-14 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="size-7" /></span>
+              <span className="mx-auto grid size-14 place-items-center rounded-full bg-primary text-primary-foreground">
+                <Check className="size-7" />
+              </span>
               <h1 className="text-2xl">{copy.withdrawnTitle}</h1>
               <p className="text-muted-foreground">{copy.withdrawnBody}</p>
             </>
@@ -48,7 +57,8 @@ function Withdraw() {
                   setState("done");
                 }}
               >
-                {state === "busy" ? <Loader2 className="animate-spin" /> : null} {copy.withdrawButton}
+                {state === "busy" ? <Loader2 className="animate-spin" /> : null}{" "}
+                {copy.withdrawButton}
               </Button>
             </>
           )}

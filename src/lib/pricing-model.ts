@@ -68,7 +68,14 @@ export const DEFAULT_MODEL: PricingModel = {
       includedRooms: 2,
       extraRoomPence: 50,
       maxProperties: 1,
-      features: ["check_in", "guest_guide", "calendar_sync", "extras", "guest_register", "invoices"],
+      features: [
+        "check_in",
+        "guest_guide",
+        "calendar_sync",
+        "extras",
+        "guest_register",
+        "invoices",
+      ],
       apiRequests: 0,
       aiReads: 20,
       highlight: false,
@@ -81,7 +88,17 @@ export const DEFAULT_MODEL: PricingModel = {
       includedRooms: 5,
       extraRoomPence: 50,
       maxProperties: 5,
-      features: ["check_in", "guest_guide", "calendar_sync", "extras", "id_check", "guest_register", "invoices", "team", "branding"],
+      features: [
+        "check_in",
+        "guest_guide",
+        "calendar_sync",
+        "extras",
+        "id_check",
+        "guest_register",
+        "invoices",
+        "team",
+        "branding",
+      ],
       apiRequests: 0,
       aiReads: 80,
       highlight: true,
@@ -151,7 +168,11 @@ export function creditPence(c: CostModel): number {
 export type HostSize = { rooms: number; properties: number; apiAddon: boolean };
 
 export function planFor(model: PricingModel, key: string | null | undefined): Plan {
-  return model.plans.find((p) => p.key === key) ?? model.plans.find((p) => p.highlight) ?? model.plans[0]!;
+  return (
+    model.plans.find((p) => p.key === key) ??
+    model.plans.find((p) => p.highlight) ??
+    model.plans[0]!
+  );
 }
 
 /** Whether a host on this plan can use the API and MCP server. */
@@ -171,8 +192,14 @@ export function monthlyPrice(model: PricingModel, plan: Plan, size: HostSize): n
 }
 
 /** What one host costs a month to run, in pence, before fixed costs. */
-export function variableCost(c: CostModel, use: { rooms: number; apiRequests: number; aiReads: number }): number {
-  const credits = use.rooms * c.creditsPerRoom + (use.apiRequests / 1000) * c.creditsPer1kApi + use.aiReads * c.creditsPerAiRead;
+export function variableCost(
+  c: CostModel,
+  use: { rooms: number; apiRequests: number; aiReads: number },
+): number {
+  const credits =
+    use.rooms * c.creditsPerRoom +
+    (use.apiRequests / 1000) * c.creditsPer1kApi +
+    use.aiReads * c.creditsPerAiRead;
   return credits * creditPence(c);
 }
 
@@ -211,11 +238,19 @@ export function recommend(
   typical: Record<string, { rooms: number; apiRequests: number }>,
 ): Recommendation[] {
   const fixedShare = fixedCost(c) / Math.max(1, expectedHosts);
-  const roomPrice = friendly(priceForCost(c.creditsPerRoom * creditPence(c), c) - c.stripeFixedPence / (1 - c.stripePct));
+  const roomPrice = friendly(
+    priceForCost(c.creditsPerRoom * creditPence(c), c) - c.stripeFixedPence / (1 - c.stripePct),
+  );
   let floor = 0;
   return model.plans.map((plan) => {
     const t = typical[plan.key] ?? { rooms: plan.includedRooms, apiRequests: plan.apiRequests };
-    const cost = fixedShare + variableCost(c, { rooms: plan.includedRooms, apiRequests: plan.apiRequests ? t.apiRequests : 0, aiReads: plan.aiReads });
+    const cost =
+      fixedShare +
+      variableCost(c, {
+        rooms: plan.includedRooms,
+        apiRequests: plan.apiRequests ? t.apiRequests : 0,
+        aiReads: plan.aiReads,
+      });
     const breakEven = priceForCost(cost, c);
     const recommended = Math.max(friendly(breakEven), floor);
     // The next tier always costs at least a little more than this one.
@@ -232,7 +267,12 @@ export function recommend(
 
 /** API add-on price: break-even plus margin for its included requests. */
 export function recommendApiAddon(model: PricingModel, c: CostModel): number {
-  return friendly(priceForCost(variableCost(c, { rooms: 0, apiRequests: model.apiAddon.includedRequests, aiReads: 0 }), c));
+  return friendly(
+    priceForCost(
+      variableCost(c, { rooms: 0, apiRequests: model.apiAddon.includedRequests, aiReads: 0 }),
+      c,
+    ),
+  );
 }
 
 /**
@@ -240,17 +280,35 @@ export function recommendApiAddon(model: PricingModel, c: CostModel): number {
  * with the plan mix, rooms and add-on take-up from the projection. null
  * when each host costs more than it pays (no number of hosts helps).
  */
-export function breakEvenHosts(model: PricingModel, c: CostModel, p: Projection): { breakEven: number; withMargin: number; perHostPence: number } | null {
-  const total = model.plans.reduce((n, plan) => n + Math.max(0, p.start[plan.key] ?? 0) + Math.max(0, p.newPerMonth[plan.key] ?? 0), 0);
+export function breakEvenHosts(
+  model: PricingModel,
+  c: CostModel,
+  p: Projection,
+): { breakEven: number; withMargin: number; perHostPence: number } | null {
+  const total = model.plans.reduce(
+    (n, plan) =>
+      n + Math.max(0, p.start[plan.key] ?? 0) + Math.max(0, p.newPerMonth[plan.key] ?? 0),
+    0,
+  );
   let revenue = 0;
   let net = 0;
   for (const plan of model.plans) {
-    const share = total > 0 ? (Math.max(0, p.start[plan.key] ?? 0) + Math.max(0, p.newPerMonth[plan.key] ?? 0)) / total : plan.highlight ? 1 : 0;
+    const share =
+      total > 0
+        ? (Math.max(0, p.start[plan.key] ?? 0) + Math.max(0, p.newPerMonth[plan.key] ?? 0)) / total
+        : plan.highlight
+          ? 1
+          : 0;
     if (!share) continue;
     const rooms = p.rooms[plan.key] ?? plan.includedRooms;
     const api = plan.apiRequests > 0 ? 1 : p.apiAttachPct / 100;
-    const gross = monthlyPrice(model, plan, { rooms, properties: 1, apiAddon: false }) + (plan.apiRequests > 0 ? 0 : api * model.apiAddon.pricePence);
-    const cost = variableCost(c, { rooms, apiRequests: api * p.apiRequests, aiReads: plan.aiReads }) + gross * c.stripePct + c.stripeFixedPence;
+    const gross =
+      monthlyPrice(model, plan, { rooms, properties: 1, apiAddon: false }) +
+      (plan.apiRequests > 0 ? 0 : api * model.apiAddon.pricePence);
+    const cost =
+      variableCost(c, { rooms, apiRequests: api * p.apiRequests, aiReads: plan.aiReads }) +
+      gross * c.stripePct +
+      c.stripeFixedPence;
     revenue += share * gross;
     net += share * (gross - cost);
   }
@@ -294,7 +352,14 @@ export const DEFAULT_PROJECTION: Projection = {
   apiRequests: 3000,
 };
 
-export type MonthRow = { month: number; hosts: number; revenuePence: number; costPence: number; profitPence: number; marginPct: number };
+export type MonthRow = {
+  month: number;
+  hosts: number;
+  revenuePence: number;
+  costPence: number;
+  profitPence: number;
+  marginPct: number;
+};
 
 export function project(model: PricingModel, c: CostModel, p: Projection, months = 12): MonthRow[] {
   const hosts: Record<string, number> = { ...p.start };
@@ -311,7 +376,9 @@ export function project(model: PricingModel, c: CostModel, p: Projection, months
       const addonRevenue = plan.apiRequests > 0 ? 0 : withApi * model.apiAddon.pricePence;
       const gross = n * price + addonRevenue;
       revenue += gross;
-      cost += n * variableCost(c, { rooms, apiRequests: 0, aiReads: plan.aiReads }) + withApi * variableCost(c, { rooms: 0, apiRequests: p.apiRequests, aiReads: 0 });
+      cost +=
+        n * variableCost(c, { rooms, apiRequests: 0, aiReads: plan.aiReads }) +
+        withApi * variableCost(c, { rooms: 0, apiRequests: p.apiRequests, aiReads: 0 });
       cost += gross * c.stripePct + n * c.stripeFixedPence;
       count += n;
       hosts[plan.key] = n * (1 - p.churnPct / 100) + (p.newPerMonth[plan.key] ?? 0);
@@ -360,7 +427,14 @@ export function rebase(p: Projection, now: CurrentState, today: string): Project
   return { ...p, start, rooms, apiAttachPct: Math.round(now.apiAttachPct), startedOn: today };
 }
 
-export type HostRow = { planKey: string | null; apiAddon: boolean; status: string; rooms: number; properties: number; isDemo: boolean };
+export type HostRow = {
+  planKey: string | null;
+  apiAddon: boolean;
+  status: string;
+  rooms: number;
+  properties: number;
+  isDemo: boolean;
+};
 
 export type HostSummary = {
   state: CurrentState;
@@ -382,7 +456,13 @@ export function summariseHosts(model: PricingModel, hosts: HostRow[]): HostSumma
     byPlanState[p.key] = { hosts: 0, rooms: 0 };
     byPlan[p.key] = { payers: 0, trials: 0, revenuePence: 0 };
   }
-  let payers = 0, trials = 0, comped = 0, revenue = 0, activeRooms = 0, addonEligible = 0, addonOn = 0;
+  let payers = 0,
+    trials = 0,
+    comped = 0,
+    revenue = 0,
+    activeRooms = 0,
+    addonEligible = 0,
+    addonOn = 0;
   for (const h of hosts) {
     if (h.isDemo) continue;
     const plan = planFor(model, h.planKey);
@@ -395,7 +475,11 @@ export function summariseHosts(model: PricingModel, hosts: HostRow[]): HostSumma
     if (h.status === "comped") comped++;
     if (!paying) continue;
     payers++;
-    const price = monthlyPrice(model, plan, { rooms: h.rooms, properties: h.properties, apiAddon: h.apiAddon });
+    const price = monthlyPrice(model, plan, {
+      rooms: h.rooms,
+      properties: h.properties,
+      apiAddon: h.apiAddon,
+    });
     revenue += price;
     byPlan[plan.key]!.payers++;
     byPlan[plan.key]!.revenuePence += price;
@@ -407,7 +491,10 @@ export function summariseHosts(model: PricingModel, hosts: HostRow[]): HostSumma
     }
   }
   return {
-    state: { byPlan: byPlanState, apiAttachPct: addonEligible ? (addonOn / addonEligible) * 100 : 0 },
+    state: {
+      byPlan: byPlanState,
+      apiAttachPct: addonEligible ? (addonOn / addonEligible) * 100 : 0,
+    },
     payers,
     trials,
     comped,
@@ -418,8 +505,18 @@ export function summariseHosts(model: PricingModel, hosts: HostRow[]): HostSumma
 }
 
 /** What last month actually cost: Run credits, fixed costs and Stripe's cut. */
-export function actualCost(c: CostModel, totalCredits: number, revenuePence: number, payers: number): number {
-  return Math.round(c.fixedPence + totalCredits * creditPence(c) + revenuePence * c.stripePct + payers * c.stripeFixedPence);
+export function actualCost(
+  c: CostModel,
+  totalCredits: number,
+  revenuePence: number,
+  payers: number,
+): number {
+  return Math.round(
+    c.fixedPence +
+      totalCredits * creditPence(c) +
+      revenuePence * c.stripePct +
+      payers * c.stripeFixedPence,
+  );
 }
 
 /** Adds or replaces the history row for a month (YYYY-MM), newest last, 24 kept. */
@@ -459,11 +556,16 @@ export function calibrate(c: CostModel, a: Actuals): CostModel {
 
 export function normaliseModel(raw: unknown): PricingModel {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<PricingModel>;
-  const plans = Array.isArray(r.plans) && r.plans.length ? (r.plans as Plan[]) : DEFAULT_MODEL.plans;
+  const plans =
+    Array.isArray(r.plans) && r.plans.length ? (r.plans as Plan[]) : DEFAULT_MODEL.plans;
   return {
     currency: typeof r.currency === "string" ? r.currency : DEFAULT_MODEL.currency,
     trialDays: typeof r.trialDays === "number" ? r.trialDays : DEFAULT_MODEL.trialDays,
-    plans: plans.map((p) => ({ ...DEFAULT_MODEL.plans[1]!, ...p, features: (p.features ?? []).filter((f) => f in FEATURES) })),
+    plans: plans.map((p) => ({
+      ...DEFAULT_MODEL.plans[1]!,
+      ...p,
+      features: (p.features ?? []).filter((f) => f in FEATURES),
+    })),
     apiAddon: { ...DEFAULT_MODEL.apiAddon, ...(r.apiAddon ?? {}) },
   };
 }
@@ -480,7 +582,8 @@ export function normaliseCosts(raw: unknown): CostModel {
 
 export function normaliseProjection(raw: unknown): Projection {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<Projection>;
-  const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : d);
+  const num = (v: unknown, d: number) =>
+    typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : d;
   const map = (v: unknown, d: Record<string, number>) => {
     if (!v || typeof v !== "object") return { ...d };
     const out: Record<string, number> = {};
@@ -494,7 +597,12 @@ export function normaliseProjection(raw: unknown): Projection {
     apiAttachPct: Math.min(100, num(r.apiAttachPct, DEFAULT_PROJECTION.apiAttachPct)),
     rooms: map(r.rooms, DEFAULT_PROJECTION.rooms),
     apiRequests: num(r.apiRequests, DEFAULT_PROJECTION.apiRequests),
-    startedOn: typeof r.startedOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.startedOn) ? r.startedOn : undefined,
-    history: Array.isArray(r.history) ? (r.history as HistoryRow[]).filter((h) => h && typeof h.month === "string") : [],
+    startedOn:
+      typeof r.startedOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.startedOn)
+        ? r.startedOn
+        : undefined,
+    history: Array.isArray(r.history)
+      ? (r.history as HistoryRow[]).filter((h) => h && typeof h.month === "string")
+      : [],
   };
 }

@@ -2,7 +2,13 @@ import { useState } from "react";
 import { AlertTriangle, BadgeCheck, CircleHelp, IdCard, User } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { guestCard as copy } from "@/content/copy";
 import { formatUkDate } from "@/lib/dates";
 import { nationalityName } from "@/lib/hotel-register";
@@ -36,8 +42,13 @@ export type GuestPerson = {
 };
 
 export function personTitle(p: GuestPerson) {
-  if (p.kind === "child") return p.register ? `${p.register.fullName} (${p.age})` : copy.child(p.age);
-  return p.fullName ?? p.register?.fullName ?? (p.position === 0 ? copy.leadGuest : copy.adult(p.position + 1));
+  if (p.kind === "child")
+    return p.register ? `${p.register.fullName} (${p.age})` : copy.child(p.age);
+  return (
+    p.fullName ??
+    p.register?.fullName ??
+    (p.position === 0 ? copy.leadGuest : copy.adult(p.position + 1))
+  );
 }
 
 /** The tick a host looks for: the photo ID matches the name on the booking. */
@@ -76,7 +87,9 @@ function Face({ p, size }: { p: GuestPerson; size: string }) {
   return p.facePhotoUrl ? (
     <img src={p.facePhotoUrl} alt="" className={`${size} shrink-0 rounded-full object-cover`} />
   ) : (
-    <span className={`${size} grid shrink-0 place-items-center rounded-full bg-secondary text-muted-foreground`}>
+    <span
+      className={`${size} grid shrink-0 place-items-center rounded-full bg-secondary text-muted-foreground`}
+    >
       <User className="size-1/2" />
     </span>
   );
@@ -104,7 +117,9 @@ export function GuestPeople({
       {arrivedAdults ? (
         <p className="mb-2 text-sm text-muted-foreground">
           {copy.arrivedCount(arrivedAdults, arrivedChildren ?? 0)}
-          {arrivedAdults + (arrivedChildren ?? 0) !== bookedCount ? ` · ${copy.bookedFor(bookedCount)}` : ""}
+          {arrivedAdults + (arrivedChildren ?? 0) !== bookedCount
+            ? ` · ${copy.bookedFor(bookedCount)}`
+            : ""}
         </p>
       ) : null}
       {people.length === 0 ? (
@@ -119,8 +134,12 @@ export function GuestPeople({
                   <span className="block truncate font-medium">{personTitle(p)}</span>
                   <span className="block text-xs text-muted-foreground">
                     {p.kind === "adult" && p.position === 0 ? copy.leadGuest : null}
-                    {p.kind === "adult" && p.documentType ? `${p.position === 0 ? " · " : ""}${copy.docType[p.documentType] ?? p.documentType}` : null}
-                    {p.register ? `${p.kind === "adult" && (p.position === 0 || p.documentType) ? " · " : ""}${nationalityName(p.register.nationality)}` : null}
+                    {p.kind === "adult" && p.documentType
+                      ? `${p.position === 0 ? " · " : ""}${copy.docType[p.documentType] ?? p.documentType}`
+                      : null}
+                    {p.register
+                      ? `${p.kind === "adult" && (p.position === 0 || p.documentType) ? " · " : ""}${nationalityName(p.register.nationality)}`
+                      : null}
                   </span>
                 </span>
                 <IdBadge p={p} />
@@ -138,7 +157,9 @@ export function GuestPeople({
                     {row}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3 rounded-xl border border-border p-3">{row}</div>
+                  <div className="flex items-center gap-3 rounded-xl border border-border p-3">
+                    {row}
+                  </div>
                 )}
               </li>
             );
@@ -154,7 +175,9 @@ export function GuestPeople({
                 <DialogTitle className="flex flex-wrap items-center gap-2 font-display text-xl">
                   {copy.idDialogTitle(personTitle(open))} <IdBadge p={open} />
                 </DialogTitle>
-                <DialogDescription>{copy.deletedOn(formatUkDate(open.deleteAfter, { withYear: true }))}</DialogDescription>
+                <DialogDescription>
+                  {copy.deletedOn(formatUkDate(open.deleteAfter, { withYear: true }))}
+                </DialogDescription>
               </DialogHeader>
 
               {open.idPhotoUrl || open.facePhotoUrl ? (
@@ -162,15 +185,27 @@ export function GuestPeople({
                   {open.idPhotoUrl ? (
                     <figure>
                       <a href={open.idPhotoUrl} target="_blank" rel="noreferrer">
-                        <img src={open.idPhotoUrl} alt={copy.idPhoto} className="w-full rounded-xl border border-border bg-muted object-contain" />
+                        <img
+                          src={open.idPhotoUrl}
+                          alt={copy.idPhoto}
+                          className="w-full rounded-xl border border-border bg-muted object-contain"
+                        />
                       </a>
-                      <figcaption className="mt-1 text-xs text-muted-foreground">{copy.idPhoto}</figcaption>
+                      <figcaption className="mt-1 text-xs text-muted-foreground">
+                        {copy.idPhoto}
+                      </figcaption>
                     </figure>
                   ) : null}
                   {open.facePhotoUrl ? (
                     <figure>
-                      <img src={open.facePhotoUrl} alt={copy.facePhoto} className="w-full rounded-xl border border-border object-cover" />
-                      <figcaption className="mt-1 text-xs text-muted-foreground">{copy.facePhoto}</figcaption>
+                      <img
+                        src={open.facePhotoUrl}
+                        alt={copy.facePhoto}
+                        className="w-full rounded-xl border border-border object-cover"
+                      />
+                      <figcaption className="mt-1 text-xs text-muted-foreground">
+                        {copy.facePhoto}
+                      </figcaption>
                     </figure>
                   ) : null}
                 </div>
@@ -180,11 +215,33 @@ export function GuestPeople({
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <Detail label={copy.detailName} value={open.fullName} />
-                <Detail label={copy.detailDob} value={open.dateOfBirth ? formatUkDate(open.dateOfBirth, { withYear: true }) : null} />
-                <Detail label={copy.detailDoc} value={open.documentType ? (copy.docType[open.documentType] ?? open.documentType) : null} />
+                <Detail
+                  label={copy.detailDob}
+                  value={
+                    open.dateOfBirth ? formatUkDate(open.dateOfBirth, { withYear: true }) : null
+                  }
+                />
+                <Detail
+                  label={copy.detailDoc}
+                  value={
+                    open.documentType
+                      ? (copy.docType[open.documentType] ?? open.documentType)
+                      : null
+                  }
+                />
                 <Detail label={copy.detailCountry} value={open.issuingCountry} />
-                <Detail label={copy.detailExpiry} value={open.documentExpiry ? formatUkDate(open.documentExpiry, { withYear: true }) : null} />
-                <Detail label={copy.detailNumber} value={open.documentLast4 ? `•••• ${open.documentLast4}` : null} />
+                <Detail
+                  label={copy.detailExpiry}
+                  value={
+                    open.documentExpiry
+                      ? formatUkDate(open.documentExpiry, { withYear: true })
+                      : null
+                  }
+                />
+                <Detail
+                  label={copy.detailNumber}
+                  value={open.documentLast4 ? `•••• ${open.documentLast4}` : null}
+                />
               </dl>
 
               {open.register ? (
@@ -192,10 +249,16 @@ export function GuestPeople({
                   <h4 className="font-medium">{copy.registerTitle}</h4>
                   <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                     <Detail label={copy.detailName} value={open.register.fullName} />
-                    <Detail label={copy.registerNationality} value={nationalityName(open.register.nationality)} />
+                    <Detail
+                      label={copy.registerNationality}
+                      value={nationalityName(open.register.nationality)}
+                    />
                     {open.register.documentNumber ? (
                       <>
-                        <Detail label={copy.registerDocument} value={open.register.documentNumber} />
+                        <Detail
+                          label={copy.registerDocument}
+                          value={open.register.documentNumber}
+                        />
                         <Detail label={copy.registerPlace} value={open.register.placeOfIssue} />
                         <Detail label={copy.registerNext} value={open.register.nextDestination} />
                         <Detail label={copy.registerAddress} value={open.register.nextAddress} />

@@ -1,9 +1,32 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { timelineCopy as copy } from "@/content/copy";
-import { MINUTES_PER_DAY, ZOOMS, daysIn, dayNumber, laneOf, panBy, place, rangeLabel, step, ticks, viewFor, zoomAt, zoomOf, type View, type ZoomKey } from "@/lib/timeline";
+import {
+  MINUTES_PER_DAY,
+  ZOOMS,
+  daysIn,
+  dayNumber,
+  laneOf,
+  panBy,
+  place,
+  rangeLabel,
+  step,
+  ticks,
+  viewFor,
+  zoomAt,
+  zoomOf,
+  type View,
+  type ZoomKey,
+} from "@/lib/timeline";
 import { cn } from "@/lib/utils";
 
 /**
@@ -78,7 +101,15 @@ export function RoomTimeline({
 
   // Swipe to move, pinch to zoom: touch, pen or mouse. Up and down stays the page's own scrolling.
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef<{ mode: "none" | "maybe" | "pan" | "pinch"; start: View; x: number; y: number; dist: number; anchor: number; moved: boolean }>({ mode: "none", start: view, x: 0, y: 0, dist: 0, anchor: 0.5, moved: false });
+  const gesture = useRef<{
+    mode: "none" | "maybe" | "pan" | "pinch";
+    start: View;
+    x: number;
+    y: number;
+    dist: number;
+    anchor: number;
+    moved: boolean;
+  }>({ mode: "none", start: view, x: 0, y: 0, dist: 0, anchor: 0.5, moved: false });
   const anchorAt = (clientX: number) => {
     const r = track.current?.getBoundingClientRect();
     return r && r.width ? Math.min(1, Math.max(0, (clientX - r.left) / r.width)) : 0.5;
@@ -87,9 +118,23 @@ export function RoomTimeline({
     const pts = [...pointers.current.values()];
     if (pts.length >= 2) {
       const [a, b] = pts as [{ x: number; y: number }, { x: number; y: number }];
-      gesture.current = { mode: "pinch", start: live.current, x: 0, y: 0, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, anchor: anchorAt((a.x + b.x) / 2), moved: true };
+      gesture.current = {
+        mode: "pinch",
+        start: live.current,
+        x: 0,
+        y: 0,
+        dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        anchor: anchorAt((a.x + b.x) / 2),
+        moved: true,
+      };
     } else if (pts.length === 1) {
-      gesture.current = { ...gesture.current, mode: "maybe", start: live.current, x: pts[0]!.x, y: pts[0]!.y };
+      gesture.current = {
+        ...gesture.current,
+        mode: "maybe",
+        start: live.current,
+        x: pts[0]!.x,
+        y: pts[0]!.y,
+      };
     } else gesture.current = { ...gesture.current, mode: "none" };
   };
 
@@ -122,28 +167,49 @@ export function RoomTimeline({
     <section className="card-soft overflow-hidden p-0" data-tour={tourName}>
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-2 py-2 sm:px-3">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" aria-label={copy.earlier} onClick={() => onView(step(view, -1))}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={copy.earlier}
+            onClick={() => onView(step(view, -1))}
+          >
             <ChevronLeft className="size-5" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => onView(viewFor(zoom, today))}>
             {copy.today}
           </Button>
-          <Button variant="ghost" size="icon" aria-label={copy.later} onClick={() => onView(step(view, 1))}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={copy.later}
+            onClick={() => onView(step(view, 1))}
+          >
             <ChevronRight className="size-5" />
           </Button>
         </div>
         <p className="min-w-0 flex-1 truncate font-medium" aria-live="polite">
           {rangeLabel(view)}
         </p>
-        <div role="radiogroup" aria-label={copy.zoom} className="flex w-full rounded-xl bg-muted p-0.5 sm:w-auto">
+        <div
+          role="radiogroup"
+          aria-label={copy.zoom}
+          className="flex w-full rounded-xl bg-muted p-0.5 sm:w-auto"
+        >
           {ZOOMS.map((z) => (
             <button
               key={z.key}
               type="button"
               role="radio"
               aria-checked={zoom === z.key}
-              onClick={() => onView(viewFor(z.key as ZoomKey, days[Math.floor(days.length / 2)] ?? today))}
-              className={cn("flex-1 rounded-lg px-2 py-1.5 text-xs font-medium sm:flex-none sm:px-2.5", zoom === z.key ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
+              onClick={() =>
+                onView(viewFor(z.key as ZoomKey, days[Math.floor(days.length / 2)] ?? today))
+              }
+              className={cn(
+                "flex-1 rounded-lg px-2 py-1.5 text-xs font-medium sm:flex-none sm:px-2.5",
+                zoom === z.key
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
               {copy.zooms[z.key]}
             </button>
@@ -168,12 +234,16 @@ export function RoomTimeline({
           const g = gesture.current;
           const w = track.current?.getBoundingClientRect().width || 600;
           if (g.mode === "pinch") {
-            const [a, b] = [...pointers.current.values()] as [{ x: number; y: number }, { x: number; y: number }];
+            const [a, b] = [...pointers.current.values()] as [
+              { x: number; y: number },
+              { x: number; y: number },
+            ];
             onView(zoomAt(g.start, g.dist / (Math.hypot(a.x - b.x, a.y - b.y) || 1), g.anchor));
           } else if (g.mode === "maybe" || g.mode === "pan") {
             const dx = e.clientX - g.x;
             const dy = e.clientY - g.y;
-            if (g.mode === "maybe" && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) g.mode = "pan";
+            if (g.mode === "maybe" && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy))
+              g.mode = "pan";
             if (g.mode === "pan") {
               g.moved = true;
               onView(panBy(g.start, -dx / w));
@@ -200,9 +270,19 @@ export function RoomTimeline({
         {/* The marks along the top stay put while the rooms scroll. */}
         <div className="sticky top-0 z-20 grid grid-cols-[var(--label-w)_minmax(0,1fr)] border-b border-border bg-surface/95 backdrop-blur">
           <span className="px-2 py-2 text-xs text-muted-foreground sm:px-3">{copy.room}</span>
-          <div ref={track} className="relative h-8 overflow-hidden text-[11px] tabular-nums text-muted-foreground">
+          <div
+            ref={track}
+            className="relative h-8 overflow-hidden text-[11px] tabular-nums text-muted-foreground"
+          >
             {ticksNow.map((t) => (
-              <span key={t.at} className={cn("absolute top-1/2 -translate-y-1/2 whitespace-nowrap pl-1", t.day && "font-semibold text-foreground")} style={{ left: left(t.at) }}>
+              <span
+                key={t.at}
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 whitespace-nowrap pl-1",
+                  t.day && "font-semibold text-foreground",
+                )}
+                style={{ left: left(t.at) }}
+              >
                 {t.label}
               </span>
             ))}
@@ -211,7 +291,10 @@ export function RoomTimeline({
 
         <div className="relative">
           {/* Days behind everything: weekends, today, each midnight, and the time now. */}
-          <div aria-hidden className="pointer-events-none absolute inset-y-0 left-[var(--label-w)] right-0 overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-[var(--label-w)] right-0 overflow-hidden"
+          >
             {days.map((d) => {
               const start = dayNumber(d) * MINUTES_PER_DAY;
               const dow = new Date(`${d}T12:00:00Z`).getUTCDay();
@@ -220,13 +303,19 @@ export function RoomTimeline({
               return (
                 <span
                   key={d}
-                  className={cn("absolute inset-y-0 border-l border-border/70", d === today ? "bg-primary/[0.06]" : dow === 0 || dow === 6 ? "bg-muted/40" : "")}
+                  className={cn(
+                    "absolute inset-y-0 border-l border-border/70",
+                    d === today ? "bg-primary/[0.06]" : dow === 0 || dow === 6 ? "bg-muted/40" : "",
+                  )}
                   style={{ left: `${p.left * 100}%`, width: `${p.width * 100}%` }}
                 />
               );
             })}
             {now !== null && now > view.from && now < view.from + view.span ? (
-              <span className="absolute inset-y-0 z-10 w-0.5 bg-destructive" style={{ left: left(now) }} />
+              <span
+                className="absolute inset-y-0 z-10 w-0.5 bg-destructive"
+                style={{ left: left(now) }}
+              />
             ) : null}
           </div>
 
@@ -236,9 +325,19 @@ export function RoomTimeline({
             const { lane: laneIx, count } = laneOf(front);
             const height = count * lane + 8;
             return (
-              <div key={room.id} className="grid grid-cols-[var(--label-w)_minmax(0,1fr)] border-b border-border last:border-b-0">
-                <div className="flex min-w-0 items-center px-2 sm:px-3" style={{ minHeight: height }}>
-                  {roomLabel ? roomLabel(room) : <span className="truncate text-sm font-medium">{room.display_name}</span>}
+              <div
+                key={room.id}
+                className="grid grid-cols-[var(--label-w)_minmax(0,1fr)] border-b border-border last:border-b-0"
+              >
+                <div
+                  className="flex min-w-0 items-center px-2 sm:px-3"
+                  style={{ minHeight: height }}
+                >
+                  {roomLabel ? (
+                    roomLabel(room)
+                  ) : (
+                    <span className="truncate text-sm font-medium">{room.display_name}</span>
+                  )}
                 </div>
                 <div className="relative" style={{ height }}>
                   {mine.map((it) => {
@@ -257,12 +356,22 @@ export function RoomTimeline({
                       front ? "gap-1 rounded-md px-1.5 font-medium" : "inset-y-0",
                       front && p.cutStart && "rounded-l-none",
                       front && p.cutEnd && "rounded-r-none",
-                      it.onClick && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      it.onClick &&
+                        "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       it.className,
                     );
                     const content = wide ? it.label : null;
                     return it.onClick ? (
-                      <button key={it.id} type="button" title={it.title} aria-label={it.title} className={cls} style={style} onClick={it.onClick} data-tour={it.tour}>
+                      <button
+                        key={it.id}
+                        type="button"
+                        title={it.title}
+                        aria-label={it.title}
+                        className={cls}
+                        style={style}
+                        onClick={it.onClick}
+                        data-tour={it.tour}
+                      >
                         {content}
                       </button>
                     ) : (
@@ -277,7 +386,9 @@ export function RoomTimeline({
           })}
         </div>
       </div>
-      <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">{copy.hint}</p>
+      <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+        {copy.hint}
+      </p>
     </section>
   );
 }

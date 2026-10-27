@@ -111,12 +111,7 @@ export function parseIcs(text: string, timeZone = "Europe/London"): IcsEvent[] {
       continue;
     }
     if (trimmed === "END:VEVENT") {
-      if (
-        current &&
-        current.uid &&
-        current.startDate &&
-        current.endDate
-      ) {
+      if (current && current.uid && current.startDate && current.endDate) {
         events.push({
           uid: current.uid,
           summary: current.summary ?? "",
@@ -186,9 +181,10 @@ export function extractReservationCode(text: string): string | null {
   if (url?.[1]) return url[1].toUpperCase();
   const hm = /\b(HM[A-Z0-9]{6,})\b/.exec(text);
   if (hm?.[1]) return hm[1];
-  const code = /(?:Reservation|Booking|Confirmation)\s*(?:code|number|ID)\s*[:#]?\s*([A-Z0-9-]{4,})/i.exec(
-    text,
-  );
+  const code =
+    /(?:Reservation|Booking|Confirmation)\s*(?:code|number|ID)\s*[:#]?\s*([A-Z0-9-]{4,})/i.exec(
+      text,
+    );
   return code?.[1] ? code[1].toUpperCase() : null;
 }
 

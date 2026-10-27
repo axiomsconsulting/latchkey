@@ -79,7 +79,9 @@ function SetupPage() {
   const [linkOk, setLinkOk] = useState(true);
   const [pinOk, setPinOk] = useState(true);
 
-  const steps = trialUser ? [copy.step1, copy.step2, copy.step3, extraCopy.saveTitle] : [copy.step1, copy.step2, copy.step3];
+  const steps = trialUser
+    ? [copy.step1, copy.step2, copy.step3, extraCopy.saveTitle]
+    : [copy.step1, copy.step2, copy.step3];
 
   async function finish() {
     if (!workspace.data) return;
@@ -152,7 +154,11 @@ function SetupPage() {
   }
 
   const canContinue =
-    step === 0 ? property.name.trim().length > 1 && linkOk : step === 1 ? rooms.some((r) => r.trim()) : true;
+    step === 0
+      ? property.name.trim().length > 1 && linkOk
+      : step === 1
+        ? rooms.some((r) => r.trim())
+        : true;
 
   // Last step of a free trial: everything is set up, now save it to an account.
   if (saving) {
@@ -186,7 +192,9 @@ function SetupPage() {
         ))}
       </ol>
 
-      {step === 0 && setupHostId && workspace.data?.role === "owner" ? <ReferralCodeField hostId={setupHostId} /> : null}
+      {step === 0 && setupHostId && workspace.data?.role === "owner" ? (
+        <ReferralCodeField hostId={setupHostId} />
+      ) : null}
 
       <div className="card-soft grid gap-4 p-5">
         {step === 0 ? (
@@ -226,7 +234,11 @@ function SetupPage() {
               label="Short guest link"
               value={property.short_code}
               onChange={(v) => setProperty((p) => ({ ...p, short_code: v }))}
-              context={{ name: property.name, address: property.address, postcode: property.postcode }}
+              context={{
+                name: property.name,
+                address: property.address,
+                postcode: property.postcode,
+              }}
               auto
               onValid={setLinkOk}
             />
@@ -236,7 +248,8 @@ function SetupPage() {
         {step === 1 ? (
           <>
             <p className="text-sm text-muted-foreground">
-              Name the rooms you let and how many people each one sleeps in total. You can change these later.
+              Name the rooms you let and how many people each one sleeps in total. You can change
+              these later.
             </p>
             {rooms.map((room, i) => (
               <div key={i} className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3">

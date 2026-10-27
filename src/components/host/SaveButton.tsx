@@ -5,7 +5,8 @@ import { common, saveCopy as copy } from "@/content/copy";
 import { cn } from "@/lib/utils";
 
 /** Has anything changed since it was last saved? (Compares plain data.) */
-export const changed = (now: unknown, saved: unknown) => JSON.stringify(now) !== JSON.stringify(saved);
+export const changed = (now: unknown, saved: unknown) =>
+  JSON.stringify(now) !== JSON.stringify(saved);
 
 /**
  * A settings card's Save, at its top right: greyed out until something
@@ -40,7 +41,14 @@ export function SaveButton({
           {copy.unsaved}
         </span>
       ) : null}
-      <Button type={type} form={form} size="sm" onClick={onClick} disabled={!dirty || busy} aria-label={dirty ? `${label}: ${copy.unsaved}` : label}>
+      <Button
+        type={type}
+        form={form}
+        size="sm"
+        onClick={onClick}
+        disabled={!dirty || busy}
+        aria-label={dirty ? `${label}: ${copy.unsaved}` : label}
+      >
         {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {label}
       </Button>
     </div>

@@ -2,7 +2,23 @@ import { useEffect, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
-import { CalendarX, Check, Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, KeyRound, Loader2, MessageCircle, Moon, Sun } from "lucide-react";
+import {
+  CalendarX,
+  Check,
+  Cloud,
+  CloudDrizzle,
+  CloudFog,
+  CloudLightning,
+  CloudMoon,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
+  KeyRound,
+  Loader2,
+  MessageCircle,
+  Moon,
+  Sun,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { GuideSections } from "@/components/guest/GuideSections";
 import { getStayWeather } from "@/lib/weather.functions";
@@ -68,9 +84,15 @@ function Stay() {
     if (s.found) rememberStay(s.propertyId, token, s.checkOutDate);
   }, [s, token]);
   if (!s.found) {
-    const opens = "opensAt" in s && s.opensAt
-      ? new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" }).format(new Date(s.opensAt))
-      : null;
+    const opens =
+      "opensAt" in s && s.opensAt
+        ? new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Europe/London",
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          }).format(new Date(s.opensAt))
+        : null;
     return (
       <GuestFrame>
         <GuestMessage text={opens ? gcopy.notYet(opens) : copy.stayGone} />
@@ -84,7 +106,14 @@ type StayData = Extract<Awaited<ReturnType<typeof getStay>>, { found: true }>;
 
 /** Jumps to a part of the guide (a section on the reminder card is found there). */
 function jumpTo(id: string) {
-  window.setTimeout(() => (document.getElementById(id) ?? (id.startsWith("guide-") ? document.getElementById("forget") : null))?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  window.setTimeout(
+    () =>
+      (
+        document.getElementById(id) ??
+        (id.startsWith("guide-") ? document.getElementById("forget") : null)
+      )?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    60,
+  );
 }
 
 function StayPage({ s, token, theme }: { s: StayData; token: string; theme: StayData["theme"] }) {
@@ -95,16 +124,35 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   // Quick ways in, in the theme's icon style: the host's chosen tiles, or Wi-Fi, the first guide sections, extras and messages.
   const tiles = shownTiles(
     s.tiles.tiles,
-    { page: "stay", sections: [...s.guide, ...s.pinnedSections].map((g) => ({ key: g.key, title: g.title })), hasWifi: !!s.wifi, canOrder: !s.readOnly },
-    { wifi: copy.stayNetwork, extras: gcopy.quickExtras, messages: stayHeroCopy.messageTile, times: stayHeroCopy.tileTimes },
+    {
+      page: "stay",
+      sections: [...s.guide, ...s.pinnedSections].map((g) => ({ key: g.key, title: g.title })),
+      hasWifi: !!s.wifi,
+      canOrder: !s.readOnly,
+    },
+    {
+      wifi: copy.stayNetwork,
+      extras: gcopy.quickExtras,
+      messages: stayHeroCopy.messageTile,
+      times: stayHeroCopy.tileTimes,
+    },
   );
   return (
     <GuestFrame theme={s.theme} name={p?.name ?? undefined}>
       <GuestDemoDock code={s.demoCode} />
-      <main className={cn("mx-auto max-w-4xl space-y-6 py-6 sm:py-8", s.needsCheckIn && !s.readOnly && "pb-32")}>
+      <main
+        className={cn(
+          "mx-auto max-w-4xl space-y-6 py-6 sm:py-8",
+          s.needsCheckIn && !s.readOnly && "pb-32",
+        )}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            {theme.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{theme.eyebrow}</p> : null}
+            {theme.eyebrow ? (
+              <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+                {theme.eyebrow}
+              </p>
+            ) : null}
             <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
             {/* Today, where they are: the date and the weather. */}
             <StayToday token={token} timeZone={p?.timezone ?? "Europe/London"} />
@@ -127,7 +175,9 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         </div>
 
         {/* The last day: a gentle ask for a review, where they booked (or here, for a direct stay). */}
-        {s.review && reviewDay(s.progress.phase) ? <ReviewNudge token={token} ask={s.review} place={p?.name ?? ""} /> : null}
+        {s.review && reviewDay(s.progress.phase) ? (
+          <ReviewNudge token={token} ask={s.review} place={p?.name ?? ""} />
+        ) : null}
 
         <GuideTiles
           theme={theme}
@@ -146,14 +196,28 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         />
 
         {/* The cover photo with the extras invitation, the stay at a glance, and help: in every template's own look. */}
-        <StayCover theme={theme} name={p?.name ?? ""} photo={s.roomPhoto} extras={!s.readOnly} onExtras={() => jumpTo("stay-extras")} />
-        <section aria-labelledby="forget" className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5">
-          <h2 id="forget" className="text-xl">{gcopy.forgetTitle}</h2>
+        <StayCover
+          theme={theme}
+          name={p?.name ?? ""}
+          photo={s.roomPhoto}
+          extras={!s.readOnly}
+          onExtras={() => jumpTo("stay-extras")}
+        />
+        <section
+          aria-labelledby="forget"
+          className="rounded-3xl border-2 border-accent/40 bg-accent/10 p-5"
+        >
+          <h2 id="forget" className="text-xl">
+            {gcopy.forgetTitle}
+          </h2>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {s.forget.map((f, i) => {
               const Icon = forgetIcon(f.key);
               return (
-                <li key={i} className="flex min-h-12 items-start gap-3 rounded-2xl bg-surface px-4 py-3 text-lg">
+                <li
+                  key={i}
+                  className="flex min-h-12 items-start gap-3 rounded-2xl bg-surface px-4 py-3 text-lg"
+                >
                   <Icon className="mt-0.5 size-6 shrink-0 text-accent" aria-hidden />
                   <ExpandableText text={f.text} className="text-lg" />
                 </li>
@@ -164,11 +228,16 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
 
         {s.amenities.length ? (
           <section aria-labelledby="amenities" className="card-soft p-5">
-            <h2 id="amenities" className="text-xl">{gcopy.amenitiesTitle}</h2>
+            <h2 id="amenities" className="text-xl">
+              {gcopy.amenitiesTitle}
+            </h2>
             <p className="mt-1 text-muted-foreground">{gcopy.amenitiesBody}</p>
             <ul className="mt-3 flex flex-wrap gap-2">
               {s.amenities.map((a) => (
-                <li key={a} className="flex min-h-11 items-center gap-2 rounded-full bg-secondary px-4 py-2 text-base">
+                <li
+                  key={a}
+                  className="flex min-h-11 items-center gap-2 rounded-full bg-secondary px-4 py-2 text-base"
+                >
                   <Check className="size-4 text-primary" aria-hidden />
                   {a}
                 </li>
@@ -177,17 +246,42 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           </section>
         ) : null}
 
-        {s.wifi ? <WifiCard id="stay-wifi" wifi={s.wifi} profileUrl={`/api/public/wifi/stay/${token}`} checkInHref={`/kiosk/${p?.short_code ?? ""}?guest=1`} /> : null}
+        {s.wifi ? (
+          <WifiCard
+            id="stay-wifi"
+            wifi={s.wifi}
+            profileUrl={`/api/public/wifi/stay/${token}`}
+            checkInHref={`/kiosk/${p?.short_code ?? ""}?guest=1`}
+          />
+        ) : null}
 
         <GuideSections
           sections={s.guide as never}
           open={open}
           onOpenChange={onOpenChange}
           active={active}
-          lockedText={gcopy.doorLocked(new Intl.DateTimeFormat("en-GB", { timeZone: p?.timezone ?? "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(s.doorOpensAt)))}
+          lockedText={gcopy.doorLocked(
+            new Intl.DateTimeFormat("en-GB", {
+              timeZone: p?.timezone ?? "Europe/London",
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            }).format(new Date(s.doorOpensAt)),
+          )}
         />
 
-        {s.readOnly ? <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p> : (<><div id="stay-extras" className="scroll-mt-6"><StayExtras token={token} /></div><StayServices token={token} /></>)}
+        {s.readOnly ? (
+          <p className="card-soft p-5 text-lg">{gcopy.readOnly}</p>
+        ) : (
+          <>
+            <div id="stay-extras" className="scroll-mt-6">
+              <StayExtras token={token} />
+            </div>
+            <StayServices token={token} />
+          </>
+        )}
         <StayInvoice token={token} place={p?.name ?? ""} />
         {/* The second of the guide's two ways to message (the first is at the top): anything not covered here, before the feedback. */}
         {s.readOnly ? null : <NeedSomethingElse text={s.stayMessage} />}
@@ -195,7 +289,9 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         {s.review?.direct && reviewDay(s.progress.phase) ? null : <StayReview token={token} />}
         {s.readOnly ? null : <StayAgain token={token} />}
       </main>
-      {s.needsCheckIn && !s.readOnly ? <CheckInNudge token={token} firstName={s.firstName} /> : null}
+      {s.needsCheckIn && !s.readOnly ? (
+        <CheckInNudge token={token} firstName={s.firstName} />
+      ) : null}
     </GuestFrame>
   );
 }
@@ -203,9 +299,14 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
 /** "Need something else?": a question that isn't answered in the guide, straight to the host. */
 function NeedSomethingElse({ text }: { text: string }) {
   return (
-    <section aria-labelledby="need-else" className="card-soft flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+    <section
+      aria-labelledby="need-else"
+      className="card-soft flex flex-col gap-3 p-5 sm:flex-row sm:items-center"
+    >
       <div className="min-w-0 flex-1">
-        <h2 id="need-else" className="text-xl">{pcopy.needElse}</h2>
+        <h2 id="need-else" className="text-xl">
+          {pcopy.needElse}
+        </h2>
         <p className="text-muted-foreground">{text}</p>
       </div>
       <Button onClick={openStayInbox} className="shrink-0">
@@ -281,9 +382,24 @@ function CheckInNudge({ token, firstName }: { token: string; firstName: string |
 /** Under the welcome: today's day and date where they're staying, and the weather there now. */
 function StayToday({ token, timeZone }: { token: string; timeZone: string }) {
   const fetchWeather = useServerFn(getStayWeather);
-  const q = useQuery({ queryKey: ["stay-weather", token], queryFn: () => fetchWeather({ data: { token } }), staleTime: 15 * 60_000 });
+  const q = useQuery({
+    queryKey: ["stay-weather", token],
+    queryFn: () => fetchWeather({ data: { token } }),
+    staleTime: 15 * 60_000,
+  });
   const [today, setToday] = useState<string | null>(null);
-  useEffect(() => setToday(new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "long", day: "numeric", month: "long" }).format(new Date())), [timeZone]);
+  useEffect(
+    () =>
+      setToday(
+        new Intl.DateTimeFormat("en-GB", {
+          timeZone,
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }).format(new Date()),
+      ),
+    [timeZone],
+  );
   const w = q.data;
   const d = w ? describeWeather(w.code, w.isDay) : null;
   const Icon = d ? WEATHER_ICONS[d.icon] : null;

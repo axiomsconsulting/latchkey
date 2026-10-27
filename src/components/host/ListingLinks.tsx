@@ -27,7 +27,16 @@ export function ListingLinkIcons({ links, className }: { links: unknown; classNa
             aria-label={copy.open(label)}
             className="grid size-8 place-items-center rounded-lg hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {l.site === "other" ? <Globe className="size-4 text-muted-foreground" /> : <ChannelIcon channel={l.site} iconUrl={site?.iconUrl ?? null} label={label} size="1.1rem" />}
+            {l.site === "other" ? (
+              <Globe className="size-4 text-muted-foreground" />
+            ) : (
+              <ChannelIcon
+                channel={l.site}
+                iconUrl={site?.iconUrl ?? null}
+                label={label}
+                size="1.1rem"
+              />
+            )}
           </a>
         );
       })}
@@ -36,12 +45,28 @@ export function ListingLinkIcons({ links, className }: { links: unknown; classNa
 }
 
 /** Editing the links: one per line (or pasted all at once), with the site each is recognised as. */
-export function ListingLinksField({ id, value, onChange, hint }: { id: string; value: string; onChange: (v: string) => void; hint: string }) {
+export function ListingLinksField({
+  id,
+  value,
+  onChange,
+  hint,
+}: {
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  hint: string;
+}) {
   const found = normaliseListingLinks(value);
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{copy.label}</Label>
-      <Textarea id={id} rows={2} value={value} onChange={(e) => onChange(e.target.value)} placeholder={copy.placeholder} />
+      <Textarea
+        id={id}
+        rows={2}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={copy.placeholder}
+      />
       <p className="text-xs text-muted-foreground">{hint}</p>
       {found.length ? (
         <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -53,4 +78,7 @@ export function ListingLinksField({ id, value, onChange, hint }: { id: string; v
 }
 
 /** The stored links as text for the field. */
-export const linksText = (links: unknown) => normaliseListingLinks(links).map((l) => l.url).join("\n");
+export const linksText = (links: unknown) =>
+  normaliseListingLinks(links)
+    .map((l) => l.url)
+    .join("\n");

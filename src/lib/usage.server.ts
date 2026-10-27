@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Counting what costs Run credits, and the routine switches. Server only.
  * Both fail open: a missing table (before migration 0027) never breaks the
@@ -28,7 +29,9 @@ async function settings(): Promise<JobSetting[]> {
   if (cache && Date.now() - cache.at < 60_000) return cache.rows;
   try {
     const db = await admin();
-    const { data, error } = await db.from("job_settings").select("key, enabled, every_minutes, last_run_at");
+    const { data, error } = await db
+      .from("job_settings")
+      .select("key, enabled, every_minutes, last_run_at");
     const rows = error ? [] : ((data ?? []) as JobSetting[]);
     cache = { at: Date.now(), rows };
     return rows;
@@ -55,7 +58,13 @@ export async function recordRun(key: string, status: string, startedAt: number):
   try {
     const db = await admin();
     await db.from("job_settings").upsert(
-      { key, last_run_at: new Date().toISOString(), last_status: status.slice(0, 300), last_duration_ms: Date.now() - startedAt, updated_at: new Date().toISOString() },
+      {
+        key,
+        last_run_at: new Date().toISOString(),
+        last_status: status.slice(0, 300),
+        last_duration_ms: Date.now() - startedAt,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "key" },
     );
     const job = JOBS.find((j) => j.key === key);

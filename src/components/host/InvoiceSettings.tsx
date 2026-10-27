@@ -17,7 +17,10 @@ export function InvoiceSettings({ hostId, isOwner }: { hostId: string; isOwner: 
   const fetchSettings = useServerFn(getInvoiceSettings);
   const save = useServerFn(saveInvoiceSettings);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["invoice-settings", hostId], queryFn: () => fetchSettings({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["invoice-settings", hostId],
+    queryFn: () => fetchSettings({ data: { hostId } }),
+  });
   const [form, setForm] = useState({ enabled: false, taxNumber: "", prefix: "INV" });
   const [busy, setBusy] = useState(false);
 
@@ -28,7 +31,9 @@ export function InvoiceSettings({ hostId, isOwner }: { hostId: string; isOwner: 
 
   if (!s?.available) return null;
   const taxName = s.taxLabel || s.terms.name;
-  const dirty = changed(form, { enabled: s.enabled, taxNumber: s.taxNumber, prefix: s.prefix }) && !!form.prefix;
+  const dirty =
+    changed(form, { enabled: s.enabled, taxNumber: s.taxNumber, prefix: s.prefix }) &&
+    !!form.prefix;
 
   async function submit() {
     setBusy(true);
@@ -60,7 +65,11 @@ export function InvoiceSettings({ hostId, isOwner }: { hostId: string; isOwner: 
           <Label htmlFor="inv-on" className="text-base">
             {copy.enable}
           </Label>
-          <Switch id="inv-on" checked={form.enabled} onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))} />
+          <Switch
+            id="inv-on"
+            checked={form.enabled}
+            onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))}
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
@@ -81,9 +90,16 @@ export function InvoiceSettings({ hostId, isOwner }: { hostId: string; isOwner: 
               className="h-11 uppercase"
               maxLength={12}
               value={form.prefix}
-              onChange={(e) => setForm((f) => ({ ...f, prefix: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "") }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  prefix: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""),
+                }))
+              }
             />
-            <p className="text-xs text-muted-foreground">{copy.prefixHint(invoiceNumber(form.prefix, 1))}</p>
+            <p className="text-xs text-muted-foreground">
+              {copy.prefixHint(invoiceNumber(form.prefix, 1))}
+            </p>
           </div>
         </div>
         <p className="rounded-xl bg-muted p-3 text-sm">

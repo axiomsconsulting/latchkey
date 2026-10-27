@@ -10,11 +10,24 @@ const m = (direction: "inbound" | "outbound", at: string, extra: Partial<Msg> = 
   body: `${direction} ${at}`,
   ...extra,
 });
-const r = (status: string, total = 500): Req => ({ id: status, status, total_pence: total, items: [], created_at: "2026-10-16T09:00:00Z" });
+const r = (status: string, total = 500): Req => ({
+  id: status,
+  status,
+  total_pence: total,
+  items: [],
+  created_at: "2026-10-16T09:00:00Z",
+});
 
 describe("what a stay's conversation is waiting on", () => {
   it("counts new guest messages and shows the latest", () => {
-    const c = summarise([m("outbound", "2026-10-16T08:00:00Z", { read_by_guest_at: "x" }), m("inbound", "2026-10-16T09:00:00Z")], [], []);
+    const c = summarise(
+      [
+        m("outbound", "2026-10-16T08:00:00Z", { read_by_guest_at: "x" }),
+        m("inbound", "2026-10-16T09:00:00Z"),
+      ],
+      [],
+      [],
+    );
     expect(c.chips).toEqual([{ key: "unread", count: 1 }]);
     expect(c.lastFromGuest).toBe(true);
     expect(c.lastBody).toBe("inbound 2026-10-16T09:00:00Z");
@@ -27,10 +40,22 @@ describe("what a stay's conversation is waiting on", () => {
   });
 
   it("tracks requests to approve, unpaid and to deliver, and open service requests", () => {
-    const c = summarise([], [r("requested"), r("suggested"), r("awaiting_payment", 1200), r("approved"), r("confirmed"), r("delivered"), r("declined")], [
-      { id: "j1", status: "new", title: "Towels", created_at: "2026-10-16T10:00:00Z" },
-      { id: "j2", status: "done", title: "Tap", created_at: "2026-10-15T10:00:00Z" },
-    ]);
+    const c = summarise(
+      [],
+      [
+        r("requested"),
+        r("suggested"),
+        r("awaiting_payment", 1200),
+        r("approved"),
+        r("confirmed"),
+        r("delivered"),
+        r("declined"),
+      ],
+      [
+        { id: "j1", status: "new", title: "Towels", created_at: "2026-10-16T10:00:00Z" },
+        { id: "j2", status: "done", title: "Tap", created_at: "2026-10-15T10:00:00Z" },
+      ],
+    );
     expect(c.chips).toEqual([
       { key: "approve", count: 2 },
       { key: "unpaid", count: 1 },
@@ -42,15 +67,33 @@ describe("what a stay's conversation is waiting on", () => {
   });
 
   it("notes messages the guest hasn't seen, and when everything is sorted", () => {
-    expect(summarise([m("outbound", "2026-10-16T09:00:00Z")], [], []).chips).toEqual([{ key: "unseen", count: 1 }]);
+    expect(summarise([m("outbound", "2026-10-16T09:00:00Z")], [], []).chips).toEqual([
+      { key: "unseen", count: 1 },
+    ]);
     expect(summarise([m("outbound", "2026-10-16T09:00:00Z")], [], []).needsHost).toBe(false);
-    expect(summarise([m("outbound", "2026-10-16T09:00:00Z", { read_by_guest_at: "x" })], [r("delivered")], []).chips).toEqual([{ key: "sorted", count: 0 }]);
+    expect(
+      summarise(
+        [m("outbound", "2026-10-16T09:00:00Z", { read_by_guest_at: "x" })],
+        [r("delivered")],
+        [],
+      ).chips,
+    ).toEqual([{ key: "sorted", count: 0 }]);
     expect(summarise([], [], []).chips).toEqual([]);
   });
 
   it("puts stays waiting on the host first", () => {
-    const quiet = { id: "a", conversation: summarise([m("outbound", "2026-10-16T12:00:00Z", { read_by_guest_at: "x" })], [], []) };
-    const waiting = { id: "b", conversation: summarise([m("inbound", "2026-10-15T08:00:00Z")], [], []) };
+    const quiet = {
+      id: "a",
+      conversation: summarise(
+        [m("outbound", "2026-10-16T12:00:00Z", { read_by_guest_at: "x" })],
+        [],
+        [],
+      ),
+    };
+    const waiting = {
+      id: "b",
+      conversation: summarise([m("inbound", "2026-10-15T08:00:00Z")], [], []),
+    };
     expect(byAttention([quiet, waiting]).map((x) => x.id)).toEqual(["b", "a"]);
   });
 
@@ -59,7 +102,9 @@ describe("what a stay's conversation is waiting on", () => {
     expect(scopeOf({ check_in_date: "2026-10-14", check_out_date: "2026-10-18" }, T)).toBe("now");
     expect(scopeOf({ check_in_date: T, check_out_date: "2026-10-18" }, T)).toBe("now");
     expect(scopeOf({ check_in_date: "2026-10-12", check_out_date: T }, T)).toBe("now");
-    expect(scopeOf({ check_in_date: "2026-10-20", check_out_date: "2026-10-22" }, T)).toBe("upcoming");
+    expect(scopeOf({ check_in_date: "2026-10-20", check_out_date: "2026-10-22" }, T)).toBe(
+      "upcoming",
+    );
     expect(scopeOf({ check_in_date: "2026-10-01", check_out_date: "2026-10-03" }, T)).toBe("past");
   });
 });

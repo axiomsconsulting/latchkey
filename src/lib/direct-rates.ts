@@ -33,10 +33,24 @@ export function normaliseOffers(raw: unknown): SeasonalOffer[] {
     const to = typeof o["to"] === "string" && ISO.test(o["to"]) ? o["to"] : null;
     const percent = typeof o["percent"] === "number" ? Math.round(o["percent"]) : NaN;
     if (!from || !to || to < from || !(percent >= 1 && percent <= 90)) continue;
-    const label = typeof o["label"] === "string" ? o["label"].replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 60) : "";
-    const ids = Array.isArray(o["roomIds"]) ? o["roomIds"].filter((r): r is string => typeof r === "string" && /^[0-9a-f-]{36}$/i.test(r)).slice(0, 100) : null;
+    const label =
+      typeof o["label"] === "string"
+        ? o["label"]
+            // eslint-disable-next-line no-control-regex -- strips control characters from text people type
+            .replace(/[\u0000-\u001f<>]/g, "")
+            .trim()
+            .slice(0, 60)
+        : "";
+    const ids = Array.isArray(o["roomIds"])
+      ? o["roomIds"]
+          .filter((r): r is string => typeof r === "string" && /^[0-9a-f-]{36}$/i.test(r))
+          .slice(0, 100)
+      : null;
     out.push({
-      id: typeof o["id"] === "string" && /^[a-z0-9-]{4,40}$/i.test(o["id"]) ? o["id"] : `offer-${from}-${to}-${percent}`,
+      id:
+        typeof o["id"] === "string" && /^[a-z0-9-]{4,40}$/i.test(o["id"])
+          ? o["id"]
+          : `offer-${from}-${to}-${percent}`,
       label: label || `${percent}% off`,
       from,
       to,
@@ -56,7 +70,11 @@ export function nightsOf(checkIn: string, checkOut: string): string[] {
 }
 
 /** The best offer for a room on one night, if any. */
-export function offerOn(offers: SeasonalOffer[], roomId: string, night: string): SeasonalOffer | null {
+export function offerOn(
+  offers: SeasonalOffer[],
+  roomId: string,
+  night: string,
+): SeasonalOffer | null {
   let best: SeasonalOffer | null = null;
   for (const o of offers) {
     if (night < o.from || night > o.to) continue;
@@ -77,7 +95,13 @@ export type Quote = {
 };
 
 /** The estimated total for a room over a stay, with each night's best offer taken off. */
-export function quoteStay(ratePence: number, offers: SeasonalOffer[], roomId: string, checkIn: string, checkOut: string): Quote {
+export function quoteStay(
+  ratePence: number,
+  offers: SeasonalOffer[],
+  roomId: string,
+  checkIn: string,
+  checkOut: string,
+): Quote {
   const nights = nightsOf(checkIn, checkOut);
   let discount = 0;
   const applied = new Map<string, SeasonalOffer>();
@@ -88,23 +112,41 @@ export function quoteStay(ratePence: number, offers: SeasonalOffer[], roomId: st
     applied.set(o.id, o);
   }
   const base = ratePence * nights.length;
-  return { nights: nights.length, base, discount, total: base - discount, applied: [...applied.values()] };
+  return {
+    nights: nights.length,
+    base,
+    discount,
+    total: base - discount,
+    applied: [...applied.values()],
+  };
 }
 
 /** Is any night of the stay already taken in this room? (Stays as [checkIn, checkOut) date ranges.) */
-export function roomTaken(stays: Array<{ from: string; to: string }>, checkIn: string, checkOut: string): boolean {
+export function roomTaken(
+  stays: Array<{ from: string; to: string }>,
+  checkIn: string,
+  checkOut: string,
+): boolean {
   return stays.some((s) => s.from < checkOut && checkIn < s.to);
 }
 
 /** Offers still to come (or running), for the page's "seasonal offers" list. */
-export const upcomingOffers = (offers: SeasonalOffer[], today: string) => offers.filter((o) => o.to >= today);
+export const upcomingOffers = (offers: SeasonalOffer[], today: string) =>
+  offers.filter((o) => o.to >= today);
 
 /** "£120" / "¥12,000" from hundredths. */
 export function money(pence: number, currency: string): string {
-  const zero = ["JPY", "KRW", "VND", "CLP", "ISK", "HUF", "TWD", "UGX", "XAF", "XOF"].includes(currency);
+  const zero = ["JPY", "KRW", "VND", "CLP", "ISK", "HUF", "TWD", "UGX", "XAF", "XOF"].includes(
+    currency,
+  );
   // Whole amounts without ".00"; any pence with both digits.
   const digits = zero || pence % 100 === 0 ? 0 : 2;
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(pence / 100);
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(pence / 100);
 }
 
 /**
@@ -112,11 +154,20 @@ export function money(pence: number, currency: string): string {
  * one running today (whole-property offers first), else the next one to
  * start within six months; null when there's none.
  */
-export function offerToMention(offers: SeasonalOffer[], today: string): (SeasonalOffer & { running: boolean }) | null {
-  const horizon = new Date(Date.parse(`${today}T00:00:00Z`) + 183 * 86_400_000).toISOString().slice(0, 10);
+export function offerToMention(
+  offers: SeasonalOffer[],
+  today: string,
+): (SeasonalOffer & { running: boolean }) | null {
+  const horizon = new Date(Date.parse(`${today}T00:00:00Z`) + 183 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
   const rank = (o: SeasonalOffer) => o.percent + (o.roomIds ? 0 : 0.5);
-  const running = offers.filter((o) => o.from <= today && o.to >= today).sort((a, b) => rank(b) - rank(a))[0];
+  const running = offers
+    .filter((o) => o.from <= today && o.to >= today)
+    .sort((a, b) => rank(b) - rank(a))[0];
   if (running) return { ...running, running: true };
-  const next = offers.filter((o) => o.from > today && o.from <= horizon).sort((a, b) => a.from.localeCompare(b.from) || rank(b) - rank(a))[0];
+  const next = offers
+    .filter((o) => o.from > today && o.from <= horizon)
+    .sort((a, b) => a.from.localeCompare(b.from) || rank(b) - rank(a))[0];
   return next ? { ...next, running: false } : null;
 }

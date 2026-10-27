@@ -978,9 +978,18 @@ function TField({
 }
 
 /** The open decisions (D-numbers in the build notes) the super admin may change. */
-const EDITABLE: Array<{ key: keyof PartnerConfig; label: string; options?: string[]; type?: "date" | "email" }> = [
-  { key: "signupsOpen", label: "Join page takes applications (closed: \"coming soon\")" },
-  { key: "noticeEmail", label: "Notice email for partners (Annex B; signing needs it)", type: "email" },
+const EDITABLE: Array<{
+  key: keyof PartnerConfig;
+  label: string;
+  options?: string[];
+  type?: "date" | "email";
+}> = [
+  { key: "signupsOpen", label: 'Join page takes applications (closed: "coming soon")' },
+  {
+    key: "noticeEmail",
+    label: "Notice email for partners (Annex B; signing needs it)",
+    type: "email",
+  },
   { key: "launchDate", label: "Programme launch date (Annex B)", type: "date" },
   { key: "idImagesStored", label: "Keep partner ID photos for review (17.1)" },
   { key: "holdDays", label: "Hold Period, days (D10; agreement v1.0 says 45)" },

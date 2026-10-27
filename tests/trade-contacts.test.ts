@@ -33,10 +33,7 @@ describe("internationalDigits", () => {
 
 describe("contactLinks", () => {
   it("builds call, text, WhatsApp and email links", () => {
-    const links = contactLinks(
-      { phone: "07700 900123", email: "sam@example.com" },
-      "GB",
-    );
+    const links = contactLinks({ phone: "07700 900123", email: "sam@example.com" }, "GB");
     expect(links.tel).toBe("tel:07700900123");
     expect(links.whatsapp).toBe("https://wa.me/447700900123");
     expect(links.email).toBe("mailto:sam@example.com");
@@ -65,7 +62,15 @@ describe("matchCategory", () => {
 
 describe("guessTradeMapping", () => {
   it("recognises common spreadsheet headings", () => {
-    const m = guessTradeMapping(["Name", "Company", "Trade", "Mobile", "WhatsApp", "Email", "Notes"]);
+    const m = guessTradeMapping([
+      "Name",
+      "Company",
+      "Trade",
+      "Mobile",
+      "WhatsApp",
+      "Email",
+      "Notes",
+    ]);
     expect(m.name).toBe(0);
     expect(m.company_name).toBe(1);
     expect(m.category).toBe(2);

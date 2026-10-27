@@ -11,14 +11,30 @@ import { common, platformMsgCopy as copy } from "@/content/copy";
 import { formatUkDate } from "@/lib/dates";
 import { ensureInboundAddress, getNotifySettings } from "@/lib/notify.functions";
 
-const PLATFORM: Record<string, string> = { airbnb: "Airbnb", booking_com: "Booking.com", vrbo: "Vrbo", expedia: "Expedia", other: "Other", gmail_confirm: "Gmail" };
+const PLATFORM: Record<string, string> = {
+  airbnb: "Airbnb",
+  booking_com: "Booking.com",
+  vrbo: "Vrbo",
+  expedia: "Expedia",
+  other: "Other",
+  gmail_confirm: "Gmail",
+};
 
 /** Settings: forward booking-site message emails so each lands in the guest's conversation. */
-export function PlatformMessagesSettings({ hostId, isOwner }: { hostId: string; isOwner: boolean }) {
+export function PlatformMessagesSettings({
+  hostId,
+  isOwner,
+}: {
+  hostId: string;
+  isOwner: boolean;
+}) {
   const fetchFn = useServerFn(getNotifySettings);
   const ensure = useServerFn(ensureInboundAddress);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["notify-settings", hostId], queryFn: () => fetchFn({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["notify-settings", hostId],
+    queryFn: () => fetchFn({ data: { hostId } }),
+  });
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const d = q.data;
@@ -58,7 +74,8 @@ export function PlatformMessagesSettings({ hostId, isOwner }: { hostId: string; 
                 })
               }
             >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />} {copied ? copy.copied : copy.copy}
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}{" "}
+              {copied ? copy.copied : copy.copy}
             </Button>
           </div>
         </div>
@@ -121,11 +138,19 @@ export function PlatformMessagesSettings({ hostId, isOwner }: { hostId: string; 
             <ul className="divide-y divide-border text-sm">
               {received.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center gap-2 py-1.5">
-                  <span className="w-24 shrink-0 text-xs text-muted-foreground">{formatUkDate(r.received_at.slice(0, 10))}</span>
-                  <span className="shrink-0 text-xs font-medium">{PLATFORM[r.platform ?? "other"] ?? r.platform}</span>
+                  <span className="w-24 shrink-0 text-xs text-muted-foreground">
+                    {formatUkDate(r.received_at.slice(0, 10))}
+                  </span>
+                  <span className="shrink-0 text-xs font-medium">
+                    {PLATFORM[r.platform ?? "other"] ?? r.platform}
+                  </span>
                   <span className="min-w-0 flex-1 truncate">{r.guest_name ?? r.subject}</span>
                   {r.booking_id ? (
-                    <Link to="/app/bookings" search={{ guest: r.booking_id }} className="text-xs text-success hover:underline">
+                    <Link
+                      to="/app/bookings"
+                      search={{ guest: r.booking_id }}
+                      className="text-xs text-success hover:underline"
+                    >
                       {copy.matched}
                     </Link>
                   ) : (

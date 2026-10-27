@@ -8,8 +8,15 @@ import { listTeam } from "@/lib/team.functions";
 import { cn } from "@/lib/utils";
 
 function initials(name: string) {
-  const parts = name.replace(/@.*/, "").split(/[\s._-]+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase() || "?";
+  const parts = name
+    .replace(/@.*/, "")
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+  return (
+    (
+      (parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")
+    ).toUpperCase() || "?"
+  );
 }
 
 /** The signed-in person: photo or initials, and their name when there's room. */
@@ -25,16 +32,29 @@ export function useMe() {
     staleTime: 5 * 60_000,
   });
   const me = team.data?.members.find((m) => m.isYou) ?? null;
-  return me ? { name: me.name || me.email, email: me.email, avatarUrl: me.avatarUrl, role: me.role } : null;
+  return me
+    ? { name: me.name || me.email, email: me.email, avatarUrl: me.avatarUrl, role: me.role }
+    : null;
 }
 
-export function Avatar({ name, url, className }: { name: string; url: string | null; className?: string }) {
+export function Avatar({
+  name,
+  url,
+  className,
+}: {
+  name: string;
+  url: string | null;
+  className?: string;
+}) {
   return url ? (
     <img src={url} alt="" className={cn("size-8 shrink-0 rounded-full object-cover", className)} />
   ) : (
     <span
       aria-hidden
-      className={cn("grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground", className)}
+      className={cn(
+        "grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground",
+        className,
+      )}
     >
       {initials(name)}
     </span>
@@ -45,7 +65,13 @@ export function Avatar({ name, url, className }: { name: string; url: string | n
  * Opens your own profile (photo, name, email) in Settings → Team.
  * `compact` shows the picture only, for the icon rail and phone header.
  */
-export function UserChip({ compact = false, className }: { compact?: boolean; className?: string }) {
+export function UserChip({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   const me = useMe();
   if (!me) return null;
   return (

@@ -16,7 +16,12 @@
 export const NIGHT_MODES = ["glow", "flow", "aurora"] as const;
 export type NightMode = (typeof NIGHT_MODES)[number];
 /** Patterns saved before they were grouped. */
-const OLD_MODES: Record<string, NightMode> = { breathe: "glow", steady: "glow", sweep: "flow", cycle: "flow" };
+const OLD_MODES: Record<string, NightMode> = {
+  breathe: "glow",
+  steady: "glow",
+  sweep: "flow",
+  cycle: "flow",
+};
 
 /**
  * Five bright colour families, each a few close shades so the light drifts
@@ -33,12 +38,19 @@ export const NIGHT_PALETTES = {
 export type NightPalette = keyof typeof NIGHT_PALETTES;
 export const NIGHT_PALETTE_KEYS = Object.keys(NIGHT_PALETTES) as NightPalette[];
 /** Colours saved before they were grouped into five families. */
-const OLD_PALETTES: Record<string, NightPalette> = { sunset: "ember", lavender: "moonlight", ocean: "moonlight", forest: "meadow", spectrum: "candle" };
+const OLD_PALETTES: Record<string, NightPalette> = {
+  sunset: "ember",
+  lavender: "moonlight",
+  ocean: "moonlight",
+  forest: "meadow",
+  spectrum: "candle",
+};
 
 /** Speed 1 (slowest) to 5 (liveliest); 3 is how the preview always looked. Each multiplies every period. */
 export const NIGHT_SPEED = { min: 1, max: 5, default: 3 } as const;
 const SPEED_FACTOR = [3, 1.7, 1, 0.6, 0.35] as const;
-export const speedFactor = (speed: number) => SPEED_FACTOR[Math.min(4, Math.max(0, Math.round(speed) - 1))]!;
+export const speedFactor = (speed: number) =>
+  SPEED_FACTOR[Math.min(4, Math.max(0, Math.round(speed) - 1))]!;
 /** Speeds saved as words before the slider. */
 const OLD_SPEEDS: Record<string, number> = { slow: 2, gentle: 3, lively: 4 };
 
@@ -67,16 +79,37 @@ export const DEFAULT_REST: KioskRest = {
   clockQr: false,
 };
 
-const pick = <T extends string>(v: unknown, options: readonly T[], fallback: T): T => (typeof v === "string" && (options as readonly string[]).includes(v) ? (v as T) : fallback);
+const pick = <T extends string>(v: unknown, options: readonly T[], fallback: T): T =>
+  typeof v === "string" && (options as readonly string[]).includes(v) ? (v as T) : fallback;
 
 export function normaliseRest(raw: unknown): KioskRest {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   return {
     nightLight: r["nightLight"] === true,
     nightWhen: pick(r["nightWhen"], ["always", "quiet"] as const, DEFAULT_REST.nightWhen),
-    mode: pick(typeof r["mode"] === "string" ? (OLD_MODES[r["mode"]] ?? r["mode"]) : null, NIGHT_MODES, DEFAULT_REST.mode),
-    palette: pick(typeof r["palette"] === "string" ? (OLD_PALETTES[r["palette"]] ?? r["palette"]) : null, NIGHT_PALETTE_KEYS, DEFAULT_REST.palette),
-    speed: Math.min(NIGHT_SPEED.max, Math.max(NIGHT_SPEED.min, Math.round(typeof r["speed"] === "number" ? r["speed"] : typeof r["speed"] === "string" ? (OLD_SPEEDS[r["speed"]] ?? NIGHT_SPEED.default) : NIGHT_SPEED.default))),
+    mode: pick(
+      typeof r["mode"] === "string" ? (OLD_MODES[r["mode"]] ?? r["mode"]) : null,
+      NIGHT_MODES,
+      DEFAULT_REST.mode,
+    ),
+    palette: pick(
+      typeof r["palette"] === "string" ? (OLD_PALETTES[r["palette"]] ?? r["palette"]) : null,
+      NIGHT_PALETTE_KEYS,
+      DEFAULT_REST.palette,
+    ),
+    speed: Math.min(
+      NIGHT_SPEED.max,
+      Math.max(
+        NIGHT_SPEED.min,
+        Math.round(
+          typeof r["speed"] === "number"
+            ? r["speed"]
+            : typeof r["speed"] === "string"
+              ? (OLD_SPEEDS[r["speed"]] ?? NIGHT_SPEED.default)
+              : NIGHT_SPEED.default,
+        ),
+      ),
+    ),
     otherwise: pick(r["otherwise"], ["clock", "blank"] as const, DEFAULT_REST.otherwise),
     clockQr: r["clockQr"] === true,
   };
@@ -105,8 +138,20 @@ const tidy = (v: number) => Math.round(v * 100) / 100;
 export function nightLookFor(own: unknown): NightLook {
   const o = (own && typeof own === "object" ? own : {}) as Record<string, unknown>;
   return {
-    brightness: tidy(clamp(num(o["brightness"]) ?? DEFAULT_NIGHT_LOOK.brightness, NIGHT_LOOK.brightness.min, NIGHT_LOOK.brightness.max)),
-    depth: tidy(clamp(num(o["depth"]) ?? DEFAULT_NIGHT_LOOK.depth, NIGHT_LOOK.depth.min, NIGHT_LOOK.depth.max)),
+    brightness: tidy(
+      clamp(
+        num(o["brightness"]) ?? DEFAULT_NIGHT_LOOK.brightness,
+        NIGHT_LOOK.brightness.min,
+        NIGHT_LOOK.brightness.max,
+      ),
+    ),
+    depth: tidy(
+      clamp(
+        num(o["depth"]) ?? DEFAULT_NIGHT_LOOK.depth,
+        NIGHT_LOOK.depth.min,
+        NIGHT_LOOK.depth.max,
+      ),
+    ),
   };
 }
 
@@ -117,7 +162,14 @@ const rgb = (hex: string): Rgb => {
   const h = hex.replace("#", "");
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as Rgb;
 };
-const hex = (c: Rgb) => `#${c.map((v) => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, "0")).join("")}`;
+const hex = (c: Rgb) =>
+  `#${c
+    .map((v) =>
+      Math.round(clamp(v, 0, 255))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
 
 /** a → b by f (0..1). */
 export function mix(a: string, b: string, f: number): string {
@@ -172,7 +224,11 @@ export type NightFrame = {
 };
 
 /** The night light at `t` seconds since it started. */
-export function nightFrame(rest: Pick<KioskRest, "mode" | "palette" | "speed">, t: number, depth: number): NightFrame {
+export function nightFrame(
+  rest: Pick<KioskRest, "mode" | "palette" | "speed">,
+  t: number,
+  depth: number,
+): NightFrame {
   const k = speedFactor(rest.speed);
   const colours = NIGHT_PALETTES[rest.palette].map((c) => deepen(c, depth));
   const turn = (period: number) => t / (period * k);
@@ -183,7 +239,10 @@ export function nightFrame(rest: Pick<KioskRest, "mode" | "palette" | "speed">, 
       // A soft spot of the next colour keeps even one colour from sitting flat.
       const a = along(colours, drift);
       const b = along(colours, drift + 0.25);
-      return { background: `radial-gradient(120% 120% at 50% 40%, ${b} 0%, ${a} 70%)`, level: GLOW_LOW + (1 - GLOW_LOW) * swell };
+      return {
+        background: `radial-gradient(120% 120% at 50% 40%, ${b} 0%, ${a} 70%)`,
+        level: GLOW_LOW + (1 - GLOW_LOW) * swell,
+      };
     }
     case "flow": {
       const a = along(colours, drift);
@@ -206,7 +265,10 @@ export function nightFrame(rest: Pick<KioskRest, "mode" | "palette" | "speed">, 
         const c = along(colours, drift + i / 3);
         return `radial-gradient(circle at ${x.toFixed(1)}% ${y.toFixed(1)}%, ${c} 0%, ${c}00 62%)`;
       };
-      return { background: `${blob(0)}, ${blob(1)}, ${blob(2)}, ${mix(along(colours, drift + 0.5), "#000000", 0.15)}`, level: 1 };
+      return {
+        background: `${blob(0)}, ${blob(1)}, ${blob(2)}, ${mix(along(colours, drift + 0.5), "#000000", 0.15)}`,
+        level: 1,
+      };
     }
   }
 }
@@ -217,7 +279,10 @@ export function nightFrame(rest: Pick<KioskRest, "mode" | "palette" | "speed">, 
  * holds one colour for long (no burn-in), without any band or line that could
  * look like a fault. CSS background and position at `t` seconds.
  */
-export function carePattern(t: number, speed: number): { background: string; backgroundPosition: string } {
+export function carePattern(
+  t: number,
+  speed: number,
+): { background: string; backgroundPosition: string } {
   const k = speedFactor(speed);
   const p = (t / (PERIODS.care * k)) * 2 * Math.PI;
   const x = 50 + 40 * Math.sin(p);
@@ -255,7 +320,10 @@ export function qrSpot(at: Date): QrSpot {
  * the QR code: just the nearest city behind, home and the nearest ahead, so
  * the QR fits beside them. Otherwise all five in one row.
  */
-export function arrangeClocks<C extends { home: boolean }>(clocks: C[], o: { qr: boolean; portrait: boolean }): { main: C | null; row: C[] } {
+export function arrangeClocks<C extends { home: boolean }>(
+  clocks: C[],
+  o: { qr: boolean; portrait: boolean },
+): { main: C | null; row: C[] } {
   const at = clocks.findIndex((c) => c.home);
   if (o.portrait && at >= 0) return { main: clocks[at]!, row: clocks.filter((_, i) => i !== at) };
   if (o.qr && at >= 0) return { main: null, row: clocks.slice(Math.max(0, at - 1), at + 2) };

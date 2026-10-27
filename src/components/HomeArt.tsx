@@ -1,5 +1,12 @@
 import { useSite } from "@/hooks/use-site";
-import { artFor, DEFAULT_HOME_ART, DEFAULT_HOME_ART_STYLE, type HomeArtItem, type HomeArtSlot, type HomeArtStyle } from "@/lib/home-art";
+import {
+  artFor,
+  DEFAULT_HOME_ART,
+  DEFAULT_HOME_ART_STYLE,
+  type HomeArtItem,
+  type HomeArtSlot,
+  type HomeArtStyle,
+} from "@/lib/home-art";
 
 /**
  * The super admin's photo for one place on the home page (src/lib/home-art.ts),
@@ -17,7 +24,15 @@ export function HomeArt({ slot }: { slot: HomeArtSlot }) {
 }
 
 /** One faint full-width photo; also the Latchkey admin's preview. */
-export function ArtBackdrop({ item, style, contained = false }: { item: Pick<HomeArtItem, "src" | "side" | "opacity">; style: HomeArtStyle; contained?: boolean }) {
+export function ArtBackdrop({
+  item,
+  style,
+  contained = false,
+}: {
+  item: Pick<HomeArtItem, "src" | "side" | "opacity">;
+  style: HomeArtStyle;
+  contained?: boolean;
+}) {
   return (
     <div
       aria-hidden
@@ -36,12 +51,27 @@ export function ArtBackdrop({ item, style, contained = false }: { item: Pick<Hom
           decoding="async"
           loading="lazy"
           className="size-full select-none object-cover"
-          style={{ objectPosition: item.side === "left" ? "left center" : item.side === "right" ? "right center" : "center", filter: `grayscale(${style.grey})` }}
+          style={{
+            objectPosition:
+              item.side === "left"
+                ? "left center"
+                : item.side === "right"
+                  ? "right center"
+                  : "center",
+            filter: `grayscale(${style.grey})`,
+          }}
         />
-        {style.tint && style.tintStrength > 0 ? <div className="absolute inset-0" style={{ background: style.tint, opacity: style.tintStrength, mixBlendMode: "color" }} /> : null}
+        {style.tint && style.tintStrength > 0 ? (
+          <div
+            className="absolute inset-0"
+            style={{ background: style.tint, opacity: style.tintStrength, mixBlendMode: "color" }}
+          />
+        ) : null}
       </div>
       {/* Dimming: a wash of the page's own background colour. */}
-      {style.dim > 0 ? <div className="absolute inset-0 bg-background" style={{ opacity: style.dim }} /> : null}
+      {style.dim > 0 ? (
+        <div className="absolute inset-0 bg-background" style={{ opacity: style.dim }} />
+      ) : null}
     </div>
   );
 }

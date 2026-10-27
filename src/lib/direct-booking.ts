@@ -42,11 +42,15 @@ export const DEFAULT_DIRECT_BOOKING: DirectBooking = {
   children: false,
 };
 
-const int = (v: unknown, lo: number, hi: number, fb: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : fb);
+const int = (v: unknown, lo: number, hi: number, fb: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : fb;
 
 export function normaliseDirectBooking(raw: unknown): DirectBooking {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-  const n = (r["nonRef"] && typeof r["nonRef"] === "object" ? r["nonRef"] : {}) as Record<string, unknown>;
+  const n = (r["nonRef"] && typeof r["nonRef"] === "object" ? r["nonRef"] : {}) as Record<
+    string,
+    unknown
+  >;
   const kind = n["kind"] === "amount" ? "amount" : "percent";
   return {
     instant: r["instant"] === true,
@@ -55,7 +59,8 @@ export function normaliseDirectBooking(raw: unknown): DirectBooking {
     atProperty: r["atProperty"] === true,
     freeCancelDays: int(r["freeCancelDays"], 0, 60, DEFAULT_DIRECT_BOOKING.freeCancelDays),
     nonRef: {
-      enabled: typeof n["enabled"] === "boolean" ? n["enabled"] : DEFAULT_DIRECT_BOOKING.nonRef.enabled,
+      enabled:
+        typeof n["enabled"] === "boolean" ? n["enabled"] : DEFAULT_DIRECT_BOOKING.nonRef.enabled,
       kind,
       value: kind === "percent" ? int(n["value"], 1, 50, 10) : int(n["value"], 0, 10_000_000, 1000),
     },
@@ -65,14 +70,28 @@ export function normaliseDirectBooking(raw: unknown): DirectBooking {
 }
 
 /** The nightly rate on each plan (the non-refundable one, when offered). */
-export function planRates(ratePence: number, s: DirectBooking): { flex: number; nonref: number | null } {
+export function planRates(
+  ratePence: number,
+  s: DirectBooking,
+): { flex: number; nonref: number | null } {
   if (!s.nonRef.enabled) return { flex: ratePence, nonref: null };
-  const nonref = s.nonRef.kind === "percent" ? Math.round((ratePence * (100 - s.nonRef.value)) / 100) : Math.max(0, ratePence - s.nonRef.value);
+  const nonref =
+    s.nonRef.kind === "percent"
+      ? Math.round((ratePence * (100 - s.nonRef.value)) / 100)
+      : Math.max(0, ratePence - s.nonRef.value);
   return { flex: ratePence, nonref: nonref < ratePence ? nonref : null };
 }
 
 /** The estimated total on a plan, with each night's seasonal offer taken off as well. */
-export function quotePlan(ratePence: number, plan: RatePlan, s: DirectBooking, offers: SeasonalOffer[], roomId: string, checkIn: string, checkOut: string): Quote | null {
+export function quotePlan(
+  ratePence: number,
+  plan: RatePlan,
+  s: DirectBooking,
+  offers: SeasonalOffer[],
+  roomId: string,
+  checkIn: string,
+  checkOut: string,
+): Quote | null {
   const r = planRates(ratePence, s);
   const nightly = plan === "flex" ? r.flex : r.nonref;
   return nightly === null ? null : quoteStay(nightly, offers, roomId, checkIn, checkOut);
@@ -94,7 +113,8 @@ export function payMethods(s: DirectBooking, ready: { card: boolean; bank: boole
 }
 
 /** Direct booking is on and there's at least one way to pay. */
-export const bookable = (s: DirectBooking, ready: { card: boolean; bank: boolean }) => s.instant && payMethods(s, ready).length > 0;
+export const bookable = (s: DirectBooking, ready: { card: boolean; bank: boolean }) =>
+  s.instant && payMethods(s, ready).length > 0;
 
 /** A booking reference: 8 letters and digits, never ones easily confused (0/O, 1/I/L). */
 export function newReference(random: () => number = Math.random): string {
@@ -106,11 +126,61 @@ export function newReference(random: () => number = Math.random): string {
 
 /** The currency most people in a country pay in (for showing an approximate amount). */
 const COUNTRY_CURRENCY: Record<string, string> = {
-  GB: "GBP", IE: "EUR", FR: "EUR", DE: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", BE: "EUR", PT: "EUR", AT: "EUR", FI: "EUR", GR: "EUR", LU: "EUR", SK: "EUR", SI: "EUR", EE: "EUR", LV: "EUR", LT: "EUR", MT: "EUR", CY: "EUR", HR: "EUR",
-  US: "USD", CA: "CAD", AU: "AUD", NZ: "NZD", JP: "JPY", CN: "CNY", HK: "HKD", SG: "SGD", IN: "INR", CH: "CHF", NO: "NOK", SE: "SEK", DK: "DKK", PL: "PLN", CZ: "CZK", HU: "HUF", RO: "RON", BG: "BGN",
-  TR: "TRY", AE: "AED", SA: "SAR", ZA: "ZAR", BR: "BRL", MX: "MXN", KR: "KRW", TH: "THB", MY: "MYR", ID: "IDR", PH: "PHP", IL: "ILS", IS: "ISK",
+  GB: "GBP",
+  IE: "EUR",
+  FR: "EUR",
+  DE: "EUR",
+  ES: "EUR",
+  IT: "EUR",
+  NL: "EUR",
+  BE: "EUR",
+  PT: "EUR",
+  AT: "EUR",
+  FI: "EUR",
+  GR: "EUR",
+  LU: "EUR",
+  SK: "EUR",
+  SI: "EUR",
+  EE: "EUR",
+  LV: "EUR",
+  LT: "EUR",
+  MT: "EUR",
+  CY: "EUR",
+  HR: "EUR",
+  US: "USD",
+  CA: "CAD",
+  AU: "AUD",
+  NZ: "NZD",
+  JP: "JPY",
+  CN: "CNY",
+  HK: "HKD",
+  SG: "SGD",
+  IN: "INR",
+  CH: "CHF",
+  NO: "NOK",
+  SE: "SEK",
+  DK: "DKK",
+  PL: "PLN",
+  CZ: "CZK",
+  HU: "HUF",
+  RO: "RON",
+  BG: "BGN",
+  TR: "TRY",
+  AE: "AED",
+  SA: "SAR",
+  ZA: "ZAR",
+  BR: "BRL",
+  MX: "MXN",
+  KR: "KRW",
+  TH: "THB",
+  MY: "MYR",
+  ID: "IDR",
+  PH: "PHP",
+  IL: "ILS",
+  IS: "ISK",
 };
-export const currencyOfCountry = (country: string | null | undefined) => (country ? (COUNTRY_CURRENCY[country.toUpperCase()] ?? null) : null);
+export const currencyOfCountry = (country: string | null | undefined) =>
+  country ? (COUNTRY_CURRENCY[country.toUpperCase()] ?? null) : null;
 
 /** The guest's country from their browser's language ("de-DE" → DE), if it says. */
 export function countryOfLocale(locale: string | null | undefined): string | null {
@@ -127,7 +197,8 @@ export const convert = (pence: number, rate: number) => Math.round(pence * rate)
  * there are more rooms than guests.
  */
 export function splitGuests(total: number, sleeps: number[]): number[] | null {
-  if (!sleeps.length || total < sleeps.length || total > sleeps.reduce((a, b) => a + b, 0)) return null;
+  if (!sleeps.length || total < sleeps.length || total > sleeps.reduce((a, b) => a + b, 0))
+    return null;
   const out = sleeps.map(() => 1);
   let left = total - sleeps.length;
   for (let i = 0; i < sleeps.length && left > 0; i++) {

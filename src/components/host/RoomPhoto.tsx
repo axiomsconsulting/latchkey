@@ -29,7 +29,17 @@ function shrink(file: File): Promise<string> {
 }
 
 /** One room's guide cover: its own photo, or the property's cover (or the template's) until there is one. */
-export function RoomPhoto({ propertyId, roomId, photo, themeConfig }: { propertyId: string; roomId: string; photo: string | null; themeConfig: unknown }) {
+export function RoomPhoto({
+  propertyId,
+  roomId,
+  photo,
+  themeConfig,
+}: {
+  propertyId: string;
+  roomId: string;
+  photo: string | null;
+  themeConfig: unknown;
+}) {
   const save = useServerFn(saveRoomPhoto);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -51,13 +61,22 @@ export function RoomPhoto({ propertyId, roomId, photo, themeConfig }: { property
 
   return (
     <section className="card-soft flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-      {shown ? <img src={shown} alt="" className="aspect-[16/10] w-full rounded-2xl object-cover sm:w-48" /> : <div className="aspect-[16/10] w-full rounded-2xl bg-primary/10 sm:w-48" />}
+      {shown ? (
+        <img
+          src={shown}
+          alt=""
+          className="aspect-[16/10] w-full rounded-2xl object-cover sm:w-48"
+        />
+      ) : (
+        <div className="aspect-[16/10] w-full rounded-2xl bg-primary/10 sm:w-48" />
+      )}
       <div className="min-w-0 flex-1 space-y-2">
         <h2 className="text-lg">{copy.title}</h2>
         <p className="text-sm text-muted-foreground">{copy.body}</p>
         <div className="flex flex-wrap gap-2">
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-sm hover:bg-secondary">
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />} {photo ? copy.replace : copy.upload}
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}{" "}
+            {photo ? copy.replace : copy.upload}
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -75,7 +94,11 @@ export function RoomPhoto({ propertyId, roomId, photo, themeConfig }: { property
               }}
             />
           </label>
-          {photo ? <Button variant="ghost" onClick={() => void run(null)} disabled={busy}>{copy.remove}</Button> : null}
+          {photo ? (
+            <Button variant="ghost" onClick={() => void run(null)} disabled={busy}>
+              {copy.remove}
+            </Button>
+          ) : null}
         </div>
       </div>
     </section>

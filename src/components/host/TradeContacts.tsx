@@ -19,10 +19,22 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { common, tradesCopy as copy } from "@/content/copy";
 import { parseCsv } from "@/lib/csv";
@@ -160,8 +172,16 @@ export function TradeContacts({
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="size-4" /> {copy.importCta}
           </Button>
-          <Button variant="outline" disabled={suggest.isPending} onClick={() => suggest.mutate(suggestions.length > 0)}>
-            {suggest.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          <Button
+            variant="outline"
+            disabled={suggest.isPending}
+            onClick={() => suggest.mutate(suggestions.length > 0)}
+          >
+            {suggest.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4" />
+            )}
             {suggestions.length > 0 ? copy.suggestAgain : copy.suggestCta}
           </Button>
         </div>
@@ -184,7 +204,11 @@ export function TradeContacts({
                     </Button>
                     {link ? (
                       <Button asChild size="sm" variant="outline">
-                        <a href={mapsSearch(s.searchTerm, postcode || "me")} target="_blank" rel="noreferrer">
+                        <a
+                          href={mapsSearch(s.searchTerm, postcode || "me")}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
                           {copy.searchFor(s.role)} <ExternalLink className="size-4" />
                         </a>
                       </Button>
@@ -284,7 +308,11 @@ function TradeCard({
             ) : null}
           </p>
           <p className="text-sm text-muted-foreground">
-            {[tradeCategoryLabel(trade.category), trade.company_name ? trade.name : null, trade.area]
+            {[
+              tradeCategoryLabel(trade.category),
+              trade.company_name ? trade.name : null,
+              trade.area,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </p>
@@ -358,7 +386,11 @@ function TradeForm({
             <Input id="t-name" value={value.name} onChange={(e) => set("name", e.target.value)} />
           </Field>
           <Field label={copy.fields.company_name} id="t-co">
-            <Input id="t-co" value={value.company_name} onChange={(e) => set("company_name", e.target.value)} />
+            <Input
+              id="t-co"
+              value={value.company_name}
+              onChange={(e) => set("company_name", e.target.value)}
+            />
           </Field>
           <Field label={copy.fields.category} id="t-cat">
             <Select value={value.category} onValueChange={(v) => set("category", v)}>
@@ -375,27 +407,54 @@ function TradeForm({
             </Select>
           </Field>
           <Field label={copy.fields.phone} id="t-phone">
-            <Input id="t-phone" inputMode="tel" value={value.phone} onChange={(e) => set("phone", e.target.value)} />
+            <Input
+              id="t-phone"
+              inputMode="tel"
+              value={value.phone}
+              onChange={(e) => set("phone", e.target.value)}
+            />
           </Field>
           <Field label={copy.fields.whatsapp_phone} id="t-wa">
-            <Input id="t-wa" inputMode="tel" value={value.whatsapp_phone} onChange={(e) => set("whatsapp_phone", e.target.value)} />
+            <Input
+              id="t-wa"
+              inputMode="tel"
+              value={value.whatsapp_phone}
+              onChange={(e) => set("whatsapp_phone", e.target.value)}
+            />
           </Field>
           <Field label={copy.fields.email} id="t-email">
-            <Input id="t-email" type="email" value={value.email} onChange={(e) => set("email", e.target.value)} />
+            <Input
+              id="t-email"
+              type="email"
+              value={value.email}
+              onChange={(e) => set("email", e.target.value)}
+            />
           </Field>
           <Field label={copy.fields.area} id="t-area">
             <Input id="t-area" value={value.area} onChange={(e) => set("area", e.target.value)} />
           </Field>
           <Field label={copy.fields.website} id="t-web">
-            <Input id="t-web" value={value.website} onChange={(e) => set("website", e.target.value)} />
+            <Input
+              id="t-web"
+              value={value.website}
+              onChange={(e) => set("website", e.target.value)}
+            />
           </Field>
           <div className="sm:col-span-2">
             <Field label={copy.fields.notes} id="t-notes">
-              <Textarea id="t-notes" rows={2} value={value.notes} onChange={(e) => set("notes", e.target.value)} />
+              <Textarea
+                id="t-notes"
+                rows={2}
+                value={value.notes}
+                onChange={(e) => set("notes", e.target.value)}
+              />
             </Field>
           </div>
           <label className="flex items-center gap-2 sm:col-span-2">
-            <Checkbox checked={value.is_preferred} onCheckedChange={(c) => set("is_preferred", c === true)} />
+            <Checkbox
+              checked={value.is_preferred}
+              onCheckedChange={(c) => set("is_preferred", c === true)}
+            />
             <span>{copy.fields.is_preferred}</span>
           </label>
         </div>
@@ -545,4 +604,3 @@ function ImportDialog({
     </Dialog>
   );
 }
-

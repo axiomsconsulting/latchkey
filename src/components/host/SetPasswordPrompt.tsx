@@ -4,7 +4,13 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth as authCopy, authExtraCopy as copy } from "@/content/copy";
@@ -22,8 +28,23 @@ export function SetPasswordPrompt() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const check = (u: { is_anonymous?: boolean; email?: string | null; email_confirmed_at?: string | null; user_metadata?: Record<string, unknown> } | null | undefined) => {
-      const saved = !!u && !u.is_anonymous && !!u.email && !!u.email_confirmed_at && u.user_metadata?.["needs_password"] === true;
+    const check = (
+      u:
+        | {
+            is_anonymous?: boolean;
+            email?: string | null;
+            email_confirmed_at?: string | null;
+            user_metadata?: Record<string, unknown>;
+          }
+        | null
+        | undefined,
+    ) => {
+      const saved =
+        !!u &&
+        !u.is_anonymous &&
+        !!u.email &&
+        !!u.email_confirmed_at &&
+        u.user_metadata?.["needs_password"] === true;
       // The launch funnel: a trial saved by email, now confirmed.
       if (saved) trackEvent("trial_signup_completed", { method: "email" });
       setOpen(saved);
@@ -40,7 +61,10 @@ export function SetPasswordPrompt() {
       if (password !== again) return setError(copy.passwordMismatch);
     }
     setBusy(true);
-    const { error: err } = await supabase.auth.updateUser({ ...(password ? { password } : {}), data: { needs_password: false } });
+    const { error: err } = await supabase.auth.updateUser({
+      ...(password ? { password } : {}),
+      data: { needs_password: false },
+    });
     setBusy(false);
     if (err) return setError(err.message || authCopy.genericError);
     setOpen(false);
@@ -63,11 +87,25 @@ export function SetPasswordPrompt() {
         >
           <div className="space-y-1">
             <Label htmlFor="new-pw">{copy.password}</Label>
-            <Input id="new-pw" type="password" autoComplete="new-password" className="h-12" value={pw} onChange={(e) => setPw(e.target.value)} />
+            <Input
+              id="new-pw"
+              type="password"
+              autoComplete="new-password"
+              className="h-12"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="new-pw2">{copy.passwordConfirm}</Label>
-            <Input id="new-pw2" type="password" autoComplete="new-password" className="h-12" value={again} onChange={(e) => setAgain(e.target.value)} />
+            <Input
+              id="new-pw2"
+              type="password"
+              autoComplete="new-password"
+              className="h-12"
+              value={again}
+              onChange={(e) => setAgain(e.target.value)}
+            />
           </div>
           {error ? (
             <p role="alert" className="text-sm text-destructive">

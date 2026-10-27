@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Latchkey's MCP server (Streamable HTTP, JSON responses). Tools are the
  * same actions as the REST API, from api-spec.ts. Authenticated by an API
@@ -12,7 +13,9 @@ type RpcRequest = { jsonrpc: "2.0"; id?: string | number | null; method: string;
 
 // Read when a client connects, so it carries the current brand name.
 const instructions = () =>
-  rebrand("Latchkey runs small hotels, B&Bs and short lets: bookings from every booking site, guest self check-in, guest requests and messages. ") +
+  rebrand(
+    "Latchkey runs small hotels, B&Bs and short lets: bookings from every booking site, guest self check-in, guest requests and messages. ",
+  ) +
   "Use list_properties first to get property ids. Dates are YYYY-MM-DD in the property's time zone. Ask before changing bookings or messaging guests.";
 
 function reply(id: RpcRequest["id"], result: unknown) {
@@ -26,13 +29,21 @@ function fail(id: RpcRequest["id"], code: number, message: string) {
 export async function handleMcp(request: Request, keyFromPath: string | null): Promise<Response> {
   const headers = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
   if (request.method === "GET") {
-    return new Response(JSON.stringify({ error: "This MCP server answers POST requests (Streamable HTTP, JSON responses)." }), { status: 405, headers });
+    return new Response(
+      JSON.stringify({
+        error: "This MCP server answers POST requests (Streamable HTTP, JSON responses).",
+      }),
+      { status: 405, headers },
+    );
   }
   let body: RpcRequest | RpcRequest[];
   try {
     body = (await request.json()) as RpcRequest | RpcRequest[];
   } catch {
-    return new Response(JSON.stringify(fail(null, -32700, "Parse error")), { status: 400, headers });
+    return new Response(JSON.stringify(fail(null, -32700, "Parse error")), {
+      status: 400,
+      headers,
+    });
   }
   const bearer = /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1] ?? null;
   const key = bearer ?? keyFromPath;
@@ -52,7 +63,10 @@ async function handleOne(call: RpcRequest, key: string | null): Promise<unknown 
   switch (call.method) {
     case "initialize":
       return reply(call.id, {
-        protocolVersion: typeof call.params?.protocolVersion === "string" ? call.params.protocolVersion : "2025-06-18",
+        protocolVersion:
+          typeof call.params?.protocolVersion === "string"
+            ? call.params.protocolVersion
+            : "2025-06-18",
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: "latchkey", title: rebrand("Latchkey"), version: API_VERSION },
         instructions: instructions(),
@@ -66,7 +80,11 @@ async function handleOne(call: RpcRequest, key: string | null): Promise<unknown 
           title: op.title,
           description: `${op.summary} Example: "${op.askLike}"`,
           inputSchema: inputSchema(op),
-          annotations: { readOnlyHint: op.scope === "read", destructiveHint: false, openWorldHint: false },
+          annotations: {
+            readOnlyHint: op.scope === "read",
+            destructiveHint: false,
+            openWorldHint: false,
+          },
         })),
       });
     case "tools/call": {
@@ -75,11 +93,19 @@ async function handleOne(call: RpcRequest, key: string | null): Promise<unknown 
       try {
         const caller = await authenticate(key);
         const parsed = parseInput(op, (call.params?.arguments ?? {}) as Record<string, unknown>);
-        if (!parsed.ok) return reply(call.id, { content: [{ type: "text", text: parsed.problem }], isError: true });
+        if (!parsed.ok)
+          return reply(call.id, {
+            content: [{ type: "text", text: parsed.problem }],
+            isError: true,
+          });
         const data = await runOperation(caller, op, parsed.input, "mcp");
-        return reply(call.id, { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: data });
+        return reply(call.id, {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+          structuredContent: data,
+        });
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
+        const message =
+          err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
         if (!(err instanceof ApiError)) console.error("MCP tool failed", op.id, err);
         return reply(call.id, { content: [{ type: "text", text: message }], isError: true });
       }

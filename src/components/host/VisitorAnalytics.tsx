@@ -5,19 +5,37 @@ import { Bot, ChevronDown, ChevronRight, Search, UserCheck, Users } from "lucide
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { visitorsCopy as copy } from "@/content/copy";
-import { duration, summarise, type Count, type Filters, type Period, type PersonRow } from "@/lib/analytics";
+import {
+  duration,
+  summarise,
+  type Count,
+  type Filters,
+  type Period,
+  type PersonRow,
+} from "@/lib/analytics";
 import { getVisitorAnalytics } from "@/lib/analytics.functions";
 import { formatUkDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-const at = (iso: string) => `${formatUkDate(iso.slice(0, 10))} ${new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+const at = (iso: string) =>
+  `${formatUkDate(iso.slice(0, 10))} ${new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 const periodLabel = (key: string, p: Period) =>
   p === "month"
-    ? new Date(`${key}T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" })
+    ? new Date(`${key}T00:00:00Z`).toLocaleDateString("en-GB", {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      })
     : p === "week"
       ? copy.weekOf(formatUkDate(key))
       : formatUkDate(key);
@@ -27,11 +45,22 @@ export function VisitorAnalytics() {
   const fetchData = useServerFn(getVisitorAnalytics);
   const [days, setDays] = useState(30);
   const [period, setPeriod] = useState<Period>("day");
-  const [filters, setFilters] = useState<Filters>({ hideBots: true, hideTeam: true, who: "all", search: "" });
+  const [filters, setFilters] = useState<Filters>({
+    hideBots: true,
+    hideTeam: true,
+    who: "all",
+    search: "",
+  });
   const [open, setOpen] = useState<string | null>(null);
-  const q = useQuery({ queryKey: ["visitor-analytics", days], queryFn: () => fetchData({ data: { days } }) });
+  const q = useQuery({
+    queryKey: ["visitor-analytics", days],
+    queryFn: () => fetchData({ data: { days } }),
+  });
   const ownHost = typeof window === "undefined" ? undefined : window.location.hostname;
-  const s = useMemo(() => (q.data ? summarise({ ...q.data, ownHost }, filters, period) : null), [q.data, filters, period, ownHost]);
+  const s = useMemo(
+    () => (q.data ? summarise({ ...q.data, ownHost }, filters, period) : null),
+    [q.data, filters, period, ownHost],
+  );
   const viewsByVisit = useMemo(() => {
     const m = new Map<string, Array<{ path: string; at: string; durationMs: number }>>();
     for (const v of q.data?.views ?? []) m.set(v.visitId, [...(m.get(v.visitId) ?? []), v]);
@@ -43,23 +72,55 @@ export function VisitorAnalytics() {
   return (
     <div className="space-y-6">
       <section className="card-soft flex flex-wrap items-end gap-4 p-4">
-        <Choice label={copy.range} value={String(days)} onChange={(v) => setDays(Number(v))} options={[["1", copy.day1], ["7", copy.days7], ["30", copy.days30], ["90", copy.days90], ["365", copy.days365]]} />
-        <Choice label={copy.club} value={period} onChange={(v) => setPeriod(v as Period)} options={[["day", copy.byDay], ["week", copy.byWeek], ["month", copy.byMonth]]} />
+        <Choice
+          label={copy.range}
+          value={String(days)}
+          onChange={(v) => setDays(Number(v))}
+          options={[
+            ["1", copy.day1],
+            ["7", copy.days7],
+            ["30", copy.days30],
+            ["90", copy.days90],
+            ["365", copy.days365],
+          ]}
+        />
+        <Choice
+          label={copy.club}
+          value={period}
+          onChange={(v) => setPeriod(v as Period)}
+          options={[
+            ["day", copy.byDay],
+            ["week", copy.byWeek],
+            ["month", copy.byMonth],
+          ]}
+        />
         <Choice
           label={copy.who}
           value={filters.who}
           onChange={(v) => set({ who: v as Filters["who"] })}
-          options={[["all", copy.whoAll], ["known", copy.whoKnown], ["anonymous", copy.whoAnon], ["converted", copy.whoConverted]]}
+          options={[
+            ["all", copy.whoAll],
+            ["known", copy.whoKnown],
+            ["anonymous", copy.whoAnon],
+            ["converted", copy.whoConverted],
+          ]}
         />
         <label className="flex items-center gap-2 text-sm">
-          <Switch checked={filters.hideBots} onCheckedChange={(v) => set({ hideBots: v })} /> {copy.hideBots}
+          <Switch checked={filters.hideBots} onCheckedChange={(v) => set({ hideBots: v })} />{" "}
+          {copy.hideBots}
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <Switch checked={filters.hideTeam} onCheckedChange={(v) => set({ hideTeam: v })} /> {copy.hideTeam}
+          <Switch checked={filters.hideTeam} onCheckedChange={(v) => set({ hideTeam: v })} />{" "}
+          {copy.hideTeam}
         </label>
         <div className="relative min-w-56 flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder={copy.search} value={filters.search} onChange={(e) => set({ search: e.target.value })} />
+          <Input
+            className="pl-9"
+            placeholder={copy.search}
+            value={filters.search}
+            onChange={(e) => set({ search: e.target.value })}
+          />
         </div>
       </section>
 
@@ -92,7 +153,9 @@ export function VisitorAnalytics() {
               <Bot className="size-4" /> {copy.botsHidden(s.botsHidden)}
             </p>
           ) : null}
-          {q.data?.truncated ? <p className="text-sm text-muted-foreground">{copy.truncated}</p> : null}
+          {q.data?.truncated ? (
+            <p className="text-sm text-muted-foreground">{copy.truncated}</p>
+          ) : null}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="card-soft p-5">
@@ -146,30 +209,44 @@ export function VisitorAnalytics() {
               <tbody className="divide-y divide-border">
                 {s.rows.slice(0, 300).map((r) => (
                   <Fragment key={r.key}>
-                    <tr className="cursor-pointer align-top hover:bg-secondary/40" onClick={() => setOpen(open === r.key ? null : r.key)}>
+                    <tr
+                      className="cursor-pointer align-top hover:bg-secondary/40"
+                      onClick={() => setOpen(open === r.key ? null : r.key)}
+                    >
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-1 font-medium">
-                          {open === r.key ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                          {open === r.key ? (
+                            <ChevronDown className="size-4" />
+                          ) : (
+                            <ChevronRight className="size-4" />
+                          )}
                           {r.label}
                         </span>
                         <span className="mt-1 flex flex-wrap gap-1">
                           <StatusBadge r={r} />
                           {r.isBot ? <Badge variant="destructive">{copy.bot}</Badge> : null}
                           {r.isTeam ? <Badge variant="outline">{copy.team}</Badge> : null}
-                          {r.browsers > 1 ? <Badge variant="outline">{copy.browsersN(r.browsers)}</Badge> : null}
+                          {r.browsers > 1 ? (
+                            <Badge variant="outline">{copy.browsersN(r.browsers)}</Badge>
+                          ) : null}
                         </span>
                       </td>
                       <td className="px-4 py-3 tabular-nums">
                         {r.visits} · {copy.pagesN(r.pages)}
                         <span className="block text-xs text-muted-foreground">
-                          {r.clubs.slice(0, 3).map((c) => `${periodLabel(c.period, period)}: ${c.visits}`).join(" · ")}
+                          {r.clubs
+                            .slice(0, 3)
+                            .map((c) => `${periodLabel(c.period, period)}: ${c.visits}`)
+                            .join(" · ")}
                           {r.clubs.length > 3 ? " …" : ""}
                         </span>
                       </td>
                       <td className="px-4 py-3 tabular-nums">{duration(r.ms)}</td>
                       <td className="px-4 py-3">
                         {r.places.slice(0, 2).join(" · ")}
-                        <span className="block text-xs text-muted-foreground">{r.sources.slice(0, 3).join(", ")}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {r.sources.slice(0, 3).join(", ")}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-xs">{r.devices.slice(0, 2).join(" / ")}</td>
                       <td className="px-4 py-3 text-xs">{at(r.lastSeen)}</td>
@@ -177,7 +254,12 @@ export function VisitorAnalytics() {
                     {open === r.key ? (
                       <tr>
                         <td colSpan={6} className="bg-secondary/30 px-6 py-4">
-                          <PersonDetail r={r} period={period} visitById={visitById} viewsByVisit={viewsByVisit} />
+                          <PersonDetail
+                            r={r}
+                            period={period}
+                            visitById={visitById}
+                            viewsByVisit={viewsByVisit}
+                          />
                         </td>
                       </tr>
                     ) : null}
@@ -186,7 +268,9 @@ export function VisitorAnalytics() {
               </tbody>
             </table>
             {s.rows.length === 0 ? <p className="p-5 text-muted-foreground">{copy.empty}</p> : null}
-            {s.rows.length > 300 ? <p className="p-5 text-sm text-muted-foreground">{copy.more(s.rows.length - 300)}</p> : null}
+            {s.rows.length > 300 ? (
+              <p className="p-5 text-sm text-muted-foreground">{copy.more(s.rows.length - 300)}</p>
+            ) : null}
           </section>
           <p className="text-xs text-muted-foreground">{copy.privacy}</p>
         </>
@@ -202,10 +286,24 @@ function StatusBadge({ r }: { r: PersonRow }) {
         <UserCheck className="size-3" /> {copy.convertedOn(formatUkDate(r.knownAt!.slice(0, 10)))}
       </Badge>
     );
-  return <Badge variant="secondary">{r.status === "known" ? copy.known : r.status === "trial" ? copy.trial : copy.anonymous}</Badge>;
+  return (
+    <Badge variant="secondary">
+      {r.status === "known" ? copy.known : r.status === "trial" ? copy.trial : copy.anonymous}
+    </Badge>
+  );
 }
 
-type VisitLite = { id: string; startedAt: string; pages: number; durationMs: number; ip: string | null; referrer: string | null; city: string | null; region: string | null; country: string | null };
+type VisitLite = {
+  id: string;
+  startedAt: string;
+  pages: number;
+  durationMs: number;
+  ip: string | null;
+  referrer: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+};
 
 function PersonDetail({
   r,
@@ -238,7 +336,8 @@ function PersonDetail({
             <ul className="mt-1 space-y-0.5 tabular-nums">
               {r.clubs.map((c) => (
                 <li key={c.period}>
-                  {periodLabel(c.period, period)}: {copy.clubLine(c.visits, c.pages, duration(c.ms))}
+                  {periodLabel(c.period, period)}:{" "}
+                  {copy.clubLine(c.visits, c.pages, duration(c.ms))}
                 </li>
               ))}
             </ul>
@@ -252,7 +351,8 @@ function PersonDetail({
               {at(v.startedAt)} · {copy.pagesN(v.pages)} · {duration(v.durationMs)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {[v.city, v.region, v.country].filter(Boolean).join(", ") || "—"} {v.referrer ? `· ${copy.via} ${v.referrer}` : ""}
+              {[v.city, v.region, v.country].filter(Boolean).join(", ") || "—"}{" "}
+              {v.referrer ? `· ${copy.via} ${v.referrer}` : ""}
             </p>
             <ul className="mt-2 space-y-0.5 text-xs">
               {(viewsByVisit.get(v.id) ?? [])
@@ -293,7 +393,10 @@ function Bars({ title, rows }: { title: string; rows: Count[] }) {
               <span className="truncate">{r.key}</span>
               <span className="tabular-nums text-muted-foreground">{r.visits}</span>
             </div>
-            <span className={cn("mt-0.5 block h-1.5 rounded-full bg-primary/70")} style={{ width: `${(r.visits / max) * 100}%` }} />
+            <span
+              className={cn("mt-0.5 block h-1.5 rounded-full bg-primary/70")}
+              style={{ width: `${(r.visits / max) * 100}%` }}
+            />
           </li>
         ))}
         {rows.length === 0 ? <li className="text-xs text-muted-foreground">—</li> : null}
@@ -302,7 +405,17 @@ function Bars({ title, rows }: { title: string; rows: Count[] }) {
   );
 }
 
-function Choice({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: Array<[string, string]> }) {
+function Choice({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<[string, string]>;
+}) {
   return (
     <label className="space-y-1 text-xs text-muted-foreground">
       <span>{label}</span>

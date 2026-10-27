@@ -6,26 +6,73 @@
 import { addDays, dayOfWeek, zonedParts } from "./dates";
 
 export type BuiltInKey =
-  | "getting_in" | "shoes" | "room" | "kitchenette" | "bathroom" | "parking"
-  | "taxis" | "rules" | "quiet" | "unavailable" | "checkout" | "contact";
+  | "getting_in"
+  | "shoes"
+  | "room"
+  | "kitchenette"
+  | "bathroom"
+  | "parking"
+  | "taxis"
+  | "rules"
+  | "quiet"
+  | "unavailable"
+  | "checkout"
+  | "contact";
 /** Built-in sections, or the host's own ("custom_" + a random id, titled by the host). */
 export type SectionKey = BuiltInKey | `custom_${string}`;
 
-export const isCustom = (key: string): key is `custom_${string}` => /^custom_[a-z0-9]{6,20}$/.test(key);
+export const isCustom = (key: string): key is `custom_${string}` =>
+  /^custom_[a-z0-9]{6,20}$/.test(key);
 
 export const SECTIONS: { key: BuiltInKey; title: string; hint: string }[] = [
-  { key: "getting_in", title: "Getting in", hint: "How to open the front door and use the lock. Add photos of the keypad." },
-  { key: "shoes", title: "Shoes and entry", hint: "Where to leave shoes and bags when you come in." },
-  { key: "room", title: "Your room", hint: "Which door, lights, heating controls, where spare bedding is." },
-  { key: "kitchenette", title: "Kitchenette", hint: "What guests can use, labelling food, washing up." },
-  { key: "bathroom", title: "Bathroom and hot water", hint: "Shower controls, how long hot water takes, towels." },
+  {
+    key: "getting_in",
+    title: "Getting in",
+    hint: "How to open the front door and use the lock. Add photos of the keypad.",
+  },
+  {
+    key: "shoes",
+    title: "Shoes and entry",
+    hint: "Where to leave shoes and bags when you come in.",
+  },
+  {
+    key: "room",
+    title: "Your room",
+    hint: "Which door, lights, heating controls, where spare bedding is.",
+  },
+  {
+    key: "kitchenette",
+    title: "Kitchenette",
+    hint: "What guests can use, labelling food, washing up.",
+  },
+  {
+    key: "bathroom",
+    title: "Bathroom and hot water",
+    hint: "Shower controls, how long hot water takes, towels.",
+  },
   { key: "parking", title: "Parking", hint: "Where to park, permits, where not to park." },
-  { key: "taxis", title: "Local taxis", hint: "Two or three local firms with phone numbers, and the usual fare to the station." },
+  {
+    key: "taxis",
+    title: "Local taxis",
+    hint: "Two or three local firms with phone numbers, and the usual fare to the station.",
+  },
   { key: "rules", title: "House rules", hint: "Smoking, guests, pets, the shared spaces." },
   { key: "quiet", title: "Quiet hours", hint: "Anything to add to your quiet hours." },
-  { key: "unavailable", title: "Times the house is unavailable", hint: "Cleaning windows when rooms or shared spaces are closed." },
-  { key: "checkout", title: "Check-out time and steps", hint: "What to do before leaving: keys, bins, windows." },
-  { key: "contact", title: "Host contact", hint: "When and how to reach you, and what counts as an emergency." },
+  {
+    key: "unavailable",
+    title: "Times the house is unavailable",
+    hint: "Cleaning windows when rooms or shared spaces are closed.",
+  },
+  {
+    key: "checkout",
+    title: "Check-out time and steps",
+    hint: "What to do before leaving: keys, bins, windows.",
+  },
+  {
+    key: "contact",
+    title: "Host contact",
+    hint: "When and how to reach you, and what counts as an emergency.",
+  },
 ];
 
 export type GuideStep = { heading: string; body: string | null; imageUrl: string | null };
@@ -58,21 +105,33 @@ export type GuideFacts = {
   unavailableLines: string[];
 };
 
-export type GuideSection = { key: SectionKey; title: string; summary: string | null; steps: GuideStep[]; pinned: boolean };
+export type GuideSection = {
+  key: SectionKey;
+  title: string;
+  summary: string | null;
+  steps: GuideStep[];
+  pinned: boolean;
+};
 
 /** One-line facts used when the host hasn't written a summary. */
 export function autoSummary(key: SectionKey, f: GuideFacts): string | null {
   switch (key) {
-    case "quiet": return `Please keep noise down between ${f.quietStart} and ${f.quietEnd}.`;
-    case "checkout": return `Check-out is by ${f.checkOutTime} on ${f.checkOutDateLabel}.`;
-    case "parking": return f.parkingNotes;
-    case "room": return f.roomName ? `You're staying in ${f.roomName}.` : null;
-    case "shoes": return "Please take your shoes off at the front door.";
+    case "quiet":
+      return `Please keep noise down between ${f.quietStart} and ${f.quietEnd}.`;
+    case "checkout":
+      return `Check-out is by ${f.checkOutTime} on ${f.checkOutDateLabel}.`;
+    case "parking":
+      return f.parkingNotes;
+    case "room":
+      return f.roomName ? `You're staying in ${f.roomName}.` : null;
+    case "shoes":
+      return "Please take your shoes off at the front door.";
     case "contact":
       return f.hostPhone ? `${f.hostName ? `${f.hostName}: ` : ""}${f.hostPhone}` : null;
     case "unavailable":
       return f.unavailableLines.length ? f.unavailableLines.join(" · ") : null;
-    default: return null;
+    default:
+      return null;
   }
 }
 
@@ -94,7 +153,9 @@ export function buildGuide(
 ): GuideSection[] {
   const out: (GuideSection & { order: number })[] = [];
   const add = (key: SectionKey, title: string, i: number) => {
-    const room = roomId ? stored.find((x) => x.roomId === roomId && x.sectionKey === key) : undefined;
+    const room = roomId
+      ? stored.find((x) => x.roomId === roomId && x.sectionKey === key)
+      : undefined;
     const house = stored.find((x) => x.roomId === null && x.sectionKey === key);
     // Removed by the host: left out, even where Latchkey could fill it in.
     if (house?.published === false) return;
@@ -102,7 +163,10 @@ export function buildGuide(
     if (!house && !isCustom(key) && startersOff.includes(key)) return;
     const src = room ?? house;
     const summary = src?.summary?.trim() || (isCustom(key) ? null : autoSummary(key, facts));
-    const steps = mode === "detailed" ? (src?.steps ?? []).filter((st) => st.heading.trim() || st.body?.trim()) : [];
+    const steps =
+      mode === "detailed"
+        ? (src?.steps ?? []).filter((st) => st.heading.trim() || st.body?.trim())
+        : [];
     if (!summary && steps.length === 0 && !withFiles.includes(key)) return;
     // Pinning and ordering are set once for the whole house, so a room's own
     // wording doesn't quietly unpin a reminder.
@@ -114,7 +178,9 @@ export function buildGuide(
   // The host's own sections, titled in their words.
   stored
     .filter((x) => x.roomId === null && isCustom(x.sectionKey))
-    .forEach((x, i) => add(x.sectionKey, x.title?.trim() || "More information", SECTIONS.length + i));
+    .forEach((x, i) =>
+      add(x.sectionKey, x.title?.trim() || "More information", SECTIONS.length + i),
+    );
   out.sort((a, b) => a.order - b.order);
   return out.map(({ order: _order, ...rest }) => rest);
 }
@@ -132,22 +198,44 @@ export type EditorSection = {
  * The editor's list: every section in the host's running order, their own
  * sections included, with removed ones set apart so they can be added back.
  */
-export function editorSections(stored: StoredSection[], startersOff: readonly string[] = []): { shown: EditorSection[]; removed: EditorSection[] } {
+export function editorSections(
+  stored: StoredSection[],
+  startersOff: readonly string[] = [],
+): { shown: EditorSection[]; removed: EditorSection[] } {
   const house = (key: string) => stored.find((x) => x.roomId === null && x.sectionKey === key);
   const all = [
-    ...SECTIONS.map((s, i) => ({ key: s.key as SectionKey, title: s.title, hint: s.hint, custom: false, i })),
+    ...SECTIONS.map((s, i) => ({
+      key: s.key as SectionKey,
+      title: s.title,
+      hint: s.hint,
+      custom: false,
+      i,
+    })),
     ...stored
       .filter((x) => x.roomId === null && isCustom(x.sectionKey))
-      .map((x, i) => ({ key: x.sectionKey, title: x.title?.trim() || "More information", hint: "", custom: true, i: SECTIONS.length + i })),
+      .map((x, i) => ({
+        key: x.sectionKey,
+        title: x.title?.trim() || "More information",
+        hint: "",
+        custom: true,
+        i: SECTIONS.length + i,
+      })),
   ].map((s) => {
     const h = house(s.key);
     // A starter this host didn't start with sits with the removed ones, ready to add.
     const off = !h && !s.custom && startersOff.includes(s.key);
-    return { ...s, removed: h?.published === false || off, order: h?.sortOrder && h.sortOrder > 0 ? h.sortOrder : 100 + s.i };
+    return {
+      ...s,
+      removed: h?.published === false || off,
+      order: h?.sortOrder && h.sortOrder > 0 ? h.sortOrder : 100 + s.i,
+    };
   });
   all.sort((a, b) => a.order - b.order);
   const strip = ({ i: _i, order: _o, ...rest }: (typeof all)[number]) => rest;
-  return { shown: all.filter((s) => !s.removed).map(strip), removed: all.filter((s) => s.removed).map(strip) };
+  return {
+    shown: all.filter((s) => !s.removed).map(strip),
+    removed: all.filter((s) => s.removed).map(strip),
+  };
 }
 
 export type Window = {
@@ -161,7 +249,12 @@ export type Window = {
 };
 
 /** Unavailability windows affecting this room on a given local date, as text. */
-export function windowsOn(windows: Window[], roomId: string | null, date: string, tz: string): string[] {
+export function windowsOn(
+  windows: Window[],
+  roomId: string | null,
+  date: string,
+  tz: string,
+): string[] {
   const dow = dayOfWeek(date);
   const lines: string[] = [];
   for (const w of windows) {
@@ -186,8 +279,17 @@ export function windowsOn(windows: Window[], roomId: string | null, date: string
 export function weeklyLines(windows: Window[], roomId: string | null): string[] {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return windows
-    .filter((w) => w.day_of_week !== null && (!w.room_id || w.room_id === roomId) && w.start_time && w.end_time)
-    .map((w) => `${days[w.day_of_week!]} ${w.start_time!.slice(0, 5)}–${w.end_time!.slice(0, 5)}${w.reason ? ` (${w.reason})` : ""}`);
+    .filter(
+      (w) =>
+        w.day_of_week !== null &&
+        (!w.room_id || w.room_id === roomId) &&
+        w.start_time &&
+        w.end_time,
+    )
+    .map(
+      (w) =>
+        `${days[w.day_of_week!]} ${w.start_time!.slice(0, 5)}–${w.end_time!.slice(0, 5)}${w.reason ? ` (${w.reason})` : ""}`,
+    );
 }
 
 export type ForgetItem = { key: SectionKey | "today"; text: string };
@@ -205,7 +307,7 @@ export function forgetCard(sections: GuideSection[], todayWindows: string[]): Fo
   const chosen = sections.filter((s) => s.pinned);
   const source = chosen.length ? chosen : sections.filter((s) => DEFAULT_PINNED.includes(s.key));
   const items: ForgetItem[] = source
-    .map((s) => ({ key: s.key, text: (s.summary?.trim() || s.title) }))
+    .map((s) => ({ key: s.key, text: s.summary?.trim() || s.title }))
     .filter((i) => i.text.length > 0);
   for (const t of todayWindows) items.push({ key: "today", text: `Today: ${t}` });
   return items;
@@ -214,7 +316,9 @@ export function forgetCard(sections: GuideSection[], todayWindows: string[]): Fo
 /** Which sections the reminder card is currently showing. */
 export function pinnedKeys(sections: GuideSection[]): SectionKey[] {
   const chosen = sections.filter((s) => s.pinned).map((s) => s.key);
-  return chosen.length ? chosen : sections.filter((s) => DEFAULT_PINNED.includes(s.key)).map((s) => s.key);
+  return chosen.length
+    ? chosen
+    : sections.filter((s) => DEFAULT_PINNED.includes(s.key)).map((s) => s.key);
 }
 
 /** UTC instant for a local date + time in a timezone. */
@@ -247,33 +351,96 @@ export const DOOR_SECTIONS: SectionKey[] = ["getting_in"];
 export { addDays };
 
 /** Starter text for The Hill Suites style homes. Marked so hosts replace it. */
-export const STARTER: Record<BuiltInKey, { summary: string; steps: { heading: string; body: string }[] }> = {
+export const STARTER: Record<
+  BuiltInKey,
+  { summary: string; steps: { heading: string; body: string }[] }
+> = {
   getting_in: {
     summary: "The front door has a keypad lock. Your code is on your check-in screen.",
     steps: [
-      { heading: "Find the keypad", body: "It's on the right of the front door, under the porch light." },
-      { heading: "Enter your code", body: "Press the Latchkey logo to wake it, type your code, then press the tick. Wait for the green light." },
-      { heading: "Close behind you", body: "The door locks itself. Push until you hear the click." },
+      {
+        heading: "Find the keypad",
+        body: "It's on the right of the front door, under the porch light.",
+      },
+      {
+        heading: "Enter your code",
+        body: "Press the Latchkey logo to wake it, type your code, then press the tick. Wait for the green light.",
+      },
+      {
+        heading: "Close behind you",
+        body: "The door locks itself. Push until you hear the click.",
+      },
     ],
   },
-  shoes: { summary: "Shoes off in the hallway, please.", steps: [{ heading: "Shoe rack", body: "Use the rack to the left of the door. Slippers are in the basket." }] },
-  room: { summary: "Your room door is labelled with its number.", steps: [{ heading: "Heating", body: "The radiator dial goes from 1 (low) to 5 (high)." }, { heading: "Spare bedding", body: "In the top of the wardrobe." }] },
-  kitchenette: { summary: "Shared kitchenette on the ground floor: kettle, microwave and fridge.", steps: [{ heading: "Fridge", body: "Label your food with your room number. The top shelf is yours." }, { heading: "Washing up", body: "Please wash, dry and put away anything you use." }] },
-  bathroom: { summary: "Hot water takes about a minute to come through.", steps: [{ heading: "Shower", body: "Turn the left dial for power and the right dial for temperature." }] },
+  shoes: {
+    summary: "Shoes off in the hallway, please.",
+    steps: [
+      {
+        heading: "Shoe rack",
+        body: "Use the rack to the left of the door. Slippers are in the basket.",
+      },
+    ],
+  },
+  room: {
+    summary: "Your room door is labelled with its number.",
+    steps: [
+      { heading: "Heating", body: "The radiator dial goes from 1 (low) to 5 (high)." },
+      { heading: "Spare bedding", body: "In the top of the wardrobe." },
+    ],
+  },
+  kitchenette: {
+    summary: "Shared kitchenette on the ground floor: kettle, microwave and fridge.",
+    steps: [
+      { heading: "Fridge", body: "Label your food with your room number. The top shelf is yours." },
+      { heading: "Washing up", body: "Please wash, dry and put away anything you use." },
+    ],
+  },
+  bathroom: {
+    summary: "Hot water takes about a minute to come through.",
+    steps: [
+      {
+        heading: "Shower",
+        body: "Turn the left dial for power and the right dial for temperature.",
+      },
+    ],
+  },
   parking: { summary: "Free on-street parking on Bellfield Row.", steps: [] },
   taxis: {
     summary: "Local firms are quicker than an app here, especially late at night.",
     steps: [
-      { heading: "Booking ahead", body: "For an early train, book the night before. Cars are scarce before 6am." },
+      {
+        heading: "Booking ahead",
+        body: "For an early train, book the night before. Cars are scarce before 6am.",
+      },
       { heading: "To the station", body: "Amersham station is about five minutes by car." },
-      { heading: "Replace these details", body: "Add two or three local firms with their phone numbers and the usual fare." },
+      {
+        heading: "Replace these details",
+        body: "Add two or three local firms with their phone numbers and the usual fare.",
+      },
     ],
   },
   rules: { summary: "No smoking anywhere indoors. No visitors after 10pm.", steps: [] },
   quiet: { summary: "", steps: [] },
   unavailable: { summary: "", steps: [] },
-  checkout: { summary: "", steps: [{ heading: "Before you go", body: "Strip the bed, leave used towels in the bath and close the window." }, { heading: "Leaving", body: "Pull the front door shut behind you. No need to find us." }] },
-  contact: { summary: "", steps: [{ heading: "Emergencies", body: "For a leak, no heating or being locked out, call any time." }] },
+  checkout: {
+    summary: "",
+    steps: [
+      {
+        heading: "Before you go",
+        body: "Strip the bed, leave used towels in the bath and close the window.",
+      },
+      { heading: "Leaving", body: "Pull the front door shut behind you. No need to find us." },
+    ],
+  },
+  contact: {
+    summary: "",
+    steps: [
+      {
+        heading: "Emergencies",
+        body: "For a leak, no heating or being locked out, call any time.",
+      },
+    ],
+  },
 };
 
 /**
@@ -281,7 +448,10 @@ export const STARTER: Record<BuiltInKey, { summary: string; steps: { heading: st
  * out for new hosts before this host signed up. Hosts who were already here
  * keep them. `removed` maps section key → when it was taken out.
  */
-export function startersOffFor(removed: Record<string, string> | null | undefined, hostCreatedAt: string | null | undefined): BuiltInKey[] {
+export function startersOffFor(
+  removed: Record<string, string> | null | undefined,
+  hostCreatedAt: string | null | undefined,
+): BuiltInKey[] {
   if (!removed || !hostCreatedAt) return [];
   const since = Date.parse(hostCreatedAt);
   return SECTIONS.map((s) => s.key).filter((k) => {
@@ -292,10 +462,13 @@ export function startersOffFor(removed: Record<string, string> | null | undefine
 
 /** The super admin's starter settings, safe against anything stored; at least one starter always stays. */
 export function normaliseStarters(raw: unknown): { removed: Record<string, string> } {
-  const r = (raw && typeof raw === "object" ? (raw as Record<string, unknown>)["removed"] : null) as Record<string, unknown> | null;
+  const r = (
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>)["removed"] : null
+  ) as Record<string, unknown> | null;
   const keys = new Set<string>(SECTIONS.map((s) => s.key));
   const removed: Record<string, string> = {};
-  for (const [k, v] of Object.entries(r ?? {})) if (keys.has(k) && typeof v === "string" && Number.isFinite(Date.parse(v))) removed[k] = v;
+  for (const [k, v] of Object.entries(r ?? {}))
+    if (keys.has(k) && typeof v === "string" && Number.isFinite(Date.parse(v))) removed[k] = v;
   // Never every starter: the first one still offered stays.
   if (Object.keys(removed).length >= SECTIONS.length) delete removed[SECTIONS[0]!.key];
   return { removed };

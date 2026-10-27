@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Hosts' API keys and their API access. Keys are shown once when made and
  * only a hash is kept; anyone who can make changes to the business can
@@ -29,19 +30,27 @@ export const getApiAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: member } = await (context.supabase as unknown as { rpc: (f: string, a: object) => Promise<{ data: unknown }> }).rpc("is_host_member", { _host_id: data.hostId });
+    const { data: member } = await (
+      context.supabase as unknown as { rpc: (f: string, a: object) => Promise<{ data: unknown }> }
+    ).rpc("is_host_member", { _host_id: data.hostId });
     if (member !== true) return { available: false as const };
     const db = await admin();
-    const [{ data: host, error }, { data: site }, { data: keys }, { data: usage }] = await Promise.all([
-      loose(db).from("hosts").select("plan_key, api_addon").eq("id", data.hostId).maybeSingle(),
-      loose(db).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle(),
-      loose(context.supabase)
-        .from("api_keys")
-        .select("id, name, prefix, scopes, created_at, last_used_at, revoked_at")
-        .eq("host_id", data.hostId)
-        .order("created_at", { ascending: false }),
-      loose(db).from("usage_daily").select("count").eq("host_id", data.hostId).eq("metric", "api:request").gte("day", monthStart()),
-    ]);
+    const [{ data: host, error }, { data: site }, { data: keys }, { data: usage }] =
+      await Promise.all([
+        loose(db).from("hosts").select("plan_key, api_addon").eq("id", data.hostId).maybeSingle(),
+        loose(db).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle(),
+        loose(context.supabase)
+          .from("api_keys")
+          .select("id, name, prefix, scopes, created_at, last_used_at, revoked_at")
+          .eq("host_id", data.hostId)
+          .order("created_at", { ascending: false }),
+        loose(db)
+          .from("usage_daily")
+          .select("count")
+          .eq("host_id", data.hostId)
+          .eq("metric", "api:request")
+          .gte("day", monthStart()),
+      ]);
     if (error) return { available: false as const };
     const model = normaliseModel(site?.pricing_model);
     const plan = planFor(model, host?.plan_key);
@@ -56,14 +65,24 @@ export const getApiAccess = createServerFn({ method: "GET" })
       addonPricePence: model.apiAddon.pricePence,
       addonRequests: model.apiAddon.includedRequests,
       currency: model.currency,
-      keys: (keys ?? []) as Array<{ id: string; name: string; prefix: string; scopes: string[]; created_at: string; last_used_at: string | null; revoked_at: string | null }>,
+      keys: (keys ?? []) as Array<{
+        id: string;
+        name: string;
+        prefix: string;
+        scopes: string[];
+        created_at: string;
+        last_used_at: string | null;
+        revoked_at: string | null;
+      }>,
     };
   });
 
 /** Makes a key. The full key is returned this once and never again. */
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, name: z.string().trim().min(1).max(60), write: z.boolean() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ hostId: uuid, name: z.string().trim().min(1).max(60), write: z.boolean() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     await requireWrite(context.supabase, data.hostId);
@@ -91,6 +110,10 @@ export const revokeApiKey = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, data.hostId);
     const db = await admin();
-    await loose(db).from("api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", data.keyId).eq("host_id", data.hostId);
+    await loose(db)
+      .from("api_keys")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", data.keyId)
+      .eq("host_id", data.hostId);
     return { ok: true };
   });

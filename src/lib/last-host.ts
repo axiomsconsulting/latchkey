@@ -16,7 +16,10 @@ export function rememberHost(name: string, theme: ThemeConfig) {
 
 export function lastHost(): { name: string; theme: ThemeConfig } | null {
   try {
-    const v = JSON.parse(window.localStorage.getItem(KEY) ?? "null") as { name?: string; theme?: unknown } | null;
+    const v = JSON.parse(window.localStorage.getItem(KEY) ?? "null") as {
+      name?: string;
+      theme?: unknown;
+    } | null;
     if (!v?.name) return null;
     return { name: v.name, theme: normaliseTheme(v.theme) };
   } catch {

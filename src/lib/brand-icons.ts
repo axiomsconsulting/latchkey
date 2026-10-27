@@ -11,12 +11,23 @@ export type ManifestIcon = { src: string; sizes: string; type?: string; purpose?
 
 const SET = (mark: "key" | "arch" | "monogram") =>
   mark === "key"
-    ? { small: "/icons/icon-192.png", large: "/icons/icon-512.png", maskable: "/icons/icon-maskable-512.png", apple: "/icons/apple-touch-icon.png" }
-    : { small: `/brand/icons/${mark}-192.png`, large: `/brand/icons/${mark}-512.png`, maskable: `/brand/icons/${mark}-maskable-512.png`, apple: `/brand/icons/${mark}-apple.png` };
+    ? {
+        small: "/icons/icon-192.png",
+        large: "/icons/icon-512.png",
+        maskable: "/icons/icon-maskable-512.png",
+        apple: "/icons/apple-touch-icon.png",
+      }
+    : {
+        small: `/brand/icons/${mark}-192.png`,
+        large: `/brand/icons/${mark}-512.png`,
+        maskable: `/brand/icons/${mark}-maskable-512.png`,
+        apple: `/brand/icons/${mark}-apple.png`,
+      };
 
 export function appIcons(b: Pick<Brand, "logoMark" | "logoUrl">): ManifestIcon[] {
   if (b.logoUrl) return [{ src: b.logoUrl, sizes: "any", purpose: "any" }];
-  if (b.logoMark === "initial") return [{ src: "/api/public/brand/icon", sizes: "any", type: "image/svg+xml", purpose: "any" }];
+  if (b.logoMark === "initial")
+    return [{ src: "/api/public/brand/icon", sizes: "any", type: "image/svg+xml", purpose: "any" }];
   const s = SET(b.logoMark);
   return [
     { src: s.small, sizes: "192x192", type: "image/png", purpose: "any" },

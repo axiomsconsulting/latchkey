@@ -19,7 +19,17 @@ export type DemoHint = {
 
 /** The parts of a check-in screen the banner needs to know about. */
 export type DemoStep =
-  | { name: "welcome" | "letter" | "checkout" | "platform" | "no_match" | "guestName" | "confirm" | "party" }
+  | {
+      name:
+        | "welcome"
+        | "letter"
+        | "checkout"
+        | "platform"
+        | "no_match"
+        | "guestName"
+        | "confirm"
+        | "party";
+    }
   | { name: "register" | "face" | "handover" | "done" | "locked" | "waiting" }
   | { name: "pick"; items: Array<{ label: string }> }
   | { name: "identity"; method: "photo_id" | "last4" | "self_declare"; consented: boolean }
@@ -38,7 +48,8 @@ export function demoLine(step: DemoStep, hint: DemoHint, platform: string): stri
     case "platform":
       return d.platform(platform);
     case "pick": {
-      const mine = step.items.find((i) => i.label.toUpperCase().endsWith(` ${hint.letter}.`)) ?? step.items[0];
+      const mine =
+        step.items.find((i) => i.label.toUpperCase().endsWith(` ${hint.letter}.`)) ?? step.items[0];
       return mine ? d.pick(mine.label) : null;
     }
     case "no_match":

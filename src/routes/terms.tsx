@@ -8,7 +8,12 @@ import { getLegalDetails } from "@/lib/site.functions";
 /** Terms of service for businesses using Latchkey (wording in src/content/legal.ts). */
 export const Route = createFileRoute("/terms")({
   loader: () => getLegalDetails(),
-  head: () => ({ meta: [{ title: rebrand("Terms of service — Latchkey") }, { name: "description", content: rebrand("The terms for businesses using Latchkey.") }] }),
+  head: () => ({
+    meta: [
+      { title: rebrand("Terms of service — Latchkey") },
+      { name: "description", content: rebrand("The terms for businesses using Latchkey.") },
+    ],
+  }),
   component: TermsPage,
 });
 

@@ -5,7 +5,14 @@ import { LogoMark } from "@/components/theme/LogoMark";
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { demoDockCopy as copy } from "@/content/copy";
 import { withAttribution } from "@/lib/attribution";
-import { clampBottom, defaultDock, dropDock, isDrag, readDock, type DockPos } from "@/lib/demo-dock";
+import {
+  clampBottom,
+  defaultDock,
+  dropDock,
+  isDrag,
+  readDock,
+  type DockPos,
+} from "@/lib/demo-dock";
 import { SHOWCASE, demoKeyForCode } from "@/lib/demo-showcase";
 import { normaliseTheme, type ThemeConfig } from "@/lib/theme";
 import { coverFor } from "@/lib/theme-covers";
@@ -19,7 +26,15 @@ import { cn } from "@/lib/utils";
  * height, remembered in this browser. Sizes are in pixels, so the kiosk's
  * screen scaling never makes it huge.
  */
-export function DemoDock({ mode, children, onLeave }: { mode: "host" | "guest"; children: (done: () => void) => ReactNode; onLeave: () => void }) {
+export function DemoDock({
+  mode,
+  children,
+  onLeave,
+}: {
+  mode: "host" | "guest";
+  children: (done: () => void) => ReactNode;
+  onLeave: () => void;
+}) {
   const key = `lk_demo_dock_${mode}`;
   const ref = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<DockPos | null>(null);
@@ -101,7 +116,10 @@ export function DemoDock({ mode, children, onLeave }: { mode: "host" | "guest"; 
         if (ev.type === "pointerup") setOpen((o) => !o);
         return;
       }
-      const next = dropDock({ x: ev.clientX, y: ev.clientY }, tabHeight, { w: window.innerWidth, h: window.innerHeight });
+      const next = dropDock({ x: ev.clientX, y: ev.clientY }, tabHeight, {
+        w: window.innerWidth,
+        h: window.innerHeight,
+      });
       setPos(next);
       remember(next);
     };
@@ -147,28 +165,47 @@ export function DemoDock({ mode, children, onLeave }: { mode: "host" | "guest"; 
           ? { left: drag.x - 20, top: drag.y - 32, fontSize: 14 }
           : { [right ? "right" : "left"]: 0, bottom: pos.bottom, fontSize: 14 }
       }
-      className={cn("fixed z-[60] flex select-none items-end print:hidden", right ? "flex-row" : "flex-row-reverse")}
+      className={cn(
+        "fixed z-[60] flex select-none items-end print:hidden",
+        right ? "flex-row" : "flex-row-reverse",
+      )}
     >
       {tab}
       {open && !drag ? (
         <div
           className={cn(
             "max-h-[calc(100dvh-16px)] w-[min(340px,calc(100vw-48px))] overflow-y-auto border border-border bg-background/95 text-foreground shadow-lifted backdrop-blur animate-in fade-in",
-            right ? "rounded-l-[18px] border-r-0 slide-in-from-right-4" : "rounded-r-[18px] border-l-0 slide-in-from-left-4",
+            right
+              ? "rounded-l-[18px] border-r-0 slide-in-from-right-4"
+              : "rounded-r-[18px] border-l-0 slide-in-from-left-4",
           )}
         >
           <div className="space-y-[10px] p-[12px]">
             <p className="flex items-start gap-[6px] text-[12px] leading-snug text-muted-foreground">
-              <span className="mt-[1px] shrink-0 rounded-full bg-accent px-[6px] text-[10px] font-bold uppercase tracking-wide text-accent-foreground">{copy.pill}</span>
+              <span className="mt-[1px] shrink-0 rounded-full bg-accent px-[6px] text-[10px] font-bold uppercase tracking-wide text-accent-foreground">
+                {copy.pill}
+              </span>
               {copy.text}
             </p>
             {children(() => setOpen(false))}
             <div className="flex flex-wrap gap-[8px] border-t border-border pt-[10px]">
-              <a href={withAttribution("/start")} className="inline-flex h-[36px] items-center gap-[6px] rounded-full bg-accent px-[14px] text-[13px] font-semibold text-accent-foreground">
+              <a
+                href={withAttribution("/start")}
+                className="inline-flex h-[36px] items-center gap-[6px] rounded-full bg-accent px-[14px] text-[13px] font-semibold text-accent-foreground"
+              >
                 <Sparkles className="size-[14px]" /> {copy.trial}
               </a>
-              <button type="button" onClick={onLeave} className="inline-flex h-[36px] items-center gap-[6px] rounded-full border border-border px-[12px] text-[13px] font-medium hover:bg-secondary">
-                {mode === "host" ? <LogOut className="size-[14px]" /> : <X className="size-[14px]" />} {mode === "host" ? copy.leaveHost : copy.leaveGuest}
+              <button
+                type="button"
+                onClick={onLeave}
+                className="inline-flex h-[36px] items-center gap-[6px] rounded-full border border-border px-[12px] text-[13px] font-medium hover:bg-secondary"
+              >
+                {mode === "host" ? (
+                  <LogOut className="size-[14px]" />
+                ) : (
+                  <X className="size-[14px]" />
+                )}{" "}
+                {mode === "host" ? copy.leaveHost : copy.leaveGuest}
               </button>
             </div>
           </div>
@@ -181,20 +218,43 @@ export function DemoDock({ mode, children, onLeave }: { mode: "host" | "guest"; 
 type Choice = { key: string; name: string; place: string; theme: ThemeConfig };
 
 /** The property choices as small previews of each one's look: cover, logo, name, buttons and colours. */
-function ThemeChoices({ label, choices, current, onPick }: { label: string; choices: Choice[]; current: string | null; onPick: (key: string) => void }) {
+function ThemeChoices({
+  label,
+  choices,
+  current,
+  onPick,
+}: {
+  label: string;
+  choices: Choice[];
+  current: string | null;
+  onPick: (key: string) => void;
+}) {
   return (
     <div className="space-y-[6px]">
       <p className="text-[12px] font-semibold">{label}</p>
       <div className="grid grid-cols-2 gap-[8px]">
         {choices.map((c) => (
-          <ThemeCard key={c.key} choice={c} active={c.key === current} onPick={() => onPick(c.key)} />
+          <ThemeCard
+            key={c.key}
+            choice={c}
+            active={c.key === current}
+            onPick={() => onPick(c.key)}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function ThemeCard({ choice, active, onPick }: { choice: Choice; active: boolean; onPick: () => void }) {
+function ThemeCard({
+  choice,
+  active,
+  onPick,
+}: {
+  choice: Choice;
+  active: boolean;
+  onPick: () => void;
+}) {
   const { theme, name, place } = choice;
   const cover = coverFor(theme);
   return (
@@ -209,12 +269,25 @@ function ThemeCard({ choice, active, onPick }: { choice: Choice; active: boolean
     >
       <ThemeScope theme={theme} full className="block">
         <span className="relative block h-[54px] bg-primary">
-          {cover ? <img src={cover} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" /> : null}
-          <LogoMark theme={theme} name={name} className="absolute -bottom-[12px] left-[8px] size-[28px] rounded-[8px] border-2 border-background text-[12px]" />
+          {cover ? (
+            <img
+              src={cover}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 size-full object-cover"
+            />
+          ) : null}
+          <LogoMark
+            theme={theme}
+            name={name}
+            className="absolute -bottom-[12px] left-[8px] size-[28px] rounded-[8px] border-2 border-background text-[12px]"
+          />
         </span>
         <span className="block px-[8px] pb-[8px] pt-[16px]">
           <span className="block truncate font-display text-[13px] leading-tight">{name}</span>
-          <span className="block truncate text-[11px] leading-tight text-muted-foreground">{place}</span>
+          <span className="block truncate text-[11px] leading-tight text-muted-foreground">
+            {place}
+          </span>
           {/* The look in miniature: its main button, an outline button and the accent. */}
           <span aria-hidden className="mt-[7px] flex items-center gap-[4px]">
             <span className="h-[12px] flex-1 rounded-[var(--radius-button,6px)] bg-primary" />
@@ -230,8 +303,20 @@ function ThemeCard({ choice, active, onPick }: { choice: Choice; active: boolean
 /** The guest demo's property switch: starts the guest journey again at the chosen property. */
 export function GuestDemoSwitch({ current, done }: { current: string; done: () => void }) {
   const choices: Array<Choice & { path: string }> = [
-    { key: "hill", name: copy.hillName, place: copy.hillPlace, theme: normaliseTheme({}), path: "/tour" },
-    ...SHOWCASE.map((s) => ({ key: s.key, name: s.property.name, place: `${s.label} · ${s.themeName}`, theme: normaliseTheme(s.theme), path: `/tour/${s.key}` })),
+    {
+      key: "hill",
+      name: copy.hillName,
+      place: copy.hillPlace,
+      theme: normaliseTheme({}),
+      path: "/tour",
+    },
+    ...SHOWCASE.map((s) => ({
+      key: s.key,
+      name: s.property.name,
+      place: `${s.label} · ${s.themeName}`,
+      theme: normaliseTheme(s.theme),
+      path: `/tour/${s.key}`,
+    })),
   ];
   return (
     <ThemeChoices

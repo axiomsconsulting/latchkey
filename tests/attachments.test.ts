@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { displayName, extensionOf, kindFor, signAttachment, storedName, verifyAttachment } from "../src/lib/attachments";
+import {
+  displayName,
+  extensionOf,
+  kindFor,
+  signAttachment,
+  storedName,
+  verifyAttachment,
+} from "../src/lib/attachments";
 
 describe("guide attachments", () => {
   it("only takes what guests can see in the app", () => {
     expect(kindFor("image/jpeg")).toBe("image");
     expect(kindFor("application/pdf")).toBe("pdf");
-    expect(kindFor("application/vnd.openxmlformats-officedocument.wordprocessingml.document")).toBe("doc");
+    expect(kindFor("application/vnd.openxmlformats-officedocument.wordprocessingml.document")).toBe(
+      "doc",
+    );
     expect(kindFor("application/zip")).toBeNull();
     expect(kindFor("video/mp4")).toBeNull();
   });

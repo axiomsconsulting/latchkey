@@ -7,7 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { propertyCodesCopy as copy } from "@/content/copy";
 import { cleanLink } from "@/lib/property-codes";
-import { checkDoorPin, checkGuestLink, newDoorPin, suggestGuestLink } from "@/lib/property-codes.functions";
+import {
+  checkDoorPin,
+  checkGuestLink,
+  newDoorPin,
+  suggestGuestLink,
+} from "@/lib/property-codes.functions";
 import { cn } from "@/lib/utils";
 
 /** Waits until typing stops before asking the server. */
@@ -20,8 +25,23 @@ function useDebounced<T>(value: T, ms = 450) {
   return v;
 }
 
-function Status({ tone, children }: { tone: "ok" | "bad" | "warn" | "wait" | "hint"; children: React.ReactNode }) {
-  const Icon = tone === "ok" ? CheckCircle2 : tone === "bad" ? XCircle : tone === "warn" ? TriangleAlert : tone === "wait" ? Loader2 : null;
+function Status({
+  tone,
+  children,
+}: {
+  tone: "ok" | "bad" | "warn" | "wait" | "hint";
+  children: React.ReactNode;
+}) {
+  const Icon =
+    tone === "ok"
+      ? CheckCircle2
+      : tone === "bad"
+        ? XCircle
+        : tone === "warn"
+          ? TriangleAlert
+          : tone === "wait"
+            ? Loader2
+            : null;
   return (
     <p
       aria-live="polite"
@@ -126,7 +146,13 @@ export function GuestLinkField({
           spellCheck={false}
           onChange={(e) => {
             setEdited(true);
-            onChange(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-{2,}/g, "-").slice(0, 40));
+            onChange(
+              e.target.value
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, "-")
+                .replace(/-{2,}/g, "-")
+                .slice(0, 40),
+            );
           }}
           onBlur={() => value && onChange(cleanLink(value))}
         />
@@ -137,12 +163,21 @@ export function GuestLinkField({
         <Status tone="bad">{copy.linkProblems[result.problem]}</Status>
       ) : result && !result.available ? (
         <div className="space-y-2">
-          <Status tone="bad">{result.problem === "reserved" ? copy.linkProblems["reserved"] : copy.linkTaken}</Status>
+          <Status tone="bad">
+            {result.problem === "reserved" ? copy.linkProblems["reserved"] : copy.linkTaken}
+          </Status>
           {result.suggestions.length ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-muted-foreground">{copy.linkTry}</span>
               {result.suggestions.map((s) => (
-                <Button key={s} type="button" size="sm" variant="outline" className="h-8 rounded-full font-mono text-xs" onClick={() => onChange(s)}>
+                <Button
+                  key={s}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 rounded-full font-mono text-xs"
+                  onClick={() => onChange(s)}
+                >
                   {s}
                 </Button>
               ))}
@@ -246,7 +281,13 @@ export function DoorPinField({
           value={value}
           onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
         />
-        <Button type="button" variant="outline" className="h-12 shrink-0" disabled={busy} onClick={() => void fresh()}>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 shrink-0"
+          disabled={busy}
+          onClick={() => void fresh()}
+        >
           <RefreshCw className={cn("size-4", busy && "animate-spin")} /> {copy.pinNew}
         </Button>
       </div>

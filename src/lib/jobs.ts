@@ -148,7 +148,12 @@ export const JOBS: Job[] = branded([
   },
 ]);
 
-export type JobSetting = { key: string; enabled: boolean; every_minutes: number | null; last_run_at: string | null };
+export type JobSetting = {
+  key: string;
+  enabled: boolean;
+  every_minutes: number | null;
+  last_run_at: string | null;
+};
 
 /** Whether a scheduled job should run now, given its switch and last run. */
 export function jobDue(job: Job, s: JobSetting | undefined, now: Date = new Date()): boolean {

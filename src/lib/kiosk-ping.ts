@@ -33,14 +33,19 @@ export async function pingKiosk(shortCode: string): Promise<void> {
  * Several parts of the kiosk listen (the welcome, the screen at rest); they
  * share one channel per property, since a channel name can only be joined once.
  */
-const listening = new Map<string, { channel: ReturnType<typeof supabase.channel>; fns: Set<() => void> }>();
+const listening = new Map<
+  string,
+  { channel: ReturnType<typeof supabase.channel>; fns: Set<() => void> }
+>();
 
 export function onKioskPing(shortCode: string, fn: () => void): () => void {
   const name = kioskChannel(shortCode);
   let entry = listening.get(name);
   if (!entry) {
     const fns = new Set<() => void>();
-    const channel = supabase.channel(name).on("broadcast", { event: "refresh" }, () => fns.forEach((f) => f()));
+    const channel = supabase
+      .channel(name)
+      .on("broadcast", { event: "refresh" }, () => fns.forEach((f) => f()));
     channel.subscribe();
     entry = { channel, fns };
     listening.set(name, entry);

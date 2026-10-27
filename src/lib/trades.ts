@@ -68,51 +68,207 @@ export type LocalSite = {
  */
 export const LOCAL_SITES: Record<string, LocalSite[]> = {
   GB: [
-    { id: "gas_safe", name: "Gas Safe Register", bestFor: "Check any gas or boiler engineer is registered (the law requires it)", url: "https://www.gassaferegister.co.uk/", official: true },
-    { id: "niceic", name: "NICEIC", bestFor: "Find or check a certified electrician", url: "https://niceic.com/find-a-tradesperson/", official: true },
-    { id: "checkatrade", name: "Checkatrade", bestFor: "Vetted trades with verified reviews; good for emergencies", url: "https://www.checkatrade.com/" },
-    { id: "which", name: "Which? Trusted Traders", bestFor: "Traders assessed by Which?; the most careful choice", url: "https://trustedtraders.which.co.uk/" },
-    { id: "mybuilder", name: "MyBuilder", bestFor: "Post a job and get quotes, from small repairs to building work", url: "https://www.mybuilder.com/" },
-    { id: "rated_people", name: "Rated People", bestFor: "Up to three quotes per job, with past customers' ratings", url: "https://www.ratedpeople.com/" },
-    { id: "trustatrader", name: "TrustATrader", bestFor: "Well-reviewed local independents; a second price", url: "https://www.trustatrader.com/" },
-    { id: "taskrabbit", name: "Taskrabbit", bestFor: "Quick small jobs: furniture, hanging, odd jobs", url: "https://www.taskrabbit.co.uk/" },
-    { id: "bark", name: "Bark", bestFor: "Cleaners, laundry and services the trade sites don't cover", url: "https://www.bark.com/en/gb/" },
+    {
+      id: "gas_safe",
+      name: "Gas Safe Register",
+      bestFor: "Check any gas or boiler engineer is registered (the law requires it)",
+      url: "https://www.gassaferegister.co.uk/",
+      official: true,
+    },
+    {
+      id: "niceic",
+      name: "NICEIC",
+      bestFor: "Find or check a certified electrician",
+      url: "https://niceic.com/find-a-tradesperson/",
+      official: true,
+    },
+    {
+      id: "checkatrade",
+      name: "Checkatrade",
+      bestFor: "Vetted trades with verified reviews; good for emergencies",
+      url: "https://www.checkatrade.com/",
+    },
+    {
+      id: "which",
+      name: "Which? Trusted Traders",
+      bestFor: "Traders assessed by Which?; the most careful choice",
+      url: "https://trustedtraders.which.co.uk/",
+    },
+    {
+      id: "mybuilder",
+      name: "MyBuilder",
+      bestFor: "Post a job and get quotes, from small repairs to building work",
+      url: "https://www.mybuilder.com/",
+    },
+    {
+      id: "rated_people",
+      name: "Rated People",
+      bestFor: "Up to three quotes per job, with past customers' ratings",
+      url: "https://www.ratedpeople.com/",
+    },
+    {
+      id: "trustatrader",
+      name: "TrustATrader",
+      bestFor: "Well-reviewed local independents; a second price",
+      url: "https://www.trustatrader.com/",
+    },
+    {
+      id: "taskrabbit",
+      name: "Taskrabbit",
+      bestFor: "Quick small jobs: furniture, hanging, odd jobs",
+      url: "https://www.taskrabbit.co.uk/",
+    },
+    {
+      id: "bark",
+      name: "Bark",
+      bestFor: "Cleaners, laundry and services the trade sites don't cover",
+      url: "https://www.bark.com/en/gb/",
+    },
   ],
   IE: [
-    { id: "rgi", name: "Register of Gas Installers (RGI)", bestFor: "Check any gas installer is registered (the law requires it)", url: "https://www.rgi.ie/", official: true },
-    { id: "safe_electric", name: "Safe Electric", bestFor: "Find a registered electrical contractor", url: "https://www.safeelectric.ie/", official: true },
-    { id: "goldenpages", name: "Golden Pages", bestFor: "Ireland's business directory, by trade and county", url: "https://www.goldenpages.ie/" },
-    { id: "bark_ie", name: "Bark", bestFor: "Quotes for cleaners, handymen and one-off help", url: "https://www.bark.com/en/ie/" },
+    {
+      id: "rgi",
+      name: "Register of Gas Installers (RGI)",
+      bestFor: "Check any gas installer is registered (the law requires it)",
+      url: "https://www.rgi.ie/",
+      official: true,
+    },
+    {
+      id: "safe_electric",
+      name: "Safe Electric",
+      bestFor: "Find a registered electrical contractor",
+      url: "https://www.safeelectric.ie/",
+      official: true,
+    },
+    {
+      id: "goldenpages",
+      name: "Golden Pages",
+      bestFor: "Ireland's business directory, by trade and county",
+      url: "https://www.goldenpages.ie/",
+    },
+    {
+      id: "bark_ie",
+      name: "Bark",
+      bestFor: "Quotes for cleaners, handymen and one-off help",
+      url: "https://www.bark.com/en/ie/",
+    },
   ],
   US: [
-    { id: "angi", name: "Angi", bestFor: "Reviewed pros in every trade; bigger repairs and projects", url: "https://www.angi.com/" },
-    { id: "thumbtack", name: "Thumbtack", bestFor: "Compare several quotes: cleaning, painting, handyman", url: "https://www.thumbtack.com/" },
-    { id: "taskrabbit_us", name: "Taskrabbit", bestFor: "Quick, clearly defined small jobs, often same day", url: "https://www.taskrabbit.com/" },
-    { id: "yelp", name: "Yelp", bestFor: "Local reviews and phone numbers for nearby firms", url: "https://www.yelp.com/" },
-    { id: "nextdoor", name: "Nextdoor", bestFor: "Neighbours' recommendations for trusted local trades", url: "https://nextdoor.com/" },
+    {
+      id: "angi",
+      name: "Angi",
+      bestFor: "Reviewed pros in every trade; bigger repairs and projects",
+      url: "https://www.angi.com/",
+    },
+    {
+      id: "thumbtack",
+      name: "Thumbtack",
+      bestFor: "Compare several quotes: cleaning, painting, handyman",
+      url: "https://www.thumbtack.com/",
+    },
+    {
+      id: "taskrabbit_us",
+      name: "Taskrabbit",
+      bestFor: "Quick, clearly defined small jobs, often same day",
+      url: "https://www.taskrabbit.com/",
+    },
+    {
+      id: "yelp",
+      name: "Yelp",
+      bestFor: "Local reviews and phone numbers for nearby firms",
+      url: "https://www.yelp.com/",
+    },
+    {
+      id: "nextdoor",
+      name: "Nextdoor",
+      bestFor: "Neighbours' recommendations for trusted local trades",
+      url: "https://nextdoor.com/",
+    },
   ],
   CA: [
-    { id: "homestars", name: "HomeStars", bestFor: "Canada's reviewed contractors; post a project for replies", url: "https://homestars.com/" },
-    { id: "trustedpros", name: "TrustedPros", bestFor: "Reviewed Canadian trades; a second set of quotes", url: "https://trustedpros.ca/" },
-    { id: "taskrabbit_ca", name: "Taskrabbit", bestFor: "Quick small jobs in larger Canadian cities", url: "https://www.taskrabbit.ca/" },
-    { id: "yelp_ca", name: "Yelp", bestFor: "Local reviews and phone numbers", url: "https://www.yelp.ca/" },
+    {
+      id: "homestars",
+      name: "HomeStars",
+      bestFor: "Canada's reviewed contractors; post a project for replies",
+      url: "https://homestars.com/",
+    },
+    {
+      id: "trustedpros",
+      name: "TrustedPros",
+      bestFor: "Reviewed Canadian trades; a second set of quotes",
+      url: "https://trustedpros.ca/",
+    },
+    {
+      id: "taskrabbit_ca",
+      name: "Taskrabbit",
+      bestFor: "Quick small jobs in larger Canadian cities",
+      url: "https://www.taskrabbit.ca/",
+    },
+    {
+      id: "yelp_ca",
+      name: "Yelp",
+      bestFor: "Local reviews and phone numbers",
+      url: "https://www.yelp.ca/",
+    },
   ],
   AU: [
-    { id: "hipages", name: "hipages", bestFor: "Licensed tradies for plumbing, electrics and repairs", url: "https://hipages.com.au/" },
-    { id: "airtasker", name: "Airtasker", bestFor: "Small defined jobs: cleaning, moving, assembly", url: "https://www.airtasker.com/" },
-    { id: "serviceseeking", name: "ServiceSeeking", bestFor: "Free quotes from local businesses across trades", url: "https://www.serviceseeking.com.au/" },
+    {
+      id: "hipages",
+      name: "hipages",
+      bestFor: "Licensed tradies for plumbing, electrics and repairs",
+      url: "https://hipages.com.au/",
+    },
+    {
+      id: "airtasker",
+      name: "Airtasker",
+      bestFor: "Small defined jobs: cleaning, moving, assembly",
+      url: "https://www.airtasker.com/",
+    },
+    {
+      id: "serviceseeking",
+      name: "ServiceSeeking",
+      bestFor: "Free quotes from local businesses across trades",
+      url: "https://www.serviceseeking.com.au/",
+    },
   ],
   NZ: [
-    { id: "builderscrack", name: "Builderscrack", bestFor: "New Zealand's largest trade marketplace, with reviews", url: "https://builderscrack.co.nz/" },
-    { id: "nocowboys", name: "NoCowboys", bestFor: "Kiwi ratings of trades from past customers", url: "https://nocowboys.co.nz/" },
-    { id: "trademe", name: "Trade Me Services", bestFor: "Local services listed by area", url: "https://www.trademe.co.nz/a/services" },
+    {
+      id: "builderscrack",
+      name: "Builderscrack",
+      bestFor: "New Zealand's largest trade marketplace, with reviews",
+      url: "https://builderscrack.co.nz/",
+    },
+    {
+      id: "nocowboys",
+      name: "NoCowboys",
+      bestFor: "Kiwi ratings of trades from past customers",
+      url: "https://nocowboys.co.nz/",
+    },
+    {
+      id: "trademe",
+      name: "Trade Me Services",
+      bestFor: "Local services listed by area",
+      url: "https://www.trademe.co.nz/a/services",
+    },
   ],
 };
 
 /** The sites for a country, or a short international list for anywhere else. */
 export function localSites(country: string | null | undefined): LocalSite[] {
-  return LOCAL_SITES[(country ?? "GB").toUpperCase()] ?? [
-    { id: "bark_any", name: "Bark", bestFor: "Quotes from local services in many countries", url: "https://www.bark.com/" },
-    { id: "taskrabbit_any", name: "Taskrabbit", bestFor: "Quick small jobs where it operates", url: "https://www.taskrabbit.com/" },
-  ];
+  return (
+    LOCAL_SITES[(country ?? "GB").toUpperCase()] ?? [
+      {
+        id: "bark_any",
+        name: "Bark",
+        bestFor: "Quotes from local services in many countries",
+        url: "https://www.bark.com/",
+      },
+      {
+        id: "taskrabbit_any",
+        name: "Taskrabbit",
+        bestFor: "Quick small jobs where it operates",
+        url: "https://www.taskrabbit.com/",
+      },
+    ]
+  );
 }

@@ -50,7 +50,10 @@ const num = (v: string) => Math.max(0, Number(v || 0));
 function monthAt(startedOn: string, plus: number) {
   const [y, m] = startedOn.split("-").map(Number) as [number, number];
   const d = new Date(Date.UTC(y, m - 1 + plus, 1));
-  return { key: d.toISOString().slice(0, 7), label: d.toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }) };
+  return {
+    key: d.toISOString().slice(0, 7),
+    label: d.toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }),
+  };
 }
 
 /** Super admin: plans and features, costs, recommendations, projections against actuals. */
@@ -68,29 +71,71 @@ export function PricingStudio() {
     setProj(q.data.projection);
   }, [q.data]);
 
-  if (q.isLoading || !q.data || !model || !costs || !proj) return <Skeleton className="h-96 rounded-2xl" />;
+  if (q.isLoading || !q.data || !model || !costs || !proj)
+    return <Skeleton className="h-96 rounded-2xl" />;
   const d = q.data;
 
   return (
     <div className="space-y-6">
-      <p className={cn("rounded-2xl p-4", d.published ? "bg-success/10" : "bg-muted")}>{d.published ? copy.published : copy.notPublished}</p>
-      {d.migrationPending ? <p className="rounded-2xl bg-destructive/10 p-4">{copy.migration}</p> : null}
+      <p className={cn("rounded-2xl p-4", d.published ? "bg-success/10" : "bg-muted")}>
+        {d.published ? copy.published : copy.notPublished}
+      </p>
+      {d.migrationPending ? (
+        <p className="rounded-2xl bg-destructive/10 p-4">{copy.migration}</p>
+      ) : null}
       <OfferSettings />
       <Now model={model} costs={costs} proj={proj} hosts={d.hosts} usage30={d.usage30} />
-      <Plans model={model} setModel={setModel} costs={costs} proj={proj} published={d.published} payers={summariseHosts(model, d.hosts).payers} />
-      <Costs costs={costs} saved={d.costs} setCosts={setCosts} hosts={d.hosts} model={model} usage30={d.usage30} />
-      <ProjectionView model={model} costs={costs} proj={proj} saved={d.projection} setProj={setProj} today={d.today} />
+      <Plans
+        model={model}
+        setModel={setModel}
+        costs={costs}
+        proj={proj}
+        published={d.published}
+        payers={summariseHosts(model, d.hosts).payers}
+      />
+      <Costs
+        costs={costs}
+        saved={d.costs}
+        setCosts={setCosts}
+        hosts={d.hosts}
+        model={model}
+        usage30={d.usage30}
+      />
+      <ProjectionView
+        model={model}
+        costs={costs}
+        proj={proj}
+        saved={d.projection}
+        setProj={setProj}
+        today={d.today}
+      />
     </div>
   );
 }
 
 type Hosts = Parameters<typeof summariseHosts>[1];
 
-function Now({ model, costs, proj, hosts, usage30 }: { model: PricingModel; costs: CostModel; proj: Projection; hosts: Hosts; usage30: Record<string, number> }) {
+function Now({
+  model,
+  costs,
+  proj,
+  hosts,
+  usage30,
+}: {
+  model: PricingModel;
+  costs: CostModel;
+  proj: Projection;
+  hosts: Hosts;
+  usage30: Record<string, number>;
+}) {
   const s = summariseHosts(model, hosts);
   const cost =
     fixedCost(costs) +
-    variableCost(costs, { rooms: s.activeRooms, apiRequests: usage30["api:request"] ?? 0, aiReads: usage30["ai:id_read"] ?? 0 }) +
+    variableCost(costs, {
+      rooms: s.activeRooms,
+      apiRequests: usage30["api:request"] ?? 0,
+      aiReads: usage30["ai:id_read"] ?? 0,
+    }) +
     s.revenuePence * costs.stripePct +
     s.payers * costs.stripeFixedPence;
   const profit = s.revenuePence - cost;
@@ -101,7 +146,10 @@ function Now({ model, costs, proj, hosts, usage30 }: { model: PricingModel; cost
     [copy.trials, String(s.trials)],
     [copy.revenue, money(s.revenuePence, model.currency)],
     [copy.cost, money(Math.round(cost), model.currency)],
-    [copy.profit, `${money(Math.round(profit), model.currency)}${s.revenuePence ? ` · ${Math.round((profit / s.revenuePence) * 100)}%` : ""}`],
+    [
+      copy.profit,
+      `${money(Math.round(profit), model.currency)}${s.revenuePence ? ` · ${Math.round((profit / s.revenuePence) * 100)}%` : ""}`,
+    ],
   ];
   return (
     <section className="space-y-3">
@@ -110,12 +158,21 @@ function Now({ model, costs, proj, hosts, usage30 }: { model: PricingModel; cost
         {tiles.map(([label, value]) => (
           <div key={label} className="card-soft p-4">
             <p className="text-xs text-muted-foreground">{label}</p>
-            <p className={cn("mt-1 text-2xl font-semibold tabular-nums", label === copy.profit && profit < 0 && "text-destructive")}>{value}</p>
+            <p
+              className={cn(
+                "mt-1 text-2xl font-semibold tabular-nums",
+                label === copy.profit && profit < 0 && "text-destructive",
+              )}
+            >
+              {value}
+            </p>
           </div>
         ))}
       </div>
       <p className={cn("rounded-xl p-3", be ? "bg-secondary" : "bg-destructive/10")}>
-        {be ? copy.breakEven(be.breakEven, Number.isFinite(be.withMargin) ? be.withMargin : null, pct) : copy.losing}
+        {be
+          ? copy.breakEven(be.breakEven, Number.isFinite(be.withMargin) ? be.withMargin : null, pct)
+          : copy.losing}
       </p>
     </section>
   );
@@ -144,11 +201,23 @@ function Plans({
   const [move, setMove] = useState(false);
   const [busy, setBusy] = useState(false);
   const recs = useMemo(
-    () => recommend(model, costs, expected, Object.fromEntries(model.plans.map((p) => [p.key, { rooms: proj.rooms[p.key] ?? p.includedRooms, apiRequests: proj.apiRequests }]))),
+    () =>
+      recommend(
+        model,
+        costs,
+        expected,
+        Object.fromEntries(
+          model.plans.map((p) => [
+            p.key,
+            { rooms: proj.rooms[p.key] ?? p.includedRooms, apiRequests: proj.apiRequests },
+          ]),
+        ),
+      ),
     [model, costs, expected, proj],
   );
   const addonRec = recommendApiAddon(model, costs);
-  const setPlan = (i: number, patch: Partial<Plan>) => setModel({ ...model, plans: model.plans.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+  const setPlan = (i: number, patch: Partial<Plan>) =>
+    setModel({ ...model, plans: model.plans.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
 
   async function go(fn: () => Promise<string>) {
     setBusy(true);
@@ -171,7 +240,14 @@ function Plans({
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <Label htmlFor="expected">{copy.expected}</Label>
-          <Input id="expected" type="number" min={1} className="w-32" value={expected} onChange={(e) => setExpected(Math.max(1, Number(e.target.value || 1)))} />
+          <Input
+            id="expected"
+            type="number"
+            min={1}
+            className="w-32"
+            value={expected}
+            onChange={(e) => setExpected(Math.max(1, Number(e.target.value || 1)))}
+          />
         </div>
         <Button
           variant="outline"
@@ -180,7 +256,13 @@ function Plans({
               ...model,
               plans: model.plans.map((p) => {
                 const r = recs.find((x) => x.key === p.key);
-                return r ? { ...p, basePence: r.recommendedBasePence, extraRoomPence: r.recommendedExtraRoomPence } : p;
+                return r
+                  ? {
+                      ...p,
+                      basePence: r.recommendedBasePence,
+                      extraRoomPence: r.recommendedExtraRoomPence,
+                    }
+                  : p;
               }),
               apiAddon: { ...model.apiAddon, pricePence: addonRec },
             })
@@ -194,38 +276,97 @@ function Plans({
         {model.plans.map((p, i) => {
           const r = recs.find((x) => x.key === p.key);
           return (
-            <article key={p.key} className={cn("space-y-3 rounded-2xl border border-border p-4", p.highlight && "ring-2 ring-primary")}>
+            <article
+              key={p.key}
+              className={cn(
+                "space-y-3 rounded-2xl border border-border p-4",
+                p.highlight && "ring-2 ring-primary",
+              )}
+            >
               <div className="flex items-center justify-between gap-2">
-                <Input aria-label={copy.name} value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} className="text-lg font-medium" />
+                <Input
+                  aria-label={copy.name}
+                  value={p.name}
+                  onChange={(e) => setPlan(i, { name: e.target.value })}
+                  className="text-lg font-medium"
+                />
                 {p.highlight ? <Badge>{copy.recommended}</Badge> : null}
               </div>
-              <Input aria-label={copy.tagline} placeholder={copy.tagline} value={p.tagline} onChange={(e) => setPlan(i, { tagline: e.target.value })} />
-              <Field label={copy.base} value={pounds(p.basePence)} step="0.5" onChange={(v) => setPlan(i, { basePence: toPence(v) })} />
+              <Input
+                aria-label={copy.tagline}
+                placeholder={copy.tagline}
+                value={p.tagline}
+                onChange={(e) => setPlan(i, { tagline: e.target.value })}
+              />
+              <Field
+                label={copy.base}
+                value={pounds(p.basePence)}
+                step="0.5"
+                onChange={(v) => setPlan(i, { basePence: toPence(v) })}
+              />
               {r ? (
                 <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {copy.breakEvenPrice(money(r.breakEvenBasePence, model.currency), money(r.recommendedBasePence, model.currency))}
-                  <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => setPlan(i, { basePence: r.recommendedBasePence })}>
+                  {copy.breakEvenPrice(
+                    money(r.breakEvenBasePence, model.currency),
+                    money(r.recommendedBasePence, model.currency),
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2"
+                    onClick={() => setPlan(i, { basePence: r.recommendedBasePence })}
+                  >
                     {copy.use}
                   </Button>
                 </p>
               ) : null}
               <div className="grid grid-cols-2 gap-2">
-                <Field label={copy.included} value={String(p.includedRooms)} onChange={(v) => setPlan(i, { includedRooms: Math.round(num(v)) })} />
-                <Field label={copy.extraRoom} value={pounds(p.extraRoomPence)} step="0.1" onChange={(v) => setPlan(i, { extraRoomPence: toPence(v) })} />
+                <Field
+                  label={copy.included}
+                  value={String(p.includedRooms)}
+                  onChange={(v) => setPlan(i, { includedRooms: Math.round(num(v)) })}
+                />
+                <Field
+                  label={copy.extraRoom}
+                  value={pounds(p.extraRoomPence)}
+                  step="0.1"
+                  onChange={(v) => setPlan(i, { extraRoomPence: toPence(v) })}
+                />
               </div>
               <Field
                 label={copy.maxProps}
                 value={p.maxProperties === null ? "" : String(p.maxProperties)}
-                onChange={(v) => setPlan(i, { maxProperties: v.trim() === "" ? null : Math.max(1, Math.round(num(v))) })}
+                onChange={(v) =>
+                  setPlan(i, {
+                    maxProperties: v.trim() === "" ? null : Math.max(1, Math.round(num(v))),
+                  })
+                }
               />
               <div className="grid grid-cols-2 gap-2">
-                <Field label={copy.apiReq} value={String(p.apiRequests)} step="1000" onChange={(v) => setPlan(i, { apiRequests: Math.round(num(v)) })} />
-                <Field label={copy.aiReads} value={String(p.aiReads)} onChange={(v) => setPlan(i, { aiReads: Math.round(num(v)) })} />
+                <Field
+                  label={copy.apiReq}
+                  value={String(p.apiRequests)}
+                  step="1000"
+                  onChange={(v) => setPlan(i, { apiRequests: Math.round(num(v)) })}
+                />
+                <Field
+                  label={copy.aiReads}
+                  value={String(p.aiReads)}
+                  onChange={(v) => setPlan(i, { aiReads: Math.round(num(v)) })}
+                />
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <Switch
                   checked={p.highlight}
-                  onCheckedChange={(on) => setModel({ ...model, plans: model.plans.map((x, j) => ({ ...x, highlight: on ? j === i : j === i ? false : x.highlight })) })}
+                  onCheckedChange={(on) =>
+                    setModel({
+                      ...model,
+                      plans: model.plans.map((x, j) => ({
+                        ...x,
+                        highlight: on ? j === i : j === i ? false : x.highlight,
+                      })),
+                    })
+                  }
                 />
                 {copy.recommended}
               </label>
@@ -236,7 +377,11 @@ function Plans({
                       <Checkbox
                         className="mt-0.5"
                         checked={p.features.includes(f)}
-                        onCheckedChange={(on) => setPlan(i, { features: on ? [...p.features, f] : p.features.filter((x) => x !== f) })}
+                        onCheckedChange={(on) =>
+                          setPlan(i, {
+                            features: on ? [...p.features, f] : p.features.filter((x) => x !== f),
+                          })
+                        }
                       />
                       {FEATURES[f]}
                     </label>
@@ -251,15 +396,29 @@ function Plans({
       <div className="space-y-2 rounded-2xl border border-border p-4">
         <h3 className="font-medium">{copy.addonTitle}</h3>
         <div className="grid gap-2 sm:grid-cols-2">
-          <Field label={copy.addonPrice} value={pounds(model.apiAddon.pricePence)} step="0.5" onChange={(v) => setModel({ ...model, apiAddon: { ...model.apiAddon, pricePence: toPence(v) } })} />
+          <Field
+            label={copy.addonPrice}
+            value={pounds(model.apiAddon.pricePence)}
+            step="0.5"
+            onChange={(v) =>
+              setModel({ ...model, apiAddon: { ...model.apiAddon, pricePence: toPence(v) } })
+            }
+          />
           <Field
             label={copy.addonRequests}
             value={String(model.apiAddon.includedRequests)}
             step="1000"
-            onChange={(v) => setModel({ ...model, apiAddon: { ...model.apiAddon, includedRequests: Math.round(num(v)) } })}
+            onChange={(v) =>
+              setModel({
+                ...model,
+                apiAddon: { ...model.apiAddon, includedRequests: Math.round(num(v)) },
+              })
+            }
           />
         </div>
-        <p className="text-xs text-muted-foreground">{copy.addonRec(money(addonRec, model.currency))}</p>
+        <p className="text-xs text-muted-foreground">
+          {copy.addonRec(money(addonRec, model.currency))}
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
@@ -279,7 +438,11 @@ function Plans({
           {copy.publish}
         </Button>
         {published ? (
-          <Button variant="ghost" disabled={busy} onClick={() => void go(async () => (await unpublish(), copy.saved))}>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void go(async () => (await unpublish(), copy.saved))}
+          >
             {copy.unpublish}
           </Button>
         ) : null}
@@ -288,7 +451,17 @@ function Plans({
   );
 }
 
-function Field({ label, value, onChange, step }: { label: string; value: string; onChange: (v: string) => void; step?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  step,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  step?: string;
+}) {
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
   return (
@@ -351,14 +524,24 @@ function Costs({
           <h2 className="text-xl">{copy.costsTitle}</h2>
           <p className="text-muted-foreground">{copy.costsBody}</p>
         </div>
-        <SaveButton dirty={changed(costs, saved)} busy={busy} label={copy.saveCosts} onClick={() => void go(() => save({ data: { costs } }), copy.saved)} />
+        <SaveButton
+          dirty={changed(costs, saved)}
+          busy={busy}
+          label={copy.saveCosts}
+          onClick={() => void go(() => save({ data: { costs } }), copy.saved)}
+        />
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {(Object.keys(copy.costFields) as Array<keyof CostModel>).map((k) => {
           const [label, help] = copy.costFields[k]!;
           return (
             <div key={k}>
-              <Field label={label} value={String(costs[k])} step="0.001" onChange={(v) => setCosts({ ...costs, [k]: num(v) })} />
+              <Field
+                label={label}
+                value={String(costs[k])}
+                step="0.001"
+                onChange={(v) => setCosts({ ...costs, [k]: num(v) })}
+              />
               {help ? <p className="mt-0.5 text-xs text-muted-foreground">{help}</p> : null}
             </div>
           );
@@ -367,17 +550,39 @@ function Costs({
 
       <div className="space-y-3 rounded-2xl border border-border p-4">
         <h3 className="font-medium">{copy.calibrateTitle}</h3>
-        <p className="text-sm text-muted-foreground">{copy.counted(s.activeRooms, usage30["ai:id_read"] ?? 0, usage30["api:request"] ?? 0)}</p>
+        <p className="text-sm text-muted-foreground">
+          {copy.counted(s.activeRooms, usage30["ai:id_read"] ?? 0, usage30["api:request"] ?? 0)}
+        </p>
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-1 text-xs text-muted-foreground">
             <span>{copy.totalCredits}</span>
-            <Input type="number" min={0} className="w-40" value={total} onChange={(e) => setTotal(e.target.value)} />
+            <Input
+              type="number"
+              min={0}
+              className="w-40"
+              value={total}
+              onChange={(e) => setTotal(e.target.value)}
+            />
           </label>
           <label className="space-y-1 text-xs text-muted-foreground">
             <span>{copy.aiCredits}</span>
-            <Input type="number" min={0} className="w-40" value={ai} onChange={(e) => setAi(e.target.value)} />
+            <Input
+              type="number"
+              min={0}
+              className="w-40"
+              value={ai}
+              onChange={(e) => setAi(e.target.value)}
+            />
           </label>
-          <Button disabled={busy || total === ""} onClick={() => void go(() => cal({ data: { totalCredits: num(total), aiCredits: num(ai) } }), copy.calibrated)}>
+          <Button
+            disabled={busy || total === ""}
+            onClick={() =>
+              void go(
+                () => cal({ data: { totalCredits: num(total), aiCredits: num(ai) } }),
+                copy.calibrated,
+              )
+            }
+          >
             {copy.calibrate}
           </Button>
         </div>
@@ -409,7 +614,8 @@ function ProjectionView({
   const startedOn = proj.startedOn ?? today;
   const current = monthIndex(proj.startedOn, today);
   const actual = new Map((proj.history ?? []).map((h) => [h.month, h]));
-  const setMap = (field: "start" | "newPerMonth" | "rooms", key: string, v: string) => setProj({ ...proj, [field]: { ...proj[field], [key]: num(v) } });
+  const setMap = (field: "start" | "newPerMonth" | "rooms", key: string, v: string) =>
+    setProj({ ...proj, [field]: { ...proj[field], [key]: num(v) } });
   const cur = (p: number) => money(p, model.currency);
 
   async function go(fn: () => Promise<unknown>, msg: string) {
@@ -432,27 +638,68 @@ function ProjectionView({
           <h2 className="text-xl">{copy.projTitle}</h2>
           <p className="text-muted-foreground">{copy.projBody}</p>
         </div>
-        <SaveButton dirty={changed(proj, saved)} busy={busy} label={copy.saveProj} onClick={() => void go(() => save({ data: { projection: proj as unknown as Record<string, unknown> } }), copy.saved)} />
+        <SaveButton
+          dirty={changed(proj, saved)}
+          busy={busy}
+          label={copy.saveProj}
+          onClick={() =>
+            void go(
+              () => save({ data: { projection: proj as unknown as Record<string, unknown> } }),
+              copy.saved,
+            )
+          }
+        />
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {model.plans.map((p) => (
           <div key={p.key} className="space-y-2 rounded-2xl border border-border p-3">
             <h3 className="font-medium">{p.name}</h3>
             <div className="grid grid-cols-3 gap-2">
-              <Field label={copy.projStart} value={String(proj.start[p.key] ?? 0)} onChange={(v) => setMap("start", p.key, v)} />
-              <Field label={copy.projNew} value={String(proj.newPerMonth[p.key] ?? 0)} step="0.5" onChange={(v) => setMap("newPerMonth", p.key, v)} />
-              <Field label={copy.projRooms} value={String(proj.rooms[p.key] ?? p.includedRooms)} onChange={(v) => setMap("rooms", p.key, v)} />
+              <Field
+                label={copy.projStart}
+                value={String(proj.start[p.key] ?? 0)}
+                onChange={(v) => setMap("start", p.key, v)}
+              />
+              <Field
+                label={copy.projNew}
+                value={String(proj.newPerMonth[p.key] ?? 0)}
+                step="0.5"
+                onChange={(v) => setMap("newPerMonth", p.key, v)}
+              />
+              <Field
+                label={copy.projRooms}
+                value={String(proj.rooms[p.key] ?? p.includedRooms)}
+                onChange={(v) => setMap("rooms", p.key, v)}
+              />
             </div>
           </div>
         ))}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field label={copy.churn} value={String(proj.churnPct)} step="0.5" onChange={(v) => setProj({ ...proj, churnPct: Math.min(100, num(v)) })} />
-        <Field label={copy.attach} value={String(proj.apiAttachPct)} onChange={(v) => setProj({ ...proj, apiAttachPct: Math.min(100, num(v)) })} />
-        <Field label={copy.apiTypical} value={String(proj.apiRequests)} step="500" onChange={(v) => setProj({ ...proj, apiRequests: num(v) })} />
+        <Field
+          label={copy.churn}
+          value={String(proj.churnPct)}
+          step="0.5"
+          onChange={(v) => setProj({ ...proj, churnPct: Math.min(100, num(v)) })}
+        />
+        <Field
+          label={copy.attach}
+          value={String(proj.apiAttachPct)}
+          onChange={(v) => setProj({ ...proj, apiAttachPct: Math.min(100, num(v)) })}
+        />
+        <Field
+          label={copy.apiTypical}
+          value={String(proj.apiRequests)}
+          step="500"
+          onChange={(v) => setProj({ ...proj, apiRequests: num(v) })}
+        />
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button variant="ghost" disabled={busy} onClick={() => void go(() => rebase(), copy.rebased)}>
+        <Button
+          variant="ghost"
+          disabled={busy}
+          onClick={() => void go(() => rebase(), copy.rebased)}
+        >
           {copy.rebase}
         </Button>
       </div>
@@ -481,12 +728,15 @@ function ProjectionView({
                   <td className="py-2 pr-3">{r.hosts}</td>
                   <td className="py-2 pr-3">{cur(r.revenuePence)}</td>
                   <td className="py-2 pr-3">{cur(r.costPence)}</td>
-                  <td className={cn("py-2 pr-3", r.profitPence < 0 && "text-destructive")}>{cur(r.profitPence)}</td>
+                  <td className={cn("py-2 pr-3", r.profitPence < 0 && "text-destructive")}>
+                    {cur(r.profitPence)}
+                  </td>
                   <td className="py-2 pr-3">{r.marginPct}%</td>
                   <td className="py-2 text-xs">
                     {a ? (
                       <span className={cn(aProfit < 0 && "text-destructive")}>
-                        {a.hosts} hosts · {cur(a.revenuePence)} − {cur(a.costPence)} = {cur(aProfit)}
+                        {a.hosts} hosts · {cur(a.revenuePence)} − {cur(a.costPence)} ={" "}
+                        {cur(aProfit)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>

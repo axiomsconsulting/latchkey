@@ -36,7 +36,8 @@ export const DEFAULT_BRAND: Brand = {
   footer: "",
 };
 
-const clean = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+const clean = (v: unknown, max: number) =>
+  typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
 
 /** Safe against anything stored. */
 export function normaliseBrand(raw: unknown): Brand {
@@ -45,19 +46,29 @@ export function normaliseBrand(raw: unknown): Brand {
   const mark = BRAND_LOGO_MARKS.includes(r["logoMark"] as BrandLogoMark)
     ? (r["logoMark"] as BrandLogoMark)
     : // Saved before logos were chosen: a renamed (white label) product keeps its initial, never Latchkey's key.
-      name === DEFAULT_NAME ? DEFAULT_BRAND.logoMark : "initial";
-  const logoUrl = typeof r["logoUrl"] === "string" && /^https:\/\/\S{1,1990}$/.test(r["logoUrl"]) ? r["logoUrl"] : "";
+      name === DEFAULT_NAME
+      ? DEFAULT_BRAND.logoMark
+      : "initial";
+  const logoUrl =
+    typeof r["logoUrl"] === "string" && /^https:\/\/\S{1,1990}$/.test(r["logoUrl"])
+      ? r["logoUrl"]
+      : "";
   return {
     name,
     logoMark: mark,
     logoUrl,
     // A tagline still saved as an earlier default follows the current one.
-    tagline: ((t) => (!t || OLD_TAGLINES.includes(t) ? DEFAULT_BRAND.tagline : t))(clean(r["tagline"], 120)),
+    tagline: ((t) => (!t || OLD_TAGLINES.includes(t) ? DEFAULT_BRAND.tagline : t))(
+      clean(r["tagline"], 120),
+    ),
     footer: clean(r["footer"], 300),
   };
 }
 
-const OLD_TAGLINES = ["Self check-in for guest houses, B&Bs and short lets", "Guest operations for independent accommodation"];
+const OLD_TAGLINES = [
+  "Self check-in for guest houses, B&Bs and short lets",
+  "Guest operations for independent accommodation",
+];
 
 let current: Brand = DEFAULT_BRAND;
 // On the server, each request's own brand (brand.server.ts), so two requests never mix.

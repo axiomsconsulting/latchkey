@@ -12,7 +12,12 @@ import { clearPartnerIntent } from "@/lib/partner-intent";
 
 export const Route = createFileRoute("/start")({
   ssr: false,
-  head: () => ({ meta: [{ title: rebrand("Start your free trial — Latchkey") }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: rebrand("Start your free trial — Latchkey") },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: StartTrial,
 });
 

@@ -7,10 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { hostInbox as copy } from "@/content/copy";
-import { getHostThread, listHostThreads, markHostRead, sendHostMessage } from "@/lib/messages.functions";
+import {
+  getHostThread,
+  listHostThreads,
+  markHostRead,
+  sendHostMessage,
+} from "@/lib/messages.functions";
 import { cn } from "@/lib/utils";
 
-const PLATFORM_NAME: Record<string, string> = { airbnb: "Airbnb", booking_com: "Booking.com", vrbo: "Vrbo", expedia: "Expedia", other: "a booking site" };
+const PLATFORM_NAME: Record<string, string> = {
+  airbnb: "Airbnb",
+  booking_com: "Booking.com",
+  vrbo: "Vrbo",
+  expedia: "Expedia",
+  other: "a booking site",
+};
 
 function when(iso: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -28,7 +39,13 @@ export function openGuestThread(bookingId: string) {
   window.dispatchEvent(new CustomEvent("latchkey:open-thread", { detail: bookingId }));
 }
 
-export function HostInbox({ propertyId, className }: { propertyId: string | null; className?: string }) {
+export function HostInbox({
+  propertyId,
+  className,
+}: {
+  propertyId: string | null;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -65,7 +82,8 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
 
   const unread = threads.data?.unread ?? 0;
   // The newest booking-site message with a reply address: replies by email reach the guest there.
-  const lastPlatform = [...(thread.data ?? [])].reverse().find((m) => m.platform && !m.fromHost && m.replyTo) ?? null;
+  const lastPlatform =
+    [...(thread.data ?? [])].reverse().find((m) => m.platform && !m.fromHost && m.replyTo) ?? null;
 
   // The inbox is in the page twice (desktop and phone headers): only the one on screen answers.
   useEffect(() => {
@@ -93,8 +111,13 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
           ref={trigger}
           type="button"
           data-tour="inbox"
-          aria-label={unread > 0 ? (unread === 1 ? copy.unreadOne : copy.unreadMany(unread)) : copy.open}
-          className={cn("relative grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground", className)}
+          aria-label={
+            unread > 0 ? (unread === 1 ? copy.unreadOne : copy.unreadMany(unread)) : copy.open
+          }
+          className={cn(
+            "relative grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground",
+            className,
+          )}
         >
           <Bell className="size-5" />
           {unread > 0 ? (
@@ -128,7 +151,9 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
                       <span className="flex items-center justify-between gap-2">
                         <span className="font-medium">
                           {t.guest}
-                          {t.room ? <span className="text-muted-foreground"> · {t.room}</span> : null}
+                          {t.room ? (
+                            <span className="text-muted-foreground"> · {t.room}</span>
+                          ) : null}
                         </span>
                         {t.unread > 0 ? (
                           <span className="rounded-full bg-destructive px-2 text-xs text-destructive-foreground">
@@ -136,8 +161,14 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
                           </span>
                         ) : null}
                       </span>
-                      <span className="mt-1 block truncate text-sm text-muted-foreground">{t.lastBody}</span>
-                      {t.lastAt ? <span className="block text-xs text-muted-foreground">{when(t.lastAt)}</span> : null}
+                      <span className="mt-1 block truncate text-sm text-muted-foreground">
+                        {t.lastBody}
+                      </span>
+                      {t.lastAt ? (
+                        <span className="block text-xs text-muted-foreground">
+                          {when(t.lastAt)}
+                        </span>
+                      ) : null}
                     </button>
                   </li>
                 ))}
@@ -163,9 +194,18 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
                       m.fromHost ? "ml-auto bg-primary text-primary-foreground" : "bg-secondary",
                     )}
                   >
-                    {m.platform ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{copy.via(PLATFORM_NAME[m.platform] ?? m.platform)}</p> : null}
+                    {m.platform ? (
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {copy.via(PLATFORM_NAME[m.platform] ?? m.platform)}
+                      </p>
+                    ) : null}
                     <p className="whitespace-pre-wrap">{m.body}</p>
-                    <p className={cn("mt-1 text-xs", m.fromHost ? "opacity-80" : "text-muted-foreground")}>
+                    <p
+                      className={cn(
+                        "mt-1 text-xs",
+                        m.fromHost ? "opacity-80" : "text-muted-foreground",
+                      )}
+                    >
                       {when(m.createdAt)}
                     </p>
                   </div>
@@ -174,9 +214,15 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
             </div>
             {lastPlatform?.replyTo ? (
               <div className="flex flex-wrap items-center gap-2 border-t bg-secondary/40 px-4 py-2 text-xs">
-                <span className="min-w-0 flex-1">{copy.platformReplyHint(PLATFORM_NAME[lastPlatform.platform ?? "other"] ?? "the booking site")}</span>
+                <span className="min-w-0 flex-1">
+                  {copy.platformReplyHint(
+                    PLATFORM_NAME[lastPlatform.platform ?? "other"] ?? "the booking site",
+                  )}
+                </span>
                 <Button asChild size="sm" variant="outline">
-                  <a href={`mailto:${lastPlatform.replyTo}?body=${encodeURIComponent(draft)}`}>{copy.replyByEmail}</a>
+                  <a href={`mailto:${lastPlatform.replyTo}?body=${encodeURIComponent(draft)}`}>
+                    {copy.replyByEmail}
+                  </a>
                 </Button>
               </div>
             ) : null}
@@ -197,7 +243,11 @@ export function HostInbox({ propertyId, className }: { propertyId: string | null
                 className="min-h-12 flex-1"
               />
               <Button type="submit" disabled={!draft.trim() || reply.isPending}>
-                {reply.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                {reply.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Send className="size-4" />
+                )}
                 <span className="sr-only">{copy.send}</span>
               </Button>
             </form>

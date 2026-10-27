@@ -12,7 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { common, directBookingCopy as copy } from "@/content/copy";
 import { normaliseDirectBooking, type DirectBooking } from "@/lib/direct-booking";
-import { getDirectBookingSettings, saveDirectBookingSettings } from "@/lib/direct-booking.functions";
+import {
+  getDirectBookingSettings,
+  saveDirectBookingSettings,
+} from "@/lib/direct-booking.functions";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,19 +29,33 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
   const fetchFn = useServerFn(getDirectBookingSettings);
   const saveFn = useServerFn(saveDirectBookingSettings);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["direct-booking", propertyId], queryFn: () => fetchFn({ data: { propertyId } }) });
+  const q = useQuery({
+    queryKey: ["direct-booking", propertyId],
+    queryFn: () => fetchFn({ data: { propertyId } }),
+  });
   const [form, setForm] = useState<DirectBooking | null>(null);
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!q.data) return;
     setForm(q.data.settings);
-    setAmount(q.data.settings.nonRef.kind === "amount" ? (q.data.settings.nonRef.value / 100).toFixed(2) : String(q.data.settings.nonRef.value));
+    setAmount(
+      q.data.settings.nonRef.kind === "amount"
+        ? (q.data.settings.nonRef.value / 100).toFixed(2)
+        : String(q.data.settings.nonRef.value),
+    );
   }, [q.data]);
 
   if (q.isLoading || !q.data || !form) return <Skeleton className="h-48 rounded-2xl" />;
   const d = q.data;
-  const next = normaliseDirectBooking({ ...form, nonRef: { ...form.nonRef, value: form.nonRef.kind === "amount" ? Math.round(Number(amount || 0) * 100) : Number(amount || 0) } });
+  const next = normaliseDirectBooking({
+    ...form,
+    nonRef: {
+      ...form.nonRef,
+      value:
+        form.nonRef.kind === "amount" ? Math.round(Number(amount || 0) * 100) : Number(amount || 0),
+    },
+  });
   const dirty = changed(next, d.settings);
   const set = (patch: Partial<DirectBooking>) => setForm((f) => f && { ...f, ...patch });
 
@@ -55,18 +72,34 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
     }
   }
 
-  const methodRow = (key: "card" | "bank" | "atProperty", ready: boolean, help: string, setupLink?: { to: string; search?: Record<string, string>; label: string }) => (
+  const methodRow = (
+    key: "card" | "bank" | "atProperty",
+    ready: boolean,
+    help: string,
+    setupLink?: { to: string; search?: Record<string, string>; label: string },
+  ) => (
     <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
       <div className="min-w-0 text-sm">
-        <Label htmlFor={`db-${key}`} className="text-base">{copy.methods[key]}</Label>
+        <Label htmlFor={`db-${key}`} className="text-base">
+          {copy.methods[key]}
+        </Label>
         <p className="text-muted-foreground">{help}</p>
         {!ready && setupLink ? (
-          <Link to={setupLink.to as never} search={setupLink.search as never} className="mt-1 inline-block font-medium text-primary hover:underline">
+          <Link
+            to={setupLink.to as never}
+            search={setupLink.search as never}
+            className="mt-1 inline-block font-medium text-primary hover:underline"
+          >
             {setupLink.label}
           </Link>
         ) : null}
       </div>
-      <Switch id={`db-${key}`} checked={form[key]} disabled={!ready && !form[key]} onCheckedChange={(v) => set({ [key]: v } as Partial<DirectBooking>)} />
+      <Switch
+        id={`db-${key}`}
+        checked={form[key]}
+        disabled={!ready && !form[key]}
+        onCheckedChange={(v) => set({ [key]: v } as Partial<DirectBooking>)}
+      />
     </div>
   );
 
@@ -74,7 +107,9 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
     <section className="card-soft space-y-4 p-5" data-tour="direct-booking-settings">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-lg"><CreditCard className="size-5 text-primary" /> {copy.title}</h2>
+          <h2 className="flex items-center gap-2 text-lg">
+            <CreditCard className="size-5 text-primary" /> {copy.title}
+          </h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
         {d.available ? <SaveButton dirty={dirty} busy={busy} onClick={() => void save()} /> : null}
@@ -83,18 +118,30 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
 
       <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
         <div className="text-sm">
-          <Label htmlFor="db-instant" className="text-base">{copy.instant}</Label>
+          <Label htmlFor="db-instant" className="text-base">
+            {copy.instant}
+          </Label>
           <p className="text-muted-foreground">{copy.instantHelp}</p>
         </div>
-        <Switch id="db-instant" checked={form.instant} onCheckedChange={(v) => set({ instant: v })} />
+        <Switch
+          id="db-instant"
+          checked={form.instant}
+          onCheckedChange={(v) => set({ instant: v })}
+        />
       </div>
 
       <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
         <div className="text-sm">
-          <Label htmlFor="db-children" className="text-base">{copy.children}</Label>
+          <Label htmlFor="db-children" className="text-base">
+            {copy.children}
+          </Label>
           <p className="text-muted-foreground">{copy.childrenHelp}</p>
         </div>
-        <Switch id="db-children" checked={form.children} onCheckedChange={(v) => set({ children: v })} />
+        <Switch
+          id="db-children"
+          checked={form.children}
+          onCheckedChange={(v) => set({ children: v })}
+        />
       </div>
 
       {/* Other sites only see a direct booking if they import the room's Latchkey calendar. */}
@@ -103,7 +150,9 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-accent" />
           <span>
             {copy.calendarWarning(d.roomsNotShared.join(", "))}{" "}
-            <Link to="/app/connections" className="font-medium text-primary hover:underline">{copy.calendarLink}</Link>
+            <Link to="/app/connections" className="font-medium text-primary hover:underline">
+              {copy.calendarLink}
+            </Link>
           </span>
         </p>
       ) : form.instant ? (
@@ -117,19 +166,37 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
             <p className="font-medium">{copy.flex}</p>
             <label className="mt-2 flex items-center gap-2">
               {copy.freeCancelBefore}
-              <Input className="h-9 w-16" inputMode="numeric" value={String(form.freeCancelDays)} onChange={(e) => set({ freeCancelDays: Number(e.target.value.replace(/\D/g, "") || 0) })} aria-label={copy.freeCancelBefore} />
+              <Input
+                className="h-9 w-16"
+                inputMode="numeric"
+                value={String(form.freeCancelDays)}
+                onChange={(e) =>
+                  set({ freeCancelDays: Number(e.target.value.replace(/\D/g, "") || 0) })
+                }
+                aria-label={copy.freeCancelBefore}
+              />
               {copy.daysBefore}
             </label>
           </div>
           <div className="rounded-xl border border-border p-3 text-sm">
             <div className="flex items-center justify-between gap-2">
               <p className="font-medium">{copy.nonRef}</p>
-              <Switch checked={form.nonRef.enabled} onCheckedChange={(v) => set({ nonRef: { ...form.nonRef, enabled: v } })} aria-label={copy.nonRef} />
+              <Switch
+                checked={form.nonRef.enabled}
+                onCheckedChange={(v) => set({ nonRef: { ...form.nonRef, enabled: v } })}
+                aria-label={copy.nonRef}
+              />
             </div>
             {form.nonRef.enabled ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {copy.cheaperBy}
-                <Input className="h-9 w-20" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label={copy.cheaperBy} />
+                <Input
+                  className="h-9 w-20"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  aria-label={copy.cheaperBy}
+                />
                 <div role="radiogroup" className="flex rounded-lg bg-muted p-0.5">
                   {(["percent", "amount"] as const).map((k) => (
                     <button
@@ -138,7 +205,12 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
                       role="radio"
                       aria-checked={form.nonRef.kind === k}
                       onClick={() => set({ nonRef: { ...form.nonRef, kind: k } })}
-                      className={cn("rounded-md px-2 py-1 text-xs font-medium", form.nonRef.kind === k ? "bg-background shadow-sm" : "text-muted-foreground")}
+                      className={cn(
+                        "rounded-md px-2 py-1 text-xs font-medium",
+                        form.nonRef.kind === k
+                          ? "bg-background shadow-sm"
+                          : "text-muted-foreground",
+                      )}
                     >
                       {k === "percent" ? "%" : copy.perNightIn(d.currency)}
                     </button>
@@ -152,13 +224,27 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{copy.payTitle}</legend>
-        {methodRow("card", d.ready.card, copy.cardHelp, { to: "/app/settings", search: { focus: "payments" }, label: copy.connectStripe })}
-        {methodRow("bank", d.ready.bank, copy.bankHelp(form.bankPayDays), { to: "/app/settings", search: { focus: "money" }, label: copy.addBank })}
+        {methodRow("card", d.ready.card, copy.cardHelp, {
+          to: "/app/settings",
+          search: { focus: "payments" },
+          label: copy.connectStripe,
+        })}
+        {methodRow("bank", d.ready.bank, copy.bankHelp(form.bankPayDays), {
+          to: "/app/settings",
+          search: { focus: "money" },
+          label: copy.addBank,
+        })}
         {methodRow("atProperty", true, copy.propertyHelp)}
         {form.bank ? (
           <label className="flex items-center gap-2 text-sm">
             {copy.bankDaysLabel}
-            <Input className="h-9 w-16" inputMode="numeric" value={String(form.bankPayDays)} onChange={(e) => set({ bankPayDays: Number(e.target.value.replace(/\D/g, "") || 1) })} aria-label={copy.bankDaysLabel} />
+            <Input
+              className="h-9 w-16"
+              inputMode="numeric"
+              value={String(form.bankPayDays)}
+              onChange={(e) => set({ bankPayDays: Number(e.target.value.replace(/\D/g, "") || 1) })}
+              aria-label={copy.bankDaysLabel}
+            />
             {copy.days}
           </label>
         ) : null}

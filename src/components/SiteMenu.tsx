@@ -1,6 +1,25 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BedDouble, Building2, CalendarDays, Check, Code2, DoorOpen, Home, Info, KeyRound, LayoutDashboard, LogIn, LogOut, Menu, PlayCircle, Settings, Sparkles, Tag, Wrench } from "lucide-react";
+import {
+  BedDouble,
+  Building2,
+  CalendarDays,
+  Check,
+  Code2,
+  DoorOpen,
+  Home,
+  Info,
+  KeyRound,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Menu,
+  PlayCircle,
+  Settings,
+  Sparkles,
+  Tag,
+  Wrench,
+} from "lucide-react";
 
 import { DemoPicker } from "@/components/DemoPicker";
 import { Button } from "@/components/ui/button";
@@ -41,7 +60,12 @@ export function SiteMenu() {
       <div className="relative">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" aria-label={siteMenu.open} className="relative z-10 size-11 pointer-coarse:size-12 pointer-coarse:[&_svg]:size-5">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={siteMenu.open}
+              className="relative z-10 size-11 pointer-coarse:size-12 pointer-coarse:[&_svg]:size-5"
+            >
               <Menu />
             </Button>
           </SheetTrigger>
@@ -53,37 +77,68 @@ export function SiteMenu() {
               <Link to="/" search={{ home: true }} className={item} onClick={close}>
                 <Home aria-hidden /> {siteMenu.home}
               </Link>
-              <button type="button" className={item} onClick={() => { close(); setDemoOpen(true); }}>
+              <button
+                type="button"
+                className={item}
+                onClick={() => {
+                  close();
+                  setDemoOpen(true);
+                }}
+              >
                 <PlayCircle aria-hidden /> {siteMenu.demo}
               </button>
-              <a href="/?home=1#pricing" className={item} onClick={close}><Tag aria-hidden /> {siteMenu.pricing}</a>
-              <Link to="/kiosk/$code" params={{ code: "tour" }} className={item} onClick={close}><BedDouble aria-hidden /> {siteMenu.guest}</Link>
+              <a href="/?home=1#pricing" className={item} onClick={close}>
+                <Tag aria-hidden /> {siteMenu.pricing}
+              </a>
+              <Link to="/kiosk/$code" params={{ code: "tour" }} className={item} onClick={close}>
+                <BedDouble aria-hidden /> {siteMenu.guest}
+              </Link>
               <Link to="/checkin" className={item} onClick={close}>
                 <KeyRound aria-hidden /> {siteMenu.guestPin}
               </Link>
-              <Link to="/about" className={item} onClick={close}><Info aria-hidden /> {siteMenu.about}</Link>
-              <Link to="/developers" className={item} onClick={close}><Code2 aria-hidden /> {siteMenu.developers}</Link>
+              <Link to="/about" className={item} onClick={close}>
+                <Info aria-hidden /> {siteMenu.about}
+              </Link>
+              <Link to="/developers" className={item} onClick={close}>
+                <Code2 aria-hidden /> {siteMenu.developers}
+              </Link>
               {signedIn ? (
                 <>
                   <hr className="my-2 border-border" />
-                  <Link to="/app/today" className={item} onClick={close}><LayoutDashboard aria-hidden /> {siteMenu.dashboard}</Link>
+                  <Link to="/app/today" className={item} onClick={close}>
+                    <LayoutDashboard aria-hidden /> {siteMenu.dashboard}
+                  </Link>
                   <PropertyList onPicked={close} />
-                  <Link to="/app/bookings" className={item} onClick={close}><CalendarDays aria-hidden /> {siteMenu.bookings}</Link>
-                  <Link to="/app/services" className={item} onClick={close}><Wrench aria-hidden /> {siteMenu.services}</Link>
-                  <Link to="/app/settings" className={item} onClick={close}><Settings aria-hidden /> {siteMenu.admin}</Link>
+                  <Link to="/app/bookings" className={item} onClick={close}>
+                    <CalendarDays aria-hidden /> {siteMenu.bookings}
+                  </Link>
+                  <Link to="/app/services" className={item} onClick={close}>
+                    <Wrench aria-hidden /> {siteMenu.services}
+                  </Link>
+                  <Link to="/app/settings" className={item} onClick={close}>
+                    <Settings aria-hidden /> {siteMenu.admin}
+                  </Link>
                   <button
                     type="button"
                     className={item}
-                    onClick={async () => { close(); await signOut(); await navigate({ to: "/", search: { home: true } }); }}
+                    onClick={async () => {
+                      close();
+                      await signOut();
+                      await navigate({ to: "/", search: { home: true } });
+                    }}
                   >
                     <LogOut aria-hidden /> {siteMenu.signOut}
                   </button>
                 </>
               ) : (
                 <>
-                <Link to="/start" className={item} onClick={close}><Sparkles aria-hidden /> {siteMenu.trial}</Link>
-                <Link to="/auth" className={item} onClick={close}><LogIn aria-hidden /> {siteMenu.signIn}</Link>
-              </>
+                  <Link to="/start" className={item} onClick={close}>
+                    <Sparkles aria-hidden /> {siteMenu.trial}
+                  </Link>
+                  <Link to="/auth" className={item} onClick={close}>
+                    <LogIn aria-hidden /> {siteMenu.signIn}
+                  </Link>
+                </>
               )}
             </nav>
           </SheetContent>
@@ -126,7 +181,13 @@ function Shortcuts({
           <PlayCircle className="size-5" /> {siteMenu.demoShort}
         </button>
         {signedIn ? null : (
-          <Link to="/start" className={cn(tab, "bg-accent text-accent-foreground hover:bg-accent/90 hover:text-accent-foreground")}>
+          <Link
+            to="/start"
+            className={cn(
+              tab,
+              "bg-accent text-accent-foreground hover:bg-accent/90 hover:text-accent-foreground",
+            )}
+          >
             <Sparkles className="size-5" /> {siteMenu.trialShort}
           </Link>
         )}
@@ -144,7 +205,10 @@ function Shortcuts({
   const bubble =
     "spring flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-soft hover:-translate-y-0.5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-12 pointer-coarse:gap-2 pointer-coarse:px-5 pointer-coarse:text-base pointer-coarse:[&_svg]:size-5";
   return (
-    <nav aria-label={siteMenu.shortcuts} className={cn("flex gap-2 pointer-coarse:gap-3", className)}>
+    <nav
+      aria-label={siteMenu.shortcuts}
+      className={cn("flex gap-2 pointer-coarse:gap-3", className)}
+    >
       <Link to={host} className={bubble} title={siteMenu.hostHint}>
         <LayoutDashboard className="size-3.5" /> {siteMenu.host}
       </Link>

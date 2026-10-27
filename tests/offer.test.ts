@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_OFFER, nextMonthPence, normaliseOffer, offerNowUsed, offerRunning, pendingOffer, ukToday } from "../src/lib/offer";
+import {
+  DEFAULT_OFFER,
+  nextMonthPence,
+  normaliseOffer,
+  offerNowUsed,
+  offerRunning,
+  pendingOffer,
+  ukToday,
+} from "../src/lib/offer";
 
 describe("launch offer", () => {
   it("runs between its start and end days, inclusive, only when switched on", () => {
@@ -39,7 +47,13 @@ describe("launch offer", () => {
 
   it("cleans up stored settings", () => {
     expect(normaliseOffer(null).enabled).toBe(false);
-    const o = normaliseOffer({ enabled: true, pricePence: -5, label: "  ", startsOn: "soon", endsOn: "2027-01-31" });
+    const o = normaliseOffer({
+      enabled: true,
+      pricePence: -5,
+      label: "  ",
+      startsOn: "soon",
+      endsOn: "2027-01-31",
+    });
     expect(o).toEqual({ ...DEFAULT_OFFER, endsOn: "2027-01-31" });
   });
 });

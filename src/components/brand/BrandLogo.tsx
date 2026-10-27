@@ -13,12 +13,20 @@ import { cn } from "@/lib/utils";
  */
 export type BrandMarkVariant = "key" | "arch" | "monogram";
 
-export const BRAND_COLOURS = { forest: "#183b2b", cream: "#f4ecdc", terracotta: "#c8643b" } as const;
+export const BRAND_COLOURS = {
+  forest: "#183b2b",
+  cream: "#f4ecdc",
+  terracotta: "#c8643b",
+} as const;
 
 const { forest, cream, terracotta } = BRAND_COLOURS;
 
 /** Each motif drawn on a 48×48 grid in the given colours, without the squircle behind it. */
-export function markArt(variant: BrandMarkVariant, fg: string = cream, accent: string = terracotta): string {
+export function markArt(
+  variant: BrandMarkVariant,
+  fg: string = cream,
+  accent: string = terracotta,
+): string {
   switch (variant) {
     // Antique mortise key: hollow bow with the jewel, collar, shaft and a stepped bit.
     case "key":
@@ -32,7 +40,11 @@ export function markArt(variant: BrandMarkVariant, fg: string = cream, accent: s
   }
 }
 
-export const BRAND_MARKS: Record<BrandMarkVariant, string> = { key: markArt("key"), arch: markArt("arch"), monogram: markArt("monogram") };
+export const BRAND_MARKS: Record<BrandMarkVariant, string> = {
+  key: markArt("key"),
+  arch: markArt("arch"),
+  monogram: markArt("monogram"),
+};
 
 /** A letter on the squircle: the site logo when the super admin picks "first letter". */
 export function initialIconSvg(name: string, size = 48): string {
@@ -41,15 +53,29 @@ export function initialIconSvg(name: string, size = 48): string {
 }
 
 /** The whole icon as an SVG document: squircle plus motif. `pad` (0–0.3) shrinks it for maskable icons. */
-export function brandIconSvg(variant: BrandMarkVariant = "key", { pad = 0, size = 48 }: { pad?: number; size?: number } = {}): string {
+export function brandIconSvg(
+  variant: BrandMarkVariant = "key",
+  { pad = 0, size = 48 }: { pad?: number; size?: number } = {},
+): string {
   const scale = 1 - pad * 2;
   const offset = 24 * (1 - scale);
-  const bg = pad > 0 ? `<rect width="48" height="48" fill="${forest}"/>` : `<rect width="48" height="48" rx="12" fill="${forest}"/>`;
+  const bg =
+    pad > 0
+      ? `<rect width="48" height="48" fill="${forest}"/>`
+      : `<rect width="48" height="48" rx="12" fill="${forest}"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="${size}" height="${size}">${bg}<g transform="translate(${offset} ${offset}) scale(${scale})">${BRAND_MARKS[variant]}</g></svg>`;
 }
 
 /** Just the mark. */
-export function BrandMark({ variant = "key", className, title }: { variant?: BrandMarkVariant; className?: string | undefined; title?: string | undefined }) {
+export function BrandMark({
+  variant = "key",
+  className,
+  title,
+}: {
+  variant?: BrandMarkVariant;
+  className?: string | undefined;
+  title?: string | undefined;
+}) {
   return (
     <svg
       viewBox="0 0 48 48"
@@ -58,7 +84,9 @@ export function BrandMark({ variant = "key", className, title }: { variant?: Bra
       aria-label={title}
       aria-hidden={title ? undefined : true}
       // Fixed drawings from this file, never user input.
-      dangerouslySetInnerHTML={{ __html: `<rect width="48" height="48" rx="12" fill="${forest}"/>${BRAND_MARKS[variant]}` }}
+      dangerouslySetInnerHTML={{
+        __html: `<rect width="48" height="48" rx="12" fill="${forest}"/>${BRAND_MARKS[variant]}`,
+      }}
     />
   );
 }
@@ -68,11 +96,25 @@ export function SiteLogoMark({ className }: { className?: string | undefined }) 
   const b = currentBrand();
   const [broken, setBroken] = useState(false);
   if (b.logoUrl && !broken) {
-    return <img src={b.logoUrl} alt="" aria-hidden onError={() => setBroken(true)} className={cn("size-10 shrink-0 rounded-2xl object-contain", className)} />;
+    return (
+      <img
+        src={b.logoUrl}
+        alt=""
+        aria-hidden
+        onError={() => setBroken(true)}
+        className={cn("size-10 shrink-0 rounded-2xl object-contain", className)}
+      />
+    );
   }
   if (b.logoMark === "initial") {
     return (
-      <span className={cn("grid size-10 shrink-0 place-items-center rounded-2xl bg-primary font-display text-lg text-primary-foreground", className)} aria-hidden>
+      <span
+        className={cn(
+          "grid size-10 shrink-0 place-items-center rounded-2xl bg-primary font-display text-lg text-primary-foreground",
+          className,
+        )}
+        aria-hidden
+      >
         {b.name.slice(0, 1).toUpperCase()}
       </span>
     );
@@ -96,7 +138,11 @@ export function BrandLogo({
   return (
     <span className={cn("flex min-w-0 items-center gap-3", className)}>
       <SiteLogoMark className={markClassName} />
-      {wordmark ? <span className={cn("truncate font-display text-xl", nameClassName)}>{name}</span> : <span className="sr-only">{name}</span>}
+      {wordmark ? (
+        <span className={cn("truncate font-display text-xl", nameClassName)}>{name}</span>
+      ) : (
+        <span className="sr-only">{name}</span>
+      )}
     </span>
   );
 }

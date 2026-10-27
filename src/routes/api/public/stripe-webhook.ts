@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Stripe webhook. Marks an extras request paid once the guest completes
  * checkout, confirms (or, unpaid, releases) direct bookings from the "Stay
@@ -14,9 +15,10 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secrets = [process.env["STRIPE_WEBHOOK_SECRET"], process.env["STRIPE_CONNECT_WEBHOOK_SECRET"]].filter(
-          (x): x is string => !!x,
-        );
+        const secrets = [
+          process.env["STRIPE_WEBHOOK_SECRET"],
+          process.env["STRIPE_CONNECT_WEBHOOK_SECRET"],
+        ].filter((x): x is string => !!x);
         if (secrets.length === 0) return new Response("Not configured", { status: 503 });
 
         const raw = await request.text();
@@ -34,9 +36,11 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
         }
 
         // Commission Partner events first (src/lib/partner-webhook.ts); anything else carries on below unchanged.
-        { const { handlePartnerEvent } = await import("@/lib/partner-webhook.server");
+        {
+          const { handlePartnerEvent } = await import("@/lib/partner-webhook.server");
           const partner = await handlePartnerEvent(event);
-          if (partner) return partner === true ? new Response("ok") : partner; }
+          if (partner) return partner === true ? new Response("ok") : partner;
+        }
 
         // A host's linked account finished (or lost) the ability to take payments.
         if (event.type === "account.updated") {
@@ -45,7 +49,10 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             await supabaseAdmin
               .from("hosts")
-              .update({ stripe_account_ready: !!acct.charges_enabled, stripe_account_checked_at: new Date().toISOString() })
+              .update({
+                stripe_account_ready: !!acct.charges_enabled,
+                stripe_account_checked_at: new Date().toISOString(),
+              })
               .eq("stripe_account_id", acct.id);
           }
           return new Response("ok");
@@ -53,17 +60,27 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
 
         // Latchkey subscriptions: created, renewed, failing, cancelled. Events
         // from a host's own account are their business, not Latchkey billing.
-        if (typeof event.type === "string" && event.type.startsWith("customer.subscription.") && !event.account) {
+        if (
+          typeof event.type === "string" &&
+          event.type.startsWith("customer.subscription.") &&
+          !event.account
+        ) {
           const { applyStripeSubscription } = await import("@/lib/billing.functions");
           await applyStripeSubscription(event.data?.object ?? {});
           return new Response("ok");
         }
-        if (event.type === "checkout.session.completed" && !event.account && event.data?.object?.metadata?.kind === "latchkey_subscription") {
+        if (
+          event.type === "checkout.session.completed" &&
+          !event.account &&
+          event.data?.object?.metadata?.kind === "latchkey_subscription"
+        ) {
           const subId = event.data.object.subscription;
           if (typeof subId === "string") {
             const { stripeCall } = await import("@/lib/stripe.server");
             const { applyStripeSubscription } = await import("@/lib/billing.functions");
-            await applyStripeSubscription(await stripeCall(`/subscriptions/${encodeURIComponent(subId)}`));
+            await applyStripeSubscription(
+              await stripeCall(`/subscriptions/${encodeURIComponent(subId)}`),
+            );
           }
           return new Response("ok");
         }
@@ -74,10 +91,18 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
           const reservationId = session.metadata?.reservation_id;
           if (typeof reservationId === "string") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { markReservationPaid, expireReservation } = await import("@/lib/direct-booking.functions");
+            const { markReservationPaid, expireReservation } =
+              await import("@/lib/direct-booking.functions");
             const db = supabaseAdmin as unknown as { from: (t: string) => any };
-            if ((event.type === "checkout.session.completed" && session.payment_status === "paid") || event.type === "checkout.session.async_payment_succeeded") {
-              await markReservationPaid(db, reservationId, typeof session.payment_intent === "string" ? session.payment_intent : null);
+            if (
+              (event.type === "checkout.session.completed" && session.payment_status === "paid") ||
+              event.type === "checkout.session.async_payment_succeeded"
+            ) {
+              await markReservationPaid(
+                db,
+                reservationId,
+                typeof session.payment_intent === "string" ? session.payment_intent : null,
+              );
             } else if (event.type === "checkout.session.expired") {
               await expireReservation(db, reservationId);
             }
@@ -85,12 +110,16 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
           return new Response("ok");
         }
 
-        if (event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") {
+        if (
+          event.type !== "checkout.session.completed" &&
+          event.type !== "checkout.session.async_payment_succeeded"
+        ) {
           return new Response("ok");
         }
 
         const session = event.data?.object ?? {};
-        const requestId: string | undefined = session.metadata?.request_id ?? session.client_reference_id;
+        const requestId: string | undefined =
+          session.metadata?.request_id ?? session.client_reference_id;
         if (!requestId) return new Response("ok");
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -108,7 +137,8 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
             status: "confirmed",
             paid_at: now,
             pay_by: null,
-            stripe_payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : null,
+            stripe_payment_intent:
+              typeof session.payment_intent === "string" ? session.payment_intent : null,
           })
           .eq("id", requestId);
         // A paid early check-in or late check-out moves the stay's times.

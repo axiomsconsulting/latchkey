@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Server only: a property's room-QR and Wi-Fi settings, and the Wi-Fi a
  * guest page shows (the room's own network, else the property's; the
@@ -9,7 +10,11 @@ import { normaliseStayAccess, wifiFor, type StayAccess } from "./stay-access";
 type Loose = { from: (t: string) => any };
 
 export async function stayAccessFor(db: Loose, propertyId: string): Promise<StayAccess> {
-  const { data, error } = await db.from("properties").select("stay_access").eq("id", propertyId).maybeSingle();
+  const { data, error } = await db
+    .from("properties")
+    .select("stay_access")
+    .eq("id", propertyId)
+    .maybeSingle();
   return normaliseStayAccess(error ? null : data?.stay_access);
 }
 
@@ -22,7 +27,9 @@ export async function guestWifi(
   checkedIn: boolean,
   access?: StayAccess,
 ): Promise<GuestWifi | null> {
-  const room = roomId ? await db.from("rooms").select("wifi_name, wifi_password").eq("id", roomId).maybeSingle() : { data: null, error: null };
+  const room = roomId
+    ? await db.from("rooms").select("wifi_name, wifi_password").eq("id", roomId).maybeSingle()
+    : { data: null, error: null };
   const wifi = wifiFor(room.error ? null : room.data, property);
   if (!wifi) return null;
   const settings = access ?? (await stayAccessFor(db, property.id));

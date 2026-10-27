@@ -27,7 +27,8 @@ import { activationBlockers, activationMissing, canRefer } from "../src/lib/part
 import { judgePartnerId, partnerIdStatus } from "../src/lib/partner-id";
 import type { IdRead } from "../src/lib/guest-records";
 
-const TEXT = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.0.md"), "utf8");
+const TEXT = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.1.md"), "utf8");
+const TEXT_1_0 = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.0.md"), "utf8");
 const NO_BONUS = {
   label: "v0.5-launch",
   effective_from: "2026-10-26T00:00:00Z",
@@ -41,7 +42,12 @@ const values = (terms = NO_BONUS, noticeEmail: string | null = "partners@example
     publishedAt: "2026-11-01T10:00:00Z",
     bodySha256: "a".repeat(64),
     terms,
-    settings: { launchDate: "2026-11-01", noticeEmail },
+    settings: {
+      launchDate: "2026-11-01",
+      noticeEmail,
+      operatorName: "Jo Bloggs, trading as OMS Estates",
+      operatorDetails: "Jo Bloggs, trading as OMS Estates, of 1 High Street, Town",
+    },
   });
 
 describe("agreement text", () => {
@@ -51,6 +57,16 @@ describe("agreement text", () => {
     expect(out).toContain("`{{bonus_summary}}`");
     expect(out).toContain("Published on 1 November 2026");
     expect(out).toContain("1 November 2026 to 31 October 2027");
+  });
+
+  it("names whoever runs Latchkey from the legal details, never a hard-coded company", () => {
+    const out = fillAgreement(TEXT, values());
+    expect(TEXT).not.toMatch(/Omnispace|16889713/);
+    expect(out).toContain(
+      "owned and run by Jo Bloggs, trading as OMS Estates, of 1 High Street, Town",
+    );
+    expect(out).toContain("accepted electronically by Jo Bloggs, trading as OMS Estates");
+    expect(out).toMatch(/1\.5 \*\*Our details, and if they change\.\*\*/);
   });
 
   it("refuses an unknown placeholder rather than show a gap", () => {
@@ -121,8 +137,10 @@ describe("agreement text", () => {
     const ticks = signingTicks(parseMarkdown(TEXT));
     expect(ticks).toHaveLength(7);
     expect(ticks[0]).toBe(
-      "I have read the whole of the Latchkey Commission Partner Agreement version 1.0 and agree to it.",
+      "I have read the whole of the Latchkey Commission Partner Agreement version 1.1 and agree to it.",
     );
+    expect(signingTicks(parseMarkdown(TEXT_1_0))).toHaveLength(7);
+    expect(() => fillAgreement(TEXT_1_0, values())).not.toThrow();
   });
 
   it("needs a full legal name of at least two words", () => {

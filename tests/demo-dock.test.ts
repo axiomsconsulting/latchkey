@@ -26,9 +26,15 @@ describe("demo panel tab", () => {
   });
 
   it("reads what the browser remembered, safely", () => {
-    expect(readDock(JSON.stringify({ side: "left", bottom: 60 }))).toEqual({ side: "left", bottom: 60 });
+    expect(readDock(JSON.stringify({ side: "left", bottom: 60 }))).toEqual({
+      side: "left",
+      bottom: 60,
+    });
     // The old corner panel's shape.
-    expect(readDock(JSON.stringify({ right: 40, bottom: 60, collapsed: true }))).toEqual({ side: "right", bottom: 60 });
+    expect(readDock(JSON.stringify({ right: 40, bottom: 60, collapsed: true }))).toEqual({
+      side: "right",
+      bottom: 60,
+    });
     expect(readDock("not json")).toBeNull();
     expect(readDock(null)).toBeNull();
   });

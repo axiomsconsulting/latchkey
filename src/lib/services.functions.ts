@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Host-side services hub: guest requests, scheduled maintenance, theme and
  * integration switches. Tradespeople come from the host's own contacts and
@@ -17,7 +18,11 @@ import { normaliseTheme, RESERVED_SLUGS } from "./theme";
 const uuid = z.string().uuid();
 
 async function hostContext(supabase: any, hostId: string) {
-  const { data } = await supabase.from("hosts").select("id, integration_modes, currency").eq("id", hostId).single();
+  const { data } = await supabase
+    .from("hosts")
+    .select("id, integration_modes, currency")
+    .eq("id", hostId)
+    .single();
   if (!data) throw new Error("Business not found.");
   return { modes: normaliseModes(data.integration_modes), currency: data.currency as string };
 }
@@ -45,7 +50,12 @@ export const saveIntegrationModes = createServerFn({ method: "POST" })
     z
       .object({
         hostId: uuid,
-        modes: z.object(Object.fromEntries(INTEGRATION_KEYS.map((k) => [k, z.enum(["demo", "live"])])) as Record<string, z.ZodEnum<["demo", "live"]>>),
+        modes: z.object(
+          Object.fromEntries(INTEGRATION_KEYS.map((k) => [k, z.enum(["demo", "live"])])) as Record<
+            string,
+            z.ZodEnum<["demo", "live"]>
+          >,
+        ),
       })
       .parse(d),
   )
@@ -56,8 +66,13 @@ export const saveIntegrationModes = createServerFn({ method: "POST" })
     // Never for the shared public demo: every visitor would be emailing real addresses.
     if (Object.values(data.modes).includes("live")) {
       const { DEMO_EMAIL } = await import("./demo-account");
-      const { data: h } = await supabaseAdmin.from("hosts").select("contact_email").eq("id", data.hostId).maybeSingle();
-      if ((h?.contact_email ?? "").toLowerCase() === DEMO_EMAIL) throw new Error("The shared demo always stays in demo mode.");
+      const { data: h } = await supabaseAdmin
+        .from("hosts")
+        .select("contact_email")
+        .eq("id", data.hostId)
+        .maybeSingle();
+      if ((h?.contact_email ?? "").toLowerCase() === DEMO_EMAIL)
+        throw new Error("The shared demo always stays in demo mode.");
     }
     const { error } = await supabaseAdmin
       .from("hosts")
@@ -76,12 +91,17 @@ export const saveTheme = createServerFn({ method: "POST" })
       .object({
         propertyId: uuid,
         theme: z.record(z.string(), z.unknown()),
-        shortCode: z.string().trim().toLowerCase().regex(/^[a-z0-9-]{3,30}$/, "Use 3–30 letters, numbers or dashes."),
+        shortCode: z
+          .string()
+          .trim()
+          .toLowerCase()
+          .regex(/^[a-z0-9-]{3,30}$/, "Use 3–30 letters, numbers or dashes."),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    if (RESERVED_SLUGS.has(data.shortCode)) throw new Error("That link name is reserved. Try another.");
+    if (RESERVED_SLUGS.has(data.shortCode))
+      throw new Error("That link name is reserved. Try another.");
     const { error } = await context.supabase
       .from("properties")
       .update({ theme_config: normaliseTheme(data.theme), short_code: data.shortCode })
@@ -109,27 +129,42 @@ export const uploadBrandAsset = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     // RLS check: the caller must be able to read this property.
-    const { data: prop } = await context.supabase.from("properties").select("id, host_id").eq("id", data.propertyId).maybeSingle();
+    const { data: prop } = await context.supabase
+      .from("properties")
+      .select("id, host_id")
+      .eq("id", data.propertyId)
+      .maybeSingle();
     if (!prop) throw new Error("Property not found.");
     await requireWrite(context.supabase, prop.host_id);
 
     const m = /^data:([\w/+.-]+);base64,(.+)$/.exec(data.dataUrl);
     if (!m) throw new Error("That file couldn't be read.");
     const ext = data.filename.split(".").pop()?.toLowerCase() ?? "";
-    const allowed = data.kind === "logo" ? ["png", "jpg", "jpeg", "webp", "svg"] : data.kind === "cover" ? ["png", "jpg", "jpeg", "webp"] : ["ttf", "otf", "woff", "woff2"];
+    const allowed =
+      data.kind === "logo"
+        ? ["png", "jpg", "jpeg", "webp", "svg"]
+        : data.kind === "cover"
+          ? ["png", "jpg", "jpeg", "webp"]
+          : ["ttf", "otf", "woff", "woff2"];
     if (!allowed.includes(ext)) throw new Error(`Please upload a ${allowed.join(", ")} file.`);
     const bytes = Buffer.from(m[2]!, "base64");
     if (bytes.length > 3 * 1024 * 1024) throw new Error("Files must be under 3 MB.");
 
     const contentType =
       data.kind === "logo" || data.kind === "cover"
-        ? ext === "svg" ? "image/svg+xml" : `image/${ext === "jpg" ? "jpeg" : ext}`
+        ? ext === "svg"
+          ? "image/svg+xml"
+          : `image/${ext === "jpg" ? "jpeg" : ext}`
         : `font/${ext === "otf" ? "otf" : ext}`;
     const path = `${data.propertyId}/${data.kind}-${Date.now()}.${ext}`;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const up = await supabaseAdmin.storage.from("branding").upload(path, bytes, { contentType, upsert: true });
+    const up = await supabaseAdmin.storage
+      .from("branding")
+      .upload(path, bytes, { contentType, upsert: true });
     if (up.error) throw new Error(up.error.message);
-    const signed = await supabaseAdmin.storage.from("branding").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    const signed = await supabaseAdmin.storage
+      .from("branding")
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
     if (signed.error) throw new Error(signed.error.message);
     return { url: signed.data.signedUrl };
   });
@@ -163,7 +198,14 @@ async function messageGuest(supabase: any, jobId: string, bookingId: string | nu
 }
 
 function ukTime(iso: string, tz: string) {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: tz,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
 export const acknowledgeJob = createServerFn({ method: "POST" })
@@ -172,32 +214,56 @@ export const acknowledgeJob = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: job, error } = await context.supabase
       .from("service_jobs")
-      .update({ status: "acknowledged", acknowledged_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        status: "acknowledged",
+        acknowledged_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", data.jobId)
       .select("id, booking_id, title")
       .single();
     if (error) throw new Error(error.message);
-    await messageGuest(context.supabase, job.id, job.booking_id, `Thanks — your host has seen "${job.title}" and is arranging it now.`);
+    await messageGuest(
+      context.supabase,
+      job.id,
+      job.booking_id,
+      `Thanks — your host has seen "${job.title}" and is arranging it now.`,
+    );
     return { ok: true };
   });
 
 export const setJobStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ jobId: uuid, status: z.enum(["in_progress", "done", "declined", "cancelled"]), note: z.string().max(300).nullable().default(null) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        jobId: uuid,
+        status: z.enum(["in_progress", "done", "declined", "cancelled"]),
+        note: z.string().max(300).nullable().default(null),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const now = new Date().toISOString();
     const { data: job, error } = await context.supabase
       .from("service_jobs")
-      .update({ status: data.status, updated_at: now, completed_at: data.status === "done" ? now : null })
+      .update({
+        status: data.status,
+        updated_at: now,
+        completed_at: data.status === "done" ? now : null,
+      })
       .eq("id", data.jobId)
       .select("id, booking_id, title")
       .single();
     if (error) throw new Error(error.message);
     const text =
-      data.status === "done" ? `"${job.title}" is sorted. Let us know if anything else is needed.`
-      : data.status === "declined" ? `Sorry, we can't arrange "${job.title}" this time.${data.note ? ` ${data.note}` : ""}`
-      : data.status === "in_progress" ? `"${job.title}" is under way now.`
-      : null;
+      data.status === "done"
+        ? `"${job.title}" is sorted. Let us know if anything else is needed.`
+        : data.status === "declined"
+          ? `Sorry, we can't arrange "${job.title}" this time.${data.note ? ` ${data.note}` : ""}`
+          : data.status === "in_progress"
+            ? `"${job.title}" is under way now.`
+            : null;
     if (text) await messageGuest(context.supabase, job.id, job.booking_id, text);
     return { ok: true };
   });

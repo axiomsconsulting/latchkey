@@ -39,7 +39,10 @@ export function ChannelIcon({
       />
     );
   }
-  const m = MARKS[channel] ?? { ...MARKS["other"]!, letter: label?.trim().charAt(0).toUpperCase() || "?" };
+  const m = MARKS[channel] ?? {
+    ...MARKS["other"]!,
+    letter: label?.trim().charAt(0).toUpperCase() || "?",
+  };
   return (
     <span
       aria-hidden

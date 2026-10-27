@@ -41,7 +41,10 @@ export function RoomFeedPanel({ roomId, roomName }: { roomId: string; roomName: 
   }
 
   return (
-    <div className="mt-3 w-full rounded-2xl border border-border bg-secondary/30 p-3" data-tour="connections-room-feeds">
+    <div
+      className="mt-3 w-full rounded-2xl border border-border bg-secondary/30 p-3"
+      data-tour="connections-room-feeds"
+    >
       <label className="flex items-center gap-3 text-sm">
         <Switch
           checked={q.data?.enabled ?? false}

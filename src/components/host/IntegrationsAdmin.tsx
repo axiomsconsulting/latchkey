@@ -9,7 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { common, integrationsCopy as copy } from "@/content/copy";
-import { connectTelegramWebhook, getIntegrationStatus, makeVapidKeys, saveIntegrationSettings, saveRoutine, sendTestSms } from "@/lib/admin.functions";
+import {
+  connectTelegramWebhook,
+  getIntegrationStatus,
+  makeVapidKeys,
+  saveIntegrationSettings,
+  saveRoutine,
+  sendTestSms,
+} from "@/lib/admin.functions";
 
 function Status({ ok }: { ok: boolean }) {
   return ok ? (
@@ -23,7 +30,17 @@ function Status({ ok }: { ok: boolean }) {
   );
 }
 
-function Block({ title, body, ok, children }: { title: string; body: string; ok: boolean | null; children?: React.ReactNode }) {
+function Block({
+  title,
+  body,
+  ok,
+  children,
+}: {
+  title: string;
+  body: string;
+  ok: boolean | null;
+  children?: React.ReactNode;
+}) {
   return (
     <section className="card-soft space-y-3 p-5">
       <div className="flex flex-wrap items-center gap-2">
@@ -80,7 +97,11 @@ export function IntegrationsAdmin() {
 
       <Block title={copy.push.title} body={copy.push.body} ok={s.push.ready}>
         {!s.push.ready ? (
-          <Button variant="outline" disabled={busy !== null} onClick={() => void run("vapid", async () => setKeys(await vapidFn()))}>
+          <Button
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => void run("vapid", async () => setKeys(await vapidFn()))}
+          >
             {busy === "vapid" ? <Loader2 className="size-4 animate-spin" /> : null} {copy.push.make}
           </Button>
         ) : null}
@@ -88,10 +109,16 @@ export function IntegrationsAdmin() {
           <div className="space-y-2 rounded-xl border-2 border-accent/40 bg-accent/10 p-3 text-sm">
             <p className="font-medium">{copy.push.warn}</p>
             <p>
-              VAPID_PUBLIC_KEY <code className="block break-all rounded bg-surface p-2 text-xs">{keys.publicKey}</code>
+              VAPID_PUBLIC_KEY{" "}
+              <code className="block break-all rounded bg-surface p-2 text-xs">
+                {keys.publicKey}
+              </code>
             </p>
             <p>
-              VAPID_PRIVATE_KEY <code className="block break-all rounded bg-surface p-2 text-xs">{keys.privateKey}</code>
+              VAPID_PRIVATE_KEY{" "}
+              <code className="block break-all rounded bg-surface p-2 text-xs">
+                {keys.privateKey}
+              </code>
             </p>
           </div>
         ) : null}
@@ -101,8 +128,19 @@ export function IntegrationsAdmin() {
         <div className="flex flex-wrap items-center gap-3 text-sm">
           {s.telegram.bot ? <span>{copy.telegram.bot(s.telegram.bot)}</span> : null}
           {s.telegram.tokenSet && !s.telegram.webhookSet ? (
-            <Button variant="outline" disabled={busy !== null} onClick={() => void run("tg", () => tgFn(), s.telegram.bot ? copy.telegram.connected(s.telegram.bot) : undefined)}>
-              {busy === "tg" ? <Loader2 className="size-4 animate-spin" /> : null} {copy.telegram.connect}
+            <Button
+              variant="outline"
+              disabled={busy !== null}
+              onClick={() =>
+                void run(
+                  "tg",
+                  () => tgFn(),
+                  s.telegram.bot ? copy.telegram.connected(s.telegram.bot) : undefined,
+                )
+              }
+            >
+              {busy === "tg" ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
+              {copy.telegram.connect}
             </Button>
           ) : null}
         </div>
@@ -111,8 +149,18 @@ export function IntegrationsAdmin() {
       <Block title={copy.sms.title} body={copy.sms.body} ok={s.sms.ready}>
         {s.sms.ready ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Input className="h-10 w-56" placeholder="+447400123456" aria-label={copy.sms.to} value={smsTo} onChange={(e) => setSmsTo(e.target.value.replace(/\s/g, ""))} />
-            <Button variant="outline" disabled={busy !== null || !/^\+\d{7,15}$/.test(smsTo)} onClick={() => void run("sms", () => smsFn({ data: { to: smsTo } }), copy.sms.sent)}>
+            <Input
+              className="h-10 w-56"
+              placeholder="+447400123456"
+              aria-label={copy.sms.to}
+              value={smsTo}
+              onChange={(e) => setSmsTo(e.target.value.replace(/\s/g, ""))}
+            />
+            <Button
+              variant="outline"
+              disabled={busy !== null || !/^\+\d{7,15}$/.test(smsTo)}
+              onClick={() => void run("sms", () => smsFn({ data: { to: smsTo } }), copy.sms.sent)}
+            >
               {copy.sms.test}
             </Button>
           </div>
@@ -124,28 +172,58 @@ export function IntegrationsAdmin() {
           <Switch
             checked={s.firecrawl.enabled}
             disabled={busy !== null || (!s.firecrawl.keySet && !s.firecrawl.enabled)}
-            onCheckedChange={(v) => void run("firecrawl", () => routineFn({ data: { key: "listing_import", enabled: v, everyMinutes: null } }), copy.firecrawl.switched(v))}
+            onCheckedChange={(v) =>
+              void run(
+                "firecrawl",
+                () =>
+                  routineFn({ data: { key: "listing_import", enabled: v, everyMinutes: null } }),
+                copy.firecrawl.switched(v),
+              )
+            }
             aria-label={copy.firecrawl.title}
           />
           {s.firecrawl.enabled ? copy.firecrawl.on : copy.firecrawl.off}
-          {!s.firecrawl.keySet ? <span className="text-muted-foreground">· {copy.firecrawl.needsKey}</span> : null}
+          {!s.firecrawl.keySet ? (
+            <span className="text-muted-foreground">· {copy.firecrawl.needsKey}</span>
+          ) : null}
         </label>
       </Block>
 
-      <Block title={copy.inbound.title} body={copy.inbound.body} ok={s.inbound.secretSet && !!s.inbound.address}>
+      <Block
+        title={copy.inbound.title}
+        body={copy.inbound.body}
+        ok={s.inbound.secretSet && !!s.inbound.address}
+      >
         <div className="space-y-2 text-sm">
           <label className="block space-y-1">
             <span className="font-medium">{copy.inbound.address}</span>
             <div className="flex flex-wrap gap-2">
-              <Input className="h-10 min-w-64 flex-1" placeholder={copy.inbound.placeholder} value={address} onChange={(e) => setAddress(e.target.value)} />
-              <Button variant="outline" disabled={busy !== null} onClick={() => void run("inbound", () => saveFn({ data: { inboundAddress: address } }), copy.inbound.saved)}>
+              <Input
+                className="h-10 min-w-64 flex-1"
+                placeholder={copy.inbound.placeholder}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+              />
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() =>
+                  void run(
+                    "inbound",
+                    () => saveFn({ data: { inboundAddress: address } }),
+                    copy.inbound.saved,
+                  )
+                }
+              >
                 {copy.inbound.save}
               </Button>
             </div>
           </label>
           <p>
             <span className="font-medium">{copy.inbound.webhook}: </span>
-            <code className="break-all text-xs">{s.origin}/api/public/inbound-email/&lt;INBOUND_EMAIL_SECRET&gt;</code>
+            <code className="break-all text-xs">
+              {s.origin}/api/public/inbound-email/&lt;INBOUND_EMAIL_SECRET&gt;
+            </code>
           </p>
         </div>
       </Block>

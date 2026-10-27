@@ -6,11 +6,27 @@ import { Moon, Sun, Sunrise, Sunset, Type } from "lucide-react";
 
 import { useQrImage } from "@/components/guest/CheckInQr";
 import { useLandscapeDisplay } from "@/hooks/use-display";
-import { burnDrift, clockHands, dayProgress, kioskNow, quietNow, worldClocksFor } from "@/lib/kiosk-clock";
+import {
+  burnDrift,
+  clockHands,
+  dayProgress,
+  kioskNow,
+  quietNow,
+  worldClocksFor,
+} from "@/lib/kiosk-clock";
 import { zoneCity } from "@/lib/world";
 import { kioskSaverLook, saveKioskNightLook, saveKioskSaverLook } from "@/lib/kiosk.functions";
 import { onKioskPing } from "@/lib/kiosk-ping";
-import { DEFAULT_NIGHT_LOOK, DEFAULT_REST, arrangeClocks, nightLookFor, normaliseRest, qrSpot, type KioskRest, type NightLook } from "@/lib/kiosk-rest";
+import {
+  DEFAULT_NIGHT_LOOK,
+  DEFAULT_REST,
+  arrangeClocks,
+  nightLookFor,
+  normaliseRest,
+  qrSpot,
+  type KioskRest,
+  type NightLook,
+} from "@/lib/kiosk-rest";
 import { cn } from "@/lib/utils";
 import {
   BRIGHTNESS,
@@ -41,7 +57,13 @@ export function useNow(stepMs = 15_000) {
 }
 
 /** Today's date and time at the top of the kiosk, in the property's time zone. */
-export function KioskClock({ tz, longName = false }: { tz: string; /** The property's name is long: on phones, "Sat 17 Oct" instead. */ longName?: boolean }) {
+export function KioskClock({
+  tz,
+  longName = false,
+}: {
+  tz: string;
+  /** The property's name is long: on phones, "Sat 17 Oct" instead. */ longName?: boolean;
+}) {
   const now = useNow();
   // Shown once running in the browser, so the server's time never mismatches the tablet's.
   const [mounted, setMounted] = useState(false);
@@ -91,14 +113,48 @@ const DAY_ICONS = {
   night: Moon,
 } as const;
 
-function Dial({ city, tz, home, now, here, look, big = false }: { city: string; tz: string; home: string; now: Date; here: boolean; look: SaverLook; /** Upright: the home clock on top, larger. */ big?: boolean }) {
+function Dial({
+  city,
+  tz,
+  home,
+  now,
+  here,
+  look,
+  big = false,
+}: {
+  city: string;
+  tz: string;
+  home: string;
+  now: Date;
+  here: boolean;
+  look: SaverLook;
+  /** Upright: the home clock on top, larger. */ big?: boolean;
+}) {
   const h = clockHands(now, tz, home);
   const b = look.brightness;
   const w = look.size;
   return (
     <figure className="flex flex-col items-center gap-3" style={{ opacity: here ? 1 : 0.8 }}>
-      <svg viewBox="0 0 100 100" className={big ? "size-48 sm:size-64 lg:size-80" : here ? "size-32 sm:size-44 lg:size-52" : "size-24 sm:size-32 lg:size-36"} aria-hidden>
-        <circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" strokeOpacity={glow(0.22, b)} strokeWidth={0.8 * w} />
+      <svg
+        viewBox="0 0 100 100"
+        className={
+          big
+            ? "size-48 sm:size-64 lg:size-80"
+            : here
+              ? "size-32 sm:size-44 lg:size-52"
+              : "size-24 sm:size-32 lg:size-36"
+        }
+        aria-hidden
+      >
+        <circle
+          cx="50"
+          cy="50"
+          r="47"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity={glow(0.22, b)}
+          strokeWidth={0.8 * w}
+        />
         {Array.from({ length: 12 }, (_, i) => (
           <line
             key={i}
@@ -112,13 +168,39 @@ function Dial({ city, tz, home, now, here, look, big = false }: { city: string; 
             transform={`rotate(${i * 30} 50 50)`}
           />
         ))}
-        <line x1="50" y1="50" x2="50" y2="27" stroke="currentColor" strokeOpacity={glow(0.55, b)} strokeWidth={2.2 * w} strokeLinecap="round" transform={`rotate(${h.hourDeg} 50 50)`} />
-        <line x1="50" y1="50" x2="50" y2="15" stroke="currentColor" strokeOpacity={glow(0.45, b)} strokeWidth={1.2 * w} strokeLinecap="round" transform={`rotate(${h.minuteDeg} 50 50)`} />
+        <line
+          x1="50"
+          y1="50"
+          x2="50"
+          y2="27"
+          stroke="currentColor"
+          strokeOpacity={glow(0.55, b)}
+          strokeWidth={2.2 * w}
+          strokeLinecap="round"
+          transform={`rotate(${h.hourDeg} 50 50)`}
+        />
+        <line
+          x1="50"
+          y1="50"
+          x2="50"
+          y2="15"
+          stroke="currentColor"
+          strokeOpacity={glow(0.45, b)}
+          strokeWidth={1.2 * w}
+          strokeLinecap="round"
+          transform={`rotate(${h.minuteDeg} 50 50)`}
+        />
         <circle cx="50" cy="50" r={1.6 * w} fill="currentColor" fillOpacity={glow(0.5, b)} />
       </svg>
       <figcaption className="text-center">
         {/* Wider letters close up as the text grows, so long city names keep to their clock. */}
-        <span className="block whitespace-nowrap font-medium uppercase" style={{ ...text(0.7, 0.7 * 0.4, look), letterSpacing: `${0.3 / Math.max(1, look.size)}em` }}>
+        <span
+          className="block whitespace-nowrap font-medium uppercase"
+          style={{
+            ...text(0.7, 0.7 * 0.4, look),
+            letterSpacing: `${0.3 / Math.max(1, look.size)}em`,
+          }}
+        >
           {city}
         </span>
         {here ? (
@@ -128,7 +210,11 @@ function Dial({ city, tz, home, now, here, look, big = false }: { city: string; 
         ) : null}
         <span className="mt-1 block tabular-nums" style={text(0.75, 0.45 * 0.4, look)}>
           {h.time}
-          {h.dayShift === 1 ? ` · ${copy.tomorrow}` : h.dayShift === -1 ? ` · ${copy.yesterday}` : ""}
+          {h.dayShift === 1
+            ? ` · ${copy.tomorrow}`
+            : h.dayShift === -1
+              ? ` · ${copy.yesterday}`
+              : ""}
         </span>
       </figcaption>
     </figure>
@@ -151,9 +237,16 @@ function SaverQr({ url, look }: { url: string; look: SaverLook }) {
         src={src}
         alt={copy.qrAlt}
         className="p-2"
-        style={{ width: `${10 * look.size}rem`, maxWidth: "36vmin", opacity: Math.min(0.85, Math.max(0.55, glow(0.4, look.brightness))) }}
+        style={{
+          width: `${10 * look.size}rem`,
+          maxWidth: "36vmin",
+          opacity: Math.min(0.85, Math.max(0.55, glow(0.4, look.brightness))),
+        }}
       />
-      <figcaption className="max-w-[14rem] text-center uppercase tracking-[0.2em]" style={text(0.65, 0.4, look)}>
+      <figcaption
+        className="max-w-[14rem] text-center uppercase tracking-[0.2em]"
+        style={text(0.65, 0.4, look)}
+      >
         {copy.saverQr}
       </figcaption>
     </figure>
@@ -208,9 +301,12 @@ export function SaverBand({
     if (hide.current) clearTimeout(hide.current);
     hide.current = setTimeout(() => setShown(false), 3_000);
   };
-  useEffect(() => () => {
-    if (hide.current) clearTimeout(hide.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (hide.current) clearTimeout(hide.current);
+    },
+    [],
+  );
   const nudge = (dir: 1 | -1) => {
     keep();
     onChange(bandValue(bandFraction(latest.current + dir * step, lo, hi), lo, hi, step));
@@ -281,8 +377,15 @@ export function SaverBand({
         }}
       >
         <span className="text-xs tabular-nums">{Math.round(value * 100)}%</span>
-        <div ref={track} className="relative w-3 flex-1 overflow-hidden rounded-full" style={{ background: "rgb(255 255 255 / 0.12)" }}>
-          <div className="absolute inset-x-0 bottom-0 rounded-full" style={{ height: `${fill * 100}%`, background: `rgb(255 255 255 / ${ink})` }} />
+        <div
+          ref={track}
+          className="relative w-3 flex-1 overflow-hidden rounded-full"
+          style={{ background: "rgb(255 255 255 / 0.12)" }}
+        >
+          <div
+            className="absolute inset-x-0 bottom-0 rounded-full"
+            style={{ height: `${fill * 100}%`, background: `rgb(255 255 255 / ${ink})` }}
+          />
         </div>
         <Icon className="size-5" aria-hidden />
         <span className="sr-only">{copy.saverBandHint}</span>
@@ -303,7 +406,10 @@ export function useSaverLook(code: string, live = true) {
   const saveLook = useServerFn(saveKioskSaverLook);
   const saveNight = useServerFn(saveKioskNightLook);
   const [defaults, setDefaults] = useState<SaverDefaults>(DEFAULT_SAVER);
-  const [look, setLook] = useState<SaverLook>({ brightness: DEFAULT_SAVER.brightness, size: DEFAULT_SAVER.size });
+  const [look, setLook] = useState<SaverLook>({
+    brightness: DEFAULT_SAVER.brightness,
+    size: DEFAULT_SAVER.size,
+  });
   // What shows at rest (the host's choice for this property) and the night light's own look.
   const [rest, setRest] = useState<KioskRest>(DEFAULT_REST);
   const [night, setNightLook] = useState<NightLook>(DEFAULT_NIGHT_LOOK);
@@ -324,7 +430,12 @@ export function useSaverLook(code: string, live = true) {
   );
   useEffect(() => {
     try {
-      const kept = JSON.parse(window.localStorage.getItem(lookKey(code)) ?? "null") as { defaults?: unknown; look?: unknown; rest?: unknown; night?: unknown } | null;
+      const kept = JSON.parse(window.localStorage.getItem(lookKey(code)) ?? "null") as {
+        defaults?: unknown;
+        look?: unknown;
+        rest?: unknown;
+        night?: unknown;
+      } | null;
       if (kept) {
         const d = normaliseDefaults(kept.defaults);
         setDefaults(d);
@@ -338,7 +449,8 @@ export function useSaverLook(code: string, live = true) {
     const load = (pinged = false) =>
       void fetchLook({ data: { code } })
         .then((r) => {
-          if (pinged && r.rest.nightLight && !current.current.rest.nightLight) setNightOnAt(Date.now());
+          if (pinged && r.rest.nightLight && !current.current.rest.nightLight)
+            setNightOnAt(Date.now());
           setDefaults(r.defaults);
           setRest(r.rest);
           // Never undo a slide the host is making right now.
@@ -385,7 +497,17 @@ export function useSaverLook(code: string, live = true) {
     sliding.current = true;
     setNightLook(next);
   }, []);
-  return { defaults, look, setLook: change, commit, rest, night, setNight: changeNight, commitNight, nightOnAt };
+  return {
+    defaults,
+    look,
+    setLook: change,
+    commit,
+    rest,
+    night,
+    setNight: changeNight,
+    commitNight,
+    nightOnAt,
+  };
 }
 
 /**
@@ -419,9 +541,21 @@ export function KioskScreensaver({
   const { defaults, look, setLook, commit } = saver;
   // Upright the way the device is held: the clocks stack.
   const upright = !useLandscapeDisplay();
-  const { main, row } = arrangeClocks(worldClocksFor(tz, zoneCity(tz), now), { qr: !!qrUrl, portrait: upright });
+  const { main, row } = arrangeClocks(worldClocksFor(tz, zoneCity(tz), now), {
+    qr: !!qrUrl,
+    portrait: upright,
+  });
   const dial = (c: { city: string; tz: string; home: boolean }, big = false) => (
-    <Dial key={c.city} city={c.city} tz={c.tz} home={tz} now={now} here={c.home} look={look} big={big} />
+    <Dial
+      key={c.city}
+      city={c.city}
+      tz={c.tz}
+      home={tz}
+      now={now}
+      here={c.home}
+      look={look}
+      big={big}
+    />
   );
   const square = qrUrl ? <SaverQr url={qrUrl} look={look} /> : null;
   // The square changes side every few minutes (qrSpot), on top of the slow wander.
@@ -441,18 +575,31 @@ export function KioskScreensaver({
     >
       <div
         className="flex flex-col items-center gap-12 transition-transform duration-[19000ms] ease-in-out"
-        style={{ transform: `translate(${drift.x}px, ${drift.y}px)`, color: `rgb(255 255 255 / ${glow(0.4, look.brightness)})` }}
+        style={{
+          transform: `translate(${drift.x}px, ${drift.y}px)`,
+          color: `rgb(255 255 255 / ${glow(0.4, look.brightness)})`,
+        }}
       >
         {/* Upright: home on top (larger, the QR square beside it), the other cities in a row below.
             On its side: here in the middle, cities behind on the left and ahead on the right; with the
             QR square, one either side of home and the square after them. */}
         {main ? (
-          <div className={cn("flex items-center justify-center gap-10 sm:gap-16", qrFirst && "flex-row-reverse")}>
+          <div
+            className={cn(
+              "flex items-center justify-center gap-10 sm:gap-16",
+              qrFirst && "flex-row-reverse",
+            )}
+          >
             {dial(main, true)}
             {square}
           </div>
         ) : null}
-        <div className={cn("flex items-center justify-center gap-6 sm:gap-10 lg:gap-14", !main && square && qrFirst && "flex-row-reverse")}>
+        <div
+          className={cn(
+            "flex items-center justify-center gap-6 sm:gap-10 lg:gap-14",
+            !main && square && qrFirst && "flex-row-reverse",
+          )}
+        >
           {row.map((c) => dial(c))}
           {!main && square ? <div className="mx-4 sm:mx-8">{square}</div> : null}
         </div>
@@ -465,7 +612,10 @@ export function KioskScreensaver({
           </p>
           {q?.active ? (
             <div className="mx-auto mt-8 max-w-xl">
-              <p className="flex items-center justify-center gap-2 tracking-wide" style={text(1, 0.4, look)}>
+              <p
+                className="flex items-center justify-center gap-2 tracking-wide"
+                style={text(1, 0.4, look)}
+              >
                 <Moon className="size-[1em]" aria-hidden /> {copy.quietTitle(q.until)}
               </p>
               <p className="mt-2 leading-relaxed" style={text(0.875, 0.3, look)}>

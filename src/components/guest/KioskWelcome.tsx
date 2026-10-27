@@ -54,7 +54,13 @@ export function useKioskWelcome(code: string, enabled = true, closeAfterMinutes 
 }
 
 /** The welcome, filling the screen. Any touch dismisses it and opens check-in. */
-export function KioskWelcomeOverlay({ welcome, onDismiss }: { welcome: Welcome; onDismiss: () => void }) {
+export function KioskWelcomeOverlay({
+  welcome,
+  onDismiss,
+}: {
+  welcome: Welcome;
+  onDismiss: () => void;
+}) {
   return (
     <div
       role="button"
@@ -69,8 +75,14 @@ export function KioskWelcomeOverlay({ welcome, onDismiss }: { welcome: Welcome; 
       onKeyDown={onDismiss}
     >
       <Hand className="mb-8 size-14 opacity-80" aria-hidden />
-      <h1 className="max-w-5xl font-display text-5xl leading-tight sm:text-7xl">{welcome.headline}</h1>
-      {welcome.body ? <p className="mt-6 max-w-3xl whitespace-pre-line text-2xl opacity-90 sm:text-3xl">{welcome.body}</p> : null}
+      <h1 className="max-w-5xl font-display text-5xl leading-tight sm:text-7xl">
+        {welcome.headline}
+      </h1>
+      {welcome.body ? (
+        <p className="mt-6 max-w-3xl whitespace-pre-line text-2xl opacity-90 sm:text-3xl">
+          {welcome.body}
+        </p>
+      ) : null}
       {/* A solid button (no see-through colours: older tablet browsers show those as plain white), with a gentle pulse every few seconds. */}
       <p className="nudge-pulse mt-14 inline-flex items-center gap-3 rounded-full bg-primary-foreground px-9 py-4 text-xl font-semibold text-primary shadow-lg sm:text-2xl">
         {copy.welcomeTap} <ArrowRight className="size-6" aria-hidden />

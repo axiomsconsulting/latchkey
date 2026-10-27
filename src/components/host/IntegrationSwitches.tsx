@@ -14,7 +14,10 @@ export function IntegrationSwitches({ hostId }: { hostId: string }) {
   const qc = useQueryClient();
   const fn = useServerFn(getIntegrations);
   const save = useServerFn(saveIntegrationModes);
-  const q = useQuery({ queryKey: ["integrations", hostId], queryFn: () => fn({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["integrations", hostId],
+    queryFn: () => fn({ data: { hostId } }),
+  });
 
   async function setMode(key: IntegrationKey, mode: Mode) {
     if (!q.data) return;
@@ -47,12 +50,20 @@ export function IntegrationSwitches({ hostId }: { hostId: string }) {
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     {item.name}
                     {mode === "live" ? (
-                      <Badge variant={ready ? "default" : "destructive"}>{ready ? copy.ready : copy.needsSetup}</Badge>
+                      <Badge variant={ready ? "default" : "destructive"}>
+                        {ready ? copy.ready : copy.needsSetup}
+                      </Badge>
                     ) : null}
                   </p>
-                  <p className="text-sm text-muted-foreground">{mode === "demo" ? item.demo : item.live}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {mode === "demo" ? item.demo : item.live}
+                  </p>
                 </div>
-                <div role="radiogroup" aria-label={item.name} className="flex rounded-full bg-muted p-1">
+                <div
+                  role="radiogroup"
+                  aria-label={item.name}
+                  className="flex rounded-full bg-muted p-1"
+                >
                   {(["demo", "live"] as const).map((m) => (
                     <button
                       key={m}
@@ -62,10 +73,16 @@ export function IntegrationSwitches({ hostId }: { hostId: string }) {
                       onClick={() => setMode(key, m)}
                       className={cn(
                         "spring flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-medium",
-                        mode === m ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground",
+                        mode === m
+                          ? "bg-primary text-primary-foreground shadow-soft"
+                          : "text-muted-foreground",
                       )}
                     >
-                      {m === "demo" ? <FlaskConical className="size-4" /> : <Radio className="size-4" />}
+                      {m === "demo" ? (
+                        <FlaskConical className="size-4" />
+                      ) : (
+                        <Radio className="size-4" />
+                      )}
                       {m === "demo" ? copy.demo : copy.live}
                     </button>
                   ))}

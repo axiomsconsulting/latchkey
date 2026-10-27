@@ -2,7 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, ArchiveRestore, CalendarDays, ListChecks, Loader2, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  CalendarDays,
+  ListChecks,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { BookingDialog, type BookingRow } from "@/components/host/BookingDialog";
@@ -33,18 +43,53 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { bookingTools as tools, bookings as copy, channels, common, statuses } from "@/content/copy";
-import { useBookingSites, usePropertyBoard, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
-import { DEFAULT_FILTERS, filterBookings, readFilters, sortBookings, stayGroup, type ListBooking, type ListFilters, type SortKey } from "@/lib/booking-list";
+import {
+  bookingTools as tools,
+  bookings as copy,
+  channels,
+  common,
+  statuses,
+} from "@/content/copy";
+import {
+  useBookingSites,
+  usePropertyBoard,
+  useRole,
+  useSelectedProperty,
+  useWorkspace,
+} from "@/hooks/use-host-data";
+import {
+  DEFAULT_FILTERS,
+  filterBookings,
+  readFilters,
+  sortBookings,
+  stayGroup,
+  type ListBooking,
+  type ListFilters,
+  type SortKey,
+} from "@/lib/booking-list";
 import { platformKey } from "@/lib/booking-sites";
 import { addDays, formatUkDate } from "@/lib/dates";
-import { archiveBookings, deleteBookings, setBookingStatus, syncPropertyNow } from "@/lib/guests.functions";
+import {
+  archiveBookings,
+  deleteBookings,
+  setBookingStatus,
+  syncPropertyNow,
+} from "@/lib/guests.functions";
 import { cn } from "@/lib/utils";
 import { todayBoard, type TodayBooking } from "@/lib/today";
 import { useLandOn } from "@/hooks/use-land-on";
 import { NeedsDetailsCard, type NeedsDetailsBooking } from "@/components/host/NeedsDetailsCard";
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
-import { AlertTriangle, ArrowUpRight, Ban, Eye, EyeOff, LockOpen, PencilLine, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Ban,
+  Eye,
+  EyeOff,
+  LockOpen,
+  PencilLine,
+  X,
+} from "lucide-react";
 import { today as todayCopy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
 
@@ -53,10 +98,17 @@ export const Route = createFileRoute("/_authenticated/app/bookings")({
   // ?edit=1 also opens the edit form, e.g. from the Edit button on Today.
   // ?show=arriving|staying|leaving|needs_details|double_booked lists just those
   // stays, worked out exactly as Today does, e.g. from a number on Today.
-  validateSearch: (search: Record<string, unknown>): { guest?: string; edit?: boolean; show?: ShowKey } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { guest?: string; edit?: boolean; show?: ShowKey } => ({
     ...(typeof search["guest"] === "string" ? { guest: search["guest"] } : {}),
-    ...(search["edit"] === true || search["edit"] === "1" || search["edit"] === 1 ? { edit: true } : {}),
-    ...(typeof search["show"] === "string" && (SHOW_KEYS as readonly string[]).includes(search["show"]) ? { show: search["show"] as ShowKey } : {}),
+    ...(search["edit"] === true || search["edit"] === "1" || search["edit"] === 1
+      ? { edit: true }
+      : {}),
+    ...(typeof search["show"] === "string" &&
+    (SHOW_KEYS as readonly string[]).includes(search["show"])
+      ? { show: search["show"] as ShowKey }
+      : {}),
   }),
   head: () => ({
     meta: [
@@ -84,7 +136,6 @@ const STATUS_KEYS = [
   "flagged",
   "blocked",
 ] as const;
-
 
 function BookingsPage() {
   const workspace = useWorkspace();
@@ -125,7 +176,10 @@ function BookingsPage() {
       // Not remembered this time.
     }
   }
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "smart", dir: "asc" });
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
+    key: "smart",
+    dir: "asc",
+  });
   const [editing, setEditing] = useState<BookingRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -144,7 +198,11 @@ function BookingsPage() {
     if (!b) return;
     setEditing(b);
     setDialogOpen(true);
-    void navigate({ to: "/app/bookings", search: { guest, ...(show ? { show } : {}) }, replace: true });
+    void navigate({
+      to: "/app/bookings",
+      search: { guest, ...(show ? { show } : {}) },
+      replace: true,
+    });
   }, [edit, guest, everything, navigate, show]);
   const todayIso = data?.today ?? new Date().toISOString().slice(0, 10);
   const windows = (data?.windows ?? []) as Array<{
@@ -158,7 +216,10 @@ function BookingsPage() {
 
   const platformOf = (b: ListBooking) => platformKey(b);
   // The same lists Today shows, so a number there opens exactly those stays here.
-  const lists = useMemo(() => todayBoard(everything as unknown as TodayBooking[], todayIso), [everything, todayIso]);
+  const lists = useMemo(
+    () => todayBoard(everything as unknown as TodayBooking[], todayIso),
+    [everything, todayIso],
+  );
   const focus = show
     ? new Set(
         {
@@ -172,10 +233,18 @@ function BookingsPage() {
     : null;
   const visible = useMemo(
     () =>
-      sortBookings(focus ? all.filter((b) => focus.has(b.id)) : filterBookings(all, filters, todayIso, platformOf), sort.key, sort.dir, todayIso, {
-        room: (id) => rooms.find((r) => r.id === id)?.display_name ?? "",
-        platform: (b) => sites.find((x) => x.key === platformKey(b))?.label ?? b.channel,
-      }),
+      sortBookings(
+        focus
+          ? all.filter((b) => focus.has(b.id))
+          : filterBookings(all, filters, todayIso, platformOf),
+        sort.key,
+        sort.dir,
+        todayIso,
+        {
+          room: (id) => rooms.find((r) => r.id === id)?.display_name ?? "",
+          platform: (b) => sites.find((x) => x.key === platformKey(b))?.label ?? b.channel,
+        },
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [all, filters, sort, todayIso, rooms, sites, show, lists],
   );
@@ -184,7 +253,6 @@ function BookingsPage() {
     () => filterBookings(all, { ...filters, hideGroups: [] }, todayIso, platformOf),
     [all, filters, todayIso],
   );
-
 
   function openNew() {
     setEditing(null);
@@ -197,7 +265,11 @@ function BookingsPage() {
   }
 
   function openGuest(id: string | null) {
-    void navigate({ to: "/app/bookings", search: { ...(id ? { guest: id } : {}), ...(show ? { show } : {}) }, replace: true });
+    void navigate({
+      to: "/app/bookings",
+      search: { ...(id ? { guest: id } : {}), ...(show ? { show } : {}) },
+      replace: true,
+    });
   }
   useLandOn(show ? "bookings-list" : guest ? `stay-${guest}` : null, everything.length > 0);
 
@@ -227,7 +299,13 @@ function BookingsPage() {
   function rowActions(b: ListBooking) {
     if (!canWrite) return null;
     const full = everything.find((x) => x.id === b.id);
-    const icon = (key: string, label: string, Icon: typeof Eye, onClick: () => void, tone?: string) => (
+    const icon = (
+      key: string,
+      label: string,
+      Icon: typeof Eye,
+      onClick: () => void,
+      tone?: string,
+    ) => (
       <Tip key={key} label={label}>
         <Button
           size="icon"
@@ -242,19 +320,37 @@ function BookingsPage() {
       </Tip>
     );
     const hide = (on: boolean) =>
-      icon(on ? "hide" : "show", on ? tools.rowHide : tools.rowShow, on ? EyeOff : Eye, () =>
-        void run(`row-${b.id}`, async () => {
-          const res = await archiveFn({ data: { ids: [b.id], archived: on } });
-          return on ? tools.archivedToast(res.count) : tools.restoredToast(res.count);
-        }),
+      icon(
+        on ? "hide" : "show",
+        on ? tools.rowHide : tools.rowShow,
+        on ? EyeOff : Eye,
+        () =>
+          void run(`row-${b.id}`, async () => {
+            const res = await archiveFn({ data: { ids: [b.id], archived: on } });
+            return on ? tools.archivedToast(res.count) : tools.restoredToast(res.count);
+          }),
       );
     if (scope === "archive") return hide(false);
     const group = stayGroup(b, todayIso);
     if (group === "closed") {
-      if (b.mirror_of) return [icon("orig", tools.rowOpenOriginal, ArrowUpRight, () => openGuest(b.mirror_of!)), hide(true)];
+      if (b.mirror_of)
+        return [
+          icon("orig", tools.rowOpenOriginal, ArrowUpRight, () => openGuest(b.mirror_of!)),
+          hide(true),
+        ];
       return [
-        icon("unblock", tools.rowUnblock, LockOpen, () =>
-          void run(`row-${b.id}`, async () => (await statusFn({ data: { id: b.id, status: "needs_details" } }), tools.reopenedToast)),
+        icon(
+          "unblock",
+          tools.rowUnblock,
+          LockOpen,
+          () =>
+            void run(
+              `row-${b.id}`,
+              async () => (
+                await statusFn({ data: { id: b.id, status: "needs_details" } }),
+                tools.reopenedToast
+              ),
+            ),
         ),
         hide(true),
       ];
@@ -262,9 +358,25 @@ function BookingsPage() {
     if (group === "cancelled" || group === "past") return hide(true);
     if (!b.guest_full_name?.trim()) {
       return [
-        icon("name", tools.rowAddName, PencilLine, () => (full ? openEdit(full) : openGuest(b.id)), "text-primary"),
-        icon("block", tools.rowNotBooking, Ban, () =>
-          void run(`row-${b.id}`, async () => (await statusFn({ data: { id: b.id, status: "blocked" } }), tools.closedToast)),
+        icon(
+          "name",
+          tools.rowAddName,
+          PencilLine,
+          () => (full ? openEdit(full) : openGuest(b.id)),
+          "text-primary",
+        ),
+        icon(
+          "block",
+          tools.rowNotBooking,
+          Ban,
+          () =>
+            void run(
+              `row-${b.id}`,
+              async () => (
+                await statusFn({ data: { id: b.id, status: "blocked" } }),
+                tools.closedToast
+              ),
+            ),
         ),
         hide(true),
       ];
@@ -322,7 +434,11 @@ function BookingsPage() {
             <PropertyPicker properties={properties} value={selectedId} onChange={select} />
             {canWrite ? (
               <Button variant="outline" onClick={() => void syncAll()} disabled={busy !== null}>
-                {busy === "sync" ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                {busy === "sync" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
                 {tools.syncAll}
               </Button>
             ) : null}
@@ -358,7 +474,10 @@ function BookingsPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-1 rounded-xl border border-border bg-surface p-1 sm:flex-none" data-tour="bookings-view">
+        <div
+          className="flex flex-1 rounded-xl border border-border bg-surface p-1 sm:flex-none"
+          data-tour="bookings-view"
+        >
           {(["list", "timeline"] as const).map((v) => (
             <button
               key={v}
@@ -391,7 +510,11 @@ function BookingsPage() {
       </div>
 
       {scope === "active" && lists.doubleBooked.length > 0 ? (
-        <div id="double-booked" role="alert" className="flex scroll-mt-24 gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4">
+        <div
+          id="double-booked"
+          role="alert"
+          className="flex scroll-mt-24 gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4"
+        >
           <AlertTriangle className="size-5 shrink-0 text-destructive" />
           <div className="text-sm">
             <p className="font-medium">{todayCopy.doubleBookedTitle}</p>
@@ -399,10 +522,15 @@ function BookingsPage() {
             <ul className="mt-2 space-y-1">
               {lists.doubleBooked.map((b) => (
                 <li key={b.id}>
-                  <button type="button" className="flex flex-wrap items-center gap-2 text-left hover:underline" onClick={() => openGuest(b.id)}>
+                  <button
+                    type="button"
+                    className="flex flex-wrap items-center gap-2 text-left hover:underline"
+                    onClick={() => openGuest(b.id)}
+                  >
                     <ChannelBadge channel={b.channel as Channel} />
                     <span>
-                      {b.guest_full_name ?? b.reservation_code} · {rooms.find((r) => r.id === b.room_id)?.display_name ?? "No room"} ·{" "}
+                      {b.guest_full_name ?? b.reservation_code} ·{" "}
+                      {rooms.find((r) => r.id === b.room_id)?.display_name ?? "No room"} ·{" "}
                       {formatUkDate(b.check_in_date)} → {formatUkDate(b.check_out_date)}
                     </span>
                   </button>
@@ -432,8 +560,15 @@ function BookingsPage() {
 
       {show ? (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-secondary px-4 py-3 text-sm">
-          <span className="font-medium">{tools.showing(tools.showLabels[show] ?? show, visible.length)}</span>
-          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => void navigate({ to: "/app/bookings", search: {}, replace: true })}>
+          <span className="font-medium">
+            {tools.showing(tools.showLabels[show] ?? show, visible.length)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={() => void navigate({ to: "/app/bookings", search: {}, replace: true })}
+          >
             <X className="size-4" /> {tools.showEverything}
           </Button>
         </div>
@@ -448,7 +583,9 @@ function BookingsPage() {
         total={all.length}
       />
 
-      {scope === "archive" ? <p className="text-sm text-muted-foreground">{tools.archiveHint}</p> : null}
+      {scope === "archive" ? (
+        <p className="text-sm text-muted-foreground">{tools.archiveHint}</p>
+      ) : null}
 
       {selecting && view === "list" ? (
         <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface p-3 shadow-soft">
@@ -456,16 +593,41 @@ function BookingsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setPicked(picked.size === visible.length ? new Set() : new Set(visible.map((b) => b.id)))}
+            onClick={() =>
+              setPicked(
+                picked.size === visible.length ? new Set() : new Set(visible.map((b) => b.id)),
+              )
+            }
           >
             {tools.selectAll}
           </Button>
-          <Button variant="outline" size="sm" disabled={!picked.size || busy !== null} onClick={() => void archiveSelected()}>
-            {busy === "archive" ? <Loader2 className="size-4 animate-spin" /> : scope === "active" ? <Archive className="size-4" /> : <ArchiveRestore className="size-4" />}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!picked.size || busy !== null}
+            onClick={() => void archiveSelected()}
+          >
+            {busy === "archive" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : scope === "active" ? (
+              <Archive className="size-4" />
+            ) : (
+              <ArchiveRestore className="size-4" />
+            )}
             {scope === "active" ? tools.archiveSelected : tools.restoreSelected}
           </Button>
-          <Button variant="outline" size="sm" className="text-destructive" disabled={!picked.size || busy !== null} onClick={() => setConfirmDelete(true)}>
-            {busy === "delete" ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive"
+            disabled={!picked.size || busy !== null}
+            onClick={() => setConfirmDelete(true)}
+          >
+            {busy === "delete" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
             {tools.deleteSelected}
           </Button>
         </div>
@@ -475,48 +637,60 @@ function BookingsPage() {
         <EmptyState
           icon={CalendarDays}
           title={scope === "archive" ? tools.archiveEmpty : copy.empty}
-          action={scope === "archive" ? undefined : (
-            <Button onClick={openNew} className="mt-2">
-              <Plus className="size-4" />
-              {copy.addBooking}
-            </Button>
-          )}
+          action={
+            scope === "archive" ? undefined : (
+              <Button onClick={openNew} className="mt-2">
+                <Plus className="size-4" />
+                {copy.addBooking}
+              </Button>
+            )
+          }
         />
       ) : view === "list" ? (
         <div id="bookings-list" className="scroll-mt-24 rounded-2xl" data-tour="bookings-main">
-        <BookingsTable
-          rows={visible}
-          allRows={everything}
-          today={todayIso}
-          rooms={rooms}
-          sites={sites}
-          currency={((workspace.data?.host as { currency?: string } | null | undefined)?.currency) ?? "GBP"}
-          sort={sort}
-          onSort={setSort}
-          selecting={selecting}
-          picked={picked}
-          onToggle={toggle}
-          onOpen={(id) => openGuest(id)}
-          rowActions={rowActions}
-        />
+          <BookingsTable
+            rows={visible}
+            allRows={everything}
+            today={todayIso}
+            rooms={rooms}
+            sites={sites}
+            currency={
+              (workspace.data?.host as { currency?: string } | null | undefined)?.currency ?? "GBP"
+            }
+            sort={sort}
+            onSort={setSort}
+            selecting={selecting}
+            picked={picked}
+            onToggle={toggle}
+            onOpen={(id) => openGuest(id)}
+            rowActions={rowActions}
+          />
         </div>
       ) : (
         // One day in hours up to a month: swipe through time, pinch to zoom (the same timeline as Housekeeping).
         <div data-tour="bookings-main">
-        <BookingsTimeline
-          rooms={rooms}
-          stays={filtered}
-          allStays={all}
-          windows={windows as unknown as ScheduleWindow[]}
-          times={{
-            checkIn: ((data?.property as { default_check_in_time?: string } | null)?.default_check_in_time ?? "15:00").slice(0, 5),
-            checkOut: ((data?.property as { default_check_out_time?: string } | null)?.default_check_out_time ?? "11:00").slice(0, 5),
-          }}
-          timezone={(data?.property as { timezone?: string | null } | null)?.timezone ?? "Europe/London"}
-          today={todayIso}
-          activity={activity}
-          onOpen={(id) => openGuest(id)}
-        />
+          <BookingsTimeline
+            rooms={rooms}
+            stays={filtered}
+            allStays={all}
+            windows={windows as unknown as ScheduleWindow[]}
+            times={{
+              checkIn: (
+                (data?.property as { default_check_in_time?: string } | null)
+                  ?.default_check_in_time ?? "15:00"
+              ).slice(0, 5),
+              checkOut: (
+                (data?.property as { default_check_out_time?: string } | null)
+                  ?.default_check_out_time ?? "11:00"
+              ).slice(0, 5),
+            }}
+            timezone={
+              (data?.property as { timezone?: string | null } | null)?.timezone ?? "Europe/London"
+            }
+            today={todayIso}
+            activity={activity}
+            onOpen={(id) => openGuest(id)}
+          />
         </div>
       )}
 
@@ -556,8 +730,8 @@ function BookingsPage() {
         booking={editing}
         defaults={{
           check_in_time:
-            (data?.property as { default_check_in_time?: string } | null)
-              ?.default_check_in_time ?? "15:00",
+            (data?.property as { default_check_in_time?: string } | null)?.default_check_in_time ??
+            "15:00",
           check_out_time:
             (data?.property as { default_check_out_time?: string } | null)
               ?.default_check_out_time ?? "11:00",

@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { checkPhone, currencies, currencySymbol, formatOffset, isCurrency, isTimeZone, phoneCountries, splitPhone, timeZones, zoneCity, zoneOffset } from "../src/lib/world";
+import {
+  checkPhone,
+  currencies,
+  currencySymbol,
+  formatOffset,
+  isCurrency,
+  isTimeZone,
+  phoneCountries,
+  splitPhone,
+  timeZones,
+  zoneCity,
+  zoneOffset,
+} from "../src/lib/world";
 
 describe("currencies", () => {
   it("lists every current currency with a symbol, the usual three first", () => {
@@ -23,7 +35,8 @@ describe("time zones", () => {
     expect(zones.length).toBeGreaterThan(300);
     expect(zones.find((z) => z.id === "Europe/London")?.offsetMinutes).toBe(0);
     expect(zones.find((z) => z.id === "Asia/Kolkata")?.label).toBe("(UTC+05:30) Kolkata · Asia");
-    for (let i = 1; i < zones.length; i++) expect(zones[i]!.offsetMinutes).toBeGreaterThanOrEqual(zones[i - 1]!.offsetMinutes);
+    for (let i = 1; i < zones.length; i++)
+      expect(zones[i]!.offsetMinutes).toBeGreaterThanOrEqual(zones[i - 1]!.offsetMinutes);
   });
 
   it("follows summer time and names cities plainly", () => {
@@ -44,7 +57,11 @@ describe("phone numbers", () => {
   });
 
   it("checks numbers against the country's format and stores them in full", () => {
-    expect(checkPhone("07400 123456", "GB")).toEqual({ ok: true, e164: "+447400123456", display: "+44 7400 123456" });
+    expect(checkPhone("07400 123456", "GB")).toEqual({
+      ok: true,
+      e164: "+447400123456",
+      display: "+44 7400 123456",
+    });
     expect(checkPhone("+44 7400 123456", "US")).toMatchObject({ ok: true, e164: "+447400123456" });
     expect(checkPhone("12345", "GB")).toEqual({ ok: false, problem: "invalid" });
     expect(checkPhone("  ", "GB")).toEqual({ ok: false, problem: "empty" });

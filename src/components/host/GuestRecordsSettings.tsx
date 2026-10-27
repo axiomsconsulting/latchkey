@@ -7,10 +7,21 @@ import { toast } from "sonner";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { checkinSettings, common } from "@/content/copy";
-import { KEEP_DAY_CHOICES, normaliseRecords, type GuestRecords, type KeepDays } from "@/lib/guest-records";
+import {
+  KEEP_DAY_CHOICES,
+  normaliseRecords,
+  type GuestRecords,
+  type KeepDays,
+} from "@/lib/guest-records";
 import { registerApplies } from "@/lib/hotel-register";
 import { saveGuestRecords } from "@/lib/host.functions";
 
@@ -53,7 +64,10 @@ export function GuestRecordsSettings({
     setBusy(true);
     try {
       await save({ data: { propertyId: property.id, records: form } });
-      await Promise.all([qc.invalidateQueries({ queryKey: ["board"] }), qc.invalidateQueries({ queryKey: ["workspace"] })]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["board"] }),
+        qc.invalidateQueries({ queryKey: ["workspace"] }),
+      ]);
       setSaved(form);
       toast.success(checkinSettings.saved);
     } catch (err) {
@@ -96,14 +110,19 @@ export function GuestRecordsSettings({
           const required = uk && key === "askWhoIsStaying";
           const locked = (photo && !form.regulatorConfirmed) || required;
           return (
-            <div key={key} className="flex items-start justify-between gap-4 rounded-xl border border-border p-4">
+            <div
+              key={key}
+              className="flex items-start justify-between gap-4 rounded-xl border border-border p-4"
+            >
               <div>
                 <Label htmlFor={`gr-${key}`} className="text-base">
                   {copy[key]}
                 </Label>
                 <p className="text-sm text-muted-foreground">{copy[`${key}Help`]}</p>
                 {required ? <p className="mt-1 text-sm">{copy.askRequiredUk}</p> : null}
-                {locked && !required && form[key] ? <p className="mt-1 text-sm text-destructive">{copy.regulatorNeeded}</p> : null}
+                {locked && !required && form[key] ? (
+                  <p className="mt-1 text-sm text-destructive">{copy.regulatorNeeded}</p>
+                ) : null}
               </div>
               <Switch
                 id={`gr-${key}`}
@@ -118,7 +137,10 @@ export function GuestRecordsSettings({
 
       <div className="mt-4 space-y-2">
         <Label htmlFor="gr-keep">{copy.keepDays}</Label>
-        <Select value={String(form.keepDays)} onValueChange={(v) => setForm((f) => ({ ...f, keepDays: Number(v) as KeepDays }))}>
+        <Select
+          value={String(form.keepDays)}
+          onValueChange={(v) => setForm((f) => ({ ...f, keepDays: Number(v) as KeepDays }))}
+        >
           <SelectTrigger id="gr-keep" className="h-11 sm:w-72">
             <SelectValue />
           </SelectTrigger>
@@ -132,8 +154,9 @@ export function GuestRecordsSettings({
         </Select>
       </div>
 
-      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{uk ? copy.lawNoteUk : copy.lawNoteElsewhere}</p>
-
+      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">
+        {uk ? copy.lawNoteUk : copy.lawNoteElsewhere}
+      </p>
     </section>
   );
 }

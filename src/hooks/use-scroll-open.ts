@@ -39,7 +39,8 @@ export function useScrollOpen(open: string[], setOpen: (next: string[]) => void)
       if (at < 0) {
         // Between two sections: keep the current one. Before the first: none. Past the last: the last while on screen.
         if (boxes[0]!.top > mid) at = -1;
-        else if (boxes[boxes.length - 1]!.bottom <= mid) at = boxes[boxes.length - 1]!.bottom > 0 ? items.length - 1 : -1;
+        else if (boxes[boxes.length - 1]!.bottom <= mid)
+          at = boxes[boxes.length - 1]!.bottom > 0 ? items.length - 1 : -1;
         else at = last ? keys.indexOf(last) : -1;
       }
       // One section at a time in the direction of travel, so a quick scroll never skips one.
@@ -57,7 +58,8 @@ export function useScrollOpen(open: string[], setOpen: (next: string[]) => void)
       const prev = opened.current;
       if (prev && prev !== key && !manual.current.has(prev) && current.current.includes(prev)) {
         const el = items[keys.indexOf(prev)];
-        const above = !!el && !!nextEl && el.getBoundingClientRect().top < nextEl.getBoundingClientRect().top;
+        const above =
+          !!el && !!nextEl && el.getBoundingClientRect().top < nextEl.getBoundingClientRect().top;
         const h = height(el);
         flushSync(() => setOpen(current.current.filter((k) => k !== prev)));
         // Folded above what they're reading: move the page up by the height it gave back.

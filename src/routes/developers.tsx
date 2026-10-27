@@ -18,7 +18,9 @@ export const Route = createFileRoute("/developers")({
       { title: rebrand("Latchkey API & MCP — connect your rooms to anything") },
       {
         name: "description",
-        content: rebrand("Connect Latchkey to Claude, ChatGPT, Cursor and your own tools. Bookings, arrivals, guest requests and messages over MCP and a simple REST API."),
+        content: rebrand(
+          "Connect Latchkey to Claude, ChatGPT, Cursor and your own tools. Bookings, arrivals, guest requests and messages over MCP and a simple REST API.",
+        ),
       },
     ],
   }),
@@ -53,7 +55,10 @@ function Developers() {
           <ul className="sticky top-6 space-y-1 text-sm">
             {SECTIONS.map(([id, label]) => (
               <li key={id}>
-                <a href={`#${id}`} className="block rounded-lg px-3 py-2 text-muted-foreground hover:bg-secondary hover:text-foreground">
+                <a
+                  href={`#${id}`}
+                  className="block rounded-lg px-3 py-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                >
                   {label}
                 </a>
               </li>
@@ -64,11 +69,14 @@ function Developers() {
 
         <main className="min-w-0 space-y-14">
           <header>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">API & MCP</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+              API & MCP
+            </p>
             <h1 className="mt-3 text-4xl sm:text-5xl">Connect your rooms to anything</h1>
             <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-              Ask an AI assistant who's arriving today, have your website add direct bookings, or send guests a message from your own tools.
-              One key works for both the MCP server (for AI assistants) and the REST API (for everything else).
+              Ask an AI assistant who's arriving today, have your website add direct bookings, or
+              send guests a message from your own tools. One key works for both the MCP server (for
+              AI assistants) and the REST API (for everything else).
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               <Badge variant="outline">{OPERATIONS.length} actions</Badge>
@@ -81,41 +89,74 @@ function Developers() {
           <Section id="start" title="Start in 3 steps" icon={Sparkles}>
             <ol className="grid gap-4 md:grid-cols-3">
               <Step n={1} title="Turn it on">
-                The API and MCP server come with the <strong>Pro</strong> plan, or as an add-on to Start and Grow. Switch it on in{" "}
-                <Link to="/app/billing" className="underline underline-offset-4">Billing</Link>.
+                The API and MCP server come with the <strong>Pro</strong> plan, or as an add-on to
+                Start and Grow. Switch it on in{" "}
+                <Link to="/app/billing" className="underline underline-offset-4">
+                  Billing
+                </Link>
+                .
               </Step>
               <Step n={2} title="Make a key">
-                In <Link to="/app/settings" className="underline underline-offset-4">Settings → API & MCP</Link>, name a key and choose whether it can make changes.
-                Copy it: it's shown once.
+                In{" "}
+                <Link to="/app/settings" className="underline underline-offset-4">
+                  Settings → API & MCP
+                </Link>
+                , name a key and choose whether it can make changes. Copy it: it's shown once.
               </Step>
               <Step n={3} title="Connect">
-                Paste it into your AI assistant or tool, using the steps below. That's it: try asking "Who's arriving today?"
+                Paste it into your AI assistant or tool, using the steps below. That's it: try
+                asking "Who's arriving today?"
               </Step>
             </ol>
           </Section>
 
           <Section id="assistants" title="Connect an AI assistant" icon={Bot}>
             <p className="text-muted-foreground">
-              {brandName()}'s MCP server works with any app that supports remote MCP servers over HTTP. Replace <Code>lk_…</Code> with your key.
+              {brandName()}'s MCP server works with any app that supports remote MCP servers over
+              HTTP. Replace <Code>lk_…</Code> with your key.
             </p>
             <Tabs defaultValue="claude-code" className="mt-4">
               <TabsList className="h-auto flex-wrap rounded-2xl p-1">
-                <TabsTrigger value="claude-code" className="rounded-xl">Claude Code</TabsTrigger>
-                <TabsTrigger value="claude-desktop" className="rounded-xl">Claude Desktop</TabsTrigger>
-                <TabsTrigger value="web" className="rounded-xl">Claude.ai & ChatGPT</TabsTrigger>
-                <TabsTrigger value="cursor" className="rounded-xl">Cursor & others</TabsTrigger>
+                <TabsTrigger value="claude-code" className="rounded-xl">
+                  Claude Code
+                </TabsTrigger>
+                <TabsTrigger value="claude-desktop" className="rounded-xl">
+                  Claude Desktop
+                </TabsTrigger>
+                <TabsTrigger value="web" className="rounded-xl">
+                  Claude.ai & ChatGPT
+                </TabsTrigger>
+                <TabsTrigger value="cursor" className="rounded-xl">
+                  Cursor & others
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="claude-code" className="mt-4 space-y-2">
                 <p>Run this once in your terminal:</p>
-                <CodeBlock code={`claude mcp add --transport http latchkey ${mcpUrl} \\\n  --header "Authorization: Bearer lk_…"`} />
+                <CodeBlock
+                  code={`claude mcp add --transport http latchkey ${mcpUrl} \\\n  --header "Authorization: Bearer lk_…"`}
+                />
               </TabsContent>
               <TabsContent value="claude-desktop" className="mt-4 space-y-2">
                 <p>
-                  In Claude Desktop, open Settings → Developer → Edit config, and add {brandName()} to <Code>mcpServers</Code>:
+                  In Claude Desktop, open Settings → Developer → Edit config, and add {brandName()}{" "}
+                  to <Code>mcpServers</Code>:
                 </p>
                 <CodeBlock
                   code={JSON.stringify(
-                    { mcpServers: { latchkey: { command: "npx", args: ["-y", "mcp-remote", mcpUrl, "--header", "Authorization: Bearer lk_…"] } } },
+                    {
+                      mcpServers: {
+                        latchkey: {
+                          command: "npx",
+                          args: [
+                            "-y",
+                            "mcp-remote",
+                            mcpUrl,
+                            "--header",
+                            "Authorization: Bearer lk_…",
+                          ],
+                        },
+                      },
+                    },
                     null,
                     2,
                   )}
@@ -123,16 +164,28 @@ function Developers() {
               </TabsContent>
               <TabsContent value="web" className="mt-4 space-y-2">
                 <p>
-                  Apps that connect by address alone (Claude.ai custom connectors, ChatGPT connectors) can use your private connector address. Keep it secret
-                  like a password; revoking the key stops it working.
+                  Apps that connect by address alone (Claude.ai custom connectors, ChatGPT
+                  connectors) can use your private connector address. Keep it secret like a
+                  password; revoking the key stops it working.
                 </p>
                 <CodeBlock code={`${mcpUrl}/lk_…`} />
               </TabsContent>
               <TabsContent value="cursor" className="mt-4 space-y-2">
                 <p>
-                  In Cursor, add to <Code>.cursor/mcp.json</Code>. Other MCP apps (Windsurf, VS Code, n8n, Zed) take the same address and header.
+                  In Cursor, add to <Code>.cursor/mcp.json</Code>. Other MCP apps (Windsurf, VS
+                  Code, n8n, Zed) take the same address and header.
                 </p>
-                <CodeBlock code={JSON.stringify({ mcpServers: { latchkey: { url: mcpUrl, headers: { Authorization: "Bearer lk_…" } } } }, null, 2)} />
+                <CodeBlock
+                  code={JSON.stringify(
+                    {
+                      mcpServers: {
+                        latchkey: { url: mcpUrl, headers: { Authorization: "Bearer lk_…" } },
+                      },
+                    },
+                    null,
+                    2,
+                  )}
+                />
               </TabsContent>
             </Tabs>
           </Section>
@@ -143,7 +196,12 @@ function Developers() {
                 <li key={op.id} className="card-soft p-4">
                   <p className="font-medium">"{op.askLike}"</p>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {op.title} · <Code>{op.id}</Code> {op.scope === "write" ? <Badge variant="secondary" className="ml-1">needs a key that can make changes</Badge> : null}
+                    {op.title} · <Code>{op.id}</Code>{" "}
+                    {op.scope === "write" ? (
+                      <Badge variant="secondary" className="ml-1">
+                        needs a key that can make changes
+                      </Badge>
+                    ) : null}
                   </div>
                 </li>
               ))}
@@ -152,9 +210,12 @@ function Developers() {
 
           <Section id="rest" title="REST API" icon={Code2}>
             <p className="text-muted-foreground">
-              Base address <Code>{restUrl}</Code>. Send your key in the <Code>Authorization: Bearer lk_…</Code> header. Requests and responses are JSON.
-              The <a className="underline underline-offset-4" href={`${REST_BASE}/openapi.json`}>OpenAPI document</a> imports into Postman, Zapier, Make, n8n
-              and most tools.
+              Base address <Code>{restUrl}</Code>. Send your key in the{" "}
+              <Code>Authorization: Bearer lk_…</Code> header. Requests and responses are JSON. The{" "}
+              <a className="underline underline-offset-4" href={`${REST_BASE}/openapi.json`}>
+                OpenAPI document
+              </a>{" "}
+              imports into Postman, Zapier, Make, n8n and most tools.
             </p>
             <div className="mt-6 space-y-6">
               {OPERATIONS.map((op) => (
@@ -165,17 +226,30 @@ function Developers() {
 
           <Section id="errors" title="Errors" icon={Plug}>
             <p className="text-muted-foreground">
-              Errors come back as <Code>{`{ "error": { "code": "…", "message": "…" } }`}</Code> with a message you can show as it is. Over MCP, the same message
-              comes back as the tool's answer.
+              Errors come back as <Code>{`{ "error": { "code": "…", "message": "…" } }`}</Code> with
+              a message you can show as it is. Over MCP, the same message comes back as the tool's
+              answer.
             </p>
             <table className="mt-4 w-full text-left text-sm">
               <tbody className="divide-y divide-border">
                 {[
-                  ["400", "bad_input, bad_dates, bad_room", "Something in the request needs fixing; the message says what."],
+                  [
+                    "400",
+                    "bad_input, bad_dates, bad_room",
+                    "Something in the request needs fixing; the message says what.",
+                  ],
                   ["401", "missing_key, bad_key", "No key, or a revoked one."],
-                  ["403", "read_only_key, not_on_plan, subscription_ended", "The key can't make changes, the API isn't on the plan, or the account has ended."],
+                  [
+                    "403",
+                    "read_only_key, not_on_plan, subscription_ended",
+                    "The key can't make changes, the API isn't on the plan, or the account has ended.",
+                  ],
                   ["404", "not_found", "Nothing with that id in your account."],
-                  ["429", "allowance_used", "This month's requests are used up; it resets on the 1st."],
+                  [
+                    "429",
+                    "allowance_used",
+                    "This month's requests are used up; it resets on the 1st.",
+                  ],
                   ["503", "api_paused", "Paused for maintenance; try again shortly."],
                 ].map(([code, names, what]) => (
                   <tr key={code}>
@@ -203,8 +277,12 @@ function Developers() {
               ))}
             </ul>
             <p className="mt-3 text-sm text-muted-foreground">
-              Every REST call and every MCP tool call counts as one request. Your usage shows in Settings → API & MCP. What changed and when is in{" "}
-              <Link to="/about" className="underline underline-offset-4">What's new</Link>.
+              Every REST call and every MCP tool call counts as one request. Your usage shows in
+              Settings → API & MCP. What changed and when is in{" "}
+              <Link to="/about" className="underline underline-offset-4">
+                What's new
+              </Link>
+              .
             </p>
           </Section>
         </main>
@@ -213,7 +291,17 @@ function Developers() {
   );
 }
 
-function Section({ id, title, icon: Icon, children }: { id: string; title: string; icon: typeof Bot; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  icon: Icon,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon: typeof Bot;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id} className="scroll-mt-6">
       <h2 className="flex items-center gap-3 text-2xl">
@@ -230,7 +318,9 @@ function Section({ id, title, icon: Icon, children }: { id: string; title: strin
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <li className="card-soft p-5">
-      <span className="grid size-8 place-items-center rounded-full bg-primary font-display text-primary-foreground">{n}</span>
+      <span className="grid size-8 place-items-center rounded-full bg-primary font-display text-primary-foreground">
+        {n}
+      </span>
       <h3 className="mt-3 text-lg">{title}</h3>
       <p className="mt-1 text-sm text-muted-foreground">{children}</p>
     </li>
@@ -238,14 +328,20 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 }
 
 function Code({ children }: { children: React.ReactNode }) {
-  return <code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[0.85em]">{children}</code>;
+  return (
+    <code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[0.85em]">
+      {children}
+    </code>
+  );
 }
 
 function CodeBlock({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="relative">
-      <pre className="overflow-x-auto rounded-2xl bg-foreground p-4 pr-24 font-mono text-sm text-background">{code}</pre>
+      <pre className="overflow-x-auto rounded-2xl bg-foreground p-4 pr-24 font-mono text-sm text-background">
+        {code}
+      </pre>
       <Button
         size="sm"
         variant="secondary"
@@ -257,7 +353,8 @@ function CodeBlock({ code }: { code: string }) {
           })
         }
       >
-        {copied ? <Check className="size-4" /> : <Copy className="size-4" />} {copied ? "Copied" : "Copy"}
+        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}{" "}
+        {copied ? "Copied" : "Copy"}
       </Button>
     </div>
   );
@@ -268,9 +365,19 @@ function curlFor(op: Operation, restUrl: string): string {
   const query = op.params.filter((p) => p.in === "query" && p.example !== undefined);
   const qs = query.length ? `?${query.map((p) => `${p.name}=${p.example}`).join("&")}` : "";
   const body = op.params.filter((p) => p.in === "body");
-  const lines = [`curl ${op.method !== "GET" ? `-X ${op.method} ` : ""}"${restUrl}${path}${qs}" \\`, `  -H "Authorization: Bearer lk_…"`];
+  const lines = [
+    `curl ${op.method !== "GET" ? `-X ${op.method} ` : ""}"${restUrl}${path}${qs}" \\`,
+    `  -H "Authorization: Bearer lk_…"`,
+  ];
   if (body.length) {
-    const example = Object.fromEntries(body.filter((p) => p.required || p.example !== undefined).map((p) => [p.name, p.example ?? (p.type === "uuid" ? "<id>" : p.type === "date" ? "2026-10-17" : "…")]));
+    const example = Object.fromEntries(
+      body
+        .filter((p) => p.required || p.example !== undefined)
+        .map((p) => [
+          p.name,
+          p.example ?? (p.type === "uuid" ? "<id>" : p.type === "date" ? "2026-10-17" : "…"),
+        ]),
+    );
     lines[lines.length - 1] += " \\";
     lines.push(`  -H "Content-Type: application/json" \\`, `  -d '${JSON.stringify(example)}'`);
   }
@@ -311,7 +418,11 @@ function Endpoint({ op, restUrl }: { op: Operation; restUrl: string }) {
                 </td>
                 <td className="py-1.5">
                   {p.description}
-                  {p.enum ? <span className="block text-xs text-muted-foreground">One of: {p.enum.join(", ")}</span> : null}
+                  {p.enum ? (
+                    <span className="block text-xs text-muted-foreground">
+                      One of: {p.enum.join(", ")}
+                    </span>
+                  ) : null}
                 </td>
               </tr>
             ))}

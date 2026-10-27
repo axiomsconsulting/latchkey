@@ -25,7 +25,10 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
   const saveFn = useServerFn(saveStayAccess);
   const forgetFn = useServerFn(forgetTablet);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["stay-access", propertyId], queryFn: () => fetchFn({ data: { propertyId } }) });
+  const q = useQuery({
+    queryKey: ["stay-access", propertyId],
+    queryFn: () => fetchFn({ data: { propertyId } }),
+  });
   const [form, setForm] = useState<StayAccess | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -36,14 +39,24 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
   const d = q.data;
   const next = normaliseStayAccess(form);
   const set = (patch: Partial<StayAccess>) => setForm((f) => f && { ...f, ...patch });
-  const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null);
+  const when = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleString("en-GB", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
 
   async function save() {
     setBusy(true);
     try {
       // Only this card's fields (reviews have their own card).
       const { roomQrEarly, presence, stayMessage, wifiAfterCheckIn } = next;
-      await saveFn({ data: { propertyId, settings: { roomQrEarly, presence, stayMessage, wifiAfterCheckIn } } });
+      await saveFn({
+        data: { propertyId, settings: { roomQrEarly, presence, stayMessage, wifiAfterCheckIn } },
+      });
       await qc.invalidateQueries({ queryKey: ["stay-access", propertyId] });
       toast.success(copy.saved);
     } catch (e) {
@@ -53,10 +66,18 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
     }
   }
 
-  const row = (id: string, label: string, help: string, checked: boolean, onChange: (v: boolean) => void) => (
+  const row = (
+    id: string,
+    label: string,
+    help: string,
+    checked: boolean,
+    onChange: (v: boolean) => void,
+  ) => (
     <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
       <div className="min-w-0 text-sm">
-        <Label htmlFor={id} className="text-base">{label}</Label>
+        <Label htmlFor={id} className="text-base">
+          {label}
+        </Label>
         <p className="text-muted-foreground">{help}</p>
       </div>
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
@@ -67,14 +88,32 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
     <section className="card-soft space-y-4 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-lg"><QrCode className="size-5 text-primary" /> {copy.title}</h2>
+          <h2 className="flex items-center gap-2 text-lg">
+            <QrCode className="size-5 text-primary" /> {copy.title}
+          </h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
-        {d.available ? <SaveButton dirty={changed([next.roomQrEarly, next.presence, next.stayMessage, next.wifiAfterCheckIn], [d.settings.roomQrEarly, d.settings.presence, d.settings.stayMessage, d.settings.wifiAfterCheckIn])} busy={busy} onClick={() => void save()} /> : null}
+        {d.available ? (
+          <SaveButton
+            dirty={changed(
+              [next.roomQrEarly, next.presence, next.stayMessage, next.wifiAfterCheckIn],
+              [
+                d.settings.roomQrEarly,
+                d.settings.presence,
+                d.settings.stayMessage,
+                d.settings.wifiAfterCheckIn,
+              ],
+            )}
+            busy={busy}
+            onClick={() => void save()}
+          />
+        ) : null}
       </div>
       {!d.available ? <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p> : null}
 
-      {row("sa-early", copy.early, copy.earlyHelp, form.roomQrEarly, (v) => set({ roomQrEarly: v }))}
+      {row("sa-early", copy.early, copy.earlyHelp, form.roomQrEarly, (v) =>
+        set({ roomQrEarly: v }),
+      )}
 
       {form.roomQrEarly ? (
         <>
@@ -88,26 +127,53 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
                   role="radio"
                   aria-checked={form.presence === k}
                   onClick={() => set({ presence: k })}
-                  className={cn("rounded-xl border p-3 text-left text-sm", form.presence === k ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary")}
+                  className={cn(
+                    "rounded-xl border p-3 text-left text-sm",
+                    form.presence === k
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "border-border hover:bg-secondary",
+                  )}
                 >
-                  <span className="block font-medium">{k === "network" ? copy.presenceNetwork : copy.presenceBoth}</span>
-                  <span className="block text-xs text-muted-foreground">{k === "network" ? copy.presenceNetworkHelp : copy.presenceBothHelp}</span>
+                  <span className="block font-medium">
+                    {k === "network" ? copy.presenceNetwork : copy.presenceBoth}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {k === "network" ? copy.presenceNetworkHelp : copy.presenceBothHelp}
+                  </span>
                 </button>
               ))}
             </div>
           </fieldset>
 
           <div className="space-y-2">
-            <p className="flex items-center gap-2 text-sm font-medium"><Tablet className="size-4 text-primary" /> {copy.tablets}</p>
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Tablet className="size-4 text-primary" /> {copy.tablets}
+            </p>
             {d.tablets.length ? (
               <ul className="divide-y divide-border rounded-xl border border-border">
                 {d.tablets.map((t) => (
                   <li key={t.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                    <span className="min-w-0 flex-1">{copy.tabletLine(when(t.last_seen_at), !!t.located_at, copy.pairedBy[t.paired_by] ?? "")}</span>
+                    <span className="min-w-0 flex-1">
+                      {copy.tabletLine(
+                        when(t.last_seen_at),
+                        !!t.located_at,
+                        copy.pairedBy[t.paired_by] ?? "",
+                      )}
+                    </span>
                     <button
                       type="button"
                       aria-label={copy.forget}
-                      onClick={() => void forgetFn({ data: { id: t.id } }).then(() => qc.invalidateQueries({ queryKey: ["stay-access", propertyId] })).then(() => toast.success(copy.forgotten), (e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))}
+                      onClick={() =>
+                        void forgetFn({ data: { id: t.id } })
+                          .then(() =>
+                            qc.invalidateQueries({ queryKey: ["stay-access", propertyId] }),
+                          )
+                          .then(
+                            () => toast.success(copy.forgotten),
+                            (e: unknown) =>
+                              toast.error(e instanceof Error ? e.message : common.errorBody),
+                          )
+                      }
                       className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-secondary"
                     >
                       <Trash2 className="size-4" />
@@ -124,13 +190,21 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
 
       <div className="space-y-1">
         <Label htmlFor="sa-message">{copy.message}</Label>
-        <Textarea id="sa-message" rows={2} maxLength={280} value={form.stayMessage} onChange={(e) => set({ stayMessage: e.target.value })} />
+        <Textarea
+          id="sa-message"
+          rows={2}
+          maxLength={280}
+          value={form.stayMessage}
+          onChange={(e) => set({ stayMessage: e.target.value })}
+        />
         <p className="text-xs text-muted-foreground">{copy.messageHelp}</p>
       </div>
 
       <div className="space-y-2">
         <p className="text-sm font-medium">{copy.wifiTitle}</p>
-        {row("sa-wifi", copy.wifiAfter, copy.wifiAfterHelp, form.wifiAfterCheckIn, (v) => set({ wifiAfterCheckIn: v }))}
+        {row("sa-wifi", copy.wifiAfter, copy.wifiAfterHelp, form.wifiAfterCheckIn, (v) =>
+          set({ wifiAfterCheckIn: v }),
+        )}
       </div>
     </section>
   );

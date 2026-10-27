@@ -49,7 +49,17 @@ export const OPERATIONS: Operation[] = branded([
     summary: "Every property in your business, with its short link and check-in times.",
     askLike: "Which of my properties are set up in Latchkey?",
     params: [],
-    example: { data: [{ id: "6f1c…", name: "The Hill Suites", short_code: "hill", check_in_from: "15:00", check_out_by: "11:00" }] },
+    example: {
+      data: [
+        {
+          id: "6f1c…",
+          name: "The Hill Suites",
+          short_code: "hill",
+          check_in_from: "15:00",
+          check_out_by: "11:00",
+        },
+      ],
+    },
   },
   {
     id: "list_rooms",
@@ -59,7 +69,15 @@ export const OPERATIONS: Operation[] = branded([
     title: "List rooms",
     summary: "The rooms in a property, with how many people each sleeps.",
     askLike: "How many rooms do I have at The Hill Suites, and how many people do they sleep?",
-    params: [{ name: "property_id", type: "uuid", required: true, in: "path", description: "The property's id from List properties." }],
+    params: [
+      {
+        name: "property_id",
+        type: "uuid",
+        required: true,
+        in: "path",
+        description: "The property's id from List properties.",
+      },
+    ],
     example: { data: [{ id: "2a9b…", name: "Suite 1", sleeps: 2, children_allowed: true }] },
   },
   {
@@ -72,16 +90,42 @@ export const OPERATIONS: Operation[] = branded([
     askLike: "Who is staying with me next week?",
     params: [
       { name: "property_id", type: "uuid", in: "query", description: "Only this property." },
-      { name: "from", type: "date", in: "query", description: "First night to include (YYYY-MM-DD). Default: today.", example: "2026-10-14" },
-      { name: "to", type: "date", in: "query", description: "Last night to include (YYYY-MM-DD). Default: 30 days on.", example: "2026-11-13" },
+      {
+        name: "from",
+        type: "date",
+        in: "query",
+        description: "First night to include (YYYY-MM-DD). Default: today.",
+        example: "2026-10-14",
+      },
+      {
+        name: "to",
+        type: "date",
+        in: "query",
+        description: "Last night to include (YYYY-MM-DD). Default: 30 days on.",
+        example: "2026-11-13",
+      },
       {
         name: "status",
         type: "string",
         in: "query",
         description: "Only stays with this status.",
-        enum: ["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged", "blocked"],
+        enum: [
+          "needs_details",
+          "upcoming",
+          "checked_in",
+          "checked_out",
+          "cancelled",
+          "flagged",
+          "blocked",
+        ],
       },
-      { name: "limit", type: "integer", in: "query", description: "Up to 200. Default 50.", example: 50 },
+      {
+        name: "limit",
+        type: "integer",
+        in: "query",
+        description: "Up to 200. Default 50.",
+        example: 50,
+      },
     ],
     example: {
       data: [
@@ -109,8 +153,25 @@ export const OPERATIONS: Operation[] = branded([
     title: "Get a booking",
     summary: "One stay in full, including who's staying and whether they've checked in.",
     askLike: "Has Priya Shah checked in yet?",
-    params: [{ name: "booking_id", type: "uuid", required: true, in: "path", description: "The booking's id." }],
-    example: { data: { id: "b81e…", guest_name: "Priya Shah", status: "checked_in", checked_in_at: "2026-10-16T15:42:00Z", adults: 2, children: 0 } },
+    params: [
+      {
+        name: "booking_id",
+        type: "uuid",
+        required: true,
+        in: "path",
+        description: "The booking's id.",
+      },
+    ],
+    example: {
+      data: {
+        id: "b81e…",
+        guest_name: "Priya Shah",
+        status: "checked_in",
+        checked_in_at: "2026-10-16T15:42:00Z",
+        adults: 2,
+        children: 0,
+      },
+    },
   },
   {
     id: "todays_arrivals",
@@ -118,13 +179,26 @@ export const OPERATIONS: Operation[] = branded([
     path: "/arrivals",
     scope: "read",
     title: "Today at a glance",
-    summary: "Who arrives, who leaves and who's staying on a given day (default today, in each property's time zone).",
+    summary:
+      "Who arrives, who leaves and who's staying on a given day (default today, in each property's time zone).",
     askLike: "Who's arriving today and who still needs to check out?",
     params: [
-      { name: "date", type: "date", in: "query", description: "The day (YYYY-MM-DD). Default: today." },
+      {
+        name: "date",
+        type: "date",
+        in: "query",
+        description: "The day (YYYY-MM-DD). Default: today.",
+      },
       { name: "property_id", type: "uuid", in: "query", description: "Only this property." },
     ],
-    example: { data: { date: "2026-10-14", arriving: [{ guest_name: "Jean Dupont", room: "Garden Room" }], leaving: [], staying: [] } },
+    example: {
+      data: {
+        date: "2026-10-14",
+        arriving: [{ guest_name: "Jean Dupont", room: "Garden Room" }],
+        leaving: [],
+        staying: [],
+      },
+    },
   },
   {
     id: "create_booking",
@@ -135,15 +209,61 @@ export const OPERATIONS: Operation[] = branded([
     summary: "Adds a stay booked directly with you (not through a booking site).",
     askLike: "Book Sam Lee into the Garden Room from Friday for two nights, £180 paid.",
     params: [
-      { name: "property_id", type: "uuid", required: true, in: "body", description: "Which property." },
+      {
+        name: "property_id",
+        type: "uuid",
+        required: true,
+        in: "body",
+        description: "Which property.",
+      },
       { name: "room_id", type: "uuid", in: "body", description: "Which room (from List rooms)." },
-      { name: "guest_name", type: "string", required: true, in: "body", description: "The guest's full name.", example: "Sam Lee" },
-      { name: "check_in", type: "date", required: true, in: "body", description: "Arrival date (YYYY-MM-DD)." },
-      { name: "check_out", type: "date", required: true, in: "body", description: "Departure date (YYYY-MM-DD)." },
-      { name: "guests", type: "integer", in: "body", description: "How many people. Default 1.", example: 2 },
-      { name: "email", type: "string", in: "body", description: "The guest's email, used to confirm who they are at check-in." },
-      { name: "amount", type: "number", in: "body", description: "What the guest paid, in your currency (e.g. 180.00). Used for invoices." },
-      { name: "notes", type: "string", in: "body", description: "Anything to remember about the stay." },
+      {
+        name: "guest_name",
+        type: "string",
+        required: true,
+        in: "body",
+        description: "The guest's full name.",
+        example: "Sam Lee",
+      },
+      {
+        name: "check_in",
+        type: "date",
+        required: true,
+        in: "body",
+        description: "Arrival date (YYYY-MM-DD).",
+      },
+      {
+        name: "check_out",
+        type: "date",
+        required: true,
+        in: "body",
+        description: "Departure date (YYYY-MM-DD).",
+      },
+      {
+        name: "guests",
+        type: "integer",
+        in: "body",
+        description: "How many people. Default 1.",
+        example: 2,
+      },
+      {
+        name: "email",
+        type: "string",
+        in: "body",
+        description: "The guest's email, used to confirm who they are at check-in.",
+      },
+      {
+        name: "amount",
+        type: "number",
+        in: "body",
+        description: "What the guest paid, in your currency (e.g. 180.00). Used for invoices.",
+      },
+      {
+        name: "notes",
+        type: "string",
+        in: "body",
+        description: "Anything to remember about the stay.",
+      },
     ],
     example: { data: { id: "c2d4…", status: "upcoming" } },
   },
@@ -153,14 +273,27 @@ export const OPERATIONS: Operation[] = branded([
     path: "/bookings/{booking_id}",
     scope: "write",
     title: "Change a booking",
-    summary: "Changes a stay's guest details, room, status or notes. Only what you send is changed.",
+    summary:
+      "Changes a stay's guest details, room, status or notes. Only what you send is changed.",
     askLike: "Move Sam Lee to Suite 1 and add a note that they're arriving late.",
     params: [
-      { name: "booking_id", type: "uuid", required: true, in: "path", description: "The booking's id." },
+      {
+        name: "booking_id",
+        type: "uuid",
+        required: true,
+        in: "path",
+        description: "The booking's id.",
+      },
       { name: "guest_name", type: "string", in: "body", description: "The guest's full name." },
       { name: "email", type: "string", in: "body", description: "The guest's email." },
       { name: "room_id", type: "uuid", in: "body", description: "Move to this room." },
-      { name: "status", type: "string", in: "body", description: "New status.", enum: ["upcoming", "checked_in", "checked_out", "cancelled"] },
+      {
+        name: "status",
+        type: "string",
+        in: "body",
+        description: "New status.",
+        enum: ["upcoming", "checked_in", "checked_out", "cancelled"],
+      },
       { name: "notes", type: "string", in: "body", description: "Replaces the stay's notes." },
     ],
     example: { data: { id: "c2d4…", status: "upcoming" } },
@@ -174,10 +307,27 @@ export const OPERATIONS: Operation[] = branded([
     summary: "Extras and problems guests have asked about, newest first.",
     askLike: "Has anyone asked for anything I haven't dealt with?",
     params: [
-      { name: "open_only", type: "boolean", in: "query", description: "Only ones still waiting on you. Default true.", example: true },
+      {
+        name: "open_only",
+        type: "boolean",
+        in: "query",
+        description: "Only ones still waiting on you. Default true.",
+        example: true,
+      },
       { name: "limit", type: "integer", in: "query", description: "Up to 100. Default 30." },
     ],
-    example: { data: [{ id: "9e…", kind: "extras", guest_name: "Priya Shah", what: "2 × Fresh towels", status: "new", created_at: "2026-10-14T09:12:00Z" }] },
+    example: {
+      data: [
+        {
+          id: "9e…",
+          kind: "extras",
+          guest_name: "Priya Shah",
+          what: "2 × Fresh towels",
+          status: "new",
+          created_at: "2026-10-14T09:12:00Z",
+        },
+      ],
+    },
   },
   {
     id: "send_guest_message",
@@ -188,8 +338,20 @@ export const OPERATIONS: Operation[] = branded([
     summary: "Sends a message to the guest's stay page, as you.",
     askLike: "Tell Priya the towels will be outside her door by 6pm.",
     params: [
-      { name: "booking_id", type: "uuid", required: true, in: "path", description: "The booking's id." },
-      { name: "message", type: "string", required: true, in: "body", description: "What to say (up to 2,000 characters)." },
+      {
+        name: "booking_id",
+        type: "uuid",
+        required: true,
+        in: "path",
+        description: "The booking's id.",
+      },
+      {
+        name: "message",
+        type: "string",
+        required: true,
+        in: "body",
+        description: "What to say (up to 2,000 characters).",
+      },
     ],
     example: { data: { id: "m1…", sent_at: "2026-10-14T10:03:00Z" } },
   },
@@ -224,7 +386,10 @@ export function inputSchema(op: Operation, where?: Array<Param["in"]>) {
   return {
     type: "object",
     properties: Object.fromEntries(
-      ps.map((p) => [p.name, { ...type(p), description: p.description, ...(p.enum ? { enum: p.enum } : {}) }]),
+      ps.map((p) => [
+        p.name,
+        { ...type(p), description: p.description, ...(p.enum ? { enum: p.enum } : {}) },
+      ]),
     ),
     required: ps.filter((p) => p.required).map((p) => p.name),
     additionalProperties: false,
@@ -234,7 +399,10 @@ export function inputSchema(op: Operation, where?: Array<Param["in"]>) {
 export type ParsedInput = Record<string, string | number | boolean | undefined>;
 
 /** Checks and converts inputs against an operation. Returns the problem, if any. */
-export function parseInput(op: Operation, raw: Record<string, unknown>): { ok: true; input: ParsedInput } | { ok: false; problem: string } {
+export function parseInput(
+  op: Operation,
+  raw: Record<string, unknown>,
+): { ok: true; input: ParsedInput } | { ok: false; problem: string } {
   const out: ParsedInput = {};
   for (const p of op.params) {
     const v = raw[p.name];
@@ -253,28 +421,35 @@ export function parseInput(op: Operation, raw: Record<string, unknown>): { ok: t
         out[p.name] = Number(s);
         break;
       case "boolean":
-        if (!["true", "false"].includes(s)) return { ok: false, problem: `${p.name} must be true or false.` };
+        if (!["true", "false"].includes(s))
+          return { ok: false, problem: `${p.name} must be true or false.` };
         out[p.name] = s === "true";
         break;
       case "date":
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(s))) return { ok: false, problem: `${p.name} must be a date like 2026-10-14.` };
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || Number.isNaN(Date.parse(s)))
+          return { ok: false, problem: `${p.name} must be a date like 2026-10-14.` };
         out[p.name] = s;
         break;
       case "uuid":
-        if (!/^[0-9a-f-]{36}$/i.test(s)) return { ok: false, problem: rebrand(`${p.name} must be an id from Latchkey.`) };
+        if (!/^[0-9a-f-]{36}$/i.test(s))
+          return { ok: false, problem: rebrand(`${p.name} must be an id from Latchkey.`) };
         out[p.name] = s;
         break;
       default:
         if (s.length > 2000) return { ok: false, problem: `${p.name} is too long.` };
         out[p.name] = s;
     }
-    if (p.enum && !p.enum.includes(String(out[p.name]))) return { ok: false, problem: `${p.name} must be one of ${p.enum.join(", ")}.` };
+    if (p.enum && !p.enum.includes(String(out[p.name])))
+      return { ok: false, problem: `${p.name} must be one of ${p.enum.join(", ")}.` };
   }
   return { ok: true, input: out };
 }
 
 /** Matches a REST path like /bookings/abc to its operation and path params. */
-export function matchRoute(method: string, path: string): { op: Operation; params: Record<string, string> } | null {
+export function matchRoute(
+  method: string,
+  path: string,
+): { op: Operation; params: Record<string, string> } | null {
   const parts = path.split("/").filter(Boolean);
   for (const op of OPERATIONS) {
     if (op.method !== method) continue;
@@ -310,8 +485,21 @@ export function openApi(origin: string) {
       "x-latchkey-scope": op.scope,
       parameters: op.params
         .filter((p) => p.in !== "body")
-        .map((p) => ({ name: p.name, in: p.in, required: p.in === "path" || !!p.required, description: p.description, schema: inputSchema({ ...op, params: [p] }).properties[p.name] })),
-      ...(body.length ? { requestBody: { required: true, content: { "application/json": { schema: inputSchema(op, ["body"]) } } } } : {}),
+        .map((p) => ({
+          name: p.name,
+          in: p.in,
+          required: p.in === "path" || !!p.required,
+          description: p.description,
+          schema: inputSchema({ ...op, params: [p] }).properties[p.name],
+        })),
+      ...(body.length
+        ? {
+            requestBody: {
+              required: true,
+              content: { "application/json": { schema: inputSchema(op, ["body"]) } },
+            },
+          }
+        : {}),
       responses: {
         "200": { description: "OK", content: { "application/json": { example: op.example } } },
         "401": { description: "Missing or wrong API key" },
@@ -322,9 +510,23 @@ export function openApi(origin: string) {
   }
   return {
     openapi: "3.1.0",
-    info: { title: rebrand("Latchkey API"), version: API_VERSION, description: rebrand("Bookings, arrivals, guest requests and messages for your Latchkey properties.") },
+    info: {
+      title: rebrand("Latchkey API"),
+      version: API_VERSION,
+      description: rebrand(
+        "Bookings, arrivals, guest requests and messages for your Latchkey properties.",
+      ),
+    },
     servers: [{ url: `${origin}${REST_BASE}` }],
-    components: { securitySchemes: { bearer: { type: "http", scheme: "bearer", description: rebrand("A Latchkey API key (lk_…), from Settings → API & MCP.") } } },
+    components: {
+      securitySchemes: {
+        bearer: {
+          type: "http",
+          scheme: "bearer",
+          description: rebrand("A Latchkey API key (lk_…), from Settings → API & MCP."),
+        },
+      },
+    },
     paths,
   };
 }

@@ -9,9 +9,36 @@
  * until the host picks their own; "antique-key", "portico" and "serif-l" are
  * Latchkey's own marks drawn in the host's colours.
  */
-export type LogoPreset = "site" | "antique-key" | "portico" | "serif-l" | "key" | "arch" | "fern" | "knot" | "lantern" | "monogram" | "sunburst" | "crest" | "leaf";
+export type LogoPreset =
+  | "site"
+  | "antique-key"
+  | "portico"
+  | "serif-l"
+  | "key"
+  | "arch"
+  | "fern"
+  | "knot"
+  | "lantern"
+  | "monogram"
+  | "sunburst"
+  | "crest"
+  | "leaf";
 
-export const LOGO_PRESETS: LogoPreset[] = ["site", "antique-key", "portico", "serif-l", "key", "arch", "fern", "knot", "lantern", "monogram", "sunburst", "crest", "leaf"];
+export const LOGO_PRESETS: LogoPreset[] = [
+  "site",
+  "antique-key",
+  "portico",
+  "serif-l",
+  "key",
+  "arch",
+  "fern",
+  "knot",
+  "lantern",
+  "monogram",
+  "sunburst",
+  "crest",
+  "leaf",
+];
 
 export type Artwork = "none" | "skyline" | "palace" | "dunes" | "coast" | "hills";
 export const ARTWORKS: Artwork[] = ["none", "skyline", "palace", "dunes", "coast", "hills"];
@@ -111,11 +138,28 @@ const base = {
 } as const satisfies Partial<ThemeConfig>;
 
 type Preset = Omit<ThemePreset, keyof typeof base | "buttonRadius" | "sideNotes" | "features"> &
-  Partial<Omit<ThemePreset, "sideNotes" | "features">> & { sideNotes?: [string, string]; features?: ThemeFeature[] };
-const preset = (p: Preset): ThemePreset => ({ ...base, sideNotes: ["", ""], features: [], buttonRadius: p.radius, ...p }) as ThemePreset;
+  Partial<Omit<ThemePreset, "sideNotes" | "features">> & {
+    sideNotes?: [string, string];
+    features?: ThemeFeature[];
+  };
+const preset = (p: Preset): ThemePreset =>
+  ({ ...base, sideNotes: ["", ""], features: [], buttonRadius: p.radius, ...p }) as ThemePreset;
 
 export const THEME_PRESETS: ThemePreset[] = [
-  preset({ presetId: "heritage", name: "Boutique Heritage", blurb: "Forest green, cream and terracotta", primary: "#2f4f3a", accent: "#c2643c", background: "#f8f3ea", surface: "#fdfaf4", foreground: "#23332a", headingFont: "Fraunces", bodyFont: "Inter", logoPreset: "key", radius: 1 }),
+  preset({
+    presetId: "heritage",
+    name: "Boutique Heritage",
+    blurb: "Forest green, cream and terracotta",
+    primary: "#2f4f3a",
+    accent: "#c2643c",
+    background: "#f8f3ea",
+    surface: "#fdfaf4",
+    foreground: "#23332a",
+    headingFont: "Fraunces",
+    bodyFont: "Inter",
+    logoPreset: "key",
+    radius: 1,
+  }),
 
   // Hotel-grade templates: whole looks (shape, type, icons, backdrop, words), start points any host can pick and adjust.
   preset({
@@ -204,7 +248,10 @@ export const THEME_PRESETS: ThemePreset[] = [
     subname: "St James's",
     welcomeTitle: "Welcome, your stay awaits",
     welcomeBody: "Tap to begin your arrival",
-    sideNotes: ["History · Hospitality · A brighter tomorrow", "London · Heritage · Always a place"],
+    sideNotes: [
+      "History · Hospitality · A brighter tomorrow",
+      "London · Heritage · Always a place",
+    ],
     poweredBy: true,
   }),
   preset({
@@ -270,11 +317,77 @@ export const THEME_PRESETS: ThemePreset[] = [
  * that chose one keep it: normaliseTheme still reads them.
  */
 const RETIRED_PRESETS: ThemePreset[] = [
-  preset({ presetId: "cotswold", name: "Cotswold Stone", blurb: "Warm sand, slate and ochre", primary: "#3d4a57", accent: "#c58a2b", background: "#f4ede1", surface: "#fbf7f0", foreground: "#2a3038", headingFont: "Playfair Display", bodyFont: "Plus Jakarta Sans", logoPreset: "arch", radius: 0.75 }),
-  preset({ presetId: "midnight", name: "Midnight Manor", blurb: "Oxford blue, linen and champagne", primary: "#1f2e4d", accent: "#b8955a", background: "#f3efe7", surface: "#fbf9f4", foreground: "#1b2336", headingFont: "DM Serif Display", bodyFont: "Outfit", logoPreset: "lantern", radius: 0.5 }),
-  preset({ presetId: "nordic", name: "Nordic Sanctuary", blurb: "Sage, alabaster and charcoal", primary: "#56705f", accent: "#3b3b3b", background: "#f2f2ec", surface: "#fafaf6", foreground: "#2b2f2c", headingFont: "Syne", bodyFont: "Manrope", logoPreset: "fern", radius: 1.5 }),
-  preset({ presetId: "seaside", name: "Seaside Guesthouse", blurb: "Harbour teal, sandstone and coral", primary: "#1f5f66", accent: "#e0765a", background: "#f5f1ea", surface: "#fcfaf6", foreground: "#1d3538", headingFont: "Cormorant Garamond", bodyFont: "Karla", logoPreset: "knot", radius: 1.25, artwork: "coast" }),
-  preset({ presetId: "townhouse", name: "Modern Townhouse", blurb: "Ink, bone and brick red", primary: "#1e1e1e", accent: "#b3412f", background: "#f4f1ec", surface: "#ffffff", foreground: "#1e1e1e", headingFont: "Space Grotesk", bodyFont: "DM Sans", logoPreset: "monogram", radius: 0.375 }),
+  preset({
+    presetId: "cotswold",
+    name: "Cotswold Stone",
+    blurb: "Warm sand, slate and ochre",
+    primary: "#3d4a57",
+    accent: "#c58a2b",
+    background: "#f4ede1",
+    surface: "#fbf7f0",
+    foreground: "#2a3038",
+    headingFont: "Playfair Display",
+    bodyFont: "Plus Jakarta Sans",
+    logoPreset: "arch",
+    radius: 0.75,
+  }),
+  preset({
+    presetId: "midnight",
+    name: "Midnight Manor",
+    blurb: "Oxford blue, linen and champagne",
+    primary: "#1f2e4d",
+    accent: "#b8955a",
+    background: "#f3efe7",
+    surface: "#fbf9f4",
+    foreground: "#1b2336",
+    headingFont: "DM Serif Display",
+    bodyFont: "Outfit",
+    logoPreset: "lantern",
+    radius: 0.5,
+  }),
+  preset({
+    presetId: "nordic",
+    name: "Nordic Sanctuary",
+    blurb: "Sage, alabaster and charcoal",
+    primary: "#56705f",
+    accent: "#3b3b3b",
+    background: "#f2f2ec",
+    surface: "#fafaf6",
+    foreground: "#2b2f2c",
+    headingFont: "Syne",
+    bodyFont: "Manrope",
+    logoPreset: "fern",
+    radius: 1.5,
+  }),
+  preset({
+    presetId: "seaside",
+    name: "Seaside Guesthouse",
+    blurb: "Harbour teal, sandstone and coral",
+    primary: "#1f5f66",
+    accent: "#e0765a",
+    background: "#f5f1ea",
+    surface: "#fcfaf6",
+    foreground: "#1d3538",
+    headingFont: "Cormorant Garamond",
+    bodyFont: "Karla",
+    logoPreset: "knot",
+    radius: 1.25,
+    artwork: "coast",
+  }),
+  preset({
+    presetId: "townhouse",
+    name: "Modern Townhouse",
+    blurb: "Ink, bone and brick red",
+    primary: "#1e1e1e",
+    accent: "#b3412f",
+    background: "#f4f1ec",
+    surface: "#ffffff",
+    foreground: "#1e1e1e",
+    headingFont: "Space Grotesk",
+    bodyFont: "DM Sans",
+    logoPreset: "monogram",
+    radius: 0.375,
+  }),
 ];
 
 export const DEFAULT_THEME: ThemeConfig = THEME_PRESETS[0]!;
@@ -282,37 +395,83 @@ export const DEFAULT_THEME: ThemeConfig = THEME_PRESETS[0]!;
 /** Google Fonts offered in the pickers (any other Google font can be typed by name). */
 export const FONT_CHOICES = [
   // Serif and display
-  "Fraunces", "Playfair Display", "DM Serif Display", "Cormorant Garamond", "Libre Baskerville", "Libre Caslon Text", "EB Garamond",
-  "Bodoni Moda", "Cinzel", "Marcellus", "Prata", "Italiana", "Lora", "Crimson Pro",
+  "Fraunces",
+  "Playfair Display",
+  "DM Serif Display",
+  "Cormorant Garamond",
+  "Libre Baskerville",
+  "Libre Caslon Text",
+  "EB Garamond",
+  "Bodoni Moda",
+  "Cinzel",
+  "Marcellus",
+  "Prata",
+  "Italiana",
+  "Lora",
+  "Crimson Pro",
   // Sans
-  "Syne", "Space Grotesk", "Inter", "Plus Jakarta Sans", "Outfit", "Manrope", "Karla", "DM Sans", "Work Sans", "Lato", "Nunito Sans",
-  "Mulish", "Montserrat", "Poppins", "Raleway", "Josefin Sans", "Jost", "Figtree",
+  "Syne",
+  "Space Grotesk",
+  "Inter",
+  "Plus Jakarta Sans",
+  "Outfit",
+  "Manrope",
+  "Karla",
+  "DM Sans",
+  "Work Sans",
+  "Lato",
+  "Nunito Sans",
+  "Mulish",
+  "Montserrat",
+  "Poppins",
+  "Raleway",
+  "Josefin Sans",
+  "Jost",
+  "Figtree",
 ] as const;
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-const clamp = (v: unknown, lo: number, hi: number, fb: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fb);
-const pick = <T extends string>(v: unknown, options: readonly T[], fb: T): T => (options.includes(v as T) ? (v as T) : fb);
+const clamp = (v: unknown, lo: number, hi: number, fb: number) =>
+  typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fb;
+const pick = <T extends string>(v: unknown, options: readonly T[], fb: T): T =>
+  options.includes(v as T) ? (v as T) : fb;
 /** Plain words only: no markup or control characters, trimmed to length. */
 const words = (v: unknown, max: number, fb: string) =>
-  typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, max) : fb;
+  typeof v === "string"
+    ? v
+        // eslint-disable-next-line no-control-regex -- strips control characters from text people type
+        .replace(/[\u0000-\u001f<>]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, max)
+    : fb;
 
 /** Accepts anything from storage and returns a complete, safe theme. */
 export function normaliseTheme(raw: unknown): ThemeConfig {
-  const r = (raw && typeof raw === "object" ? raw : {}) as Partial<ThemeConfig> & Record<string, unknown>;
-  const preset = [...THEME_PRESETS, ...RETIRED_PRESETS].find((p) => p.presetId === r.presetId) ?? DEFAULT_THEME;
+  const r = (raw && typeof raw === "object" ? raw : {}) as Partial<ThemeConfig> &
+    Record<string, unknown>;
+  const preset =
+    [...THEME_PRESETS, ...RETIRED_PRESETS].find((p) => p.presetId === r.presetId) ?? DEFAULT_THEME;
   const colour = (v: unknown, fb: string) => (typeof v === "string" && HEX.test(v) ? v : fb);
-  const font = (v: unknown, fb: string) => (typeof v === "string" && /^[A-Za-z0-9 ]{2,40}$/.test(v) ? v : fb);
+  const font = (v: unknown, fb: string) =>
+    typeof v === "string" && /^[A-Za-z0-9 ]{2,40}$/.test(v) ? v : fb;
   const url = (v: unknown) => (typeof v === "string" && /^https:\/\//.test(v) ? v : null);
   const notes = Array.isArray(r.sideNotes) ? r.sideNotes : preset.sideNotes;
   const features = (Array.isArray(r.features) ? r.features : preset.features)
     .filter((f): f is ThemeFeature => !!f && typeof f === "object")
-    .map((f) => ({ icon: typeof f.icon === "string" && /^[a-z0-9-]{2,40}$/.test(f.icon) ? f.icon : "sparkles", text: words(f.text, 40, "") }))
+    .map((f) => ({
+      icon: typeof f.icon === "string" && /^[a-z0-9-]{2,40}$/.test(f.icon) ? f.icon : "sparkles",
+      text: words(f.text, 40, ""),
+    }))
     .filter((f) => f.text)
     .slice(0, 3);
   return {
     // A saved template keeps its own id; anything unknown falls back to the default's values.
-    presetId: typeof r.presetId === "string" && /^[a-z0-9_-]{1,60}$/.test(r.presetId) ? r.presetId : preset.presetId,
+    presetId:
+      typeof r.presetId === "string" && /^[a-z0-9_-]{1,60}$/.test(r.presetId)
+        ? r.presetId
+        : preset.presetId,
     primary: colour(r.primary, preset.primary),
     accent: colour(r.accent, preset.accent),
     background: colour(r.background, preset.background),
@@ -326,7 +485,17 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     logoPreset: pick(r.logoPreset, LOGO_PRESETS, "site"),
     logoUrl: url(r.logoUrl),
     radius: clamp(r.radius, 0, 2, preset.radius),
-    buttonRadius: r.buttonRadius === PILL ? PILL : clamp(r.buttonRadius, 0, 2, typeof r.radius === "number" && r.buttonRadius === undefined ? clamp(r.radius, 0, 2, preset.radius) : preset.buttonRadius),
+    buttonRadius:
+      r.buttonRadius === PILL
+        ? PILL
+        : clamp(
+            r.buttonRadius,
+            0,
+            2,
+            typeof r.radius === "number" && r.buttonRadius === undefined
+              ? clamp(r.radius, 0, 2, preset.radius)
+              : preset.buttonRadius,
+          ),
     buttonFill: pick(r.buttonFill, ["solid", "gradient", "outline"] as const, preset.buttonFill),
     buttonColour: pick(r.buttonColour, ["primary", "accent"] as const, preset.buttonColour),
     buttonCase: pick(r.buttonCase, ["normal", "upper"] as const, preset.buttonCase),
@@ -337,7 +506,11 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     iconStroke: clamp(r.iconStroke, 1, 2.75, preset.iconStroke),
     iconTone: pick(r.iconTone, ["primary", "accent", "foreground"] as const, preset.iconTone),
     iconFrame: pick(r.iconFrame, ["none", "circle", "square"] as const, preset.iconFrame),
-    backgroundStyle: pick(r.backgroundStyle, ["plain", "gradient"] as const, preset.backgroundStyle),
+    backgroundStyle: pick(
+      r.backgroundStyle,
+      ["plain", "gradient"] as const,
+      preset.backgroundStyle,
+    ),
     frame: pick(r.frame, ["none", "line", "ornate"] as const, preset.frame),
     artwork: pick(r.artwork, ARTWORKS, preset.artwork),
     artworkOpacity: clamp(r.artworkOpacity, 0.04, 0.5, preset.artworkOpacity),
@@ -438,14 +611,23 @@ export function themeVars(t: ThemeConfig): Record<string, string> {
     "--btn": btn,
     "--btn-fg": t.buttonFill === "outline" ? btn : readableOn(btn),
     "--btn-bg": t.buttonFill === "outline" ? "transparent" : btn,
-    "--btn-image": t.buttonFill === "gradient" ? `linear-gradient(180deg, ${mix(btn, "#ffffff", 0.28)} 0%, ${btn} 55%, ${mix(btn, "#000000", 0.12)} 100%)` : "none",
+    "--btn-image":
+      t.buttonFill === "gradient"
+        ? `linear-gradient(180deg, ${mix(btn, "#ffffff", 0.28)} 0%, ${btn} 55%, ${mix(btn, "#000000", 0.12)} 100%)`
+        : "none",
     "--btn-border": t.buttonFill === "outline" ? btn : "transparent",
     "--card-shadow": t.cardStyle === "shadow" ? "var(--shadow-soft)" : "none",
-    "--card-border": t.cardStyle === "flat" ? "transparent" : mix(t.surface, t.foreground, t.cardStyle === "outline" ? 0.16 : 0.1),
+    "--card-border":
+      t.cardStyle === "flat"
+        ? "transparent"
+        : mix(t.surface, t.foreground, t.cardStyle === "outline" ? 0.16 : 0.1),
     "--icon-stroke": String(t.iconStroke),
-    "--icon": t.iconTone === "accent" ? t.accent : t.iconTone === "foreground" ? t.foreground : t.primary,
+    "--icon":
+      t.iconTone === "accent" ? t.accent : t.iconTone === "foreground" ? t.foreground : t.primary,
     "--page-image":
-      t.backgroundStyle === "gradient" ? `radial-gradient(120% 90% at 50% 0%, ${mix(t.background, t.foreground, 0.06)} 0%, ${t.background} 60%, ${mix(t.background, "#000000", 0.08)} 100%)` : "none",
+      t.backgroundStyle === "gradient"
+        ? `radial-gradient(120% 90% at 50% 0%, ${mix(t.background, t.foreground, 0.06)} 0%, ${t.background} 60%, ${mix(t.background, "#000000", 0.08)} 100%)`
+        : "none",
   };
 }
 
@@ -459,12 +641,54 @@ export function googleFontsHref(t: ThemeConfig): string {
 
 /** Short codes that clash with app pages can't be used as vanity links. */
 export const RESERVED_SLUGS = new Set([
-  "app", "auth", "api", "stay", "kiosk", "checkin", "p", "assets", "favicon.ico", "robots.txt",
-  "about", "developers", "invite", "invoice", "lovable", "room", "start", "icons", "offline", "sw", "manifest",
-  "pricing", "help", "support", "admin", "login", "signin", "signup", "register", "terms", "privacy", "www", "mail", "static",
-  "enquire", "book", "reserve", "stay-again", "brand", "partners",
+  "app",
+  "auth",
+  "api",
+  "stay",
+  "kiosk",
+  "checkin",
+  "p",
+  "assets",
+  "favicon.ico",
+  "robots.txt",
+  "about",
+  "developers",
+  "invite",
+  "invoice",
+  "lovable",
+  "room",
+  "start",
+  "icons",
+  "offline",
+  "sw",
+  "manifest",
+  "pricing",
+  "help",
+  "support",
+  "admin",
+  "login",
+  "signin",
+  "signup",
+  "register",
+  "terms",
+  "privacy",
+  "www",
+  "mail",
+  "static",
+  "enquire",
+  "book",
+  "reserve",
+  "stay-again",
+  "brand",
+  "partners",
   // The shared public demo owns these.
-  "tour", "demo", "showcase", "desert-star-texas", "ashcombe-mayfair", "maison-vermeil-paris", "aoba-tokyo",
+  "tour",
+  "demo",
+  "showcase",
+  "desert-star-texas",
+  "ashcombe-mayfair",
+  "maison-vermeil-paris",
+  "aoba-tokyo",
 ]);
 
 /**
@@ -472,7 +696,9 @@ export const RESERVED_SLUGS = new Set([
  * one to fall back on (Google refuses a request for weights a font lacks,
  * and display fonts often have just one).
  */
-export function googleFontLinks(t: ThemeConfig): Array<{ family: string; href: string; fallback: string }> {
+export function googleFontLinks(
+  t: ThemeConfig,
+): Array<{ family: string; href: string; fallback: string }> {
   return [...new Set([t.headingFont, t.bodyFont])]
     .filter((f) => /^[A-Za-z0-9 ]{2,40}$/.test(f))
     .map((f) => {

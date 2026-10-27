@@ -30,7 +30,15 @@ export type NeedsDetailsBooking = {
 };
 
 /** A stay from a calendar feed without a guest name: add it here, or mark the nights closed. */
-export function NeedsDetailsCard({ booking, roomName, id }: { booking: NeedsDetailsBooking; roomName: string; id?: string }) {
+export function NeedsDetailsCard({
+  booking,
+  roomName,
+  id,
+}: {
+  booking: NeedsDetailsBooking;
+  roomName: string;
+  id?: string;
+}) {
   const save = useServerFn(saveBooking);
   const qc = useQueryClient();
   const [name, setName] = useState("");
@@ -126,4 +134,3 @@ export function NeedsDetailsCard({ booking, roomName, id }: { booking: NeedsDeta
     </div>
   );
 }
-

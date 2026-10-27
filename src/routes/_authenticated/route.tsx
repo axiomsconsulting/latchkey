@@ -10,7 +10,10 @@ async function resumeDemo() {
   if (!isDemoBrowser()) return null;
   try {
     const res = await startDemo({ data: { as: "host" } });
-    const { data, error } = await supabase.auth.verifyOtp({ token_hash: res.tokenHash!, type: "magiclink" });
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: res.tokenHash!,
+      type: "magiclink",
+    });
     if (error) return null;
     return data.user;
   } catch {

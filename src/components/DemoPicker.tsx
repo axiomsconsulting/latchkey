@@ -4,7 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, LayoutDashboard, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { demoCopy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { defaultCampaign, sessionUtm, withAttribution } from "@/lib/attribution";
@@ -32,7 +39,10 @@ export function useDemo() {
       }
       // Local only: a global sign-out here would end every other demo visitor's session.
       await supabase.auth.signOut({ scope: "local" });
-      const { error: e } = await supabase.auth.verifyOtp({ token_hash: res.tokenHash!, type: "magiclink" });
+      const { error: e } = await supabase.auth.verifyOtp({
+        token_hash: res.tokenHash!,
+        type: "magiclink",
+      });
       if (e) throw e;
       markDemo(true);
       // A regional demo opens on its own property.
@@ -47,7 +57,15 @@ export function useDemo() {
   return { go, busy, error };
 }
 
-export function DemoPicker({ children, open, onOpenChange }: { children?: ReactNode; open?: boolean; onOpenChange?: (o: boolean) => void }) {
+export function DemoPicker({
+  children,
+  open,
+  onOpenChange,
+}: {
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (o: boolean) => void;
+}) {
   const { go, busy, error } = useDemo();
 
   const option = (as: "host" | "guest", icon: ReactNode, title: string, body: string) => (
@@ -76,10 +94,24 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
           <DialogDescription>{demoCopy.body}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          {option("guest", <KeyRound className="size-6" />, demoCopy.guestTitle, demoCopy.guestBody)}
-          {option("host", <LayoutDashboard className="size-6" />, demoCopy.hostTitle, demoCopy.hostBody)}
+          {option(
+            "guest",
+            <KeyRound className="size-6" />,
+            demoCopy.guestTitle,
+            demoCopy.guestBody,
+          )}
+          {option(
+            "host",
+            <LayoutDashboard className="size-6" />,
+            demoCopy.hostTitle,
+            demoCopy.hostBody,
+          )}
         </div>
-        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
         <p className="text-xs text-muted-foreground">{demoCopy.resetNote}</p>
       </DialogContent>
     </Dialog>
@@ -90,7 +122,15 @@ export function DemoPicker({ children, open, onOpenChange }: { children?: ReactN
  * /tour and /demo/host: open the demo straight away (the stable links for
  * posts and emails), with a calm wait and a way to try again.
  */
-export function DemoLauncher({ as, region, campaign }: { as: "host" | "guest"; region?: ShowcaseKey; campaign?: string }) {
+export function DemoLauncher({
+  as,
+  region,
+  campaign,
+}: {
+  as: "host" | "guest";
+  region?: ShowcaseKey;
+  campaign?: string;
+}) {
   const { go, error } = useDemo();
   const started = useRef(false);
   useEffect(() => {
@@ -106,13 +146,17 @@ export function DemoLauncher({ as, region, campaign }: { as: "host" | "guest"; r
       <div className="card-soft w-full max-w-md space-y-4 p-8 text-center">
         {error ? (
           <>
-            <p role="alert" className="text-lg">{error}</p>
+            <p role="alert" className="text-lg">
+              {error}
+            </p>
             <Button onClick={() => void go(as, region)}>{demoCopy.tryAgain}</Button>
           </>
         ) : (
           <>
             <Loader2 className="mx-auto size-8 animate-spin text-primary" aria-hidden />
-            <p className="font-display text-xl" role="status">{as === "guest" ? demoCopy.openingGuest : demoCopy.openingHost}</p>
+            <p className="font-display text-xl" role="status">
+              {as === "guest" ? demoCopy.openingGuest : demoCopy.openingHost}
+            </p>
           </>
         )}
         <p className="text-xs text-muted-foreground">{demoCopy.resetNote}</p>

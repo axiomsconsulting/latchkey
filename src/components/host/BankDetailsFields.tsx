@@ -10,10 +10,17 @@ import { phoneCountries } from "@/lib/world";
  * each checked as it's typed, with a preview of what guests at home and
  * abroad will see.
  */
-export function BankDetailsFields({ value, onChange }: { value: BankAccount; onChange: (next: BankAccount) => void }) {
+export function BankDetailsFields({
+  value,
+  onChange,
+}: {
+  value: BankAccount;
+  onChange: (next: BankAccount) => void;
+}) {
   const { local, international } = bankFields(value.country);
   const problems = bankProblems(value);
-  const problemFor = (key: string) => (value[key as keyof BankAccount] ? problems.find((p) => p.key === key)?.message : undefined);
+  const problemFor = (key: string) =>
+    value[key as keyof BankAccount] ? problems.find((p) => p.key === key)?.message : undefined;
   const field = (f: (typeof local)[number]) => {
     const problem = problemFor(f.key);
     return (
@@ -39,8 +46,15 @@ export function BankDetailsFields({ value, onChange }: { value: BankAccount; onC
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <Label htmlFor="bank-country" className="block text-xs">{copy.country}</Label>
-        <select id="bank-country" className="h-10 w-full rounded-xl border border-input bg-surface px-3 text-sm sm:w-72" value={value.country} onChange={(e) => onChange({ ...value, country: e.target.value })}>
+        <Label htmlFor="bank-country" className="block text-xs">
+          {copy.country}
+        </Label>
+        <select
+          id="bank-country"
+          className="h-10 w-full rounded-xl border border-input bg-surface px-3 text-sm sm:w-72"
+          value={value.country}
+          onChange={(e) => onChange({ ...value, country: e.target.value })}
+        >
           {phoneCountries().map((c) => (
             <option key={c.iso} value={c.iso}>
               {c.flag} {c.name}
@@ -65,7 +79,8 @@ export function BankDetailsFields({ value, onChange }: { value: BankAccount; onC
               <p className="mb-1 font-medium">{title as string}</p>
               {(lines as Array<{ label: string; value: string }>).map((l) => (
                 <p key={l.label}>
-                  <span className="text-muted-foreground">{l.label}:</span> <span className="font-mono">{l.value}</span>
+                  <span className="text-muted-foreground">{l.label}:</span>{" "}
+                  <span className="font-mono">{l.value}</span>
                 </p>
               ))}
             </div>

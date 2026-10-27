@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Hosts attach photos and documents to guide sections; the super admin
  * connects the Google Drive they're kept in. See drive.server.ts.
@@ -51,17 +52,37 @@ export const uploadGuideAttachment = createServerFn({ method: "POST" })
     const hostId = await hostOfProperty(context.supabase, data.propertyId);
     await requireWrite(context.supabase, hostId);
     const kind = kindFor(data.mime);
-    if (!kind) throw new Error("Attach photos (JPG, PNG, WebP, GIF), PDFs, or Word, Excel or PowerPoint files.");
+    if (!kind)
+      throw new Error(
+        "Attach photos (JPG, PNG, WebP, GIF), PDFs, or Word, Excel or PowerPoint files.",
+      );
     const bytes = Uint8Array.from(atob(data.data), (c) => c.charCodeAt(0));
-    if (bytes.length > MAX_ATTACHMENT_BYTES) throw new Error("That file is over 10 MB. Try a smaller one.");
+    if (bytes.length > MAX_ATTACHMENT_BYTES)
+      throw new Error("That file is over 10 MB. Try a smaller one.");
     const sb = await admin();
-    const { count } = await sb.from("guide_attachments").select("id", { count: "exact", head: true }).eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
-    if ((count ?? 0) >= MAX_PER_SECTION) throw new Error(`A section can have up to ${MAX_PER_SECTION} attachments.`);
-    const { data: host } = await sb.from("hosts").select("business_name").eq("id", hostId).maybeSingle();
+    const { count } = await sb
+      .from("guide_attachments")
+      .select("id", { count: "exact", head: true })
+      .eq("property_id", data.propertyId)
+      .eq("section_key", data.sectionKey);
+    if ((count ?? 0) >= MAX_PER_SECTION)
+      throw new Error(`A section can have up to ${MAX_PER_SECTION} attachments.`);
+    const { data: host } = await sb
+      .from("hosts")
+      .select("business_name")
+      .eq("id", hostId)
+      .maybeSingle();
     const { hostFolder, uploadAttachment } = await import("./drive.server");
     const folderId = await hostFolder(hostId, host?.business_name ?? "Host");
     const id = crypto.randomUUID();
-    const fileId = await uploadAttachment({ folderId, sectionKey: data.sectionKey, id, originalName: data.name, mime: data.mime, bytes });
+    const fileId = await uploadAttachment({
+      folderId,
+      sectionKey: data.sectionKey,
+      id,
+      originalName: data.name,
+      mime: data.mime,
+      bytes,
+    });
     const { error } = await sb.from("guide_attachments").insert({
       id,
       host_id: hostId,
@@ -87,7 +108,11 @@ export const deleteGuideAttachment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = await admin();
-    const { data: row } = await sb.from("guide_attachments").select("id, file_id, host_id").eq("id", data.id).maybeSingle();
+    const { data: row } = await sb
+      .from("guide_attachments")
+      .select("id, file_id, host_id")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!row) return { ok: true };
     await requireWrite(context.supabase, row.host_id);
     const { deleteFiles } = await import("./drive.server");
@@ -98,10 +123,16 @@ export const deleteGuideAttachment = createServerFn({ method: "POST" })
 
 export const renameGuideAttachment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: uuid, name: z.string().trim().min(1).max(200) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ id: uuid, name: z.string().trim().min(1).max(200) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const sb = await admin();
-    const { data: row } = await sb.from("guide_attachments").select("host_id").eq("id", data.id).maybeSingle();
+    const { data: row } = await sb
+      .from("guide_attachments")
+      .select("host_id")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!row) throw new Error("Not available.");
     await requireWrite(context.supabase, row.host_id);
     await sb.from("guide_attachments").update({ name: data.name }).eq("id", data.id);
@@ -117,7 +148,8 @@ async function requireSuperAdmin(supabase: unknown) {
 
 function callbackUrl(): string {
   const req = getRequest();
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
+  const host =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
   const proto = req.headers.get("x-forwarded-proto") ?? new URL(req.url).protocol.replace(":", "");
   return `${proto}://${host}/api/public/google/callback`;
 }
@@ -130,7 +162,14 @@ export const driveStatus = createServerFn({ method: "GET" })
     const c = await driveConnection().catch(() => null);
     const { driveQueueStatus } = await import("./private-store.server");
     const queue = await driveQueueStatus().catch(() => null);
-    return { configured: driveConfigured(), connected: !!c, email: c?.email ?? null, connectedAt: c?.connectedAt ?? null, callback: callbackUrl(), queue };
+    return {
+      configured: driveConfigured(),
+      connected: !!c,
+      email: c?.email ?? null,
+      connectedAt: c?.connectedAt ?? null,
+      callback: callbackUrl(),
+      queue,
+    };
   });
 
 /** Moves private files waiting for Google Drive now (the daily clean-up does it too). */
@@ -148,7 +187,8 @@ export const driveConnectUrl = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await requireSuperAdmin(context.supabase);
     const { consentUrl, driveConfigured, newOAuthState } = await import("./drive.server");
-    if (!driveConfigured()) throw new Error("Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Lovable Cloud first.");
+    if (!driveConfigured())
+      throw new Error("Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Lovable Cloud first.");
     return { url: consentUrl(callbackUrl(), await newOAuthState()) };
   });
 

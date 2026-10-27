@@ -147,6 +147,8 @@ export type SignedRecord = {
   ip: string | null;
   userAgent: string | null;
   signaturePng: Uint8Array;
+  /** Who accepts for OMS (operatorName from the legal details). */
+  operatorName: string;
 };
 
 /** The signed agreement and its signing certificate, as PDF bytes. */
@@ -208,7 +210,7 @@ export async function signedAgreementPdf(
   w.space(16);
   w.line(`Acceptance id: ${r.acceptanceId}`, { size: 8.5, color: MUTED });
   w.line(
-    "For OMS: accepted electronically by Omnispace Estates Ltd (trading as OMS Estates) on activation of the Account (clause 4.2).",
+    `For OMS: accepted electronically by ${r.operatorName} on activation of the Account (clause 4.2).`,
     { size: 8.5, color: MUTED },
   );
   return doc.save();

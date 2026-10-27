@@ -21,12 +21,19 @@ import { AgreeNote } from "@/components/LegalPage";
  * email; a password is offered once it's confirmed). Google/Apple hand the
  * trial over to the account they sign in with.
  */
-export function SaveTrial({ next = "/app/today", onLater }: { next?: string; onLater?: () => void }) {
+export function SaveTrial({
+  next = "/app/today",
+  onLater,
+}: {
+  next?: string;
+  onLater?: () => void;
+}) {
   const ws = useWorkspace();
   const saveDetails = useServerFn(saveTrialDetails);
   const saveName = useServerFn(saveTrialName);
   const qc = useQueryClient();
-  const contact = (ws.data?.host as { contact_email?: string | null } | null | undefined)?.contact_email ?? "";
+  const contact =
+    (ws.data?.host as { contact_email?: string | null } | null | undefined)?.contact_email ?? "";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,14 +58,24 @@ export function SaveTrial({ next = "/app/today", onLater }: { next?: string; onL
     try {
       await keepName();
       // The lead is kept on the business straight away, even before the link is opened.
-      if (ws.data?.hostId && name.trim()) await saveDetails({ data: { hostId: ws.data.hostId, name: name.trim(), email: to } }).catch(() => undefined);
+      if (ws.data?.hostId && name.trim())
+        await saveDetails({ data: { hostId: ws.data.hostId, name: name.trim(), email: to } }).catch(
+          () => undefined,
+        );
       signInIntent("email_link");
       const { error: err } = await supabase.auth.updateUser(
-        { email: to, data: { needs_password: true, ...(name.trim() ? { full_name: name.trim() } : {}) } },
+        {
+          email: to,
+          data: { needs_password: true, ...(name.trim() ? { full_name: name.trim() } : {}) },
+        },
         { emailRedirectTo: `${window.location.origin}${next}` },
       );
       if (err) {
-        setError(/already|registered|exists/i.test(err.message) ? trialCopy.bannerTaken : err.message || authCopy.genericError);
+        setError(
+          /already|registered|exists/i.test(err.message)
+            ? trialCopy.bannerTaken
+            : err.message || authCopy.genericError,
+        );
         return;
       }
       setSent(to);
@@ -81,7 +98,14 @@ export function SaveTrial({ next = "/app/today", onLater }: { next?: string; onL
     <div className="space-y-4">
       <div className="space-y-1">
         <Label htmlFor="save-name">{copy.yourName}</Label>
-        <Input id="save-name" className="h-12" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+        <Input
+          id="save-name"
+          className="h-12"
+          autoComplete="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={80}
+        />
       </div>
       <div onClickCapture={() => void keepName()}>
         <SocialButtons next={next} signUp />
@@ -94,7 +118,14 @@ export function SaveTrial({ next = "/app/today", onLater }: { next?: string; onL
       <form onSubmit={sendLink} className="space-y-2">
         <Label htmlFor="save-email">{trialCopy.bannerEmail}</Label>
         <div className="flex flex-wrap gap-2">
-          <Input id="save-email" type="email" autoComplete="email" className="h-12 min-w-56 flex-1" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            id="save-email"
+            type="email"
+            autoComplete="email"
+            className="h-12 min-w-56 flex-1"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
           <Button type="submit" className="h-12" disabled={busy}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             {copy.sendLink}
@@ -109,7 +140,11 @@ export function SaveTrial({ next = "/app/today", onLater }: { next?: string; onL
         </p>
       ) : null}
       {onLater ? (
-        <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:underline" onClick={onLater}>
+        <button
+          type="button"
+          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          onClick={onLater}
+        >
           {copy.later}
         </button>
       ) : null}

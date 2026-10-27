@@ -6,7 +6,11 @@
 
 /* ------------------------------ the browser ------------------------------ */
 
-export type Agent = { browser: string; os: string; device: "Desktop" | "Phone" | "Tablet" | "Bot" | "Unknown" };
+export type Agent = {
+  browser: string;
+  os: string;
+  device: "Desktop" | "Phone" | "Tablet" | "Bot" | "Unknown";
+};
 
 export function parseUserAgent(ua: string | null | undefined): Agent {
   const s = ua ?? "";
@@ -37,7 +41,12 @@ export function parseUserAgent(ua: string | null | undefined): Agent {
             : /Linux/.test(s)
               ? "Linux"
               : "Other";
-  const device = /iPad|Tablet/.test(s) || (/Android/.test(s) && !/Mobile/.test(s)) ? "Tablet" : /Mobi|iPhone|iPod/.test(s) ? "Phone" : "Desktop";
+  const device =
+    /iPad|Tablet/.test(s) || (/Android/.test(s) && !/Mobile/.test(s))
+      ? "Tablet"
+      : /Mobi|iPhone|iPod/.test(s)
+        ? "Phone"
+        : "Desktop";
   return { browser, os, device };
 }
 
@@ -45,14 +54,18 @@ const BOT_UA =
   /bot|crawl|spider|slurp|archiver|facebookexternalhit|embedly|preview|headless|phantom|puppeteer|playwright|selenium|lighthouse|pagespeed|gtmetrix|pingdom|uptime|monitor|curl|wget|python|httpclient|axios|node-fetch|go-http|java\/|okhttp|scrapy|feedfetcher|mediapartners|whatsapp|telegram|discord|slack|skypeuri|bingpreview/i;
 
 /** Why a browser looks like a bot or crawler, or null for a person. */
-export function botReason(ua: string | null | undefined, signals: { webdriver?: boolean; pagesInVisit?: number; secondsInVisit?: number } = {}): string | null {
+export function botReason(
+  ua: string | null | undefined,
+  signals: { webdriver?: boolean; pagesInVisit?: number; secondsInVisit?: number } = {},
+): string | null {
   const s = ua ?? "";
   if (!s.trim()) return "No browser name";
   const m = s.match(BOT_UA);
   if (m) return `Says it's ${m[0].toLowerCase()}`;
   if (signals.webdriver) return "Automated browser";
   // Dozens of pages in a minute or two isn't a person reading.
-  if ((signals.pagesInVisit ?? 0) >= 40 && (signals.secondsInVisit ?? Infinity) < 120) return "Too many pages too fast";
+  if ((signals.pagesInVisit ?? 0) >= 40 && (signals.secondsInVisit ?? Infinity) < 120)
+    return "Too many pages too fast";
   return null;
 }
 
@@ -78,7 +91,11 @@ export function sourceOf(referrer: string | null | undefined, ownHost?: string):
 }
 
 /** One place, from the most to the least specific we know. */
-export function placeOf(v: { city?: string | null; region?: string | null; country?: string | null }): string {
+export function placeOf(v: {
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
+}): string {
   return [v.city, v.region, v.country].filter(Boolean).join(", ") || "Unknown";
 }
 
@@ -124,9 +141,20 @@ export type ProfileIn = {
   isTeam: boolean;
 };
 
-export type ViewIn = { visitId: string; path: string; title: string | null; at: string; durationMs: number };
+export type ViewIn = {
+  visitId: string;
+  path: string;
+  title: string | null;
+  at: string;
+  durationMs: number;
+};
 
-export type Filters = { hideBots: boolean; hideTeam: boolean; who: "all" | "known" | "anonymous" | "converted"; search: string };
+export type Filters = {
+  hideBots: boolean;
+  hideTeam: boolean;
+  who: "all" | "known" | "anonymous" | "converted";
+  search: string;
+};
 
 export type Club = { period: string; visits: number; pages: number; ms: number };
 
@@ -183,7 +211,11 @@ export function periodKey(iso: string, period: Period): string {
   return day.toISOString().slice(0, 10);
 }
 
-function tally(map: Map<string, { visits: number; visitors: Set<string> }>, key: string, visitor: string) {
+function tally(
+  map: Map<string, { visits: number; visitors: Set<string> }>,
+  key: string,
+  visitor: string,
+) {
   const t = map.get(key) ?? { visits: 0, visitors: new Set<string>() };
   t.visits++;
   t.visitors.add(visitor);
@@ -196,14 +228,22 @@ const ranked = (map: Map<string, { visits: number; visitors: Set<string> }>, n =
     .sort((a, b) => b.visits - a.visits)
     .slice(0, n);
 
-const uniq = (xs: Array<string | null | undefined>) => [...new Set(xs.filter((x): x is string => !!x))];
+const uniq = (xs: Array<string | null | undefined>) => [
+  ...new Set(xs.filter((x): x is string => !!x)),
+];
 
 /**
  * Everything the dashboard shows, for the visits in a period. A person is a
  * profile (every browser matched to them) or, until identified, one browser.
  */
 export function summarise(
-  input: { visits: VisitIn[]; visitors: VisitorIn[]; profiles: ProfileIn[]; views: ViewIn[]; ownHost?: string | undefined },
+  input: {
+    visits: VisitIn[];
+    visitors: VisitorIn[];
+    profiles: ProfileIn[];
+    views: ViewIn[];
+    ownHost?: string | undefined;
+  },
   f: Filters,
   period: Period,
 ): Summary {
@@ -234,7 +274,9 @@ export function summarise(
       const status: PersonRow["status"] = p?.email ? "known" : p ? "trial" : "anonymous";
       row = {
         key,
-        label: p?.email ?? (p ? "Trial user (no email yet)" : `Anonymous visitor ${visit.visitorId.slice(0, 6)}`),
+        label:
+          p?.email ??
+          (p ? "Trial user (no email yet)" : `Anonymous visitor ${visit.visitorId.slice(0, 6)}`),
         status,
         converted: !!p?.knownAt && Date.parse(p.firstSeen) < Date.parse(p.knownAt) - 60_000,
         knownAt: p?.knownAt ?? null,
@@ -264,10 +306,17 @@ export function summarise(
     row.visitIds.push(visit.id);
     row.places = uniq([...row.places, placeOf(visit)]);
     row.ips = uniq([...row.ips, visit.ip]);
-    row.sources = uniq([...row.sources, visit.utmSource ?? sourceOf(visit.referrer, input.ownHost)]);
-    if (v) row.devices = uniq([...row.devices, [v.browser, v.os, v.device].filter(Boolean).join(" · ")]);
+    row.sources = uniq([
+      ...row.sources,
+      visit.utmSource ?? sourceOf(visit.referrer, input.ownHost),
+    ]);
+    if (v)
+      row.devices = uniq([...row.devices, [v.browser, v.os, v.device].filter(Boolean).join(" · ")]);
     const pk = periodKey(visit.startedAt, period);
-    const club = row.clubs.find((c) => c.period === pk) ?? (row.clubs.push({ period: pk, visits: 0, pages: 0, ms: 0 }), row.clubs[row.clubs.length - 1]!);
+    const club =
+      row.clubs.find((c) => c.period === pk) ??
+      (row.clubs.push({ period: pk, visits: 0, pages: 0, ms: 0 }),
+      row.clubs[row.clubs.length - 1]!);
     club.visits++;
     club.pages += visit.pages;
     club.ms += visit.durationMs;
@@ -276,12 +325,19 @@ export function summarise(
   let rows = [...people.values()];
   for (const r of rows) {
     r.clubs.sort((a, b) => b.period.localeCompare(a.period));
-    r.browsers = new Set(input.visits.filter((x) => personOf(x.visitorId) === r.key).map((x) => x.visitorId)).size;
+    r.browsers = new Set(
+      input.visits.filter((x) => personOf(x.visitorId) === r.key).map((x) => x.visitorId),
+    ).size;
   }
   if (f.who === "known") rows = rows.filter((r) => r.status === "known");
   if (f.who === "anonymous") rows = rows.filter((r) => r.status !== "known");
   if (f.who === "converted") rows = rows.filter((r) => r.converted);
-  if (search) rows = rows.filter((r) => [r.label, ...r.places, ...r.ips, ...r.devices, ...r.sources].some((x) => x.toLowerCase().includes(search)));
+  if (search)
+    rows = rows.filter((r) =>
+      [r.label, ...r.places, ...r.ips, ...r.devices, ...r.sources].some((x) =>
+        x.toLowerCase().includes(search),
+      ),
+    );
   rows.sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
 
   // Everything below counts only the people left after filtering.
@@ -294,7 +350,11 @@ export function summarise(
   for (const x of kept) {
     const v = visitors.get(x.visitorId);
     tally(sources, x.utmSource ?? sourceOf(x.referrer, input.ownHost), x.visitorId);
-    tally(places, x.country ? placeOf({ region: x.region, country: x.country }) : "Unknown", x.visitorId);
+    tally(
+      places,
+      x.country ? placeOf({ region: x.region, country: x.country }) : "Unknown",
+      x.visitorId,
+    );
     tally(devices, v?.device ?? "Unknown", x.visitorId);
     tally(browsers, v?.browser ?? "Unknown", x.visitorId);
   }
@@ -312,7 +372,12 @@ export function summarise(
     pageMap.set(view.path, t);
   }
   const pages = [...pageMap.entries()]
-    .map(([path, t]) => ({ path, views: t.views, visitors: t.visitors.size, avgMs: Math.round(t.ms / t.views) }))
+    .map(([path, t]) => ({
+      path,
+      views: t.views,
+      visitors: t.visitors.size,
+      avgMs: Math.round(t.ms / t.views),
+    }))
     .sort((a, b) => b.views - a.views)
     .slice(0, 25);
 
@@ -350,7 +415,13 @@ export function duration(ms: number): string {
 /* --------------------------- funnel events ---------------------------- */
 
 /** The launch funnel: the only events the browser may send (analytics_events, migration 0046). */
-export const EVENT_NAMES = ["tour_view", "tour_complete", "demo_host_view", "trial_signup_started", "trial_signup_completed"] as const;
+export const EVENT_NAMES = [
+  "tour_view",
+  "tour_complete",
+  "demo_host_view",
+  "trial_signup_started",
+  "trial_signup_completed",
+] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
 export function isEventName(n: unknown): n is EventName {
@@ -362,7 +433,8 @@ export type UtmFields = Partial<Record<(typeof UTM_FIELDS)[number], string>>;
 
 /** utm_* from a beacon: an object (now) or a bare source string (older pages). Each up to 200 characters. */
 export function cleanUtm(raw: unknown): UtmFields {
-  if (typeof raw === "string") return raw.trim() && raw.length <= 200 ? { utm_source: raw.trim() } : {};
+  if (typeof raw === "string")
+    return raw.trim() && raw.length <= 200 ? { utm_source: raw.trim() } : {};
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const out: UtmFields = {};
   for (const k of UTM_FIELDS) {
@@ -385,7 +457,12 @@ export function cleanProps(raw: unknown): Record<string, string | number | boole
   return JSON.stringify(out).length <= 1024 ? out : {};
 }
 
-export type FunnelEvent = { name: string; visitor_id: string | null; utm_source: string | null; utm_campaign: string | null };
+export type FunnelEvent = {
+  name: string;
+  visitor_id: string | null;
+  utm_source: string | null;
+  utm_campaign: string | null;
+};
 export type FunnelRow = {
   utmSource: string;
   utmCampaign: string;
@@ -414,7 +491,8 @@ export function funnelRows(events: FunnelEvent[]): FunnelRow[] {
   for (const [key, g] of groups) {
     const [utmSource, utmCampaign] = key.split("\u0000") as [string, string];
     const n = (name: EventName) => g.get(name)?.size ?? 0;
-    const sawDemo = new Set([...(g.get("tour_view") ?? []), ...(g.get("demo_host_view") ?? [])]).size;
+    const sawDemo = new Set([...(g.get("tour_view") ?? []), ...(g.get("demo_host_view") ?? [])])
+      .size;
     rows.push({
       utmSource,
       utmCampaign,

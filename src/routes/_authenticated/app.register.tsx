@@ -9,16 +9,39 @@ import { EmptyState } from "@/components/host/EmptyState";
 import { RegisterStayDetails } from "@/components/host/RegisterStayDetails";
 import { PageHeader } from "@/components/host/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { common, guest as guestCopy, registerPage as copy } from "@/content/copy";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
 import { addDays, formatUkDate } from "@/lib/dates";
-import { cleanRegisterEntry, isAlien, nationalityName, nationalityOptions, registerApplies } from "@/lib/hotel-register";
-import { exportRegister, listRegister, saveRegisterEntry, type RegisterRow } from "@/lib/register.functions";
+import {
+  cleanRegisterEntry,
+  isAlien,
+  nationalityName,
+  nationalityOptions,
+  registerApplies,
+} from "@/lib/hotel-register";
+import {
+  exportRegister,
+  listRegister,
+  saveRegisterEntry,
+  type RegisterRow,
+} from "@/lib/register.functions";
 import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/register")({
@@ -38,7 +61,9 @@ function RegisterPage() {
   const list = useServerFn(listRegister);
   const exportFn = useServerFn(exportRegister);
   const hostId = workspace.data?.hostId ?? "";
-  const properties = ((workspace.data?.properties ?? []) as Property[]).filter((p) => registerApplies(p.country_code));
+  const properties = ((workspace.data?.properties ?? []) as Property[]).filter((p) =>
+    registerApplies(p.country_code),
+  );
   const [propertyId, setPropertyId] = useState<string>("all");
   const [from, setFrom] = useState(() => addDays(today(), -30));
   const [to, setTo] = useState(today);
@@ -79,9 +104,11 @@ function RegisterPage() {
     }
   }
 
-  if (loading || workspace.isLoading) return <Skeleton className="mx-auto h-64 max-w-5xl rounded-2xl" />;
+  if (loading || workspace.isLoading)
+    return <Skeleton className="mx-auto h-64 max-w-5xl rounded-2xl" />;
   if (!canWrite) return <EmptyState icon={NotebookPen} title={copy.title} body={copy.staffOnly} />;
-  if (properties.length === 0) return <EmptyState icon={NotebookPen} title={copy.title} body={copy.notUk} />;
+  if (properties.length === 0)
+    return <EmptyState icon={NotebookPen} title={copy.title} body={copy.notUk} />;
 
   const data = rows.data?.rows ?? [];
 
@@ -93,7 +120,11 @@ function RegisterPage() {
         actions={
           <div className="flex flex-wrap gap-2 print:hidden">
             <Button variant="outline" onClick={() => void download()} disabled={downloading}>
-              {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              {downloading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
               {copy.download}
             </Button>
             <Button variant="outline" onClick={() => window.print()}>
@@ -126,24 +157,41 @@ function RegisterPage() {
         </div>
         <div className="space-y-1">
           <Label htmlFor="reg-from">{copy.from}</Label>
-          <Input id="reg-from" type="date" className="h-11" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          <Input
+            id="reg-from"
+            type="date"
+            className="h-11"
+            value={from}
+            max={to}
+            onChange={(e) => setFrom(e.target.value)}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="reg-to">{copy.to}</Label>
-          <Input id="reg-to" type="date" className="h-11" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+          <Input
+            id="reg-to"
+            type="date"
+            className="h-11"
+            value={to}
+            min={from}
+            onChange={(e) => setTo(e.target.value)}
+          />
         </div>
       </div>
 
       {rows.isLoading ? (
         <Skeleton className="h-48 rounded-2xl" />
       ) : rows.error ? (
-        <p className="card-soft p-6 text-muted-foreground">{rows.error instanceof Error ? rows.error.message : common.errorBody}</p>
+        <p className="card-soft p-6 text-muted-foreground">
+          {rows.error instanceof Error ? rows.error.message : common.errorBody}
+        </p>
       ) : data.length === 0 ? (
         <div className="card-soft p-8 text-center text-muted-foreground">{copy.empty}</div>
       ) : (
         <section className="card-soft overflow-x-auto p-0">
           <p className="px-4 pt-4 text-sm text-muted-foreground">
-            {copy.count(data.length)} · {formatUkDate(from, { withYear: true })} – {formatUkDate(to, { withYear: true })}
+            {copy.count(data.length)} · {formatUkDate(from, { withYear: true })} –{" "}
+            {formatUkDate(to, { withYear: true })}
           </p>
           <table className="mt-2 w-full min-w-[44rem] text-left text-sm">
             <thead className="border-b border-border text-xs text-muted-foreground">
@@ -160,53 +208,76 @@ function RegisterPage() {
             <tbody className="divide-y divide-border">
               {data.map((r, i) => (
                 <Fragment key={r.id}>
-                <tr className="align-top">
-                  <td className="whitespace-nowrap px-4 py-3">{formatUkDate(r.arrival_date, { withYear: true })}</td>
-                  <td className="px-4 py-3 font-medium">
-                    {r.full_name}
-                    {r.source === "host" ? <span className="block text-xs font-normal text-muted-foreground">{copy.byHost}</span> : null}
-                  </td>
-                  <td className="px-4 py-3">{nationalityName(r.nationality)}</td>
-                  <td className="px-4 py-3">
-                    {r.document_number ? (
-                      <>
-                        {r.document_number}
-                        <span className="block text-xs text-muted-foreground">{copy.issuedAt(r.place_of_issue ?? "")}</span>
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.next_destination ?? "—"}
-                    {r.next_address ? <span className="block text-xs text-muted-foreground">{r.next_address}</span> : null}
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.property_name}
-                    {r.room_name ? <span className="block text-xs text-muted-foreground">{r.room_name}</span> : null}
-                  </td>
-                  <td className="px-4 py-3 print:hidden">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(r)}>
-                      {copy.edit}
-                    </Button>
-                  </td>
-                </tr>
-                {/* After a stay's last entry: its ID photos and everything captured at check-in. */}
-                {r.booking_id && data[i + 1]?.booking_id !== r.booking_id ? (
-                  <tr className="print:hidden">
-                    <td colSpan={7} className="px-4 pb-3 pt-0">
-                      <Button variant="link" size="sm" className="h-8 gap-1.5 px-0" aria-expanded={openStays.has(r.booking_id)} onClick={() => toggleStay(r.booking_id!)}>
-                        <IdCard className="size-4" /> {openStays.has(r.booking_id) ? copy.hideDetails : copy.stayDetails}
-                        <ChevronDown className={`size-4 transition-transform ${openStays.has(r.booking_id) ? "rotate-180" : ""}`} />
-                      </Button>
-                      {openStays.has(r.booking_id) ? (
-                        <div className="mt-2 rounded-xl border border-border bg-muted/30 p-4">
-                          <RegisterStayDetails bookingId={r.booking_id} />
-                        </div>
+                  <tr className="align-top">
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {formatUkDate(r.arrival_date, { withYear: true })}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {r.full_name}
+                      {r.source === "host" ? (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {copy.byHost}
+                        </span>
                       ) : null}
                     </td>
+                    <td className="px-4 py-3">{nationalityName(r.nationality)}</td>
+                    <td className="px-4 py-3">
+                      {r.document_number ? (
+                        <>
+                          {r.document_number}
+                          <span className="block text-xs text-muted-foreground">
+                            {copy.issuedAt(r.place_of_issue ?? "")}
+                          </span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.next_destination ?? "—"}
+                      {r.next_address ? (
+                        <span className="block text-xs text-muted-foreground">
+                          {r.next_address}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.property_name}
+                      {r.room_name ? (
+                        <span className="block text-xs text-muted-foreground">{r.room_name}</span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 print:hidden">
+                      <Button variant="ghost" size="sm" onClick={() => setEditing(r)}>
+                        {copy.edit}
+                      </Button>
+                    </td>
                   </tr>
-                ) : null}
+                  {/* After a stay's last entry: its ID photos and everything captured at check-in. */}
+                  {r.booking_id && data[i + 1]?.booking_id !== r.booking_id ? (
+                    <tr className="print:hidden">
+                      <td colSpan={7} className="px-4 pb-3 pt-0">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-8 gap-1.5 px-0"
+                          aria-expanded={openStays.has(r.booking_id)}
+                          onClick={() => toggleStay(r.booking_id!)}
+                        >
+                          <IdCard className="size-4" />{" "}
+                          {openStays.has(r.booking_id) ? copy.hideDetails : copy.stayDetails}
+                          <ChevronDown
+                            className={`size-4 transition-transform ${openStays.has(r.booking_id) ? "rotate-180" : ""}`}
+                          />
+                        </Button>
+                        {openStays.has(r.booking_id) ? (
+                          <div className="mt-2 rounded-xl border border-border bg-muted/30 p-4">
+                            <RegisterStayDetails bookingId={r.booking_id} />
+                          </div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ) : null}
                 </Fragment>
               ))}
             </tbody>
@@ -252,7 +323,8 @@ function EntryDialog({
     nextAddress: row?.next_address ?? "",
   });
   useEffect(() => {
-    if (!form.propertyId && defaultPropertyId) setForm((f) => ({ ...f, propertyId: defaultPropertyId }));
+    if (!form.propertyId && defaultPropertyId)
+      setForm((f) => ({ ...f, propertyId: defaultPropertyId }));
   }, [defaultPropertyId, form.propertyId]);
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const alien = !!form.nationality && isAlien(form.nationality);
@@ -281,8 +353,14 @@ function EntryDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">{row ? copy.dialogEdit : copy.dialogAdd}</DialogTitle>
-          <DialogDescription>{row ? copy.keptUntil(formatUkDate(row.keep_until, { withYear: true })) : copy.dialogHelp}</DialogDescription>
+          <DialogTitle className="font-display text-xl">
+            {row ? copy.dialogEdit : copy.dialogAdd}
+          </DialogTitle>
+          <DialogDescription>
+            {row
+              ? copy.keptUntil(formatUkDate(row.keep_until, { withYear: true }))
+              : copy.dialogHelp}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -303,16 +381,34 @@ function EntryDialog({
             </div>
             <div className="space-y-1">
               <Label htmlFor="e-arr">{copy.arrival}</Label>
-              <Input id="e-arr" type="date" className="h-11" required value={form.arrivalDate} onChange={(e) => set("arrivalDate", e.target.value)} />
+              <Input
+                id="e-arr"
+                type="date"
+                className="h-11"
+                required
+                value={form.arrivalDate}
+                onChange={(e) => set("arrivalDate", e.target.value)}
+              />
             </div>
           </div>
           <div className="space-y-1">
             <Label htmlFor="e-room">{copy.room}</Label>
-            <Input id="e-room" className="h-11" value={form.roomName} onChange={(e) => set("roomName", e.target.value)} />
+            <Input
+              id="e-room"
+              className="h-11"
+              value={form.roomName}
+              onChange={(e) => set("roomName", e.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="e-name">{guestCopy.registerName}</Label>
-            <Input id="e-name" className="h-11" required value={form.fullName} onChange={(e) => set("fullName", e.target.value)} />
+            <Input
+              id="e-name"
+              className="h-11"
+              required
+              value={form.fullName}
+              onChange={(e) => set("fullName", e.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="e-nat">{guestCopy.registerNationality}</Label>
@@ -335,20 +431,40 @@ function EntryDialog({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="e-doc">{guestCopy.registerDocNumber}</Label>
-                  <Input id="e-doc" className="h-11 uppercase" value={form.documentNumber} onChange={(e) => set("documentNumber", e.target.value)} />
+                  <Input
+                    id="e-doc"
+                    className="h-11 uppercase"
+                    value={form.documentNumber}
+                    onChange={(e) => set("documentNumber", e.target.value)}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="e-place">{guestCopy.registerPlace}</Label>
-                  <Input id="e-place" className="h-11" value={form.placeOfIssue} onChange={(e) => set("placeOfIssue", e.target.value)} />
+                  <Input
+                    id="e-place"
+                    className="h-11"
+                    value={form.placeOfIssue}
+                    onChange={(e) => set("placeOfIssue", e.target.value)}
+                  />
                 </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="e-next">{guestCopy.registerNext}</Label>
-                <Input id="e-next" className="h-11" value={form.nextDestination} onChange={(e) => set("nextDestination", e.target.value)} />
+                <Input
+                  id="e-next"
+                  className="h-11"
+                  value={form.nextDestination}
+                  onChange={(e) => set("nextDestination", e.target.value)}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="e-addr">{guestCopy.registerAddress}</Label>
-                <Input id="e-addr" className="h-11" value={form.nextAddress} onChange={(e) => set("nextAddress", e.target.value)} />
+                <Input
+                  id="e-addr"
+                  className="h-11"
+                  value={form.nextAddress}
+                  onChange={(e) => set("nextAddress", e.target.value)}
+                />
               </div>
             </>
           ) : null}

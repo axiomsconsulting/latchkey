@@ -2,7 +2,22 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Bath, Bed, Bike, Car, Clock, Coffee, Droplets, Fan, Flame, Loader2, Luggage, Plug, Sparkles, Utensils, Wrench, Zap,
+  Bath,
+  Bed,
+  Bike,
+  Car,
+  Clock,
+  Coffee,
+  Droplets,
+  Fan,
+  Flame,
+  Loader2,
+  Luggage,
+  Plug,
+  Sparkles,
+  Utensils,
+  Wrench,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,8 +31,21 @@ import { SERVICE_CATEGORIES, formatPence, type ServiceCategory } from "@/lib/ser
 import { createStayRequest, getStayServices } from "@/lib/stay.functions";
 
 const ICONS: Record<string, LucideIcon> = {
-  sparkles: Sparkles, bed: Bed, bath: Bath, droplets: Droplets, flame: Flame, fan: Fan, utensils: Utensils,
-  plug: Plug, zap: Zap, coffee: Coffee, bike: Bike, car: Car, luggage: Luggage, clock: Clock, wrench: Wrench,
+  sparkles: Sparkles,
+  bed: Bed,
+  bath: Bath,
+  droplets: Droplets,
+  flame: Flame,
+  fan: Fan,
+  utensils: Utensils,
+  plug: Plug,
+  zap: Zap,
+  coffee: Coffee,
+  bike: Bike,
+  car: Car,
+  luggage: Luggage,
+  clock: Clock,
+  wrench: Wrench,
 };
 
 function Tile({ cat, onPick }: { cat: ServiceCategory; onPick: () => void }) {
@@ -30,7 +58,9 @@ function Tile({ cat, onPick }: { cat: ServiceCategory; onPick: () => void }) {
     >
       <Icon className="size-6 text-primary" />
       <span className="font-medium leading-tight">{cat.label}</span>
-      {cat.guestPricePence ? <span className="text-sm text-muted-foreground">{formatPence(cat.guestPricePence)}</span> : null}
+      {cat.guestPricePence ? (
+        <span className="text-sm text-muted-foreground">{formatPence(cat.guestPricePence)}</span>
+      ) : null}
     </button>
   );
 }
@@ -39,7 +69,11 @@ export function StayServices({ token }: { token: string }) {
   const qc = useQueryClient();
   const fetchFn = useServerFn(getStayServices);
   const create = useServerFn(createStayRequest);
-  const q = useQuery({ queryKey: ["stay-services", token], queryFn: () => fetchFn({ data: { token } }), refetchInterval: 20_000 });
+  const q = useQuery({
+    queryKey: ["stay-services", token],
+    queryFn: () => fetchFn({ data: { token } }),
+    refetchInterval: 20_000,
+  });
   const [picked, setPicked] = useState<ServiceCategory | null>(null);
   const [note, setNote] = useState("");
   const [urgent, setUrgent] = useState(false);
@@ -47,13 +81,20 @@ export function StayServices({ token }: { token: string }) {
 
   const tz = q.data?.timezone ?? "Europe/London";
   const fmt = (iso: string) =>
-    new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz,
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
 
   async function send() {
     if (!picked) return;
     setBusy(true);
     try {
-      await create({ data: { token, category: picked.id, note: note.trim() || null, urgent, wantedAt: null } });
+      await create({
+        data: { token, category: picked.id, note: note.trim() || null, urgent, wantedAt: null },
+      });
       toast.success(copy.sent);
       setPicked(null);
       setNote("");
@@ -81,8 +122,12 @@ export function StayServices({ token }: { token: string }) {
           {q.data.jobs.map((j) => (
             <div key={j.id} className="flex flex-wrap items-center gap-2 p-4">
               <span className="flex-1 font-medium">{j.title}</span>
-              {j.etaAt && j.status === "booked" ? <span className="text-sm text-primary">{copy.expected(fmt(j.etaAt))}</span> : null}
-              <span className="rounded-full bg-secondary px-3 py-1 text-sm">{hostCopy.statuses[j.status] ?? j.status}</span>
+              {j.etaAt && j.status === "booked" ? (
+                <span className="text-sm text-primary">{copy.expected(fmt(j.etaAt))}</span>
+              ) : null}
+              <span className="rounded-full bg-secondary px-3 py-1 text-sm">
+                {hostCopy.statuses[j.status] ?? j.status}
+              </span>
             </div>
           ))}
         </div>
@@ -105,7 +150,16 @@ export function StayServices({ token }: { token: string }) {
       <div>
         <h3 className="mb-2 text-lg">{copy.issues}</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {issues.map((c) => <Tile key={c.id} cat={c} onPick={() => { setPicked(c); setUrgent(c.defaultUrgency === "urgent"); }} />)}
+          {issues.map((c) => (
+            <Tile
+              key={c.id}
+              cat={c}
+              onPick={() => {
+                setPicked(c);
+                setUrgent(c.defaultUrgency === "urgent");
+              }}
+            />
+          ))}
         </div>
       </div>
       <Sheet open={picked !== null} onOpenChange={(o) => !o && setPicked(null)}>
@@ -115,7 +169,11 @@ export function StayServices({ token }: { token: string }) {
           </SheetHeader>
           <div className="mt-4 space-y-4">
             <p className="text-muted-foreground">
-              {picked?.guestPricePence ? copy.price(formatPence(picked.guestPricePence)) : picked?.kind === "extra" ? copy.priceOnRequest : null}
+              {picked?.guestPricePence
+                ? copy.price(formatPence(picked.guestPricePence))
+                : picked?.kind === "extra"
+                  ? copy.priceOnRequest
+                  : null}
             </p>
             <Textarea
               aria-label={copy.notePlaceholder}

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Minimal Stripe REST client. Server only.
  *
@@ -20,7 +21,10 @@ function resolveKey(): string | undefined {
 
 export function stripeKey(): string {
   const key = resolveKey();
-  if (!key) throw new StripeSetupError("Card payments aren't connected yet. Add your Stripe key in Settings, then try again.");
+  if (!key)
+    throw new StripeSetupError(
+      "Card payments aren't connected yet. Add your Stripe key in Settings, then try again.",
+    );
   return key;
 }
 
@@ -44,7 +48,8 @@ export function form(obj: Record<string, unknown>, prefix = ""): URLSearchParams
   const walk = (value: unknown, path: string) => {
     if (value === undefined || value === null) return;
     if (Array.isArray(value)) value.forEach((v, i) => walk(v, `${path}[${i}]`));
-    else if (typeof value === "object") for (const [k, v] of Object.entries(value as object)) walk(v, path ? `${path}[${k}]` : k);
+    else if (typeof value === "object")
+      for (const [k, v] of Object.entries(value as object)) walk(v, path ? `${path}[${k}]` : k);
     else out.append(path, String(value));
   };
   walk(obj, prefix);
@@ -77,17 +82,32 @@ export async function stripeCall<T>(
 }
 
 /** Verify a Stripe-Signature header against the raw body. */
-export async function verifyStripeSignature(rawBody: string, header: string | null, secret: string, toleranceSec = 300): Promise<boolean> {
+export async function verifyStripeSignature(
+  rawBody: string,
+  header: string | null,
+  secret: string,
+  toleranceSec = 300,
+): Promise<boolean> {
   if (!header) return false;
-  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=", 2) as [string, string]));
+  const parts = Object.fromEntries(
+    header.split(",").map((p) => p.split("=", 2) as [string, string]),
+  );
   const t = Number(parts["t"]);
   const v1 = parts["v1"];
   if (!t || !v1) return false;
   if (Math.abs(Date.now() / 1000 - t) > toleranceSec) return false;
   const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`${t}.${rawBody}`));
-  const hex = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const hex = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   if (hex.length !== v1.length) return false;
   let diff = 0;
   for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);

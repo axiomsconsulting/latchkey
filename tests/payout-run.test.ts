@@ -17,6 +17,7 @@ import {
   sendPayout,
   statementCsv,
   statementNumber,
+  vatTreatment,
   type BonusCandidate,
   type PayoutToSend,
 } from "../src/lib/partner-close";
@@ -273,7 +274,9 @@ describe("statements and retention", () => {
     expect(lines[0]).toBe(
       "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Launch Bonus (£),Held (£),Held because,Clawback (£)",
     );
-    expect(lines[1]).toBe("H.S. · Amersham,paying,2,29.00,2.90,50.00,52.90,Hold Period (45 days),0.00");
+    expect(lines[1]).toBe(
+      "H.S. · Amersham,paying,2,29.00,2.90,50.00,52.90,Hold Period (45 days),0.00",
+    );
     expect(lines[2]).toBe('"A ""B"", C",paused,1,0.00,0.00,0.00,0.00,,1.45');
     expect(lines[3]).toBe("Total,,,29.00,2.90,50.00,52.90,,1.45");
   });
@@ -293,8 +296,19 @@ describe("statements and retention", () => {
     const meta = {
       number: statementNumber("OMS-AB12C", "p", "2026-11"),
       issuedOn: "2026-12-01",
-      oms: { name: "Omnispace Estates Ltd", companyNumber: "16889713", address: "49 Trinity Circle, High Wycombe, HP11 1FB", vatNumber: "" },
-      partner: { name: "Pat Partner", address: "1 High Street", vatNumber: "GB123" },
+      oms: {
+        name: "Omnispace Estates Ltd",
+        companyNumber: "16889713",
+        address: "49 Trinity Circle, High Wycombe, HP11 1FB",
+        vatNumber: "",
+      },
+      partner: {
+        name: "Pat Partner",
+        address: "1 High Street",
+        vatNumber: "GB123",
+        country: "GB",
+        kind: "business" as const,
+      },
       selfBilled: true,
       setOffPence: 500,
       payablePence: 1200,
@@ -303,12 +317,24 @@ describe("statements and retention", () => {
     const csv = statementCsv([row], meta);
     expect(csv.split("\n")[0]).toBe("Self-billed invoice,SB-OMS-AB12C-202611");
     expect(csv).toContain("Partner VAT number,GB123");
-    expect(csv).toContain("to be confirmed by OMS's accountant");
+    expect(csv).toContain("under the self-billing agreement in clause 12.7");
+    // £2.90 commission including VAT: 1/6 is VAT.
+    expect(csv).toContain("Of which VAT at 20% (£),0.48");
+    expect(csv).toContain("The VAT shown is your output tax due to HMRC.");
+    expect(vatTreatment({ vatNumber: null, country: "IE", kind: "business" }, 600).note).toMatch(
+      /Reverse charge/,
+    );
+    expect(vatTreatment({ vatNumber: null, country: "GB", kind: "individual" }, 600)).toEqual({
+      vatPence: null,
+      note: "No VAT: the partner has told OMS they are not VAT-registered.",
+    });
     expect(csv).toContain("Payment dispute open");
     expect(csv).toContain("Set-off this month (£),5.00");
     expect(csv).toContain("Payable balance after clawbacks and set-off (£),12.00");
     expect(csv).toContain("None deducted by OMS (13.1).");
-    expect(statementCsv([row], { ...meta, selfBilled: false }).split("\n")[0]).toBe("Statement,SB-OMS-AB12C-202611");
+    expect(statementCsv([row], { ...meta, selfBilled: false }).split("\n")[0]).toBe(
+      "Statement,SB-OMS-AB12C-202611",
+    );
   });
 
   it("clears IP hashes after 180 days", () => {

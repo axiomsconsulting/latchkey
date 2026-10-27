@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Booking-site emails forwarded by hosts: who it's for, which stay, and the
  * guest's message added to that stay's conversation. Server only.
@@ -9,9 +10,11 @@ export function normalise(raw: Record<string, any>): InboundEmail {
   if ("TextBody" in raw || "FromFull" in raw || "MailboxHash" in raw) {
     const headers = (raw["Headers"] ?? []) as Array<{ Name: string; Value: string }>;
     const header = (n: string) => headers.find((h) => h.Name?.toLowerCase() === n)?.Value ?? null;
-    const to = [raw["OriginalRecipient"], ...((raw["ToFull"] ?? []) as Array<{ Email: string }>).map((t) => t.Email), raw["To"]].filter(
-      (x): x is string => typeof x === "string" && !!x,
-    );
+    const to = [
+      raw["OriginalRecipient"],
+      ...((raw["ToFull"] ?? []) as Array<{ Email: string }>).map((t) => t.Email),
+      raw["To"],
+    ].filter((x): x is string => typeof x === "string" && !!x);
     return {
       to,
       from: String(raw["From"] ?? ""),
@@ -35,7 +38,13 @@ export function normalise(raw: Record<string, any>): InboundEmail {
   };
 }
 
-const PLATFORM_LABEL: Record<string, string> = { airbnb: "Airbnb", booking_com: "Booking.com", vrbo: "Vrbo", expedia: "Expedia", other: "a booking site" };
+const PLATFORM_LABEL: Record<string, string> = {
+  airbnb: "Airbnb",
+  booking_com: "Booking.com",
+  vrbo: "Vrbo",
+  expedia: "Expedia",
+  other: "a booking site",
+};
 
 export async function receiveInbound(raw: Record<string, any>) {
   const { jobAllowed, bumpUsage } = await import("./usage.server");
@@ -46,14 +55,22 @@ export async function receiveInbound(raw: Record<string, any>) {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const db = supabaseAdmin as unknown as { from: (t: string) => any };
-  const { data: host } = await db.from("hosts").select("id, timezone").eq("inbound_code", code).maybeSingle();
+  const { data: host } = await db
+    .from("hosts")
+    .select("id, timezone")
+    .eq("inbound_code", code)
+    .maybeSingle();
   if (!host) return { ok: false, reason: "unknown_business" };
   await bumpUsage(host.id, "inbound:email");
 
   const parsed = parseInbound(email);
   const messageId = email.messageId?.slice(0, 300) ?? null;
   if (messageId) {
-    const { data: dup } = await db.from("inbound_emails").select("id").eq("message_id", messageId).maybeSingle();
+    const { data: dup } = await db
+      .from("inbound_emails")
+      .select("id")
+      .eq("message_id", messageId)
+      .maybeSingle();
     if (dup) return { ok: true, duplicate: true };
   }
 
@@ -63,7 +80,9 @@ export async function receiveInbound(raw: Record<string, any>) {
       platform: "gmail_confirm",
       from_addr: email.from.slice(0, 320),
       subject: email.subject.slice(0, 500),
-      body: [parsed.code ? `Confirmation code: ${parsed.code}` : null, parsed.link].filter(Boolean).join("\n"),
+      body: [parsed.code ? `Confirmation code: ${parsed.code}` : null, parsed.link]
+        .filter(Boolean)
+        .join("\n"),
       message_id: messageId,
     });
     return { ok: true, kind: "forward_confirm" };
@@ -72,11 +91,15 @@ export async function receiveInbound(raw: Record<string, any>) {
   // Stays from around now, at any of the business's properties.
   const { data: props } = await db.from("properties").select("id").eq("host_id", host.id);
   const propertyIds = ((props ?? []) as Array<{ id: string }>).map((p) => p.id);
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: host.timezone ?? "Europe/London" }).format(new Date());
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: host.timezone ?? "Europe/London",
+  }).format(new Date());
   const { data: stays } = propertyIds.length
     ? await db
         .from("bookings")
-        .select("id, property_id, channel, reservation_code, guest_full_name, check_in_date, check_out_date, status")
+        .select(
+          "id, property_id, channel, reservation_code, guest_full_name, check_in_date, check_out_date, status",
+        )
         .in("property_id", propertyIds)
         .gte("check_out_date", new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10))
         .not("status", "in", "(cancelled,blocked)")
@@ -103,7 +126,10 @@ export async function receiveInbound(raw: Record<string, any>) {
   if (!stay.guest_full_name && parsed.guestName) {
     await db
       .from("bookings")
-      .update({ guest_full_name: parsed.guestName, ...(stay.status === "needs_details" ? { status: "upcoming" } : {}) })
+      .update({
+        guest_full_name: parsed.guestName,
+        ...(stay.status === "needs_details" ? { status: "upcoming" } : {}),
+      })
       .eq("id", stay.id);
   }
   if (parsed.kind === "message" && parsed.body) {

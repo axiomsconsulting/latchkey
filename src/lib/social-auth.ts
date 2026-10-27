@@ -45,10 +45,16 @@ export function signInIntent(method: SignInMethod) {
 }
 
 /** Called when a real (not anonymous) session starts: makes the intended method the last used one. */
-export function confirmSignIn(user: { email?: string | null; app_metadata?: { provider?: string } }) {
+export function confirmSignIn(user: {
+  email?: string | null;
+  app_metadata?: { provider?: string };
+}) {
   let method: SignInMethod | null = null;
   try {
-    const intent = JSON.parse(read(INTENT) ?? "null") as { method?: SignInMethod; at?: number } | null;
+    const intent = JSON.parse(read(INTENT) ?? "null") as {
+      method?: SignInMethod;
+      at?: number;
+    } | null;
     // An intent from the last half hour; anything older was abandoned.
     if (intent?.method && Date.now() - (intent.at ?? 0) < 30 * 60_000) method = intent.method;
   } catch {
@@ -85,7 +91,9 @@ export async function continueWith(
   }
   signInIntent(provider);
   // Lovable's own sign-in (src/integrations/lovable): sets the session itself when it can.
-  const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: `${window.location.origin}${opts.next ?? "/app/today"}` });
+  const result = await lovable.auth.signInWithOAuth(provider, {
+    redirect_uri: `${window.location.origin}${opts.next ?? "/app/today"}`,
+  });
   if ("redirected" in result && result.redirected) return "redirected";
   if (result.error) throw result.error;
   return "signed_in";
@@ -93,13 +101,15 @@ export async function continueWith(
 
 /** Safety net: tokens handed back in the address after Google/Apple, if the client didn't take them already. */
 export async function takeTokensFromUrl(): Promise<boolean> {
-  if (typeof window === "undefined" || !window.location.hash.includes("access_token=")) return false;
+  if (typeof window === "undefined" || !window.location.hash.includes("access_token="))
+    return false;
   const p = new URLSearchParams(window.location.hash.slice(1));
   const access_token = p.get("access_token");
   const refresh_token = p.get("refresh_token");
   if (!access_token || !refresh_token) return false;
   const { data } = await supabase.auth.getSession();
-  if (data.session?.access_token !== access_token) await supabase.auth.setSession({ access_token, refresh_token });
+  if (data.session?.access_token !== access_token)
+    await supabase.auth.setSession({ access_token, refresh_token });
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
   return true;
 }

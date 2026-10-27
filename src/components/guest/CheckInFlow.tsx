@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, BookOpen, CheckCircle2, CircleHelp, HandHeart, Loader2, Minus, Phone, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  CheckCircle2,
+  CircleHelp,
+  HandHeart,
+  Loader2,
+  Minus,
+  Phone,
+  Plus,
+} from "lucide-react";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
@@ -10,7 +20,13 @@ import { IdCamera } from "@/components/guest/IdCamera";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { guest as copy } from "@/content/copy";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLandscapeDisplay } from "@/hooks/use-display";
@@ -42,7 +58,12 @@ import {
 
 import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { demoLine, type DemoHint } from "@/lib/demo-guide";
-import { REGISTER_AGE, cleanRegisterEntry, isAlien, nationalityOptions } from "@/lib/hotel-register";
+import {
+  REGISTER_AGE,
+  cleanRegisterEntry,
+  isAlien,
+  nationalityOptions,
+} from "@/lib/hotel-register";
 import { cn } from "@/lib/utils";
 import { BrandBlock, ThemeFeatures } from "@/components/theme/ThemeDecor";
 import { welcomeTitle, type ThemeConfig } from "@/lib/theme";
@@ -86,7 +107,10 @@ type Step =
   | { name: "checkout" }
   /** Only when the first answers fit stays on more than one platform. */
   | { name: "platform"; only: string[] }
-  | { name: "pick"; items: Array<{ id: string; label: string; checkOut: string; channel?: string }> }
+  | {
+      name: "pick";
+      items: Array<{ id: string; label: string; checkOut: string; channel?: string }>;
+    }
   | { name: "no_match" }
   | { name: "locked"; until: string }
   | { name: "guestName" }
@@ -100,7 +124,13 @@ type Step =
   /** Everyone left is filling in on their own phone. */
   | { name: "waiting" }
   | { name: "identity"; method: CheckinMethod; consented: boolean }
-  | { name: "done"; firstName: string; roomName: string | null; roomTitle: string | null; stayToken: string };
+  | {
+      name: "done";
+      firstName: string;
+      roomName: string | null;
+      roomTitle: string | null;
+      stayToken: string;
+    };
 
 function deviceId(): string {
   const key = "latchkey.device";
@@ -193,7 +223,8 @@ export function CheckInFlow({
   const [slots, setSlots] = useState<Slot[]>([]);
   const slotsRef = useRef<Slot[]>([]);
   slotsRef.current = slots;
-  const takenElsewhere = (position: number) => position > 0 && slotsRef.current.some((x) => x.position === position && x.state !== "open");
+  const takenElsewhere = (position: number) =>
+    position > 0 && slotsRef.current.some((x) => x.position === position && x.state !== "open");
   const otherGuestStep =
     step.name === "waiting" ||
     step.name === "companion" ||
@@ -227,8 +258,10 @@ export function CheckInFlow({
           const people = res.adults ?? 1;
           const steps: After[] = [];
           for (let i = 0; i < people; i++) {
-            if (i > 0 && res.party.everyAdult && !res.idsDone.includes(i)) steps.push({ kind: "companion", position: i });
-            if (res.party.register && !res.registered.includes(i)) steps.push({ kind: "register", position: i, child: false });
+            if (i > 0 && res.party.everyAdult && !res.idsDone.includes(i))
+              steps.push({ kind: "companion", position: i });
+            if (res.party.register && !res.registered.includes(i))
+              steps.push({ kind: "register", position: i, child: false });
           }
           res.childAges.forEach((age, i) => {
             if (res.party.register && age >= REGISTER_AGE && !res.registered.includes(people + i)) {
@@ -256,7 +289,6 @@ export function CheckInFlow({
     // Runs once for the scanned token.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeToken, kiosk]);
-
 
   async function run<T>(fn: () => Promise<T>): Promise<T | null> {
     setBusy(true);
@@ -296,7 +328,9 @@ export function CheckInFlow({
 
   /** List flow: every stay with that initial, across platforms. */
   async function listStays(chosenLetter: string) {
-    const res = await run(() => list({ data: { code: property.code, deviceId: deviceId(), letter: chosenLetter } }));
+    const res = await run(() =>
+      list({ data: { code: property.code, deviceId: deviceId(), letter: chosenLetter } }),
+    );
     if (!res) return;
     if ("until" in res && res.until) return setStep({ name: "locked", until: res.until });
     setStep({ name: "pick", items: res.items });
@@ -305,7 +339,15 @@ export function CheckInFlow({
   /** Asks for the platform only if the server says the answers so far fit more than one. */
   async function findStay(day: string, channel?: string) {
     const res = await run(() =>
-      match({ data: { code: property.code, deviceId: deviceId(), letter, checkOut: day, ...(channel ? { channel } : {}) } }),
+      match({
+        data: {
+          code: property.code,
+          deviceId: deviceId(),
+          letter,
+          checkOut: day,
+          ...(channel ? { channel } : {}),
+        },
+      }),
     );
     if (!res) return;
     if (res.status === "locked") return setStep({ name: "locked", until: res.until });
@@ -324,7 +366,9 @@ export function CheckInFlow({
   }
 
   async function onPick(bookingId: string) {
-    const res = await run(() => pick({ data: { code: property.code, deviceId: deviceId(), bookingId, letter } }));
+    const res = await run(() =>
+      pick({ data: { code: property.code, deviceId: deviceId(), bookingId, letter } }),
+    );
     if (!res) return;
     setToken(res.token);
     setPlatform(res.platform);
@@ -361,9 +405,17 @@ export function CheckInFlow({
       if (!slots.some((x) => x.state === "phone")) void finish();
       return;
     }
-    if ((step.name === "companion" || step.name === "register" || step.name === "face") && takenElsewhere(step.position)) {
+    if (
+      (step.name === "companion" || step.name === "register" || step.name === "face") &&
+      takenElsewhere(step.position)
+    ) {
       const slot = slots.find((x) => x.position === step.position);
-      void advance(queue, slot?.state === "phone" ? copy.onTheirPhone(copy.guestLabel(slot.kind, slot.position + 1)) : undefined);
+      void advance(
+        queue,
+        slot?.state === "phone"
+          ? copy.onTheirPhone(copy.guestLabel(slot.kind, slot.position + 1))
+          : undefined,
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slots]);
@@ -421,7 +473,8 @@ export function CheckInFlow({
     }
     if (p?.register) {
       childAges.current.forEach((age, i) => {
-        if (age >= REGISTER_AGE) steps.push({ kind: "register", position: people + i, child: true });
+        if (age >= REGISTER_AGE)
+          steps.push({ kind: "register", position: people + i, child: true });
       });
     }
     void advance(steps);
@@ -447,7 +500,9 @@ export function CheckInFlow({
 
   async function onCompanion(position: number, full: string, small: string) {
     const res = await run(() =>
-      companionId({ data: { token, position, image: full, ...(plan?.keepIdPhoto ? { small } : {}) } }),
+      companionId({
+        data: { token, position, image: full, ...(plan?.keepIdPhoto ? { small } : {}) },
+      }),
     );
     if (!res) return;
     if (res.status === "retry") {
@@ -487,17 +542,32 @@ export function CheckInFlow({
   }
 
   async function onPhoto(full: string, small: string) {
-    const res = await run(() => photo({ data: { token, image: full, ...(plan?.keepIdPhoto ? { small } : {}) } }));
+    const res = await run(() =>
+      photo({ data: { token, image: full, ...(plan?.keepIdPhoto ? { small } : {}) } }),
+    );
     if (!res) return fallback("photo_id");
     if (res.status === "retry") {
-      return setMessage(res.reason === "not_photo_id" ? `${copy.idNotPhotoId} ${copy.idTriesLeft(res.left)}` : copy.idRetry(res.left));
+      return setMessage(
+        res.reason === "not_photo_id"
+          ? `${copy.idNotPhotoId} ${copy.idTriesLeft(res.left)}`
+          : copy.idRetry(res.left),
+      );
     }
     if (res.status === "fallback") return fallback("photo_id");
     setPrefill((p) => ({ ...p, 0: res.prefill }));
     afterLead();
   }
 
-  const lockedTime = step.name === "locked" ? formatUkTime(new Date(step.until).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })) : "";
+  const lockedTime =
+    step.name === "locked"
+      ? formatUkTime(
+          new Date(step.until).toLocaleTimeString("en-GB", {
+            timeZone: "Europe/London",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        )
+      : "";
 
   // Shared demo only: tell visitors the fake guest's answers for the step they're on.
   // Public demo only: a line for whichever screen is showing, so the
@@ -525,9 +595,13 @@ export function CheckInFlow({
   // A door tablet on its side: the camera beside its buttons, the guide's QR beside its button,
   // so those steps use the width instead of shrinking the text to fit the height.
   const cameraSide = kiosk && landscape;
-  const phoneUrl = typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
+  const phoneUrl =
+    typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
   // While other guests are being filled in: the square lets each use their own phone at once.
-  const joinUrl = typeof window === "undefined" || !share ? null : `${window.location.origin}/kiosk/${property.code}?join=${encodeURIComponent(share)}`;
+  const joinUrl =
+    typeof window === "undefined" || !share
+      ? null
+      : `${window.location.origin}/kiosk/${property.code}?join=${encodeURIComponent(share)}`;
   const othersNow = otherGuestStep && !!joinUrl;
 
   // The square only means something once there is a stay to carry across.
@@ -542,7 +616,11 @@ export function CheckInFlow({
 
   return (
     // data-kx: the parts that stretch to fill a door tablet set to expanded buttons (styles.css).
-    <div data-kiosk-flow data-kx="col" className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}>
+    <div
+      data-kiosk-flow
+      data-kx="col"
+      className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}
+    >
       {canGoBack ? (
         <Button
           variant="ghost"
@@ -576,433 +654,571 @@ export function CheckInFlow({
               : "",
         )}
       >
-
-
-      <main data-kx="col" className="card-soft p-6 sm:p-10" aria-live="polite">
-        {demoHint ? (
-          <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">{demoHint}</p>
-        ) : null}
-        {step.name === "welcome" ? (
-          <div data-kx="center" className="py-6 text-center">
-            {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
-            {property.theme?.layout === "centred" ? <BrandBlock theme={property.theme} name={property.name} className="mb-6" /> : null}
-            {property.theme?.eyebrow ? <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">{property.theme.eyebrow}</p> : null}
-            <h1 className="text-3xl leading-tight sm:text-5xl">{property.theme ? welcomeTitle(property.theme, property.name, copy.welcomeTo(property.name)) : copy.welcomeTo(property.name)}</h1>
-            {property.theme?.layout === "centred" ? (
-              <span aria-hidden className="mx-auto mt-4 flex w-48 items-center gap-2 text-accent">
-                <span className="h-px flex-1 bg-current opacity-60" />
-                <span className="size-2 rotate-45 bg-current" />
-                <span className="h-px flex-1 bg-current opacity-60" />
-              </span>
-            ) : null}
-            <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">{property.theme?.welcomeBody || copy.letsCheckIn}</p>
-            {property.theme?.features.length ? <ThemeFeatures theme={property.theme} className="mt-6 justify-center text-left" /> : null}
-            <Button
-              size="touch-xl"
-              className="mt-10 w-full max-w-md text-xl"
-              onClick={() => setStep({ name: "letter" })}
-            >
-              {copy.startCta}
-            </Button>
-            {property.checkInFrom && property.checkOutBy ? (
-              <p className="mt-6 text-muted-foreground">{copy.stayWindow(property.checkInFrom, property.checkOutBy)}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {step.name === "letter" ? (
-          <section data-kx="col">
-            <h1 className="text-2xl sm:text-4xl">{copy.stepLetter}</h1>
-            <p className="mt-2 text-muted-foreground">{copy.stepLetterHint}</p>
-            <div data-kx="grid" className="mt-6 grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-9">
-              {LETTERS.map((l) => (
-                <Button
-                  key={l}
-                  variant="outline"
-                  size="touch"
-                  className="text-2xl font-semibold"
-                  disabled={busy}
-                  onClick={() => {
-                    setLetter(l);
-                    if (property.listFlow) void listStays(l);
-                    else setStep({ name: "checkout" });
-                  }}
-                >
-                  {l}
-                </Button>
-              ))}
+        <main data-kx="col" className="card-soft p-6 sm:p-10" aria-live="polite">
+          {demoHint ? (
+            <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">
+              {demoHint}
+            </p>
+          ) : null}
+          {step.name === "welcome" ? (
+            <div data-kx="center" className="py-6 text-center">
+              {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
+              {property.theme?.layout === "centred" ? (
+                <BrandBlock theme={property.theme} name={property.name} className="mb-6" />
+              ) : null}
+              {property.theme?.eyebrow ? (
+                <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+                  {property.theme.eyebrow}
+                </p>
+              ) : null}
+              <h1 className="text-3xl leading-tight sm:text-5xl">
+                {property.theme
+                  ? welcomeTitle(property.theme, property.name, copy.welcomeTo(property.name))
+                  : copy.welcomeTo(property.name)}
+              </h1>
+              {property.theme?.layout === "centred" ? (
+                <span aria-hidden className="mx-auto mt-4 flex w-48 items-center gap-2 text-accent">
+                  <span className="h-px flex-1 bg-current opacity-60" />
+                  <span className="size-2 rotate-45 bg-current" />
+                  <span className="h-px flex-1 bg-current opacity-60" />
+                </span>
+              ) : null}
+              <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">
+                {property.theme?.welcomeBody || copy.letsCheckIn}
+              </p>
+              {property.theme?.features.length ? (
+                <ThemeFeatures theme={property.theme} className="mt-6 justify-center text-left" />
+              ) : null}
+              <Button
+                size="touch-xl"
+                className="mt-10 w-full max-w-md text-xl"
+                onClick={() => setStep({ name: "letter" })}
+              >
+                {copy.startCta}
+              </Button>
+              {property.checkInFrom && property.checkOutBy ? (
+                <p className="mt-6 text-muted-foreground">
+                  {copy.stayWindow(property.checkInFrom, property.checkOutBy)}
+                </p>
+              ) : null}
             </div>
-          </section>
-        ) : null}
+          ) : null}
 
-        {step.name === "checkout" ? (
-          <section data-kx="col">
-            <h1 className="text-2xl sm:text-4xl">{copy.stepCheckout}</h1>
-            <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {property.checkoutChoices.map((d) => (
-                <Button
-                  key={d}
-                  variant="outline"
-                  size="touch-xl"
-                  className="text-xl"
-                  disabled={busy}
-                  onClick={() => {
-                    setCheckOut(d);
-                    void findStay(d);
-                  }}
-                >
-                  {formatUkDate(d)}
-                </Button>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {step.name === "platform" ? (
-          <section data-kx="col">
-            <h1 className="text-2xl sm:text-4xl">{copy.stepPlatform}</h1>
-            <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
-              {step.only.map(siteOf).map((site) => (
-                <Button
-                  key={site.key}
-                  variant="outline"
-                  size="touch-xl"
-                  className="justify-start gap-4 text-xl"
-                  disabled={busy}
-                  onClick={() => void findStay(checkOut, site.key)}
-                >
-                  <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} />
-                  {site.label}
-                </Button>
-              ))}
-            </div>
-            {busy ? <Loader2 className="mx-auto mt-6 size-8 animate-spin text-muted-foreground" /> : null}
-          </section>
-        ) : null}
-
-        {step.name === "pick" ? (
-          <section data-kx="col">
-            <h1 className="text-2xl sm:text-4xl">{copy.stepPickBooking}</h1>
-            {step.items.length === 0 ? (
-              <p className="mt-6 text-lg text-muted-foreground">{copy.noArrivals}</p>
-            ) : (
-              <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
-                {step.items.map((i) => (
+          {step.name === "letter" ? (
+            <section data-kx="col">
+              <h1 className="text-2xl sm:text-4xl">{copy.stepLetter}</h1>
+              <p className="mt-2 text-muted-foreground">{copy.stepLetterHint}</p>
+              <div
+                data-kx="grid"
+                className="mt-6 grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-9"
+              >
+                {LETTERS.map((l) => (
                   <Button
-                    key={i.id}
+                    key={l}
                     variant="outline"
-                    size="touch-xl"
-                    className="flex-col gap-0 text-xl"
+                    size="touch"
+                    className="text-2xl font-semibold"
                     disabled={busy}
-                    onClick={() => void onPick(i.id)}
+                    onClick={() => {
+                      setLetter(l);
+                      if (property.listFlow) void listStays(l);
+                      else setStep({ name: "checkout" });
+                    }}
                   >
-                    <span className="flex items-center gap-2">
-                      {i.channel ? (
-                        <ChannelIcon channel={i.channel} iconUrl={siteOf(i.channel).iconUrl} label={siteOf(i.channel).label} size="1em" />
-                      ) : null}
-                      {i.label}
-                    </span>
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {copy.stayCheckout} {formatUkDate(i.checkOut)}
-                    </span>
+                    {l}
                   </Button>
                 ))}
               </div>
-            )}
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {step.name === "no_match" ? (
-          <section className="py-4 text-center">
-            <h1 className="text-2xl sm:text-4xl">{copy.noMatchTitle}</h1>
-            <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">{copy.noMatchBody}</p>
-            <div className="mt-8 flex flex-col items-center gap-3">
-              <Button size="touch-xl" className="w-full max-w-md" onClick={() => setStep({ name: "letter" })}>
-                {copy.startAgain}
-              </Button>
-              <HostCall phone={hostPhone} />
-            </div>
-          </section>
-        ) : null}
+          {step.name === "checkout" ? (
+            <section data-kx="col">
+              <h1 className="text-2xl sm:text-4xl">{copy.stepCheckout}</h1>
+              <div
+                data-kx="grid"
+                data-kx-fit
+                className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+              >
+                {property.checkoutChoices.map((d) => (
+                  <Button
+                    key={d}
+                    variant="outline"
+                    size="touch-xl"
+                    className="text-xl"
+                    disabled={busy}
+                    onClick={() => {
+                      setCheckOut(d);
+                      void findStay(d);
+                    }}
+                  >
+                    {formatUkDate(d)}
+                  </Button>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-        {step.name === "locked" ? (
-          <section className="py-4 text-center">
-            <h1 className="text-2xl sm:text-4xl">{copy.lockedTitle}</h1>
-            <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">{copy.lockedBody(lockedTime)}</p>
-            <div className="mt-8 flex justify-center">
-              <HostCall phone={hostPhone} />
-            </div>
-          </section>
-        ) : null}
+          {step.name === "platform" ? (
+            <section data-kx="col">
+              <h1 className="text-2xl sm:text-4xl">{copy.stepPlatform}</h1>
+              <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
+                {step.only.map(siteOf).map((site) => (
+                  <Button
+                    key={site.key}
+                    variant="outline"
+                    size="touch-xl"
+                    className="justify-start gap-4 text-xl"
+                    disabled={busy}
+                    onClick={() => void findStay(checkOut, site.key)}
+                  >
+                    <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} />
+                    {site.label}
+                  </Button>
+                ))}
+              </div>
+              {busy ? (
+                <Loader2 className="mx-auto mt-6 size-8 animate-spin text-muted-foreground" />
+              ) : null}
+            </section>
+          ) : null}
 
-        {step.name === "guestName" ? (
-          <section className="mx-auto max-w-xl">
-            <h1 className="text-2xl sm:text-4xl">{copy.nameTitle}</h1>
-            <p className="mt-2 text-muted-foreground">{copy.nameHint}</p>
-            <form className="mt-6 space-y-4" onSubmit={(e) => void onGuestName(e)}>
-              <Input
-                aria-label={copy.nameTitle}
-                className="h-16 text-2xl"
-                autoComplete="name"
-                autoFocus
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-              <Button type="submit" size="touch-xl" className="w-full" disabled={busy || fullName.trim().split(/\s+/).length < 2}>
-                {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-                {copy.nameCta}
-              </Button>
-            </form>
-          </section>
-        ) : null}
-
-        {step.name === "confirm" ? (
-          <section data-kx="col" className="py-4 text-center">
-            <h1 className="text-4xl sm:text-6xl">{step.returning ? copy.welcomeBack(step.firstName) : copy.hi(step.firstName)}</h1>
-            <p className="mt-4 text-xl text-muted-foreground">
-              {step.returning ? (
-                copy.welcomeBackBody
-              ) : platform && !(platform === "other" && siteOf(platform).label === copy.platforms["other"]) ? (
-                <ConfirmOnSite site={siteOf(platform)} />
+          {step.name === "pick" ? (
+            <section data-kx="col">
+              <h1 className="text-2xl sm:text-4xl">{copy.stepPickBooking}</h1>
+              {step.items.length === 0 ? (
+                <p className="mt-6 text-lg text-muted-foreground">{copy.noArrivals}</p>
               ) : (
-                copy.confirmBody
-              )}
-            </p>
-            <div data-kx="grid" className="mx-auto mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2">
-              <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
-                {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-                {copy.confirmYes}
-              </Button>
-              <Button size="touch-xl" variant="outline" onClick={restart} disabled={busy}>
-                {copy.confirmNo}
-              </Button>
-            </div>
-          </section>
-        ) : null}
-
-        {step.name === "identity" && step.method === "photo_id" ? (
-          <section className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}>
-            <h1 className="text-2xl sm:text-4xl">{copy.idTitle}</h1>
-            {!step.consented ? (
-              <>
-                <p className="mt-4 text-lg">{copy.idConsentLead}</p>
-                <WhyAsk>{plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}</WhyAsk>
-                <div className="mt-8 grid gap-3">
-                  <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
-                    {copy.idConsentAgree}
-                  </Button>
-                  <Button size="touch" variant="outline" onClick={() => fallback("photo_id")}>
-                    {copy.idUseOther}
-                  </Button>
+                <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {step.items.map((i) => (
+                    <Button
+                      key={i.id}
+                      variant="outline"
+                      size="touch-xl"
+                      className="flex-col gap-0 text-xl"
+                      disabled={busy}
+                      onClick={() => void onPick(i.id)}
+                    >
+                      <span className="flex items-center gap-2">
+                        {i.channel ? (
+                          <ChannelIcon
+                            channel={i.channel}
+                            iconUrl={siteOf(i.channel).iconUrl}
+                            label={siteOf(i.channel).label}
+                            size="1em"
+                          />
+                        ) : null}
+                        {i.label}
+                      </span>
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {copy.stayCheckout} {formatUkDate(i.checkOut)}
+                      </span>
+                    </Button>
+                  ))}
                 </div>
-              </>
-            ) : (
-              <div className="mt-6">
-                <IdCamera
-                  busy={busy}
-                  side={cameraSide}
-                  onCapture={(full, small) => void onPhoto(full, small)}
-                  onFail={() => fallback("photo_id", copy.idCameraFailed)}
-                  extra={
-                    <Button variant="ghost" size="lg" className="w-full" onClick={() => fallback("photo_id")}>
+              )}
+            </section>
+          ) : null}
+
+          {step.name === "no_match" ? (
+            <section className="py-4 text-center">
+              <h1 className="text-2xl sm:text-4xl">{copy.noMatchTitle}</h1>
+              <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
+                {copy.noMatchBody}
+              </p>
+              <div className="mt-8 flex flex-col items-center gap-3">
+                <Button
+                  size="touch-xl"
+                  className="w-full max-w-md"
+                  onClick={() => setStep({ name: "letter" })}
+                >
+                  {copy.startAgain}
+                </Button>
+                <HostCall phone={hostPhone} />
+              </div>
+            </section>
+          ) : null}
+
+          {step.name === "locked" ? (
+            <section className="py-4 text-center">
+              <h1 className="text-2xl sm:text-4xl">{copy.lockedTitle}</h1>
+              <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
+                {copy.lockedBody(lockedTime)}
+              </p>
+              <div className="mt-8 flex justify-center">
+                <HostCall phone={hostPhone} />
+              </div>
+            </section>
+          ) : null}
+
+          {step.name === "guestName" ? (
+            <section className="mx-auto max-w-xl">
+              <h1 className="text-2xl sm:text-4xl">{copy.nameTitle}</h1>
+              <p className="mt-2 text-muted-foreground">{copy.nameHint}</p>
+              <form className="mt-6 space-y-4" onSubmit={(e) => void onGuestName(e)}>
+                <Input
+                  aria-label={copy.nameTitle}
+                  className="h-16 text-2xl"
+                  autoComplete="name"
+                  autoFocus
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+                <Button
+                  type="submit"
+                  size="touch-xl"
+                  className="w-full"
+                  disabled={busy || fullName.trim().split(/\s+/).length < 2}
+                >
+                  {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                  {copy.nameCta}
+                </Button>
+              </form>
+            </section>
+          ) : null}
+
+          {step.name === "confirm" ? (
+            <section data-kx="col" className="py-4 text-center">
+              <h1 className="text-4xl sm:text-6xl">
+                {step.returning ? copy.welcomeBack(step.firstName) : copy.hi(step.firstName)}
+              </h1>
+              <p className="mt-4 text-xl text-muted-foreground">
+                {step.returning ? (
+                  copy.welcomeBackBody
+                ) : platform &&
+                  !(platform === "other" && siteOf(platform).label === copy.platforms["other"]) ? (
+                  <ConfirmOnSite site={siteOf(platform)} />
+                ) : (
+                  copy.confirmBody
+                )}
+              </p>
+              <div
+                data-kx="grid"
+                className="mx-auto mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2"
+              >
+                <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
+                  {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                  {copy.confirmYes}
+                </Button>
+                <Button size="touch-xl" variant="outline" onClick={restart} disabled={busy}>
+                  {copy.confirmNo}
+                </Button>
+              </div>
+            </section>
+          ) : null}
+
+          {step.name === "identity" && step.method === "photo_id" ? (
+            <section
+              className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}
+            >
+              <h1 className="text-2xl sm:text-4xl">{copy.idTitle}</h1>
+              {!step.consented ? (
+                <>
+                  <p className="mt-4 text-lg">{copy.idConsentLead}</p>
+                  <WhyAsk>
+                    {plan?.keepIdPhoto
+                      ? copy.idConsentPhoto(plan.keepDays)
+                      : copy.idConsentDetails(plan?.keepDays ?? 30)}
+                  </WhyAsk>
+                  <div className="mt-8 grid gap-3">
+                    <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
+                      {copy.idConsentAgree}
+                    </Button>
+                    <Button size="touch" variant="outline" onClick={() => fallback("photo_id")}>
                       {copy.idUseOther}
                     </Button>
-                  }
-                />
-              </div>
-            )}
-          </section>
-        ) : null}
-
-        {step.name === "identity" && step.method === "last4" ? (
-          <Last4Step
-            kinds={kinds}
-            busy={busy}
-            onSubmit={async (kind, value) => {
-              const res = await run(() => last4({ data: { token, kind, value } }));
-              if (!res) return;
-              if (res.status === "retry") return setMessage(copy.last4Retry(res.left));
-              if (res.status === "fallback") return fallback("last4");
-              afterLead();
-            }}
-            onOther={() => fallback("last4")}
-          />
-        ) : null}
-
-        {step.name === "identity" && step.method === "self_declare" ? (
-          <section className="mx-auto max-w-xl">
-            <h1 className="text-2xl sm:text-4xl">{copy.selfTitle}</h1>
-            <p className="mt-4 text-lg">{copy.selfBody}</p>
-            <p className="mt-4 rounded-2xl bg-secondary p-4 text-secondary-foreground">{copy.selfNote}</p>
-            <Button
-              size="touch-xl"
-              className="mt-8 w-full"
-              disabled={busy}
-              onClick={async () => {
-                const ok = await run(() => declare({ data: { token } }));
-                if (ok) afterLead();
-              }}
-            >
-              {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-              {copy.selfConfirm}
-            </Button>
-          </section>
-        ) : null}
-
-        {step.name === "party" && plan ? (
-          <PartyStep plan={plan} initialAdults={adults} busy={busy} onSubmit={(a, ages) => void onParty(a, ages)} />
-        ) : null}
-
-        {step.name === "companion" ? (
-          <section className={cn("mx-auto", step.ready && cameraSide ? "max-w-5xl" : "max-w-xl")}>
-            <h1 className="text-2xl sm:text-4xl">{copy.companionTitle(step.position + 1, adults)}</h1>
-            {!step.ready ? (
-              <>
-                <p className="mt-4 text-lg">{copy.companionBody}</p>
-                <p className="mt-2 text-muted-foreground">{copy.companionConsentLead}</p>
-                <WhyAsk>{plan?.keepIdPhoto ? copy.idConsentPhoto(plan.keepDays) : copy.idConsentDetails(plan?.keepDays ?? 30)}</WhyAsk>
-                <div className="mt-8 grid gap-3">
-                  <Button size="touch-xl" onClick={() => setStep({ ...step, ready: true })}>
-                    {copy.companionReady}
-                  </Button>
-                  <Button size="touch" variant="outline" disabled={busy} onClick={() => void onSkipCompanion(step.position)}>
-                    {copy.companionSkip}
-                  </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-6">
+                  <IdCamera
+                    busy={busy}
+                    side={cameraSide}
+                    onCapture={(full, small) => void onPhoto(full, small)}
+                    onFail={() => fallback("photo_id", copy.idCameraFailed)}
+                    extra={
+                      <Button
+                        variant="ghost"
+                        size="lg"
+                        className="w-full"
+                        onClick={() => fallback("photo_id")}
+                      >
+                        {copy.idUseOther}
+                      </Button>
+                    }
+                  />
                 </div>
-              </>
-            ) : (
+              )}
+            </section>
+          ) : null}
+
+          {step.name === "identity" && step.method === "last4" ? (
+            <Last4Step
+              kinds={kinds}
+              busy={busy}
+              onSubmit={async (kind, value) => {
+                const res = await run(() => last4({ data: { token, kind, value } }));
+                if (!res) return;
+                if (res.status === "retry") return setMessage(copy.last4Retry(res.left));
+                if (res.status === "fallback") return fallback("last4");
+                afterLead();
+              }}
+              onOther={() => fallback("last4")}
+            />
+          ) : null}
+
+          {step.name === "identity" && step.method === "self_declare" ? (
+            <section className="mx-auto max-w-xl">
+              <h1 className="text-2xl sm:text-4xl">{copy.selfTitle}</h1>
+              <p className="mt-4 text-lg">{copy.selfBody}</p>
+              <p className="mt-4 rounded-2xl bg-secondary p-4 text-secondary-foreground">
+                {copy.selfNote}
+              </p>
+              <Button
+                size="touch-xl"
+                className="mt-8 w-full"
+                disabled={busy}
+                onClick={async () => {
+                  const ok = await run(() => declare({ data: { token } }));
+                  if (ok) afterLead();
+                }}
+              >
+                {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                {copy.selfConfirm}
+              </Button>
+            </section>
+          ) : null}
+
+          {step.name === "party" && plan ? (
+            <PartyStep
+              plan={plan}
+              initialAdults={adults}
+              busy={busy}
+              onSubmit={(a, ages) => void onParty(a, ages)}
+            />
+          ) : null}
+
+          {step.name === "companion" ? (
+            <section className={cn("mx-auto", step.ready && cameraSide ? "max-w-5xl" : "max-w-xl")}>
+              <h1 className="text-2xl sm:text-4xl">
+                {copy.companionTitle(step.position + 1, adults)}
+              </h1>
+              {!step.ready ? (
+                <>
+                  <p className="mt-4 text-lg">{copy.companionBody}</p>
+                  <p className="mt-2 text-muted-foreground">{copy.companionConsentLead}</p>
+                  <WhyAsk>
+                    {plan?.keepIdPhoto
+                      ? copy.idConsentPhoto(plan.keepDays)
+                      : copy.idConsentDetails(plan?.keepDays ?? 30)}
+                  </WhyAsk>
+                  <div className="mt-8 grid gap-3">
+                    <Button size="touch-xl" onClick={() => setStep({ ...step, ready: true })}>
+                      {copy.companionReady}
+                    </Button>
+                    <Button
+                      size="touch"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void onSkipCompanion(step.position)}
+                    >
+                      {copy.companionSkip}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-6">
+                  <IdCamera
+                    key={`companion-${step.position}`}
+                    busy={busy}
+                    side={cameraSide}
+                    onCapture={(full, small) => void onCompanion(step.position, full, small)}
+                    onFail={() => void onSkipCompanion(step.position)}
+                    extra={
+                      <Button
+                        variant="ghost"
+                        size="lg"
+                        className="w-full"
+                        disabled={busy}
+                        onClick={() => void onSkipCompanion(step.position)}
+                      >
+                        {copy.companionSkip}
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {step.name === "register" ? (
+            <RegisterStep
+              key={`register-${step.position}`}
+              title={
+                step.child
+                  ? copy.registerTitleChild
+                  : step.position === 0
+                    ? prefill[0]?.fullName
+                      ? copy.registerTitleYou
+                      : copy.registerTitleBlank
+                    : copy.registerTitleAdult(step.position + 1)
+              }
+              lead={step.position === 0 ? copy.registerLead : copy.registerLeadOther}
+              prefill={prefill[step.position] ?? null}
+              busy={busy}
+              onSubmit={(entry) => void onRegister(step.position, entry)}
+            />
+          ) : null}
+
+          {step.name === "face" ? (
+            <section className={cn("mx-auto", cameraSide ? "max-w-5xl" : "max-w-xl")}>
+              <h1 className="text-2xl sm:text-4xl">
+                {step.position === 0 ? copy.faceTitle : copy.faceTitleOther(step.position + 1)}
+              </h1>
               <div className="mt-6">
                 <IdCamera
-                  key={`companion-${step.position}`}
+                  key={`face-${step.position}`}
+                  facing="user"
                   busy={busy}
                   side={cameraSide}
-                  onCapture={(full, small) => void onCompanion(step.position, full, small)}
-                  onFail={() => void onSkipCompanion(step.position)}
+                  help={copy.faceBody}
+                  cta={copy.faceTake}
+                  busyLabel={copy.faceSaving}
+                  onCapture={(_full, small) => void onFace(step.position, small)}
+                  onFail={() => void advance(queue)}
                   extra={
-                    <Button variant="ghost" size="lg" className="w-full" disabled={busy} onClick={() => void onSkipCompanion(step.position)}>
-                      {copy.companionSkip}
+                    <Button
+                      variant="ghost"
+                      size="lg"
+                      className="w-full"
+                      disabled={busy}
+                      onClick={() => void advance(queue)}
+                    >
+                      {copy.faceSkip}
                     </Button>
                   }
                 />
               </div>
-            )}
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {step.name === "register" ? (
-          <RegisterStep
-            key={`register-${step.position}`}
-            title={
-              step.child
-                ? copy.registerTitleChild
-                : step.position === 0
-                  ? prefill[0]?.fullName
-                    ? copy.registerTitleYou
-                    : copy.registerTitleBlank
-                  : copy.registerTitleAdult(step.position + 1)
-            }
-            lead={step.position === 0 ? copy.registerLead : copy.registerLeadOther}
-            prefill={prefill[step.position] ?? null}
-            busy={busy}
-            onSubmit={(entry) => void onRegister(step.position, entry)}
-          />
-        ) : null}
-
-        {step.name === "face" ? (
-          <section className={cn("mx-auto", cameraSide ? "max-w-5xl" : "max-w-xl")}>
-            <h1 className="text-2xl sm:text-4xl">
-              {step.position === 0 ? copy.faceTitle : copy.faceTitleOther(step.position + 1)}
-            </h1>
-            <div className="mt-6">
-              <IdCamera
-                key={`face-${step.position}`}
-                facing="user"
-                busy={busy}
-                side={cameraSide}
-                help={copy.faceBody}
-                cta={copy.faceTake}
-                busyLabel={copy.faceSaving}
-                onCapture={(_full, small) => void onFace(step.position, small)}
-                onFail={() => void advance(queue)}
-                extra={
-                  <Button variant="ghost" size="lg" className="w-full" disabled={busy} onClick={() => void advance(queue)}>
-                    {copy.faceSkip}
-                  </Button>
-                }
-              />
-            </div>
-          </section>
-        ) : null}
-
-        {step.name === "waiting" ? (
-          <section className="mx-auto max-w-xl text-center">
-            <Loader2 className="mx-auto size-10 animate-spin text-primary" />
-            <h1 className="mt-4 text-2xl sm:text-4xl">{copy.waitingTitle}</h1>
-            <p className="mt-3 text-lg text-muted-foreground">{copy.waitingBody}</p>
-            <ul className="mx-auto mt-6 max-w-sm space-y-2 text-left">
-              {slots.map((x) => (
-                <li key={x.position} className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
-                  <span className="font-medium">{copy.guestLabel(x.kind, x.position + 1)}</span>
-                  <span className={cn("flex items-center gap-1.5 text-sm", x.state === "done" ? "text-success" : "text-muted-foreground")}>
-                    {x.state === "done" ? <CheckCircle2 className="size-4" /> : x.state === "phone" ? <Loader2 className="size-4 animate-spin" /> : null}
-                    {x.state === "done" ? copy.slotDone : x.state === "phone" ? copy.slotPhone : copy.slotOpen}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <Button size="touch" variant="ghost" className="mt-6" disabled={busy} onClick={() => void finish()}>
-              {copy.waitingSkip}
-            </Button>
-          </section>
-        ) : null}
-
-        {step.name === "handover" ? (
-          <section className="py-4 text-center">
-            <HandHeart className="mx-auto size-14 text-primary" />
-            <h1 className="mt-4 text-2xl sm:text-4xl">{copy.handoverTitle}</h1>
-            <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">{copy.handoverBody}</p>
-            <div className="mt-8 flex flex-col items-center gap-3">
-              <HostCall phone={hostPhone} />
-              <Button size="touch" variant="ghost" className="w-full max-w-md" onClick={() => setStep(step.back)}>
-                {copy.handoverResume}
+          {step.name === "waiting" ? (
+            <section className="mx-auto max-w-xl text-center">
+              <Loader2 className="mx-auto size-10 animate-spin text-primary" />
+              <h1 className="mt-4 text-2xl sm:text-4xl">{copy.waitingTitle}</h1>
+              <p className="mt-3 text-lg text-muted-foreground">{copy.waitingBody}</p>
+              <ul className="mx-auto mt-6 max-w-sm space-y-2 text-left">
+                {slots.map((x) => (
+                  <li
+                    key={x.position}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
+                  >
+                    <span className="font-medium">{copy.guestLabel(x.kind, x.position + 1)}</span>
+                    <span
+                      className={cn(
+                        "flex items-center gap-1.5 text-sm",
+                        x.state === "done" ? "text-success" : "text-muted-foreground",
+                      )}
+                    >
+                      {x.state === "done" ? (
+                        <CheckCircle2 className="size-4" />
+                      ) : x.state === "phone" ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : null}
+                      {x.state === "done"
+                        ? copy.slotDone
+                        : x.state === "phone"
+                          ? copy.slotPhone
+                          : copy.slotOpen}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                size="touch"
+                variant="ghost"
+                className="mt-6"
+                disabled={busy}
+                onClick={() => void finish()}
+              >
+                {copy.waitingSkip}
               </Button>
-            </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {step.name === "done" ? (
-          <section data-kx={cameraSide ? undefined : "center"} className={cn("py-4 text-center", cameraSide && "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-10")}>
-            <div>
-              <CheckCircle2 className="mx-auto size-14 text-success" />
-              <h1 className="mt-4 text-3xl sm:text-5xl">{copy.doneTitle(step.firstName)}</h1>
-              <p className="mt-4 text-2xl">
-                {step.roomName ? copy.roomLine(step.roomName, step.roomTitle) : copy.noRoom}
+          {step.name === "handover" ? (
+            <section className="py-4 text-center">
+              <HandHeart className="mx-auto size-14 text-primary" />
+              <h1 className="mt-4 text-2xl sm:text-4xl">{copy.handoverTitle}</h1>
+              <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
+                {copy.handoverBody}
               </p>
-              <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
-                <Link to="/stay/$token" params={{ token: step.stayToken }}>
-                  <BookOpen className="size-6" /> {copy.stayGuideCta}
-                </Link>
+              <div className="mt-8 flex flex-col items-center gap-3">
+                <HostCall phone={hostPhone} />
+                <Button
+                  size="touch"
+                  variant="ghost"
+                  className="w-full max-w-md"
+                  onClick={() => setStep(step.back)}
+                >
+                  {copy.handoverResume}
+                </Button>
+              </div>
+            </section>
+          ) : null}
+
+          {step.name === "done" ? (
+            <section
+              data-kx={cameraSide ? undefined : "center"}
+              className={cn(
+                "py-4 text-center",
+                cameraSide && "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-10",
+              )}
+            >
+              <div>
+                <CheckCircle2 className="mx-auto size-14 text-success" />
+                <h1 className="mt-4 text-3xl sm:text-5xl">{copy.doneTitle(step.firstName)}</h1>
+                <p className="mt-4 text-2xl">
+                  {step.roomName ? copy.roomLine(step.roomName, step.roomTitle) : copy.noRoom}
+                </p>
+                <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
+                  <Link to="/stay/$token" params={{ token: step.stayToken }}>
+                    <BookOpen className="size-6" /> {copy.stayGuideCta}
+                  </Link>
+                </Button>
+              </div>
+              {typeof window !== "undefined" ? (
+                <GuideLink
+                  url={`${window.location.origin}/stay/${step.stayToken}`}
+                  kiosk={kiosk}
+                  beside={cameraSide}
+                />
+              ) : null}
+            </section>
+          ) : null}
+
+          {message ? (
+            <p
+              role="alert"
+              className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground"
+            >
+              {message}
+            </p>
+          ) : null}
+
+          {canHandOver ? (
+            <div className="mt-8 border-t border-border pt-4 text-center">
+              <Button
+                variant="ghost"
+                size="lg"
+                className="text-muted-foreground"
+                disabled={busy}
+                onClick={() => void handOver()}
+              >
+                <HandHeart className="size-5" /> {copy.handoverCta}
               </Button>
             </div>
-            {typeof window !== "undefined" ? (
-              <GuideLink url={`${window.location.origin}/stay/${step.stayToken}`} kiosk={kiosk} beside={cameraSide} />
-            ) : null}
-          </section>
-        ) : null}
-
-        {message ? (
-          <p role="alert" className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground">
-            {message}
-          </p>
-        ) : null}
-
-        {canHandOver ? (
-          <div className="mt-8 border-t border-border pt-4 text-center">
-            <Button variant="ghost" size="lg" className="text-muted-foreground" disabled={busy} onClick={() => void handOver()}>
-              <HandHeart className="size-5" /> {copy.handoverCta}
-            </Button>
-          </div>
-        ) : null}
+          ) : null}
         </main>
 
         {/* Front-door tablet: the phone square sits beside the welcome, then in the corner. */}
@@ -1015,10 +1231,16 @@ export function CheckInFlow({
           />
         ) : null}
         {/* On a phone, only while others are filled in: they can use their own phones instead of this one. */}
-        {othersNow && !kiosk ? <CheckInQr url={joinUrl!} heading={copy.othersHeading} blurb={copy.othersBlurb} compact={onPhone} /> : null}
+        {othersNow && !kiosk ? (
+          <CheckInQr
+            url={joinUrl!}
+            heading={copy.othersHeading}
+            blurb={copy.othersBlurb}
+            compact={onPhone}
+          />
+        ) : null}
       </div>
     </div>
-
   );
 }
 
@@ -1056,64 +1278,71 @@ function Last4Step({
     <section data-kx="col" className={cn("mx-auto", choose ? "max-w-4xl" : "max-w-xl")}>
       <h1 className="text-2xl sm:text-4xl">{copy.last4Title}</h1>
       <div data-kx="grow" className={cn("grid gap-6", choose && "sm:grid-cols-2 sm:items-start")}>
-      {choose ? (
-        <div className="mt-6 grid gap-2">
-          {kinds.map((k) => (
-            <Button
-              key={k}
-              variant={k === kind ? "default" : "outline"}
-              size="touch"
-              className="h-auto min-h-16 whitespace-normal py-3"
-              onClick={() => {
-                setKind(k);
-                setValue("");
+        {choose ? (
+          <div className="mt-6 grid gap-2">
+            {kinds.map((k) => (
+              <Button
+                key={k}
+                variant={k === kind ? "default" : "outline"}
+                size="touch"
+                className="h-auto min-h-16 whitespace-normal py-3"
+                onClick={() => {
+                  setKind(k);
+                  setValue("");
+                }}
+              >
+                {copy.last4Kinds[k]}
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-lg">{copy.last4Kinds[kind]}</p>
+        )}
+        {/* One cell: the pad and the typed box sit on top of each other; the one not in use is hidden but keeps its space. */}
+        <div data-kx="grow" className="grid [&>*]:[grid-area:1/1]">
+          {withPad ? (
+            <div data-kx="col" className={cn("mt-6", !padOn && "invisible")} aria-hidden={!padOn}>
+              <PinPad
+                value={padOn ? value : ""}
+                onChange={setValue}
+                length={4}
+                busy={busy || !padOn}
+                onComplete={(v) => void onSubmit("phone", v)}
+              />
+              {busy && padOn ? (
+                <Loader2 className="mx-auto mt-4 size-6 animate-spin text-muted-foreground" />
+              ) : null}
+            </div>
+          ) : null}
+          {!padOn ? (
+            <form
+              className="mt-6 space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void onSubmit(kind, value);
               }}
             >
-              {copy.last4Kinds[k]}
-            </Button>
-          ))}
+              <Input
+                aria-label={copy.last4Kinds[kind]}
+                className="h-16 text-center text-2xl tracking-widest"
+                value={value}
+                inputMode={isEmail ? "email" : "text"}
+                autoComplete="off"
+                maxLength={isEmail ? 254 : 4}
+                onChange={(e) => setValue(e.target.value)}
+              />
+              <Button
+                type="submit"
+                size="touch-xl"
+                className="w-full"
+                disabled={busy || value.trim().length < 4}
+              >
+                {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                {copy.last4Submit}
+              </Button>
+            </form>
+          ) : null}
         </div>
-      ) : (
-        <p className="mt-4 text-lg">{copy.last4Kinds[kind]}</p>
-      )}
-      {/* One cell: the pad and the typed box sit on top of each other; the one not in use is hidden but keeps its space. */}
-      <div data-kx="grow" className="grid [&>*]:[grid-area:1/1]">
-      {withPad ? (
-        <div data-kx="col" className={cn("mt-6", !padOn && "invisible")} aria-hidden={!padOn}>
-          <PinPad
-            value={padOn ? value : ""}
-            onChange={setValue}
-            length={4}
-            busy={busy || !padOn}
-            onComplete={(v) => void onSubmit("phone", v)}
-          />
-          {busy && padOn ? <Loader2 className="mx-auto mt-4 size-6 animate-spin text-muted-foreground" /> : null}
-        </div>
-      ) : null}
-      {!padOn ? (
-        <form
-          className="mt-6 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void onSubmit(kind, value);
-          }}
-        >
-          <Input
-            aria-label={copy.last4Kinds[kind]}
-            className="h-16 text-center text-2xl tracking-widest"
-            value={value}
-            inputMode={isEmail ? "email" : "text"}
-            autoComplete="off"
-            maxLength={isEmail ? 254 : 4}
-            onChange={(e) => setValue(e.target.value)}
-          />
-          <Button type="submit" size="touch-xl" className="w-full" disabled={busy || value.trim().length < 4}>
-            {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-            {copy.last4Submit}
-          </Button>
-        </form>
-      ) : null}
-      </div>
       </div>
       <Button variant="ghost" size="lg" className="mt-3 w-full" onClick={onOther}>
         {copy.idUseOther}
@@ -1132,7 +1361,9 @@ function ConfirmOnSite({ site }: { site: GuestSite }) {
           <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} size="1.15em" />
         </span>
         {/* The standard "Booked directly" reads badly mid-sentence. */}
-        {site.key === "direct" && site.label === copy.platforms["direct"] ? copy.confirmDirect : site.label}
+        {site.key === "direct" && site.label === copy.platforms["direct"]
+          ? copy.confirmDirect
+          : site.label}
       </span>{" "}
       {copy.confirmOnSite.after}
     </>
@@ -1218,7 +1449,14 @@ function PartyStep({
         {plan.booked !== null ? ` ${copy.partyBooked(plan.booked)}` : ""}
       </p>
       <div className="mt-6 space-y-3">
-        <Counter label={copy.partyAdults} hint={copy.partyAdultsHint} value={adults} min={1} max={30} onChange={setAdults} />
+        <Counter
+          label={copy.partyAdults}
+          hint={copy.partyAdultsHint}
+          value={adults}
+          min={1}
+          max={30}
+          onChange={setAdults}
+        />
         {plan.childrenAllowed ? (
           <Counter
             label={copy.partyChildren}
@@ -1229,13 +1467,17 @@ function PartyStep({
             onChange={(n) => setAges((a) => (n > a.length ? [...a, null] : a.slice(0, n)))}
           />
         ) : (
-          <p className="rounded-2xl bg-secondary p-4 text-secondary-foreground">{copy.partyAdultsOnly}</p>
+          <p className="rounded-2xl bg-secondary p-4 text-secondary-foreground">
+            {copy.partyAdultsOnly}
+          </p>
         )}
       </div>
 
       {ages.length > 0 ? (
         <div className="mt-6">
-          <p className="text-muted-foreground">{plan.register ? copy.partyChildAgeHintRegister : copy.partyChildAgeHint}</p>
+          <p className="text-muted-foreground">
+            {plan.register ? copy.partyChildAgeHintRegister : copy.partyChildAgeHint}
+          </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {ages.map((age, i) => (
               <div key={i} className="space-y-1">
@@ -1277,7 +1519,12 @@ function PartyStep({
         size="touch-xl"
         className="mt-8 w-full"
         disabled={busy || missingAge}
-        onClick={() => onSubmit(adults, ages.filter((a): a is number => a !== null))}
+        onClick={() =>
+          onSubmit(
+            adults,
+            ages.filter((a): a is number => a !== null),
+          )
+        }
       >
         {busy ? <Loader2 className="size-6 animate-spin" /> : null}
         {missingAge ? copy.partyAgesMissing : copy.partyContinue}
@@ -1336,7 +1583,9 @@ function RegisterStep({
       <h1 className="text-2xl sm:text-4xl">{title}</h1>
       <p className="mt-2 text-lg text-muted-foreground">{lead}</p>
       <WhyAsk>{copy.registerWhy}</WhyAsk>
-      {prefill?.fullName ? <p className="mt-3 text-sm text-muted-foreground">{copy.registerFromId}</p> : null}
+      {prefill?.fullName ? (
+        <p className="mt-3 text-sm text-muted-foreground">{copy.registerFromId}</p>
+      ) : null}
       <form
         className="mt-6 space-y-4"
         onSubmit={(e) => {
@@ -1397,21 +1646,36 @@ function RegisterStep({
               <label htmlFor="reg-place" className="text-lg">
                 {copy.registerPlace}
               </label>
-              <Input id="reg-place" className="h-14 text-xl" value={placeOfIssue} onChange={(e) => setPlaceOfIssue(e.target.value)} />
+              <Input
+                id="reg-place"
+                className="h-14 text-xl"
+                value={placeOfIssue}
+                onChange={(e) => setPlaceOfIssue(e.target.value)}
+              />
               <p className="text-sm text-muted-foreground">{copy.registerPlaceHint}</p>
             </div>
             <div className="space-y-1">
               <label htmlFor="reg-next" className="text-lg">
                 {copy.registerNext}
               </label>
-              <Input id="reg-next" className="h-14 text-xl" value={nextDestination} onChange={(e) => setNextDestination(e.target.value)} />
+              <Input
+                id="reg-next"
+                className="h-14 text-xl"
+                value={nextDestination}
+                onChange={(e) => setNextDestination(e.target.value)}
+              />
               <p className="text-sm text-muted-foreground">{copy.registerNextHint}</p>
             </div>
             <div className="space-y-1">
               <label htmlFor="reg-address" className="text-lg">
                 {copy.registerAddress}
               </label>
-              <Input id="reg-address" className="h-14 text-xl" value={nextAddress} onChange={(e) => setNextAddress(e.target.value)} />
+              <Input
+                id="reg-address"
+                className="h-14 text-xl"
+                value={nextAddress}
+                onChange={(e) => setNextAddress(e.target.value)}
+              />
             </div>
           </>
         ) : null}
@@ -1484,7 +1748,10 @@ export function JoinCheckIn({ share }: { share: string }) {
   const person = useServerFn(joinPerson);
   const done = useServerFn(joinDone);
   const [about, setAbout] = useState<Awaited<ReturnType<typeof joinInfo>> | null>(null);
-  const [me, setMe] = useState<Extract<Awaited<ReturnType<typeof joinCheckIn>>, { status: "joined" }> | null>(null);
+  const [me, setMe] = useState<Extract<
+    Awaited<ReturnType<typeof joinCheckIn>>,
+    { status: "joined" }
+  > | null>(null);
   const [stage, setStage] = useState<JoinStage>({ name: "intro" });
   const [queue, setQueue] = useState<JoinStage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -1533,7 +1800,11 @@ export function JoinCheckIn({ share }: { share: string }) {
       res.kind === "child"
         ? [{ name: "person" }]
         : [
-            plan.everyAdult ? { name: "id", ready: false } : !plan.register ? { name: "person" } : null,
+            plan.everyAdult
+              ? { name: "id", ready: false }
+              : !plan.register
+                ? { name: "person" }
+                : null,
             plan.register ? { name: "register" } : null,
             plan.facePhoto ? { name: "face" } : null,
           ].filter((x): x is JoinStage => x !== null);
@@ -1549,19 +1820,40 @@ export function JoinCheckIn({ share }: { share: string }) {
         {stage.name === "intro" ? (
           about ? (
             <section className="text-center">
-              <h1 className="text-2xl leading-tight sm:text-4xl">{copy.joinTitle(about.leadFirstName, about.propertyName)}</h1>
+              <h1 className="text-2xl leading-tight sm:text-4xl">
+                {copy.joinTitle(about.leadFirstName, about.propertyName)}
+              </h1>
               <p className="mt-3 text-lg text-muted-foreground">{copy.joinBody}</p>
               <div className="mt-8 grid gap-3">
-                <Button size="touch-xl" disabled={busy || about.openAdults === 0} onClick={() => void pick("adult")}>
+                <Button
+                  size="touch-xl"
+                  disabled={busy || about.openAdults === 0}
+                  onClick={() => void pick("adult")}
+                >
                   {copy.joinAdult}
                 </Button>
-                {about.openAdults ? <p className="-mt-1 text-sm text-muted-foreground">{copy.joinLeft(about.openAdults)}</p> : null}
-                <Button size="touch" variant="outline" disabled={busy || about.openChildren === 0} onClick={() => void pick("child")}>
+                {about.openAdults ? (
+                  <p className="-mt-1 text-sm text-muted-foreground">
+                    {copy.joinLeft(about.openAdults)}
+                  </p>
+                ) : null}
+                <Button
+                  size="touch"
+                  variant="outline"
+                  disabled={busy || about.openChildren === 0}
+                  onClick={() => void pick("child")}
+                >
                   {copy.joinChild}
                 </Button>
-                {about.openChildren ? <p className="-mt-1 text-sm text-muted-foreground">{copy.joinLeft(about.openChildren)}</p> : null}
+                {about.openChildren ? (
+                  <p className="-mt-1 text-sm text-muted-foreground">
+                    {copy.joinLeft(about.openChildren)}
+                  </p>
+                ) : null}
               </div>
-              {about.openAdults + about.openChildren === 0 ? <p className="mt-6 text-muted-foreground">{copy.joinFull}</p> : null}
+              {about.openAdults + about.openChildren === 0 ? (
+                <p className="mt-6 text-muted-foreground">{copy.joinFull}</p>
+              ) : null}
             </section>
           ) : (
             <Loader2 className="mx-auto size-8 animate-spin text-muted-foreground" />
@@ -1576,7 +1868,11 @@ export function JoinCheckIn({ share }: { share: string }) {
             {!stage.ready ? (
               <>
                 <p className="mt-4 text-lg">{copy.companionBody}</p>
-                <WhyAsk>{me.plan.keepIdPhoto ? copy.idConsentPhoto(me.plan.keepDays) : copy.idConsentDetails(me.plan.keepDays)}</WhyAsk>
+                <WhyAsk>
+                  {me.plan.keepIdPhoto
+                    ? copy.idConsentPhoto(me.plan.keepDays)
+                    : copy.idConsentDetails(me.plan.keepDays)}
+                </WhyAsk>
                 <div className="mt-8 grid gap-3">
                   <Button size="touch-xl" onClick={() => setStage({ name: "id", ready: true })}>
                     {copy.companionReady}
@@ -1586,10 +1882,13 @@ export function JoinCheckIn({ share }: { share: string }) {
                     variant="outline"
                     disabled={busy}
                     onClick={() =>
-                      void run(() => skipCompanion({ data: { token: t, position: pos } })).then((ok) => {
-                        // No ID: at least their name, unless the register asks for it anyway.
-                        if (ok) void next(me.plan.register ? queue : [{ name: "person" }, ...queue], t);
-                      })
+                      void run(() => skipCompanion({ data: { token: t, position: pos } })).then(
+                        (ok) => {
+                          // No ID: at least their name, unless the register asks for it anyway.
+                          if (ok)
+                            void next(me.plan.register ? queue : [{ name: "person" }, ...queue], t);
+                        },
+                      )
                     }
                   >
                     {copy.joinNoId}
@@ -1601,12 +1900,27 @@ export function JoinCheckIn({ share }: { share: string }) {
                 <IdCamera
                   busy={busy}
                   onCapture={(full, small) =>
-                    void run(() => companionId({ data: { token: t, position: pos, image: full, ...(me.plan.keepIdPhoto ? { small } : {}) } })).then(async (res) => {
+                    void run(() =>
+                      companionId({
+                        data: {
+                          token: t,
+                          position: pos,
+                          image: full,
+                          ...(me.plan.keepIdPhoto ? { small } : {}),
+                        },
+                      }),
+                    ).then(async (res) => {
                       if (!res) return;
-                      if (res.status === "retry") return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
+                      if (res.status === "retry")
+                        return setMessage(
+                          res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain,
+                        );
                       if (res.status === "skip") {
                         await run(() => skipCompanion({ data: { token: t, position: pos } }));
-                        return void next(me.plan.register ? queue : [{ name: "person" }, ...queue], t);
+                        return void next(
+                          me.plan.register ? queue : [{ name: "person" }, ...queue],
+                          t,
+                        );
                       }
                       setPrefill(res.prefill);
                       await next(queue, t);
@@ -1624,24 +1938,64 @@ export function JoinCheckIn({ share }: { share: string }) {
             className="space-y-5"
             onSubmit={(e) => {
               e.preventDefault();
-              void run(() => person({ data: { token: t, fullName: name.trim(), ...(me.kind === "child" ? { age } : {}) } })).then((ok) => {
+              void run(() =>
+                person({
+                  data: {
+                    token: t,
+                    fullName: name.trim(),
+                    ...(me.kind === "child" ? { age } : {}),
+                  },
+                }),
+              ).then((ok) => {
                 if (!ok) return;
                 // A 16 or 17 year old is in the register too.
-                const more: JoinStage[] = me.kind === "child" && me.plan.register && age >= REGISTER_AGE ? [{ name: "register" }, ...queue] : queue;
-                if (me.kind === "child") setPrefill({ fullName: name.trim(), nationality: null, documentNumber: null, placeOfIssue: null });
+                const more: JoinStage[] =
+                  me.kind === "child" && me.plan.register && age >= REGISTER_AGE
+                    ? [{ name: "register" }, ...queue]
+                    : queue;
+                if (me.kind === "child")
+                  setPrefill({
+                    fullName: name.trim(),
+                    nationality: null,
+                    documentNumber: null,
+                    placeOfIssue: null,
+                  });
                 void next(more, t);
               });
             }}
           >
-            <h1 className="text-2xl sm:text-4xl">{me.kind === "child" ? copy.joinChildTitle : copy.joinNameTitle(me.number)}</h1>
+            <h1 className="text-2xl sm:text-4xl">
+              {me.kind === "child" ? copy.joinChildTitle : copy.joinNameTitle(me.number)}
+            </h1>
             <div className="space-y-2">
               <label htmlFor="join-name" className="text-base font-medium">
                 {me.kind === "child" ? copy.joinChildName : copy.joinName}
               </label>
-              <Input id="join-name" className="h-14 text-lg" autoComplete={me.kind === "child" ? "off" : "name"} required value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                id="join-name"
+                className="h-14 text-lg"
+                autoComplete={me.kind === "child" ? "off" : "name"}
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
-            {me.kind === "child" ? <Counter label={copy.joinChildAge} hint="" value={age} min={0} max={17} onChange={setAge} /> : null}
-            <Button type="submit" size="touch-xl" className="w-full" disabled={busy || !name.trim()}>
+            {me.kind === "child" ? (
+              <Counter
+                label={copy.joinChildAge}
+                hint=""
+                value={age}
+                min={0}
+                max={17}
+                onChange={setAge}
+              />
+            ) : null}
+            <Button
+              type="submit"
+              size="touch-xl"
+              className="w-full"
+              disabled={busy || !name.trim()}
+            >
               {busy ? <Loader2 className="size-6 animate-spin" /> : null} {copy.joinNext}
             </Button>
           </form>
@@ -1649,16 +2003,21 @@ export function JoinCheckIn({ share }: { share: string }) {
 
         {stage.name === "register" && me ? (
           <RegisterStep
-            title={me.kind === "child" ? copy.registerTitleChild : copy.registerTitleAdult(me.number)}
+            title={
+              me.kind === "child" ? copy.registerTitleChild : copy.registerTitleAdult(me.number)
+            }
             lead={copy.registerLeadOther}
             prefill={prefill}
             busy={busy}
             onSubmit={(entry) =>
-              void run(() => register({ data: { token: t, position: pos, ...entry } })).then((res) => {
-                if (!res) return;
-                if (!res.ok) return setMessage(res.missing.map((m) => copy.registerMissing[m]).join(" "));
-                void next(queue, t);
-              })
+              void run(() => register({ data: { token: t, position: pos, ...entry } })).then(
+                (res) => {
+                  if (!res) return;
+                  if (!res.ok)
+                    return setMessage(res.missing.map((m) => copy.registerMissing[m]).join(" "));
+                  void next(queue, t);
+                },
+              )
             }
           />
         ) : null}
@@ -1673,10 +2032,20 @@ export function JoinCheckIn({ share }: { share: string }) {
                 help={copy.faceBody}
                 cta={copy.faceTake}
                 busyLabel={copy.faceSaving}
-                onCapture={(_full, small) => void run(() => face({ data: { token: t, position: pos, image: small } })).then((ok) => ok && void next(queue, t))}
+                onCapture={(_full, small) =>
+                  void run(() => face({ data: { token: t, position: pos, image: small } })).then(
+                    (ok) => ok && void next(queue, t),
+                  )
+                }
                 onFail={() => void next(queue, t)}
               />
-              <Button variant="ghost" size="lg" className="mt-3 w-full" disabled={busy} onClick={() => void next(queue, t)}>
+              <Button
+                variant="ghost"
+                size="lg"
+                className="mt-3 w-full"
+                disabled={busy}
+                onClick={() => void next(queue, t)}
+              >
                 {copy.faceSkip}
               </Button>
             </div>
@@ -1704,7 +2073,10 @@ export function JoinCheckIn({ share }: { share: string }) {
         ) : null}
 
         {message ? (
-          <p role="alert" className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground">
+          <p
+            role="alert"
+            className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground"
+          >
             {message}
           </p>
         ) : null}

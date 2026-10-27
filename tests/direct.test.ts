@@ -1,13 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import { consentText, enquiryProblem, isReturning, nightsBetween, replyMailto } from "../src/lib/direct";
+import {
+  consentText,
+  enquiryProblem,
+  isReturning,
+  nightsBetween,
+  replyMailto,
+} from "../src/lib/direct";
 
-const ok = { name: "Priya Shah", email: "priya@example.com", phone: "+447700900123", checkIn: "2026-11-02", checkOut: "2026-11-05", guests: 2 };
+const ok = {
+  name: "Priya Shah",
+  email: "priya@example.com",
+  phone: "+447700900123",
+  checkIn: "2026-11-02",
+  checkOut: "2026-11-05",
+  guests: 2,
+};
 const TODAY = "2026-10-21";
 
 describe("repeat direct stays", () => {
   it("keeps consent wording plain and specific", () => {
-    expect(consentText("The Hill Suites")).toContain("The Hill Suites to contact me by email about future stays");
+    expect(consentText("The Hill Suites")).toContain(
+      "The Hill Suites to contact me by email about future stays",
+    );
     expect(consentText("The Hill Suites")).toContain("withdraw");
   });
 
@@ -30,7 +45,14 @@ describe("repeat direct stays", () => {
   });
 
   it("writes a reply from the host's own mailbox, with a way to stop hearing from them", () => {
-    const link = replyMailto({ email: "priya@example.com", business: "The Hill Suites", checkIn: "2026-11-02", checkOut: "2026-11-05", name: "Priya Shah", withdrawUrl: "https://x/stay-again/withdraw/abc" });
+    const link = replyMailto({
+      email: "priya@example.com",
+      business: "The Hill Suites",
+      checkIn: "2026-11-02",
+      checkOut: "2026-11-05",
+      name: "Priya Shah",
+      withdrawUrl: "https://x/stay-again/withdraw/abc",
+    });
     expect(link.startsWith("mailto:priya%40example.com?subject=")).toBe(true);
     const body = decodeURIComponent(link.split("&body=")[1]!);
     expect(body.startsWith("Hello Priya,")).toBe(true);

@@ -14,7 +14,10 @@ export function StayReview({ token }: { token: string }) {
   const fetchReview = useServerFn(getGuestReview);
   const send = useServerFn(sendGuestReview);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["stay-review", token], queryFn: () => fetchReview({ data: { token } }) });
+  const q = useQuery({
+    queryKey: ["stay-review", token],
+    queryFn: () => fetchReview({ data: { token } }),
+  });
   const [rating, setRating] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,7 +43,12 @@ export function StayReview({ token }: { token: string }) {
       </h2>
       <p className="text-muted-foreground">{copy.guestBody}</p>
       <Stars value={rating} onChange={setRating} size="size-10" />
-      <Textarea rows={3} placeholder={copy.guestComment} value={message} onChange={(e) => setMessage(e.target.value)} />
+      <Textarea
+        rows={3}
+        placeholder={copy.guestComment}
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+      />
       <Button
         size="lg"
         disabled={busy || rating === null}
@@ -60,7 +68,11 @@ export function StayReview({ token }: { token: string }) {
         {busy ? <Loader2 className="size-5 animate-spin" /> : null}
         {copy.guestSend}
       </Button>
-      {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
     </section>
   );
 }

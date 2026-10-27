@@ -28,7 +28,10 @@ export function CheckinSettings({
   );
   const [busy, setBusy] = useState(false);
   // What was last saved, to grey out Save until something changes.
-  const [saved, setSaved] = useState(() => ({ enabled: initial.enabled, primary: initial.order.find((m) => m !== "self_declare" && initial.enabled[m]) ?? "photo_id" }));
+  const [saved, setSaved] = useState(() => ({
+    enabled: initial.enabled,
+    primary: initial.order.find((m) => m !== "self_declare" && initial.enabled[m]) ?? "photo_id",
+  }));
   const save = useServerFn(saveCheckinMethods);
   const qc = useQueryClient();
 
@@ -48,9 +51,15 @@ export function CheckinSettings({
     try {
       const other: CheckinMethod = primary === "photo_id" ? "last4" : "photo_id";
       await save({
-        data: { propertyId: property.id, methods: { order: [primary, other, "self_declare"], enabled } },
+        data: {
+          propertyId: property.id,
+          methods: { order: [primary, other, "self_declare"], enabled },
+        },
       });
-      await Promise.all([qc.invalidateQueries({ queryKey: ["board"] }), qc.invalidateQueries({ queryKey: ["workspace"] })]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["board"] }),
+        qc.invalidateQueries({ queryKey: ["workspace"] }),
+      ]);
       setSaved({ enabled, primary });
       toast.success(copy.saved);
     } catch (err) {
@@ -84,7 +93,10 @@ export function CheckinSettings({
 
       <div className="mt-5 space-y-4">
         {KEYS.map((k) => (
-          <div key={k} className="flex items-start justify-between gap-4 rounded-xl border border-border p-4">
+          <div
+            key={k}
+            className="flex items-start justify-between gap-4 rounded-xl border border-border p-4"
+          >
             <div>
               <Label htmlFor={`m-${k}`} className="text-base">
                 {copy.methods[k]}
@@ -118,8 +130,9 @@ export function CheckinSettings({
         </div>
       ) : null}
 
-      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{idOff ? copy.listFlowNote : copy.fallbackNote}</p>
-
+      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">
+        {idOff ? copy.listFlowNote : copy.fallbackNote}
+      </p>
     </section>
   );
 }

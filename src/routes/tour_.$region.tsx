@@ -9,13 +9,30 @@ export const Route = createFileRoute("/tour_/$region")({
   loader: ({ params }) => {
     const spec = showcaseByKey(params.region);
     if (!spec) throw notFound();
-    return { key: spec.key, label: spec.label, name: spec.property.name, campaign: spec.campaign.guest };
+    return {
+      key: spec.key,
+      label: spec.label,
+      name: spec.property.name,
+      campaign: spec.campaign.guest,
+    };
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: rebrand(`The guest journey: ${loaderData?.name ?? "demo"}, ${loaderData?.label ?? ""} — Latchkey`) },
-      { name: "description", content: rebrand(`Check in and read the stay guide at a fictional property in ${loaderData?.label ?? "the demo"}. A Latchkey demo that resets daily.`) },
-      { property: "og:title", content: rebrand(`The guest journey in ${loaderData?.label ?? "the demo"} — Latchkey`) },
+      {
+        title: rebrand(
+          `The guest journey: ${loaderData?.name ?? "demo"}, ${loaderData?.label ?? ""} — Latchkey`,
+        ),
+      },
+      {
+        name: "description",
+        content: rebrand(
+          `Check in and read the stay guide at a fictional property in ${loaderData?.label ?? "the demo"}. A Latchkey demo that resets daily.`,
+        ),
+      },
+      {
+        property: "og:title",
+        content: rebrand(`The guest journey in ${loaderData?.label ?? "the demo"} — Latchkey`),
+      },
       { property: "og:type", content: "website" },
       { name: "robots", content: "index" },
     ],

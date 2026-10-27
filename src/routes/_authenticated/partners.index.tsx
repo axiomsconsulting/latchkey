@@ -4,7 +4,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { Check, CheckCircle2, Circle, Clock, Copy, Download, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Copy,
+  Download,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
@@ -89,13 +99,19 @@ function Account({ data: d }: { data: any }) {
       {p.status === "waitlisted" ? <p className="card-soft p-5">{copy.statusWaitlisted}</p> : null}
       {p.status === "suspended" ? <p className="card-soft p-5">{copy.statusSuspended}</p> : null}
       {p.status === "terminated" ? <p className="card-soft p-5">{copy.statusTerminated}</p> : null}
-      {p.status === "active" && d.link && d.canRefer ? <ShareLink link={d.link} code={p.referral_code} /> : null}
+      {p.status === "active" && d.link && d.canRefer ? (
+        <ShareLink link={d.link} code={p.referral_code} />
+      ) : null}
       {p.status === "active" && !d.canRefer && !p.terminated_at ? (
         <p className="card-soft p-5">{copy.needsAgreementAndId}</p>
       ) : null}
       {p.status === "active" || p.status === "terminated" ? <Payouts partner={p} /> : null}
       <section className="grid gap-3 sm:grid-cols-3">
-        <Tile label={copy.held} value={formatPence(d.balance.held)} hint={copy.heldHintDays(d.holdDays)} />
+        <Tile
+          label={copy.held}
+          value={formatPence(d.balance.held)}
+          hint={copy.heldHintDays(d.holdDays)}
+        />
         <Tile label={copy.payable} value={formatPence(d.balance.payable)} />
         <Tile label={copy.paid} value={formatPence(d.balance.paid)} />
       </section>
@@ -103,7 +119,9 @@ function Account({ data: d }: { data: any }) {
       <section className="card-soft space-y-3 p-5">
         <h2 className="text-xl">{copy.hostsTitle}</h2>
         {d.referrals.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{copy.hostsEmptyDays(d.attributionWindowDays)}</p>
+          <p className="text-sm text-muted-foreground">
+            {copy.hostsEmptyDays(d.attributionWindowDays)}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -136,7 +154,10 @@ function Account({ data: d }: { data: any }) {
                           : (STATUS_WORDS[r.status_detail] ?? r.status_detail)}
                     </td>
                     <td className="py-2 pr-3">
-                      {copy.monthsUsedOf(r.paid_months_used, r.terms_snapshot?.paid_months_cap ?? 12)}
+                      {copy.monthsUsedOf(
+                        r.paid_months_used,
+                        r.terms_snapshot?.paid_months_cap ?? 12,
+                      )}
                     </td>
                     <td className="py-2 pr-3">
                       {BONUS_WORDS[r.bonus_status] ?? r.bonus_status}
@@ -282,9 +303,21 @@ function Steps() {
   const signDone = !m.includes("agreement") && !m.includes("new_version");
   const idDone = s.idCheckStatus === "approved";
   const idWaiting = s.idCheckStatus === "pending" || s.idCheckStatus === "manual_review";
-  const rows: Array<{ label: string; state: "done" | "todo" | "waiting"; to?: "/partners/agreement" | "/partners/verify" }> = [
-    { label: m.includes("new_version") ? copy.stepNewVersion : copy.stepSign, state: signDone ? "done" : "todo", to: "/partners/agreement" },
-    { label: copy.stepVerify, state: idDone ? "done" : idWaiting ? "waiting" : "todo", to: "/partners/verify" },
+  const rows: Array<{
+    label: string;
+    state: "done" | "todo" | "waiting";
+    to?: "/partners/agreement" | "/partners/verify";
+  }> = [
+    {
+      label: m.includes("new_version") ? copy.stepNewVersion : copy.stepSign,
+      state: signDone ? "done" : "todo",
+      to: "/partners/agreement",
+    },
+    {
+      label: copy.stepVerify,
+      state: idDone ? "done" : idWaiting ? "waiting" : "todo",
+      to: "/partners/verify",
+    },
     { label: copy.stepApproval, state: m.length === 0 ? "done" : "waiting" },
   ];
   return (
@@ -309,7 +342,11 @@ function Steps() {
                   </Button>
                 ) : (
                   <span className="text-sm text-muted-foreground">
-                    {r.state === "done" ? copy.stepDone : r.state === "waiting" ? copy.stepWaiting : copy.stepToDo}
+                    {r.state === "done"
+                      ? copy.stepDone
+                      : r.state === "waiting"
+                        ? copy.stepWaiting
+                        : copy.stepToDo}
                   </span>
                 )}
               </li>
@@ -349,7 +386,11 @@ function StatementDetails() {
   const save = useServerFn(savePartnerStatementDetails);
   const qc = useQueryClient();
   const saved = q.data?.partner ? q.data.statementDetails : null;
-  const [draft, setDraft] = useState<{ address: string; vatNumber: string; selfBillingOptOut: boolean } | null>(null);
+  const [draft, setDraft] = useState<{
+    address: string;
+    vatNumber: string;
+    selfBillingOptOut: boolean;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   if (!saved) return null;
@@ -361,11 +402,20 @@ function StatementDetails() {
       <p className="text-sm text-muted-foreground">{copy.statementBody}</p>
       <label className="grid gap-1 text-sm">
         {copy.statementAddress}
-        <Input className="h-11" value={f.address} onChange={(e) => setDraft({ ...f, address: e.target.value })} autoComplete="street-address" />
+        <Input
+          className="h-11"
+          value={f.address}
+          onChange={(e) => setDraft({ ...f, address: e.target.value })}
+          autoComplete="street-address"
+        />
       </label>
       <label className="grid gap-1 text-sm">
         {copy.vat}
-        <Input className="h-11" value={f.vatNumber} onChange={(e) => setDraft({ ...f, vatNumber: e.target.value })} />
+        <Input
+          className="h-11"
+          value={f.vatNumber}
+          onChange={(e) => setDraft({ ...f, vatNumber: e.target.value })}
+        />
       </label>
       <label className="flex items-start gap-3 text-sm">
         <input
@@ -413,7 +463,8 @@ function Stop() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!q.data?.partner || q.data.stopped) return done ? <p className="card-soft p-5">{copy.stopped}</p> : null;
+  if (!q.data?.partner || q.data.stopped)
+    return done ? <p className="card-soft p-5">{copy.stopped}</p> : null;
   return (
     <section className="card-soft space-y-3 p-5">
       <h2 className="text-lg">{copy.stopTitle}</h2>
@@ -426,7 +477,12 @@ function Stop() {
         <div className="flex flex-wrap items-end gap-2">
           <label className="grid gap-1 text-sm">
             {copy.stopConfirmLabel}
-            <Input className="h-11 w-40" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+            <Input
+              className="h-11 w-40"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              autoComplete="off"
+            />
           </label>
           <Button
             variant="destructive"

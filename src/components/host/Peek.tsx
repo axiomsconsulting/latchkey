@@ -61,7 +61,11 @@ export function Peek({
           }}
           onPointerMove={(e) => {
             // Scrolling, not holding.
-            if (e.pointerType === "touch" && start.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) {
+            if (
+              e.pointerType === "touch" &&
+              start.current &&
+              Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10
+            ) {
               clearTimeout(timer.current);
               start.current = null;
             }
@@ -84,7 +88,8 @@ export function Peek({
             if ((e.target as Element).matches?.(":focus-visible")) setOpen(true);
           }}
           onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) later(() => setOpen(false), HOVER_CLOSE_MS);
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+              later(() => setOpen(false), HOVER_CLOSE_MS);
           }}
         >
           {children}

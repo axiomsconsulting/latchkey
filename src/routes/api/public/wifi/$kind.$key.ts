@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 import { createFileRoute } from "@tanstack/react-router";
 
 /**
@@ -11,7 +12,8 @@ export const Route = createFileRoute("/api/public/wifi/$kind/$key")({
   server: {
     handlers: {
       GET: async ({ params }) => {
-        const none = () => new Response("Wi-Fi details aren't available from this link.", { status: 404 });
+        const none = () =>
+          new Response("Wi-Fi details aren't available from this link.", { status: 404 });
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const db = supabaseAdmin as unknown as { from: (t: string) => any };
         const { guestWifi } = await import("@/lib/stay-access.server");
@@ -20,26 +22,53 @@ export const Route = createFileRoute("/api/public/wifi/$kind/$key")({
         const { ROOM_CODE } = await import("@/lib/room-words");
         if (params.kind === "room" && ROOM_CODE.test(params.key)) {
           const { roomByCode } = await import("@/lib/room-code.server");
-          const room = await roomByCode<{ id: string; property_id: string; active: boolean }>(db, params.key, "id, property_id, active");
+          const room = await roomByCode<{ id: string; property_id: string; active: boolean }>(
+            db,
+            params.key,
+            "id, property_id, active",
+          );
           if (!room || room.active === false) return none();
-          const { data: p } = await db.from("properties").select("id, name, wifi_name, wifi_password").eq("id", room.property_id).maybeSingle();
+          const { data: p } = await db
+            .from("properties")
+            .select("id, name, wifi_name, wifi_password")
+            .eq("id", room.property_id)
+            .maybeSingle();
           if (!p) return none();
           org = p.name;
           wifi = await guestWifi(db, p, room.id, false);
         } else if (params.kind === "stay" && params.key.length >= 20 && params.key.length <= 80) {
           const { sha256 } = await import("@/lib/checkin.server");
-          const { data: t } = await db.from("stay_tokens").select("booking_id, expires_at").eq("token_hash", sha256(params.key)).maybeSingle();
+          const { data: t } = await db
+            .from("stay_tokens")
+            .select("booking_id, expires_at")
+            .eq("token_hash", sha256(params.key))
+            .maybeSingle();
           if (!t || Date.parse(t.expires_at) < Date.now()) return none();
-          const { data: b } = await db.from("bookings").select("property_id, room_id, status").eq("id", t.booking_id).maybeSingle();
+          const { data: b } = await db
+            .from("bookings")
+            .select("property_id, room_id, status")
+            .eq("id", t.booking_id)
+            .maybeSingle();
           if (!b || b.status === "cancelled") return none();
-          const { data: p } = await db.from("properties").select("id, name, wifi_name, wifi_password").eq("id", b.property_id).maybeSingle();
+          const { data: p } = await db
+            .from("properties")
+            .select("id, name, wifi_name, wifi_password")
+            .eq("id", b.property_id)
+            .maybeSingle();
           if (!p) return none();
           org = p.name;
-          wifi = await guestWifi(db, p, b.room_id, b.status === "checked_in" || b.status === "checked_out");
+          wifi = await guestWifi(
+            db,
+            p,
+            b.room_id,
+            b.status === "checked_in" || b.status === "checked_out",
+          );
         } else return none();
         if (!wifi || wifi.locked) return none();
         const { wifiProfile } = await import("@/lib/stay-access");
-        const body = wifiProfile(wifi.name, wifi.password, org, () => crypto.randomUUID().toUpperCase());
+        const body = wifiProfile(wifi.name, wifi.password, org, () =>
+          crypto.randomUUID().toUpperCase(),
+        );
         return new Response(body, {
           headers: {
             "content-type": "application/x-apple-aspen-config",

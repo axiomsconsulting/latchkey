@@ -58,7 +58,13 @@ function PinEntry() {
           <h1 className="text-3xl">{copy.pinTitle}</h1>
           <p className="text-muted-foreground">{copy.pinBody}</p>
           <p className="text-sm text-muted-foreground">{copy.pinNote}</p>
-          <PinPad value={pin} onChange={setPin} length={6} busy={busy} onComplete={(v) => void submit(v)} />
+          <PinPad
+            value={pin}
+            onChange={setPin}
+            length={6}
+            busy={busy}
+            onComplete={(v) => void submit(v)}
+          />
           {busy ? <Loader2 className="mx-auto size-8 animate-spin text-muted-foreground" /> : null}
           {error ? (
             <p role="alert" className="text-lg text-destructive">

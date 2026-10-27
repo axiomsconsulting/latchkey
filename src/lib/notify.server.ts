@@ -1,10 +1,21 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Sends a host alert everywhere the business wants it: push to their
  * devices, Telegram, email and (for urgent alerts) SMS. Each channel must be
  * set up by the super admin, switched on in Routines, and chosen by the host.
  * Never throws: an alert is always saved on Today whatever happens here.
  */
-import { CHANNELS, alertPath, alertTitle, channelsFor, normalisePrefs, smsText, type AlertKind, type Available, type Channel } from "./notify";
+import {
+  CHANNELS,
+  alertPath,
+  alertTitle,
+  channelsFor,
+  normalisePrefs,
+  smsText,
+  type AlertKind,
+  type Available,
+  type Channel,
+} from "./notify";
 import { rebrand } from "@/lib/brand";
 
 async function db() {
@@ -29,23 +40,33 @@ export async function notifyHost(input: {
     const { jobAllowed, bumpUsage } = await import("./usage.server");
     const { hostModes } = await import("./checkin.server");
     const [{ data: host }, { data: subs }, { data: chats }, modes] = await Promise.all([
-      d.from("hosts").select("notify_prefs, contact_email, contact_phone, business_name").eq("id", input.hostId).maybeSingle(),
+      d
+        .from("hosts")
+        .select("notify_prefs, contact_email, contact_phone, business_name")
+        .eq("id", input.hostId)
+        .maybeSingle(),
       d.from("push_subscriptions").select("id, endpoint").eq("host_id", input.hostId).limit(20),
       d.from("telegram_links").select("chat_id").eq("host_id", input.hostId).limit(10),
       hostModes(input.hostId),
     ]);
     const prefs = normalisePrefs(host?.notify_prefs);
     const keys = pushKeys();
-    const phone = typeof host?.contact_phone === "string" && host.contact_phone.startsWith("+") ? host.contact_phone : null;
+    const phone =
+      typeof host?.contact_phone === "string" && host.contact_phone.startsWith("+")
+        ? host.contact_phone
+        : null;
     const allowed = async (job: string) => jobAllowed(job);
     const available: Available = {
       // Email follows the host's demo/live switch, as before.
-      email: !!host?.contact_email && modes.host_email !== "demo" && (await allowed("email_alerts")),
+      email:
+        !!host?.contact_email && modes.host_email !== "demo" && (await allowed("email_alerts")),
       push: !!keys && (subs ?? []).length > 0 && (await allowed("push_alerts")),
       telegram: !!telegramToken() && (chats ?? []).length > 0 && (await allowed("telegram_alerts")),
       sms: !!twilio() && !!phone && (await allowed("sms_alerts")),
     };
-    const send = channelsFor(input.kind, prefs, available).filter((c) => !(input.skip ?? []).includes(c));
+    const send = channelsFor(input.kind, prefs, available).filter(
+      (c) => !(input.skip ?? []).includes(c),
+    );
     for (const ch of CHANNELS) if (!send.includes(ch)) result[ch] = "skipped";
 
     const title = alertTitle(input.kind);
@@ -59,8 +80,15 @@ export async function notifyHost(input: {
         if (r === "gone") await d.from("push_subscriptions").delete().eq("id", s.id);
         else if (r === "sent") {
           ok++;
-          await d.from("push_subscriptions").update({ last_sent_at: new Date().toISOString(), failed_at: null }).eq("id", s.id);
-        } else await d.from("push_subscriptions").update({ failed_at: new Date().toISOString() }).eq("id", s.id);
+          await d
+            .from("push_subscriptions")
+            .update({ last_sent_at: new Date().toISOString(), failed_at: null })
+            .eq("id", s.id);
+        } else
+          await d
+            .from("push_subscriptions")
+            .update({ failed_at: new Date().toISOString() })
+            .eq("id", s.id);
       }
       result.push = ok ? "sent" : "failed";
       if (ok) await bumpUsage(input.hostId, "push:sent", ok);
@@ -78,7 +106,12 @@ export async function notifyHost(input: {
         });
         if (r.ok) ok++;
         // The host blocked the bot or left the chat: forget it.
-        else if (/blocked|chat not found|kicked|deactivated/i.test(r.description ?? "")) await d.from("telegram_links").delete().eq("host_id", input.hostId).eq("chat_id", c.chat_id);
+        else if (/blocked|chat not found|kicked|deactivated/i.test(r.description ?? ""))
+          await d
+            .from("telegram_links")
+            .delete()
+            .eq("host_id", input.hostId)
+            .eq("chat_id", c.chat_id);
       }
       result.telegram = ok ? "sent" : "failed";
       if (ok) await bumpUsage(input.hostId, "telegram:sent", ok);
@@ -86,11 +119,19 @@ export async function notifyHost(input: {
 
     if (send.includes("email")) {
       const { sendAlertEmail } = await import("./alert-email.server");
-      const sent = await sendAlertEmail(input.hostId, `${input.message}\n\n${link}`, input.alertId ?? undefined);
+      const sent = await sendAlertEmail(
+        input.hostId,
+        `${input.message}\n\n${link}`,
+        input.alertId ?? undefined,
+      );
       result.email = sent ? "sent" : "failed";
       if (sent) {
         await bumpUsage(input.hostId, "email:alert");
-        if (input.alertId) await d.from("host_alerts").update({ emailed_at: new Date().toISOString() }).eq("id", input.alertId);
+        if (input.alertId)
+          await d
+            .from("host_alerts")
+            .update({ emailed_at: new Date().toISOString() })
+            .eq("id", input.alertId);
       }
     }
 
@@ -107,11 +148,17 @@ export async function notifyHost(input: {
 }
 
 /** The newest unseen alert for the business behind a device token (asked for by the service worker). */
-export async function latestForDevice(token: string): Promise<{ title: string; body: string; url: string; tag: string } | null> {
+export async function latestForDevice(
+  token: string,
+): Promise<{ title: string; body: string; url: string; tag: string } | null> {
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return null;
   const d = await db();
   const hash = await sha256(token);
-  const { data: sub } = await d.from("push_subscriptions").select("host_id").eq("token_hash", hash).maybeSingle();
+  const { data: sub } = await d
+    .from("push_subscriptions")
+    .select("host_id")
+    .eq("token_hash", hash)
+    .maybeSingle();
   if (!sub) return null;
   const { data: alert } = await d
     .from("host_alerts")
@@ -121,8 +168,19 @@ export async function latestForDevice(token: string): Promise<{ title: string; b
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!alert) return { title: rebrand("Latchkey"), body: "Open Today to see what's new.", url: "/app/today", tag: "latchkey" };
-  return { title: alertTitle(alert.kind), body: alert.message, url: alertPath(alert.kind, alert.booking_id), tag: `alert-${alert.id}` };
+  if (!alert)
+    return {
+      title: rebrand("Latchkey"),
+      body: "Open Today to see what's new.",
+      url: "/app/today",
+      tag: "latchkey",
+    };
+  return {
+    title: alertTitle(alert.kind),
+    body: alert.message,
+    url: alertPath(alert.kind, alert.booking_id),
+    tag: `alert-${alert.id}`,
+  };
 }
 
 export async function sha256(s: string): Promise<string> {

@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { LATEST_VERSION, RELEASES, compareVersions, featuresByArea, releaseLevel, releasesFor, unseen } from "../src/content/changelog";
+import {
+  LATEST_VERSION,
+  RELEASES,
+  compareVersions,
+  featuresByArea,
+  releaseLevel,
+  releasesFor,
+  unseen,
+} from "../src/content/changelog";
 
 describe("change log", () => {
   it("lists each version once as major.minor.fix, newest first, with real dates", () => {
     expect(new Set(RELEASES.map((r) => r.version)).size).toBe(RELEASES.length);
     for (const r of RELEASES) expect(r.version).toMatch(/^\d+\.\d+\.\d+$/);
-    for (let i = 1; i < RELEASES.length; i++) expect(compareVersions(RELEASES[i - 1]!.version, RELEASES[i]!.version)).toBe(1);
+    for (let i = 1; i < RELEASES.length; i++)
+      expect(compareVersions(RELEASES[i - 1]!.version, RELEASES[i]!.version)).toBe(1);
     const dates = RELEASES.map((r) => r.date);
     expect([...dates].sort().reverse()).toEqual(dates);
     for (const d of dates) expect(Number.isNaN(Date.parse(d))).toBe(false);
@@ -33,7 +42,9 @@ describe("versions", () => {
     const hosts = releasesFor({ admin: false }).flatMap((r) => r.items);
     expect(hosts.some((i) => i.admin)).toBe(false);
     expect(hosts.some((i) => i.text.startsWith("Latchkey admin"))).toBe(false);
-    expect(releasesFor({ admin: true }).flatMap((r) => r.items).length).toBe(RELEASES.flatMap((r) => r.items).length);
+    expect(releasesFor({ admin: true }).flatMap((r) => r.items).length).toBe(
+      RELEASES.flatMap((r) => r.items).length,
+    );
   });
 
   it("shows only what's new since last seen, and nothing to brand-new hosts", () => {

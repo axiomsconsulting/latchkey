@@ -4,13 +4,40 @@ import { DEFAULT_GROUP_BRAND, effectiveLogo } from "@/lib/group-brand";
 import { Link, Navigate, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, History, Loader2, LogOut, Mail, CreditCard, NotebookPen, PanelLeftOpen, Settings, Sparkles, LayoutGrid, MessageSquareHeart, MoreHorizontal, Compass } from "lucide-react";
+import {
+  Eye,
+  History,
+  Loader2,
+  LogOut,
+  Mail,
+  CreditCard,
+  NotebookPen,
+  PanelLeftOpen,
+  Settings,
+  Sparkles,
+  LayoutGrid,
+  MessageSquareHeart,
+  MoreHorizontal,
+  Compass,
+} from "lucide-react";
 
 import { HostInbox } from "@/components/host/HostInbox";
 import { HostSwitcher, useAccessWatch } from "@/components/host/HostSwitcher";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
-import { AccessGate, AnnouncementPopup, FeedbackButton, FeedbackDialog, ShellBanners } from "@/components/host/ShellExtras";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  AccessGate,
+  AnnouncementPopup,
+  FeedbackButton,
+  FeedbackDialog,
+  ShellBanners,
+} from "@/components/host/ShellExtras";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
 import { GuidedTour, openTour } from "@/components/host/GuidedTour";
@@ -30,11 +57,29 @@ import { rememberHost } from "@/lib/last-host";
 
 import { ThemeScope } from "@/components/theme/ThemeScope";
 import { Button } from "@/components/ui/button";
-import { adminCopy, auth, billingCopy, brand, feedbackCopy, hostNav, tourCopy, invite as inviteCopy, siteMenu, team as teamCopy } from "@/content/copy";
+import {
+  adminCopy,
+  auth,
+  billingCopy,
+  brand,
+  feedbackCopy,
+  hostNav,
+  tourCopy,
+  invite as inviteCopy,
+  siteMenu,
+  team as teamCopy,
+} from "@/content/copy";
 import { useAlerts, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { getWorkspace } from "@/lib/host.functions";
 import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
-import { NAV_WIDTH, cycleMode, modeForWidth, readNavMode, stepMode, type NavMode } from "@/lib/nav-mode";
+import {
+  NAV_WIDTH,
+  cycleMode,
+  modeForWidth,
+  readNavMode,
+  stepMode,
+  type NavMode,
+} from "@/lib/nav-mode";
 import { normaliseTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -45,14 +90,26 @@ import { cn } from "@/lib/utils";
  */
 function useMenu(superAdmin: boolean): NavItemResolved[] {
   const ui = useUi();
-  const labels: Record<string, string> = { ...(hostNav as unknown as Record<string, string>), admin: adminCopy.navLabel };
+  const labels: Record<string, string> = {
+    ...(hostNav as unknown as Record<string, string>),
+    admin: adminCopy.navLabel,
+  };
   return resolveNav(ui.nav, labels, { superAdmin });
 }
 
-const shortLabel = (item: NavItemResolved) => (item.builtIn ? ((hostNav.short as Record<string, string>)[item.id] ?? item.label) : item.label);
+const shortLabel = (item: NavItemResolved) =>
+  item.builtIn ? ((hostNav.short as Record<string, string>)[item.id] ?? item.label) : item.label;
 
 /** A menu link: a page in the app, or another site in a new tab. */
-function MenuLink({ item, className, activeProps, onClick, title, ariaLabel, children }: {
+function MenuLink({
+  item,
+  className,
+  activeProps,
+  onClick,
+  title,
+  ariaLabel,
+  children,
+}: {
   item: NavItemResolved;
   className: string;
   activeProps?: Record<string, unknown>;
@@ -63,13 +120,30 @@ function MenuLink({ item, className, activeProps, onClick, title, ariaLabel, chi
 }) {
   if (item.external) {
     return (
-      <a href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClick} title={title} aria-label={ariaLabel} className={className} data-tour={`nav-${item.id}`}>
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClick}
+        title={title}
+        aria-label={ariaLabel}
+        className={className}
+        data-tour={`nav-${item.id}`}
+      >
         {children}
       </a>
     );
   }
   return (
-    <Link to={item.href as never} onClick={onClick} title={title} aria-label={ariaLabel} className={className} activeProps={activeProps as never} data-tour={`nav-${item.id}`}>
+    <Link
+      to={item.href as never}
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      className={className}
+      activeProps={activeProps as never}
+      data-tour={`nav-${item.id}`}
+    >
       {children}
     </Link>
   );
@@ -80,7 +154,9 @@ const NAV_KEY = "latchkey.nav";
 /** Signed in as the shared public demo account. */
 function useIsSharedDemo(): boolean {
   const ws = useWorkspace();
-  return (ws.data?.host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL;
+  return (
+    (ws.data?.host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL
+  );
 }
 
 function haptic() {
@@ -98,17 +174,36 @@ export function HostShell() {
   // Seven fit; Settings always keeps its place, and whatever doesn't fit goes in the More menu.
   const dockable = allPages.filter((i) => i.id !== "admin");
   const settingsItem = dockable.find((i) => i.id === "settings");
-  const dock = dockable.length <= 7 ? dockable : [...dockable.filter((i) => i.id !== "settings").slice(0, settingsItem ? 6 : 7), ...(settingsItem ? [settingsItem] : [])];
+  const dock =
+    dockable.length <= 7
+      ? dockable
+      : [
+          ...dockable.filter((i) => i.id !== "settings").slice(0, settingsItem ? 6 : 7),
+          ...(settingsItem ? [settingsItem] : []),
+        ];
   const overflow = dockable.filter((i) => !dock.includes(i));
   useAccessWatch();
   // Next time "/" opens on this device, go straight to the dashboard (not the shared demo).
   useEffect(() => {
-    if (data) rememberDashboard(canWrite && (data.host as { contact_email?: string } | null)?.contact_email !== DEMO_EMAIL);
+    if (data)
+      rememberDashboard(
+        canWrite && (data.host as { contact_email?: string } | null)?.contact_email !== DEMO_EMAIL,
+      );
   }, [data, canWrite]);
-  const properties = (data?.properties ?? []) as Array<{ id: string; name: string; theme_config: unknown }>;
+  const properties = (data?.properties ?? []) as Array<{
+    id: string;
+    name: string;
+    theme_config: unknown;
+  }>;
   const { selectedId, select } = useSelectedProperty(properties);
   const switcher = (className: string) => (
-    <PropertyPicker properties={properties} value={selectedId} onChange={select} className={className} label={siteMenu.switchProperty} />
+    <PropertyPicker
+      properties={properties}
+      value={selectedId}
+      onChange={select}
+      className={className}
+      label={siteMenu.switchProperty}
+    />
   );
   const property = properties.find((p) => p.id === selectedId) ?? null;
   const theme = normaliseTheme(property?.theme_config);
@@ -117,9 +212,18 @@ export function HostShell() {
   const title = property?.name ?? host?.business_name ?? brand.name;
   // The group: its logo where the host chose it, and its name under the property's.
   const groupFn = useServerFn(getGroupBrand);
-  const groupQ = useQuery({ queryKey: ["group-brand", data?.hostId], enabled: !!data?.hostId, queryFn: () => groupFn({ data: { hostId: data!.hostId } }), staleTime: 60_000 });
-  const logoTheme = { ...theme, ...effectiveLogo(theme, groupQ.data?.brand ?? DEFAULT_GROUP_BRAND) };
-  const groupName = host?.business_name && host.business_name !== title ? host.business_name : brand.name;
+  const groupQ = useQuery({
+    queryKey: ["group-brand", data?.hostId],
+    enabled: !!data?.hostId,
+    queryFn: () => groupFn({ data: { hostId: data!.hostId } }),
+    staleTime: 60_000,
+  });
+  const logoTheme = {
+    ...theme,
+    ...effectiveLogo(theme, groupQ.data?.brand ?? DEFAULT_GROUP_BRAND),
+  };
+  const groupName =
+    host?.business_name && host.business_name !== title ? host.business_name : brand.name;
   // Remembered for the sign-in page ("welcome back" with their own logo); never a support view or the demo.
   useEffect(() => {
     const support = (data as { support?: unknown } | undefined)?.support;
@@ -156,11 +260,12 @@ export function HostShell() {
   // A Commission Partner has no rooms to run: their own account instead of an empty "My rooms".
   if (data && "partnerOnly" in data) return <Navigate to="/partners" replace />;
 
-  const readOnly = data && !canWrite ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-      <Eye className="size-3.5" /> {teamCopy.readOnlyBadge}
-    </span>
-  ) : null;
+  const readOnly =
+    data && !canWrite ? (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+        <Eye className="size-3.5" /> {teamCopy.readOnlyBadge}
+      </span>
+    ) : null;
 
   return (
     <ThemeScope theme={theme} global className="min-h-screen">
@@ -187,7 +292,12 @@ export function HostShell() {
 
       {/* Phone/tablet portrait: compact glass header */}
       <header className="glass sticky top-2 z-10 mx-3 mt-2 flex items-center gap-1 rounded-2xl px-3 py-2 md:hidden print:hidden">
-        <Link to="/" search={{ home: true }} aria-label={brand.name} className="shrink-0 rounded-xl">
+        <Link
+          to="/"
+          search={{ home: true }}
+          aria-label={brand.name}
+          className="shrink-0 rounded-xl"
+        >
           <LogoMark theme={logoTheme} name={title} className="size-9" />
         </Link>
         <span className="min-w-0 flex-1 truncate font-display text-lg">{title}</span>
@@ -197,7 +307,11 @@ export function HostShell() {
         {/* Everything else in one menu, so the name has room on a phone. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" aria-label={hostNav.moreDrawer} className="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-secondary">
+            <button
+              type="button"
+              aria-label={hostNav.moreDrawer}
+              className="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-secondary"
+            >
               <MoreHorizontal className="size-5" />
             </button>
           </DropdownMenuTrigger>
@@ -206,35 +320,50 @@ export function HostShell() {
             {overflow.map((it) => (
               <DropdownMenuItem key={it.id} asChild className="min-h-11 gap-3 rounded-xl md:hidden">
                 {it.external ? (
-                  <a href={it.href} target="_blank" rel="noreferrer"><NavIcon icon={it.icon} className="size-5" /> {it.label}</a>
+                  <a href={it.href} target="_blank" rel="noreferrer">
+                    <NavIcon icon={it.icon} className="size-5" /> {it.label}
+                  </a>
                 ) : (
-                  <Link to={it.href} data-tour={`nav-${it.id}`}><NavIcon icon={it.icon} className="size-5" /> {it.label}</Link>
+                  <Link to={it.href} data-tour={`nav-${it.id}`}>
+                    <NavIcon icon={it.icon} className="size-5" /> {it.label}
+                  </Link>
                 )}
               </DropdownMenuItem>
             ))}
             {overflow.length ? <DropdownMenuSeparator className="md:hidden" /> : null}
             <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
-              <Link to="/app/whats-new"><Sparkles className="size-5" /> {whatsNewCopy.navLabel}</Link>
+              <Link to="/app/whats-new">
+                <Sparkles className="size-5" /> {whatsNewCopy.navLabel}
+              </Link>
             </DropdownMenuItem>
             {canWrite ? (
               <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
-                <Link to="/app/register"><NotebookPen className="size-5" /> {hostNav.register}</Link>
+                <Link to="/app/register">
+                  <NotebookPen className="size-5" /> {hostNav.register}
+                </Link>
               </DropdownMenuItem>
             ) : null}
             {isOwner ? (
               <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
-                <Link to="/app/activity"><History className="size-5" /> {hostNav.activity}</Link>
+                <Link to="/app/activity">
+                  <History className="size-5" /> {hostNav.activity}
+                </Link>
               </DropdownMenuItem>
             ) : null}
             {isOwner && !isSharedDemo ? (
               <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
-                <Link to="/app/billing"><CreditCard className="size-5" /> {billingCopy.navLabel}</Link>
+                <Link to="/app/billing">
+                  <CreditCard className="size-5" /> {billingCopy.navLabel}
+                </Link>
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem className="min-h-11 gap-3 rounded-xl" onSelect={() => openTour()}>
               <Compass className="size-5" /> {tourCopy.navLabel}
             </DropdownMenuItem>
-            <DropdownMenuItem className="min-h-11 gap-3 rounded-xl" onSelect={() => setFeedbackOpen(true)}>
+            <DropdownMenuItem
+              className="min-h-11 gap-3 rounded-xl"
+              onSelect={() => setFeedbackOpen(true)}
+            >
               <MessageSquareHeart className="size-5" /> {feedbackCopy.button}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -264,25 +393,25 @@ export function HostShell() {
         >
           {(done) => (
             <>
-            <button
-              type="button"
-              onClick={() => {
-                done();
-                openTour();
-              }}
-              className="inline-flex h-[36px] w-full items-center justify-center gap-[6px] rounded-full bg-primary px-[14px] text-[13px] font-semibold text-primary-foreground"
-            >
-              <Compass className="size-[14px]" /> {tourCopy.navLabel}
-            </button>
-            <HostDemoSwitch
-              properties={properties}
-              value={selectedId ?? null}
-              done={done}
-              onChange={(id) => {
-                select(id);
-                void navigate({ to: "/app/today" });
-              }}
-            />
+              <button
+                type="button"
+                onClick={() => {
+                  done();
+                  openTour();
+                }}
+                className="inline-flex h-[36px] w-full items-center justify-center gap-[6px] rounded-full bg-primary px-[14px] text-[13px] font-semibold text-primary-foreground"
+              >
+                <Compass className="size-[14px]" /> {tourCopy.navLabel}
+              </button>
+              <HostDemoSwitch
+                properties={properties}
+                value={selectedId ?? null}
+                done={done}
+                onChange={(id) => {
+                  select(id);
+                  void navigate({ to: "/app/today" });
+                }}
+              />
             </>
           )}
         </DemoDock>
@@ -293,7 +422,11 @@ export function HostShell() {
         className={cn(
           // On paper: none of the dashboard's spacing around what's printed.
           "px-4 py-6 pb-32 transition-[margin,padding] duration-300 ease-out sm:px-6 md:pb-10 print:!m-0 print:!p-0",
-          navMode === "full" ? "md:ml-72 md:py-10" : navMode === "rail" ? "md:ml-28 md:py-10" : "md:pb-10 md:pt-32",
+          navMode === "full"
+            ? "md:ml-72 md:py-10"
+            : navMode === "rail"
+              ? "md:ml-28 md:py-10"
+              : "md:pb-10 md:pt-32",
         )}
       >
         <div className="print:hidden">
@@ -308,10 +441,12 @@ export function HostShell() {
         <GuidedTour autoOffer={isSharedDemo} />
         <WhatsNewPopup
           admin={data?.isSuperAdmin === true}
-          skip={!data || (host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL}
+          skip={
+            !data ||
+            (host as { contact_email?: string } | null | undefined)?.contact_email === DEMO_EMAIL
+          }
         />
       </main>
-
 
       {/* Floating pill dock */}
       <nav
@@ -326,17 +461,27 @@ export function HostShell() {
             onClick={haptic}
             ariaLabel={it.label}
             className="spring flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 text-[10px] font-medium text-muted-foreground @container active:scale-90 max-[360px]:px-0 max-[360px]:text-[9px] max-[360px]:tracking-tight"
-            activeProps={{ className: "bg-primary !text-primary-foreground shadow-soft", "aria-current": "page" }}
+            activeProps={{
+              className: "bg-primary !text-primary-foreground shadow-soft",
+              "aria-current": "page",
+            }}
           >
             <span className="relative">
               <NavIcon icon={it.icon} iconUrl={it.iconUrl} iconColour={it.iconColour} />
               {it.id === "today" && alertCount > 0 ? (
-                <span className="absolute -right-2 -top-1 size-2.5 rounded-full bg-destructive ring-2 ring-surface" aria-label={`${alertCount} alerts`} />
+                <span
+                  className="absolute -right-2 -top-1 size-2.5 rounded-full bg-destructive ring-2 ring-surface"
+                  aria-label={`${alertCount} alerts`}
+                />
               ) : null}
             </span>
             {/* Narrow tabs use the short form, like "Props" for Properties. */}
-            <span aria-hidden className="hidden max-w-full truncate @[4.25rem]:block">{it.label}</span>
-            <span aria-hidden className="block max-w-full truncate @[4.25rem]:hidden">{shortLabel(it)}</span>
+            <span aria-hidden className="hidden max-w-full truncate @[4.25rem]:block">
+              {it.label}
+            </span>
+            <span aria-hidden className="block max-w-full truncate @[4.25rem]:hidden">
+              {shortLabel(it)}
+            </span>
           </MenuLink>
         ))}
       </nav>
@@ -363,16 +508,39 @@ function useMedia(query: string): boolean {
 }
 
 /** A group of menu items folded behind one button, for when there's hardly any room. */
-function MenuDrawer({ label, icon: Icon, top, narrow, linkBase, children }: { label: string; icon: typeof LayoutGrid; top: boolean; narrow: boolean; linkBase: string; children: ReactNode }) {
+function MenuDrawer({
+  label,
+  icon: Icon,
+  top,
+  narrow,
+  linkBase,
+  children,
+}: {
+  label: string;
+  icon: typeof LayoutGrid;
+  top: boolean;
+  narrow: boolean;
+  linkBase: string;
+  children: ReactNode;
+}) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" title={label} aria-label={label} className={cn(linkBase, "shrink-0", top || narrow ? "justify-center p-2.5" : "px-3 py-2")}>
+        <button
+          type="button"
+          title={label}
+          aria-label={label}
+          className={cn(linkBase, "shrink-0", top || narrow ? "justify-center p-2.5" : "px-3 py-2")}
+        >
           <Icon className="size-5 shrink-0" />
           <span className={top || narrow ? "sr-only" : "truncate"}>{label}</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent side={top ? "bottom" : "right"} align="start" className="glass max-h-[80vh] w-64 overflow-y-auto rounded-2xl p-2">
+      <PopoverContent
+        side={top ? "bottom" : "right"}
+        align="start"
+        className="glass max-h-[80vh] w-64 overflow-y-auto rounded-2xl p-2"
+      >
         <div className="flex flex-col gap-1">{children}</div>
       </PopoverContent>
     </Popover>
@@ -425,14 +593,20 @@ function DesktopNav({
 
   function onPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { x: e.clientX, y: e.clientY, width: top ? 0 : NAV_WIDTH[mode as "full" | "rail"], moved: false };
+    drag.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: top ? 0 : NAV_WIDTH[mode as "full" | "rail"],
+      moved: false,
+    };
   }
   function onPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
     const d = drag.current;
     if (!d) return;
     if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 4) d.moved = true;
     // From the top bar, pulling down brings the sidebar back.
-    if (!top && d.moved) setDragWidth(Math.max(0, Math.min(NAV_WIDTH.full, d.width + e.clientX - d.x)));
+    if (!top && d.moved)
+      setDragWidth(Math.max(0, Math.min(NAV_WIDTH.full, d.width + e.clientX - d.x)));
   }
   function onPointerUp(e: React.PointerEvent<HTMLButtonElement>) {
     const d = drag.current;
@@ -456,14 +630,27 @@ function DesktopNav({
   const fade = settling ? "opacity-0" : "opacity-100 transition-opacity duration-200";
   const linkBase =
     "spring flex items-center gap-3 rounded-2xl text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground active:scale-[0.97]";
-  const active = { className: "bg-primary !text-primary-foreground shadow-soft", "aria-current": "page" } as const;
+  const active = {
+    className: "bg-primary !text-primary-foreground shadow-soft",
+    "aria-current": "page",
+  } as const;
   // Labels show when there is room for them: always in the full sidebar,
   // never on the rail, and along the top once the bar is wide enough.
-  const labelClass = narrow ? "sr-only" : top ? "sr-only @6xl:not-sr-only @6xl:truncate" : "truncate";
+  const labelClass = narrow
+    ? "sr-only"
+    : top
+      ? "sr-only @6xl:not-sr-only @6xl:truncate"
+      : "truncate";
   // Less height (side menu) or width (top bar): tighter rows first, then two drawers.
   const dense = useMedia(top ? "(max-width: 1280px)" : "(max-height: 860px)");
   const drawers = useMedia(top ? "(max-width: 860px)" : "(max-height: 600px)");
-  const pad = top ? (dense ? "shrink-0 px-2.5 py-2" : "shrink-0 px-3 py-2.5") : narrow ? cn("justify-center px-3", dense ? "py-2" : "py-3") : cn("px-3", dense ? "py-2" : "py-3");
+  const pad = top
+    ? dense
+      ? "shrink-0 px-2.5 py-2"
+      : "shrink-0 px-3 py-2.5"
+    : narrow
+      ? cn("justify-center px-3", dense ? "py-2" : "py-3")
+      : cn("px-3", dense ? "py-2" : "py-3");
   const pinned = menu.find((i) => i.id === "today") ?? menu[0];
   const rest = menu.filter((i) => i !== pinned);
 
@@ -485,7 +672,10 @@ function DesktopNav({
       </span>
       <span className={inDrawer ? "truncate" : labelClass}>{it.label}</span>
       {it.id === "today" && alertCount > 0 && !narrow && !top ? (
-        <span className="ml-auto rounded-full bg-destructive px-2 text-xs text-destructive-foreground" aria-label={`${alertCount} alerts`}>
+        <span
+          className="ml-auto rounded-full bg-destructive px-2 text-xs text-destructive-foreground"
+          aria-label={`${alertCount} alerts`}
+        >
           {alertCount}
         </span>
       ) : null}
@@ -494,10 +684,24 @@ function DesktopNav({
 
   // Guest register to feedback: the second group.
   const extras = (inDrawer: boolean) => {
-    const cls = cn(linkBase, inDrawer ? "w-full px-3 py-2.5" : narrow || top ? cn("justify-center", dense ? "p-2" : "p-3") : pad);
+    const cls = cn(
+      linkBase,
+      inDrawer
+        ? "w-full px-3 py-2.5"
+        : narrow || top
+          ? cn("justify-center", dense ? "p-2" : "p-3")
+          : pad,
+    );
     const text = inDrawer ? "truncate" : narrow || top ? "sr-only" : "truncate";
     const one = (to: string, label: string, Icon: typeof NotebookPen) => (
-      <Link key={to} to={to as never} onClick={haptic} title={label} className={cls} activeProps={active}>
+      <Link
+        key={to}
+        to={to as never}
+        onClick={haptic}
+        title={label}
+        className={cls}
+        activeProps={active}
+      >
         <Icon className="size-5 shrink-0" />
         <span className={text}>{label}</span>
       </Link>
@@ -512,7 +716,10 @@ function DesktopNav({
           <span className={text}>{tourCopy.navLabel}</span>
         </button>
         {isOwner && !isSharedDemo ? one("/app/billing", billingCopy.navLabel, CreditCard) : null}
-        <FeedbackButton compact={!inDrawer && (narrow || top)} {...(inDrawer ? { className: "w-full" } : {})} />
+        <FeedbackButton
+          compact={!inDrawer && (narrow || top)}
+          {...(inDrawer ? { className: "w-full" } : {})}
+        />
       </>
     );
   };
@@ -526,11 +733,20 @@ function DesktopNav({
         top ? "flex-row items-center gap-2 rounded-[1.75rem]" : "flex-col rounded-[2rem]",
       )}
     >
-      <Link to="/" search={{ home: true }} className="flex shrink-0 items-center gap-3 rounded-2xl px-2 py-2" title={title}>
+      <Link
+        to="/"
+        search={{ home: true }}
+        className="flex shrink-0 items-center gap-3 rounded-2xl px-2 py-2"
+        title={title}
+      >
         <LogoMark theme={logoTheme ?? theme} name={title} />
-        <span className={cn("min-w-0", narrow ? "sr-only" : top ? "hidden @[84rem]:block" : "", fade)}>
+        <span
+          className={cn("min-w-0", narrow ? "sr-only" : top ? "hidden @[84rem]:block" : "", fade)}
+        >
           <span className="block truncate font-display text-lg leading-tight">{title}</span>
-          <span className="block truncate text-xs text-muted-foreground">{groupName ?? brand.name}</span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {groupName ?? brand.name}
+          </span>
         </span>
       </Link>
 
@@ -544,29 +760,53 @@ function DesktopNav({
 
       {/* Today stays put; the rest of the menu and the extras scroll (arrows, no scrollbars) or fold into drawers. */}
       <nav
-        className={cn("flex min-h-0 min-w-0 gap-1", top ? "flex-1 flex-row items-center" : cn("flex-1 flex-col", dense ? "mt-3" : "mt-6"), fade)}
+        className={cn(
+          "flex min-h-0 min-w-0 gap-1",
+          top ? "flex-1 flex-row items-center" : cn("flex-1 flex-col", dense ? "mt-3" : "mt-6"),
+          fade,
+        )}
         aria-label="Main"
       >
         {pinned ? menuLink(pinned) : null}
         {drawers ? (
           <>
-            <MenuDrawer label={hostNav.menuDrawer} icon={LayoutGrid} top={top} narrow={narrow} linkBase={linkBase}>
+            <MenuDrawer
+              label={hostNav.menuDrawer}
+              icon={LayoutGrid}
+              top={top}
+              narrow={narrow}
+              linkBase={linkBase}
+            >
               {rest.map((it) => menuLink(it, true))}
             </MenuDrawer>
-            <MenuDrawer label={hostNav.moreDrawer} icon={MoreHorizontal} top={top} narrow={narrow} linkBase={linkBase}>
+            <MenuDrawer
+              label={hostNav.moreDrawer}
+              icon={MoreHorizontal}
+              top={top}
+              narrow={narrow}
+              linkBase={linkBase}
+            >
               {extras(true)}
             </MenuDrawer>
             {top ? null : <span className="flex-1" />}
           </>
         ) : (
           <>
-            <MenuStrip direction={top ? "horizontal" : "vertical"} label={hostNav.menuDrawer} className={top ? "flex-1" : "flex-[1_1_auto]"}>
+            <MenuStrip
+              direction={top ? "horizontal" : "vertical"}
+              label={hostNav.menuDrawer}
+              className={top ? "flex-1" : "flex-[1_1_auto]"}
+            >
               {rest.map((it) => menuLink(it))}
             </MenuStrip>
             <MenuStrip
               direction={top ? "horizontal" : "vertical"}
               label={hostNav.moreDrawer}
-              className={top ? "max-w-[40%] shrink" : cn("flex-[0_1_auto] border-t border-border", dense ? "mt-1 pt-1" : "mt-2 pt-2")}
+              className={
+                top
+                  ? "max-w-[40%] shrink"
+                  : cn("flex-[0_1_auto] border-t border-border", dense ? "mt-1 pt-1" : "mt-2 pt-2")
+              }
             >
               {extras(false)}
             </MenuStrip>
@@ -578,8 +818,17 @@ function DesktopNav({
       <div className={cn("flex shrink-0 gap-1", top ? "flex-row items-center" : "flex-col", fade)}>
         {top ? <HostSwitcher className="hidden h-10 w-44 rounded-2xl @[84rem]:flex" /> : null}
         {top ? switcher("hidden h-10 w-44 rounded-2xl @[72rem]:flex") : null}
-        <div className={cn("flex items-center gap-1", narrow ? "flex-col" : "", top ? "" : cn("border-t border-border", dense ? "mt-1 pt-1" : "mt-2 pt-2"))}>
-          <UserChip compact={narrow || top} className={narrow || top ? "justify-center" : "flex-1"} />
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            narrow ? "flex-col" : "",
+            top ? "" : cn("border-t border-border", dense ? "mt-1 pt-1" : "mt-2 pt-2"),
+          )}
+        >
+          <UserChip
+            compact={narrow || top}
+            className={narrow || top ? "justify-center" : "flex-1"}
+          />
           <button
             type="button"
             onClick={onSignOut}
@@ -591,7 +840,13 @@ function DesktopNav({
           </button>
         </div>
         {top ? (
-          <button type="button" onClick={() => change("full")} title={hostNav.menuToSide} aria-label={hostNav.menuToSide} className={cn(linkBase, "justify-center p-3")}>
+          <button
+            type="button"
+            onClick={() => change("full")}
+            title={hostNav.menuToSide}
+            aria-label={hostNav.menuToSide}
+            className={cn(linkBase, "justify-center p-3")}
+          >
             <PanelLeftOpen className="size-5" />
           </button>
         ) : null}
@@ -615,7 +870,9 @@ function DesktopNav({
         onKeyDown={onKeyDown}
         className={cn(
           "group absolute grid touch-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          top ? "-bottom-2 left-1/2 h-4 w-20 -translate-x-1/2 cursor-ns-resize" : "-right-2 top-1/2 h-20 w-4 -translate-y-1/2 cursor-ew-resize",
+          top
+            ? "-bottom-2 left-1/2 h-4 w-20 -translate-x-1/2 cursor-ns-resize"
+            : "-right-2 top-1/2 h-20 w-4 -translate-y-1/2 cursor-ew-resize",
         )}
       >
         <span
@@ -659,7 +916,11 @@ function PendingInvite({ onSignOut }: { onSignOut: () => void }) {
           {busy ? <Loader2 className="size-4 animate-spin" /> : null}
           {inviteCopy.pendingOwn}
         </Button>
-        <button type="button" className="text-sm text-muted-foreground underline-offset-4 hover:underline" onClick={onSignOut}>
+        <button
+          type="button"
+          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          onClick={onSignOut}
+        >
           {auth.signOut}
         </button>
       </div>

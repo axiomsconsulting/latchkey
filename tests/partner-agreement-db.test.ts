@@ -32,19 +32,28 @@ beforeAll(async () => {
 
 const sign = () =>
   db.system<{ id: string }>(
-    "insert into partner_agreement_acceptances (partner_id, agreement_version_id, version, body_sha256, rendered_sha256, typed_name, ticks, ip, user_agent) values ($1, $2, '1.0', 'x', 'y', 'Pat Partner', '[]', '203.0.113.9', 'test') returning id",
+    "insert into partner_agreement_acceptances (partner_id, agreement_version_id, version, body_sha256, rendered_sha256, typed_name, ticks, ip, user_agent) values ($1, $2, '1.1', 'x', 'y', 'Pat Partner', '[]', '203.0.113.9', 'test') returning id",
     [partnerId, versionId],
   );
 
 describe("agreement versions", () => {
-  it("seed v1.0 as the version in force, word for word from the file", async () => {
-    const file = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.0.md"), "utf8");
-    const [row] = await db.system<{ status: string; body_sha256: string; body_markdown: string }>(
-      "select status, body_sha256, body_markdown from partner_agreement_versions where version = '1.0'",
-    );
-    expect(row!.status).toBe("current");
-    expect(row!.body_markdown).toBe(file);
-    expect(row!.body_sha256).toBe(createHash("sha256").update(file, "utf8").digest("hex"));
+  it("have v1.1 in force and v1.0 retired, each word for word from its file", async () => {
+    for (const [version, status] of [
+      ["1.0", "retired"],
+      ["1.1", "current"],
+    ] as const) {
+      const file = readFileSync(
+        join(__dirname, `../docs/legal/partner-agreement-v${version}.md`),
+        "utf8",
+      );
+      const [row] = await db.system<{ status: string; body_sha256: string; body_markdown: string }>(
+        "select status, body_sha256, body_markdown from partner_agreement_versions where version = $1",
+        [version],
+      );
+      expect(row!.status).toBe(status);
+      expect(row!.body_markdown).toBe(file);
+      expect(row!.body_sha256).toBe(createHash("sha256").update(file, "utf8").digest("hex"));
+    }
   });
 
   it("refuse changes to published text, but allow retiring it", async () => {
@@ -81,11 +90,11 @@ describe("agreement versions", () => {
 
   it("let anyone read the text in force, never drafts", async () => {
     await db.system(
-      "insert into partner_agreement_versions (version, status, body_markdown, body_sha256) values ('1.1', 'draft', 'd', encode(sha256(convert_to('d','UTF8')),'hex'))",
+      "insert into partner_agreement_versions (version, status, body_markdown, body_sha256) values ('1.9', 'draft', 'd', encode(sha256(convert_to('d','UTF8')),'hex'))",
     );
     expect(
       await db.as("anon", "select version from partner_agreement_versions order by version"),
-    ).toEqual([{ version: "1.0" }]);
+    ).toEqual([{ version: "1.0" }, { version: "1.1" }]);
     expect(
       (await db.as("admin", "select version from partner_agreement_versions")).length,
     ).toBeGreaterThan(1);

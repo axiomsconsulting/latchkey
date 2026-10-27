@@ -24,11 +24,20 @@ describe("picking a stay", () => {
     expect(tapDay(stay, "out", "2027-06-01", b).stay.checkOut).toBe("2026-12-24");
   });
   it("drags the whole stay", () => {
-    expect(moveStay(stay, "2026-10-25", "2026-10-30", b)).toEqual({ checkIn: "2026-10-30", checkOut: "2026-11-01" });
-    expect(moveStay(stay, "2026-10-26", "2026-10-20", b)).toEqual({ checkIn: "2026-10-24", checkOut: "2026-10-26" });
+    expect(moveStay(stay, "2026-10-25", "2026-10-30", b)).toEqual({
+      checkIn: "2026-10-30",
+      checkOut: "2026-11-01",
+    });
+    expect(moveStay(stay, "2026-10-26", "2026-10-20", b)).toEqual({
+      checkIn: "2026-10-24",
+      checkOut: "2026-10-26",
+    });
   });
   it("paints a new stay either way", () => {
-    expect(paintStay("2026-11-05", "2026-11-02", b)).toEqual({ checkIn: "2026-11-02", checkOut: "2026-11-05" });
+    expect(paintStay("2026-11-05", "2026-11-02", b)).toEqual({
+      checkIn: "2026-11-02",
+      checkOut: "2026-11-05",
+    });
     expect(paintStay("2026-11-05", "2026-11-05", b)).toBeNull();
   });
   it("keeps stays inside the bounds", () => {

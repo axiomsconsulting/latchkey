@@ -22,11 +22,14 @@ export function TrialBanner() {
   const [sent, setSent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const ws = useWorkspace();
-  const contact = (ws.data?.host as { contact_email?: string | null } | null | undefined)?.contact_email || null;
+  const contact =
+    (ws.data?.host as { contact_email?: string | null } | null | undefined)?.contact_email || null;
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => setAnonymous(!!data.user?.is_anonymous));
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setAnonymous(!!s?.user?.is_anonymous));
+    const { data } = supabase.auth.onAuthStateChange((_e, s) =>
+      setAnonymous(!!s?.user?.is_anonymous),
+    );
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -48,7 +51,11 @@ export function TrialBanner() {
         { emailRedirectTo: `${window.location.origin}/app/today` },
       );
       if (err) {
-        setError(/already|registered|exists/i.test(err.message) ? copy.bannerTaken : err.message || authCopy.genericError);
+        setError(
+          /already|registered|exists/i.test(err.message)
+            ? copy.bannerTaken
+            : err.message || authCopy.genericError,
+        );
         return;
       }
       setSent(to);

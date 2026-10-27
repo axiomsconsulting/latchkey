@@ -14,13 +14,22 @@ export function defaultDock(viewportWidth: number, mode: "host" | "guest"): Dock
 }
 
 /** Never off the top or bottom, never under the edge. */
-export function clampBottom(bottom: number, height: number, viewportHeight: number, margin = 8): number {
+export function clampBottom(
+  bottom: number,
+  height: number,
+  viewportHeight: number,
+  margin = 8,
+): number {
   const max = Math.max(margin, viewportHeight - height - margin);
   return Math.round(Math.min(max, Math.max(margin, bottom)));
 }
 
 /** Let go anywhere: it sticks to the nearer side, at the height it was dropped. */
-export function dropDock(pointer: { x: number; y: number }, tabHeight: number, viewport: { w: number; h: number }): DockPos {
+export function dropDock(
+  pointer: { x: number; y: number },
+  tabHeight: number,
+  viewport: { w: number; h: number },
+): DockPos {
   return {
     side: pointer.x < viewport.w / 2 ? "left" : "right",
     bottom: clampBottom(viewport.h - pointer.y - tabHeight / 2, tabHeight, viewport.h),

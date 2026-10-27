@@ -14,9 +14,12 @@ export const DEMO_CODE = "tour";
 export const DEMO_CODES: readonly string[] = [DEMO_CODE, ...SHOWCASE_CODES];
 
 /** Every outside integration stays simulated on the shared account (tests/demo-account.test.ts). */
-export const DEMO_INTEGRATION_MODES: IntegrationModes = Object.fromEntries(INTEGRATION_KEYS.map((k) => [k, "demo"])) as IntegrationModes;
+export const DEMO_INTEGRATION_MODES: IntegrationModes = Object.fromEntries(
+  INTEGRATION_KEYS.map((k) => [k, "demo"]),
+) as IntegrationModes;
 
-export const DEMO_LOCKED = "Settings are locked in the shared demo. Start a free trial to change them.";
+export const DEMO_LOCKED =
+  "Settings are locked in the shared demo. Start a free trial to change them.";
 
 /** A public guest tour (The Hill Suites or a regional demo), where lockouts are off and answers are shown. */
 export function isTour(p: { is_demo?: boolean | null; short_code?: string | null }): boolean {

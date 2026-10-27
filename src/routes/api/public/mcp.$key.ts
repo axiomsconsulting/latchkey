@@ -8,8 +8,10 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/mcp/$key")({
   server: {
     handlers: {
-      POST: async ({ request, params }) => (await import("@/lib/mcp.server")).handleMcp(request, params.key),
-      GET: async ({ request, params }) => (await import("@/lib/mcp.server")).handleMcp(request, params.key),
+      POST: async ({ request, params }) =>
+        (await import("@/lib/mcp.server")).handleMcp(request, params.key),
+      GET: async ({ request, params }) =>
+        (await import("@/lib/mcp.server")).handleMcp(request, params.key),
     },
   },
 });

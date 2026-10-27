@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { partnerCopy as copy } from "@/content/copy";
-import { deviceId, storedReferral } from "@/lib/attribution";
+import { deviceId, storedReferral, unconfirmedReferralCode } from "@/lib/attribution";
 import {
   attachReasonText,
   attachReferral,
@@ -17,8 +17,9 @@ import {
 
 /**
  * Set-up's optional Commission Partner code. A code from a partner's link
- * (the lk_ref cookie) is filled in and added straight away; otherwise the
- * owner may type one. The server checks every code and decides; this only
+ * (the lk_ref cookie) is filled in and added straight away; a code from a
+ * link this visit came through without cookies accepted is filled in for the
+ * owner to confirm; otherwise the owner may type one. The server checks every code and decides; this only
  * asks. Hidden when the programme isn't set up or a partner is already noted.
  */
 export function ReferralCodeField({ hostId }: { hostId: string }) {
@@ -53,7 +54,11 @@ export function ReferralCodeField({ hostId }: { hostId: string }) {
   useEffect(() => {
     if (tried.current || !status.data?.setUp || status.data.attached) return;
     const ref = storedReferral();
-    if (!ref) return;
+    if (!ref) {
+      const code = unconfirmedReferralCode();
+      if (code) setCode(code);
+      return;
+    }
     tried.current = true;
     setCode(ref.code);
     void send(ref.code, "cookie", ref.clicked_at);

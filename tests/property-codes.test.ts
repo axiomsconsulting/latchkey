@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { areaCode, cleanLink, distinctiveWords, linkAlternatives, linkCandidates, linkProblem, randomPin, townFrom, weakPin } from "../src/lib/property-codes";
+import {
+  areaCode,
+  cleanLink,
+  distinctiveWords,
+  linkAlternatives,
+  linkCandidates,
+  linkProblem,
+  randomPin,
+  townFrom,
+  weakPin,
+} from "../src/lib/property-codes";
 
 describe("guest links", () => {
   it("keeps the word that names the place, not the kind of place", () => {
@@ -18,10 +28,16 @@ describe("guest links", () => {
   });
 
   it("tries the best link first, then more words, the town, the area and numbers", () => {
-    const c = linkCandidates({ name: "The Old Rectory Guest House", address: "4 Church Lane, Bath", postcode: "BA1 2AB" });
+    const c = linkCandidates({
+      name: "The Old Rectory Guest House",
+      address: "4 Church Lane, Bath",
+      postcode: "BA1 2AB",
+    });
     expect(c.slice(0, 3)).toEqual(["old-rectory", "old-rectory-bath", "old-rectory-ba1"]);
     expect(c).toContain("old-rectory-2");
-    expect(linkCandidates({ name: "Grange Manor Farm Seaview", address: "Bath" }).slice(0, 3)).toEqual(["grange", "grange-seaview", "grange-bath"]);
+    expect(
+      linkCandidates({ name: "Grange Manor Farm Seaview", address: "Bath" }).slice(0, 3),
+    ).toEqual(["grange", "grange-seaview", "grange-bath"]);
     expect(linkCandidates({ name: "St Ives Inn" })[0]).toBe("st-ives");
   });
 
@@ -35,7 +51,13 @@ describe("guest links", () => {
 
   it("suggests at most three free alternatives for a taken link", () => {
     const taken = new Set(["grange", "grange-bath", "grange-2026"]);
-    const alt = linkAlternatives("grange", { name: "The Grange Manor Farm", address: "Bath", postcode: "BA1 2AB" }, (c) => !taken.has(c), 3, 2026);
+    const alt = linkAlternatives(
+      "grange",
+      { name: "The Grange Manor Farm", address: "Bath", postcode: "BA1 2AB" },
+      (c) => !taken.has(c),
+      3,
+      2026,
+    );
     expect(alt).toEqual(["grange-ba1", "grange-2", "grange-3"]);
     expect(alt.every((a) => !taken.has(a))).toBe(true);
   });
@@ -50,7 +72,8 @@ describe("guest links", () => {
 
 describe("door PINs", () => {
   it("spots easy guesses", () => {
-    for (const p of ["111111", "123456", "987654", "890123", "121212", "123123", "112211"]) expect(weakPin(p)).toBe(true);
+    for (const p of ["111111", "123456", "987654", "890123", "121212", "123123", "112211"])
+      expect(weakPin(p)).toBe(true);
     for (const p of ["409271", "582916"]) expect(weakPin(p)).toBe(false);
   });
 

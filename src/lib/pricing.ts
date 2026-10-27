@@ -20,10 +20,18 @@ export function monthlyPence(cfg: PricingConfig, roomsPerProperty: number[]): nu
   if (roomsPerProperty.length === 0) return 0;
   return roomsPerProperty.reduce((sum, rooms, i) => {
     const extraRooms = Math.max(0, Math.floor(rooms) - 1);
-    return sum + (i === 0 ? cfg.base_pence : cfg.extra_property_pence) + extraRooms * cfg.extra_room_pence;
+    return (
+      sum +
+      (i === 0 ? cfg.base_pence : cfg.extra_property_pence) +
+      extraRooms * cfg.extra_room_pence
+    );
   }, 0);
 }
 
 export function money(pence: number, currency = "GBP"): string {
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency, minimumFractionDigits: pence % 100 ? 2 : 0 }).format(pence / 100);
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: pence % 100 ? 2 : 0,
+  }).format(pence / 100);
 }

@@ -108,7 +108,10 @@ class Mem implements PartnerStore {
   async saveCharge(c: ChargeRecord) {
     if (!this.records.some((x) => x.charge_id === c.charge_id)) this.records.push({ ...c });
   }
-  pending: Record<string, { status: "open" | "won" | "lost"; amount_pence: number | null; applied: boolean }> = {};
+  pending: Record<
+    string,
+    { status: "open" | "won" | "lost"; amount_pence: number | null; applied: boolean }
+  > = {};
   async savePendingDispute(id: string, status: "open" | "won" | "lost", amount: number | null) {
     this.pending[id] = { status, amount_pence: amount, applied: false };
   }
@@ -522,7 +525,12 @@ describe("partner webhook", () => {
     const s = setup();
     charge(s, "ch_2026-11");
     const early = await processPartnerEvent(
-      ev("charge.dispute.created", { id: "dp_e", charge: "ch_2026-11", amount: 2900, status: "needs_response" }),
+      ev("charge.dispute.created", {
+        id: "dp_e",
+        charge: "ch_2026-11",
+        amount: 2900,
+        status: "needs_response",
+      }),
       s,
     );
     expect(early).toBe("not_ours");
@@ -535,8 +543,24 @@ describe("partner webhook", () => {
   it("claws back a payment whose dispute was lost before the payment was recorded", async () => {
     const s = setup();
     charge(s, "ch_2026-11");
-    await processPartnerEvent(ev("charge.dispute.created", { id: "dp_l", charge: "ch_2026-11", amount: 2900, status: "needs_response" }), s);
-    await processPartnerEvent(ev("charge.dispute.closed", { id: "dp_l", charge: "ch_2026-11", amount: 2900, status: "lost" }), s);
+    await processPartnerEvent(
+      ev("charge.dispute.created", {
+        id: "dp_l",
+        charge: "ch_2026-11",
+        amount: 2900,
+        status: "needs_response",
+      }),
+      s,
+    );
+    await processPartnerEvent(
+      ev("charge.dispute.closed", {
+        id: "dp_l",
+        charge: "ch_2026-11",
+        amount: 2900,
+        status: "lost",
+      }),
+      s,
+    );
     await processPartnerEvent(invoicePaid("2026-11"), s);
     expect(s.lines.find((l) => l.stripe_invoice_id === "in_2026-11")!.state).toBe("void");
     expect(s.referrals[0]!.qp_dispute).toBe("lost");
@@ -545,7 +569,15 @@ describe("partner webhook", () => {
   it("ignores a dispute won before the payment was recorded", async () => {
     const s = setup();
     charge(s, "ch_2026-11");
-    await processPartnerEvent(ev("charge.dispute.closed", { id: "dp_w", charge: "ch_2026-11", amount: 2900, status: "won" }), s);
+    await processPartnerEvent(
+      ev("charge.dispute.closed", {
+        id: "dp_w",
+        charge: "ch_2026-11",
+        amount: 2900,
+        status: "won",
+      }),
+      s,
+    );
     await processPartnerEvent(invoicePaid("2026-11"), s);
     expect(s.lines.find((l) => l.stripe_invoice_id === "in_2026-11")!.state).not.toBe("on_hold");
   });

@@ -8,7 +8,12 @@ export const Route = createFileRoute("/demo/host")({
   head: () => ({
     meta: [
       { title: rebrand("The host dashboard — Latchkey demo") },
-      { name: "description", content: rebrand("Look around a guest operations dashboard: arrivals, housekeeping, requests and reports. A Latchkey demo that resets every day.") },
+      {
+        name: "description",
+        content: rebrand(
+          "Look around a guest operations dashboard: arrivals, housekeeping, requests and reports. A Latchkey demo that resets every day.",
+        ),
+      },
       { property: "og:title", content: rebrand("The host dashboard — Latchkey demo") },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

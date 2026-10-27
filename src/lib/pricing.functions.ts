@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -6,24 +7,31 @@ import { DEFAULT_PRICING, type PricingConfig } from "./pricing";
 
 const COLS = "base_pence, extra_room_pence, extra_property_pence, trial_days, currency";
 
-export const getPricing = createServerFn({ method: "GET" }).handler(async (): Promise<PricingConfig> => {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
-  const url = process.env["SUPABASE_URL"];
-  if (!key || !url) return DEFAULT_PRICING;
-  const db = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
+export const getPricing = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PricingConfig> => {
+    const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
+    const url = process.env["SUPABASE_URL"];
+    if (!key || !url) return DEFAULT_PRICING;
+    const db = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input, init) => {
+          const h = new Headers(init?.headers);
+          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
+            h.delete("Authorization");
+          h.set("apikey", key);
+          return fetch(input, { ...init, headers: h });
+        },
       },
-    },
-  });
-  const { data } = await (db as any).from("platform_pricing").select(COLS).eq("id", 1).maybeSingle();
-  return (data as PricingConfig | null) ?? DEFAULT_PRICING;
-});
+    });
+    const { data } = await (db as any)
+      .from("platform_pricing")
+      .select(COLS)
+      .eq("id", 1)
+      .maybeSingle();
+    return (data as PricingConfig | null) ?? DEFAULT_PRICING;
+  },
+);
 
 /** The backend's admin role, or the Latchkey super admin by email. */
 async function isAdmin(supabase: any, userId: string): Promise<boolean> {
@@ -54,8 +62,12 @@ export const savePricing = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
-    if (!(await isAdmin(sb, context.userId))) throw new Error("Only a super admin can change pricing.");
-    const { error } = await sb.from("platform_pricing").update({ ...data, updated_at: new Date().toISOString() }).eq("id", 1);
+    if (!(await isAdmin(sb, context.userId)))
+      throw new Error("Only a super admin can change pricing.");
+    const { error } = await sb
+      .from("platform_pricing")
+      .update({ ...data, updated_at: new Date().toISOString() })
+      .eq("id", 1);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

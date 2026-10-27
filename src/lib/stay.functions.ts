@@ -13,7 +13,11 @@ const token = z.string().min(20).max(80);
 async function stayBooking(t: string) {
   const { admin, sha256 } = await import("./checkin.server");
   const db = await admin();
-  const { data: st } = await db.from("stay_tokens").select("booking_id, expires_at").eq("token_hash", sha256(t)).maybeSingle();
+  const { data: st } = await db
+    .from("stay_tokens")
+    .select("booking_id, expires_at")
+    .eq("token_hash", sha256(t))
+    .maybeSingle();
   if (!st || Date.parse(st.expires_at) < Date.now()) throw new Error("This stay link has expired.");
   const { data: b } = await db
     .from("bookings")
@@ -82,7 +86,8 @@ export const createStayRequest = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("booking_id", booking.id)
       .gte("created_at", since);
-    if ((count ?? 0) >= 10) throw new Error("You've sent a lot of requests. Please call your host.");
+    if ((count ?? 0) >= 10)
+      throw new Error("You've sent a lot of requests. Please call your host.");
 
     const urgency = data.urgent ? "urgent" : cat.defaultUrgency;
     const { data: row, error } = await db

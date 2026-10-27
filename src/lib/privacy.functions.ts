@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /** A business's privacy and retention choices (hosts.privacy, migration 0041). */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -12,7 +13,11 @@ export const getPrivacy = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ hostId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await (context.supabase as unknown as Loose).from("hosts").select("privacy").eq("id", data.hostId).maybeSingle();
+    const { data: row, error } = await (context.supabase as unknown as Loose)
+      .from("hosts")
+      .select("privacy")
+      .eq("id", data.hostId)
+      .maybeSingle();
     // Before migration 0041: the defaults, and nothing to save yet.
     return { available: !error, privacy: normalisePrivacy(error ? null : row?.privacy) };
   });
@@ -23,8 +28,12 @@ export const savePrivacy = createServerFn({ method: "POST" })
     z
       .object({
         hostId: z.string().uuid(),
-        guestDetailsDays: z.number().refine((n) => (DETAIL_DAY_CHOICES as readonly number[]).includes(n)),
-        messagesDays: z.number().refine((n) => (MESSAGE_DAY_CHOICES as readonly number[]).includes(n)),
+        guestDetailsDays: z
+          .number()
+          .refine((n) => (DETAIL_DAY_CHOICES as readonly number[]).includes(n)),
+        messagesDays: z
+          .number()
+          .refine((n) => (MESSAGE_DAY_CHOICES as readonly number[]).includes(n)),
       })
       .parse(d),
   )
@@ -32,7 +41,10 @@ export const savePrivacy = createServerFn({ method: "POST" })
     // How long guests' details are kept is the owner's decision.
     await requireOwner(context.supabase, data.hostId);
     const privacy = normalisePrivacy(data);
-    const { error } = await (context.supabase as unknown as Loose).from("hosts").update({ privacy }).eq("id", data.hostId);
+    const { error } = await (context.supabase as unknown as Loose)
+      .from("hosts")
+      .update({ privacy })
+      .eq("id", data.hostId);
     if (error) throw new Error(error.message);
     return { ok: true, privacy };
   });

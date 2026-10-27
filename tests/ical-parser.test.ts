@@ -267,20 +267,43 @@ describe("room reconciliation across platforms", () => {
   it("flags two named guests from different platforms on the same nights", () => {
     const changes = reconcileRoom([
       rb({ id: "a" }),
-      rb({ id: "b", channel: "homestay", guest_full_name: "Ade Okafor", check_in_date: "2026-10-03" }),
+      rb({
+        id: "b",
+        channel: "homestay",
+        guest_full_name: "Ade Okafor",
+        check_in_date: "2026-10-03",
+      }),
     ]);
     expect(changes.map((c) => c.status)).toEqual(["flagged", "flagged"]);
   });
 
   it("releases a mirror when the real stay is gone, unless the host decided", () => {
-    const orphan = rb({ id: "e", channel: "booking_com", status: "blocked", guest_full_name: null, mirror_of: "gone" });
-    expect(reconcileRoom([orphan])).toEqual([{ id: "e", mirror_of: null, status: "needs_details" }]);
-    expect(reconcileRoom([{ ...orphan, manual_fields: ["status"] }])).toEqual([{ id: "e", mirror_of: null }]);
+    const orphan = rb({
+      id: "e",
+      channel: "booking_com",
+      status: "blocked",
+      guest_full_name: null,
+      mirror_of: "gone",
+    });
+    expect(reconcileRoom([orphan])).toEqual([
+      { id: "e", mirror_of: null, status: "needs_details" },
+    ]);
+    expect(reconcileRoom([{ ...orphan, manual_fields: ["status"] }])).toEqual([
+      { id: "e", mirror_of: null },
+    ]);
   });
 
   it("ignores same-platform overlaps and non-overlapping stays", () => {
     expect(
-      reconcileRoom([rb({ id: "a" }), rb({ id: "b", check_in_date: "2026-10-04", check_out_date: "2026-10-06", channel: "homestay" })]),
+      reconcileRoom([
+        rb({ id: "a" }),
+        rb({
+          id: "b",
+          check_in_date: "2026-10-04",
+          check_out_date: "2026-10-06",
+          channel: "homestay",
+        }),
+      ]),
     ).toEqual([]);
   });
 });
@@ -300,26 +323,47 @@ describe("hidden stays and closed nights across syncs", () => {
     externalListingTitle: null,
     ...over,
   });
-  const hiddenBlock = { ...baseExisting, status: "blocked", guest_full_name: null, archived_at: "2026-03-01T00:00:00Z" };
+  const hiddenBlock = {
+    ...baseExisting,
+    status: "blocked",
+    guest_full_name: null,
+    archived_at: "2026-03-01T00:00:00Z",
+  };
 
   it("keeps a hidden closed night hidden while the platform still shows it the same", async () => {
     const { shouldUnhide } = await import("../src/lib/sync-logic");
     expect(shouldUnhide(hiddenBlock, feed())).toBe(false);
-    expect(shouldUnhide({ ...hiddenBlock, archived_at: null }, feed({ checkOutDate: "2026-04-09" }))).toBe(false);
+    expect(
+      shouldUnhide({ ...hiddenBlock, archived_at: null }, feed({ checkOutDate: "2026-04-09" })),
+    ).toBe(false);
   });
 
   it("shows it again when the platform changes it", async () => {
     const { shouldUnhide } = await import("../src/lib/sync-logic");
     expect(shouldUnhide(hiddenBlock, feed({ checkOutDate: "2026-04-05" }))).toBe(true);
-    expect(shouldUnhide(hiddenBlock, feed({ status: "upcoming", guestFullName: "Sam Lee" }))).toBe(true);
+    expect(shouldUnhide(hiddenBlock, feed({ status: "upcoming", guestFullName: "Sam Lee" }))).toBe(
+      true,
+    );
     expect(shouldUnhide({ ...hiddenBlock, status: "cancelled" }, feed())).toBe(true);
     // Dates the host changed by hand don't count as the platform changing them.
-    expect(shouldUnhide({ ...hiddenBlock, manual_fields: ["check_out_date"], check_out_date: "2026-04-02" }, feed())).toBe(false);
+    expect(
+      shouldUnhide(
+        { ...hiddenBlock, manual_fields: ["check_out_date"], check_out_date: "2026-04-02" },
+        feed(),
+      ),
+    ).toBe(false);
   });
 
   it("lets a named guest from the platform replace nights the host marked as not a booking", () => {
-    const marked = { ...baseExisting, status: "blocked", guest_full_name: null, manual_fields: ["status"] };
+    const marked = {
+      ...baseExisting,
+      status: "blocked",
+      guest_full_name: null,
+      manual_fields: ["status"],
+    };
     expect(buildPatch(marked, feed()).status).toBeUndefined();
-    expect(buildPatch(marked, feed({ status: "upcoming", guestFullName: "Sam Lee" })).status).toBe("upcoming");
+    expect(buildPatch(marked, feed({ status: "upcoming", guestFullName: "Sam Lee" })).status).toBe(
+      "upcoming",
+    );
   });
 });

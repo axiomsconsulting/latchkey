@@ -2,7 +2,14 @@ import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { worldCopy as copy } from "@/content/copy";
@@ -64,9 +71,13 @@ function Picker({
                     setOpen(false);
                   }}
                 >
-                  <Check className={cn("size-4", o.value === value ? "opacity-100" : "opacity-0")} />
+                  <Check
+                    className={cn("size-4", o.value === value ? "opacity-100" : "opacity-0")}
+                  />
                   <span className="min-w-0 flex-1 truncate">{o.label}</span>
-                  {o.hint ? <span className="shrink-0 text-xs text-muted-foreground">{o.hint}</span> : null}
+                  {o.hint ? (
+                    <span className="shrink-0 text-xs text-muted-foreground">{o.hint}</span>
+                  ) : null}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -78,18 +89,64 @@ function Picker({
 }
 
 /** Every currency, shown with its symbol: "£ GBP · British Pound". */
-export function CurrencyPicker({ id, value, onChange, disabled }: { id?: string; value: string; onChange: (v: string) => void; disabled?: boolean }) {
+export function CurrencyPicker({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
   const options = useMemo(
-    () => currencies().map((c) => ({ value: c.code, label: `${c.symbol !== c.code ? `${c.symbol} ` : ""}${c.code} · ${c.name}`, search: `${c.code} ${c.name} ${c.symbol}` })),
+    () =>
+      currencies().map((c) => ({
+        value: c.code,
+        label: `${c.symbol !== c.code ? `${c.symbol} ` : ""}${c.code} · ${c.name}`,
+        search: `${c.code} ${c.name} ${c.symbol}`,
+      })),
     [],
   );
-  return <Picker id={id} value={value} options={options} onChange={onChange} placeholder={copy.findCurrency} disabled={disabled} />;
+  return (
+    <Picker
+      id={id}
+      value={value}
+      options={options}
+      onChange={onChange}
+      placeholder={copy.findCurrency}
+      disabled={disabled}
+    />
+  );
 }
 
 /** Every time zone, west to east, with today's offset from UTC. */
-export function TimeZonePicker({ id, value, onChange, disabled }: { id?: string; value: string; onChange: (v: string) => void; disabled?: boolean }) {
-  const options = useMemo(() => timeZones().map((z) => ({ value: z.id, label: z.label, search: `${z.id} ${z.label}` })), []);
-  return <Picker id={id} value={value} options={options} onChange={onChange} placeholder={copy.findZone} disabled={disabled} />;
+export function TimeZonePicker({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const options = useMemo(
+    () => timeZones().map((z) => ({ value: z.id, label: z.label, search: `${z.id} ${z.label}` })),
+    [],
+  );
+  return (
+    <Picker
+      id={id}
+      value={value}
+      options={options}
+      onChange={onChange}
+      placeholder={copy.findZone}
+      disabled={disabled}
+    />
+  );
 }
 
 /**
@@ -106,11 +163,22 @@ export function PhoneInput({
   id?: string;
   country: string;
   national: string;
-  onChange: (next: { country: string; national: string; valid: boolean; e164: string | null }) => void;
+  onChange: (next: {
+    country: string;
+    national: string;
+    valid: boolean;
+    e164: string | null;
+  }) => void;
   disabled?: boolean;
 }) {
   const options = useMemo(
-    () => phoneCountries().map((c) => ({ value: c.iso, label: `${c.flag} ${c.name}`, hint: c.dial, search: `${c.name} ${c.iso} ${c.dial}` })),
+    () =>
+      phoneCountries().map((c) => ({
+        value: c.iso,
+        label: `${c.flag} ${c.name}`,
+        hint: c.dial,
+        search: `${c.name} ${c.iso} ${c.dial}`,
+      })),
     [],
   );
   const here = phoneCountries().find((c) => c.iso === country);
@@ -136,7 +204,10 @@ export function PhoneInput({
           type="tel"
           inputMode="tel"
           autoComplete="tel-national"
-          className={cn("h-12", check && !check.ok && "border-destructive focus-visible:ring-destructive")}
+          className={cn(
+            "h-12",
+            check && !check.ok && "border-destructive focus-visible:ring-destructive",
+          )}
           value={national}
           placeholder={phoneExample(country)}
           disabled={disabled}
@@ -145,7 +216,9 @@ export function PhoneInput({
         />
       </div>
       {check && !check.ok ? (
-        <p className="text-sm text-destructive">{copy.badPhone(here?.name ?? country, phoneExample(country))}</p>
+        <p className="text-sm text-destructive">
+          {copy.badPhone(here?.name ?? country, phoneExample(country))}
+        </p>
       ) : check?.ok ? (
         <p className="text-xs text-muted-foreground">{check.display}</p>
       ) : null}

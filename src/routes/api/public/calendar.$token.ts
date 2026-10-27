@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 import { createFileRoute } from "@tanstack/react-router";
 import { rebrand } from "@/lib/brand";
 

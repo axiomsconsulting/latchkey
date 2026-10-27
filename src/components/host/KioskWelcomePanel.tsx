@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { common, kioskWelcomeCopy as copy } from "@/content/copy";
 import { clearKioskWelcome, getKioskWelcome, setKioskWelcome } from "@/lib/kiosk.functions";
@@ -15,7 +21,12 @@ import { pingKiosk } from "@/lib/kiosk-ping";
 import { cn } from "@/lib/utils";
 
 const firstName = (full: string | null) => (full ?? "").trim().split(/\s+/)[0] ?? "";
-const time = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+const time = (iso: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 
 /**
  * Put a welcome for an arriving guest on the front-door kiosk, full screen,
@@ -42,7 +53,11 @@ export function KioskWelcomePanel({
   const setFn = useServerFn(setKioskWelcome);
   const clearFn = useServerFn(clearKioskWelcome);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["kiosk-welcome", propertyId], queryFn: () => fetchFn({ data: { propertyId } }), refetchInterval: 20_000 });
+  const q = useQuery({
+    queryKey: ["kiosk-welcome", propertyId],
+    queryFn: () => fetchFn({ data: { propertyId } }),
+    refetchInterval: 20_000,
+  });
   const current = q.data?.message ?? null;
   const named = forBooking ? [forBooking] : arriving.filter((b) => b.guest_full_name?.trim());
   const [bookingId, setBookingId] = useState<string>(named[0]?.id ?? "none");
@@ -97,7 +112,8 @@ export function KioskWelcomePanel({
       current ? copy.updated : copy.shown,
     );
 
-  if (q.data && !q.data.available) return <p className="text-sm text-muted-foreground">{copy.notReady}</p>;
+  if (q.data && !q.data.available)
+    return <p className="text-sm text-muted-foreground">{copy.notReady}</p>;
 
   return (
     <div className={bare ? "space-y-3" : "space-y-3 border-t border-border pt-3"}>
@@ -113,15 +129,37 @@ export function KioskWelcomePanel({
             <p className="font-display text-xl">{current.headline}</p>
             {current.body ? <p className="mt-1 text-sm opacity-90">{current.body}</p> : null}
           </div>
-          <p className={cn("text-xs", current.dismissed ? "text-success" : "text-muted-foreground")}>
-            {current.dismissed && current.dismissedAt ? copy.tapped(time(current.dismissedAt)) : copy.showing(time(current.updatedAt), time(current.expiresAt))}
+          <p
+            className={cn("text-xs", current.dismissed ? "text-success" : "text-muted-foreground")}
+          >
+            {current.dismissed && current.dismissedAt
+              ? copy.tapped(time(current.dismissedAt))
+              : copy.showing(time(current.updatedAt), time(current.expiresAt))}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setEditing(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy !== null}
+              onClick={() => setEditing(true)}
+            >
               {copy.edit}
             </Button>
-            <Button size="sm" variant="ghost" className="text-destructive" disabled={busy !== null} onClick={() => void run("clear", () => clearFn({ data: { propertyId } }), copy.removed)}>
-              {busy === "clear" ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />} {copy.remove}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              disabled={busy !== null}
+              onClick={() =>
+                void run("clear", () => clearFn({ data: { propertyId } }), copy.removed)
+              }
+            >
+              {busy === "clear" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <X className="size-4" />
+              )}{" "}
+              {copy.remove}
             </Button>
           </div>
         </div>
@@ -149,13 +187,25 @@ export function KioskWelcomePanel({
             <Label htmlFor="kw-head" className="text-xs">
               {copy.headline}
             </Label>
-            <Input id="kw-head" className="h-10" maxLength={80} value={headline} onChange={(e) => setHeadline(e.target.value)} />
+            <Input
+              id="kw-head"
+              className="h-10"
+              maxLength={80}
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="kw-body" className="text-xs">
               {copy.body}
             </Label>
-            <Textarea id="kw-body" rows={2} maxLength={300} value={body} onChange={(e) => setBody(e.target.value)} />
+            <Textarea
+              id="kw-body"
+              rows={2}
+              maxLength={300}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+            />
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <div className="space-y-1">
@@ -174,7 +224,12 @@ export function KioskWelcomePanel({
               </Select>
             </div>
             <Button disabled={busy !== null || !headline.trim()} onClick={() => void show()}>
-              {busy === "show" ? <Loader2 className="size-4 animate-spin" /> : <MonitorUp className="size-4" />} {current ? copy.update : copy.show}
+              {busy === "show" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <MonitorUp className="size-4" />
+              )}{" "}
+              {current ? copy.update : copy.show}
             </Button>
             {editing ? (
               <Button variant="ghost" onClick={() => setEditing(false)}>

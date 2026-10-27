@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Recording visits for the super admin's analytics. Server only. Writes go
  * through the service role; nothing here ever blocks the page being viewed.
@@ -9,7 +10,10 @@ const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function db() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin as unknown as { from: (t: string) => any; rpc: (fn: string, a: Record<string, unknown>) => any };
+  return supabaseAdmin as unknown as {
+    from: (t: string) => any;
+    rpc: (fn: string, a: Record<string, unknown>) => any;
+  };
 }
 
 export type Hit = {
@@ -48,7 +52,12 @@ export async function origin(request: Request) {
   };
   return {
     ip_hash: hashIp(requestIp(h)),
-    country: cf.country ?? h.get("cf-ipcountry") ?? h.get("x-vercel-ip-country") ?? h.get("x-country-code") ?? null,
+    country:
+      cf.country ??
+      h.get("cf-ipcountry") ??
+      h.get("x-vercel-ip-country") ??
+      h.get("x-country-code") ??
+      null,
     region: cf.region ?? decode(h.get("cf-region") ?? h.get("x-vercel-ip-country-region")),
   };
 }
@@ -94,7 +103,11 @@ export async function recordHit(hit: Hit, request: Request): Promise<void> {
   const firstBot = botReason(ua, { webdriver: !!hit.wd });
 
   // The browser: created on its first page, kept up to date after.
-  const { data: existing } = await d.from("analytics_visitors").select("id, is_bot").eq("id", hit.v).maybeSingle();
+  const { data: existing } = await d
+    .from("analytics_visitors")
+    .select("id, is_bot")
+    .eq("id", hit.v)
+    .maybeSingle();
   if (!existing) {
     await d.from("analytics_visitors").upsert(
       {
@@ -130,8 +143,23 @@ export async function recordHit(hit: Hit, request: Request): Promise<void> {
   if (!visitId) {
     const where = await origin(request);
     const utm = cleanUtm(hit.utm);
-    const base = { visitor_id: hit.v, entry_path: path, exit_path: path, referrer: clip(hit.ref, 500), utm_source: utm.utm_source ?? null, is_bot: !!firstBot || !!existing?.is_bot, country: where.country, region: where.region };
-    let made = (await d.from("analytics_visits").insert({ ...base, ...utm, ip_hash: where.ip_hash }).select("id").single()).data;
+    const base = {
+      visitor_id: hit.v,
+      entry_path: path,
+      exit_path: path,
+      referrer: clip(hit.ref, 500),
+      utm_source: utm.utm_source ?? null,
+      is_bot: !!firstBot || !!existing?.is_bot,
+      country: where.country,
+      region: where.region,
+    };
+    let made = (
+      await d
+        .from("analytics_visits")
+        .insert({ ...base, ...utm, ip_hash: where.ip_hash })
+        .select("id")
+        .single()
+    ).data;
     // Before migration 0046 (no utm_medium… or ip_hash yet): the older columns only, still no address.
     if (!made) made = (await d.from("analytics_visits").insert(base).select("id").single()).data;
     visitId = made?.id;
@@ -140,13 +168,26 @@ export async function recordHit(hit: Hit, request: Request): Promise<void> {
   }
   if (!visitId) return;
 
-  const { error } = await d.from("analytics_views").insert({ id: hit.id, visit_id: visitId, visitor_id: hit.v, path, title: clip(hit.title, 200) });
+  const { error } = await d.from("analytics_views").insert({
+    id: hit.id,
+    visit_id: visitId,
+    visitor_id: hit.v,
+    path,
+    title: clip(hit.title, 200),
+  });
   if (error) return; // a repeat of the same page view
   const pages = ((open?.pages as number | undefined) ?? 0) + 1;
   const seconds = open ? (Date.now() - Date.parse(open.started_at)) / 1000 : 0;
   const tooFast = botReason(ua, { pagesInVisit: pages, secondsInVisit: seconds });
-  await d.from("analytics_visits").update({ pages, last_at: now, exit_path: path, ...(tooFast ? { is_bot: true } : {}) }).eq("id", visitId);
-  if (tooFast && !firstBot) await d.from("analytics_visitors").update({ is_bot: true, bot_reason: tooFast }).eq("id", hit.v);
+  await d
+    .from("analytics_visits")
+    .update({ pages, last_at: now, exit_path: path, ...(tooFast ? { is_bot: true } : {}) })
+    .eq("id", visitId);
+  if (tooFast && !firstBot)
+    await d
+      .from("analytics_visitors")
+      .update({ is_bot: true, bot_reason: tooFast })
+      .eq("id", hit.v);
 }
 
 async function sha256(s: string): Promise<string> {
@@ -155,10 +196,19 @@ async function sha256(s: string): Promise<string> {
 }
 
 /** Links this browser to a signed-in person (deterministic: user id and email). */
-export async function identifyVisitor(visitorId: string, userId: string, email: string | null): Promise<void> {
+export async function identifyVisitor(
+  visitorId: string,
+  userId: string,
+  email: string | null,
+): Promise<void> {
   if (!uuidRe.test(visitorId)) return;
   const d = await db();
-  const { data: member } = await d.from("host_members").select("host_id").eq("user_id", userId).limit(1).maybeSingle();
+  const { data: member } = await d
+    .from("host_members")
+    .select("host_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
   const clean = email?.trim().toLowerCase() || null;
   await d.rpc("analytics_identify", {
     _visitor: visitorId,
@@ -178,7 +228,11 @@ export async function pruneAnalytics(): Promise<void> {
     const ipKeep = new Date(Date.now() - 90 * 86_400_000).toISOString();
     await d.from("analytics_visits").delete().lt("started_at", keep);
     await d.from("analytics_visitors").delete().lt("last_seen", keep);
-    await d.from("analytics_visits").update({ ip: null }).lt("started_at", ipKeep).not("ip", "is", null);
+    await d
+      .from("analytics_visits")
+      .update({ ip: null })
+      .lt("started_at", ipKeep)
+      .not("ip", "is", null);
     await d.from("analytics_events").delete().lt("at", keep);
   } catch {
     // Before migration 0028.

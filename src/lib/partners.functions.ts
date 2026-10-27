@@ -449,8 +449,16 @@ export const adminPartnerOverview = createServerFn({ method: "GET" })
       .from("partner_agreement_acceptances")
       .select("partner_id, version, signed_at, oms_confirmed_at")
       .order("signed_at", { ascending: true });
-    const acceptances: Record<string, { version: string; signed_at: string; oms_confirmed_at: string | null }> = {};
-    for (const a of (accRows ?? []) as Array<{ partner_id: string; version: string; signed_at: string; oms_confirmed_at: string | null }>)
+    const acceptances: Record<
+      string,
+      { version: string; signed_at: string; oms_confirmed_at: string | null }
+    > = {};
+    for (const a of (accRows ?? []) as Array<{
+      partner_id: string;
+      version: string;
+      signed_at: string;
+      oms_confirmed_at: string | null;
+    }>)
       acceptances[a.partner_id] = a;
     const bal: Record<string, { held: number; payable: number; paid: number }> = {};
     for (const l of (lines ?? []) as Array<{
@@ -506,7 +514,10 @@ export const approvePartner = createServerFn({ method: "POST" })
       .eq("partner_id", p.id)
       .order("signed_at", { ascending: false })
       .limit(1);
-    const latest = ((acc ?? [])[0] ?? null) as { id: string; oms_confirmed_at: string | null } | null;
+    const latest = ((acc ?? [])[0] ?? null) as {
+      id: string;
+      oms_confirmed_at: string | null;
+    } | null;
     if (latest && !latest.oms_confirmed_at)
       check(
         await db
@@ -567,8 +578,10 @@ export const setPartnerStatus = createServerFn({ method: "POST" })
     if (input.status === "terminated") {
       const { dayStart } = await import("./commission");
       const today = now.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
-      if (input.stopDate && input.stopDate < today) throw new Error("The Stop Date can't be in the past.");
-      const stopAt = input.stopDate && input.stopDate > today ? new Date(dayStart(input.stopDate)) : now;
+      if (input.stopDate && input.stopDate < today)
+        throw new Error("The Stop Date can't be in the past.");
+      const stopAt =
+        input.stopDate && input.stopDate > today ? new Date(dayStart(input.stopDate)) : now;
       // A later Stop Date: the partner stays active until then (the code stops on that day).
       if (stopAt > now) patch["status"] = "active";
       Object.assign(patch, {
@@ -581,7 +594,9 @@ export const setPartnerStatus = createServerFn({ method: "POST" })
       // The details read from their ID are kept for 6 years after the agreement ends (17.1).
       await db
         .from("partner_id_checks")
-        .update({ retain_until: new Date(stopAt.getTime() + 6 * 365.25 * 86_400_000).toISOString() })
+        .update({
+          retain_until: new Date(stopAt.getTime() + 6 * 365.25 * 86_400_000).toISOString(),
+        })
         .eq("partner_id", input.partnerId);
     }
     check(await db.from("partners").update(patch).eq("id", input.partnerId));

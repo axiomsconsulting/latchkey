@@ -4,7 +4,16 @@ import { arrange } from "@/lib/ui-config";
 import { ChevronDown, Maximize2, Minimize2 } from "lucide-react";
 
 import { dashboardCopy as copy } from "@/content/copy";
-import { bands, defaultPlaces, placeCard, readLayout, setPlace, toggleCollapsed, type Layout, type Place } from "@/lib/dashboard-layout";
+import {
+  bands,
+  defaultPlaces,
+  placeCard,
+  readLayout,
+  setPlace,
+  toggleCollapsed,
+  type Layout,
+  type Place,
+} from "@/lib/dashboard-layout";
 import { moveItem } from "@/lib/reorder";
 import { cn } from "@/lib/utils";
 
@@ -41,14 +50,25 @@ export function DashboardSections({
   page?: string;
 }) {
   const ui = useUi();
-  const allowed = page ? arrange(ui.pages[page], all.map((i) => i.id)) : all.map((i) => i.id);
+  const allowed = page
+    ? arrange(
+        ui.pages[page],
+        all.map((i) => i.id),
+      )
+    : all.map((i) => i.id);
   const items = allowed.map((id) => all.find((i) => i.id === id)!).filter(Boolean);
   const defaults = items.map((i) => i.id);
   const defaultPlace = defaultPlaces(items);
-  const [layout, setLayoutState] = useState<Layout>({ order: defaults, collapsed: [], place: defaultPlace });
+  const [layout, setLayoutState] = useState<Layout>({
+    order: defaults,
+    collapsed: [],
+    place: defaultPlace,
+  });
   const [dragging, setDragging] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const drag = useRef<{ id: string; x: number; y: number; moved: boolean; layout: Layout } | null>(null);
+  const drag = useRef<{ id: string; x: number; y: number; moved: boolean; layout: Layout } | null>(
+    null,
+  );
 
   useEffect(() => {
     try {
@@ -92,7 +112,9 @@ export function DashboardSections({
     for (const col of root.querySelectorAll<HTMLElement>("[data-col]")) {
       if (!hit(col)) continue;
       const last = col.dataset["last"]!;
-      return last === id ? setPlace(l, id, col.dataset["col"] as Place) : placeCard(l, id, last, "after", col.dataset["col"] as Place);
+      return last === id
+        ? setPlace(l, id, col.dataset["col"] as Place)
+        : placeCard(l, id, last, "after", col.dataset["col"] as Place);
     }
     return l;
   }
@@ -162,7 +184,10 @@ export function DashboardSections({
     return node !== null && node !== false && node !== undefined;
   });
   const rank = new Map(shown.map((id, i) => [id, i]));
-  const changed = layout.order.join() !== defaults.join() || layout.collapsed.length > 0 || defaults.some((id) => layout.place[id] !== defaultPlace[id]);
+  const changed =
+    layout.order.join() !== defaults.join() ||
+    layout.collapsed.length > 0 ||
+    defaults.some((id) => layout.place[id] !== defaultPlace[id]);
   const card = (id: string, place: Place) => (
     <li
       key={id}
@@ -190,11 +215,18 @@ export function DashboardSections({
       <div ref={listRef} className="flex flex-col gap-5 pt-2">
         {bands(layout, shown).map((band) =>
           band.kind === "wide" ? (
-            <ul key={band.id} className="flex flex-col">{card(band.id, "w")}</ul>
+            <ul key={band.id} className="flex flex-col">
+              {card(band.id, "w")}
+            </ul>
           ) : (
             <div key={`cols-${band.last}`} className="flex flex-col gap-5 lg:grid lg:grid-cols-2">
               {(["l", "r"] as const).map((col) => (
-                <ul key={col} data-col={col} data-last={band.last} className="contents lg:flex lg:min-h-8 lg:flex-col lg:gap-5">
+                <ul
+                  key={col}
+                  data-col={col}
+                  data-last={band.last}
+                  className="contents lg:flex lg:min-h-8 lg:flex-col lg:gap-5"
+                >
                   {(col === "l" ? band.left : band.right).map((id) => card(id, col))}
                 </ul>
               ))}
@@ -203,7 +235,11 @@ export function DashboardSections({
         )}
       </div>
       {changed ? (
-        <button type="button" className="text-xs text-muted-foreground underline-offset-4 hover:underline" onClick={() => setLayout({ order: defaults, collapsed: [], place: defaultPlace })}>
+        <button
+          type="button"
+          className="text-xs text-muted-foreground underline-offset-4 hover:underline"
+          onClick={() => setLayout({ order: defaults, collapsed: [], place: defaultPlace })}
+        >
           {copy.reset}
         </button>
       ) : null}
@@ -231,7 +267,13 @@ export function DashSection({
   const ctx = useContext(SectionsContext);
   const folded = ctx?.collapsed(id) ?? false;
   return (
-    <section id={`today-${id}`} className={cn("card-soft relative flex flex-col p-5 scroll-mt-24", ctx?.dragging === id && "shadow-lifted ring-2 ring-primary/40")}>
+    <section
+      id={`today-${id}`}
+      className={cn(
+        "card-soft relative flex flex-col p-5 scroll-mt-24",
+        ctx?.dragging === id && "shadow-lifted ring-2 ring-primary/40",
+      )}
+    >
       {ctx ? (
         <button
           {...ctx.grabProps(id, title)}

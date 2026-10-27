@@ -10,7 +10,13 @@ import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { channels, common, settings as copy } from "@/content/copy";
-import { BUILT_IN_SITES, isBuiltIn, newSiteKey, normaliseStoredSites, type StoredSite } from "@/lib/booking-sites";
+import {
+  BUILT_IN_SITES,
+  isBuiltIn,
+  newSiteKey,
+  normaliseStoredSites,
+  type StoredSite,
+} from "@/lib/booking-sites";
 import { saveBookingSites } from "@/lib/host.functions";
 
 const ICON_PX = 64;
@@ -107,7 +113,10 @@ export function ChannelLabels({
     setBusy(true);
     try {
       await save({
-        data: { hostId, sites: rows.map((r) => ({ key: r.key, label: r.label.trim(), icon_url: r.icon_url })) },
+        data: {
+          hostId,
+          sites: rows.map((r) => ({ key: r.key, label: r.label.trim(), icon_url: r.icon_url })),
+        },
       });
       await qc.invalidateQueries({ queryKey: ["workspace"] });
       toast.success(copy.channelsSaved);
@@ -137,7 +146,7 @@ export function ChannelLabels({
       />
       <div className="grid gap-3 sm:grid-cols-2">
         {rows.map((r) => {
-          const standard = r.builtIn ? (channels as Record<string, string>)[r.key] ?? r.key : "";
+          const standard = r.builtIn ? ((channels as Record<string, string>)[r.key] ?? r.key) : "";
           const name = r.label.trim() || standard || copy.channelsNewName;
           return (
             <div key={r.key} className="flex items-end gap-3">
@@ -205,7 +214,12 @@ export function ChannelLabels({
           type="button"
           variant="outline"
           disabled={rows.length >= BUILT_IN_SITES.length + 20}
-          onClick={() => setRows((rs) => [...rs, { key: newSiteKey(), label: "", icon_url: null, builtIn: false }])}
+          onClick={() =>
+            setRows((rs) => [
+              ...rs,
+              { key: newSiteKey(), label: "", icon_url: null, builtIn: false },
+            ])
+          }
         >
           <Plus className="size-4" /> {copy.channelsAdd}
         </Button>

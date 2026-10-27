@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Server-only helpers for guest check-in. Guests never touch tables directly;
  * every read and write here uses the admin client after the caller's answers
@@ -31,7 +32,12 @@ const PROPERTY_COLUMNS =
 export async function loadPropertyByCode(code: string) {
   const db = await admin();
   const find = (cols: string) =>
-    db.from("properties").select(cols).eq("short_code", code.toLowerCase()).eq("active", true).maybeSingle();
+    db
+      .from("properties")
+      .select(cols)
+      .eq("short_code", code.toLowerCase())
+      .eq("active", true)
+      .maybeSingle();
   const { data } = await withLegacy(
     () =>
       db
@@ -49,7 +55,11 @@ export async function loadPropertyByCode(code: string) {
 export async function hostModes(hostId: string) {
   const { normaliseModes } = await import("./integration-modes");
   const db = await admin();
-  const { data } = await db.from("hosts").select("integration_modes").eq("id", hostId).maybeSingle();
+  const { data } = await db
+    .from("hosts")
+    .select("integration_modes")
+    .eq("id", hostId)
+    .maybeSingle();
   return normaliseModes(data?.integration_modes);
 }
 
@@ -81,9 +91,13 @@ export async function loadSessionByShare(share: string): Promise<Session> {
   return loadSessionWhere("share_hash", sha256(share));
 }
 
-async function loadSessionWhere(column: "token_hash" | "id" | "share_hash", value: string): Promise<Session> {
+async function loadSessionWhere(
+  column: "token_hash" | "id" | "share_hash",
+  value: string,
+): Promise<Session> {
   const db = await admin();
-  const legacy = "id, property_id, booking_id, confirmed, verified_method, photo_attempts, last4_attempts, completed_at, expires_at";
+  const legacy =
+    "id, property_id, booking_id, confirmed, verified_method, photo_attempts, last4_attempts, completed_at, expires_at";
   const { data } = await withLegacy(
     () =>
       db
@@ -92,21 +106,41 @@ async function loadSessionWhere(column: "token_hash" | "id" | "share_hash", valu
         // share_hash is from migration 0037, newer than the generated types.
         .eq(column as "id", value)
         .maybeSingle(),
-    () => db.from("checkin_sessions").select(legacy).eq(column as "id", value).maybeSingle(),
+    () =>
+      db
+        .from("checkin_sessions")
+        .select(legacy)
+        .eq(column as "id", value)
+        .maybeSingle(),
   );
   if (!data || Date.parse(data.expires_at) < Date.now()) {
     throw new Error("This check-in has timed out. Please start again.");
   }
   const row = data as Partial<Session>;
-  return { ...row, adults: row.adults ?? null, children: row.children ?? null, companion_attempts: row.companion_attempts ?? 0 } as Session;
+  return {
+    ...row,
+    adults: row.adults ?? null,
+    children: row.children ?? null,
+    companion_attempts: row.companion_attempts ?? 0,
+  } as Session;
 }
 
-export type JoinClaim = { id: string; session_id: string; position: number; kind: "adult" | "child"; done_at: string | null };
+export type JoinClaim = {
+  id: string;
+  session_id: string;
+  position: number;
+  kind: "adult" | "child";
+  done_at: string | null;
+};
 
 /** A guest's phone that joined a check-in: the one guest it may fill in. */
 export async function loadJoin(token: string): Promise<JoinClaim> {
   const db = (await admin()) as unknown as { from: (t: string) => any };
-  const { data } = await db.from("checkin_joins").select("id, session_id, position, kind, done_at").eq("token_hash", sha256(token)).maybeSingle();
+  const { data } = await db
+    .from("checkin_joins")
+    .select("id, session_id, position, kind, done_at")
+    .eq("token_hash", sha256(token))
+    .maybeSingle();
   if (!data) throw new Error("This check-in has timed out. Please start again.");
   return data as JoinClaim;
 }
@@ -116,7 +150,15 @@ export async function raiseAlert(input: {
   hostId: string;
   propertyId: string;
   bookingId?: string | null;
-  kind: "lockout" | "id_mismatch" | "id_partial" | "self_declared" | "service_request" | "party" | "handover" | "direct_enquiry";
+  kind:
+    | "lockout"
+    | "id_mismatch"
+    | "id_partial"
+    | "self_declared"
+    | "service_request"
+    | "party"
+    | "handover"
+    | "direct_enquiry";
   message: string;
   /** Channels not to use for this one (e.g. email, when the platform already emailed). */
   skip?: Array<"email" | "push" | "telegram" | "sms">;
@@ -135,7 +177,14 @@ export async function raiseAlert(input: {
     .single();
   // Push, Telegram, email and SMS, as the business has chosen (never throws).
   const { notifyHost } = await import("./notify.server");
-  await notifyHost({ hostId: input.hostId, kind: input.kind, message: input.message, bookingId: input.bookingId ?? null, alertId: data?.id ?? null, skip: input.skip ?? [] });
+  await notifyHost({
+    hostId: input.hostId,
+    kind: input.kind,
+    message: input.message,
+    bookingId: input.bookingId ?? null,
+    alertId: data?.id ?? null,
+    skip: input.skip ?? [],
+  });
 }
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
@@ -145,7 +194,9 @@ const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
  * is held in memory for this call only; whether a small copy is kept is the
  * caller's decision, based on the host's settings.
  */
-export async function readIdDetails(imageDataUrl: string): Promise<import("./guest-records").IdRead> {
+export async function readIdDetails(
+  imageDataUrl: string,
+): Promise<import("./guest-records").IdRead> {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new Error("ID reading is not configured.");
 
@@ -197,7 +248,14 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
               looks_homemade: { type: "boolean" },
               document_type: {
                 type: ["string", "null"],
-                enum: ["passport", "driving_licence", "national_id", "residence_permit", "other", null],
+                enum: [
+                  "passport",
+                  "driving_licence",
+                  "national_id",
+                  "residence_permit",
+                  "other",
+                  null,
+                ],
               },
               full_name: { type: ["string", "null"] },
               date_of_birth: { type: ["string", "null"] },
@@ -250,7 +308,11 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
       const payload = line.slice(5).trim();
       if (!payload || payload === "[DONE]") continue;
       try {
-        const evt = JSON.parse(payload) as { type?: string; delta?: string; error?: { message?: string } };
+        const evt = JSON.parse(payload) as {
+          type?: string;
+          delta?: string;
+          error?: { message?: string };
+        };
         if (evt.type === "response.output_text.delta" && evt.delta) text += evt.delta;
         if (evt.type === "error" || evt.type === "response.failed") {
           console.error("ID read stream error", payload.slice(0, 300));
@@ -263,11 +325,18 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
   }
 
   const date = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
-  const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+  const str = (v: unknown, max: number) =>
+    typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
   try {
     const p = JSON.parse(text) as Record<string, unknown>;
     const { last4Of } = await import("./guest-records");
-    const types = ["passport", "driving_licence", "national_id", "residence_permit", "other"] as const;
+    const types = [
+      "passport",
+      "driving_licence",
+      "national_id",
+      "residence_permit",
+      "other",
+    ] as const;
     return {
       isIdDocument: p["is_id_document"] === true,
       hasHolderPhoto: p["has_holder_photo"] === true,
@@ -278,7 +347,11 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
       expiryDate: date(p["expiry_date"]),
       issuingCountry: str(p["issuing_country"], 60),
       numberLast4: last4Of(
-        typeof p["document_number"] === "string" ? p["document_number"] : typeof p["number_last4"] === "string" ? p["number_last4"] : null,
+        typeof p["document_number"] === "string"
+          ? p["document_number"]
+          : typeof p["number_last4"] === "string"
+            ? p["number_last4"]
+            : null,
       ),
       nationality: str(p["nationality"], 40),
       documentNumber: str(p["document_number"], 40),
@@ -367,10 +440,14 @@ export async function guestSites(hostId: string) {
   const { channels, guest } = await import("@/content/copy");
   const db = await admin();
   const { data } = await db.from("hosts").select("booking_sites").eq("id", hostId).maybeSingle();
-  return resolveSites(await channelLabels(hostId), (data as { booking_sites?: unknown } | null)?.booking_sites, {
-    ...channels,
-    ...guest.platforms,
-  });
+  return resolveSites(
+    await channelLabels(hostId),
+    (data as { booking_sites?: unknown } | null)?.booking_sites,
+    {
+      ...channels,
+      ...guest.platforms,
+    },
+  );
 }
 
 /**
@@ -386,6 +463,10 @@ export async function withLegacy<T>(
   // Postgres says "column … does not exist"; the API layer says it "could not find the '…' column".
   const missing =
     res.error &&
-    (res.error.code === "42703" || res.error.code === "PGRST204" || /column .* does not exist|could not find the '.*' column/i.test(res.error.message));
-  return missing ? ((await legacy()) as { data: T; error: { code?: string; message: string } | null }) : res;
+    (res.error.code === "42703" ||
+      res.error.code === "PGRST204" ||
+      /column .* does not exist|could not find the '.*' column/i.test(res.error.message));
+  return missing
+    ? ((await legacy()) as { data: T; error: { code?: string; message: string } | null })
+    : res;
 }

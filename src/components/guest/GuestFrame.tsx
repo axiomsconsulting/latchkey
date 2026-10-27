@@ -36,24 +36,45 @@ export function GuestFrame({
           <div className={`mx-auto flex ${width} items-center gap-4 py-5`}>
             <LogoMark theme={theme} name={name} className="size-14 bg-transparent text-2xl" />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-2xl uppercase leading-tight tracking-[0.08em] sm:text-3xl">{name}</p>
-              {theme.subname ? <p className="truncate text-sm uppercase tracking-[0.4em] opacity-90">{theme.subname}</p> : null}
+              <p className="truncate font-display text-2xl uppercase leading-tight tracking-[0.08em] sm:text-3xl">
+                {name}
+              </p>
+              {theme.subname ? (
+                <p className="truncate text-sm uppercase tracking-[0.4em] opacity-90">
+                  {theme.subname}
+                </p>
+              ) : null}
             </div>
             {switchable ? (
-              <Link to="/checkin" aria-label={guestCopy.switchProperty} title={guestCopy.switchProperty} className="grid min-h-11 min-w-11 place-items-center rounded-full opacity-90 hover:opacity-100">
+              <Link
+                to="/checkin"
+                aria-label={guestCopy.switchProperty}
+                title={guestCopy.switchProperty}
+                className="grid min-h-11 min-w-11 place-items-center rounded-full opacity-90 hover:opacity-100"
+              >
                 <Repeat className="size-5" />
               </Link>
             ) : null}
           </div>
         </div>
       ) : null}
-      <header className={band ? "hidden" : `relative mx-auto flex ${width} items-center gap-3 pt-6 text-sm font-medium text-muted-foreground`}>
+      <header
+        className={
+          band
+            ? "hidden"
+            : `relative mx-auto flex ${width} items-center gap-3 pt-6 text-sm font-medium text-muted-foreground`
+        }
+      >
         {theme && name ? (
           <>
             <LogoMark theme={theme} name={name} />
             <span className="min-w-0">
               <span className="block truncate font-display text-lg text-foreground">{name}</span>
-              {theme.subname ? <span className="block truncate text-xs uppercase tracking-[0.25em]">{theme.subname}</span> : null}
+              {theme.subname ? (
+                <span className="block truncate text-xs uppercase tracking-[0.25em]">
+                  {theme.subname}
+                </span>
+              ) : null}
             </span>
           </>
         ) : (
@@ -68,12 +89,15 @@ export function GuestFrame({
             title={guestCopy.switchProperty}
             className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:text-foreground"
           >
-            <Repeat className="size-4" /> <span className="hidden sm:inline">{guestCopy.switchProperty}</span>
+            <Repeat className="size-4" />{" "}
+            <span className="hidden sm:inline">{guestCopy.switchProperty}</span>
           </Link>
         ) : null}
       </header>
       <div className="relative">{children}</div>
-      {theme ? <ThemeFooter theme={theme} className={`relative mx-auto mt-6 ${width} pb-8`} /> : null}
+      {theme ? (
+        <ThemeFooter theme={theme} className={`relative mx-auto mt-6 ${width} pb-8`} />
+      ) : null}
     </ThemeScope>
   );
 }

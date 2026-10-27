@@ -26,8 +26,26 @@ import {
 describe("kiosk at rest settings", () => {
   it("starts with the clock screensaver and no night light, safe against anything stored", () => {
     expect(normaliseRest(null)).toEqual(DEFAULT_REST);
-    expect(normaliseRest({ nightLight: "yes", mode: "disco", palette: 3, speed: "warp", otherwise: "tv" })).toEqual(DEFAULT_REST);
-    expect(normaliseRest({ nightLight: true, nightWhen: "quiet", mode: "aurora", palette: "moonlight", speed: 5, otherwise: "blank", clockQr: true })).toEqual({
+    expect(
+      normaliseRest({
+        nightLight: "yes",
+        mode: "disco",
+        palette: 3,
+        speed: "warp",
+        otherwise: "tv",
+      }),
+    ).toEqual(DEFAULT_REST);
+    expect(
+      normaliseRest({
+        nightLight: true,
+        nightWhen: "quiet",
+        mode: "aurora",
+        palette: "moonlight",
+        speed: 5,
+        otherwise: "blank",
+        clockQr: true,
+      }),
+    ).toEqual({
       nightLight: true,
       nightWhen: "quiet",
       mode: "aurora",
@@ -39,14 +57,26 @@ describe("kiosk at rest settings", () => {
   });
 
   it("keeps what was saved before patterns were grouped and speed became a slider", () => {
-    expect(normaliseRest({ mode: "breathe", speed: "slow" })).toMatchObject({ mode: "glow", speed: 2 });
+    expect(normaliseRest({ mode: "breathe", speed: "slow" })).toMatchObject({
+      mode: "glow",
+      speed: 2,
+    });
     // Colours grouped into five families: old choices go to the nearest.
     expect(normaliseRest({ palette: "ocean" }).palette).toBe("moonlight");
     expect(normaliseRest({ palette: "lavender" }).palette).toBe("moonlight");
     expect(normaliseRest({ palette: "sunset" }).palette).toBe("ember");
     expect(normaliseRest({ palette: "forest" }).palette).toBe("meadow");
-    expect(Object.keys(NIGHT_PALETTES)).toEqual(["candle", "ember", "moonlight", "meadow", "pearl"]);
-    expect(normaliseRest({ mode: "steady", speed: "lively" })).toMatchObject({ mode: "glow", speed: 4 });
+    expect(Object.keys(NIGHT_PALETTES)).toEqual([
+      "candle",
+      "ember",
+      "moonlight",
+      "meadow",
+      "pearl",
+    ]);
+    expect(normaliseRest({ mode: "steady", speed: "lively" })).toMatchObject({
+      mode: "glow",
+      speed: 4,
+    });
     expect(normaliseRest({ mode: "sweep" }).mode).toBe("flow");
     expect(normaliseRest({ mode: "cycle", speed: 99 })).toMatchObject({ mode: "flow", speed: 5 });
     expect(NIGHT_MODES).toEqual(["glow", "flow", "aurora"]);
@@ -66,7 +96,10 @@ describe("kiosk at rest settings", () => {
     expect(nightLookFor(null)).toEqual(DEFAULT_NIGHT_LOOK);
     expect(DEFAULT_NIGHT_LOOK.brightness).toBe(1);
     expect(nightLookFor({ brightness: 9, depth: -1 })).toEqual({ brightness: 1, depth: 0 });
-    expect(nightLookFor({ brightness: 0, depth: 0.333 })).toEqual({ brightness: 0.05, depth: 0.33 });
+    expect(nightLookFor({ brightness: 0, depth: 0.333 })).toEqual({
+      brightness: 0.05,
+      depth: 0.33,
+    });
   });
 });
 
@@ -97,7 +130,8 @@ describe("night light colours", () => {
   });
 
   it("glows between nearly full and full brightness, slower when slow", () => {
-    const at = (t: number, speed: number) => nightFrame({ mode: "glow", palette: "candle", speed }, t, 1).level;
+    const at = (t: number, speed: number) =>
+      nightFrame({ mode: "glow", palette: "candle", speed }, t, 1).level;
     expect(at(0, 3)).toBeCloseTo(GLOW_LOW, 5);
     expect(at(PERIODS.glow / 2, 3)).toBeCloseTo(1, 5);
     expect(at(PERIODS.glow / 2, 1)).toBeLessThan(1);
@@ -125,12 +159,22 @@ describe("the QR code at rest", () => {
 });
 
 describe("clock screensaver layout", () => {
-  const five = [{ home: false, c: "LA" }, { home: false, c: "NY" }, { home: true, c: "London" }, { home: false, c: "Dubai" }, { home: false, c: "Tokyo" }];
+  const five = [
+    { home: false, c: "LA" },
+    { home: false, c: "NY" },
+    { home: true, c: "London" },
+    { home: false, c: "Dubai" },
+    { home: false, c: "Tokyo" },
+  ];
   it("shows all five in a row on its side", () => {
     expect(arrangeClocks(five, { qr: false, portrait: false })).toEqual({ main: null, row: five });
   });
   it("keeps one either side of home beside the QR code", () => {
-    expect(arrangeClocks(five, { qr: true, portrait: false }).row.map((x) => x.c)).toEqual(["NY", "London", "Dubai"]);
+    expect(arrangeClocks(five, { qr: true, portrait: false }).row.map((x) => x.c)).toEqual([
+      "NY",
+      "London",
+      "Dubai",
+    ]);
   });
   it("puts home on top when upright, the other four under it", () => {
     const a = arrangeClocks(five, { qr: true, portrait: true });

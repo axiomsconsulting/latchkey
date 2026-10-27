@@ -9,7 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { common, driveAdminCopy, starterAdminCopy } from "@/content/copy";
-import { driveConnectUrl, driveDisconnect, driveStatus, syncPrivateQueue } from "@/lib/attachments.functions";
+import {
+  driveConnectUrl,
+  driveDisconnect,
+  driveStatus,
+  syncPrivateQueue,
+} from "@/lib/attachments.functions";
 import { SECTIONS } from "@/lib/guide";
 import { getStarterSettings, setStarterSection } from "@/lib/site.functions";
 
@@ -28,7 +33,9 @@ export function StarterSectionsAdmin() {
         </h2>
         <p className="text-sm text-muted-foreground">{starterAdminCopy.help}</p>
       </div>
-      {q.data && !q.data.available ? <p className="text-sm text-muted-foreground">{starterAdminCopy.notReady}</p> : null}
+      {q.data && !q.data.available ? (
+        <p className="text-sm text-muted-foreground">{starterAdminCopy.notReady}</p>
+      ) : null}
       <ul className="divide-y divide-border rounded-xl border border-border">
         {SECTIONS.map((s) => {
           const offered = !removed[s.key];
@@ -49,7 +56,9 @@ export function StarterSectionsAdmin() {
                     void setFn({ data: { key: s.key, offered: v } })
                       .then(() => qc.invalidateQueries({ queryKey: ["starter-sections"] }))
                       .then(() => toast.success(starterAdminCopy.saved))
-                      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+                      .catch((e: unknown) =>
+                        toast.error(e instanceof Error ? e.message : common.errorBody),
+                      )
                   }
                 />
               </label>
@@ -93,14 +102,22 @@ export function DriveAdmin() {
       {s ? (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={s.connected ? "default" : "outline"}>{s.connected && s.email ? driveAdminCopy.connected(s.email) : s.connected ? driveAdminCopy.connected("Google") : driveAdminCopy.notConnected}</Badge>
+            <Badge variant={s.connected ? "default" : "outline"}>
+              {s.connected && s.email
+                ? driveAdminCopy.connected(s.email)
+                : s.connected
+                  ? driveAdminCopy.connected("Google")
+                  : driveAdminCopy.notConnected}
+            </Badge>
             <Button
               size="sm"
               disabled={!s.configured}
               onClick={() =>
                 void connectFn()
                   .then((r) => window.location.assign(r.url))
-                  .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+                  .catch((e: unknown) =>
+                    toast.error(e instanceof Error ? e.message : common.errorBody),
+                  )
               }
             >
               {s.connected ? driveAdminCopy.reconnect : driveAdminCopy.connect}
@@ -120,13 +137,19 @@ export function DriveAdmin() {
               </Button>
             ) : null}
           </div>
-          {!s.configured ? <p className="text-sm text-destructive">{driveAdminCopy.missingSecrets}</p> : null}
+          {!s.configured ? (
+            <p className="text-sm text-destructive">{driveAdminCopy.missingSecrets}</p>
+          ) : null}
           {s.queue ? (
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border p-3 text-sm">
               <span className={s.queue.waiting ? "text-destructive" : "text-muted-foreground"}>
-                {s.queue.waiting ? driveAdminCopy.queueWaiting(s.queue.waiting) : driveAdminCopy.queueEmpty}
+                {s.queue.waiting
+                  ? driveAdminCopy.queueWaiting(s.queue.waiting)
+                  : driveAdminCopy.queueEmpty}
               </span>
-              {s.queue.lastError ? <span className="text-xs text-muted-foreground">{s.queue.lastError}</span> : null}
+              {s.queue.lastError ? (
+                <span className="text-xs text-muted-foreground">{s.queue.lastError}</span>
+              ) : null}
               {s.queue.waiting ? (
                 <Button
                   size="sm"
@@ -136,14 +159,17 @@ export function DriveAdmin() {
                     setSyncing(true);
                     void syncFn()
                       .then((r) => toast.success(driveAdminCopy.queueMoved(r.moved, r.waiting)))
-                      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+                      .catch((e: unknown) =>
+                        toast.error(e instanceof Error ? e.message : common.errorBody),
+                      )
                       .finally(() => {
                         setSyncing(false);
                         void q.refetch();
                       });
                   }}
                 >
-                  {syncing ? <Loader2 className="size-4 animate-spin" /> : null} {driveAdminCopy.queueMove}
+                  {syncing ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
+                  {driveAdminCopy.queueMove}
                 </Button>
               ) : null}
             </div>
@@ -155,7 +181,11 @@ export function DriveAdmin() {
               {driveAdminCopy.setup.map((step, i) => (
                 <li key={i}>
                   {step}
-                  {i === 2 ? <code className="mt-1 block break-all rounded bg-muted px-2 py-1 font-mono text-xs text-foreground">{s.callback}</code> : null}
+                  {i === 2 ? (
+                    <code className="mt-1 block break-all rounded bg-muted px-2 py-1 font-mono text-xs text-foreground">
+                      {s.callback}
+                    </code>
+                  ) : null}
                 </li>
               ))}
             </ol>

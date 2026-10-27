@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Server functions for the host dashboard. Reads and writes go through the
  * signed-in user's client so row-level security is always applied; only the
@@ -9,7 +10,13 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
-import { hostOfProperty, isSuperAdmin, requireOwner, requireWrite, SUPER_ADMIN_ONLY } from "@/lib/roles";
+import {
+  hostOfProperty,
+  isSuperAdmin,
+  requireOwner,
+  requireWrite,
+  SUPER_ADMIN_ONLY,
+} from "@/lib/roles";
 import { maskUrl } from "./ical";
 import { RESERVED_SLUGS } from "./theme";
 import { todayInZone } from "./dates";
@@ -31,10 +38,14 @@ const uuid = z.string().uuid();
 
 /** Calls functions added after the generated types (migration 0017). */
 type RpcClient = {
-  rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+  rpc: (
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
 };
 
-const HOST_COLUMNS = "id, business_name, contact_email, contact_phone, currency, timezone, channel_labels";
+const HOST_COLUMNS =
+  "id, business_name, contact_email, contact_phone, currency, timezone, channel_labels";
 
 type Membership = { host_id: string; role: string; hosts: { business_name: string } | null };
 
@@ -69,7 +80,10 @@ async function partnerOnly(
 export const getWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ create: z.boolean().optional(), asPartner: z.boolean().optional() }).optional().parse(input),
+    z
+      .object({ create: z.boolean().optional(), asPartner: z.boolean().optional() })
+      .optional()
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -99,7 +113,12 @@ export const getWorkspace = createServerFn({ method: "GET" })
     // host's permission, which the database checks on every write.
     const { data: superAdmin } = await rpc.rpc("is_super_admin");
     const isSuperAdmin = superAdmin === true;
-    let support: { hostId: string; businessName: string; writable: boolean; until: string | null } | null = null;
+    let support: {
+      hostId: string;
+      businessName: string;
+      writable: boolean;
+      until: string | null;
+    } | null = null;
     if (isSuperAdmin) {
       const { data: prefs } = await (supabase as unknown as { from: (t: string) => any })
         .from("user_prefs")
@@ -108,10 +127,19 @@ export const getWorkspace = createServerFn({ method: "GET" })
         .maybeSingle();
       const target = (prefs as { support_host_id?: string | null } | null)?.support_host_id ?? null;
       if (target) {
-        const { data: t } = await supabase.from("hosts").select("id, business_name, support_access_until").eq("id", target).maybeSingle();
+        const { data: t } = await supabase
+          .from("hosts")
+          .select("id, business_name, support_access_until")
+          .eq("id", target)
+          .maybeSingle();
         if (t) {
           const { data: writable } = await rpc.rpc("support_can_write", { _host_id: t.id });
-          support = { hostId: t.id, businessName: t.business_name, writable: writable === true, until: t.support_access_until };
+          support = {
+            hostId: t.id,
+            businessName: t.business_name,
+            writable: writable === true,
+            until: t.support_access_until,
+          };
           hostId = t.id;
         }
       }
@@ -175,17 +203,28 @@ export const getWorkspace = createServerFn({ method: "GET" })
           () =>
             supabase
               .from("hosts")
-              .select(`${HOST_COLUMNS}, booking_sites, subscription_status, trial_ends_at, stripe_subscription_id, support_access_until`)
+              .select(
+                `${HOST_COLUMNS}, booking_sites, subscription_status, trial_ends_at, stripe_subscription_id, support_access_until`,
+              )
               .eq("id", hostId)
               .single(),
           () =>
             withLegacy(
-              () => supabase.from("hosts").select(`${HOST_COLUMNS}, booking_sites`).eq("id", hostId).single(),
+              () =>
+                supabase
+                  .from("hosts")
+                  .select(`${HOST_COLUMNS}, booking_sites`)
+                  .eq("id", hostId)
+                  .single(),
               () => supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
             ),
         );
       })(),
-      supabase.from("properties").select("*").eq("host_id", hostId).order("created_at", { ascending: true }),
+      supabase
+        .from("properties")
+        .select("*")
+        .eq("host_id", hostId)
+        .order("created_at", { ascending: true }),
     ]);
     if (hostErr) throw new Error(hostErr.message);
 
@@ -292,10 +331,20 @@ const propertyInput = z.object({
   name: z.string().min(1),
   address: z.string().nullable().default(null),
   postcode: z.string().nullable().default(null),
-  country_code: z.string().length(2).transform((v) => v.toUpperCase()),
+  country_code: z
+    .string()
+    .length(2)
+    .transform((v) => v.toUpperCase()),
   // Empty on a new property: a free one is made from its name (property-codes.ts).
-  short_code: z.string().regex(/^([a-z0-9-]{2,})?$/).default(""),
-  check_in_pin: z.string().regex(/^\d{6}$/).nullable().default(null),
+  short_code: z
+    .string()
+    .regex(/^([a-z0-9-]{2,})?$/)
+    .default(""),
+  check_in_pin: z
+    .string()
+    .regex(/^\d{6}$/)
+    .nullable()
+    .default(null),
   timezone: z.string().nullable().default(null),
   default_check_in_time: z.string(),
   default_check_out_time: z.string(),
@@ -317,7 +366,8 @@ export const saveProperty = createServerFn({ method: "POST" })
       const { data: current } = id
         ? await context.supabase.from("properties").select("short_code").eq("id", id).maybeSingle()
         : { data: null };
-      if (current?.short_code !== fields.short_code) throw new Error("That short link is reserved. Try another.");
+      if (current?.short_code !== fields.short_code)
+        throw new Error("That short link is reserved. Try another.");
     }
     // Guest links and door PINs are unique across every host: fill in free ones
     // for a new property, and say plainly (with free alternatives) when one is taken.
@@ -329,11 +379,18 @@ export const saveProperty = createServerFn({ method: "POST" })
       const pool = linkAlternatives(fields.short_code, ctx, () => true, 40);
       const used = await codes.takenAmong("short_code", pool, id);
       const free = linkAlternatives(fields.short_code, ctx, (c) => !used.has(c));
-      throw new Error(`The guest link "${fields.short_code}" is already used by another property.${free.length ? ` Free ones: ${free.join(", ")}.` : ""}`);
+      throw new Error(
+        `The guest link "${fields.short_code}" is already used by another property.${free.length ? ` Free ones: ${free.join(", ")}.` : ""}`,
+      );
     }
     if (!fields.check_in_pin && !id) fields.check_in_pin = await codes.freeDoorPin();
-    else if (fields.check_in_pin && (await codes.takenAmong("check_in_pin", [fields.check_in_pin], id)).size) {
-      throw new Error("That door PIN is already used by another property. Choose another, or make a new one.");
+    else if (
+      fields.check_in_pin &&
+      (await codes.takenAmong("check_in_pin", [fields.check_in_pin], id)).size
+    ) {
+      throw new Error(
+        "That door PIN is already used by another property. Choose another, or make a new one.",
+      );
     }
     const payload = { ...fields, host_id: hostId };
     const q = id
@@ -380,30 +437,63 @@ export const saveRoom = createServerFn({ method: "POST" })
 /** The property's or a room's links to its own listings on the booking sites (migration 0051). */
 export const saveListingLinks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ propertyId: uuid, roomId: uuid.nullable(), urls: z.array(z.string().max(2000)).max(20) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        propertyId: uuid,
+        roomId: uuid.nullable(),
+        urls: z.array(z.string().max(2000)).max(20),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     const { normaliseListingLinks } = await import("./listing-links");
     const listing_links = normaliseListingLinks(data.urls);
     const sb = context.supabase as unknown as { from: (t: string) => any };
     const q = data.roomId
-      ? sb.from("rooms").update({ listing_links }).eq("id", data.roomId).eq("property_id", data.propertyId)
+      ? sb
+          .from("rooms")
+          .update({ listing_links })
+          .eq("id", data.roomId)
+          .eq("property_id", data.propertyId)
       : sb.from("properties").update({ listing_links }).eq("id", data.propertyId);
     const { error } = await q;
-    if (error) throw new Error(/listing_links/.test(error.message) ? "Listing links need the latest update (migration 0051)." : error.message);
+    if (error)
+      throw new Error(
+        /listing_links/.test(error.message)
+          ? "Listing links need the latest update (migration 0051)."
+          : error.message,
+      );
     return { ok: true, listing_links };
   });
 
 /** A room's own Wi-Fi network (migration 0057); empty means the property's. */
 export const saveRoomWifi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ roomId: uuid, name: z.string().trim().max(64), password: z.string().trim().max(128) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        roomId: uuid,
+        name: z.string().trim().max(64),
+        password: z.string().trim().max(128),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as { from: (t: string) => any };
     const { error } = await sb
       .from("rooms")
-      .update({ wifi_name: data.name || null, wifi_password: data.name ? data.password || null : null })
+      .update({
+        wifi_name: data.name || null,
+        wifi_password: data.name ? data.password || null : null,
+      })
       .eq("id", data.roomId);
-    if (error) throw new Error(/wifi_name/.test(error.message) ? "Room Wi-Fi needs the latest update (migration 0057)." : error.message);
+    if (error)
+      throw new Error(
+        /wifi_name/.test(error.message)
+          ? "Room Wi-Fi needs the latest update (migration 0057)."
+          : error.message,
+      );
     return { ok: true };
   });
 
@@ -482,11 +572,23 @@ const bookingInput = z.object({
   check_out_date: z.string(),
   check_in_time: z.string().nullable(),
   check_out_time: z.string().nullable(),
-  status: z.enum(["needs_details", "upcoming", "checked_in", "checked_out", "cancelled", "flagged", "blocked"]),
+  status: z.enum([
+    "needs_details",
+    "upcoming",
+    "checked_in",
+    "checked_out",
+    "cancelled",
+    "flagged",
+    "blocked",
+  ]),
   notes: z.string().nullable(),
   guest_email: z.string().trim().email().max(254).nullable().default(null),
   /** The guest's full number (E.164); sets phone_last4 too. Only sent when the form has it (migration 0050). */
-  guest_phone: z.string().regex(/^\+[1-9]\d{6,14}$/).nullable().optional(),
+  guest_phone: z
+    .string()
+    .regex(/^\+[1-9]\d{6,14}$/)
+    .nullable()
+    .optional(),
   // Only sent when the form has it, so saving works before migration 0030.
   guest_address: z.string().trim().max(400).nullable().optional(),
   /** A booking site the host added; the stay is then stored as channel "other". */
@@ -514,7 +616,15 @@ export const saveBooking = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => bookingInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { id, site_key, stay_amount_pence, stay_amount_includes_tax, guest_address, guest_phone, ...base } = data;
+    const {
+      id,
+      site_key,
+      stay_amount_pence,
+      stay_amount_includes_tax,
+      guest_address,
+      guest_phone,
+      ...base
+    } = data;
     // A stay waiting for details that now has the guest's name is an ordinary upcoming stay.
     if (base.status === "needs_details" && base.guest_full_name?.trim()) base.status = "upcoming";
     // A full number also gives the last 4 digits guests confirm at check-in.
@@ -540,8 +650,20 @@ export const saveBooking = createServerFn({ method: "POST" })
     if (!id) {
       const { withLegacy } = await import("./checkin.server");
       const { data: row, error } = await withLegacy(
-        () => supabase.from("bookings").insert({ ...fields, ...address, source: "manual" } as typeof fields & { source: "manual" }).select("*").single(),
-        () => supabase.from("bookings").insert({ ...fields, source: "manual" }).select("*").single(),
+        () =>
+          supabase
+            .from("bookings")
+            .insert({ ...fields, ...address, source: "manual" } as typeof fields & {
+              source: "manual";
+            })
+            .select("*")
+            .single(),
+        () =>
+          supabase
+            .from("bookings")
+            .insert({ ...fields, source: "manual" })
+            .select("*")
+            .single(),
       );
       if (error) throw new Error(error.message);
       return row;
@@ -572,11 +694,19 @@ export const saveBooking = createServerFn({ method: "POST" })
       () =>
         supabase
           .from("bookings")
-          .update({ ...fields, ...address, manual_fields: Array.from(manual) } as typeof fields & { manual_fields: string[] })
+          .update({ ...fields, ...address, manual_fields: Array.from(manual) } as typeof fields & {
+            manual_fields: string[];
+          })
           .eq("id", id)
           .select("*")
           .single(),
-      () => supabase.from("bookings").update({ ...fields, manual_fields: Array.from(manual) }).eq("id", id).select("*").single(),
+      () =>
+        supabase
+          .from("bookings")
+          .update({ ...fields, manual_fields: Array.from(manual) })
+          .eq("id", id)
+          .select("*")
+          .single(),
     );
     if (error) throw new Error(error.message);
     const timeWarning = await afterTimeChange(supabase, existing as never, row as never);
@@ -593,23 +723,65 @@ export const saveBooking = createServerFn({ method: "POST" })
 async function afterTimeChange(
   db: any,
   before: { check_in_time: string | null; check_out_time: string | null },
-  b: { id: string; room_id: string | null; property_id: string; status: string; check_in_date: string; check_out_date: string; check_in_time: string | null; check_out_time: string | null },
+  b: {
+    id: string;
+    room_id: string | null;
+    property_id: string;
+    status: string;
+    check_in_date: string;
+    check_out_date: string;
+    check_in_time: string | null;
+    check_out_time: string | null;
+  },
 ): Promise<string | null> {
   const t = (v: string | null) => (v ?? "").slice(0, 5);
   const inChanged = t(before.check_in_time) !== t(b.check_in_time) && !!b.check_in_time;
   const outChanged = t(before.check_out_time) !== t(b.check_out_time) && !!b.check_out_time;
-  if ((!inChanged && !outChanged) || ["cancelled", "checked_out", "blocked"].includes(b.status)) return null;
+  if ((!inChanged && !outChanged) || ["cancelled", "checked_out", "blocked"].includes(b.status))
+    return null;
   const { formatUkDate } = await import("./dates");
   const lines = [
-    inChanged ? `Your check-in time is now ${t(b.check_in_time)} on ${formatUkDate(b.check_in_date)}.` : null,
-    outChanged ? `Your check-out time is now ${t(b.check_out_time)} on ${formatUkDate(b.check_out_date)}.` : null,
+    inChanged
+      ? `Your check-in time is now ${t(b.check_in_time)} on ${formatUkDate(b.check_in_date)}.`
+      : null,
+    outChanged
+      ? `Your check-out time is now ${t(b.check_out_time)} on ${formatUkDate(b.check_out_date)}.`
+      : null,
   ].filter(Boolean);
-  await db.from("messages").insert({ booking_id: b.id, direction: "outbound", channel: "stay_page", body: lines.join(" "), sent_at: new Date().toISOString() });
+  await db.from("messages").insert({
+    booking_id: b.id,
+    direction: "outbound",
+    channel: "stay_page",
+    body: lines.join(" "),
+    sent_at: new Date().toISOString(),
+  });
   if (!b.room_id) return null;
-  const { data: p } = await db.from("properties").select("default_check_in_time, default_check_out_time").eq("id", b.property_id).maybeSingle();
+  const { data: p } = await db
+    .from("properties")
+    .select("default_check_in_time, default_check_out_time")
+    .eq("id", b.property_id)
+    .maybeSingle();
   const [{ data: next }, { data: prev }] = await Promise.all([
-    db.from("bookings").select("check_in_time").eq("room_id", b.room_id).eq("check_in_date", b.check_out_date).neq("id", b.id).neq("status", "cancelled").is("mirror_of", null).limit(1).maybeSingle(),
-    db.from("bookings").select("check_out_time").eq("room_id", b.room_id).eq("check_out_date", b.check_in_date).neq("id", b.id).neq("status", "cancelled").is("mirror_of", null).limit(1).maybeSingle(),
+    db
+      .from("bookings")
+      .select("check_in_time")
+      .eq("room_id", b.room_id)
+      .eq("check_in_date", b.check_out_date)
+      .neq("id", b.id)
+      .neq("status", "cancelled")
+      .is("mirror_of", null)
+      .limit(1)
+      .maybeSingle(),
+    db
+      .from("bookings")
+      .select("check_out_time")
+      .eq("room_id", b.room_id)
+      .eq("check_out_date", b.check_in_date)
+      .neq("id", b.id)
+      .neq("status", "cancelled")
+      .is("mirror_of", null)
+      .limit(1)
+      .maybeSingle(),
   ]);
   const { stayAccessFor } = await import("./stay-access.server");
   const { bufferClash } = await import("./stay-times");
@@ -632,7 +804,15 @@ export const importBookings = createServerFn({ method: "POST" })
           .array(
             z.object({
               room_id: uuid.nullable(),
-              channel: z.enum(["airbnb", "booking_com", "homestay", "vrbo", "agoda", "direct", "other"]),
+              channel: z.enum([
+                "airbnb",
+                "booking_com",
+                "homestay",
+                "vrbo",
+                "agoda",
+                "direct",
+                "other",
+              ]),
               guest_full_name: z.string().nullable(),
               reservation_code: z.string().nullable(),
               guest_count: z.number().int().min(1).max(12),
@@ -663,7 +843,10 @@ export const importBookings = createServerFn({ method: "POST" })
       check_out_time: property?.default_check_out_time ?? "11:00",
     }));
 
-    const { data: rows, error } = await context.supabase.from("bookings").insert(payload).select("id");
+    const { data: rows, error } = await context.supabase
+      .from("bookings")
+      .insert(payload)
+      .select("id");
     if (error) throw new Error(error.message);
     return { imported: rows?.length ?? 0 };
   });
@@ -761,7 +944,11 @@ export const saveConnection = createServerFn({ method: "POST" })
     // An added site is stored as "other" plus its key; the key is only sent
     // when set or being cleared, so this works before migration 0021.
     const { data: before } = data.id
-      ? await context.supabase.from("channel_connections").select("*").eq("id", data.id).maybeSingle()
+      ? await context.supabase
+          .from("channel_connections")
+          .select("*")
+          .eq("id", data.id)
+          .maybeSingle()
       : { data: null };
     const base = {
       property_id: data.property_id,
@@ -791,10 +978,16 @@ export const saveConnection = createServerFn({ method: "POST" })
 
     // Moving a link to another site moves its stays too, so the next sync
     // recognises them instead of adding them again.
-    if (before && (before.channel !== base.channel || (before.site_key ?? null) !== (data.site_key ?? null))) {
+    if (
+      before &&
+      (before.channel !== base.channel || (before.site_key ?? null) !== (data.site_key ?? null))
+    ) {
       const { error: moveErr } = await context.supabase
         .from("bookings")
-        .update({ channel: base.channel, ...("site_key" in base ? { site_key: base.site_key } : {}) })
+        .update({
+          channel: base.channel,
+          ...("site_key" in base ? { site_key: base.site_key } : {}),
+        })
         .eq("connection_id", before.id);
       if (moveErr) console.error("Moving stays to the new site failed", moveErr.message);
     }
@@ -832,10 +1025,16 @@ export const deleteConnection = createServerFn({ method: "POST" })
     if (data.withBookings) {
       // The stays this link brought in go too. Any with payments are archived
       // instead, so money records are never lost.
-      const { data: stays } = await context.supabase.from("bookings").select("id").eq("connection_id", data.id);
+      const { data: stays } = await context.supabase
+        .from("bookings")
+        .select("id")
+        .eq("connection_id", data.id);
       const ids = (stays ?? []).map((b) => b.id);
       if (ids.length) {
-        const { data: paid } = await context.supabase.from("payments").select("booking_id").in("booking_id", ids);
+        const { data: paid } = await context.supabase
+          .from("payments")
+          .select("booking_id")
+          .in("booking_id", ids);
         const keep = new Set((paid ?? []).map((p) => p.booking_id));
         const db = context.supabase as unknown as RpcClient & { from: (t: string) => any };
         const gone = ids.filter((id) => !keep.has(id));
@@ -845,15 +1044,15 @@ export const deleteConnection = createServerFn({ method: "POST" })
           removed = gone.length;
         }
         if (keep.size) {
-          await db.from("bookings").update({ archived_at: new Date().toISOString() }).in("id", [...keep]);
+          await db
+            .from("bookings")
+            .update({ archived_at: new Date().toISOString() })
+            .in("id", [...keep]);
           archived = keep.size;
         }
       }
     }
-    const { error } = await context.supabase
-      .from("channel_connections")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("channel_connections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true, removed, archived };
   });
@@ -870,7 +1069,10 @@ export const syncConnectionNow = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!allowed) throw new Error("You do not have access to that connection.");
     // Viewers can see connections, but the sync itself writes bookings.
-    await requireWrite(context.supabase, await hostOfProperty(context.supabase, allowed.property_id));
+    await requireWrite(
+      context.supabase,
+      await hostOfProperty(context.supabase, allowed.property_id),
+    );
 
     const { syncConnection, FeedError } = await import("./ical-sync.server");
     try {
@@ -896,7 +1098,11 @@ export const loadDemoData = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (!(await isSuperAdmin(context.supabase))) {
       await requireOwner(context.supabase, data.hostId);
-      const { count } = await supabaseAdmin.from("properties").select("id", { count: "exact", head: true }).eq("host_id", data.hostId).eq("is_demo", false);
+      const { count } = await supabaseAdmin
+        .from("properties")
+        .select("id", { count: "exact", head: true })
+        .eq("host_id", data.hostId)
+        .eq("is_demo", false);
       if ((count ?? 0) > 0) throw new Error(SUPER_ADMIN_ONLY);
     }
     // Only Latchkey's server may mark rows as demo, so seed with the service role.
@@ -915,8 +1121,28 @@ export type DemoSeed = {
   theme?: Record<string, unknown>;
   rooms?: typeof DEMO_ROOMS;
   connections?: Array<{ roomKey: string; channel: DemoBooking["channel"]; listing_name: string }>;
-  extras?: Array<{ key: string; name: string; description?: string; pricePence: number; unit: string; maxQty: number; isFree?: boolean; autoApprove?: boolean; isLoan?: boolean; breakfast?: unknown }>;
-  trades?: Array<{ name: string; company_name: string; category: string; phone: string; area: string; notes: string; rating: number; is_preferred?: boolean }>;
+  extras?: Array<{
+    key: string;
+    name: string;
+    description?: string;
+    pricePence: number;
+    unit: string;
+    maxQty: number;
+    isFree?: boolean;
+    autoApprove?: boolean;
+    isLoan?: boolean;
+    breakfast?: unknown;
+  }>;
+  trades?: Array<{
+    name: string;
+    company_name: string;
+    category: string;
+    phone: string;
+    area: string;
+    notes: string;
+    rating: number;
+    is_preferred?: boolean;
+  }>;
   guides?: Array<{ section_key: string; summary: string }>;
   windows?: typeof DEMO_UNAVAILABILITY;
 };
@@ -927,61 +1153,75 @@ export type DemoSeed = {
  * (a code: only that property is replaced, so the public demo's properties
  * never wipe each other). Used by the public demo and the recording account too.
  */
-export async function seedDemo(supabase: Client, hostId: string, shortCode?: string, seed: DemoSeed = {}) {
+export async function seedDemo(
+  supabase: Client,
+  hostId: string,
+  shortCode?: string,
+  seed: DemoSeed = {},
+) {
   const bookings = seed.bookings ?? DEMO_BOOKINGS;
   const jobs = seed.jobs ?? DEMO_JOBS;
   const messages = seed.messages ?? DEMO_MESSAGES;
   const demoRooms = seed.rooms ?? DEMO_ROOMS;
   const db = supabase as unknown as { from: (t: string) => any };
   if (shortCode) {
-    await db.from("properties").delete().eq("host_id", hostId).eq("is_demo", true).eq("short_code", shortCode);
+    await db
+      .from("properties")
+      .delete()
+      .eq("host_id", hostId)
+      .eq("is_demo", true)
+      .eq("short_code", shortCode);
   } else {
     await removeDemoRows(supabase, hostId);
   }
 
-    const suffix = Math.random().toString(36).slice(2, 6);
-    const base = {
-      ...DEMO_PROPERTY,
-      check_in_pin: String(100000 + Math.floor(Math.random() * 899999)),
-      ...(seed.property ?? {}),
-      ...(seed.theme ? { theme_config: seed.theme } : {}),
-      short_code: shortCode ?? `${DEMO_PROPERTY.short_code}-${suffix}`,
-      host_id: hostId,
-      is_demo: true,
-    } as Record<string, unknown>;
-    const { withLegacy } = await import("./checkin.server");
-    // A property's own currency needs migration 0047; before it, the business's.
-    const { currency: _currency, ...withoutCurrency } = base;
-    const { data: property, error } = await withLegacy<{ id: string; short_code: string; timezone: string | null } | null>(
-      () => db.from("properties").insert(base).select("*").single(),
-      () => db.from("properties").insert(withoutCurrency).select("*").single(),
-    );
-    if (error || !property) throw new Error(error?.message ?? "Couldn't create the demo property.");
+  const suffix = Math.random().toString(36).slice(2, 6);
+  const base = {
+    ...DEMO_PROPERTY,
+    check_in_pin: String(100000 + Math.floor(Math.random() * 899999)),
+    ...(seed.property ?? {}),
+    ...(seed.theme ? { theme_config: seed.theme } : {}),
+    short_code: shortCode ?? `${DEMO_PROPERTY.short_code}-${suffix}`,
+    host_id: hostId,
+    is_demo: true,
+  } as Record<string, unknown>;
+  const { withLegacy } = await import("./checkin.server");
+  // A property's own currency needs migration 0047; before it, the business's.
+  const { currency: _currency, ...withoutCurrency } = base;
+  const { data: property, error } = await withLegacy<{
+    id: string;
+    short_code: string;
+    timezone: string | null;
+  } | null>(
+    () => db.from("properties").insert(base).select("*").single(),
+    () => db.from("properties").insert(withoutCurrency).select("*").single(),
+  );
+  if (error || !property) throw new Error(error?.message ?? "Couldn't create the demo property.");
 
-    const { data: rooms, error: roomErr } = await supabase
-      .from("rooms")
-      .insert(
-        demoRooms.map((r) => ({
-          property_id: property.id,
-          room_number: r.room_number,
-          display_name: r.display_name,
-          public_title: r.public_title,
-          description: r.description,
-          max_guests: r.max_guests,
-          has_ensuite: r.has_ensuite,
-          sort_order: r.sort_order,
-          is_demo: true,
-        })),
-      )
-      .select("*");
-    if (roomErr) throw new Error(roomErr.message);
+  const { data: rooms, error: roomErr } = await supabase
+    .from("rooms")
+    .insert(
+      demoRooms.map((r) => ({
+        property_id: property.id,
+        room_number: r.room_number,
+        display_name: r.display_name,
+        public_title: r.public_title,
+        description: r.description,
+        max_guests: r.max_guests,
+        has_ensuite: r.has_ensuite,
+        sort_order: r.sort_order,
+        is_demo: true,
+      })),
+    )
+    .select("*");
+  if (roomErr) throw new Error(roomErr.message);
 
-    const roomByKey = new Map(
-      demoRooms.map((r, i) => [r.key, rooms?.[i]?.id ?? null] as const),
-    );
+  const roomByKey = new Map(demoRooms.map((r, i) => [r.key, rooms?.[i]?.id ?? null] as const));
 
-    const today = todayInZone(property.timezone ?? "Europe/London");
-    const { data: stays } = await db.from("bookings").insert(
+  const today = todayInZone(property.timezone ?? "Europe/London");
+  const { data: stays } = await db
+    .from("bookings")
+    .insert(
       bookings.map((b) => ({
         property_id: property.id,
         room_id: roomByKey.get(b.roomKey) ?? null,
@@ -998,118 +1238,148 @@ export async function seedDemo(supabase: Client, hostId: string, shortCode?: str
         is_demo: true,
         ...demoDates(today, b),
       })),
-    ).select("id, guest_full_name");
+    )
+    .select("id, guest_full_name");
 
-    // Open work and a conversation, so Services, housekeeping and messages aren't empty.
-    const stayOf = new Map(((stays ?? []) as Array<{ id: string; guest_full_name: string | null }>).map((x) => [x.guest_full_name, x.id]));
-    await supabase.from("service_jobs").insert(
-      jobs.map((j) => ({
+  // Open work and a conversation, so Services, housekeeping and messages aren't empty.
+  const stayOf = new Map(
+    ((stays ?? []) as Array<{ id: string; guest_full_name: string | null }>).map((x) => [
+      x.guest_full_name,
+      x.id,
+    ]),
+  );
+  await supabase.from("service_jobs").insert(
+    jobs.map((j) => ({
+      host_id: hostId,
+      property_id: property.id,
+      room_id: roomByKey.get(j.roomKey) ?? null,
+      booking_id: j.guest ? (stayOf.get(j.guest) ?? null) : null,
+      source: j.source,
+      category: j.category,
+      title: j.title,
+      note: j.note,
+      urgency: j.urgency,
+      status: j.status,
+      is_demo: true,
+    })),
+  );
+  await supabase.from("messages").insert(
+    messages
+      .filter((m) => stayOf.get(m.guest))
+      .map((m) => {
+        const at = new Date(Date.now() - m.minutesAgo * 60_000).toISOString();
+        return {
+          booking_id: stayOf.get(m.guest)!,
+          direction: m.direction,
+          channel: "stay_page",
+          body: m.body,
+          sent_at: at,
+          created_at: at,
+        };
+      }),
+  );
+
+  if (seed.readiness) {
+    // Today's departures on the housekeeping board (migration 0042; skipped before it).
+    const leaving = bookings.filter((b) => b.check_out_offset === 0);
+    await db
+      .from("room_readiness")
+      .insert(
+        leaving.map((b, i) => ({
+          property_id: property.id,
+          room_id: roomByKey.get(b.roomKey),
+          day: today,
+          status: i === 0 ? "cleaning" : "to_clean",
+          assignee:
+            i === 0
+              ? (seed.trades?.find((t) => t.category === "cleaning")?.name ??
+                "Marta (housekeeping)")
+              : null,
+        })),
+      )
+      .then(
+        () => undefined,
+        () => undefined,
+      );
+  }
+
+  await supabase.from("unavailability_windows").insert(
+    (seed.windows ?? DEMO_UNAVAILABILITY).map((w) => ({
+      property_id: property.id,
+      room_id: null,
+      reason: w.reason,
+      day_of_week: w.day_of_week,
+      start_time: w.start_time,
+      end_time: w.end_time,
+      is_demo: true,
+    })),
+  );
+
+  await db.from("channel_connections").insert(
+    (seed.connections ?? DEMO_CONNECTIONS).map((c) => ({
+      property_id: property.id,
+      room_id: roomByKey.get(c.roomKey) ?? null,
+      channel: c.channel,
+      listing_name: c.listing_name,
+      masked_url: "example-calendar.test/…demo",
+      sync_status: "ok" as const,
+      last_synced_at: new Date(Date.now() - 12 * 60_000).toISOString(),
+      is_demo: true,
+    })),
+  );
+
+  // The regional demos' own price list (with breakfast), tradespeople and guide text.
+  if (seed.extras?.length) {
+    const currency = (base["currency"] as string | undefined) ?? "GBP";
+    await db.from("extras_catalogue").insert(
+      seed.extras.map((e, i) => ({
+        property_id: property.id,
+        item_key: e.key,
+        name: e.name,
+        description: e.description ?? null,
+        price_pence: e.isFree ? 0 : e.pricePence,
+        unit: e.unit,
+        max_qty: e.maxQty,
+        is_free: !!e.isFree,
+        auto_approve: !!e.autoApprove,
+        requires_approval: !e.autoApprove,
+        active: true,
+        is_loan: !!e.isLoan,
+        sort_order: i,
+        currency,
+        options: e.breakfast ? { breakfast: e.breakfast } : {},
+        is_demo: true,
+      })),
+    );
+  }
+  if (seed.trades?.length) {
+    await db.from("trades").insert(
+      seed.trades.map((t) => ({
+        ...t,
         host_id: hostId,
         property_id: property.id,
-        room_id: roomByKey.get(j.roomKey) ?? null,
-        booking_id: j.guest ? (stayOf.get(j.guest) ?? null) : null,
-        source: j.source,
-        category: j.category,
-        title: j.title,
-        note: j.note,
-        urgency: j.urgency,
-        status: j.status,
+        source: "manual",
         is_demo: true,
       })),
     );
-    await supabase.from("messages").insert(
-      messages.filter((m) => stayOf.get(m.guest)).map((m) => {
-        const at = new Date(Date.now() - m.minutesAgo * 60_000).toISOString();
-        return { booking_id: stayOf.get(m.guest)!, direction: m.direction, channel: "stay_page", body: m.body, sent_at: at, created_at: at };
-      }),
-    );
-
-    if (seed.readiness) {
-      // Today's departures on the housekeeping board (migration 0042; skipped before it).
-      const leaving = bookings.filter((b) => b.check_out_offset === 0);
-      await db
-        .from("room_readiness")
-        .insert(
-          leaving.map((b, i) => ({
-            property_id: property.id,
-            room_id: roomByKey.get(b.roomKey),
-            day: today,
-            status: i === 0 ? "cleaning" : "to_clean",
-            assignee: i === 0 ? (seed.trades?.find((t) => t.category === "cleaning")?.name ?? "Marta (housekeeping)") : null,
-          })),
-        )
-        .then(() => undefined, () => undefined);
-    }
-
-    await supabase.from("unavailability_windows").insert(
-      (seed.windows ?? DEMO_UNAVAILABILITY).map((w) => ({
+  }
+  if (seed.guides?.length) {
+    const { SECTIONS } = await import("./guide");
+    await db.from("guides").insert(
+      seed.guides.map((g, i) => ({
         property_id: property.id,
         room_id: null,
-        reason: w.reason,
-        day_of_week: w.day_of_week,
-        start_time: w.start_time,
-        end_time: w.end_time,
+        section_key: g.section_key,
+        title: SECTIONS.find((x) => x.key === g.section_key)?.title ?? g.section_key,
+        summary: g.summary,
+        published: true,
+        sort_order: i + 1,
         is_demo: true,
       })),
     );
+  }
 
-    await db.from("channel_connections").insert(
-      (seed.connections ?? DEMO_CONNECTIONS).map((c) => ({
-        property_id: property.id,
-        room_id: roomByKey.get(c.roomKey) ?? null,
-        channel: c.channel,
-        listing_name: c.listing_name,
-        masked_url: "example-calendar.test/…demo",
-        sync_status: "ok" as const,
-        last_synced_at: new Date(Date.now() - 12 * 60_000).toISOString(),
-        is_demo: true,
-      })),
-    );
-
-    // The regional demos' own price list (with breakfast), tradespeople and guide text.
-    if (seed.extras?.length) {
-      const currency = (base["currency"] as string | undefined) ?? "GBP";
-      await db.from("extras_catalogue").insert(
-        seed.extras.map((e, i) => ({
-          property_id: property.id,
-          item_key: e.key,
-          name: e.name,
-          description: e.description ?? null,
-          price_pence: e.isFree ? 0 : e.pricePence,
-          unit: e.unit,
-          max_qty: e.maxQty,
-          is_free: !!e.isFree,
-          auto_approve: !!e.autoApprove,
-          requires_approval: !e.autoApprove,
-          active: true,
-          is_loan: !!e.isLoan,
-          sort_order: i,
-          currency,
-          options: e.breakfast ? { breakfast: e.breakfast } : {},
-          is_demo: true,
-        })),
-      );
-    }
-    if (seed.trades?.length) {
-      await db.from("trades").insert(seed.trades.map((t) => ({ ...t, host_id: hostId, property_id: property.id, source: "manual", is_demo: true })));
-    }
-    if (seed.guides?.length) {
-      const { SECTIONS } = await import("./guide");
-      await db.from("guides").insert(
-        seed.guides.map((g, i) => ({
-          property_id: property.id,
-          room_id: null,
-          section_key: g.section_key,
-          title: SECTIONS.find((x) => x.key === g.section_key)?.title ?? g.section_key,
-          summary: g.summary,
-          published: true,
-          sort_order: i + 1,
-          is_demo: true,
-        })),
-      );
-    }
-
-    return property as { id: string; short_code: string };
+  return property as { id: string; short_code: string };
 }
 
 /** One regional demo property (src/lib/demo-showcase.ts) on a host: rebuilt from scratch, dates relative to today. */
@@ -1132,24 +1402,71 @@ export async function seedShowcase(supabase: Client, hostId: string, spec: Showc
     theme: spec.theme,
     rooms: spec.rooms,
     bookings: stays,
-    connections: spec.rooms.map((r, i) => ({ roomKey: r.key, channel: spec.channels[i % spec.channels.length]!, listing_name: `${spec.property.name} · ${r.display_name}` })).filter((c) => c.channel !== "direct"),
+    connections: spec.rooms
+      .map((r, i) => ({
+        roomKey: r.key,
+        channel: spec.channels[i % spec.channels.length]!,
+        listing_name: `${spec.property.name} · ${r.display_name}`,
+      }))
+      .filter((c) => c.channel !== "direct"),
     extras: spec.extras,
     trades: spec.trades,
     guides: spec.guides,
     windows: [],
     readiness: true,
     jobs: [
-      ...(asker ? [{ roomKey: asker.roomKey, guest: asker.guest_full_name, source: "guest" as const, category: spec.request.category, title: spec.request.title, note: spec.request.note, urgency: "normal" as const, status: "new" as const }] : []),
-      { roomKey: spec.maintenance.roomKey, guest: null, source: "maintenance" as const, category: spec.maintenance.category, title: spec.maintenance.title, note: spec.maintenance.note, urgency: "low" as const, status: "acknowledged" as const },
+      ...(asker
+        ? [
+            {
+              roomKey: asker.roomKey,
+              guest: asker.guest_full_name,
+              source: "guest" as const,
+              category: spec.request.category,
+              title: spec.request.title,
+              note: spec.request.note,
+              urgency: "normal" as const,
+              status: "new" as const,
+            },
+          ]
+        : []),
+      {
+        roomKey: spec.maintenance.roomKey,
+        guest: null,
+        source: "maintenance" as const,
+        category: spec.maintenance.category,
+        title: spec.maintenance.title,
+        note: spec.maintenance.note,
+        urgency: "low" as const,
+        status: "acknowledged" as const,
+      },
     ] as never,
     messages: [
       ...(asker?.guest_full_name
         ? [
-            { guest: asker.guest_full_name, direction: "inbound" as const, minutesAgo: 140, body: spec.conversation.ask },
-            { guest: asker.guest_full_name, direction: "outbound" as const, minutesAgo: 120, body: spec.conversation.reply },
+            {
+              guest: asker.guest_full_name,
+              direction: "inbound" as const,
+              minutesAgo: 140,
+              body: spec.conversation.ask,
+            },
+            {
+              guest: asker.guest_full_name,
+              direction: "outbound" as const,
+              minutesAgo: 120,
+              body: spec.conversation.reply,
+            },
           ]
         : []),
-      ...(arriving?.guest_full_name ? [{ guest: arriving.guest_full_name, direction: "inbound" as const, minutesAgo: 35, body: spec.conversation.waiting }] : []),
+      ...(arriving?.guest_full_name
+        ? [
+            {
+              guest: arriving.guest_full_name,
+              direction: "inbound" as const,
+              minutesAgo: 35,
+              body: spec.conversation.waiting,
+            },
+          ]
+        : []),
     ] as never,
   });
 }
@@ -1231,7 +1548,11 @@ export const saveCheckinMethods = createServerFn({ method: "POST" })
         propertyId: uuid,
         methods: z.object({
           order: z.array(methodKey).max(3),
-          enabled: z.object({ photo_id: z.boolean(), last4: z.boolean(), self_declare: z.boolean() }),
+          enabled: z.object({
+            photo_id: z.boolean(),
+            last4: z.boolean(),
+            self_declare: z.boolean(),
+          }),
         }),
       })
       .parse(d),
@@ -1330,9 +1651,14 @@ export const undoCheckIn = createServerFn({ method: "POST" })
     const { admin } = await import("./checkin.server");
     const db = await admin();
     const nowIso = new Date().toISOString();
-    await db.from("checkin_sessions").update({ expires_at: nowIso }).eq("booking_id", data.bookingId);
+    await db
+      .from("checkin_sessions")
+      .update({ expires_at: nowIso })
+      .eq("booking_id", data.bookingId);
     await db.from("stay_tokens").update({ expires_at: nowIso }).eq("booking_id", data.bookingId);
-    await db.from("presence_log").insert({ booking_id: data.bookingId, event: "left", source: "host_undo" });
+    await db
+      .from("presence_log")
+      .insert({ booking_id: data.bookingId, event: "left", source: "host_undo" });
     return { ok: true };
   });
 
@@ -1360,7 +1686,8 @@ export const saveBookingSites = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { isBuiltIn, normaliseStoredSites } = await import("./booking-sites");
-    if (data.sites.some((s) => !isBuiltIn(s.key) && !s.label.trim())) throw new Error("Give each site you add a name.");
+    if (data.sites.some((s) => !isBuiltIn(s.key) && !s.label.trim()))
+      throw new Error("Give each site you add a name.");
     const sites = normaliseStoredSites(data.sites);
     // Older screens still read channel_labels, so keep it in step.
     const labels: Record<string, string> = {};
@@ -1372,7 +1699,9 @@ export const saveBookingSites = createServerFn({ method: "POST" })
     });
     if (error?.code === "PGRST202") {
       // Before migration 0021 is applied the function doesn't exist yet.
-      throw new Error("Adding booking sites needs the latest database update. Please try again shortly.");
+      throw new Error(
+        "Adding booking sites needs the latest database update. Please try again shortly.",
+      );
     } else if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -1381,7 +1710,9 @@ export const saveBookingSites = createServerFn({ method: "POST" })
 export const saveChannelLabels = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ hostId: uuid, labels: z.record(z.string(), z.string().trim().max(40)) }).parse(input),
+    z
+      .object({ hostId: uuid, labels: z.record(z.string(), z.string().trim().max(40)) })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const clean: Record<string, string> = {};
@@ -1394,7 +1725,10 @@ export const saveChannelLabels = createServerFn({ method: "POST" })
     });
     if (error?.code === "PGRST202") {
       // Before migration 0017 is applied the function doesn't exist yet.
-      const { error: e2 } = await context.supabase.from("hosts").update({ channel_labels: clean }).eq("id", data.hostId);
+      const { error: e2 } = await context.supabase
+        .from("hosts")
+        .update({ channel_labels: clean })
+        .eq("id", data.hostId);
       if (e2) throw new Error(e2.message);
     } else if (error) throw new Error(error.message);
     return { ok: true };
@@ -1431,4 +1765,3 @@ export const recordSignupSource = createServerFn({ method: "POST" })
       .is("signup_utm", null);
     return { ok: true };
   });
-

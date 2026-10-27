@@ -102,7 +102,10 @@ export function useConnections(propertyId: string | null) {
     queryFn: () => fn({ data: { propertyId: propertyId! } }),
     // Keep the "Syncing…" badges honest while a sync runs.
     refetchInterval: (q) =>
-      (q.state.data?.connections ?? []).some((c) => linkState(c as { sync_status: string; sync_started_at?: string | null }) === "syncing")
+      (q.state.data?.connections ?? []).some(
+        (c) =>
+          linkState(c as { sync_status: string; sync_started_at?: string | null }) === "syncing",
+      )
         ? 4000
         : false,
   });
@@ -122,7 +125,8 @@ export function useAlerts() {
 /** The host's booking sites: built-ins with their wording and icons, then any they added. */
 export function useBookingSites(): Site[] {
   const { data } = useWorkspace();
-  const host = data?.host as { channel_labels?: Record<string, string>; booking_sites?: unknown } | null | undefined;
+  const host = data?.host as
+    { channel_labels?: Record<string, string>; booking_sites?: unknown } | null | undefined;
   return useMemo(
     () => resolveSites(host?.channel_labels ?? {}, host?.booking_sites, channels),
     [host?.channel_labels, host?.booking_sites],

@@ -4,13 +4,16 @@ import { isPlatformDomain, normaliseDomain, txtMatches, verifyRecord } from "../
 
 describe("host domains", () => {
   it("cleans what people paste", () => {
-    expect(normaliseDomain("https://Stay.Hill-Suites.co.uk/path?x=1")).toBe("stay.hill-suites.co.uk");
+    expect(normaliseDomain("https://Stay.Hill-Suites.co.uk/path?x=1")).toBe(
+      "stay.hill-suites.co.uk",
+    );
     expect(normaliseDomain("hillsuites.com.")).toBe("hillsuites.com");
     expect(normaliseDomain("checkin.hillsuites.com:443")).toBe("checkin.hillsuites.com");
   });
 
   it("refuses things that aren't domains", () => {
-    for (const bad of ["", "localhost", "hill suites.com", "-bad.com", "192.168.0.1", "a..b.com"]) expect(normaliseDomain(bad)).toBeNull();
+    for (const bad of ["", "localhost", "hill suites.com", "-bad.com", "192.168.0.1", "a..b.com"])
+      expect(normaliseDomain(bad)).toBeNull();
   });
 
   it("never lets a host take the platform's own domains", () => {

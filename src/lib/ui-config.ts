@@ -33,7 +33,14 @@ export const NAV_BUILT_INS: NavBuiltIn[] = [
   { id: "direct", to: "/app/direct", labelKey: "direct", icon: "heart" },
   { id: "reports", to: "/app/reports", labelKey: "reports", icon: "chart-column" },
   { id: "settings", to: "/app/settings", labelKey: "settings", icon: "settings" },
-  { id: "admin", to: "/app/admin", labelKey: "admin", icon: "shield-check", locked: true, superOnly: true },
+  {
+    id: "admin",
+    to: "/app/admin",
+    labelKey: "admin",
+    icon: "shield-check",
+    locked: true,
+    superOnly: true,
+  },
 ];
 
 export type NavEntry = {
@@ -101,7 +108,12 @@ export function normaliseNav(raw: unknown): NavEntry[] {
     const href = cleanHref(e["href"]);
     const label = str(e["label"], 30);
     if (!href || !label) continue;
-    const iconUrl = typeof e["iconUrl"] === "string" && /^data:image\/(png|svg\+xml|webp);base64,/.test(e["iconUrl"]) && e["iconUrl"].length <= MAX_ICON_DATA_URL ? e["iconUrl"] : undefined;
+    const iconUrl =
+      typeof e["iconUrl"] === "string" &&
+      /^data:image\/(png|svg\+xml|webp);base64,/.test(e["iconUrl"]) &&
+      e["iconUrl"].length <= MAX_ICON_DATA_URL
+        ? e["iconUrl"]
+        : undefined;
     custom++;
     seen.add(id);
     out.push({
@@ -118,7 +130,9 @@ export function normaliseNav(raw: unknown): NavEntry[] {
   // straight after the built-in that comes before them, or at the end.
   for (const [i, b] of NAV_BUILT_INS.entries()) {
     if (seen.has(b.id)) continue;
-    const before = NAV_BUILT_INS.slice(0, i).reverse().find((x) => seen.has(x.id));
+    const before = NAV_BUILT_INS.slice(0, i)
+      .reverse()
+      .find((x) => seen.has(x.id));
     const at = before ? out.findIndex((e) => e.id === before.id) + 1 : out.length;
     out.splice(at, 0, { id: b.id });
     seen.add(b.id);
@@ -127,7 +141,11 @@ export function normaliseNav(raw: unknown): NavEntry[] {
 }
 
 /** The menu someone sees: in order, hidden ones left out, admin only for super admins. */
-export function resolveNav(entries: NavEntry[], labels: Record<string, string>, opts: { superAdmin: boolean; includeHidden?: boolean }): NavItemResolved[] {
+export function resolveNav(
+  entries: NavEntry[],
+  labels: Record<string, string>,
+  opts: { superAdmin: boolean; includeHidden?: boolean },
+): NavItemResolved[] {
   const builtIns = new Map(NAV_BUILT_INS.map((b) => [b.id, b]));
   return entries
     .map((e): NavItemResolved | null => {
@@ -135,7 +153,18 @@ export function resolveNav(entries: NavEntry[], labels: Record<string, string>, 
       if (b) {
         if (b.superOnly && !opts.superAdmin) return null;
         if (e.hidden && !opts.includeHidden) return null;
-        return { id: b.id, label: labels[b.labelKey] ?? b.id, href: b.to, external: false, icon: b.icon, iconUrl: null, iconColour: false, builtIn: true, locked: !!b.locked, superOnly: !!b.superOnly };
+        return {
+          id: b.id,
+          label: labels[b.labelKey] ?? b.id,
+          href: b.to,
+          external: false,
+          icon: b.icon,
+          iconUrl: null,
+          iconColour: false,
+          builtIn: true,
+          locked: !!b.locked,
+          superOnly: !!b.superOnly,
+        };
       }
       if (e.hidden && !opts.includeHidden) return null;
       const href = e.href ?? "/";
@@ -235,12 +264,21 @@ export function normaliseLayouts(raw: unknown): PageLayouts {
     const p = (r[page] && typeof r[page] === "object" ? r[page] : {}) as Record<string, unknown>;
     const ids = def.sections.map((s) => s.id);
     const known = new Set(ids);
-    const order = [...new Set((Array.isArray(p["order"]) ? p["order"] : []).filter((x): x is string => typeof x === "string" && known.has(x)))];
+    const order = [
+      ...new Set(
+        (Array.isArray(p["order"]) ? p["order"] : []).filter(
+          (x): x is string => typeof x === "string" && known.has(x),
+        ),
+      ),
+    ];
     // Sections the admin hasn't placed (new ones in a later release) join their default neighbours:
     // straight after the section that comes before them by default, or before the one after them.
     for (const [i, id] of ids.entries()) {
       if (order.includes(id)) continue;
-      const before = ids.slice(0, i).reverse().find((x) => order.includes(x));
+      const before = ids
+        .slice(0, i)
+        .reverse()
+        .find((x) => order.includes(x));
       if (before) {
         order.splice(order.indexOf(before) + 1, 0, id);
         continue;
@@ -249,7 +287,13 @@ export function normaliseLayouts(raw: unknown): PageLayouts {
       order.splice(after ? order.indexOf(after) : order.length, 0, id);
     }
     const locked = new Set(def.sections.filter((s) => s.locked).map((s) => s.id));
-    const hidden = [...new Set((Array.isArray(p["hidden"]) ? p["hidden"] : []).filter((x): x is string => typeof x === "string" && known.has(x) && !locked.has(x)))];
+    const hidden = [
+      ...new Set(
+        (Array.isArray(p["hidden"]) ? p["hidden"] : []).filter(
+          (x): x is string => typeof x === "string" && known.has(x) && !locked.has(x),
+        ),
+      ),
+    ];
     out[page] = { order, hidden };
   }
   return out;

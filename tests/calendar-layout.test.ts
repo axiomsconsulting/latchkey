@@ -6,11 +6,26 @@ const days = ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"];
 
 describe("spanFor", () => {
   it("covers each night from check-in to the day before check-out", () => {
-    expect(spanFor(days, "2026-10-13", "2026-10-15")).toEqual({ start: 1, length: 2, before: false, after: false });
+    expect(spanFor(days, "2026-10-13", "2026-10-15")).toEqual({
+      start: 1,
+      length: 2,
+      before: false,
+      after: false,
+    });
   });
   it("clips stays that start before or run past the days shown", () => {
-    expect(spanFor(days, "2026-10-10", "2026-10-13")).toEqual({ start: 0, length: 1, before: true, after: false });
-    expect(spanFor(days, "2026-10-15", "2026-10-20")).toEqual({ start: 3, length: 1, before: false, after: true });
+    expect(spanFor(days, "2026-10-10", "2026-10-13")).toEqual({
+      start: 0,
+      length: 1,
+      before: true,
+      after: false,
+    });
+    expect(spanFor(days, "2026-10-15", "2026-10-20")).toEqual({
+      start: 3,
+      length: 1,
+      before: false,
+      after: true,
+    });
   });
   it("ignores stays outside the range", () => {
     expect(spanFor(days, "2026-10-01", "2026-10-12")).toBeNull();

@@ -106,20 +106,18 @@ function blank(propertyId: string, roomId: string | null, defaults?: Props["defa
   };
 }
 
-export function BookingDialog({
-  open,
-  onOpenChange,
-  propertyId,
-  rooms,
-  booking,
-  defaults,
-}: Props) {
+export function BookingDialog({ open, onOpenChange, propertyId, rooms, booking, defaults }: Props) {
   const save = useServerFn(saveBooking);
   const undo = useServerFn(undoCheckIn);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   // The guest's full number, with its country; the last 4 digits come from it.
-  const [phone, setPhone] = useState<{ country: string; national: string; valid: boolean; e164: string | null }>({ country: "GB", national: "", valid: true, e164: null });
+  const [phone, setPhone] = useState<{
+    country: string;
+    national: string;
+    valid: boolean;
+    e164: string | null;
+  }>({ country: "GB", national: "", valid: true, e164: null });
   const [undoing, setUndoing] = useState(false);
 
   async function onUndo() {
@@ -147,11 +145,11 @@ export function BookingDialog({
   const sites = useBookingSites();
   const ws = useWorkspace();
   const currency = (ws.data?.host as { currency?: string } | null | undefined)?.currency ?? "GBP";
-  const country = ((ws.data?.properties ?? []) as Array<{ id: string; country_code?: string | null }>).find((p) => p.id === propertyId)?.country_code;
+  const country = (
+    (ws.data?.properties ?? []) as Array<{ id: string; country_code?: string | null }>
+  ).find((p) => p.id === propertyId)?.country_code;
   const tax = taxTerms(country).name;
-  const [form, setForm] = useState(() =>
-    blank(propertyId, rooms[0]?.id ?? null, defaults),
-  );
+  const [form, setForm] = useState(() => blank(propertyId, rooms[0]?.id ?? null, defaults));
 
   useEffect(() => {
     if (!open) return;
@@ -172,13 +170,17 @@ export function BookingDialog({
         notes: booking.notes ?? "",
         guest_email: booking.guest_email ?? "",
         guest_address: booking.guest_address ?? "",
-        stay_amount: booking.stay_amount_pence != null ? (booking.stay_amount_pence / 100).toFixed(2) : "",
+        stay_amount:
+          booking.stay_amount_pence != null ? (booking.stay_amount_pence / 100).toFixed(2) : "",
         stay_amount_includes_tax: booking.stay_amount_includes_tax ?? true,
       });
     } else {
       setForm(blank(propertyId, rooms[0]?.id ?? null, defaults));
     }
-    const home = ((ws.data?.properties ?? []) as Array<{ id: string; country_code?: string | null }>).find((p) => p.id === propertyId)?.country_code ?? "GB";
+    const home =
+      ((ws.data?.properties ?? []) as Array<{ id: string; country_code?: string | null }>).find(
+        (p) => p.id === propertyId,
+      )?.country_code ?? "GB";
     const split = splitPhone(booking?.guest_phone ?? null, home);
     setPhone({ ...split, valid: true, e164: booking?.guest_phone ?? null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,21 +212,29 @@ export function BookingDialog({
           guest_full_name: form.guest_full_name.trim() || null,
           reservation_code: form.reservation_code.trim() || null,
           guest_count: Number(form.guest_count) || 1,
-          phone_last4: phone.e164 ? phone.e164.replace(/\D/g, "").slice(-4) : /^\d{4}$/.test(form.phone_last4) ? form.phone_last4 : null,
+          phone_last4: phone.e164
+            ? phone.e164.replace(/\D/g, "").slice(-4)
+            : /^\d{4}$/.test(form.phone_last4)
+              ? form.phone_last4
+              : null,
           guest_phone: phone.national.trim() ? phone.e164 : null,
           check_in_date: form.check_in_date,
           check_out_date: form.check_out_date,
           check_in_time: form.check_in_time || null,
           check_out_time: form.check_out_time || null,
           // Details given: no longer waiting for them.
-          status: (form.status === "needs_details" && form.guest_full_name.trim() ? "upcoming" : form.status) as (typeof STATUS_KEYS)[number],
+          status: (form.status === "needs_details" && form.guest_full_name.trim()
+            ? "upcoming"
+            : form.status) as (typeof STATUS_KEYS)[number],
           notes: form.notes.trim() || null,
           guest_email: form.guest_email.trim() || null,
           guest_address: form.guest_address.trim() || null,
           // Only sent when there's an amount to set or clear.
           ...(form.stay_amount.trim() || booking?.stay_amount_pence != null
             ? {
-                stay_amount_pence: form.stay_amount.trim() ? Math.round(Number(form.stay_amount.replace(/[^0-9.]/g, "")) * 100) : null,
+                stay_amount_pence: form.stay_amount.trim()
+                  ? Math.round(Number(form.stay_amount.replace(/[^0-9.]/g, "")) * 100)
+                  : null,
                 stay_amount_includes_tax: form.stay_amount_includes_tax,
               }
             : {}),
@@ -261,7 +271,9 @@ export function BookingDialog({
             <div className="mt-2 space-y-1 rounded-xl bg-muted px-3 py-2 text-sm">
               {booking.mirror_of ? <p>{copy.mirrorNote}</p> : null}
               {booking.listing_title ? (
-                <p className="text-muted-foreground">{copy.listing}: {booking.listing_title}</p>
+                <p className="text-muted-foreground">
+                  {copy.listing}: {booking.listing_title}
+                </p>
               ) : null}
               {booking.feed_status === "TENTATIVE" ? (
                 <p className="text-muted-foreground">{copy.tentative}</p>
@@ -282,13 +294,16 @@ export function BookingDialog({
             <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl bg-muted px-3 py-2 text-sm">
               <span className="flex-1">{copy.undoCheckInHelp}</span>
               <Button type="button" variant="outline" size="sm" disabled={undoing} onClick={onUndo}>
-                {undoing ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+                {undoing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="size-4" />
+                )}
                 {copy.undoCheckIn}
               </Button>
             </div>
           ) : null}
         </DialogHeader>
-
 
         <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
@@ -332,7 +347,12 @@ export function BookingDialog({
                 {sites.map((site) => (
                   <SelectItem key={site.key} value={site.key}>
                     <span className="flex items-center gap-2">
-                      <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} size="1.25em" />
+                      <ChannelIcon
+                        channel={site.key}
+                        iconUrl={site.iconUrl}
+                        label={site.label}
+                        size="1.25em"
+                      />
                       {site.label}
                     </span>
                   </SelectItem>
@@ -423,11 +443,18 @@ export function BookingDialog({
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="phone">{copy.phoneFull}</Label>
-            <PhoneInput id="phone" country={phone.country} national={phone.national} onChange={setPhone} />
+            <PhoneInput
+              id="phone"
+              country={phone.country}
+              national={phone.national}
+              onChange={setPhone}
+            />
             {/* Booking sites often share only the end of the number: that's enough for check-in. */}
             {!phone.national.trim() ? (
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                <Label htmlFor="phone4" className="font-normal text-muted-foreground">{copy.phoneLast4Only}</Label>
+                <Label htmlFor="phone4" className="font-normal text-muted-foreground">
+                  {copy.phoneLast4Only}
+                </Label>
                 <Input
                   id="phone4"
                   inputMode="numeric"

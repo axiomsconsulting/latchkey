@@ -1,10 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Server-only calendar sync. Raw feed URLs live in connection_secrets and are
  * never returned to the browser.
  */
 
 import { mapEventsToBookings, parseIcs, type Channel } from "./ical";
-import { bookingsToCancel, buildPatch, detectRoomClashes, shouldUnhide, type ExistingBooking } from "./sync-logic";
+import {
+  bookingsToCancel,
+  buildPatch,
+  detectRoomClashes,
+  shouldUnhide,
+  type ExistingBooking,
+} from "./sync-logic";
 import { todayInZone } from "./dates";
 import { reconcileRoom, type RoomBooking } from "./room-reconcile";
 
@@ -131,7 +138,10 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
   // database without the column (before migration 0019) still syncs.
   const marker = supabaseAdmin as unknown as { from: (t: string) => any };
   const markSyncing = (on: boolean) =>
-    marker.from("channel_connections").update({ sync_started_at: on ? new Date().toISOString() : null }).eq("id", connectionId);
+    marker
+      .from("channel_connections")
+      .update({ sync_started_at: on ? new Date().toISOString() : null })
+      .eq("id", connectionId);
   await markSyncing(true);
 
   try {
@@ -149,8 +159,18 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       "id, external_uid, connection_id, room_id, status, check_in_date, check_out_date, manual_fields, guest_full_name, phone_last4, guest_count, check_in_time, check_out_time, reservation_code";
     const { withLegacy } = await import("./checkin.server");
     const { data: existingRows } = await withLegacy(
-      () => supabaseAdmin.from("bookings").select(`${cols}, archived_at`).eq("property_id", conn.property_id).eq("channel", conn.channel),
-      () => supabaseAdmin.from("bookings").select(cols).eq("property_id", conn.property_id).eq("channel", conn.channel),
+      () =>
+        supabaseAdmin
+          .from("bookings")
+          .select(`${cols}, archived_at`)
+          .eq("property_id", conn.property_id)
+          .eq("channel", conn.channel),
+      () =>
+        supabaseAdmin
+          .from("bookings")
+          .select(cols)
+          .eq("property_id", conn.property_id)
+          .eq("channel", conn.channel),
     );
 
     const existing = (existingRows ?? []) as unknown as ExistingBooking[];
@@ -179,7 +199,10 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
           Object.assign(payload, { archived_at: null });
           unhidden += 1;
         }
-        await supabaseAdmin.from("bookings").update(payload as never).eq("id", prior.id);
+        await supabaseAdmin
+          .from("bookings")
+          .update(payload as never)
+          .eq("id", prior.id);
         if (Object.keys(patch).length > 0) updated += 1;
       } else {
         const { error } = await supabaseAdmin.from("bookings").insert({
@@ -215,7 +238,10 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       cancelled = toCancel.length;
     }
 
-    if (unhidden) warnings.push(`${unhidden} hidden ${unhidden === 1 ? "stay was" : "stays were"} shown again because the platform changed ${unhidden === 1 ? "it" : "them"}.`);
+    if (unhidden)
+      warnings.push(
+        `${unhidden} hidden ${unhidden === 1 ? "stay was" : "stays were"} shown again because the platform changed ${unhidden === 1 ? "it" : "them"}.`,
+      );
     if (conn.room_id) warnings.push(...(await reconcileRoomById(conn.room_id)));
 
     const status = warnings.length > 0 ? "warning" : "ok";
@@ -271,7 +297,10 @@ export async function reconcileRoomById(roomId: string): Promise<string[]> {
   const rows = (data ?? []) as RoomBooking[];
   const changes = reconcileRoom(rows);
   for (const { id, ...patch } of changes) {
-    await supabaseAdmin.from("bookings").update(patch as never).eq("id", id);
+    await supabaseAdmin
+      .from("bookings")
+      .update(patch as never)
+      .eq("id", id);
   }
   const flagged = changes.filter((c) => c.status === "flagged").length;
   return flagged > 0 ? [`Possible double-booking: ${flagged} stays overlap on this room.`] : [];
@@ -310,11 +339,14 @@ export async function runRetentionSweep(): Promise<number> {
   let hostRows: Array<{ id: string; privacy?: unknown }> = [];
   {
     const withPrivacy = await db.from("hosts").select("id, privacy");
-    hostRows = withPrivacy.error ? ((await db.from("hosts").select("id")).data ?? []) : (withPrivacy.data ?? []);
+    hostRows = withPrivacy.error
+      ? ((await db.from("hosts").select("id")).data ?? [])
+      : (withPrivacy.data ?? []);
   }
   const { data: props } = await db.from("properties").select("id, host_id");
   const propsOf = new Map<string, string[]>();
-  for (const p of (props ?? []) as Array<{ id: string; host_id: string }>) propsOf.set(p.host_id, [...(propsOf.get(p.host_id) ?? []), p.id]);
+  for (const p of (props ?? []) as Array<{ id: string; host_id: string }>)
+    propsOf.set(p.host_id, [...(propsOf.get(p.host_id) ?? []), p.id]);
   // Group properties by cutoff, so each distinct choice is one update.
   const detailGroups = new Map<string, string[]>();
   const messageGroups = new Map<string, string[]>();
@@ -327,21 +359,30 @@ export async function runRetentionSweep(): Promise<number> {
     const m = messagesCutoff(today, choice);
     if (m) messageGroups.set(m, [...(messageGroups.get(m) ?? []), ...ids]);
   }
-  const chunks = <T,>(xs: T[], n = 150) => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
+  const chunks = <T>(xs: T[], n = 150) =>
+    Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
   let anonymised = 0;
   for (const [cutoff, ids] of detailGroups) {
     for (const part of chunks(ids)) {
       const clear = (withPhone: boolean) =>
         db
           .from("bookings")
-          .update({ guest_full_name: null, guest_email: null, phone_last4: null, ...(withPhone ? { guest_phone: null } : {}), notes: null, anonymised_at: new Date().toISOString() })
+          .update({
+            guest_full_name: null,
+            guest_email: null,
+            phone_last4: null,
+            ...(withPhone ? { guest_phone: null } : {}),
+            notes: null,
+            anonymised_at: new Date().toISOString(),
+          })
           .in("property_id", part)
           .lt("check_out_date", cutoff)
           .is("anonymised_at", null)
           .select("id");
       // The full phone number (migration 0050) goes too; before that column exists, the rest still does.
-      let { data, error } = await clear(true);
-      if (error && /guest_phone/.test(error.message)) ({ data } = await clear(false));
+      const first = await clear(true);
+      let data = first.data;
+      if (first.error && /guest_phone/.test(first.error.message)) ({ data } = await clear(false));
       anonymised += data?.length ?? 0;
     }
   }
@@ -349,7 +390,12 @@ export async function runRetentionSweep(): Promise<number> {
     for (const part of chunks(ids)) {
       // A few thousand stays a run at most, so one run never times out.
       for (let round = 0; round < 10; round++) {
-        const { data: stays } = await db.from("bookings").select("id, messages!inner(id)").in("property_id", part).lt("check_out_date", cutoff).limit(300);
+        const { data: stays } = await db
+          .from("bookings")
+          .select("id, messages!inner(id)")
+          .in("property_id", part)
+          .lt("check_out_date", cutoff)
+          .limit(300);
         const stayIds = ((stays ?? []) as Array<{ id: string }>).map((b) => b.id);
         if (!stayIds.length) break;
         await db.from("messages").delete().in("booking_id", stayIds);
@@ -366,12 +412,21 @@ export async function runRetentionSweep(): Promise<number> {
   await supabaseAdmin.from("checkin_sessions").delete().lt("expires_at", new Date().toISOString());
   await supabaseAdmin.from("stay_tokens").delete().lt("expires_at", new Date().toISOString());
   // Demo rate-limit rows are only needed for an hour; keep a day at most.
-  await db.from("demo_starts").delete().lt("at", new Date(Date.now() - 86_400_000).toISOString());
+  await db
+    .from("demo_starts")
+    .delete()
+    .lt("at", new Date(Date.now() - 86_400_000).toISOString());
   // Direct enquiries go a year after they arrived (migration 0043; nothing to do before it).
-  await db.from("direct_enquiries").delete().lt("created_at", new Date(Date.now() - 365 * 86_400_000).toISOString());
+  await db
+    .from("direct_enquiries")
+    .delete()
+    .lt("created_at", new Date(Date.now() - 365 * 86_400_000).toISOString());
   // The team activity history is kept for a year.
   const yearAgo = new Date(Date.now() - 365 * 86_400_000).toISOString();
-  await (supabaseAdmin as unknown as { from: (t: string) => any }).from("audit_log").delete().lt("at", yearAgo);
+  await (supabaseAdmin as unknown as { from: (t: string) => any })
+    .from("audit_log")
+    .delete()
+    .lt("at", yearAgo);
   // Visitor analytics: 13 months, IP addresses cleared after 90 days.
   const { pruneAnalytics } = await import("./analytics.server");
   await pruneAnalytics();
@@ -421,7 +476,15 @@ export async function purgeGuestIds(today: string) {
       .lt("delete_after", today)
       .limit(300);
     if (!data?.length) return;
-    await removeGuestPhotos(data.flatMap((r) => [r.id_photo_path, r.face_photo_path].filter((x): x is string => !!x)));
-    await supabaseAdmin.from("guest_ids").delete().in("id", data.map((r) => r.id));
+    await removeGuestPhotos(
+      data.flatMap((r) => [r.id_photo_path, r.face_photo_path].filter((x): x is string => !!x)),
+    );
+    await supabaseAdmin
+      .from("guest_ids")
+      .delete()
+      .in(
+        "id",
+        data.map((r) => r.id),
+      );
   }
 }

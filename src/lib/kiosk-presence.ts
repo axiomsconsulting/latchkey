@@ -37,7 +37,8 @@ export async function readFix(ask: boolean): Promise<Fix | null> {
   }
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+      (p) =>
+        resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
       () => resolve(null),
       { enableHighAccuracy: true, timeout: 10_000, maximumAge: 10 * 60_000 },
     );

@@ -23,7 +23,12 @@ export function stayFrom(checkIn: string, nights: number, b: Bounds): Stay {
 }
 
 /** A tap on a day: the new stay and which end the next tap sets. */
-export function tapDay(stay: Stay, focus: Focus, day: string, b: Bounds): { stay: Stay; focus: Focus; done: boolean } {
+export function tapDay(
+  stay: Stay,
+  focus: Focus,
+  day: string,
+  b: Bounds,
+): { stay: Stay; focus: Focus; done: boolean } {
   if (day < b.min || day > addDays(b.max, 1)) return { stay, focus, done: false };
   const nights = Math.max(1, nightsBetween(stay.checkIn, stay.checkOut) || 1);
   if (focus === "out" && day > stay.checkIn) {
@@ -61,7 +66,8 @@ export function monthGrid(year: number, month0: number): Array<Array<string | nu
   const days = new Date(Date.UTC(year, month0 + 1, 0)).getUTCDate();
   const lead = (first.getUTCDay() + 6) % 7;
   const cells: Array<string | null> = Array.from({ length: lead }, () => null);
-  for (let d = 1; d <= days; d++) cells.push(`${year}-${String(month0 + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+  for (let d = 1; d <= days; d++)
+    cells.push(`${year}-${String(month0 + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
   while (cells.length % 7) cells.push(null);
   const weeks: Array<Array<string | null>> = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));

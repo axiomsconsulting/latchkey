@@ -25,7 +25,11 @@ export function defaultPlaces(items: Array<{ id: string; wide?: boolean }>): Rec
   return out;
 }
 
-export function readLayout(raw: string | null, defaults: string[], defaultPlace: Record<string, Place> = {}): Layout {
+export function readLayout(
+  raw: string | null,
+  defaults: string[],
+  defaultPlace: Record<string, Place> = {},
+): Layout {
   let saved: Partial<Layout> = {};
   try {
     saved = JSON.parse(raw ?? "{}") as Partial<Layout>;
@@ -33,15 +37,23 @@ export function readLayout(raw: string | null, defaults: string[], defaultPlace:
     saved = {};
   }
   const known = new Set(defaults);
-  const order = (Array.isArray(saved.order) ? saved.order : []).filter((id): id is string => typeof id === "string" && known.has(id));
+  const order = (Array.isArray(saved.order) ? saved.order : []).filter(
+    (id): id is string => typeof id === "string" && known.has(id),
+  );
   // New sections go after the one they follow by default.
   for (const id of defaults) {
     if (order.includes(id)) continue;
-    const before = defaults.slice(0, defaults.indexOf(id)).reverse().find((d) => order.includes(d));
+    const before = defaults
+      .slice(0, defaults.indexOf(id))
+      .reverse()
+      .find((d) => order.includes(d));
     order.splice(before ? order.indexOf(before) + 1 : 0, 0, id);
   }
-  const collapsed = (Array.isArray(saved.collapsed) ? saved.collapsed : []).filter((id): id is string => typeof id === "string" && known.has(id));
-  const savedPlace = saved.place && typeof saved.place === "object" ? (saved.place as Record<string, unknown>) : {};
+  const collapsed = (Array.isArray(saved.collapsed) ? saved.collapsed : []).filter(
+    (id): id is string => typeof id === "string" && known.has(id),
+  );
+  const savedPlace =
+    saved.place && typeof saved.place === "object" ? (saved.place as Record<string, unknown>) : {};
   const place: Record<string, Place> = {};
   for (const id of defaults) {
     const p = savedPlace[id];
@@ -51,10 +63,16 @@ export function readLayout(raw: string | null, defaults: string[], defaultPlace:
 }
 
 export function toggleCollapsed(l: Layout, id: string): Layout {
-  return { ...l, collapsed: l.collapsed.includes(id) ? l.collapsed.filter((x) => x !== id) : [...l.collapsed, id] };
+  return {
+    ...l,
+    collapsed: l.collapsed.includes(id)
+      ? l.collapsed.filter((x) => x !== id)
+      : [...l.collapsed, id],
+  };
 }
 
-export type Band = { kind: "wide"; id: string } | { kind: "cols"; left: string[]; right: string[]; last: string };
+export type Band =
+  { kind: "wide"; id: string } | { kind: "cols"; left: string[]; right: string[]; last: string };
 
 /** The page as bands: each full-width card on its own, and the cards between them in two columns. */
 export function bands(l: Layout, ids: string[] = l.order): Band[] {
@@ -78,7 +96,13 @@ export function bands(l: Layout, ids: string[] = l.order): Band[] {
 }
 
 /** Moves a card next to another (or to the end of a band's column) and gives it that place. */
-export function placeCard(l: Layout, id: string, ref: string, side: "before" | "after", place: Place): Layout {
+export function placeCard(
+  l: Layout,
+  id: string,
+  ref: string,
+  side: "before" | "after",
+  place: Place,
+): Layout {
   if (id === ref && l.place[id] === place) return l;
   const order = l.order.filter((x) => x !== id);
   const at = order.indexOf(ref);
