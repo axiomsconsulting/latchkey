@@ -68,6 +68,7 @@ import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public
 import { Route as ApiPublicInboundEmailSecretRouteImport } from './routes/api/public/inbound-email.$secret'
 import { Route as ApiPublicManifestAppRouteImport } from './routes/api/public/manifest/app'
 import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
+import { Route as ApiPublicPrivateFileRefRouteImport } from './routes/api/public/private-file.$ref'
 import { Route as ApiPublicPushLatestRouteImport } from './routes/api/public/push/latest'
 import { Route as ApiPublicTelegramSecretRouteImport } from './routes/api/public/telegram.$secret'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
@@ -384,6 +385,11 @@ const ApiPublicMcpKeyRoute = ApiPublicMcpKeyRouteImport.update({
   path: '/$key',
   getParentRoute: () => ApiPublicMcpRoute,
 } as any)
+const ApiPublicPrivateFileRefRoute = ApiPublicPrivateFileRefRouteImport.update({
+  id: '/api/public/private-file/$ref',
+  path: '/api/public/private-file/$ref',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPushLatestRoute = ApiPublicPushLatestRouteImport.update({
   id: '/api/public/push/latest',
   path: '/api/public/push/latest',
@@ -486,6 +492,7 @@ export interface FileRoutesByFullPath {
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
@@ -553,6 +560,7 @@ export interface FileRoutesByTo {
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
@@ -623,6 +631,7 @@ export interface FileRoutesById {
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
+  '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
@@ -693,6 +702,7 @@ export interface FileRouteTypes {
     | '/api/public/inbound-email/$secret'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
+    | '/api/public/private-file/$ref'
     | '/api/public/push/latest'
     | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
@@ -760,6 +770,7 @@ export interface FileRouteTypes {
     | '/api/public/inbound-email/$secret'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
+    | '/api/public/private-file/$ref'
     | '/api/public/push/latest'
     | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
@@ -829,6 +840,7 @@ export interface FileRouteTypes {
     | '/api/public/inbound-email/$secret'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
+    | '/api/public/private-file/$ref'
     | '/api/public/push/latest'
     | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
@@ -877,6 +889,7 @@ export interface RootRouteChildren {
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicInboundEmailSecretRoute: typeof ApiPublicInboundEmailSecretRoute
   ApiPublicManifestAppRoute: typeof ApiPublicManifestAppRoute
+  ApiPublicPrivateFileRefRoute: typeof ApiPublicPrivateFileRefRoute
   ApiPublicPushLatestRoute: typeof ApiPublicPushLatestRoute
   ApiPublicTelegramSecretRoute: typeof ApiPublicTelegramSecretRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
@@ -1302,6 +1315,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMcpKeyRouteImport
       parentRoute: typeof ApiPublicMcpRoute
     }
+    '/api/public/private-file/$ref': {
+      id: '/api/public/private-file/$ref'
+      path: '/api/public/private-file/$ref'
+      fullPath: '/api/public/private-file/$ref'
+      preLoaderRoute: typeof ApiPublicPrivateFileRefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/push/latest': {
       id: '/api/public/push/latest'
       path: '/api/public/push/latest'
@@ -1471,6 +1491,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicInboundEmailSecretRoute: ApiPublicInboundEmailSecretRoute,
   ApiPublicManifestAppRoute: ApiPublicManifestAppRoute,
+  ApiPublicPrivateFileRefRoute: ApiPublicPrivateFileRefRoute,
   ApiPublicPushLatestRoute: ApiPublicPushLatestRoute,
   ApiPublicTelegramSecretRoute: ApiPublicTelegramSecretRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,

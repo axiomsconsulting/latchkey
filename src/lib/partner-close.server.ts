@@ -210,25 +210,8 @@ export async function closeAndPlan(
   for (const p of (active ?? []) as Array<{ id: string }>)
     await checkDisputeRate(db, p.id, config, asOf);
 
-  // 4. Old IP and device hashes (D21).
-  const cutoff = hashPurgeBefore(asOf, config.ipHashRetentionDays);
-  const cleared = await db
-    .from("referral_clicks")
-    .update({ ip_hash: null, device_hash: null })
-    .lt("clicked_at", cutoff)
-    .not("ip_hash", "is", null)
-    .select("id");
-  summary.hashesCleared = (cleared.data ?? []).length;
-  await db
-    .from("host_identity_keys")
-    .delete()
-    .in("kind", ["ip_hash", "device_hash"])
-    .lt("seen_at", cutoff);
-  await db
-    .from("partner_identity_keys")
-    .delete()
-    .in("kind", ["ip_hash", "device_hash"])
-    .lt("seen_at", cutoff);
+  // 4. Old IP and device hashes (D21). Also run daily by the privacy clean-up.
+  summary.hashesCleared = await purgePartnerHashes(db, config, asOf);
 
   // 5. Clawbacks: ask for repayment after 3 months with nothing due (6.7(c)); write-offs only below the threshold.
   const { data: open } = await db.from("clawbacks").select("*").eq("status", "open");
@@ -635,4 +618,68 @@ export async function partnerStatement(
       };
     }),
   );
+}
+
+/**
+ * Clears IP and device hashes older than the retention period (agreement
+ * 17.1: 180 days). Run by the daily privacy clean-up whether or not the
+ * month close is switched on, and again by the month close; safe to repeat.
+ */
+export async function purgePartnerHashes(
+  db: AnyDb,
+  config: Pick<PartnerConfig, "ipHashRetentionDays">,
+  asOf: number,
+): Promise<number> {
+  const cutoff = hashPurgeBefore(asOf, config.ipHashRetentionDays);
+  const cleared = await db
+    .from("referral_clicks")
+    .update({ ip_hash: null, device_hash: null })
+    .lt("clicked_at", cutoff)
+    .not("ip_hash", "is", null)
+    .select("id");
+  await db
+    .from("host_identity_keys")
+    .delete()
+    .in("kind", ["ip_hash", "device_hash"])
+    .lt("seen_at", cutoff);
+  await db
+    .from("partner_identity_keys")
+    .delete()
+    .in("kind", ["ip_hash", "device_hash"])
+    .lt("seen_at", cutoff);
+  await db.from("partner_events").update({ ip_hash: null }).lt("created_at", cutoff).not("ip_hash", "is", null);
+  await db.from("partner_id_access_log").update({ ip_hash: null }).lt("viewed_at", cutoff).not("ip_hash", "is", null);
+  return (cleared.data ?? []).length;
+}
+
+/**
+ * Partner ID photos go 30 days after OMS approves or rejects the check
+ * (agreement 17.1); the details read and the result stay. Checks whose
+ * keep-until date has passed (the agreement plus 6 years) go entirely.
+ */
+export async function purgePartnerIdImages(db: AnyDb, asOf: number): Promise<number> {
+  const now = new Date(asOf).toISOString();
+  const { data } = await db
+    .from("partner_id_checks")
+    .select("id, id_image_path, selfie_image_path")
+    .lte("images_delete_after", now)
+    .is("images_deleted_at", null)
+    .limit(300);
+  const rows = (data ?? []) as Array<{ id: string; id_image_path: string | null; selfie_image_path: string | null }>;
+  if (rows.length) {
+    const { removePrivate } = await import("./private-store.server");
+    await removePrivate(rows.flatMap((r) => [r.id_image_path, r.selfie_image_path]));
+    await db
+      .from("partner_id_checks")
+      .update({ id_image_path: null, selfie_image_path: null, images_deleted_at: now })
+      .in("id", rows.map((r) => r.id));
+  }
+  const { data: old } = await db.from("partner_id_checks").select("id, id_image_path, selfie_image_path").lte("retain_until", now).limit(300);
+  const gone = (old ?? []) as Array<{ id: string; id_image_path: string | null; selfie_image_path: string | null }>;
+  if (gone.length) {
+    const { removePrivate } = await import("./private-store.server");
+    await removePrivate(gone.flatMap((r) => [r.id_image_path, r.selfie_image_path]));
+    await db.from("partner_id_checks").delete().in("id", gone.map((r) => r.id));
+  }
+  return rows.length;
 }

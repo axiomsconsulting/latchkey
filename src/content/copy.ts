@@ -3381,8 +3381,12 @@ export const starterAdminCopy = branded({
 });
 
 export const driveAdminCopy = branded({
-  title: "Guide attachments (Google Drive)",
-  help: "Hosts attach photos and documents to their stay guides. They're kept in a Google Drive you connect, in a private folder per host, named after each section. Nothing there is ever shared: guests see files only through short-lived links from Latchkey.",
+  title: "Google Drive: attachments and private records",
+  help: "The Google Drive you connect holds hosts' guide attachments (a folder per host) and Latchkey's private records: guests' ID photos (a folder per business), Commission Partners' ID photos, drawn signatures and signed agreements (a folder per partner), all under \"Latchkey private records (restricted, do not share)\". Nothing there is ever shared: people see files only through short-lived links from Latchkey. If Drive can't be reached, files wait in Latchkey's private storage and move across once it's back, then the copy is removed.",
+  queueEmpty: "Nothing waiting for Google Drive.",
+  queueWaiting: (n: number) => (n === 1 ? "1 private file is waiting to move to Google Drive." : `${n} private files are waiting to move to Google Drive.`),
+  queueMove: "Move them now",
+  queueMoved: (moved: number, left: number) => `${moved} moved to Google Drive${left ? `, ${left} still waiting` : ""}.`,
   connected: (email: string) => `Connected to ${email}`,
   notConnected: "Not connected",
   connect: "Connect Google Drive",
@@ -3392,7 +3396,7 @@ export const driveAdminCopy = branded({
   setupTitle: "One-off set-up in Google Cloud (free)",
   setup: [
     "In Google Cloud Console, create a project, then enable the Google Drive API.",
-    "OAuth consent screen: External, add your email as a test user (or publish it; the drive.file permission needs no Google review).",
+    "OAuth consent screen: External, then Publish app (In production). The drive.file permission needs no Google review. Leave it in Testing and Google ends the connection after 7 days, so files would queue until you reconnect.",
     "Credentials → Create OAuth client ID → Web application. Add this as an authorised redirect URI:",
     "Copy the client ID and secret into Lovable Cloud secrets as GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then press Connect here.",
   ],

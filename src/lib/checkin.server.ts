@@ -304,49 +304,45 @@ export async function readIdDetails(imageDataUrl: string): Promise<import("./gue
 
 /* ------------------------------ guest photos ----------------------------- */
 
-const ID_BUCKET = "guest-ids";
-let bucketReady = false;
-
-/** The private bucket is made on first use, so no setup step is needed. */
-async function ensureIdBucket() {
-  if (bucketReady) return;
-  const db = await admin();
-  const { data } = await db.storage.getBucket(ID_BUCKET);
-  if (!data) {
-    const { error } = await db.storage.createBucket(ID_BUCKET, { public: false, fileSizeLimit: 400 * 1024 });
-    if (error && !/exist/i.test(error.message)) throw new Error(error.message);
-  }
-  bucketReady = true;
-}
-
-/** Saves a small JPEG a guest's device already shrank. Returns its path. */
-export async function storeGuestPhoto(bookingId: string, kind: "id" | "face", dataUrl: string): Promise<string> {
+/**
+ * Saves a small JPEG a guest's device already shrank, in the business's
+ * restricted Google Drive folder (or the queue while Drive is unreachable).
+ * Returns the reference to keep on guest_ids.
+ */
+export async function storeGuestPhoto(
+  bookingId: string,
+  kind: "id" | "face",
+  dataUrl: string,
+  propertyId: string,
+): Promise<string> {
   const m = /^data:image\/jpeg;base64,(.+)$/.exec(dataUrl);
   if (!m) throw new Error("That photo couldn't be saved.");
   const bytes = Buffer.from(m[1]!, "base64");
   if (bytes.length > 400 * 1024) throw new Error("That photo is too large.");
-  await ensureIdBucket();
-  const db = await admin();
-  const path = `${bookingId}/${kind}-${randomBytes(8).toString("hex")}.jpg`;
-  const up = await db.storage.from(ID_BUCKET).upload(path, bytes, { contentType: "image/jpeg" });
-  if (up.error) throw new Error(up.error.message);
-  return path;
+  const { guestOwner, storePrivate } = await import("./private-store.server");
+  const owner = await guestOwner(propertyId);
+  return storePrivate({
+    kind: kind === "id" ? "guest_id" : "guest_face",
+    ownerKey: owner.key,
+    ownerLabel: owner.label,
+    name: `${bookingId}-${kind}-${randomBytes(4).toString("hex")}.jpg`,
+    mime: "image/jpeg",
+    bytes: new Uint8Array(bytes),
+    ref: { table: "guest_ids", column: kind === "id" ? "id_photo_path" : "face_photo_path" },
+  });
 }
 
+/** Deletes guest photos for good, from Google Drive or the queue. */
 export async function removeGuestPhotos(paths: string[]) {
   if (!paths.length) return;
-  const db = await admin();
-  await db.storage.from(ID_BUCKET).remove(paths);
+  const { removePrivate } = await import("./private-store.server");
+  await removePrivate(paths);
 }
 
-/** Short-lived links so photos are only visible while the card is open. */
+/** Short-lived links (10 minutes) so photos are only visible while the card is open. */
 export async function signGuestPhotos(paths: string[]): Promise<Record<string, string>> {
-  const out: Record<string, string> = {};
-  if (!paths.length) return out;
-  const db = await admin();
-  const { data } = await db.storage.from(ID_BUCKET).createSignedUrls(paths, 60 * 10);
-  for (const u of data ?? []) if (u.path && u.signedUrl) out[u.path] = u.signedUrl;
-  return out;
+  const { signPrivateLinks } = await import("./private-store.server");
+  return signPrivateLinks(paths, 600, "guest-photo.jpg");
 }
 
 /**

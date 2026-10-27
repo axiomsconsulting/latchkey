@@ -90,7 +90,11 @@ export async function finishConnect(code: string, redirectUri: string): Promise<
   // A different Google account: its own fresh root folder.
   await saveConnection({ refreshToken: json.refresh_token, email, rootFolderId: before?.email === email ? (before?.rootFolderId ?? null) : null, connectedAt: new Date().toISOString() });
   token = null;
-  if (before?.email !== email) await (await db()).from("host_storage").delete().eq("provider", "google_drive");
+  if (before?.email !== email) {
+    await (await db()).from("host_storage").delete().eq("provider", "google_drive");
+    // Private records start a fresh folder tree in the new account (files already moved stay in the old one).
+    await (await db()).from("drive_folders").delete().neq("key", "");
+  }
 }
 
 export async function disconnect() {
@@ -115,12 +119,13 @@ async function accessToken(): Promise<string> {
   return token.value;
 }
 
-async function drive(path: string, init: RequestInit = {}): Promise<Response> {
+/** A Google Drive API call with the connected account's token (private-store.server.ts uses it too). */
+export async function drive(path: string, init: RequestInit = {}): Promise<Response> {
   const res = await fetch(`https://www.googleapis.com${path}`, { ...init, headers: { authorization: `Bearer ${await accessToken()}`, ...(init.headers ?? {}) } });
   return res;
 }
 
-async function createFolder(name: string, parent: string | null): Promise<string> {
+export async function createFolder(name: string, parent: string | null): Promise<string> {
   const res = await drive("/drive/v3/files?fields=id", {
     method: "POST",
     headers: { "content-type": "application/json" },
