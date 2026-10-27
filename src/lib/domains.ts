@@ -5,14 +5,29 @@
  */
 
 /** Domains the platform itself runs on: never a host's. */
-export const PLATFORM_SUFFIXES = ["omsestates.uk", "lovable.app", "lovable.dev", "lovableproject.com", "workers.dev", "localhost"];
+export const PLATFORM_SUFFIXES = [
+  "omsestates.uk",
+  "lovable.app",
+  "lovable.dev",
+  "lovableproject.com",
+  "workers.dev",
+  "localhost",
+];
 
 /** "https://Stay.Hill-Suites.co.uk/path" → "stay.hill-suites.co.uk", or null if it isn't a usable domain. */
 export function normaliseDomain(input: string): string | null {
   let d = input.trim().toLowerCase();
-  d = d.replace(/^[a-z]+:\/\//, "").replace(/[/?#].*$/, "").replace(/:\d+$/, "").replace(/\.$/, "");
+  d = d
+    .replace(/^[a-z]+:\/\//, "")
+    .replace(/[/?#].*$/, "")
+    .replace(/:\d+$/, "")
+    .replace(/\.$/, "");
   if (d.startsWith("www.") && d.split(".").length > 3) d = d.slice(4);
-  if (d.length > 253 || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(d)) return null;
+  if (
+    d.length > 253 ||
+    !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(d)
+  )
+    return null;
   if (!/[a-z]/.test(d.split(".").pop() ?? "")) return null;
   return d;
 }

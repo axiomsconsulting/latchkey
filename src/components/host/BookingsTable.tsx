@@ -16,7 +16,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { bookings as bookingCopy, bookingTable as copy } from "@/content/copy";
-import { GROUP_ORDER, closedNote, closedReason, nights, stayDates, stayGroup, type ListBooking, type ListFilters, type SortKey, type StayGroup } from "@/lib/booking-list";
+import {
+  GROUP_ORDER,
+  closedNote,
+  closedReason,
+  nights,
+  stayDates,
+  stayGroup,
+  type ListBooking,
+  type ListFilters,
+  type SortKey,
+  type StayGroup,
+} from "@/lib/booking-list";
 import { platformKey, type Site } from "@/lib/booking-sites";
 import { formatUkDate, stayState } from "@/lib/dates";
 import { formatMoney } from "@/lib/invoice";
@@ -52,7 +63,10 @@ function ShowHide({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className={cn("h-11 min-w-0 gap-1.5 px-3", hidden.length && "border-primary", className)}>
+        <Button
+          variant="outline"
+          className={cn("h-11 min-w-0 gap-1.5 px-3", hidden.length && "border-primary", className)}
+        >
           <span className="truncate">{label}</span>
           <span className="shrink-0 rounded-full bg-secondary px-1.5 text-xs">
             {shown}/{options.length}
@@ -69,7 +83,9 @@ function ShowHide({
             checked={!hidden.includes(o.key)}
             // Keep the menu open so several can be ticked in one go.
             onSelect={(e) => e.preventDefault()}
-            onCheckedChange={(on) => onChange(on ? hidden.filter((h) => h !== o.key) : [...hidden, o.key])}
+            onCheckedChange={(on) =>
+              onChange(on ? hidden.filter((h) => h !== o.key) : [...hidden, o.key])
+            }
           >
             {o.label}
           </DropdownMenuCheckboxItem>
@@ -95,10 +111,15 @@ export function BookingFilters({
   total: number;
 }) {
   const groupOptions = GROUP_ORDER.map((g) => ({ key: g, label: copy.groups[g]! }));
-  const roomOptions = [...rooms.map((r) => ({ key: r.id, label: r.display_name })), { key: "none", label: copy.noRoom }];
+  const roomOptions = [
+    ...rooms.map((r) => ({ key: r.id, label: r.display_name })),
+    { key: "none", label: copy.noRoom },
+  ];
   const platformOptions = sites.map((s) => ({ key: s.key, label: s.label }));
   const pastShown = !filters.hideGroups.includes("past");
-  const anyHidden = filters.hideGroups.length + filters.hideRooms.length + filters.hidePlatforms.length > 0 || filters.search;
+  const anyHidden =
+    filters.hideGroups.length + filters.hideRooms.length + filters.hidePlatforms.length > 0 ||
+    filters.search;
 
   // A phone: search on its own row, the three filters sharing the next evenly, then past stays and the count.
   // Wider: all in one row.
@@ -116,23 +137,49 @@ export function BookingFilters({
         />
       </div>
       <div className="grid grid-cols-3 gap-2 lg:flex">
-        <ShowHide label={copy.status} options={groupOptions} hidden={filters.hideGroups} onChange={(h) => onChange({ ...filters, hideGroups: h as StayGroup[] })} />
-        <ShowHide label={copy.rooms} options={roomOptions} hidden={filters.hideRooms} onChange={(h) => onChange({ ...filters, hideRooms: h })} />
-        <ShowHide label={copy.platforms} options={platformOptions} hidden={filters.hidePlatforms} onChange={(h) => onChange({ ...filters, hidePlatforms: h })} />
+        <ShowHide
+          label={copy.status}
+          options={groupOptions}
+          hidden={filters.hideGroups}
+          onChange={(h) => onChange({ ...filters, hideGroups: h as StayGroup[] })}
+        />
+        <ShowHide
+          label={copy.rooms}
+          options={roomOptions}
+          hidden={filters.hideRooms}
+          onChange={(h) => onChange({ ...filters, hideRooms: h })}
+        />
+        <ShowHide
+          label={copy.platforms}
+          options={platformOptions}
+          hidden={filters.hidePlatforms}
+          onChange={(h) => onChange({ ...filters, hidePlatforms: h })}
+        />
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <label className="flex h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm">
           <Switch
             checked={pastShown}
             onCheckedChange={(on) =>
-              onChange({ ...filters, hideGroups: on ? filters.hideGroups.filter((g) => g !== "past") : [...filters.hideGroups, "past"] })
+              onChange({
+                ...filters,
+                hideGroups: on
+                  ? filters.hideGroups.filter((g) => g !== "past")
+                  : [...filters.hideGroups, "past"],
+              })
             }
           />
           {copy.showPast}
         </label>
         <span className="text-sm text-muted-foreground">{copy.shown(shown, total)}</span>
         {anyHidden ? (
-          <Button variant="link" className="h-auto p-0" onClick={() => onChange({ search: "", hideGroups: [], hideRooms: [], hidePlatforms: [] })}>
+          <Button
+            variant="link"
+            className="h-auto p-0"
+            onClick={() =>
+              onChange({ search: "", hideGroups: [], hideRooms: [], hidePlatforms: [] })
+            }
+          >
             {copy.clear}
           </Button>
         ) : null}
@@ -179,27 +226,49 @@ export function BookingsTable({
   onToggle: (id: string) => void;
   onOpen: (id: string) => void;
 }) {
-  if (rows.length === 0) return <div className="card-soft p-8 text-center text-muted-foreground">{copy.nothing}</div>;
-  const roomName = (id: string | null) => rooms.find((r) => r.id === id)?.display_name ?? copy.noRoom;
+  if (rows.length === 0)
+    return <div className="card-soft p-8 text-center text-muted-foreground">{copy.nothing}</div>;
+  const roomName = (id: string | null) =>
+    rooms.find((r) => r.id === id)?.display_name ?? copy.noRoom;
   const site = (b: ListBooking) => sites.find((s) => s.key === platformKey(b));
   const platformLabel = (b: ListBooking) => site(b)?.label ?? b.channel;
   // Closed nights say why they're closed instead of asking for a guest name.
   // Closed nights and stays without a name get their icons here instead of a
   // label: the status icon and the group heading already say what they are.
   const closed = (b: ListBooking) => stayGroup(b, today) === "closed";
-  const name = (b: ListBooking) => (closed(b) ? closedReason(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || bookingCopy.guestUnknown);
+  const name = (b: ListBooking) =>
+    closed(b)
+      ? closedReason(b, allRows ?? rows, platformLabel)
+      : b.guest_full_name?.trim() || bookingCopy.guestUnknown;
   const shownText = (b: ListBooking) =>
-    closed(b) ? closedNote(b, allRows ?? rows, platformLabel) : b.guest_full_name?.trim() || b.reservation_code || "";
+    closed(b)
+      ? closedNote(b, allRows ?? rows, platformLabel)
+      : b.guest_full_name?.trim() || b.reservation_code || "";
   const unnamed = (b: ListBooking) => !closed(b) && !b.guest_full_name?.trim();
   const statusOf = (b: ListBooking) => (b.mirror_of ? "mirror" : stayState(b, today));
   // Mirrors say whose booking they follow; blocks show the host's note, if any.
   const statusDetail = (b: ListBooking) =>
-    b.mirror_of ? closedReason(b, allRows ?? rows, platformLabel) : closed(b) ? closedNote(b, allRows ?? rows, platformLabel) || null : null;
-  const nightsText = (b: ListBooking) => `${nights(b)} ${nights(b) === 1 ? bookingCopy.night : bookingCopy.nights}`;
+    b.mirror_of
+      ? closedReason(b, allRows ?? rows, platformLabel)
+      : closed(b)
+        ? closedNote(b, allRows ?? rows, platformLabel) || null
+        : null;
+  const nightsText = (b: ListBooking) =>
+    `${nights(b)} ${nights(b) === 1 ? bookingCopy.night : bookingCopy.nights}`;
   const guestCell = (b: ListBooking) => (
     <span className="flex min-w-0 items-center gap-1">
-      {rowActions && !selecting ? <span className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>{rowActions(b)}</span> : null}
-      <span className={cn("min-w-0 truncate", closed(b) || unnamed(b) ? "text-sm text-muted-foreground" : "font-medium")} title={name(b)}>
+      {rowActions && !selecting ? (
+        <span className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+          {rowActions(b)}
+        </span>
+      ) : null}
+      <span
+        className={cn(
+          "min-w-0 truncate",
+          closed(b) || unnamed(b) ? "text-sm text-muted-foreground" : "font-medium",
+        )}
+        title={name(b)}
+      >
         {shownText(b)}
       </span>
     </span>
@@ -210,16 +279,32 @@ export function BookingsTable({
     const active = sort.key === key;
     const next = active && sort.dir === "asc" ? "desc" : "asc";
     return (
-      <th key={key} className={cn("px-3 py-2 font-medium", (key === "nights" || key === "amount") && "text-right")}>
+      <th
+        key={key}
+        className={cn(
+          "px-3 py-2 font-medium",
+          (key === "nights" || key === "amount") && "text-right",
+        )}
+      >
         <button
           type="button"
-          onClick={() => onSort(active && sort.dir === "desc" ? { key: "smart", dir: "asc" } : { key, dir: next })}
+          onClick={() =>
+            onSort(
+              active && sort.dir === "desc" ? { key: "smart", dir: "asc" } : { key, dir: next },
+            )
+          }
           className="inline-flex items-center gap-1 hover:text-foreground"
           aria-label={copy.sortBy(copy.cols[key]!)}
           aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
         >
           {copy.cols[key]}
-          {active ? sort.dir === "asc" ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" /> : null}
+          {active ? (
+            sort.dir === "asc" ? (
+              <ArrowUp className="size-3.5" />
+            ) : (
+              <ArrowDown className="size-3.5" />
+            )
+          ) : null}
         </button>
       </th>
     );
@@ -246,16 +331,27 @@ export function BookingsTable({
           </thead>
           <tbody>
             {sections.map(({ b, heading }) => (
-              <BookingRowGroup key={b.id} heading={heading} span={COLUMNS.length + (selecting ? 1 : 0)}>
+              <BookingRowGroup
+                key={b.id}
+                heading={heading}
+                span={COLUMNS.length + (selecting ? 1 : 0)}
+              >
                 <tr
                   id={`stay-${b.id}`}
                   data-tour="booking-row"
-                  className={cn("cursor-pointer border-b border-border last:border-0 hover:bg-muted", picked.has(b.id) && "bg-primary/5")}
+                  className={cn(
+                    "cursor-pointer border-b border-border last:border-0 hover:bg-muted",
+                    picked.has(b.id) && "bg-primary/5",
+                  )}
                   onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
                 >
                   {selecting ? (
                     <td className="px-3" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox checked={picked.has(b.id)} onCheckedChange={() => onToggle(b.id)} aria-label={name(b)} />
+                      <Checkbox
+                        checked={picked.has(b.id)}
+                        onCheckedChange={() => onToggle(b.id)}
+                        aria-label={name(b)}
+                      />
                     </td>
                   ) : null}
                   <td className="w-[34%] min-w-[13rem] max-w-0 px-2 py-2">{guestCell(b)}</td>
@@ -266,8 +362,17 @@ export function BookingsTable({
                   </td>
                   <td className="px-3 py-2">
                     <Tip label={site(b)?.label ?? b.channel}>
-                      <span tabIndex={0} className="inline-flex" aria-label={site(b)?.label ?? b.channel}>
-                        <ChannelIcon channel={b.channel} iconUrl={site(b)?.iconUrl ?? null} label={site(b)?.label ?? b.channel} size="1.25rem" />
+                      <span
+                        tabIndex={0}
+                        className="inline-flex"
+                        aria-label={site(b)?.label ?? b.channel}
+                      >
+                        <ChannelIcon
+                          channel={b.channel}
+                          iconUrl={site(b)?.iconUrl ?? null}
+                          label={site(b)?.label ?? b.channel}
+                          size="1.25rem"
+                        />
                       </span>
                     </Tip>
                   </td>
@@ -288,10 +393,30 @@ export function BookingsTable({
       <ul className="space-y-2 md:hidden">
         {sections.map(({ b, heading }) => (
           <li key={b.id}>
-            {heading ? <p className="mb-1 mt-3 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{copy.groups[heading]}</p> : null}
-            <div className={cn("card-soft flex items-center gap-3 p-3", picked.has(b.id) && "ring-2 ring-primary")}>
-              {selecting ? <Checkbox checked={picked.has(b.id)} onCheckedChange={() => onToggle(b.id)} aria-label={name(b)} /> : null}
-              <ChannelIcon channel={b.channel} iconUrl={site(b)?.iconUrl ?? null} label={site(b)?.label ?? b.channel} size={28} />
+            {heading ? (
+              <p className="mb-1 mt-3 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {copy.groups[heading]}
+              </p>
+            ) : null}
+            <div
+              className={cn(
+                "card-soft flex items-center gap-3 p-3",
+                picked.has(b.id) && "ring-2 ring-primary",
+              )}
+            >
+              {selecting ? (
+                <Checkbox
+                  checked={picked.has(b.id)}
+                  onCheckedChange={() => onToggle(b.id)}
+                  aria-label={name(b)}
+                />
+              ) : null}
+              <ChannelIcon
+                channel={b.channel}
+                iconUrl={site(b)?.iconUrl ?? null}
+                label={site(b)?.label ?? b.channel}
+                size={28}
+              />
               <div className="min-w-0 flex-1">
                 {guestCell(b)}
                 <button
@@ -301,10 +426,16 @@ export function BookingsTable({
                   className="block w-full truncate text-left text-sm text-muted-foreground"
                   aria-label={`${name(b)}: ${stayDates(b.check_in_date, b.check_out_date, today)}`}
                 >
-                  {roomName(b.room_id)} · {stayDates(b.check_in_date, b.check_out_date, today)} · {nightsText(b)}
+                  {roomName(b.room_id)} · {stayDates(b.check_in_date, b.check_out_date, today)} ·{" "}
+                  {nightsText(b)}
                 </button>
               </div>
-              <button type="button" onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))} className="shrink-0" aria-label={name(b)}>
+              <button
+                type="button"
+                onClick={() => (selecting ? onToggle(b.id) : onOpen(b.id))}
+                className="shrink-0"
+                aria-label={name(b)}
+              >
                 <StatusIcon state={statusOf(b)} detail={statusDetail(b)} />
               </button>
             </div>
@@ -316,12 +447,23 @@ export function BookingsTable({
 }
 
 /** A group heading row (in the default order) before the stay's own row. */
-function BookingRowGroup({ heading, span, children }: { heading: StayGroup | null; span: number; children: React.ReactNode }) {
+function BookingRowGroup({
+  heading,
+  span,
+  children,
+}: {
+  heading: StayGroup | null;
+  span: number;
+  children: React.ReactNode;
+}) {
   return (
     <>
       {heading ? (
         <tr className="bg-muted/50">
-          <td colSpan={span} className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <td
+            colSpan={span}
+            className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
             {copy.groups[heading]}
           </td>
         </tr>

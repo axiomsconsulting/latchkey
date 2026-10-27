@@ -21,12 +21,33 @@ export async function pushState(): Promise<PushState> {
 
 export function deviceName(): string {
   const ua = navigator.userAgent;
-  const os = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android" : /Mac/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : "Device";
-  const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Browser";
+  const os = /iPhone/.test(ua)
+    ? "iPhone"
+    : /iPad/.test(ua)
+      ? "iPad"
+      : /Android/.test(ua)
+        ? "Android"
+        : /Mac/.test(ua)
+          ? "Mac"
+          : /Windows/.test(ua)
+            ? "Windows"
+            : "Device";
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /Firefox\//.test(ua)
+      ? "Firefox"
+      : /Chrome\//.test(ua)
+        ? "Chrome"
+        : /Safari\//.test(ua)
+          ? "Safari"
+          : "Browser";
   return `${os} · ${browser}`;
 }
 
-export async function turnOnPush(publicKey: string, save: (endpoint: string, device: string) => Promise<{ token: string }>): Promise<void> {
+export async function turnOnPush(
+  publicKey: string,
+  save: (endpoint: string, device: string) => Promise<{ token: string }>,
+): Promise<void> {
   const reg = await serviceWorker();
   if (!reg) throw new Error("needs-app");
   const permission = await Notification.requestPermission();
@@ -34,7 +55,10 @@ export async function turnOnPush(publicKey: string, save: (endpoint: string, dev
   const ready = await navigator.serviceWorker.ready;
   const sub =
     (await ready.pushManager.getSubscription()) ??
-    (await ready.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(publicKey) as BufferSource }));
+    (await ready.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: fromB64url(publicKey) as BufferSource,
+    }));
   const { token } = await save(sub.endpoint, deviceName());
   ready.active?.postMessage({ type: "push-token", token });
 }

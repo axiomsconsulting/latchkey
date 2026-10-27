@@ -11,16 +11,28 @@ const CORS = {
 };
 
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body, null, 2), { status, headers: { "Content-Type": "application/json", ...CORS } });
+  return new Response(JSON.stringify(body, null, 2), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS },
+  });
 }
 
 async function handle(request: Request, splat: string): Promise<Response> {
   const { OPERATIONS, matchRoute, openApi, parseInput } = await import("@/lib/api-spec");
   const path = `/${splat}`.replace(/\/+$/, "") || "/";
-  if (request.method === "GET" && path === "/openapi.json") return json(openApi(new URL(request.url).origin));
+  if (request.method === "GET" && path === "/openapi.json")
+    return json(openApi(new URL(request.url).origin));
   const match = matchRoute(request.method, path);
   if (!match) {
-    return json({ error: { code: "not_found", message: `No ${request.method} ${path}. See /developers for the ${OPERATIONS.length} actions.` } }, 404);
+    return json(
+      {
+        error: {
+          code: "not_found",
+          message: `No ${request.method} ${path}. See /developers for the ${OPERATIONS.length} actions.`,
+        },
+      },
+      404,
+    );
   }
   const { ApiError, authenticate, runOperation } = await import("@/lib/api-handlers.server");
   try {
@@ -39,9 +51,13 @@ async function handle(request: Request, splat: string): Promise<Response> {
     if (!parsed.ok) return json({ error: { code: "bad_input", message: parsed.problem } }, 400);
     return json(await runOperation(caller, match.op, parsed.input, "rest"));
   } catch (err) {
-    if (err instanceof ApiError) return json({ error: { code: err.code, message: err.message } }, err.status);
+    if (err instanceof ApiError)
+      return json({ error: { code: err.code, message: err.message } }, err.status);
     console.error("API failed", match.op.id, err);
-    return json({ error: { code: "server_error", message: "Something went wrong. Please try again." } }, 500);
+    return json(
+      { error: { code: "server_error", message: "Something went wrong. Please try again." } },
+      500,
+    );
   }
 }
 

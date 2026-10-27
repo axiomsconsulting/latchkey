@@ -39,7 +39,8 @@ function ActivityPage() {
     queryKey: ["activity", hostId],
     enabled: !!hostId && isOwner,
     initialPageParam: undefined as number | undefined,
-    queryFn: ({ pageParam }) => fetchPage({ data: { hostId, ...(pageParam ? { before: pageParam } : {}) } }),
+    queryFn: ({ pageParam }) =>
+      fetchPage({ data: { hostId, ...(pageParam ? { before: pageParam } : {}) } }),
     getNextPageParam: (last) => (last.more ? last.items[last.items.length - 1]?.id : undefined),
   });
 
@@ -62,7 +63,11 @@ function ActivityPage() {
         </ol>
       )}
       {pages.hasNextPage ? (
-        <Button variant="outline" onClick={() => void pages.fetchNextPage()} disabled={pages.isFetchingNextPage}>
+        <Button
+          variant="outline"
+          onClick={() => void pages.fetchNextPage()}
+          disabled={pages.isFetchingNextPage}
+        >
           {pages.isFetchingNextPage ? <Loader2 className="size-4 animate-spin" /> : null}
           {copy.more}
         </Button>
@@ -92,7 +97,11 @@ function readable(v: string | null | undefined): string {
 function ActivityItem({ row }: { row: ActivityRow }) {
   const name = rowName(row.changed);
   const changes = fieldChanges(row.action, row.changed);
-  const [open, setOpen] = useState<{ field: string; from: string | null; to: string | null } | null>(null);
+  const [open, setOpen] = useState<{
+    field: string;
+    from: string | null;
+    to: string | null;
+  } | null>(null);
   return (
     <li className="min-w-0 space-y-1 p-4">
       <p className="break-words">
@@ -111,7 +120,14 @@ function ActivityItem({ row }: { row: ActivityRow }) {
                   {c.field}: {c.hidden ? copy.redacted : `${c.from ?? "—"} → ${c.to ?? "—"}`}
                 </span>
                 {long ? (
-                  <Button variant="ghost" size="sm" className="h-7 shrink-0 px-2" onClick={() => setOpen({ field: c.field, from: c.from ?? null, to: c.to ?? null })}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 shrink-0 px-2"
+                    onClick={() =>
+                      setOpen({ field: c.field, from: c.from ?? null, to: c.to ?? null })
+                    }
+                  >
                     <Maximize2 className="size-3.5" /> {copy.view}
                   </Button>
                 ) : null}
@@ -125,7 +141,13 @@ function ActivityItem({ row }: { row: ActivityRow }) {
   );
 }
 
-function ValueWindow({ change, onClose }: { change: { field: string; from: string | null; to: string | null } | null; onClose: () => void }) {
+function ValueWindow({
+  change,
+  onClose,
+}: {
+  change: { field: string; from: string | null; to: string | null } | null;
+  onClose: () => void;
+}) {
   const [wrap, setWrap] = useState(true);
   return (
     <Dialog open={!!change} onOpenChange={(o) => (o ? null : onClose())}>
@@ -150,7 +172,9 @@ function ValuePane({ label, value, wrap }: { label: string; value: string; wrap:
   return (
     <section className="flex min-w-0 flex-col rounded-xl border border-border">
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
         <Button
           variant="ghost"
           size="sm"
@@ -162,10 +186,17 @@ function ValuePane({ label, value, wrap }: { label: string; value: string; wrap:
             })
           }
         >
-          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {copied ? copy.copied : copy.copy}
+          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}{" "}
+          {copied ? copy.copied : copy.copy}
         </Button>
       </div>
-      <pre className={wrap ? "max-h-[55vh] overflow-auto whitespace-pre-wrap break-all p-3 font-mono text-xs" : "max-h-[55vh] overflow-auto whitespace-pre p-3 font-mono text-xs"}>
+      <pre
+        className={
+          wrap
+            ? "max-h-[55vh] overflow-auto whitespace-pre-wrap break-all p-3 font-mono text-xs"
+            : "max-h-[55vh] overflow-auto whitespace-pre p-3 font-mono text-xs"
+        }
+      >
         {value}
       </pre>
     </section>

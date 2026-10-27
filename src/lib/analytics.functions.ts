@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Visitor analytics: linking a browser to the signed-in person, and the
  * super admin's dashboard. Matching happens in the database
@@ -24,7 +25,11 @@ export const identifyVisit = createServerFn({ method: "POST" })
       const { DEMO_EMAIL } = await import("./demo-account");
       if (claims.email?.toLowerCase() === DEMO_EMAIL) return { ok: false };
       const { identifyVisitor } = await import("./analytics.server");
-      await identifyVisitor(data.visitorId, claims.sub, claims.is_anonymous ? null : claims.email || null);
+      await identifyVisitor(
+        data.visitorId,
+        claims.sub,
+        claims.is_anonymous ? null : claims.email || null,
+      );
     } catch {
       // Analytics never gets in the way of signing in.
     }
@@ -34,7 +39,10 @@ export const identifyVisit = createServerFn({ method: "POST" })
 const PAGE = 1000;
 
 /** Reads up to `max` rows, a page at a time (the API returns 1,000 at most). */
-async function all<T>(query: (from: number, to: number) => Promise<{ data: T[] | null; error: unknown }>, max = 20_000): Promise<T[]> {
+async function all<T>(
+  query: (from: number, to: number) => Promise<{ data: T[] | null; error: unknown }>,
+  max = 20_000,
+): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; from < max; from += PAGE) {
     const { data, error } = await query(from, from + PAGE - 1);
@@ -57,18 +65,34 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
     const since = new Date(Date.now() - data.days * 86_400_000).toISOString();
 
     const probe = await db.from("analytics_visits").select("id").limit(1);
-    if (probe.error) return { migrationPending: true, visits: [], visitors: [], profiles: [], views: [], truncated: false };
+    if (probe.error)
+      return {
+        migrationPending: true,
+        visits: [],
+        visitors: [],
+        profiles: [],
+        views: [],
+        truncated: false,
+      };
 
     const visits = await all<any>((a, b) =>
       db
         .from("analytics_visits")
-        .select("id, visitor_id, started_at, pages, duration_ms, entry_path, referrer, utm_source, ip, country, region, city, is_bot")
+        .select(
+          "id, visitor_id, started_at, pages, duration_ms, entry_path, referrer, utm_source, ip, country, region, city, is_bot",
+        )
         .gte("started_at", since)
         .order("started_at", { ascending: false })
         .range(a, b),
     );
-    const views = await all<any>((a, b) =>
-      db.from("analytics_views").select("visit_id, path, title, at, duration_ms").gte("at", since).order("at", { ascending: false }).range(a, b),
+    const views = await all<any>(
+      (a, b) =>
+        db
+          .from("analytics_views")
+          .select("visit_id, path, title, at, duration_ms")
+          .gte("at", since)
+          .order("at", { ascending: false })
+          .range(a, b),
       50_000,
     );
     const visitorIds = [...new Set(visits.map((v) => v.visitor_id as string))];
@@ -90,7 +114,9 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
       profiles.push(...(rows ?? []));
     }
     const { data: team } = await db.from("super_admins").select("email");
-    const teamEmails = new Set(((team ?? []) as Array<{ email: string }>).map((t) => t.email.toLowerCase()));
+    const teamEmails = new Set(
+      ((team ?? []) as Array<{ email: string }>).map((t) => t.email.toLowerCase()),
+    );
 
     return {
       migrationPending: false,
@@ -130,7 +156,13 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
         firstSeen: p.first_seen as string,
         isTeam: !!p.email && teamEmails.has(String(p.email).toLowerCase()),
       })),
-      views: views.map((v) => ({ visitId: v.visit_id as string, path: v.path as string, title: v.title as string | null, at: v.at as string, durationMs: Number(v.duration_ms) })),
+      views: views.map((v) => ({
+        visitId: v.visit_id as string,
+        path: v.path as string,
+        title: v.title as string | null,
+        at: v.at as string,
+        durationMs: Number(v.duration_ms),
+      })),
     };
   });
 
@@ -150,5 +182,8 @@ export const getLaunchFunnel = createServerFn({ method: "GET" })
       .limit(50_000);
     if (error) return { migrationPending: true, rows: [] };
     const { funnelRows } = await import("./analytics");
-    return { migrationPending: false, rows: funnelRows((events ?? []) as Parameters<typeof funnelRows>[0]) };
+    return {
+      migrationPending: false,
+      rows: funnelRows((events ?? []) as Parameters<typeof funnelRows>[0]),
+    };
   });

@@ -10,7 +10,8 @@ import { common, guideAttachCopy as copy } from "@/content/copy";
 import { MAX_ATTACHMENT_BYTES, MAX_PER_SECTION, kindFor } from "@/lib/attachments";
 import { deleteGuideAttachment, uploadGuideAttachment } from "@/lib/attachments.functions";
 
-const ACCEPT = "image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.ppt,.pptx";
+const ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,application/pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.ppt,.pptx";
 
 /** Big photos are scaled to 2000px (they still look sharp on any phone) to save space. */
 async function shrinkPhoto(file: File): Promise<Blob> {
@@ -39,20 +40,38 @@ function toBase64(blob: Blob): Promise<string> {
  * will, remove. Kept in the host's own private folder, named after the
  * section; shared by every room.
  */
-export function SectionAttachments({ propertyId, sectionKey, items, ready }: { propertyId: string; sectionKey: string; items: Attachment[]; ready: boolean }) {
+export function SectionAttachments({
+  propertyId,
+  sectionKey,
+  items,
+  ready,
+}: {
+  propertyId: string;
+  sectionKey: string;
+  items: Attachment[];
+  ready: boolean;
+}) {
   const qc = useQueryClient();
   const upload = useServerFn(uploadGuideAttachment);
   const remove = useServerFn(deleteGuideAttachment);
   const input = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["guide-attachments", propertyId] }), qc.invalidateQueries({ queryKey: ["guide", propertyId] })]);
+  const refresh = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["guide-attachments", propertyId] }),
+      qc.invalidateQueries({ queryKey: ["guide", propertyId] }),
+    ]);
 
   async function add(files: FileList | null) {
     if (!files?.length) return;
     setBusy("add");
     try {
       for (const file of [...files].slice(0, MAX_PER_SECTION - items.length)) {
-        const mime = file.type || (file.name.endsWith(".docx") ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "");
+        const mime =
+          file.type ||
+          (file.name.endsWith(".docx")
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : "");
         if (!kindFor(mime)) {
           toast.error(copy.wrongType(file.name));
           continue;
@@ -62,7 +81,15 @@ export function SectionAttachments({ propertyId, sectionKey, items, ready }: { p
           toast.error(copy.tooBig(file.name));
           continue;
         }
-        await upload({ data: { propertyId, sectionKey, name: file.name, mime: blob === file ? mime : "image/jpeg", data: await toBase64(blob) } });
+        await upload({
+          data: {
+            propertyId,
+            sectionKey,
+            name: file.name,
+            mime: blob === file ? mime : "image/jpeg",
+            data: await toBase64(blob),
+          },
+        });
       }
       await refresh();
       toast.success(copy.added);
@@ -82,9 +109,26 @@ export function SectionAttachments({ propertyId, sectionKey, items, ready }: { p
         </p>
         {ready ? (
           <>
-            <input ref={input} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => void add(e.target.files)} />
-            <Button size="sm" variant="outline" disabled={busy !== null || items.length >= MAX_PER_SECTION} onClick={() => input.current?.click()}>
-              {busy === "add" ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />} {copy.add}
+            <input
+              ref={input}
+              type="file"
+              multiple
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => void add(e.target.files)}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy !== null || items.length >= MAX_PER_SECTION}
+              onClick={() => input.current?.click()}
+            >
+              {busy === "add" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Paperclip className="size-4" />
+              )}{" "}
+              {copy.add}
             </Button>
           </>
         ) : null}
@@ -115,7 +159,12 @@ export function SectionAttachments({ propertyId, sectionKey, items, ready }: { p
                     }
                   }}
                 >
-                  {busy === a.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} {copy.remove(a.name)}
+                  {busy === a.id ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}{" "}
+                  {copy.remove(a.name)}
                 </Button>
               </li>
             ))}

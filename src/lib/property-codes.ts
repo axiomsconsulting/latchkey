@@ -16,8 +16,41 @@ import { RESERVED_SLUGS } from "./theme";
 
 /** Little words, in English and the languages hosts most often name places in. */
 const ARTICLES = [
-  "the", "a", "an", "and", "of", "at", "on", "in", "by", "to", "for", "with", "n",
-  "le", "la", "les", "l", "el", "los", "las", "il", "lo", "de", "du", "des", "d", "der", "die", "das", "het", "den", "y", "e", "et", "und",
+  "the",
+  "a",
+  "an",
+  "and",
+  "of",
+  "at",
+  "on",
+  "in",
+  "by",
+  "to",
+  "for",
+  "with",
+  "n",
+  "le",
+  "la",
+  "les",
+  "l",
+  "el",
+  "los",
+  "las",
+  "il",
+  "lo",
+  "de",
+  "du",
+  "des",
+  "d",
+  "der",
+  "die",
+  "das",
+  "het",
+  "den",
+  "y",
+  "e",
+  "et",
+  "und",
 ];
 
 /**
@@ -29,31 +62,185 @@ const ARTICLES = [
  */
 const DESCRIPTORS = [
   // Hotels
-  "hotel", "hotels", "motel", "motels", "aparthotel", "aparthotels", "apart", "boutique", "resort", "resorts", "spa", "suites", "suite",
-  "townhouse", "metro", "grand", "luxury", "premier", "plaza", "palace",
+  "hotel",
+  "hotels",
+  "motel",
+  "motels",
+  "aparthotel",
+  "aparthotels",
+  "apart",
+  "boutique",
+  "resort",
+  "resorts",
+  "spa",
+  "suites",
+  "suite",
+  "townhouse",
+  "metro",
+  "grand",
+  "luxury",
+  "premier",
+  "plaza",
+  "palace",
   // Guest accommodation
-  "guest", "guests", "guesthouse", "guesthouses", "house", "houses", "home", "homes", "homestay", "homestays",
-  "b", "bb", "bnb", "bandb", "bed", "beds", "breakfast", "inn", "inns", "tavern", "pub", "arms", "restaurant", "rooms", "room",
-  "farmhouse", "farm", "manor", "hall", "court", "lodge", "lodges", "lodging", "lodgings", "pension",
+  "guest",
+  "guests",
+  "guesthouse",
+  "guesthouses",
+  "house",
+  "houses",
+  "home",
+  "homes",
+  "homestay",
+  "homestays",
+  "b",
+  "bb",
+  "bnb",
+  "bandb",
+  "bed",
+  "beds",
+  "breakfast",
+  "inn",
+  "inns",
+  "tavern",
+  "pub",
+  "arms",
+  "restaurant",
+  "rooms",
+  "room",
+  "farmhouse",
+  "farm",
+  "manor",
+  "hall",
+  "court",
+  "lodge",
+  "lodges",
+  "lodging",
+  "lodgings",
+  "pension",
   // Serviced accommodation and short lets
-  "sa", "serviced", "service", "accommodation", "accommodations", "accom", "apartment", "apartments", "apts", "apt", "flat", "flats",
-  "studio", "studios", "residence", "residences", "residency", "stay", "stays", "staycation", "let", "lets", "lettings", "letting",
-  "rental", "rentals", "holiday", "holidays", "vacation", "vacations", "short", "property", "properties", "living",
+  "sa",
+  "serviced",
+  "service",
+  "accommodation",
+  "accommodations",
+  "accom",
+  "apartment",
+  "apartments",
+  "apts",
+  "apt",
+  "flat",
+  "flats",
+  "studio",
+  "studios",
+  "residence",
+  "residences",
+  "residency",
+  "stay",
+  "stays",
+  "staycation",
+  "let",
+  "lets",
+  "lettings",
+  "letting",
+  "rental",
+  "rentals",
+  "holiday",
+  "holidays",
+  "vacation",
+  "vacations",
+  "short",
+  "property",
+  "properties",
+  "living",
   // Hostels, self-catering, outdoors
-  "hostel", "hostels", "backpackers", "bunkhouse", "cottage", "cottages", "cabin", "cabins", "chalet", "chalets", "villa", "villas",
-  "barn", "barns", "retreat", "retreats", "camping", "campsite", "glamping", "caravan", "caravans", "park", "parks", "lodgepark",
+  "hostel",
+  "hostels",
+  "backpackers",
+  "bunkhouse",
+  "cottage",
+  "cottages",
+  "cabin",
+  "cabins",
+  "chalet",
+  "chalets",
+  "villa",
+  "villas",
+  "barn",
+  "barns",
+  "retreat",
+  "retreats",
+  "camping",
+  "campsite",
+  "glamping",
+  "caravan",
+  "caravans",
+  "park",
+  "parks",
+  "lodgepark",
   // Abroad
-  "hote", "hostal", "albergo", "locanda", "pensione", "gasthaus", "gasthof", "pousada", "posada", "hacienda", "riad", "ryokan", "auberge",
-  "chambres", "maison", "casa", "domus", "haus", "hof",
+  "hote",
+  "hostal",
+  "albergo",
+  "locanda",
+  "pensione",
+  "gasthaus",
+  "gasthof",
+  "pousada",
+  "posada",
+  "hacienda",
+  "riad",
+  "ryokan",
+  "auberge",
+  "chambres",
+  "maison",
+  "casa",
+  "domus",
+  "haus",
+  "hof",
   // Business words
-  "ltd", "limited", "llc", "llp", "plc", "co", "company", "group", "collection", "hospitality", "uk",
+  "ltd",
+  "limited",
+  "llc",
+  "llp",
+  "plc",
+  "co",
+  "company",
+  "group",
+  "collection",
+  "hospitality",
+  "uk",
 ];
 
 const SKIP = new Set([...ARTICLES, ...DESCRIPTORS]);
 
 /** Words that only make sense with the next one ("Old Rectory", "St Ives", "Little Barn"). */
 const MODIFIERS = new Set([
-  "old", "olde", "ye", "new", "royal", "little", "great", "big", "upper", "lower", "north", "south", "east", "west", "st", "saint", "no", "number", "sir", "lady", "lord", "king", "kings", "queen", "queens",
+  "old",
+  "olde",
+  "ye",
+  "new",
+  "royal",
+  "little",
+  "great",
+  "big",
+  "upper",
+  "lower",
+  "north",
+  "south",
+  "east",
+  "west",
+  "st",
+  "saint",
+  "no",
+  "number",
+  "sir",
+  "lady",
+  "lord",
+  "king",
+  "kings",
+  "queen",
+  "queens",
 ]);
 
 export const LINK = { min: 3, max: 40 } as const;
@@ -101,7 +288,11 @@ export function linkProblem(code: string): LinkProblem | null {
 export function areaCode(postcode: string | null | undefined): string {
   const p = (postcode ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   if (!p) return "";
-  const out = p.includes(" ") ? p.split(" ")[0]! : p.length > 4 && /^[a-z]{1,2}\d/.test(p) ? p.slice(0, -3) : p;
+  const out = p.includes(" ")
+    ? p.split(" ")[0]!
+    : p.length > 4 && /^[a-z]{1,2}\d/.test(p)
+      ? p.slice(0, -3)
+      : p;
   return out.replace(/[^a-z0-9]/g, "").slice(0, 5);
 }
 
@@ -118,7 +309,11 @@ export function townFrom(address: string | null | undefined): string {
   return "";
 }
 
-export type LinkContext = { name: string; address?: string | null | undefined; postcode?: string | null | undefined };
+export type LinkContext = {
+  name: string;
+  address?: string | null | undefined;
+  postcode?: string | null | undefined;
+};
 
 const dedupe = (xs: string[]) => [...new Set(xs.filter((x) => x && !linkProblem(x)))];
 
@@ -129,7 +324,10 @@ const dedupe = (xs: string[]) => [...new Set(xs.filter((x) => x && !linkProblem(
 export function linkCandidates(ctx: LinkContext): string[] {
   const words = distinctiveWords(ctx.name);
   // A short or leading word ("St Ives", "No 5", "Old Rectory") reads better joined to the next.
-  const first = words[0] && (words[0].length < LINK.min || MODIFIERS.has(words[0])) && words[1] ? `${words[0]}-${words[1]}` : (words[0] ?? "stay");
+  const first =
+    words[0] && (words[0].length < LINK.min || MODIFIERS.has(words[0])) && words[1]
+      ? `${words[0]}-${words[1]}`
+      : (words[0] ?? "stay");
   const rest = words.slice(first.includes("-") ? 2 : 1);
   const town = townFrom(ctx.address);
   const area = areaCode(ctx.postcode);
@@ -150,7 +348,13 @@ export function linkCandidates(ctx: LinkContext): string[] {
  * words from the name, the town, the postcode area, the year, then numbers.
  * `isFree` says which are free; only those are offered.
  */
-export function linkAlternatives(desired: string, ctx: LinkContext, isFree: (code: string) => boolean, count = 3, year = new Date().getFullYear()): string[] {
+export function linkAlternatives(
+  desired: string,
+  ctx: LinkContext,
+  isFree: (code: string) => boolean,
+  count = 3,
+  year = new Date().getFullYear(),
+): string[] {
   const base = cleanLink(desired) || linkCandidates(ctx)[0] || "stay";
   const used = new Set(base.split("-"));
   const words = distinctiveWords(ctx.name).filter((w) => !used.has(w));

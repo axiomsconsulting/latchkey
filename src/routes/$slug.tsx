@@ -25,9 +25,15 @@ export const Route = createFileRoute("/$slug")({
     return {
       meta: [
         { title: `${name} — welcome` },
-        { name: "description", content: `Check in, find your room and ask for anything during your stay at ${name}.` },
+        {
+          name: "description",
+          content: `Check in, find your room and ask for anything during your stay at ${name}.`,
+        },
         { property: "og:title", content: `${name} — welcome` },
-        { property: "og:description", content: `Check yourself in and find your guest guide at ${name}.` },
+        {
+          property: "og:description",
+          content: `Check yourself in and find your guest guide at ${name}.`,
+        },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary" },
       ],
@@ -45,29 +51,61 @@ function PropertyHome() {
   const p = Route.useLoaderData();
   return (
     <GuestFrame theme={p.theme} name={p.name}>
-      <main className={cn("mx-auto flex max-w-4xl flex-col gap-8 py-12 sm:py-20", p.theme.layout === "centred" && "items-center text-center")}>
-        {p.theme.layout === "centred" && !p.theme.headerBand ? <BrandBlock theme={p.theme} name={p.name} /> : null}
+      <main
+        className={cn(
+          "mx-auto flex max-w-4xl flex-col gap-8 py-12 sm:py-20",
+          p.theme.layout === "centred" && "items-center text-center",
+        )}
+      >
+        {p.theme.layout === "centred" && !p.theme.headerBand ? (
+          <BrandBlock theme={p.theme} name={p.name} />
+        ) : null}
         <div className="space-y-4">
-          {p.theme.eyebrow ? <p className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">{p.theme.eyebrow}</p> : null}
-          <h1 className="text-4xl sm:text-6xl">{welcomeTitle(p.theme, p.name, `Welcome to ${p.name}`)}</h1>
-          <p className={cn("max-w-xl text-lg text-muted-foreground", p.theme.layout === "centred" && "mx-auto")}>
-            {p.theme.welcomeBody || "Check yourself in, find your room and ask for anything you need. No app, no sign-up."}
+          {p.theme.eyebrow ? (
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+              {p.theme.eyebrow}
+            </p>
+          ) : null}
+          <h1 className="text-4xl sm:text-6xl">
+            {welcomeTitle(p.theme, p.name, `Welcome to ${p.name}`)}
+          </h1>
+          <p
+            className={cn(
+              "max-w-xl text-lg text-muted-foreground",
+              p.theme.layout === "centred" && "mx-auto",
+            )}
+          >
+            {p.theme.welcomeBody ||
+              "Check yourself in, find your room and ask for anything you need. No app, no sign-up."}
           </p>
-          {p.theme.features.length ? <ThemeFeatures theme={p.theme} className={cn("pt-2", p.theme.layout === "centred" && "justify-center text-left")} /> : null}
+          {p.theme.features.length ? (
+            <ThemeFeatures
+              theme={p.theme}
+              className={cn("pt-2", p.theme.layout === "centred" && "justify-center text-left")}
+            />
+          ) : null}
         </div>
         {p.theme.coverImageUrl ? (
-          <img src={p.theme.coverImageUrl} alt="" className="aspect-[16/7] w-full rounded-2xl object-cover shadow-soft" />
+          <img
+            src={p.theme.coverImageUrl}
+            alt=""
+            className="aspect-[16/7] w-full rounded-2xl object-cover shadow-soft"
+          />
         ) : null}
         <div className="grid w-full gap-3 sm:grid-cols-2">
           <Button asChild size="touch-xl" className="justify-between">
             <Link to="/kiosk/$code" params={{ code: p.code }} search={{ guest: true }}>
-              <span className="flex items-center gap-2"><KeyRound className="size-6" /> {copy.startCta}</span>
+              <span className="flex items-center gap-2">
+                <KeyRound className="size-6" /> {copy.startCta}
+              </span>
               <ArrowRight className="size-6" />
             </Link>
           </Button>
           <Button asChild size="touch-xl" variant="outline" className="justify-between">
             <Link to="/kiosk/$code" params={{ code: p.code }}>
-              <span className="flex items-center gap-2"><Tablet className="size-6" /> Front-door tablet mode</span>
+              <span className="flex items-center gap-2">
+                <Tablet className="size-6" /> Front-door tablet mode
+              </span>
               <ArrowRight className="size-6" />
             </Link>
           </Button>
@@ -77,7 +115,10 @@ function PropertyHome() {
         </p>
       </main>
       <footer className="mx-auto flex max-w-4xl justify-end pb-8">
-        <Link to="/auth" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+        <Link
+          to="/auth"
+          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+        >
           Host portal
         </Link>
       </footer>

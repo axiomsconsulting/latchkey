@@ -96,9 +96,16 @@ export interface PartnerStore {
    * 10.4: a dispute on a charge not recorded yet (it may never be a
    * referred host's). Kept by charge id; the latest status wins.
    */
-  savePendingDispute(chargeId: string, status: "open" | "won" | "lost", amountPence: number | null, eventId: string): Promise<void>;
+  savePendingDispute(
+    chargeId: string,
+    status: "open" | "won" | "lost",
+    amountPence: number | null,
+    eventId: string,
+  ): Promise<void>;
   /** The pending dispute for a charge just recorded, if any (then marked applied). */
-  takePendingDispute(chargeId: string): Promise<{ status: "open" | "won" | "lost"; amount_pence: number | null } | null>;
+  takePendingDispute(
+    chargeId: string,
+  ): Promise<{ status: "open" | "won" | "lost"; amount_pence: number | null } | null>;
   updateCharge(chargeId: string, patch: Partial<ChargeRecord>): Promise<void>;
   updateReferral(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Inserts lines; one already there (same invoice, same bonus) is skipped. */
@@ -310,7 +317,16 @@ async function onInvoicePaid(
       await holdForDispute(s, fresh, chargeId, `${event.id}:pending_dispute`);
       const rec = await s.chargeRecord(chargeId);
       if (pending.status === "lost" && rec)
-        await closeDispute(s, config, fresh, rec, chargeId, "lost", pending.amount_pence ?? rec.amount_pence, `${event.id}:pending_dispute_lost`);
+        await closeDispute(
+          s,
+          config,
+          fresh,
+          rec,
+          chargeId,
+          "lost",
+          pending.amount_pence ?? rec.amount_pence,
+          `${event.id}:pending_dispute_lost`,
+        );
     }
   }
   return "handled";
@@ -469,7 +485,12 @@ async function onDisputeCreated(event: StripeObj, s: PartnerStore): Promise<Outc
 }
 
 /** Withholds the commission and bonus tied to a disputed charge (10.4). */
-async function holdForDispute(s: PartnerStore, r: Referral, chargeId: string, eventId: string): Promise<Outcome> {
+async function holdForDispute(
+  s: PartnerStore,
+  r: Referral,
+  chargeId: string,
+  eventId: string,
+): Promise<Outcome> {
   await s.updateCharge(chargeId, { dispute_status: "open" });
   const lines = await s.linesForReferral(r.id);
   const hold = lines
@@ -517,12 +538,26 @@ async function onDisputeClosed(
   const rec = await s.chargeRecord(chargeId);
   if (!rec) {
     if (dispute.status === "won" || dispute.status === "lost")
-      await s.savePendingDispute(chargeId, dispute.status, Number(dispute.amount ?? 0) || null, event.id);
+      await s.savePendingDispute(
+        chargeId,
+        dispute.status,
+        Number(dispute.amount ?? 0) || null,
+        event.id,
+      );
     return "not_ours";
   }
   const r = await s.referral(rec.referral_id);
   if (!r) return "not_ours";
-  return closeDispute(s, config, r, rec, chargeId, String(dispute.status), Number(dispute.amount ?? rec.amount_pence), event.id);
+  return closeDispute(
+    s,
+    config,
+    r,
+    rec,
+    chargeId,
+    String(dispute.status),
+    Number(dispute.amount ?? rec.amount_pence),
+    event.id,
+  );
 }
 
 /** A dispute's outcome: won releases what was held; lost claws it back (10.4, 10.5). */
@@ -580,10 +615,7 @@ async function closeDispute(
   }
   if (status === "lost") {
     await s.updateCharge(chargeId, { dispute_status: "lost" });
-    const amount = Math.min(
-      rec.amount_pence,
-      Math.max(0, disputedPence || rec.amount_pence),
-    );
+    const amount = Math.min(rec.amount_pence, Math.max(0, disputedPence || rec.amount_pence));
     const plan = applyClawback(
       {
         cause: "chargeback",

@@ -21,7 +21,10 @@ export function StayInvoice({ token, place }: { token: string; place: string }) 
   const fetchInvoice = useServerFn(getStayInvoice);
   const create = useServerFn(createStayInvoice);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["stay-invoice", token], queryFn: () => fetchInvoice({ data: { token } }) });
+  const q = useQuery({
+    queryKey: ["stay-invoice", token],
+    queryFn: () => fetchInvoice({ data: { token } }),
+  });
   const [changing, setChanging] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [address, setAddress] = useState("");
@@ -53,7 +56,10 @@ export function StayInvoice({ token, place }: { token: string; place: string }) 
 
   const inv = d.invoice;
   if (inv) {
-    const url = typeof window === "undefined" ? `/invoice/${inv.token}` : `${window.location.origin}/invoice/${inv.token}`;
+    const url =
+      typeof window === "undefined"
+        ? `/invoice/${inv.token}`
+        : `${window.location.origin}/invoice/${inv.token}`;
     const mail = `mailto:${encodeURIComponent(inv.email ?? "")}?subject=${encodeURIComponent(copy.emailSubject(inv.number, place))}&body=${encodeURIComponent(copy.emailBody(url))}`;
     return (
       <section aria-labelledby="invoice" className="card-soft p-5">
@@ -84,7 +90,8 @@ export function StayInvoice({ token, place }: { token: string; place: string }) 
               })
             }
           >
-            {copied ? <Check className="size-5" /> : <Copy className="size-5" />} {copied ? copy.copied : copy.copyLink}
+            {copied ? <Check className="size-5" /> : <Copy className="size-5" />}{" "}
+            {copied ? copy.copied : copy.copyLink}
           </Button>
         </div>
       </section>
@@ -138,7 +145,13 @@ export function StayInvoice({ token, place }: { token: string; place: string }) 
           </div>
           <div className="space-y-1">
             <Label htmlFor="inv-address">{copy.address}</Label>
-            <Textarea id="inv-address" rows={4} autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <Textarea
+              id="inv-address"
+              rows={4}
+              autoComplete="street-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
             <p className="text-sm text-muted-foreground">{copy.addressHint}</p>
           </div>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>

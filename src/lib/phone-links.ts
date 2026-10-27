@@ -6,7 +6,8 @@
  */
 
 /** A full number in international form, e.g. +447700900123. */
-export const isE164 = (v: string | null | undefined): v is string => !!v && /^\+[1-9]\d{6,14}$/.test(v);
+export const isE164 = (v: string | null | undefined): v is string =>
+  !!v && /^\+[1-9]\d{6,14}$/.test(v);
 
 /** The last 4 digits, as guests confirm at check-in. */
 export const lastFour = (e164: string) => e164.replace(/\D/g, "").slice(-4);

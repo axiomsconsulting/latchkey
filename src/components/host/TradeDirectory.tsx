@@ -4,7 +4,13 @@ import { BadgeCheck, ExternalLink, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { trades as copy } from "@/content/copy";
 import { SERVICE_CATEGORIES } from "@/lib/services";
 import { localSites, mapsSearch, tradeTerm } from "@/lib/trades";
@@ -50,29 +56,50 @@ export function TradeDirectory({
           <div className="space-y-2">
             <Label htmlFor="trade-cat">{copy.jobLabel}</Label>
             <Select value={category} onValueChange={pickCategory}>
-              <SelectTrigger id="trade-cat" className="h-11"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="trade-cat" className="h-11">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {SERVICE_CATEGORIES.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                {SERVICE_CATEGORIES.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="trade-term">{copy.termLabel}</Label>
-            <Input id="trade-term" className="h-11" value={term} onChange={(e) => setTerm(e.target.value)} placeholder={tradeTerm(category)} />
+            <Input
+              id="trade-term"
+              className="h-11"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              placeholder={tradeTerm(category)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="trade-area">{copy.areaLabel}</Label>
-            <Input id="trade-area" className="h-11" value={area} onChange={(e) => setArea(e.target.value)} placeholder="HP13 5AA" />
+            <Input
+              id="trade-area"
+              className="h-11"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              placeholder="HP13 5AA"
+            />
           </div>
         </div>
         {ready ? (
           <Button asChild className="mt-3 h-auto min-h-11 whitespace-normal py-2">
             <a href={mapsUrl} target="_blank" rel="noreferrer">
-              <MapPin className="size-4 shrink-0" /> {copy.mapsSearch(effectiveTerm, area)} <ExternalLink className="size-4 shrink-0" />
+              <MapPin className="size-4 shrink-0" /> {copy.mapsSearch(effectiveTerm, area)}{" "}
+              <ExternalLink className="size-4 shrink-0" />
             </a>
           </Button>
         ) : (
-          <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">{copy.needArea}</p>
+          <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+            {copy.needArea}
+          </p>
         )}
       </div>
 
@@ -82,10 +109,20 @@ export function TradeDirectory({
         <ul className="mt-3 divide-y divide-border">
           {sites.map((site) => (
             <li key={site.id}>
-              <a href={site.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-lg px-1 py-2 text-sm hover:bg-muted">
+              <a
+                href={site.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3 rounded-lg px-1 py-2 text-sm hover:bg-muted"
+              >
                 <span className="w-40 shrink-0 font-medium sm:w-48">
                   {site.name}
-                  {site.official ? <BadgeCheck className="ml-1 inline size-4 text-primary" aria-label={copy.official} /> : null}
+                  {site.official ? (
+                    <BadgeCheck
+                      className="ml-1 inline size-4 text-primary"
+                      aria-label={copy.official}
+                    />
+                  ) : null}
                 </span>
                 <span className="min-w-0 flex-1 text-muted-foreground">{site.bestFor}</span>
                 <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />

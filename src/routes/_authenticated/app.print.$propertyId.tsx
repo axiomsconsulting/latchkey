@@ -18,9 +18,7 @@ function PrintCard() {
   const { propertyId } = Route.useParams();
   const board = usePropertyBoard(propertyId);
   const property = board.data?.property as
-    | { name: string; short_code: string; check_in_pin: string | null }
-    | null
-    | undefined;
+    { name: string; short_code: string; check_in_pin: string | null } | null | undefined;
   const [qr, setQr] = useState<string | null>(null);
   const url = property ? `${window.location.origin}/kiosk/${property.short_code}?guest=1` : "";
 
@@ -52,13 +50,22 @@ function PrintCard() {
           <h1 className="text-3xl text-neutral-900 print:text-5xl">{property.name}</h1>
           <p className="mt-2 text-lg text-neutral-600 print:text-2xl">{copy.cardHeadline}</p>
         </div>
-        {qr ? <img src={qr} alt={copy.qrAlt} className="w-3/4 print:w-[60%]" /> : <Skeleton className="aspect-square w-3/4" />}
+        {qr ? (
+          <img src={qr} alt={copy.qrAlt} className="w-3/4 print:w-[60%]" />
+        ) : (
+          <Skeleton className="aspect-square w-3/4" />
+        )}
         <div className="space-y-1 print:space-y-2">
           <p className="text-sm text-neutral-600 print:text-lg">{copy.cardOrVisit}</p>
-          <p className="font-medium text-neutral-900 print:text-xl">{url.replace(/^https?:\/\//, "")}</p>
+          <p className="font-medium text-neutral-900 print:text-xl">
+            {url.replace(/^https?:\/\//, "")}
+          </p>
           {property.check_in_pin ? (
             <p className="text-sm text-neutral-600 print:text-lg">
-              {copy.cardPin} <span className="font-mono text-base font-semibold text-neutral-900 print:text-2xl">{property.check_in_pin}</span>
+              {copy.cardPin}{" "}
+              <span className="font-mono text-base font-semibold text-neutral-900 print:text-2xl">
+                {property.check_in_pin}
+              </span>
             </p>
           ) : null}
         </div>

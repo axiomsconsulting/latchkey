@@ -141,7 +141,8 @@ export async function sendPayout(
   if (breachSetOffPending(partner, Date.now()))
     return {
       status: "refused",
-      reason: "Stopped for breach: apply any set-off first (agreement 20.4(b)), then the balance can be paid.",
+      reason:
+        "Stopped for breach: apply any set-off first (agreement 20.4(b)), then the balance can be paid.",
     };
   if (partner.flagged)
     return { status: "refused", reason: "The partner has an open review: resolve it first." };
@@ -280,25 +281,56 @@ export function statementCsv(
   const table = [
     head,
     ...body,
-    ["Total", "", "", pounds(total.n), pounds(total.c), pounds(total.b), pounds(total.h), "", pounds(total.k)].join(","),
+    [
+      "Total",
+      "",
+      "",
+      pounds(total.n),
+      pounds(total.c),
+      pounds(total.b),
+      pounds(total.h),
+      "",
+      pounds(total.k),
+    ].join(","),
   ];
   if (!meta) return table.join("\n");
   const kv = (k: string, v: string) => `${esc(k)},${esc(v)}`;
   const top = [
     kv(meta.selfBilled ? "Self-billed invoice" : "Statement", meta.number),
     kv("Issued", meta.issuedOn),
-    kv("Issued by", `${meta.oms.name}${meta.oms.companyNumber ? `, company number ${meta.oms.companyNumber}` : ""}`),
-    kv("OMS address", meta.oms.address || "[OMS registered address: set in Latchkey admin → Site settings → Legal]"),
+    kv(
+      "Issued by",
+      `${meta.oms.name}${meta.oms.companyNumber ? `, company number ${meta.oms.companyNumber}` : ""}`,
+    ),
+    kv(
+      "OMS address",
+      meta.oms.address || "[OMS registered address: set in Latchkey admin → Site settings → Legal]",
+    ),
     ...(meta.oms.vatNumber ? [kv("OMS VAT number", meta.oms.vatNumber)] : []),
     kv("Commission Partner", meta.partner.name),
     kv("Partner address", meta.partner.address || "[not given]"),
     ...(meta.partner.vatNumber ? [kv("Partner VAT number", meta.partner.vatNumber)] : []),
     ...(meta.selfBilled
       ? [
-          kv("Self-billing", "[Self-billing statement wording: to be confirmed by OMS's accountant]"),
-          ...(meta.partner.vatNumber ? [kv("VAT", "[VAT wording for self-billed invoices: to be confirmed by OMS's accountant]")] : []),
+          kv(
+            "Self-billing",
+            "[Self-billing statement wording: to be confirmed by OMS's accountant]",
+          ),
+          ...(meta.partner.vatNumber
+            ? [
+                kv(
+                  "VAT",
+                  "[VAT wording for self-billed invoices: to be confirmed by OMS's accountant]",
+                ),
+              ]
+            : []),
         ]
-      : [kv("Self-billing", "The Commission Partner opted out: OMS pays against the partner's own invoice, which must match this statement (12.7(c)).")]),
+      : [
+          kv(
+            "Self-billing",
+            "The Commission Partner opted out: OMS pays against the partner's own invoice, which must match this statement (12.7(c)).",
+          ),
+        ]),
     "",
   ];
   const bottom = [
@@ -312,7 +344,11 @@ export function statementCsv(
 }
 
 /** The statement number: per partner and month, never reused. */
-export function statementNumber(referralCode: string | null, partnerId: string, month: string): string {
+export function statementNumber(
+  referralCode: string | null,
+  partnerId: string,
+  month: string,
+): string {
   return `SB-${(referralCode ?? partnerId.slice(0, 8)).toUpperCase()}-${month.replace("-", "")}`;
 }
 

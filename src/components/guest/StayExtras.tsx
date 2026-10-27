@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { extrasCopy as copy, payments as paymentsCopy, responseNotes } from "@/content/copy";
 import { formatPence } from "@/lib/services";
-import { acceptSuggestion, cancelExtrasRequest, chooseOfflinePayment, createExtrasRequest, getStayExtras } from "@/lib/extras.functions";
+import {
+  acceptSuggestion,
+  cancelExtrasRequest,
+  chooseOfflinePayment,
+  createExtrasRequest,
+  getStayExtras,
+} from "@/lib/extras.functions";
 import { confirmExtrasPayment, startExtrasCheckout } from "@/lib/payments.functions";
 import { cn } from "@/lib/utils";
 import { breakfastMenu, type BreakfastStyle, type ExtraItem } from "@/lib/extras";
@@ -29,7 +35,11 @@ export function StayExtras({ token }: { token: string }) {
   const checkout = useServerFn(startExtrasCheckout);
   const confirmPay = useServerFn(confirmExtrasPayment);
   const [payingId, setPayingId] = useState<string | null>(null);
-  const q = useQuery({ queryKey: ["stay-extras", token], queryFn: () => fetchFn({ data: { token } }), refetchInterval: 20_000 });
+  const q = useQuery({
+    queryKey: ["stay-extras", token],
+    queryFn: () => fetchFn({ data: { token } }),
+    refetchInterval: 20_000,
+  });
   const [lines, setLines] = useState<Line[]>([]);
   const [win, setWin] = useState<string>("asap");
   const [busy, setBusy] = useState(false);
@@ -39,7 +49,12 @@ export function StayExtras({ token }: { token: string }) {
 
   const d = q.data;
   const cur = d?.currency ?? "GBP";
-  const fmtT = (iso: string) => new Intl.DateTimeFormat("en-GB", { timeZone: d?.timezone ?? "Europe/London", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  const fmtT = (iso: string) =>
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: d?.timezone ?? "Europe/London",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
 
   const priceOf = (l: Line) => {
     const it = d?.items.find((i) => i.key === l.key);
@@ -90,8 +105,12 @@ export function StayExtras({ token }: { token: string }) {
   }
 
   async function act(fn: () => Promise<unknown>) {
-    try { await fn(); await qc.invalidateQueries({ queryKey: ["stay-extras", token] }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Please try again."); }
+    try {
+      await fn();
+      await qc.invalidateQueries({ queryKey: ["stay-extras", token] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Please try again.");
+    }
   }
 
   // Coming back from the card page: say thank you, or offer the other ways to pay.
@@ -103,7 +122,9 @@ export function StayExtras({ token }: { token: string }) {
     window.history.replaceState(null, "", url.toString());
     if (paid === "1") {
       void confirmPay({ data: { token } })
-        .then((r) => (r.confirmed ? toast.success(paymentsCopy.paidToast) : toast.info(copy.payTrouble)))
+        .then((r) =>
+          r.confirmed ? toast.success(paymentsCopy.paidToast) : toast.info(copy.payTrouble),
+        )
         .catch(() => toast.info(copy.payTrouble))
         .finally(() => qc.invalidateQueries({ queryKey: ["stay-extras", token] }));
       void qc.invalidateQueries({ queryKey: ["stay-extras", token] });
@@ -119,27 +140,50 @@ export function StayExtras({ token }: { token: string }) {
   if (!d) return null;
 
   // Breakfast dishes have their own card above; everything else is a tile.
-  const regular = d.items.filter((i) => i.key !== "late_checkout" && i.key !== "early_checkin" && !i.breakfast);
+  const regular = d.items.filter(
+    (i) => i.key !== "late_checkout" && i.key !== "early_checkin" && !i.breakfast,
+  );
   const lineOf = (k: string) => lines.find((l) => l.key === k);
   const nameOf = (k: string) => d.items.find((i) => i.key === k)?.name ?? k;
   const receiptReq = d.requests.find((r) => r.id === receiptId) ?? null;
 
   // Early check-in / late check-out: each choice is a number of blocks (the basket quantity), with its time and price.
-  const hourPicker = (key: string, title: string, opts: { steps: number; label: string; pricePence: number }[], none: string) => {
+  const hourPicker = (
+    key: string,
+    title: string,
+    opts: { steps: number; label: string; pricePence: number }[],
+    none: string,
+  ) => {
     const it = d.items.find((i) => i.key === key);
     if (!it) return null;
     return (
       <div className="card-soft p-4">
         <p className="font-medium">{title}</p>
-        {opts.length === 0 ? <p className="mt-1 text-sm text-muted-foreground">{none}</p> : (
+        {opts.length === 0 ? (
+          <p className="mt-1 text-sm text-muted-foreground">{none}</p>
+        ) : (
           <div className="mt-3 flex flex-wrap gap-2">
             {opts.map((o) => {
               const on = lineOf(key)?.qty === o.steps;
               return (
-                <button key={o.steps} type="button" onClick={() => setQty(key, on ? 0 : o.steps)} aria-pressed={on}
-                  className={cn("spring min-h-14 rounded-2xl border-2 px-4 text-left", on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface")}>
+                <button
+                  key={o.steps}
+                  type="button"
+                  onClick={() => setQty(key, on ? 0 : o.steps)}
+                  aria-pressed={on}
+                  className={cn(
+                    "spring min-h-14 rounded-2xl border-2 px-4 text-left",
+                    on
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-surface",
+                  )}
+                >
                   <span className="block font-medium">{o.label}</span>
-                  <span className={cn("block text-sm", on ? "opacity-90" : "text-muted-foreground")}>{o.pricePence > 0 ? formatPence(o.pricePence, cur) : copy.free}</span>
+                  <span
+                    className={cn("block text-sm", on ? "opacity-90" : "text-muted-foreground")}
+                  >
+                    {o.pricePence > 0 ? formatPence(o.pricePence, cur) : copy.free}
+                  </span>
                 </button>
               );
             })}
@@ -160,15 +204,31 @@ export function StayExtras({ token }: { token: string }) {
         <div className="card-soft divide-y divide-border">
           <h3 className="p-4 text-lg">{copy.yours}</h3>
           {d.requests.map((r) => {
-            const left = r.payBy ? Math.max(0, Math.round((Date.parse(r.payBy) - Date.now()) / 60000)) : null;
+            const left = r.payBy
+              ? Math.max(0, Math.round((Date.parse(r.payBy) - Date.now()) / 60000))
+              : null;
             return (
               <div key={r.id} className="flex flex-wrap items-center gap-2 p-4">
-                <span className="flex-1 font-medium">{r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</span>
+                <span className="flex-1 font-medium">
+                  {r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}
+                </span>
                 {r.totalPence > 0 ? <span>{formatPence(r.totalPence, cur)}</span> : null}
-                <span className="rounded-full bg-secondary px-3 py-1 text-sm">{copy.statuses[r.status] ?? r.status}</span>
-                {r.lateUntil ? <span className="text-sm text-muted-foreground">{copy.until(r.lateUntil.slice(0, 5))}</span> : null}
-                {r.earlyFrom ? <span className="text-sm text-muted-foreground">{copy.from(r.earlyFrom.slice(0, 5))}</span> : null}
-                {r.status === "awaiting_payment" && left !== null ? <span className="text-sm text-accent">{copy.payLeft(left)}</span> : null}
+                <span className="rounded-full bg-secondary px-3 py-1 text-sm">
+                  {copy.statuses[r.status] ?? r.status}
+                </span>
+                {r.lateUntil ? (
+                  <span className="text-sm text-muted-foreground">
+                    {copy.until(r.lateUntil.slice(0, 5))}
+                  </span>
+                ) : null}
+                {r.earlyFrom ? (
+                  <span className="text-sm text-muted-foreground">
+                    {copy.from(r.earlyFrom.slice(0, 5))}
+                  </span>
+                ) : null}
+                {r.status === "awaiting_payment" && left !== null ? (
+                  <span className="text-sm text-accent">{copy.payLeft(left)}</span>
+                ) : null}
                 {r.status === "awaiting_payment" && !r.paymentMethod ? (
                   <Button size="touch" onClick={() => pay(r.id)} disabled={payingId === r.id}>
                     {payingId === r.id ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -176,18 +236,35 @@ export function StayExtras({ token }: { token: string }) {
                   </Button>
                 ) : null}
                 {r.status === "awaiting_payment" ? (
-                  <Button size="touch" variant="ghost" onClick={() => setTroubleId(troubleId === r.id ? null : r.id)}>
+                  <Button
+                    size="touch"
+                    variant="ghost"
+                    onClick={() => setTroubleId(troubleId === r.id ? null : r.id)}
+                  >
                     {copy.payTrouble}
                   </Button>
                 ) : null}
                 {r.status === "confirmed" ? (
                   <Button size="touch" variant="outline" onClick={() => setReceiptId(r.id)}>
-                    <Receipt className="size-4" />{copy.receipt}
+                    <Receipt className="size-4" />
+                    {copy.receipt}
                   </Button>
                 ) : null}
-                {r.hostNote ? <p className="w-full text-sm text-primary">{responseNotes.fromHost(r.hostNote)}</p> : null}
-                {r.paymentMethod === "bank" ? <p className="w-full text-sm text-muted-foreground">{copy.payChosenBank} {copy.payNotGuaranteed}</p> : null}
-                {r.paymentMethod === "cash" ? <p className="w-full text-sm text-muted-foreground">{copy.payChosenCash} {copy.payNotGuaranteed}</p> : null}
+                {r.hostNote ? (
+                  <p className="w-full text-sm text-primary">
+                    {responseNotes.fromHost(r.hostNote)}
+                  </p>
+                ) : null}
+                {r.paymentMethod === "bank" ? (
+                  <p className="w-full text-sm text-muted-foreground">
+                    {copy.payChosenBank} {copy.payNotGuaranteed}
+                  </p>
+                ) : null}
+                {r.paymentMethod === "cash" ? (
+                  <p className="w-full text-sm text-muted-foreground">
+                    {copy.payChosenCash} {copy.payNotGuaranteed}
+                  </p>
+                ) : null}
 
                 {troubleId === r.id && r.status === "awaiting_payment" ? (
                   <div className="w-full space-y-3 rounded-2xl bg-secondary/60 p-4">
@@ -206,18 +283,38 @@ export function StayExtras({ token }: { token: string }) {
                               ))}
                             </dl>
                           ) : null}
-                          {d.bankDetails ? <p className="whitespace-pre-line text-sm">{d.bankDetails}</p> : null}
-                          <p className="text-sm text-muted-foreground">{copy.payRefNote(r.receiptNumber ?? r.id.slice(0, 8).toUpperCase())}</p>
-                          <Button className="mt-2" size="touch" variant="outline" onClick={() => act(() => offline({ data: { token, id: r.id, method: "bank" } }))}>
+                          {d.bankDetails ? (
+                            <p className="whitespace-pre-line text-sm">{d.bankDetails}</p>
+                          ) : null}
+                          <p className="text-sm text-muted-foreground">
+                            {copy.payRefNote(r.receiptNumber ?? r.id.slice(0, 8).toUpperCase())}
+                          </p>
+                          <Button
+                            className="mt-2"
+                            size="touch"
+                            variant="outline"
+                            onClick={() =>
+                              act(() => offline({ data: { token, id: r.id, method: "bank" } }))
+                            }
+                          >
                             {copy.payBank}
                           </Button>
                         </>
-                      ) : <p className="text-sm text-muted-foreground">{copy.noBankDetails}</p>}
+                      ) : (
+                        <p className="text-sm text-muted-foreground">{copy.noBankDetails}</p>
+                      )}
                     </div>
                     <div>
                       <p className="font-medium">{copy.payCashTitle}</p>
                       <p className="text-sm">{copy.payCashBody}</p>
-                      <Button className="mt-2" size="touch" variant="outline" onClick={() => act(() => offline({ data: { token, id: r.id, method: "cash" } }))}>
+                      <Button
+                        className="mt-2"
+                        size="touch"
+                        variant="outline"
+                        onClick={() =>
+                          act(() => offline({ data: { token, id: r.id, method: "cash" } }))
+                        }
+                      >
                         {copy.payCash}
                       </Button>
                     </div>
@@ -226,12 +323,27 @@ export function StayExtras({ token }: { token: string }) {
 
                 {r.status === "suggested" && r.suggested ? (
                   <>
-                    <span className="w-full text-sm">{copy.suggested(copy.windows[r.suggested] ?? r.suggested)}</span>
-                    <Button size="touch" onClick={() => act(() => accept({ data: { token, id: r.id } }))}>{copy.accept}</Button>
+                    <span className="w-full text-sm">
+                      {copy.suggested(copy.windows[r.suggested] ?? r.suggested)}
+                    </span>
+                    <Button
+                      size="touch"
+                      onClick={() => act(() => accept({ data: { token, id: r.id } }))}
+                    >
+                      {copy.accept}
+                    </Button>
                   </>
                 ) : null}
-                {["requested", "approved", "awaiting_payment", "suggested", "confirmed"].includes(r.status) ? (
-                  <Button size="touch" variant="outline" onClick={() => act(() => cancel({ data: { token, id: r.id } }))}>{copy.cancel}</Button>
+                {["requested", "approved", "awaiting_payment", "suggested", "confirmed"].includes(
+                  r.status,
+                ) ? (
+                  <Button
+                    size="touch"
+                    variant="outline"
+                    onClick={() => act(() => cancel({ data: { token, id: r.id } }))}
+                  >
+                    {copy.cancel}
+                  </Button>
                 ) : null}
               </div>
             );
@@ -239,8 +351,26 @@ export function StayExtras({ token }: { token: string }) {
         </div>
       ) : null}
 
-      {hourPicker("late_checkout", copy.lateTitle, d.lateOptions.map((o) => ({ steps: o.steps, label: copy.until(o.until), pricePence: o.pricePence })), copy.lateNone)}
-      {hourPicker("early_checkin", copy.earlyTitle, d.earlyOptions.map((o) => ({ steps: o.steps, label: copy.from(o.from), pricePence: o.pricePence })), copy.earlyNone)}
+      {hourPicker(
+        "late_checkout",
+        copy.lateTitle,
+        d.lateOptions.map((o) => ({
+          steps: o.steps,
+          label: copy.until(o.until),
+          pricePence: o.pricePence,
+        })),
+        copy.lateNone,
+      )}
+      {hourPicker(
+        "early_checkin",
+        copy.earlyTitle,
+        d.earlyOptions.map((o) => ({
+          steps: o.steps,
+          label: copy.from(o.from),
+          pricePence: o.pricePence,
+        })),
+        copy.earlyNone,
+      )}
 
       <BreakfastOrder
         items={d.items}
@@ -248,7 +378,15 @@ export function StayExtras({ token }: { token: string }) {
         mornings={d.breakfastMornings ?? []}
         times={d.breakfastTimes ?? []}
         onOrder={async (order) => {
-          const res = await create({ data: { token, lines: order.lines.map((l) => ({ ...l, size: null })), window: "morning", note: order.note, breakfast: { style: order.style, date: order.date, time: order.time } } });
+          const res = await create({
+            data: {
+              token,
+              lines: order.lines.map((l) => ({ ...l, size: null })),
+              window: "morning",
+              note: order.note,
+              breakfast: { style: order.style, date: order.date, time: order.time },
+            },
+          });
           await qc.invalidateQueries({ queryKey: ["stay-extras", token] });
           if (res.status === "awaiting_payment") await pay(res.id);
           else toast.success(bcopy.sent);
@@ -260,7 +398,9 @@ export function StayExtras({ token }: { token: string }) {
           const l = lineOf(it.key);
           const qty = l?.qty ?? 0;
           const size = l?.size ?? it.sizes?.[1]?.key ?? it.sizes?.[0]?.key ?? null;
-          const price = it.isFree ? copy.free : `${formatPence(it.sizes?.find((s) => s.key === size)?.pricePence ?? it.pricePence, cur)} ${copy.units[it.unit]}`;
+          const price = it.isFree
+            ? copy.free
+            : `${formatPence(it.sizes?.find((s) => s.key === size)?.pricePence ?? it.pricePence, cur)} ${copy.units[it.unit]}`;
           return (
             <div key={it.key} className={cn("card-soft p-4", qty > 0 && "ring-2 ring-primary")}>
               <div className="flex items-center gap-3">
@@ -268,21 +408,57 @@ export function StayExtras({ token }: { token: string }) {
                   <p className="font-medium">{it.name}</p>
                   <p className="text-sm text-muted-foreground">{price}</p>
                 </div>
-                <Button size="icon" variant="outline" className="size-12 rounded-full" aria-label={`Fewer ${it.name}`} disabled={qty === 0} onClick={() => setQty(it.key, qty - 1, size)}><Minus /></Button>
-                <span className="w-6 text-center text-lg font-semibold" aria-live="polite">{qty}</span>
-                <Button size="icon" className="size-12 rounded-full" aria-label={`More ${it.name}`} disabled={qty >= it.maxQty} onClick={() => setQty(it.key, qty + 1, size)}><Plus /></Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="size-12 rounded-full"
+                  aria-label={`Fewer ${it.name}`}
+                  disabled={qty === 0}
+                  onClick={() => setQty(it.key, qty - 1, size)}
+                >
+                  <Minus />
+                </Button>
+                <span className="w-6 text-center text-lg font-semibold" aria-live="polite">
+                  {qty}
+                </span>
+                <Button
+                  size="icon"
+                  className="size-12 rounded-full"
+                  aria-label={`More ${it.name}`}
+                  disabled={qty >= it.maxQty}
+                  onClick={() => setQty(it.key, qty + 1, size)}
+                >
+                  <Plus />
+                </Button>
               </div>
               {it.sizes && qty > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label={copy.bagSize}>
+                <div
+                  className="mt-3 flex flex-wrap gap-2"
+                  role="radiogroup"
+                  aria-label={copy.bagSize}
+                >
                   {it.sizes.map((s) => (
-                    <button key={s.key} type="button" role="radio" aria-checked={size === s.key} onClick={() => setQty(it.key, qty, s.key)}
-                      className={cn("min-h-11 rounded-full border px-3 text-sm", size === s.key ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
+                    <button
+                      key={s.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={size === s.key}
+                      onClick={() => setQty(it.key, qty, s.key)}
+                      className={cn(
+                        "min-h-11 rounded-full border px-3 text-sm",
+                        size === s.key
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border",
+                      )}
+                    >
                       {s.label} · {formatPence(s.pricePence, cur)}
                     </button>
                   ))}
                 </div>
               ) : null}
-              {it.isLoan && qty > 0 ? <p className="mt-2 text-sm text-muted-foreground">{copy.loanNote}</p> : null}
+              {it.isLoan && qty > 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">{copy.loanNote}</p>
+              ) : null}
             </div>
           );
         })}
@@ -291,7 +467,11 @@ export function StayExtras({ token }: { token: string }) {
       {/* Basket bar: never blocks the page, so guests can keep adding items. */}
       {count > 0 ? (
         <div className="fixed inset-x-0 bottom-20 z-40 px-4 sm:bottom-6">
-          <Button size="touch-xl" className="mx-auto flex w-full max-w-xl shadow-lg" onClick={() => setCartOpen(true)}>
+          <Button
+            size="touch-xl"
+            className="mx-auto flex w-full max-w-xl shadow-lg"
+            onClick={() => setCartOpen(true)}
+          >
             <ShoppingBasket className="size-6" />
             {copy.cartButton(count, total > 0 ? formatPence(total, cur) : "")}
           </Button>
@@ -304,17 +484,36 @@ export function StayExtras({ token }: { token: string }) {
             <SheetTitle>{copy.cartTitle}</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 p-4 pt-0">
-            {lines.length === 0 ? <p className="text-muted-foreground">{copy.cartEmpty}</p> : (
+            {lines.length === 0 ? (
+              <p className="text-muted-foreground">{copy.cartEmpty}</p>
+            ) : (
               <ul className="divide-y divide-border rounded-2xl border border-border">
                 {lines.map((l) => (
                   <li key={l.key} className="flex items-center gap-3 p-3">
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium">{nameOf(l.key)}</span>
-                      <span className="text-sm text-muted-foreground">{priceOf(l) > 0 ? formatPence(priceOf(l), cur) : copy.free}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {priceOf(l) > 0 ? formatPence(priceOf(l), cur) : copy.free}
+                      </span>
                     </span>
-                    <Button size="icon" variant="outline" className="size-11 rounded-full" aria-label={`${copy.cartRemove} ${nameOf(l.key)}`} onClick={() => setQty(l.key, l.qty - 1, l.size)}><Minus /></Button>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="size-11 rounded-full"
+                      aria-label={`${copy.cartRemove} ${nameOf(l.key)}`}
+                      onClick={() => setQty(l.key, l.qty - 1, l.size)}
+                    >
+                      <Minus />
+                    </Button>
                     <span className="w-6 text-center text-lg font-semibold">{l.qty}</span>
-                    <Button size="icon" className="size-11 rounded-full" aria-label={nameOf(l.key)} onClick={() => setQty(l.key, l.qty + 1, l.size)}><Plus /></Button>
+                    <Button
+                      size="icon"
+                      className="size-11 rounded-full"
+                      aria-label={nameOf(l.key)}
+                      onClick={() => setQty(l.key, l.qty + 1, l.size)}
+                    >
+                      <Plus />
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -323,10 +522,23 @@ export function StayExtras({ token }: { token: string }) {
             <p className="font-medium">{copy.when}</p>
             <div className="flex flex-wrap gap-2">
               {d.windows.map((w) => (
-                <button key={w} type="button" onClick={() => setWin(w)}
-                  className={cn("spring min-h-14 rounded-2xl border-2 px-4 text-left", win === w ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface")}>
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setWin(w)}
+                  className={cn(
+                    "spring min-h-14 rounded-2xl border-2 px-4 text-left",
+                    win === w
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-surface",
+                  )}
+                >
                   {copy.windows[w]}
-                  {w === "asap" && d.outUntil ? <span className="block text-sm opacity-80">{copy.hostOut(fmtT(d.outUntil))}</span> : null}
+                  {w === "asap" && d.outUntil ? (
+                    <span className="block text-sm opacity-80">
+                      {copy.hostOut(fmtT(d.outUntil))}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -335,14 +547,27 @@ export function StayExtras({ token }: { token: string }) {
               <span>{copy.total}</span>
               <span>{total > 0 ? formatPence(total, cur) : copy.free}</span>
             </p>
-            {total === 0 && lines.length > 0 ? <p className="text-sm text-muted-foreground">{copy.cartFreeNote}</p> : null}
+            {total === 0 && lines.length > 0 ? (
+              <p className="text-sm text-muted-foreground">{copy.cartFreeNote}</p>
+            ) : null}
 
-            <Button size="touch-xl" className="w-full" onClick={send} disabled={busy || lines.length === 0}>
+            <Button
+              size="touch-xl"
+              className="w-full"
+              onClick={send}
+              disabled={busy || lines.length === 0}
+            >
               {busy ? <Loader2 className="size-6 animate-spin" /> : null}
               {total > 0 ? `${copy.payAndSend} · ${formatPence(total, cur)}` : copy.sendFree}
             </Button>
-            <Button size="touch" variant="ghost" className="w-full" onClick={() => setCartOpen(false)}>
-              <X className="size-4" />{copy.cartClose}
+            <Button
+              size="touch"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setCartOpen(false)}
+            >
+              <X className="size-4" />
+              {copy.cartClose}
             </Button>
           </div>
         </SheetContent>
@@ -382,7 +607,13 @@ function BreakfastOrder({
   currency: string;
   mornings: string[];
   times: string[];
-  onOrder: (o: { style: BreakfastStyle; lines: Array<{ key: string; qty: number }>; date: string; time: string; note: string | null }) => Promise<void>;
+  onOrder: (o: {
+    style: BreakfastStyle;
+    lines: Array<{ key: string; qty: number }>;
+    date: string;
+    time: string;
+    note: string | null;
+  }) => Promise<void>;
 }) {
   const menu = breakfastMenu(items);
   const [style, setStyle] = useState<BreakfastStyle | null>(menu[0]?.style ?? null);
@@ -399,9 +630,13 @@ function BreakfastOrder({
   return (
     <section className="card-soft space-y-4 p-5" aria-labelledby="breakfast-title">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary"><Coffee className="size-5" /></span>
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
+          <Coffee className="size-5" />
+        </span>
         <div className="min-w-0">
-          <h3 id="breakfast-title" className="text-xl">{bcopy.title}</h3>
+          <h3 id="breakfast-title" className="text-xl">
+            {bcopy.title}
+          </h3>
           <p className="text-sm text-muted-foreground">{bcopy.body}</p>
         </div>
       </div>
@@ -417,7 +652,12 @@ function BreakfastOrder({
                 setStyle(m.style);
                 setQty({});
               }}
-              className={cn("min-h-11 rounded-full border px-4 text-sm font-medium", current.style === m.style ? "border-primary bg-primary text-primary-foreground" : "border-border")}
+              className={cn(
+                "min-h-11 rounded-full border px-4 text-sm font-medium",
+                current.style === m.style
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border",
+              )}
             >
               {breakfastCopy.styles[m.style]}
             </button>
@@ -428,7 +668,11 @@ function BreakfastOrder({
       )}
       {current.sections.map((sec) => (
         <div key={sec.name || "menu"} className="space-y-2">
-          {sec.name ? <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{sec.name}</h4> : null}
+          {sec.name ? (
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {sec.name}
+            </h4>
+          ) : null}
           <ul className="divide-y divide-border rounded-2xl border border-border">
             {sec.items.map((it) => {
               const n = qty[it.key] ?? 0;
@@ -436,15 +680,35 @@ function BreakfastOrder({
                 <li key={it.key} className="flex items-center gap-3 p-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{it.name}</p>
-                    {it.description ? <p className="text-sm text-muted-foreground">{it.description}</p> : null}
+                    {it.description ? (
+                      <p className="text-sm text-muted-foreground">{it.description}</p>
+                    ) : null}
                   </div>
-                  <span className="shrink-0 text-sm tabular-nums">{it.isFree ? bcopy.included : formatPence(it.pricePence, currency)}</span>
+                  <span className="shrink-0 text-sm tabular-nums">
+                    {it.isFree ? bcopy.included : formatPence(it.pricePence, currency)}
+                  </span>
                   <div className="flex shrink-0 items-center gap-1">
-                    <Button size="icon" variant="outline" className="size-10" aria-label={bcopy.less(it.name)} disabled={n === 0} onClick={() => setQty((q) => ({ ...q, [it.key]: Math.max(0, n - 1) }))}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="size-10"
+                      aria-label={bcopy.less(it.name)}
+                      disabled={n === 0}
+                      onClick={() => setQty((q) => ({ ...q, [it.key]: Math.max(0, n - 1) }))}
+                    >
                       <Minus className="size-4" />
                     </Button>
-                    <span className="w-6 text-center tabular-nums" aria-live="polite">{n}</span>
-                    <Button size="icon" variant="outline" className="size-10" aria-label={bcopy.more(it.name)} disabled={n >= it.maxQty} onClick={() => setQty((q) => ({ ...q, [it.key]: n + 1 }))}>
+                    <span className="w-6 text-center tabular-nums" aria-live="polite">
+                      {n}
+                    </span>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="size-10"
+                      aria-label={bcopy.more(it.name)}
+                      disabled={n >= it.maxQty}
+                      onClick={() => setQty((q) => ({ ...q, [it.key]: n + 1 }))}
+                    >
                       <Plus className="size-4" />
                     </Button>
                   </div>
@@ -457,14 +721,30 @@ function BreakfastOrder({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1 text-sm">
           <span className="font-medium">{bcopy.morning}</span>
-          <select className="h-11 w-full rounded-xl border border-border bg-surface px-3" value={date} onChange={(e) => setDate(e.target.value)}>
-            {mornings.map((m) => <option key={m} value={m}>{formatUkDate(m)}</option>)}
+          <select
+            className="h-11 w-full rounded-xl border border-border bg-surface px-3"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          >
+            {mornings.map((m) => (
+              <option key={m} value={m}>
+                {formatUkDate(m)}
+              </option>
+            ))}
           </select>
         </label>
         <label className="space-y-1 text-sm">
           <span className="font-medium">{bcopy.time}</span>
-          <select className="h-11 w-full rounded-xl border border-border bg-surface px-3" value={time} onChange={(e) => setTime(e.target.value)}>
-            {times.map((t) => <option key={t} value={t}>{t}</option>)}
+          <select
+            className="h-11 w-full rounded-xl border border-border bg-surface px-3"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          >
+            {times.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
         </label>
       </div>
@@ -483,7 +763,13 @@ function BreakfastOrder({
         onClick={async () => {
           setBusy(true);
           try {
-            await onOrder({ style: current.style, lines: chosen.map((i) => ({ key: i.key, qty: qty[i.key]! })), date, time, note: note.trim() || null });
+            await onOrder({
+              style: current.style,
+              lines: chosen.map((i) => ({ key: i.key, qty: qty[i.key]! })),
+              date,
+              time,
+              note: note.trim() || null,
+            });
             setQty({});
             setNote("");
           } catch (e) {
@@ -493,9 +779,9 @@ function BreakfastOrder({
           }
         }}
       >
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null} {chosen.length ? bcopy.order(total > 0 ? formatPence(total, currency) : "") : bcopy.choose}
+        {busy ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
+        {chosen.length ? bcopy.order(total > 0 ? formatPence(total, currency) : "") : bcopy.choose}
       </Button>
     </section>
   );
 }
-

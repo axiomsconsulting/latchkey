@@ -7,7 +7,13 @@ import { toast } from "sonner";
 
 import { SaveButton } from "@/components/host/SaveButton";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { common, privacyCopy as copy } from "@/content/copy";
 import { DETAIL_DAY_CHOICES, MESSAGE_DAY_CHOICES, type Privacy } from "@/lib/privacy";
 import { getPrivacy, savePrivacy } from "@/lib/privacy.functions";
@@ -17,7 +23,10 @@ export function PrivacySettings({ hostId, isOwner }: { hostId: string; isOwner: 
   const fetchFn = useServerFn(getPrivacy);
   const saveFn = useServerFn(savePrivacy);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["privacy", hostId], queryFn: () => fetchFn({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["privacy", hostId],
+    queryFn: () => fetchFn({ data: { hostId } }),
+  });
   const [form, setForm] = useState<Privacy | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -39,7 +48,11 @@ export function PrivacySettings({ hostId, isOwner }: { hostId: string; isOwner: 
   }
 
   const editable = isOwner && !!q.data?.available;
-  const changed = !!form && !!q.data && (form.guestDetailsDays !== q.data.privacy.guestDetailsDays || form.messagesDays !== q.data.privacy.messagesDays);
+  const changed =
+    !!form &&
+    !!q.data &&
+    (form.guestDetailsDays !== q.data.privacy.guestDetailsDays ||
+      form.messagesDays !== q.data.privacy.messagesDays);
 
   return (
     <section id="settings-privacy" className="card-soft scroll-mt-24 space-y-4 p-5">
@@ -51,34 +64,64 @@ export function PrivacySettings({ hostId, isOwner }: { hostId: string; isOwner: 
           <h2 className="text-lg">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
-        {isOwner ? <SaveButton dirty={changed && editable} busy={busy} onClick={() => void save()} /> : null}
+        {isOwner ? (
+          <SaveButton dirty={changed && editable} busy={busy} onClick={() => void save()} />
+        ) : null}
       </div>
 
       {form ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
             <Label>{copy.details}</Label>
-            <Select value={String(form.guestDetailsDays)} disabled={!editable} onValueChange={(v) => setForm((f) => f && { ...f, guestDetailsDays: Number(v) as Privacy["guestDetailsDays"] })}>
-              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+            <Select
+              value={String(form.guestDetailsDays)}
+              disabled={!editable}
+              onValueChange={(v) =>
+                setForm(
+                  (f) => f && { ...f, guestDetailsDays: Number(v) as Privacy["guestDetailsDays"] },
+                )
+              }
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {DETAIL_DAY_CHOICES.map((d) => <SelectItem key={d} value={String(d)}>{copy.afterDays(d)}</SelectItem>)}
+                {DETAIL_DAY_CHOICES.map((d) => (
+                  <SelectItem key={d} value={String(d)}>
+                    {copy.afterDays(d)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">{copy.detailsHelp}</p>
           </div>
           <div className="space-y-1">
             <Label>{copy.messages}</Label>
-            <Select value={String(form.messagesDays)} disabled={!editable} onValueChange={(v) => setForm((f) => f && { ...f, messagesDays: Number(v) as Privacy["messagesDays"] })}>
-              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+            <Select
+              value={String(form.messagesDays)}
+              disabled={!editable}
+              onValueChange={(v) =>
+                setForm((f) => f && { ...f, messagesDays: Number(v) as Privacy["messagesDays"] })
+              }
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {MESSAGE_DAY_CHOICES.map((d) => <SelectItem key={d} value={String(d)}>{d === 0 ? copy.keepMessages : copy.afterDays(d)}</SelectItem>)}
+                {MESSAGE_DAY_CHOICES.map((d) => (
+                  <SelectItem key={d} value={String(d)}>
+                    {d === 0 ? copy.keepMessages : copy.afterDays(d)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">{copy.messagesHelp}</p>
           </div>
         </div>
       ) : null}
-      {q.data && !q.data.available ? <p className="text-sm text-muted-foreground">{copy.notReady}</p> : null}
+      {q.data && !q.data.available ? (
+        <p className="text-sm text-muted-foreground">{copy.notReady}</p>
+      ) : null}
       {isOwner ? null : <p className="text-xs text-muted-foreground">{copy.ownerOnly}</p>}
 
       <div className="rounded-2xl border border-border bg-surface p-4">
@@ -86,13 +129,26 @@ export function PrivacySettings({ hostId, isOwner }: { hostId: string; isOwner: 
         <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
           <li>
             {copy.idPhotos}{" "}
-            <Link to="/app/settings" search={{ focus: "records" }} className="font-medium text-primary underline-offset-2 hover:underline">{copy.idPhotosLink}</Link>
+            <Link
+              to="/app/settings"
+              search={{ focus: "records" }}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {copy.idPhotosLink}
+            </Link>
           </li>
           <li>
             {copy.register}{" "}
-            <Link to="/app/register" className="font-medium text-primary underline-offset-2 hover:underline">{copy.registerLink}</Link>
+            <Link
+              to="/app/register"
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {copy.registerLink}
+            </Link>
           </li>
-          {copy.fixed.map((line) => <li key={line}>{line}</li>)}
+          {copy.fixed.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
         </ul>
       </div>
     </section>

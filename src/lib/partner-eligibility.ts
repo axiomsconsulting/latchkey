@@ -125,7 +125,8 @@ export function canReceiveTransfers(acct: AnyAccount | null | undefined): boolea
   if (!acct) return false;
   const transfers =
     acct.capabilities?.transfers === "active" ||
-    acct.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status === "active";
+    acct.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status ===
+      "active";
   const due = acct.requirements;
   const nothingDue = !due?.currently_due?.length && !due?.past_due?.length && !due?.disabled_reason;
   return transfers && acct.payouts_enabled === true && nothingDue;

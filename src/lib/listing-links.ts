@@ -26,7 +26,15 @@ function tidy(raw: string): string | null {
 /** From anything stored or typed (links, or {url} objects, or text with links in it). */
 export function normaliseListingLinks(raw: unknown): ListingLink[] {
   const items: string[] = Array.isArray(raw)
-    ? raw.map((x) => (typeof x === "string" ? x : x && typeof x === "object" && typeof (x as { url?: unknown }).url === "string" ? (x as { url: string }).url : "")).filter(Boolean)
+    ? raw
+        .map((x) =>
+          typeof x === "string"
+            ? x
+            : x && typeof x === "object" && typeof (x as { url?: unknown }).url === "string"
+              ? (x as { url: string }).url
+              : "",
+        )
+        .filter(Boolean)
     : typeof raw === "string"
       ? (raw.match(/https?:\/\/[^\s<>"')]+/gi) ?? [])
       : [];
@@ -41,4 +49,7 @@ export function normaliseListingLinks(raw: unknown): ListingLink[] {
 }
 
 /** Adds new links to what's already kept, without repeating any. */
-export const mergeListingLinks = (had: unknown, add: unknown): ListingLink[] => normaliseListingLinks([...normaliseListingLinks(had), ...normaliseListingLinks(add)].map((l) => l.url));
+export const mergeListingLinks = (had: unknown, add: unknown): ListingLink[] =>
+  normaliseListingLinks(
+    [...normaliseListingLinks(had), ...normaliseListingLinks(add)].map((l) => l.url),
+  );

@@ -10,7 +10,15 @@ import { common, guideCopy as copy } from "@/content/copy";
 import { saveRoomAmenities } from "@/lib/guide.functions";
 
 /** What's already in the room, shown to guests above the extras list. */
-export function RoomAmenities({ propertyId, roomId, amenities }: { propertyId: string; roomId: string; amenities: string[] }) {
+export function RoomAmenities({
+  propertyId,
+  roomId,
+  amenities,
+}: {
+  propertyId: string;
+  roomId: string;
+  amenities: string[];
+}) {
   const qc = useQueryClient();
   const save = useServerFn(saveRoomAmenities);
   const [text, setText] = useState(amenities.join("\n"));
@@ -25,7 +33,11 @@ export function RoomAmenities({ propertyId, roomId, amenities }: { propertyId: s
   async function submit() {
     setBusy(true);
     try {
-      const list = text.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 30);
+      const list = text
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 30);
       await save({ data: { roomId, amenities: list } });
       await qc.invalidateQueries({ queryKey: ["guide", propertyId] });
       setSaved(text);
@@ -44,7 +56,12 @@ export function RoomAmenities({ propertyId, roomId, amenities }: { propertyId: s
           <Label htmlFor="amenities">{copy.amenitiesLabel}</Label>
           <p className="text-sm text-muted-foreground">{copy.amenitiesHelp}</p>
         </div>
-        <SaveButton dirty={text.trim() !== saved.trim()} busy={busy} label={copy.save} onClick={() => void submit()} />
+        <SaveButton
+          dirty={text.trim() !== saved.trim()}
+          busy={busy}
+          label={copy.save}
+          onClick={() => void submit()}
+        />
       </div>
       <Textarea id="amenities" rows={5} value={text} onChange={(e) => setText(e.target.value)} />
     </section>

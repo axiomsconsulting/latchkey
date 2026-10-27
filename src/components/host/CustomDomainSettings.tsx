@@ -7,9 +7,21 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { common, domainCopy as copy } from "@/content/copy";
-import { addHostDomain, checkHostDomain, listHostDomains, removeHostDomain, setHostDomainProperty } from "@/lib/domains.functions";
+import {
+  addHostDomain,
+  checkHostDomain,
+  listHostDomains,
+  removeHostDomain,
+  setHostDomainProperty,
+} from "@/lib/domains.functions";
 
 function CopyValue({ value }: { value: string }) {
   const [done, setDone] = useState(false);
@@ -24,7 +36,8 @@ function CopyValue({ value }: { value: string }) {
         })
       }
     >
-      {done ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} {done ? copy.copied : copy.copy}
+      {done ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}{" "}
+      {done ? copy.copied : copy.copy}
     </button>
   );
 }
@@ -34,13 +47,25 @@ function CopyValue({ value }: { value: string }) {
  * it, add two DNS records, check. Once connected, guests there see the
  * business's name on every page.
  */
-export function CustomDomainSettings({ hostId, isOwner, properties }: { hostId: string; isOwner: boolean; properties: Array<{ id: string; name: string }> }) {
+export function CustomDomainSettings({
+  hostId,
+  isOwner,
+  properties,
+}: {
+  hostId: string;
+  isOwner: boolean;
+  properties: Array<{ id: string; name: string }>;
+}) {
   const listFn = useServerFn(listHostDomains);
   const addFn = useServerFn(addHostDomain);
   const checkFn = useServerFn(checkHostDomain);
   const propFn = useServerFn(setHostDomainProperty);
   const removeFn = useServerFn(removeHostDomain);
-  const q = useQuery({ queryKey: ["host-domains", hostId], enabled: isOwner, queryFn: () => listFn({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["host-domains", hostId],
+    enabled: isOwner,
+    queryFn: () => listFn({ data: { hostId } }),
+  });
   const [domain, setDomain] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -75,15 +100,38 @@ export function CustomDomainSettings({ hostId, isOwner, properties }: { hostId: 
             <article key={d.domain} className="space-y-3 rounded-xl border border-border p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="min-w-0 flex-1 truncate font-mono">{d.domain}</span>
-                <Badge variant={d.live ? "default" : "secondary"}>{d.live ? copy.live : d.verified ? copy.waitingLive : copy.waitingProof}</Badge>
-                <Button variant="ghost" size="sm" className="text-destructive" disabled={busy !== null} onClick={() => void act(`rm-${d.domain}`, () => removeFn({ data: { hostId, domain: d.domain } }), copy.removed)}>
+                <Badge variant={d.live ? "default" : "secondary"}>
+                  {d.live ? copy.live : d.verified ? copy.waitingLive : copy.waitingProof}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  disabled={busy !== null}
+                  onClick={() =>
+                    void act(
+                      `rm-${d.domain}`,
+                      () => removeFn({ data: { hostId, domain: d.domain } }),
+                      copy.removed,
+                    )
+                  }
+                >
                   <Trash2 className="size-4" /> {copy.remove}
                 </Button>
               </div>
               {properties.length > 1 ? (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-muted-foreground">{copy.opens}</span>
-                  <Select value={d.propertyId ?? "first"} onValueChange={(v) => void act(`p-${d.domain}`, () => propFn({ data: { hostId, domain: d.domain, propertyId: v === "first" ? null : v } }))}>
+                  <Select
+                    value={d.propertyId ?? "first"}
+                    onValueChange={(v) =>
+                      void act(`p-${d.domain}`, () =>
+                        propFn({
+                          data: { hostId, domain: d.domain, propertyId: v === "first" ? null : v },
+                        }),
+                      )
+                    }
+                  >
                     <SelectTrigger className="h-9 w-56">
                       <SelectValue />
                     </SelectTrigger>
@@ -132,11 +180,14 @@ export function CustomDomainSettings({ hostId, isOwner, properties }: { hostId: 
                     onClick={() =>
                       void act(`c-${d.domain}`, async () => {
                         const r = await checkFn({ data: { hostId, domain: d.domain } });
-                        toast[r.verified ? "success" : "message"](r.verified ? copy.proved : copy.notYet);
+                        toast[r.verified ? "success" : "message"](
+                          r.verified ? copy.proved : copy.notYet,
+                        );
                       })
                     }
                   >
-                    {busy === `c-${d.domain}` ? <Loader2 className="size-4 animate-spin" /> : null} {busy === `c-${d.domain}` ? copy.checking : copy.check}
+                    {busy === `c-${d.domain}` ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
+                    {busy === `c-${d.domain}` ? copy.checking : copy.check}
                   </Button>
                 </div>
               ) : null}
@@ -147,10 +198,22 @@ export function CustomDomainSettings({ hostId, isOwner, properties }: { hostId: 
             onSubmit={(e) => {
               e.preventDefault();
               if (!domain.trim()) return;
-              void act("add", () => addFn({ data: { hostId, domain, propertyId: null } }).then(() => setDomain("")), copy.added);
+              void act(
+                "add",
+                () =>
+                  addFn({ data: { hostId, domain, propertyId: null } }).then(() => setDomain("")),
+                copy.added,
+              );
             }}
           >
-            <Input className="h-11 min-w-0 flex-1 font-mono" placeholder={copy.placeholder} value={domain} onChange={(e) => setDomain(e.target.value)} autoCapitalize="none" spellCheck={false} />
+            <Input
+              className="h-11 min-w-0 flex-1 font-mono"
+              placeholder={copy.placeholder}
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              autoCapitalize="none"
+              spellCheck={false}
+            />
             <Button type="submit" className="h-11" disabled={busy !== null || !domain.trim()}>
               {busy === "add" ? <Loader2 className="size-4 animate-spin" /> : null} {copy.add}
             </Button>

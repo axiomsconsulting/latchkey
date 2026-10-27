@@ -17,10 +17,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { common, team as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { formatUkDate } from "@/lib/dates";
@@ -41,7 +53,15 @@ import {
 type Confirm = { kind: "remove"; userId: string; email: string } | { kind: "leave" } | null;
 
 /** Settings → Team. Owners manage it; everyone else sees who is on it. */
-export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: boolean; demo: boolean }) {
+export function TeamPanel({
+  hostId,
+  isOwner,
+  demo,
+}: {
+  hostId: string;
+  isOwner: boolean;
+  demo: boolean;
+}) {
   const qc = useQueryClient();
   const list = useServerFn(listTeam);
   const invite = useServerFn(inviteMember);
@@ -90,7 +110,9 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
     e.preventDefault();
     setBusy("invite");
     try {
-      const res = await invite({ data: { hostId, email, role, propertyIds: role === "owner" ? null : inviteProps } });
+      const res = await invite({
+        data: { hostId, email, role, propertyIds: role === "owner" ? null : inviteProps },
+      });
       await qc.invalidateQueries({ queryKey: ["team", hostId] });
       if (res.emailed) toast.success(copy.sent);
       else toast.warning(copy.notEmailed);
@@ -107,7 +129,9 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
   async function onConfirm() {
     if (!confirm) return;
     if (confirm.kind === "remove") {
-      await act(`remove-${confirm.userId}`, () => remove({ data: { hostId, userId: confirm.userId } }));
+      await act(`remove-${confirm.userId}`, () =>
+        remove({ data: { hostId, userId: confirm.userId } }),
+      );
     } else if (await act("leave", () => leave({ data: { hostId } }))) {
       // Back to whichever host is left (or a fresh workspace).
       await qc.resetQueries();
@@ -153,13 +177,21 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
                   {/* A long email shortens; "(You)" always stays in view. */}
                   <p className="flex min-w-0 items-baseline gap-2 font-medium">
                     <span className="truncate">{m.name ?? m.email}</span>
-                    {m.isYou ? <span className="shrink-0 text-xs font-normal text-muted-foreground">({copy.you})</span> : null}
+                    {m.isYou ? (
+                      <span className="shrink-0 text-xs font-normal text-muted-foreground">
+                        ({copy.you})
+                      </span>
+                    ) : null}
                   </p>
-                  {m.name ? <p className="truncate text-sm text-muted-foreground">{m.email}</p> : null}
+                  {m.name ? (
+                    <p className="truncate text-sm text-muted-foreground">{m.email}</p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     {copy.joined(formatUkDate(m.joined.slice(0, 10), { withYear: true }))}
                     {" · "}
-                    {m.lastSignIn ? copy.lastActive(formatUkDate(m.lastSignIn.slice(0, 10))) : copy.neverSignedIn}
+                    {m.lastSignIn
+                      ? copy.lastActive(formatUkDate(m.lastSignIn.slice(0, 10)))
+                      : copy.neverSignedIn}
                   </p>
                 </div>
                 {manage && !m.isYou ? (
@@ -167,25 +199,41 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
                     <Select
                       value={m.role}
                       onValueChange={(v) =>
-                        void act(`role-${m.userId}`, () => setRole({ data: { hostId, userId: m.userId, role: v as InviteRole } }))
+                        void act(`role-${m.userId}`, () =>
+                          setRole({ data: { hostId, userId: m.userId, role: v as InviteRole } }),
+                        )
                       }
                       disabled={busy !== null}
                     >
-                      <SelectTrigger className="h-10 w-36" aria-label={`${copy.roleLabel}: ${m.email}`}>
+                      <SelectTrigger
+                        className="h-10 w-36"
+                        aria-label={`${copy.roleLabel}: ${m.email}`}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {INVITE_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>{copy.roles[r]}</SelectItem>
+                          <SelectItem key={r} value={r}>
+                            {copy.roles[r]}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" disabled={busy !== null} onClick={() => setConfirm({ kind: "remove", userId: m.userId, email: m.email })}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy !== null}
+                      onClick={() =>
+                        setConfirm({ kind: "remove", userId: m.userId, email: m.email })
+                      }
+                    >
                       {copy.remove}
                     </Button>
                   </div>
                 ) : (
-                  <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium">{copy.roles[m.role]}</span>
+                  <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium">
+                    {copy.roles[m.role]}
+                  </span>
                 )}
               </div>
               <div className="mt-2 rounded-2xl bg-secondary/40 p-3 text-sm">
@@ -193,23 +241,40 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
                 <p className="mt-1 text-muted-foreground">
                   {copy.accessTo(
                     properties
-                      .filter((p) => m.role === "owner" || !m.propertyIds || m.propertyIds.includes(p.id))
+                      .filter(
+                        (p) => m.role === "owner" || !m.propertyIds || m.propertyIds.includes(p.id),
+                      )
                       .map((p) => `${p.name} (${copy.rooms(p.rooms)})`)
                       .join(", ") || copy.noProperties,
                   )}
                 </p>
                 {/* A property's own team: owners choose which properties someone covers. */}
-                {manage && !m.isYou && m.role !== "owner" && properties.length > 1 && team.data?.scopable ? (
+                {manage &&
+                !m.isYou &&
+                m.role !== "owner" &&
+                properties.length > 1 &&
+                team.data?.scopable ? (
                   <PropertyScope
                     properties={properties}
                     value={m.propertyIds}
                     disabled={busy !== null}
-                    onChange={(ids) => void act(`scope-${m.userId}`, () => setScope({ data: { hostId, userId: m.userId, propertyIds: ids } }), copy.scopeSaved)}
+                    onChange={(ids) =>
+                      void act(
+                        `scope-${m.userId}`,
+                        () => setScope({ data: { hostId, userId: m.userId, propertyIds: ids } }),
+                        copy.scopeSaved,
+                      )
+                    }
                   />
                 ) : null}
               </div>
               {m.isYou && !demo ? (
-                <Button variant="ghost" size="sm" className="mt-2" onClick={() => setProfileOpen(true)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setProfileOpen(true)}
+                >
                   {copy.editProfile}
                 </Button>
               ) : null}
@@ -220,15 +285,38 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
               <span className="min-w-0 flex-1 truncate text-muted-foreground">{i.email}</span>
               <span className="text-sm text-muted-foreground">
                 {copy.roles[i.role]} · {i.expired ? copy.expired : copy.pending}
-                {i.propertyIds?.length ? ` · ${properties.filter((p) => i.propertyIds!.includes(p.id)).map((p) => p.name).join(", ")}` : ""}
+                {i.propertyIds?.length
+                  ? ` · ${properties
+                      .filter((p) => i.propertyIds!.includes(p.id))
+                      .map((p) => p.name)
+                      .join(", ")}`
+                  : ""}
               </span>
               {manage ? (
                 <>
-                  <Button variant="outline" size="sm" disabled={busy !== null} onClick={() => void act(`resend-${i.id}`, () => resend({ data: { inviteId: i.id } }), copy.resent)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy !== null}
+                    onClick={() =>
+                      void act(
+                        `resend-${i.id}`,
+                        () => resend({ data: { inviteId: i.id } }),
+                        copy.resent,
+                      )
+                    }
+                  >
                     {busy === `resend-${i.id}` ? <Loader2 className="size-4 animate-spin" /> : null}
                     {copy.resend}
                   </Button>
-                  <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => void act(`revoke-${i.id}`, () => revoke({ data: { inviteId: i.id } }))}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy !== null}
+                    onClick={() =>
+                      void act(`revoke-${i.id}`, () => revoke({ data: { inviteId: i.id } }))
+                    }
+                  >
                     {copy.revoke}
                   </Button>
                 </>
@@ -253,13 +341,30 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
           <form onSubmit={sendInvite} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="invite-email">{copy.emailLabel}</Label>
-              <Input id="invite-email" type="email" required className="h-12" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                id="invite-email"
+                type="email"
+                required
+                className="h-12"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">{copy.roleLabel}</legend>
               {INVITE_ROLES.map((r) => (
-                <label key={r} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border p-3 has-[:checked]:border-primary has-[:checked]:bg-secondary">
-                  <input type="radio" name="invite-role" value={r} checked={role === r} onChange={() => setNewRole(r)} className="mt-1" />
+                <label
+                  key={r}
+                  className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border p-3 has-[:checked]:border-primary has-[:checked]:bg-secondary"
+                >
+                  <input
+                    type="radio"
+                    name="invite-role"
+                    value={r}
+                    checked={role === r}
+                    onChange={() => setNewRole(r)}
+                    className="mt-1"
+                  />
                   <span>
                     <span className="block font-medium">{copy.roles[r]}</span>
                     <span className="block text-sm text-muted-foreground">{copy.roleHints[r]}</span>
@@ -270,7 +375,11 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
             {role !== "owner" && properties.length > 1 && team.data?.scopable ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">{copy.scopeLabel}</p>
-                <PropertyScope properties={properties} value={inviteProps} onChange={setInviteProps} />
+                <PropertyScope
+                  properties={properties}
+                  value={inviteProps}
+                  onChange={setInviteProps}
+                />
               </div>
             ) : null}
             <Button type="submit" className="w-full" disabled={busy === "invite"}>
@@ -294,12 +403,18 @@ export function TeamPanel({ hostId, isOwner, demo }: { hostId: string; isOwner: 
       <AlertDialog open={confirm !== null} onOpenChange={(o) => (o ? null : setConfirm(null))}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{confirm?.kind === "remove" ? copy.removeTitle(confirm.email) : copy.leaveTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{confirm?.kind === "remove" ? copy.removeBody : copy.leaveBody}</AlertDialogDescription>
+            <AlertDialogTitle>
+              {confirm?.kind === "remove" ? copy.removeTitle(confirm.email) : copy.leaveTitle}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.kind === "remove" ? copy.removeBody : copy.leaveBody}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void onConfirm()}>{confirm?.kind === "remove" ? copy.remove : copy.leave}</AlertDialogAction>
+            <AlertDialogAction onClick={() => void onConfirm()}>
+              {confirm?.kind === "remove" ? copy.remove : copy.leave}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -318,7 +433,10 @@ function Avatar({ name, url }: { name: string; url: string | null }) {
   return url ? (
     <img src={url} alt="" className="size-12 shrink-0 rounded-2xl object-cover" />
   ) : (
-    <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary font-display text-lg text-primary-foreground">
+    <span
+      aria-hidden
+      className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary font-display text-lg text-primary-foreground"
+    >
       {initials || "?"}
     </span>
   );
@@ -362,7 +480,12 @@ function ProfileDialog({
   function pickPhoto(file: File | undefined) {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => void step("photo", () => upload({ data: { dataUrl: String(reader.result) } }), copy.photoSaved);
+    reader.onload = () =>
+      void step(
+        "photo",
+        () => upload({ data: { dataUrl: String(reader.result) } }),
+        copy.photoSaved,
+      );
     reader.readAsDataURL(file);
   }
 
@@ -376,7 +499,13 @@ function ProfileDialog({
         <div className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="profile-photo">{copy.photo}</Label>
-            <Input id="profile-photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy !== null} onChange={(e) => pickPhoto(e.target.files?.[0])} />
+            <Input
+              id="profile-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={busy !== null}
+              onChange={(e) => pickPhoto(e.target.files?.[0])}
+            />
           </div>
           <form
             className="space-y-2"
@@ -387,7 +516,13 @@ function ProfileDialog({
           >
             <Label htmlFor="profile-name">{copy.name}</Label>
             <div className="flex gap-2">
-              <Input id="profile-name" className="h-11" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
+              <Input
+                id="profile-name"
+                className="h-11"
+                value={name}
+                maxLength={80}
+                onChange={(e) => setName(e.target.value)}
+              />
               <Button type="submit" disabled={busy !== null}>
                 {busy === "name" ? <Loader2 className="size-4 animate-spin" /> : null}
                 {common.save}
@@ -413,8 +548,20 @@ function ProfileDialog({
           >
             <Label htmlFor="profile-email">{copy.signInEmail}</Label>
             <div className="flex gap-2">
-              <Input id="profile-email" type="email" className="h-11" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <Button type="submit" variant="outline" disabled={busy !== null || email.trim().toLowerCase() === currentEmail.toLowerCase()}>
+              <Input
+                id="profile-email"
+                type="email"
+                className="h-11"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={
+                  busy !== null || email.trim().toLowerCase() === currentEmail.toLowerCase()
+                }
+              >
                 {busy === "email" ? <Loader2 className="size-4 animate-spin" /> : null}
                 {copy.changeEmail}
               </Button>
@@ -443,10 +590,30 @@ function PropertyScope({
   return (
     <div className="mt-2 space-y-2 text-sm">
       <div role="radiogroup" aria-label={copy.scopeLabel} className="flex flex-wrap gap-2">
-        <button type="button" role="radio" aria-checked={all} disabled={disabled} onClick={() => onChange(null)} className={cn("min-h-9 rounded-full border px-3 text-xs font-medium", all ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={all}
+          disabled={disabled}
+          onClick={() => onChange(null)}
+          className={cn(
+            "min-h-9 rounded-full border px-3 text-xs font-medium",
+            all ? "border-primary bg-primary text-primary-foreground" : "border-border",
+          )}
+        >
           {copy.scopeAll}
         </button>
-        <button type="button" role="radio" aria-checked={!all} disabled={disabled} onClick={() => onChange([properties[0]!.id])} className={cn("min-h-9 rounded-full border px-3 text-xs font-medium", !all ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!all}
+          disabled={disabled}
+          onClick={() => onChange([properties[0]!.id])}
+          className={cn(
+            "min-h-9 rounded-full border px-3 text-xs font-medium",
+            !all ? "border-primary bg-primary text-primary-foreground" : "border-border",
+          )}
+        >
           {copy.scopeSome}
         </button>
       </div>
@@ -461,7 +628,9 @@ function PropertyScope({
                     type="checkbox"
                     checked={on}
                     disabled={disabled || (on && value!.length === 1)}
-                    onChange={() => onChange(on ? value!.filter((x) => x !== p.id) : [...value!, p.id])}
+                    onChange={() =>
+                      onChange(on ? value!.filter((x) => x !== p.id) : [...value!, p.id])
+                    }
                   />
                   {p.name}
                 </label>
@@ -473,4 +642,3 @@ function PropertyScope({
     </div>
   );
 }
-

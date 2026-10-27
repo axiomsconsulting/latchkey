@@ -31,7 +31,8 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
   const ws = useWorkspace();
   const { isOwner } = useRole();
   const hostId = ws.data?.hostId ?? "";
-  const email = (ws.data?.host as { contact_email?: string | null } | null | undefined)?.contact_email ?? null;
+  const email =
+    (ws.data?.host as { contact_email?: string | null } | null | undefined)?.contact_email ?? null;
   const statusFn = useServerFn(getPaymentStatus);
   const connect = useServerFn(connectStripe);
   const refresh = useServerFn(refreshStripe);
@@ -41,7 +42,10 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   // Errors stay on the card (copyable, sendable to support) instead of a toast that vanishes.
   const [problem, setProblem] = useState<AppError | null>(null);
-  const q = useQuery({ queryKey: ["payment-status", propertyId], queryFn: () => statusFn({ data: { propertyId } }) });
+  const q = useQuery({
+    queryKey: ["payment-status", propertyId],
+    queryFn: () => statusFn({ data: { propertyId } }),
+  });
 
   // Back from Stripe's sign-up: check the account and say where things stand.
   useEffect(() => {
@@ -75,7 +79,9 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
     setBusy("connect");
     setProblem(null);
     try {
-      const { url } = await connect({ data: { hostId, returnTo: `${window.location.origin}${window.location.pathname}` } });
+      const { url } = await connect({
+        data: { hostId, returnTo: `${window.location.origin}${window.location.pathname}` },
+      });
       window.location.href = url;
     } catch (e) {
       setProblem(readAppError(e, copy.connectFailed));
@@ -84,7 +90,8 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
   }
 
   const d = q.data;
-  const spinner = (key: string) => (busy === key ? <Loader2 className="size-4 animate-spin" /> : null);
+  const spinner = (key: string) =>
+    busy === key ? <Loader2 className="size-4 animate-spin" /> : null;
 
   return (
     <section className="card-soft p-5">
@@ -123,11 +130,32 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
             <CheckCircle2 className="size-4 text-primary" /> {copy.platformTitle}
           </p>
           <p className="text-sm text-muted-foreground">{copy.platformBody}</p>
-          <StripeAccountCard identity={d.identity} title={stripeAccountCopy.platformTitle} checkedAt={d.checkedAt} onCheck={() => void q.refetch()} checking={q.isFetching} linkKind="own" admin={d.isSuperAdmin} />
+          <StripeAccountCard
+            identity={d.identity}
+            title={stripeAccountCopy.platformTitle}
+            checkedAt={d.checkedAt}
+            onCheck={() => void q.refetch()}
+            checking={q.isFetching}
+            linkKind="own"
+            admin={d.isSuperAdmin}
+          />
           <div className="flex flex-wrap gap-2">
-            <SyncButton busy={busy} onSync={() => void run("sync", () => syncFn({ data: { propertyId } }).then((r) => toast.success(copy.synced(r.created, r.updated))))} />
+            <SyncButton
+              busy={busy}
+              onSync={() =>
+                void run("sync", () =>
+                  syncFn({ data: { propertyId } }).then((r) =>
+                    toast.success(copy.synced(r.created, r.updated)),
+                  ),
+                )
+              }
+            />
             {d.isSuperAdmin && isOwner ? (
-              <Button variant="outline" disabled={busy !== null} onClick={() => void run("own", () => platform({ data: { hostId, on: false } }))}>
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => void run("own", () => platform({ data: { hostId, on: false } }))}
+              >
                 {spinner("own")} {copy.useOwn}
               </Button>
             ) : null}
@@ -136,15 +164,39 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
       ) : d.mode === "connected" && d.ready ? (
         <div className="mt-4 space-y-3">
           <p className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="size-4 text-primary" /> {d.identity?.name ? copy.connectedTo(d.identity.name) : copy.connectedUnnamed}
+            <CheckCircle2 className="size-4 text-primary" />{" "}
+            {d.identity?.name ? copy.connectedTo(d.identity.name) : copy.connectedUnnamed}
           </p>
-          <StripeAccountCard identity={d.identity} title={stripeAccountCopy.title} checkedAt={d.checkedAt} onCheck={() => void q.refetch()} checking={q.isFetching} linkKind={d.isSuperAdmin ? "connected" : "own"} admin={d.isSuperAdmin} />
+          <StripeAccountCard
+            identity={d.identity}
+            title={stripeAccountCopy.title}
+            checkedAt={d.checkedAt}
+            onCheck={() => void q.refetch()}
+            checking={q.isFetching}
+            linkKind={d.isSuperAdmin ? "connected" : "own"}
+            admin={d.isSuperAdmin}
+          />
           {!d.webhookReady ? <p className="text-sm text-accent">{copy.webhookMissing}</p> : null}
           <p className="text-sm text-muted-foreground">{copy.syncedCount(d.syncedCount)}</p>
           <div className="flex flex-wrap gap-2">
-            <SyncButton busy={busy} onSync={() => void run("sync", () => syncFn({ data: { propertyId } }).then((r) => toast.success(copy.synced(r.created, r.updated))))} />
+            <SyncButton
+              busy={busy}
+              onSync={() =>
+                void run("sync", () =>
+                  syncFn({ data: { propertyId } }).then((r) =>
+                    toast.success(copy.synced(r.created, r.updated)),
+                  ),
+                )
+              }
+            />
             {isOwner ? (
-              <Button variant="ghost" disabled={busy !== null} onClick={() => void run("unlink", () => unlink({ data: { hostId } }), copy.unlinked)}>
+              <Button
+                variant="ghost"
+                disabled={busy !== null}
+                onClick={() =>
+                  void run("unlink", () => unlink({ data: { hostId } }), copy.unlinked)
+                }
+              >
                 {copy.unlink}
               </Button>
             ) : null}
@@ -152,23 +204,43 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
         </div>
       ) : (
         <div className="mt-4 space-y-3">
-          <p className="font-medium">{d.mode === "connected" ? copy.pendingBody : copy.connectTitle}</p>
+          <p className="font-medium">
+            {d.mode === "connected" ? copy.pendingBody : copy.connectTitle}
+          </p>
           {d.mode === "connected" && d.identity ? (
-            <StripeAccountCard identity={d.identity} title={stripeAccountCopy.title} checkedAt={d.checkedAt} linkKind={d.isSuperAdmin ? "connected" : "own"} admin={d.isSuperAdmin} />
+            <StripeAccountCard
+              identity={d.identity}
+              title={stripeAccountCopy.title}
+              checkedAt={d.checkedAt}
+              linkKind={d.isSuperAdmin ? "connected" : "own"}
+              admin={d.isSuperAdmin}
+            />
           ) : null}
-          {d.mode !== "connected" ? <p className="text-sm text-muted-foreground">{copy.connectBody(email)}</p> : null}
+          {d.mode !== "connected" ? (
+            <p className="text-sm text-muted-foreground">{copy.connectBody(email)}</p>
+          ) : null}
           {isOwner ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="accent" disabled={busy !== null} onClick={() => void goToStripe()}>
                 {spinner("connect")} {d.mode === "connected" ? copy.continueCta : copy.connectCta}
               </Button>
               {d.mode === "connected" ? (
-                <Button variant="outline" disabled={busy !== null} onClick={() => void run("check", () => refresh({ data: { hostId } }))}>
+                <Button
+                  variant="outline"
+                  disabled={busy !== null}
+                  onClick={() => void run("check", () => refresh({ data: { hostId } }))}
+                >
                   {spinner("check")} {copy.checkAgain}
                 </Button>
               ) : null}
               {d.isSuperAdmin ? (
-                <Button variant="ghost" disabled={busy !== null} onClick={() => void run("platform", () => platform({ data: { hostId, on: true } }))}>
+                <Button
+                  variant="ghost"
+                  disabled={busy !== null}
+                  onClick={() =>
+                    void run("platform", () => platform({ data: { hostId, on: true } }))
+                  }
+                >
                   {spinner("platform")} {copy.usePlatform}
                 </Button>
               ) : null}
@@ -185,7 +257,12 @@ export function PaymentsPanel({ propertyId }: { propertyId: string }) {
 function SyncButton({ busy, onSync }: { busy: string | null; onSync: () => void }) {
   return (
     <Button onClick={onSync} disabled={busy !== null}>
-      {busy === "sync" ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} {copy.syncButton}
+      {busy === "sync" ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <RefreshCw className="size-4" />
+      )}{" "}
+      {copy.syncButton}
     </Button>
   );
 }

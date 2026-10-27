@@ -79,24 +79,48 @@ export function BrandAdmin() {
           </h2>
           <p className="text-sm text-muted-foreground">{copy.help}</p>
         </div>
-        <SaveButton dirty={!!q.data?.available && changed(form, q.data.brand)} busy={busy} onClick={() => void save()} />
+        <SaveButton
+          dirty={!!q.data?.available && changed(form, q.data.brand)}
+          busy={busy}
+          onClick={() => void save()}
+        />
       </div>
-      {q.data && !q.data.available ? <p className="text-sm text-muted-foreground">{copy.notReady}</p> : null}
+      {q.data && !q.data.available ? (
+        <p className="text-sm text-muted-foreground">{copy.notReady}</p>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="b-name">{copy.name}</Label>
-          <Input id="b-name" className="h-11" maxLength={40} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <p className="text-xs text-muted-foreground">{copy.preview(form.name.trim() || DEFAULT_BRAND.name)}</p>
+          <Input
+            id="b-name"
+            className="h-11"
+            maxLength={40}
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+          <p className="text-xs text-muted-foreground">
+            {copy.preview(form.name.trim() || DEFAULT_BRAND.name)}
+          </p>
         </div>
         <div className="space-y-1">
           <Label htmlFor="b-tag">{copy.tagline}</Label>
-          <Input id="b-tag" className="h-11" maxLength={120} value={form.tagline} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))} />
+          <Input
+            id="b-tag"
+            className="h-11"
+            maxLength={120}
+            value={form.tagline}
+            onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+          />
         </div>
       </div>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{copy.logoTitle}</legend>
         <p className="text-xs text-muted-foreground">{copy.logoHelp}</p>
-        <div role="radiogroup" aria-label={copy.logoTitle} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div
+          role="radiogroup"
+          aria-label={copy.logoTitle}
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+        >
           {BRAND_LOGO_MARKS.map((m) => (
             <button
               key={m}
@@ -106,11 +130,15 @@ export function BrandAdmin() {
               onClick={() => setForm((f) => ({ ...f, logoMark: m, logoUrl: "" }))}
               className={cn(
                 "flex flex-col items-center gap-2 rounded-2xl border p-3 text-center text-xs",
-                form.logoMark === m && !form.logoUrl ? "border-primary bg-primary/5 ring-2 ring-primary/30" : "border-border hover:bg-secondary",
+                form.logoMark === m && !form.logoUrl
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                  : "border-border hover:bg-secondary",
               )}
             >
               {m === "initial" ? (
-                <span className="grid size-12 place-items-center rounded-2xl bg-primary font-display text-xl text-primary-foreground">{(form.name.trim() || DEFAULT_BRAND.name).slice(0, 1).toUpperCase()}</span>
+                <span className="grid size-12 place-items-center rounded-2xl bg-primary font-display text-xl text-primary-foreground">
+                  {(form.name.trim() || DEFAULT_BRAND.name).slice(0, 1).toUpperCase()}
+                </span>
               ) : (
                 <BrandMark variant={m as BrandMarkVariant} className="size-12" />
               )}
@@ -119,18 +147,54 @@ export function BrandAdmin() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {form.logoUrl ? <img src={form.logoUrl} alt="" className="size-12 rounded-2xl border border-border object-contain" /> : null}
+          {form.logoUrl ? (
+            <img
+              src={form.logoUrl}
+              alt=""
+              className="size-12 rounded-2xl border border-border object-contain"
+            />
+          ) : null}
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-sm hover:bg-secondary">
-            {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />} {copy.uploadLogo}
-            <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ImagePlus className="size-4" />
+            )}{" "}
+            {copy.uploadLogo}
+            <input
+              type="file"
+              accept=".png,.jpg,.jpeg,.webp,.svg"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void upload(f);
+              }}
+            />
           </label>
-          {form.logoUrl ? <Button variant="ghost" size="sm" onClick={() => setForm((f) => ({ ...f, logoUrl: "" }))}>{copy.removeLogo}</Button> : null}
+          {form.logoUrl ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setForm((f) => ({ ...f, logoUrl: "" }))}
+            >
+              {copy.removeLogo}
+            </Button>
+          ) : null}
         </div>
-        <p className="text-xs text-muted-foreground">{copy.uploadHint} {copy.appIconNote}</p>
+        <p className="text-xs text-muted-foreground">
+          {copy.uploadHint} {copy.appIconNote}
+        </p>
       </fieldset>
       <div className="space-y-1">
         <Label htmlFor="b-foot">{copy.footer}</Label>
-        <Textarea id="b-foot" rows={2} maxLength={300} value={form.footer} onChange={(e) => setForm((f) => ({ ...f, footer: e.target.value }))} />
+        <Textarea
+          id="b-foot"
+          rows={2}
+          maxLength={300}
+          value={form.footer}
+          onChange={(e) => setForm((f) => ({ ...f, footer: e.target.value }))}
+        />
         <p className="text-xs text-muted-foreground">{copy.footerHint}</p>
       </div>
     </section>
@@ -161,7 +225,9 @@ export function DomainsAdmin() {
                 <span className="block truncate font-mono text-sm">{d.domain}</span>
                 <span className="block text-xs text-muted-foreground">{d.business}</span>
               </span>
-              <Badge variant={d.verified ? "secondary" : "outline"}>{d.verified ? copy.verified : copy.waiting}</Badge>
+              <Badge variant={d.verified ? "secondary" : "outline"}>
+                {d.verified ? copy.verified : copy.waiting}
+              </Badge>
               <label className="flex items-center gap-2 text-sm">
                 {copy.live}
                 <Switch
@@ -170,7 +236,9 @@ export function DomainsAdmin() {
                   onCheckedChange={(v) =>
                     void liveFn({ data: { domain: d.domain, live: v } })
                       .then(() => q.refetch())
-                      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+                      .catch((e: unknown) =>
+                        toast.error(e instanceof Error ? e.message : common.errorBody),
+                      )
                   }
                 />
               </label>

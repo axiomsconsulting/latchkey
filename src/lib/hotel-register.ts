@@ -38,10 +38,62 @@ export const BRITISH_STATUSES = {
  * Nevis" is KN. Zimbabwe remains listed although it left the Commonwealth.
  */
 export const SCHEDULE_3 = [
-  "AG", "AU", "BS", "BD", "BB", "BZ", "BW", "BN", "CM", "CA", "CY", "DM", "SZ", "FJ",
-  "GA", "GM", "GH", "GD", "GY", "IN", "JM", "KE", "KI", "LS", "MW", "MY", "MV", "MT",
-  "MU", "MZ", "NR", "NZ", "NG", "PK", "PG", "RW", "KN", "LC", "VC", "SC", "SL", "SG",
-  "SB", "ZA", "LK", "TZ", "TG", "TO", "TT", "TV", "UG", "VU", "WS", "ZM", "ZW", "NA",
+  "AG",
+  "AU",
+  "BS",
+  "BD",
+  "BB",
+  "BZ",
+  "BW",
+  "BN",
+  "CM",
+  "CA",
+  "CY",
+  "DM",
+  "SZ",
+  "FJ",
+  "GA",
+  "GM",
+  "GH",
+  "GD",
+  "GY",
+  "IN",
+  "JM",
+  "KE",
+  "KI",
+  "LS",
+  "MW",
+  "MY",
+  "MV",
+  "MT",
+  "MU",
+  "MZ",
+  "NR",
+  "NZ",
+  "NG",
+  "PK",
+  "PG",
+  "RW",
+  "KN",
+  "LC",
+  "VC",
+  "SC",
+  "SL",
+  "SG",
+  "SB",
+  "ZA",
+  "LK",
+  "TZ",
+  "TG",
+  "TO",
+  "TT",
+  "TV",
+  "UG",
+  "VU",
+  "WS",
+  "ZM",
+  "ZW",
+  "NA",
 ] as const;
 
 /** Every country of nationality, ISO 3166-1 alpha-2 (GB is a British status above). */
@@ -96,7 +148,14 @@ export function nationalityOptions(): Array<{ code: string; name: string }> {
 export function nationalityFromId(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const v = raw.trim().toUpperCase();
-  if (v === "GBR" || v === "GB" || v === "BRITISH" || v === "BRITISH CITIZEN" || v === "UNITED KINGDOM") return "GB";
+  if (
+    v === "GBR" ||
+    v === "GB" ||
+    v === "BRITISH" ||
+    v === "BRITISH CITIZEN" ||
+    v === "UNITED KINGDOM"
+  )
+    return "GB";
   if (ALPHA3[v]) return ALPHA3[v];
   if (v.length === 2 && isNationality(v)) return v;
   const byName = nationalityOptions().find((o) => o.name.toUpperCase() === v);
@@ -105,10 +164,50 @@ export function nationalityFromId(raw: string | null | undefined): string | null
 
 /** The handful of alpha-3 codes passports print most often in the UK. */
 const ALPHA3: Record<string, string> = {
-  IRL: "IE", FRA: "FR", DEU: "DE", D: "DE", ESP: "ES", ITA: "IT", NLD: "NL", BEL: "BE", PRT: "PT", POL: "PL", ROU: "RO",
-  USA: "US", CAN: "CA", AUS: "AU", NZL: "NZ", IND: "IN", PAK: "PK", CHN: "CN", JPN: "JP", KOR: "KR", BRA: "BR", MEX: "MX",
-  ZAF: "ZA", NGA: "NG", SWE: "SE", NOR: "NO", DNK: "DK", FIN: "FI", CHE: "CH", AUT: "AT", GRC: "GR", TUR: "TR", UKR: "UA",
-  HKG: "HK", SGP: "SG", MYS: "MY", ARE: "AE", SAU: "SA", ISR: "IL", EGY: "EG", BGD: "BD", LKA: "LK", KEN: "KE", GHA: "GH",
+  IRL: "IE",
+  FRA: "FR",
+  DEU: "DE",
+  D: "DE",
+  ESP: "ES",
+  ITA: "IT",
+  NLD: "NL",
+  BEL: "BE",
+  PRT: "PT",
+  POL: "PL",
+  ROU: "RO",
+  USA: "US",
+  CAN: "CA",
+  AUS: "AU",
+  NZL: "NZ",
+  IND: "IN",
+  PAK: "PK",
+  CHN: "CN",
+  JPN: "JP",
+  KOR: "KR",
+  BRA: "BR",
+  MEX: "MX",
+  ZAF: "ZA",
+  NGA: "NG",
+  SWE: "SE",
+  NOR: "NO",
+  DNK: "DK",
+  FIN: "FI",
+  CHE: "CH",
+  AUT: "AT",
+  GRC: "GR",
+  TUR: "TR",
+  UKR: "UA",
+  HKG: "HK",
+  SGP: "SG",
+  MYS: "MY",
+  ARE: "AE",
+  SAU: "SA",
+  ISR: "IL",
+  EGY: "EG",
+  BGD: "BD",
+  LKA: "LK",
+  KEN: "KE",
+  GHA: "GH",
 };
 
 /** Who on a stay has to be in the register: every adult, and children 16 or over. */
@@ -128,7 +227,9 @@ export function registerApplies(countryCode: string | null | undefined): boolean
 /** Kept for at least 12 months from arrival; removed the day after. */
 export function registerKeepUntil(arrivalDate: string): string {
   const [y, m, d] = arrivalDate.split("-").map(Number) as [number, number, number];
-  const date = new Date(Date.UTC(y + Math.floor(REGISTER_MONTHS / 12), m - 1 + (REGISTER_MONTHS % 12), d));
+  const date = new Date(
+    Date.UTC(y + Math.floor(REGISTER_MONTHS / 12), m - 1 + (REGISTER_MONTHS % 12), d),
+  );
   // 29 February rolls to 1 March, which is still at least 12 months.
   return date.toISOString().slice(0, 10);
 }
@@ -158,8 +259,11 @@ export type RegisterProblem = "name" | "nationality" | "document" | "place" | "d
  * Checks one person's entry. Document details and next destination are only
  * kept for aliens: nobody else is asked, and anything sent anyway is dropped.
  */
-export function cleanRegisterEntry(input: RegisterInput): { ok: true; entry: RegisterEntry } | { ok: false; missing: RegisterProblem[] } {
-  const text = (v: string | null | undefined, max: number) => (v ?? "").trim().replace(/\s+/g, " ").slice(0, max);
+export function cleanRegisterEntry(
+  input: RegisterInput,
+): { ok: true; entry: RegisterEntry } | { ok: false; missing: RegisterProblem[] } {
+  const text = (v: string | null | undefined, max: number) =>
+    (v ?? "").trim().replace(/\s+/g, " ").slice(0, max);
   const fullName = text(input.fullName, 120);
   const nationality = input.nationality.trim().toUpperCase();
   const alien = isNationality(nationality) && isAlien(nationality);

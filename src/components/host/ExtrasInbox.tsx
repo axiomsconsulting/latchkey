@@ -12,7 +12,11 @@ import { decideExtrasRequest, listExtrasRequests } from "@/lib/extras.functions"
 import { formatPence } from "@/lib/services";
 
 type Action = "approve" | "decline" | "suggest" | "delivered" | "mark_paid";
-type Pending = { id: string; action: Action; window: "asap" | "evening" | "morning" | "door" | null };
+type Pending = {
+  id: string;
+  action: Action;
+  window: "asap" | "evening" | "morning" | "door" | null;
+};
 
 export function ExtrasInbox({ propertyId }: { propertyId: string }) {
   const qc = useQueryClient();
@@ -62,7 +66,11 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
       ) : (
         <ul className="mt-4 space-y-3">
           {q.data.map((r) => (
-            <li key={r.id} id={`request-${r.id}`} className="scroll-mt-24 rounded-2xl border border-border bg-surface p-4">
+            <li
+              key={r.id}
+              id={`request-${r.id}`}
+              className="scroll-mt-24 rounded-2xl border border-border bg-surface p-4"
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">
                   {r.guest}
@@ -94,31 +102,31 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
 
               {pending && pending.id === r.id ? (
                 ((p: Pending) => (
-                <div className="mt-3 space-y-2 rounded-2xl border border-border p-3">
-                  <p className="text-sm font-medium">{responseNotes.label}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {presetsFor(p.action).map((n) => (
-                      <Button key={n} size="sm" variant="outline" onClick={() => send(p, n)}>
-                        {n}
+                  <div className="mt-3 space-y-2 rounded-2xl border border-border p-3">
+                    <p className="text-sm font-medium">{responseNotes.label}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {presetsFor(p.action).map((n) => (
+                        <Button key={n} size="sm" variant="outline" onClick={() => send(p, n)}>
+                          {n}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        className="h-11 flex-1"
+                        value={custom}
+                        placeholder={responseNotes.custom}
+                        aria-label={responseNotes.custom}
+                        onChange={(e) => setCustom(e.target.value)}
+                      />
+                      <Button size="sm" onClick={() => send(p, custom.trim() || null)}>
+                        {responseNotes.send}
                       </Button>
-                    ))}
+                      <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
+                        {copy.cancel}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      className="h-11 flex-1"
-                      value={custom}
-                      placeholder={responseNotes.custom}
-                      aria-label={responseNotes.custom}
-                      onChange={(e) => setCustom(e.target.value)}
-                    />
-                    <Button size="sm" onClick={() => send(p, custom.trim() || null)}>
-                      {responseNotes.send}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
-                      {copy.cancel}
-                    </Button>
-                  </div>
-                </div>
                 ))(pending)
               ) : (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -127,10 +135,18 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
                       <Button size="sm" onClick={() => start(r.id, "approve")}>
                         {copy.approve}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => start(r.id, "suggest", "evening")}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => start(r.id, "suggest", "evening")}
+                      >
                         {copy.suggest}: {copy.windows["evening"]}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => start(r.id, "suggest", "morning")}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => start(r.id, "suggest", "morning")}
+                      >
                         {copy.suggest}: {copy.windows["morning"]}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => start(r.id, "decline")}>
@@ -169,7 +185,12 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
 function breakfastLine(b: { at: string | null; style: string }): string {
   const style = breakfastCopy.styles[b.style] ?? b.style;
   if (!b.at) return `Breakfast · ${style}`;
-  const when = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(b.at));
+  const when = new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(b.at));
   return `Breakfast · ${style} · ${when}`;
 }
-

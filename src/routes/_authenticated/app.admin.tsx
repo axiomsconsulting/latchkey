@@ -2,7 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, ChartLine, Handshake, Eye, Flag, LayoutDashboard, ListTree, Loader2, Megaphone, MessageSquareHeart, Plug, Settings, ShieldCheck, Tag, Timer } from "lucide-react";
+import {
+  Building2,
+  ChartLine,
+  Handshake,
+  Eye,
+  Flag,
+  LayoutDashboard,
+  ListTree,
+  Loader2,
+  Megaphone,
+  MessageSquareHeart,
+  Plug,
+  Settings,
+  ShieldCheck,
+  Tag,
+  Timer,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
@@ -26,15 +42,33 @@ import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SaveButton, changed } from "@/components/host/SaveButton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { adminCopy as copy, channels, common, menuAdminCopy, stripeAccountCopy } from "@/content/copy";
+import {
+  adminCopy as copy,
+  channels,
+  common,
+  menuAdminCopy,
+  stripeAccountCopy,
+} from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
 import {
   addSuperAdmin,
@@ -61,18 +95,25 @@ import { DEFAULT_PRICING, monthlyPence, money, type PricingConfig } from "@/lib/
 import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/admin")({
-  head: () => ({ meta: [{ title: rebrand("Admin · Latchkey") }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [{ title: rebrand("Admin · Latchkey") }, { name: "robots", content: "noindex" }],
+  }),
   component: AdminPage,
 });
 
-const day = (iso: string | null) => (iso ? formatUkDate(iso.slice(0, 10), { withYear: true }) : "—");
+const day = (iso: string | null) =>
+  iso ? formatUkDate(iso.slice(0, 10), { withYear: true }) : "—";
 
 /** The super admin's view of the whole service. */
 function AdminPage() {
   const ws = useWorkspace();
   const fetchOverview = useServerFn(getAdminOverview);
   const isSuper = ws.data?.isSuperAdmin === true;
-  const q = useQuery({ queryKey: ["admin-overview"], enabled: isSuper, queryFn: () => fetchOverview() });
+  const q = useQuery({
+    queryKey: ["admin-overview"],
+    enabled: isSuper,
+    queryFn: () => fetchOverview(),
+  });
   const search = useSearch({ strict: false }) as { drive?: string; tab?: string };
   const backFromDrive = !!search.drive;
 
@@ -81,37 +122,90 @@ function AdminPage() {
 
   const pricing = (q.data?.pricing as PricingConfig | null) ?? DEFAULT_PRICING;
   const hosts = q.data?.hosts ?? [];
-  const openFlags = (q.data?.flags ?? []).filter((f: { resolved_at: string | null }) => !f.resolved_at).length;
+  const openFlags = (q.data?.flags ?? []).filter(
+    (f: { resolved_at: string | null }) => !f.resolved_at,
+  ).length;
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageHeader title={copy.title} subtitle={copy.subtitle} />
       {/* Back from connecting Google Drive: straight to Integrations, where the result shows. */}
-      <Tabs defaultValue={backFromDrive ? "integrations" : search.tab === "hosts" ? "hosts" : "overview"}>
+      <Tabs
+        defaultValue={
+          backFromDrive ? "integrations" : search.tab === "hosts" ? "hosts" : "overview"
+        }
+      >
         <TabsList className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
-          <TabsTrigger value="overview" className="h-10 gap-2 rounded-xl px-4"><LayoutDashboard className="size-4" aria-hidden />{copy.tabOverview}</TabsTrigger>
-          <TabsTrigger value="hosts" className="h-10 gap-2 rounded-xl px-4"><Building2 className="size-4" aria-hidden />{copy.tabHosts}</TabsTrigger>
-          <TabsTrigger value="flags" className="h-10 gap-2 rounded-xl px-4"><Flag className="size-4" aria-hidden />
-            {copy.tabFlags} {openFlags ? <Badge variant="destructive" className="ml-2">{openFlags}</Badge> : null}
+          <TabsTrigger value="overview" className="h-10 gap-2 rounded-xl px-4">
+            <LayoutDashboard className="size-4" aria-hidden />
+            {copy.tabOverview}
           </TabsTrigger>
-          <TabsTrigger value="feedback" className="h-10 gap-2 rounded-xl px-4"><MessageSquareHeart className="size-4" aria-hidden />{copy.tabFeedback}</TabsTrigger>
-          <TabsTrigger value="messages" className="h-10 gap-2 rounded-xl px-4"><Megaphone className="size-4" aria-hidden />{copy.tabMessages}</TabsTrigger>
-          <TabsTrigger value="visitors" className="h-10 gap-2 rounded-xl px-4"><ChartLine className="size-4" aria-hidden />{copy.tabVisitors}</TabsTrigger>
-          <TabsTrigger value="pricing" className="h-10 gap-2 rounded-xl px-4"><Tag className="size-4" aria-hidden />{copy.tabPricing}</TabsTrigger>
-          <TabsTrigger value="partners" className="h-10 gap-2 rounded-xl px-4"><Handshake className="size-4" aria-hidden />Commission Partners</TabsTrigger>
-          <TabsTrigger value="routines" className="h-10 gap-2 rounded-xl px-4"><Timer className="size-4" aria-hidden />{copy.tabRoutines}</TabsTrigger>
-          <TabsTrigger value="integrations" className="h-10 gap-2 rounded-xl px-4"><Plug className="size-4" aria-hidden />{copy.tabIntegrations}</TabsTrigger>
-          <TabsTrigger value="menu" className="h-10 gap-2 rounded-xl px-4"><ListTree className="size-4" aria-hidden />{menuAdminCopy.tab}</TabsTrigger>
-          <TabsTrigger value="settings" className="h-10 gap-2 rounded-xl px-4"><Settings className="size-4" aria-hidden />{copy.tabSettings}</TabsTrigger>
+          <TabsTrigger value="hosts" className="h-10 gap-2 rounded-xl px-4">
+            <Building2 className="size-4" aria-hidden />
+            {copy.tabHosts}
+          </TabsTrigger>
+          <TabsTrigger value="flags" className="h-10 gap-2 rounded-xl px-4">
+            <Flag className="size-4" aria-hidden />
+            {copy.tabFlags}{" "}
+            {openFlags ? (
+              <Badge variant="destructive" className="ml-2">
+                {openFlags}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+          <TabsTrigger value="feedback" className="h-10 gap-2 rounded-xl px-4">
+            <MessageSquareHeart className="size-4" aria-hidden />
+            {copy.tabFeedback}
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="h-10 gap-2 rounded-xl px-4">
+            <Megaphone className="size-4" aria-hidden />
+            {copy.tabMessages}
+          </TabsTrigger>
+          <TabsTrigger value="visitors" className="h-10 gap-2 rounded-xl px-4">
+            <ChartLine className="size-4" aria-hidden />
+            {copy.tabVisitors}
+          </TabsTrigger>
+          <TabsTrigger value="pricing" className="h-10 gap-2 rounded-xl px-4">
+            <Tag className="size-4" aria-hidden />
+            {copy.tabPricing}
+          </TabsTrigger>
+          <TabsTrigger value="partners" className="h-10 gap-2 rounded-xl px-4">
+            <Handshake className="size-4" aria-hidden />
+            Commission Partners
+          </TabsTrigger>
+          <TabsTrigger value="routines" className="h-10 gap-2 rounded-xl px-4">
+            <Timer className="size-4" aria-hidden />
+            {copy.tabRoutines}
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="h-10 gap-2 rounded-xl px-4">
+            <Plug className="size-4" aria-hidden />
+            {copy.tabIntegrations}
+          </TabsTrigger>
+          <TabsTrigger value="menu" className="h-10 gap-2 rounded-xl px-4">
+            <ListTree className="size-4" aria-hidden />
+            {menuAdminCopy.tab}
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="h-10 gap-2 rounded-xl px-4">
+            <Settings className="size-4" aria-hidden />
+            {copy.tabSettings}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
-          {q.isLoading ? <Skeleton className="h-48 rounded-2xl" /> : <Overview hosts={hosts} pricing={pricing} />}
+          {q.isLoading ? (
+            <Skeleton className="h-48 rounded-2xl" />
+          ) : (
+            <Overview hosts={hosts} pricing={pricing} />
+          )}
         </TabsContent>
         <TabsContent value="hosts" className="mt-4 space-y-6">
           {/* Demo / live and sample data for the business being viewed (moved here from Settings). */}
           <AdminBusinessTools />
-          {q.isLoading ? <Skeleton className="h-48 rounded-2xl" /> : <HostTable hosts={hosts} pricing={pricing} />}
+          {q.isLoading ? (
+            <Skeleton className="h-48 rounded-2xl" />
+          ) : (
+            <HostTable hosts={hosts} pricing={pricing} />
+          )}
         </TabsContent>
         <TabsContent value="flags" className="mt-4">
           <Flags flags={q.data?.flags ?? []} hosts={hosts} />
@@ -171,12 +265,24 @@ function monthly(h: HostStats, pricing: PricingConfig) {
 function Overview({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingConfig }) {
   const real = hosts.filter((h) => !h.is_demo);
   const sum = (f: (h: HostStats) => number) => real.reduce((n, h) => n + f(h), 0);
-  const paying = real.filter((h) => h.subscription_status === "active" || h.subscription_status === "past_due");
-  const trialing = real.filter((h) => h.subscription_status === "trialing" && h.trial_ends_at && Date.parse(h.trial_ends_at) > Date.now());
-  const ended = real.length - paying.length - trialing.length - real.filter((h) => h.subscription_status === "comped").length;
+  const paying = real.filter(
+    (h) => h.subscription_status === "active" || h.subscription_status === "past_due",
+  );
+  const trialing = real.filter(
+    (h) =>
+      h.subscription_status === "trialing" &&
+      h.trial_ends_at &&
+      Date.parse(h.trial_ends_at) > Date.now(),
+  );
+  const ended =
+    real.length -
+    paying.length -
+    trialing.length -
+    real.filter((h) => h.subscription_status === "comped").length;
   const platforms = useMemo(() => {
     const total: Record<string, number> = {};
-    for (const h of real) for (const [k, v] of Object.entries(h.channels)) total[k] = (total[k] ?? 0) + v;
+    for (const h of real)
+      for (const [k, v] of Object.entries(h.channels)) total[k] = (total[k] ?? 0) + v;
     return Object.entries(total).sort((a, b) => b[1] - a[1]);
   }, [real]);
   const maxPlatform = Math.max(1, ...platforms.map(([, n]) => n));
@@ -187,7 +293,13 @@ function Overview({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingConf
     [copy.statRooms, String(sum((h) => h.rooms_per_property.reduce((a, b) => a + b, 0)))],
     [copy.statBookings30, String(sum((h) => h.bookings_30d))],
     [copy.statCheckins30, String(sum((h) => h.checkins_30d))],
-    [copy.statMrr, money(paying.reduce((n, h) => n + monthly(h, pricing), 0), pricing.currency)],
+    [
+      copy.statMrr,
+      money(
+        paying.reduce((n, h) => n + monthly(h, pricing), 0),
+        pricing.currency,
+      ),
+    ],
     [copy.statPaying, String(paying.length)],
     [copy.statTrialing, String(trialing.length)],
     [copy.statEnded, String(Math.max(0, ended))],
@@ -207,9 +319,15 @@ function Overview({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingConf
         <h2 className="text-lg">{copy.platforms}</h2>
         <ul className="mt-3 space-y-2">
           {platforms.map(([k, n]) => (
-            <li key={k} className="grid grid-cols-[8rem_minmax(0,1fr)_3rem] items-center gap-3 text-sm">
+            <li
+              key={k}
+              className="grid grid-cols-[8rem_minmax(0,1fr)_3rem] items-center gap-3 text-sm"
+            >
               <span className="truncate">{(channels as Record<string, string>)[k] ?? k}</span>
-              <span className="h-3 rounded-full bg-primary/80" style={{ width: `${(n / maxPlatform) * 100}%` }} />
+              <span
+                className="h-3 rounded-full bg-primary/80"
+                style={{ width: `${(n / maxPlatform) * 100}%` }}
+              />
               <span className="text-right tabular-nums">{n}</span>
             </li>
           ))}
@@ -224,19 +342,33 @@ function planLabel(h: HostStats) {
     const ended = !h.trial_ends_at || Date.parse(h.trial_ends_at) <= Date.now();
     return ended ? `Trial ended ${day(h.trial_ends_at)}` : `Trial to ${day(h.trial_ends_at)}`;
   }
-  return { active: "Paying", past_due: "Payment failing", canceled: "Cancelled", comped: "Free" }[h.subscription_status] ?? h.subscription_status;
+  return (
+    { active: "Paying", past_due: "Payment failing", canceled: "Cancelled", comped: "Free" }[
+      h.subscription_status
+    ] ?? h.subscription_status
+  );
 }
 
 /** Which Stripe account takes this business's guest payments; the ID opens it in Latchkey's Connect list. */
 function StripeCell({ s, live }: { s: HostStats["stripe"]; live: boolean }) {
-  if (!s || s.mode === "none") return <span className="text-muted-foreground">{stripeAccountCopy.modeNone}</span>;
-  if (s.mode === "platform") return <Badge variant="outline">{stripeAccountCopy.modePlatform}</Badge>;
+  if (!s || s.mode === "none")
+    return <span className="text-muted-foreground">{stripeAccountCopy.modeNone}</span>;
+  if (s.mode === "platform")
+    return <Badge variant="outline">{stripeAccountCopy.modePlatform}</Badge>;
   return (
     <span className="block">
-      <a href={stripeDashboardUrl("connected", s.account, live)} target="_blank" rel="noreferrer" title={s.account ?? ""} className="font-mono text-xs text-primary hover:underline">
+      <a
+        href={stripeDashboardUrl("connected", s.account, live)}
+        target="_blank"
+        rel="noreferrer"
+        title={s.account ?? ""}
+        className="font-mono text-xs text-primary hover:underline"
+      >
         {shortAccount(s.account)}
       </a>
-      <span className="block text-xs text-muted-foreground">{s.ready ? stripeAccountCopy.charges : stripeAccountCopy.modePending}</span>
+      <span className="block text-xs text-muted-foreground">
+        {s.ready ? stripeAccountCopy.charges : stripeAccountCopy.modePending}
+      </span>
     </span>
   );
 }
@@ -284,9 +416,17 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
             <tr key={h.host_id} className="align-top">
               <td className="px-4 py-3">
                 <span className="font-medium">{h.business_name}</span>
-                {h.is_demo ? <Badge variant="outline" className="ml-2">Demo</Badge> : null}
-                <span className="block text-xs text-muted-foreground">{h.owner_email ?? "No email yet (trial)"}</span>
-                <span className="block text-xs text-muted-foreground">Joined {day(h.created_at)}</span>
+                {h.is_demo ? (
+                  <Badge variant="outline" className="ml-2">
+                    Demo
+                  </Badge>
+                ) : null}
+                <span className="block text-xs text-muted-foreground">
+                  {h.owner_email ?? "No email yet (trial)"}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Joined {day(h.created_at)}
+                </span>
               </td>
               <td className="px-4 py-3">
                 {planLabel(h)}
@@ -297,7 +437,9 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
                   </span>
                 ) : null}
                 {h.support_access_until && Date.parse(h.support_access_until) > Date.now() ? (
-                  <Badge variant="secondary" className="mt-1 block w-fit">{copy.supportOn}</Badge>
+                  <Badge variant="secondary" className="mt-1 block w-fit">
+                    {copy.supportOn}
+                  </Badge>
                 ) : null}
               </td>
               <td className="px-4 py-3 tabular-nums">
@@ -306,7 +448,9 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
               <td className="px-4 py-3 tabular-nums">
                 {h.bookings_30d} / {h.bookings_total}
               </td>
-              <td className="px-4 py-3 tabular-nums">{money(monthly(h, pricing), pricing.currency)}</td>
+              <td className="px-4 py-3 tabular-nums">
+                {money(monthly(h, pricing), pricing.currency)}
+              </td>
               <td className="px-4 py-3">
                 <StripeCell s={h.stripe} live={live} />
               </td>
@@ -316,7 +460,12 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => void act(() => view({ data: { hostId: h.host_id } }), () => navigate({ to: "/app/today" }))}
+                    onClick={() =>
+                      void act(
+                        () => view({ data: { hostId: h.host_id } }),
+                        () => navigate({ to: "/app/today" }),
+                      )
+                    }
                   >
                     <Eye className="size-4" /> {copy.viewAs}
                   </Button>
@@ -327,37 +476,91 @@ function HostTable({ hosts, pricing }: { hosts: HostStats[]; pricing: PricingCon
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => void act(() => plan({ data: { hostId: h.host_id, action: "extend_trial", days: 14 } }))}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          void act(() =>
+                            plan({ data: { hostId: h.host_id, action: "extend_trial", days: 14 } }),
+                          )
+                        }
+                      >
                         {copy.extend}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void act(() => plan({ data: { hostId: h.host_id, action: "back_to_trial", days: 14 } }))}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          void act(() =>
+                            plan({
+                              data: { hostId: h.host_id, action: "back_to_trial", days: 14 },
+                            }),
+                          )
+                        }
+                      >
                         {copy.backToTrial}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void act(() => plan({ data: { hostId: h.host_id, action: "comp" } }))}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          void act(() => plan({ data: { hostId: h.host_id, action: "comp" } }))
+                        }
+                      >
                         {copy.comp}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {plans.map((k) => (
-                        <DropdownMenuItem key={k} onClick={() => void act(() => pkg({ data: { hostId: h.host_id, planKey: k, apiAddon: h.api_addon ?? false } }))}>
-                          {copy.planPackage}: {k[0]!.toUpperCase() + k.slice(1)} {h.plan_key === k ? "✓" : ""}
+                        <DropdownMenuItem
+                          key={k}
+                          onClick={() =>
+                            void act(() =>
+                              pkg({
+                                data: {
+                                  hostId: h.host_id,
+                                  planKey: k,
+                                  apiAddon: h.api_addon ?? false,
+                                },
+                              }),
+                            )
+                          }
+                        >
+                          {copy.planPackage}: {k[0]!.toUpperCase() + k.slice(1)}{" "}
+                          {h.plan_key === k ? "✓" : ""}
                         </DropdownMenuItem>
                       ))}
                       <DropdownMenuItem
-                        onClick={() => void act(() => pkg({ data: { hostId: h.host_id, planKey: h.plan_key ?? "grow", apiAddon: !(h.api_addon ?? false) } }))}
+                        onClick={() =>
+                          void act(() =>
+                            pkg({
+                              data: {
+                                hostId: h.host_id,
+                                planKey: h.plan_key ?? "grow",
+                                apiAddon: !(h.api_addon ?? false),
+                              },
+                            }),
+                          )
+                        }
                       >
                         {h.api_addon ? copy.apiAddonOff : copy.apiAddonOn}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => void act(() => platformStripe({ data: { hostId: h.host_id, on: true } }))}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          void act(() => platformStripe({ data: { hostId: h.host_id, on: true } }))
+                        }
+                      >
                         {copy.platformStripeOn}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void act(() => platformStripe({ data: { hostId: h.host_id, on: false } }))}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          void act(() => platformStripe({ data: { hostId: h.host_id, on: false } }))
+                        }
+                      >
                         {copy.platformStripeOff}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive"
-                        onClick={() => void act(() => plan({ data: { hostId: h.host_id, action: "end_access" } }))}
+                        onClick={() =>
+                          void act(() =>
+                            plan({ data: { hostId: h.host_id, action: "end_access" } }),
+                          )
+                        }
                       >
                         {copy.endAccess}
                       </DropdownMenuItem>
@@ -377,13 +580,24 @@ function Flags({
   flags,
   hosts,
 }: {
-  flags: Array<{ id: string; host_id: string; matched_host_id: string | null; reason: string; detail: string; created_at: string; resolved_at: string | null; resolution: string | null }>;
+  flags: Array<{
+    id: string;
+    host_id: string;
+    matched_host_id: string | null;
+    reason: string;
+    detail: string;
+    created_at: string;
+    resolved_at: string | null;
+    resolution: string | null;
+  }>;
   hosts: HostStats[];
 }) {
   const qc = useQueryClient();
   const resolve = useServerFn(resolveTrialFlag);
-  const name = (id: string | null) => hosts.find((h) => h.host_id === id)?.business_name ?? "Unknown";
-  if (flags.length === 0) return <div className="card-soft p-8 text-center text-muted-foreground">{copy.flagsEmpty}</div>;
+  const name = (id: string | null) =>
+    hosts.find((h) => h.host_id === id)?.business_name ?? "Unknown";
+  if (flags.length === 0)
+    return <div className="card-soft p-8 text-center text-muted-foreground">{copy.flagsEmpty}</div>;
   return (
     <ul className="space-y-3">
       {flags.map((f) => (
@@ -402,7 +616,9 @@ function Flags({
               size="sm"
               variant="outline"
               onClick={() =>
-                void resolve({ data: { id: f.id, resolution: "" } }).then(() => qc.invalidateQueries({ queryKey: ["admin-overview"] }))
+                void resolve({ data: { id: f.id, resolution: "" } }).then(() =>
+                  qc.invalidateQueries({ queryKey: ["admin-overview"] }),
+                )
               }
             >
               {copy.resolve}
@@ -421,13 +637,18 @@ function FeedbackInbox() {
   const q = useQuery({ queryKey: ["admin-feedback"], queryFn: () => fetchList() });
   if (q.isLoading) return <Skeleton className="h-40 rounded-2xl" />;
   const rows = q.data ?? [];
-  if (rows.length === 0) return <div className="card-soft p-8 text-center text-muted-foreground">{copy.feedbackEmpty}</div>;
+  if (rows.length === 0)
+    return (
+      <div className="card-soft p-8 text-center text-muted-foreground">{copy.feedbackEmpty}</div>
+    );
   return (
     <ul className="space-y-3">
       {rows.map((f) => (
         <li key={f.id} className="card-soft p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={f.kind === "bug" ? "destructive" : "secondary"}>{copy.kinds[f.kind] ?? f.kind}</Badge>
+            <Badge variant={f.kind === "bug" ? "destructive" : "secondary"}>
+              {copy.kinds[f.kind] ?? f.kind}
+            </Badge>
             {f.rating ? <Stars value={f.rating} size="size-4" /> : null}
             <span className="text-sm text-muted-foreground">
               {f.hosts?.business_name ?? "—"} · {day(f.created_at)}
@@ -436,9 +657,9 @@ function FeedbackInbox() {
             <Select
               value={f.status}
               onValueChange={(v) =>
-                void setStatus({ data: { id: f.id, status: v as "new" | "seen" | "planned" | "done" } }).then(() =>
-                  qc.invalidateQueries({ queryKey: ["admin-feedback"] }),
-                )
+                void setStatus({
+                  data: { id: f.id, status: v as "new" | "seen" | "planned" | "done" },
+                }).then(() => qc.invalidateQueries({ queryKey: ["admin-feedback"] }))
               }
             >
               <SelectTrigger className="ml-auto h-9 w-32">
@@ -515,15 +736,34 @@ function Announcements({ hosts }: { hosts: HostStats[] }) {
         </div>
         <div className="space-y-1">
           <Label htmlFor="ann-title">{copy.msgTitle}</Label>
-          <Input id="ann-title" required maxLength={120} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+          <Input
+            id="ann-title"
+            required
+            maxLength={120}
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="ann-body">{copy.msgBody}</Label>
-          <Textarea id="ann-body" required rows={5} maxLength={2000} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
+          <Textarea
+            id="ann-body"
+            required
+            rows={5}
+            maxLength={2000}
+            value={form.body}
+            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="ann-days">{copy.msgExpires}</Label>
-          <Input id="ann-days" inputMode="numeric" className="w-32" value={form.days} onChange={(e) => setForm((f) => ({ ...f, days: e.target.value.replace(/\D/g, "") }))} />
+          <Input
+            id="ann-days"
+            inputMode="numeric"
+            className="w-32"
+            value={form.days}
+            onChange={(e) => setForm((f) => ({ ...f, days: e.target.value.replace(/\D/g, "") }))}
+          />
         </div>
         <Button type="submit" disabled={busy}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -535,7 +775,9 @@ function Announcements({ hosts }: { hosts: HostStats[] }) {
           <li key={a.id} className="card-soft p-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{a.title}</span>
-              <Badge variant={a.active ? "default" : "outline"}>{a.active ? copy.msgActive : copy.msgOff}</Badge>
+              <Badge variant={a.active ? "default" : "outline"}>
+                {a.active ? copy.msgActive : copy.msgOff}
+              </Badge>
               <span className="text-xs text-muted-foreground">
                 {a.hosts?.business_name ?? copy.everyone} · {day(a.created_at)}
               </span>
@@ -543,7 +785,11 @@ function Announcements({ hosts }: { hosts: HostStats[] }) {
                 size="sm"
                 variant="ghost"
                 className="ml-auto"
-                onClick={() => void toggle({ data: { id: a.id, active: !a.active } }).then(() => qc.invalidateQueries({ queryKey: ["admin-announcements"] }))}
+                onClick={() =>
+                  void toggle({ data: { id: a.id, active: !a.active } }).then(() =>
+                    qc.invalidateQueries({ queryKey: ["admin-announcements"] }),
+                  )
+                }
               >
                 {a.active ? copy.msgStop : copy.msgResume}
               </Button>
@@ -561,7 +807,12 @@ function SiteSettings() {
   const save = useServerFn(saveSiteSettings);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["site-settings"], queryFn: () => fetchSettings() });
-  const [form, setForm] = useState({ signupsOpen: true, invoiceNightlyLines: true, supportEmail: "", notice: "" });
+  const [form, setForm] = useState({
+    signupsOpen: true,
+    invoiceNightlyLines: true,
+    supportEmail: "",
+    notice: "",
+  });
   useEffect(() => {
     if (q.data) {
       setForm({
@@ -573,7 +824,14 @@ function SiteSettings() {
     }
   }, [q.data]);
   const [busy, setBusy] = useState(false);
-  const dirty = !!q.data && changed(form, { signupsOpen: q.data.signups_open, invoiceNightlyLines: q.data.invoice_nightly_lines, supportEmail: q.data.support_email ?? "", notice: q.data.notice ?? "" });
+  const dirty =
+    !!q.data &&
+    changed(form, {
+      signupsOpen: q.data.signups_open,
+      invoiceNightlyLines: q.data.invoice_nightly_lines,
+      supportEmail: q.data.support_email ?? "",
+      notice: q.data.notice ?? "",
+    });
 
   return (
     <section className="card-soft space-y-4 p-5">
@@ -596,7 +854,11 @@ function SiteSettings() {
         <Label htmlFor="signups" className="text-base">
           {copy.signupsOpen}
         </Label>
-        <Switch id="signups" checked={form.signupsOpen} onCheckedChange={(v) => setForm((f) => ({ ...f, signupsOpen: v }))} />
+        <Switch
+          id="signups"
+          checked={form.signupsOpen}
+          onCheckedChange={(v) => setForm((f) => ({ ...f, signupsOpen: v }))}
+        />
       </div>
       <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
         <div>
@@ -613,11 +875,22 @@ function SiteSettings() {
       </div>
       <div className="space-y-1">
         <Label htmlFor="support-email">{copy.supportEmail}</Label>
-        <Input id="support-email" type="email" value={form.supportEmail} onChange={(e) => setForm((f) => ({ ...f, supportEmail: e.target.value }))} />
+        <Input
+          id="support-email"
+          type="email"
+          value={form.supportEmail}
+          onChange={(e) => setForm((f) => ({ ...f, supportEmail: e.target.value }))}
+        />
       </div>
       <div className="space-y-1">
         <Label htmlFor="notice">{copy.notice}</Label>
-        <Textarea id="notice" rows={2} maxLength={300} value={form.notice} onChange={(e) => setForm((f) => ({ ...f, notice: e.target.value }))} />
+        <Textarea
+          id="notice"
+          rows={2}
+          maxLength={300}
+          value={form.notice}
+          onChange={(e) => setForm((f) => ({ ...f, notice: e.target.value }))}
+        />
       </div>
     </section>
   );
@@ -657,12 +930,27 @@ function SuperAdmins() {
           <li key={a.email} className="flex flex-wrap items-center gap-3 p-3 text-sm">
             <span className="min-w-0 flex-1">
               <span className="block font-medium">
-                {a.email} {a.you ? <Badge variant="secondary" className="ml-1">{copy.you}</Badge> : null}
+                {a.email}{" "}
+                {a.you ? (
+                  <Badge variant="secondary" className="ml-1">
+                    {copy.you}
+                  </Badge>
+                ) : null}
               </span>
-              {a.addedBy ? <span className="block text-xs text-muted-foreground">{copy.addedBy(a.addedBy, day(a.addedAt))}</span> : null}
+              {a.addedBy ? (
+                <span className="block text-xs text-muted-foreground">
+                  {copy.addedBy(a.addedBy, day(a.addedAt))}
+                </span>
+              ) : null}
             </span>
             {!a.you && (q.data?.length ?? 0) > 1 ? (
-              <Button size="sm" variant="ghost" className="text-destructive" disabled={busy} onClick={() => void run(() => remove({ data: { email: a.email } }), copy.removed)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                disabled={busy}
+                onClick={() => void run(() => remove({ data: { email: a.email } }), copy.removed)}
+              >
                 {copy.removeAdmin}
               </Button>
             ) : null}
@@ -676,7 +964,14 @@ function SuperAdmins() {
           void run(() => add({ data: { email } }), copy.added).then(() => setEmail(""));
         }}
       >
-        <Input type="email" required className="h-11 min-w-64 flex-1" placeholder={copy.addPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Input
+          type="email"
+          required
+          className="h-11 min-w-64 flex-1"
+          placeholder={copy.addPlaceholder}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         <Button type="submit" disabled={busy}>
           {copy.addAdmin}
         </Button>

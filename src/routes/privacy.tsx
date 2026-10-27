@@ -17,12 +17,22 @@ import { getLegalDetails } from "@/lib/site.functions";
  */
 export const Route = createFileRoute("/privacy")({
   loader: () => getLegalDetails(),
-  head: () => ({ meta: [{ title: rebrand("Privacy policy — Latchkey") }, { name: "description", content: copy.intro }] }),
+  head: () => ({
+    meta: [
+      { title: rebrand("Privacy policy — Latchkey") },
+      { name: "description", content: copy.intro },
+    ],
+  }),
   component: PrivacyPage,
 });
 
 function PrivacyPage() {
-  return <LegalPage doc={privacyPolicy(Route.useLoaderData())} extra={{ statistics: <StatisticsSwitch /> }} />;
+  return (
+    <LegalPage
+      doc={privacyPolicy(Route.useLoaderData())}
+      extra={{ statistics: <StatisticsSwitch /> }}
+    />
+  );
 }
 
 function StatisticsSwitch() {
@@ -49,7 +59,12 @@ function StatisticsSwitch() {
       <p className="font-medium">{copy.switchTitle}</p>
       <label className="flex items-center justify-between gap-4">
         <span>{off === null ? copy.checking : off ? copy.offNow : copy.onNow}</span>
-        <Switch checked={off === false} disabled={off === null || browserSignal} onCheckedChange={(v) => set(v)} aria-label={copy.switchLabel} />
+        <Switch
+          checked={off === false}
+          disabled={off === null || browserSignal}
+          onCheckedChange={(v) => set(v)}
+          aria-label={copy.switchLabel}
+        />
       </label>
       {browserSignal ? <p className="text-sm text-muted-foreground">{copy.browserSignal}</p> : null}
       <p className="text-sm text-muted-foreground">{copy.switchHint}</p>

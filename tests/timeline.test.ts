@@ -1,6 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { SPAN, at, centreDay, dayNumber, daysIn, isoOfDay, laneOf, loadRange, nowOn, panBy, place, rangeLabel, stayTimes, step, ticks, viewFor, zoomAt, zoomOf } from "../src/lib/timeline";
+import {
+  SPAN,
+  at,
+  centreDay,
+  dayNumber,
+  daysIn,
+  isoOfDay,
+  laneOf,
+  loadRange,
+  nowOn,
+  panBy,
+  place,
+  rangeLabel,
+  stayTimes,
+  step,
+  ticks,
+  viewFor,
+  zoomAt,
+  zoomOf,
+} from "../src/lib/timeline";
 
 const day = "2026-10-20"; // a Tuesday
 
@@ -14,7 +33,15 @@ describe("room timeline", () => {
   it("opens a day as the working day, longer views from the day before", () => {
     expect(viewFor("day", day)).toEqual({ from: at(day, "06:00"), span: 18 * 60 });
     expect(daysIn(viewFor("day", day))).toEqual([day]);
-    expect(daysIn(viewFor("week", day))).toEqual(["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25"]);
+    expect(daysIn(viewFor("week", day))).toEqual([
+      "2026-10-19",
+      "2026-10-20",
+      "2026-10-21",
+      "2026-10-22",
+      "2026-10-23",
+      "2026-10-24",
+      "2026-10-25",
+    ]);
     expect(zoomOf(viewFor("3days", day).span)).toBe("3days");
     expect(centreDay(viewFor("day", day))).toBe(day);
   });
@@ -38,8 +65,18 @@ describe("room timeline", () => {
 
   it("places a stay across the view, cut where it runs off either side", () => {
     const v = viewFor("day", day);
-    expect(place(v, at(day, "15:00"), at("2026-10-22", "11:00"))).toEqual({ left: 0.5, width: 0.5, cutStart: false, cutEnd: true });
-    expect(place(v, at("2026-10-18", "15:00"), at(day, "10:30"))).toEqual({ left: 0, width: 4.5 / 18, cutStart: true, cutEnd: false });
+    expect(place(v, at(day, "15:00"), at("2026-10-22", "11:00"))).toEqual({
+      left: 0.5,
+      width: 0.5,
+      cutStart: false,
+      cutEnd: true,
+    });
+    expect(place(v, at("2026-10-18", "15:00"), at(day, "10:30"))).toEqual({
+      left: 0,
+      width: 4.5 / 18,
+      cutStart: true,
+      cutEnd: false,
+    });
     expect(place(v, at("2026-10-25", "15:00"), at("2026-10-26", "11:00"))).toBeNull();
   });
 
@@ -61,7 +98,15 @@ describe("room timeline", () => {
   });
 
   it("puts a stay at its own times or the property's", () => {
-    const s = stayTimes({ check_in_date: day, check_out_date: "2026-10-22", check_in_time: "17:30:00", check_out_time: null }, { checkIn: "15:00", checkOut: "11:00" });
+    const s = stayTimes(
+      {
+        check_in_date: day,
+        check_out_date: "2026-10-22",
+        check_in_time: "17:30:00",
+        check_out_time: null,
+      },
+      { checkIn: "15:00", checkOut: "11:00" },
+    );
     expect(s).toEqual({ start: at(day, "17:30"), end: at("2026-10-22", "11:00") });
   });
 

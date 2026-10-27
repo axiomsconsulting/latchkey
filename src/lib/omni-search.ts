@@ -52,7 +52,10 @@ export function cleanQuery(q: string): string {
  * query must appear; a title starting with the query ranks first, then a
  * word in the title starting with it, then anywhere.
  */
-export function matchScore(query: string, hit: Pick<SearchHit, "title" | "subtitle" | "keywords">): number {
+export function matchScore(
+  query: string,
+  hit: Pick<SearchHit, "title" | "subtitle" | "keywords">,
+): number {
   const q = cleanQuery(query).toLowerCase();
   if (!q) return 0;
   const title = hit.title.toLowerCase();
@@ -99,6 +102,11 @@ export const ADMIN_SETTINGS = new Set(["adminLink"]);
 /** A stay's dates for a result line: "12 Oct – 14 Oct 2026". */
 export function stayLine(checkIn: string, checkOut: string): string {
   const f = (d: string, year: boolean) =>
-    new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}), timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`));
+    new Intl.DateTimeFormat("en-GB", {
+      day: "numeric",
+      month: "short",
+      ...(year ? { year: "numeric" } : {}),
+      timeZone: "UTC",
+    }).format(new Date(`${d}T12:00:00Z`));
   return `${f(checkIn, false)} – ${f(checkOut, true)}`;
 }

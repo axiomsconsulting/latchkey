@@ -33,7 +33,10 @@ export function tradeCategoryLabel(id: string): string {
 /* ------------------------------ phone numbers ---------------------------- */
 
 /** Digits only, with the country's dialling code, ready for a wa.me link. */
-export function internationalDigits(raw: string | null | undefined, country: string): string | null {
+export function internationalDigits(
+  raw: string | null | undefined,
+  country: string,
+): string | null {
   const value = (raw ?? "").trim();
   if (!value) return null;
   const dial = region(country).dialCode;
@@ -70,9 +73,13 @@ export function contactLinks(
   const text = message ? `?text=${encodeURIComponent(message)}` : "";
   return {
     tel: phone ? `tel:${phone.replace(/[^\d+]/g, "")}` : null,
-    sms: phone ? `sms:${phone.replace(/[^\d+]/g, "")}${message ? `?&body=${encodeURIComponent(message)}` : ""}` : null,
+    sms: phone
+      ? `sms:${phone.replace(/[^\d+]/g, "")}${message ? `?&body=${encodeURIComponent(message)}` : ""}`
+      : null,
     whatsapp: wa ? `https://wa.me/${wa}${text}` : null,
-    email: email ? `mailto:${email}${message ? `?subject=${encodeURIComponent(message)}` : ""}` : null,
+    email: email
+      ? `mailto:${email}${message ? `?subject=${encodeURIComponent(message)}` : ""}`
+      : null,
   };
 }
 

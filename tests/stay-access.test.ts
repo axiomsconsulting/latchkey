@@ -1,14 +1,60 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_REVIEW_TEXT, DEFAULT_ROOM_CARD_TEXT, DEFAULT_STAY_MESSAGE, reviewDay, starsOf, distanceMetres, inStayWindow, joinKind, nearKiosk, networkKey, normaliseStayAccess, stayProgress, wifiFor, wifiProfile, wifiQrText } from "@/lib/stay-access";
+import {
+  DEFAULT_REVIEW_TEXT,
+  DEFAULT_ROOM_CARD_TEXT,
+  DEFAULT_STAY_MESSAGE,
+  reviewDay,
+  starsOf,
+  distanceMetres,
+  inStayWindow,
+  joinKind,
+  nearKiosk,
+  networkKey,
+  normaliseStayAccess,
+  stayProgress,
+  wifiFor,
+  wifiProfile,
+  wifiQrText,
+} from "@/lib/stay-access";
 
 describe("stay access", () => {
   it("normalises the host's settings", () => {
-    expect(normaliseStayAccess(null)).toMatchObject({ roomQrEarly: false, presence: "network_or_location", stayMessage: DEFAULT_STAY_MESSAGE, wifiAfterCheckIn: false, askReview: false, showDirectReviews: false });
-    const s = normaliseStayAccess({ roomQrEarly: true, presence: "network", stayMessage: "  Hope all's <well>  ", wifiAfterCheckIn: true, askReview: true, reviewText: " Please review ", showDirectReviews: true });
-    expect(s).toEqual({ roomQrEarly: true, presence: "network", stayMessage: "Hope all's well", wifiAfterCheckIn: true, askReview: true, reviewText: "Please review", showDirectReviews: true, bufferMinutes: 60, roomCardText: DEFAULT_ROOM_CARD_TEXT });
+    expect(normaliseStayAccess(null)).toMatchObject({
+      roomQrEarly: false,
+      presence: "network_or_location",
+      stayMessage: DEFAULT_STAY_MESSAGE,
+      wifiAfterCheckIn: false,
+      askReview: false,
+      showDirectReviews: false,
+    });
+    const s = normaliseStayAccess({
+      roomQrEarly: true,
+      presence: "network",
+      stayMessage: "  Hope all's <well>  ",
+      wifiAfterCheckIn: true,
+      askReview: true,
+      reviewText: " Please review ",
+      showDirectReviews: true,
+    });
+    expect(s).toEqual({
+      roomQrEarly: true,
+      presence: "network",
+      stayMessage: "Hope all's well",
+      wifiAfterCheckIn: true,
+      askReview: true,
+      reviewText: "Please review",
+      showDirectReviews: true,
+      bufferMinutes: 60,
+      roomCardText: DEFAULT_ROOM_CARD_TEXT,
+    });
     expect(normaliseStayAccess({ reviewText: "  " }).reviewText).toBe(DEFAULT_REVIEW_TEXT);
     // The old default read like feedback: it becomes the new "anything else?" wording.
-    expect(normaliseStayAccess({ stayMessage: "We hope your stay has been comfortable so far. If anything would make it better, just send us a message." }).stayMessage).toBe(DEFAULT_STAY_MESSAGE);
+    expect(
+      normaliseStayAccess({
+        stayMessage:
+          "We hope your stay has been comfortable so far. If anything would make it better, just send us a message.",
+      }).stayMessage,
+    ).toBe(DEFAULT_STAY_MESSAGE);
   });
   it("turns scores into stars and picks the review day", () => {
     expect([1, 2, 5, 9, 10].map(starsOf)).toEqual([1, 1, 3, 5, 5]);
@@ -16,10 +62,28 @@ describe("stay access", () => {
     expect(reviewDay("during")).toBe(false);
   });
   it("counts the nights of a stay", () => {
-    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-24")).toMatchObject({ phase: "before", nights: 3 });
-    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-25")).toEqual({ nights: 3, phase: "arrival", night: 1, done: 0, left: 3 });
-    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-26")).toEqual({ nights: 3, phase: "during", night: 2, done: 1, left: 2 });
-    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-28")).toMatchObject({ phase: "leaving", left: 0 });
+    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-24")).toMatchObject({
+      phase: "before",
+      nights: 3,
+    });
+    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-25")).toEqual({
+      nights: 3,
+      phase: "arrival",
+      night: 1,
+      done: 0,
+      left: 3,
+    });
+    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-26")).toEqual({
+      nights: 3,
+      phase: "during",
+      night: 2,
+      done: 1,
+      left: 2,
+    });
+    expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-28")).toMatchObject({
+      phase: "leaving",
+      left: 0,
+    });
     expect(stayProgress("2026-10-25", "2026-10-28", "2026-10-30").phase).toBe("after");
     expect(inStayWindow("2026-10-25", "2026-10-28", "2026-10-28")).toBe(true);
   });
@@ -40,14 +104,29 @@ describe("stay access", () => {
     expect(nearKiosk(kiosk, { lat: 51.6287, lng: -0.7482, accuracy: 1500 })).toBe(false);
   });
   it("uses the room's own network before the property's", () => {
-    expect(wifiFor({ wifi_name: "Room 2", wifi_password: "abc" }, { wifi_name: "House", wifi_password: "x" })).toEqual({ name: "Room 2", password: "abc" });
-    expect(wifiFor({ wifi_name: " " }, { wifi_name: "House", wifi_password: "" })).toEqual({ name: "House", password: null });
+    expect(
+      wifiFor(
+        { wifi_name: "Room 2", wifi_password: "abc" },
+        { wifi_name: "House", wifi_password: "x" },
+      ),
+    ).toEqual({ name: "Room 2", password: "abc" });
+    expect(wifiFor({ wifi_name: " " }, { wifi_name: "House", wifi_password: "" })).toEqual({
+      name: "House",
+      password: null,
+    });
     expect(wifiFor(null, null)).toBeNull();
   });
   it("writes join codes and profiles", () => {
-    expect(wifiQrText('My;Net', 'p:a"ss')).toBe('WIFI:T:WPA;S:My\\;Net;P:p\\:a\\"ss;;');
+    expect(wifiQrText("My;Net", 'p:a"ss')).toBe('WIFI:T:WPA;S:My\\;Net;P:p\\:a\\"ss;;');
     expect(wifiQrText("Open", null)).toBe("WIFI:T:nopass;S:Open;;");
-    const p = wifiProfile("Hill <Guest>", "pw&1", "The Hill", (n) => `0000000${n}-0000-4000-8000-000000000000`);
+    // A backslash is escaped too, or phones misread the rest of the password.
+    expect(wifiQrText("Net", "a\\b")).toBe("WIFI:T:WPA;S:Net;P:a\\\\b;;");
+    const p = wifiProfile(
+      "Hill <Guest>",
+      "pw&1",
+      "The Hill",
+      (n) => `0000000${n}-0000-4000-8000-000000000000`,
+    );
     expect(p).toContain("<string>Hill &lt;Guest&gt;</string>");
     expect(p).toContain("<string>pw&amp;1</string>");
     expect(joinKind("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe("ios");

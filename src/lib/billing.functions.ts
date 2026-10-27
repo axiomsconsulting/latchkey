@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Latchkey's own subscription. Hosts add a card during their trial through
  * Stripe Checkout; Stripe takes the first monthly payment the moment the
@@ -9,7 +10,13 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
-import { billingPhase, fromStripeStatus, hasAccess, stripeTrialEnd, trialDaysLeft } from "@/lib/billing";
+import {
+  billingPhase,
+  fromStripeStatus,
+  hasAccess,
+  stripeTrialEnd,
+  trialDaysLeft,
+} from "@/lib/billing";
 import { DEFAULT_PRICING, monthlyPence, type PricingConfig } from "@/lib/pricing";
 import { requireOwner } from "@/lib/roles";
 import { rebrand } from "@/lib/brand";
@@ -44,13 +51,22 @@ async function priceFor(hostId: string): Promise<{
   const db = await admin();
   const offer = await offerOf(hostId);
   const [{ data: pricing }, { data: props }, { data: site }, { data: host }] = await Promise.all([
-    (db as any).from("platform_pricing").select("base_pence, extra_room_pence, extra_property_pence, trial_days, currency").eq("id", 1).maybeSingle(),
+    (db as any)
+      .from("platform_pricing")
+      .select("base_pence, extra_room_pence, extra_property_pence, trial_days, currency")
+      .eq("id", 1)
+      .maybeSingle(),
     db.from("properties").select("id, is_demo, rooms(id, active)").eq("host_id", hostId),
     (db as any).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle(),
     (db as any).from("hosts").select("plan_key, api_addon").eq("id", hostId).maybeSingle(),
   ]);
   const real = (props ?? []).filter((p) => !p.is_demo);
-  const rooms = real.map((p) => Math.max(1, ((p.rooms as Array<{ active: boolean }> | null) ?? []).filter((r) => r.active).length));
+  const rooms = real.map((p) =>
+    Math.max(
+      1,
+      ((p.rooms as Array<{ active: boolean }> | null) ?? []).filter((r) => r.active).length,
+    ),
+  );
   const totalRooms = rooms.reduce((n, r) => n + r, 0);
   const apiAddon = host?.api_addon === true;
   if (site?.pricing_model) {
@@ -58,7 +74,11 @@ async function priceFor(hostId: string): Promise<{
     const model = normaliseModel(site.pricing_model);
     const plan = planFor(model, host?.plan_key);
     return {
-      pence: monthlyPrice(model, plan, { rooms: Math.max(1, totalRooms), properties: real.length, apiAddon }),
+      pence: monthlyPrice(model, plan, {
+        rooms: Math.max(1, totalRooms),
+        properties: real.length,
+        apiAddon,
+      }),
       currency: model.currency,
       properties: real.length,
       rooms: totalRooms,
@@ -82,25 +102,38 @@ async function priceFor(hostId: string): Promise<{
 }
 
 /** A launch offer still to come (read separately so billing works before migration 0029). */
-async function offerOf(hostId: string): Promise<{ offerPence: number | null; offerLabel: string | null }> {
+async function offerOf(
+  hostId: string,
+): Promise<{ offerPence: number | null; offerLabel: string | null }> {
   const db = await admin();
-  const { data, error } = await (db as any).from("hosts").select("offer_pence, offer_label, offer_used_at").eq("id", hostId).maybeSingle();
+  const { data, error } = await (db as any)
+    .from("hosts")
+    .select("offer_pence, offer_label, offer_used_at")
+    .eq("id", hostId)
+    .maybeSingle();
   if (error || !data) return { offerPence: null, offerLabel: null };
   const { pendingOffer } = await import("./offer");
   const pending = pendingOffer(data);
-  return { offerPence: pending, offerLabel: pending === null ? null : (data.offer_label ?? "Launch offer") };
+  return {
+    offerPence: pending,
+    offerLabel: pending === null ? null : (data.offer_label ?? "Launch offer"),
+  };
 }
 
 /** Keeps a live Stripe subscription at the host's current price. */
 /** Moves a subscriber to their current price: now (prorated) or from the next bill. */
 export async function updateStripePrice(hostId: string, when: "now" | "next_bill" = "now") {
   const db = await admin();
-  const { data: h } = await db.from("hosts").select("business_name, stripe_subscription_id, subscription_status").eq("id", hostId).single();
+  const { data: h } = await db
+    .from("hosts")
+    .select("business_name, stripe_subscription_id, subscription_status")
+    .eq("id", hostId)
+    .single();
   if (!h?.stripe_subscription_id || !["active", "past_due"].includes(h.subscription_status)) return;
   const { stripeCall } = await import("./stripe.server");
-  const sub = await stripeCall<{ items: { data: Array<{ id: string; price: { product: string; currency: string } }> } }>(
-    `/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`,
-  );
+  const sub = await stripeCall<{
+    items: { data: Array<{ id: string; price: { product: string; currency: string } }> };
+  }>(`/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`);
   const item = sub.items.data[0];
   if (!item) return;
   const price = await priceFor(hostId);
@@ -109,7 +142,12 @@ export async function updateStripePrice(hostId: string, when: "now" | "next_bill
     items: [
       {
         id: item.id,
-        price_data: { currency: item.price.currency, product: item.price.product, unit_amount: nextMonthPence(price.pence, price.offerPence), recurring: { interval: "month" } },
+        price_data: {
+          currency: item.price.currency,
+          product: item.price.product,
+          unit_amount: nextMonthPence(price.pence, price.offerPence),
+          recurring: { interval: "month" },
+        },
       },
     ],
     proration_behavior: when === "now" ? "create_prorations" : "none",
@@ -119,17 +157,33 @@ export async function updateStripePrice(hostId: string, when: "now" | "next_bill
 /** The host picks a plan and whether they want the API add-on. */
 export const changePlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, planKey: z.string().regex(/^[a-z0-9_]{2,30}$/), apiAddon: z.boolean() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        hostId: uuid,
+        planKey: z.string().regex(/^[a-z0-9_]{2,30}$/),
+        apiAddon: z.boolean(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
     const db = await admin();
-    const { data: site } = await (db as any).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle();
+    const { data: site } = await (db as any)
+      .from("site_settings")
+      .select("pricing_model")
+      .eq("id", 1)
+      .maybeSingle();
     if (!site?.pricing_model) throw new Error("Plans aren't available yet.");
     const { normaliseModel } = await import("./pricing-model");
     const model = normaliseModel(site.pricing_model);
-    if (!model.plans.some((p) => p.key === data.planKey)) throw new Error("That plan isn't available.");
-    const { error } = await (db as any).from("hosts").update({ plan_key: data.planKey, api_addon: data.apiAddon }).eq("id", data.hostId);
+    if (!model.plans.some((p) => p.key === data.planKey))
+      throw new Error("That plan isn't available.");
+    const { error } = await (db as any)
+      .from("hosts")
+      .update({ plan_key: data.planKey, api_addon: data.apiAddon })
+      .eq("id", data.hostId);
     if (error) throw new Error(error.message);
     await updateStripePrice(data.hostId);
     return { ok: true };
@@ -138,7 +192,11 @@ export const changePlan = createServerFn({ method: "POST" })
 /** The plans hosts can choose from, once published. */
 async function publishedPlans() {
   const db = await admin();
-  const { data: site } = await (db as any).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle();
+  const { data: site } = await (db as any)
+    .from("site_settings")
+    .select("pricing_model")
+    .eq("id", 1)
+    .maybeSingle();
   if (!site?.pricing_model) return null;
   const { normaliseModel, FEATURES } = await import("./pricing-model");
   const model = normaliseModel(site.pricing_model);
@@ -154,7 +212,11 @@ export const getBilling = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     // RLS: members (and the super admin) can read the business.
-    const { data: h, error } = await context.supabase.from("hosts").select(BILLING_COLUMNS).eq("id", data.hostId).maybeSingle();
+    const { data: h, error } = await context.supabase
+      .from("hosts")
+      .select(BILLING_COLUMNS)
+      .eq("id", data.hostId)
+      .maybeSingle();
     if (error || !h) return { available: false as const };
     const { stripeReady } = await import("./stripe.server");
     const price = await priceFor(data.hostId);
@@ -181,7 +243,11 @@ export const startSubscription = createServerFn({ method: "POST" })
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
     const db = await admin();
-    const { data: h } = await db.from("hosts").select(BILLING_COLUMNS).eq("id", data.hostId).single();
+    const { data: h } = await db
+      .from("hosts")
+      .select(BILLING_COLUMNS)
+      .eq("id", data.hostId)
+      .single();
     if (!h) throw new Error("Business not found.");
     if (h.stripe_subscription_id && ["active", "past_due"].includes(h.subscription_status)) {
       throw new Error("You already have a subscription. Use Update card to change how you pay.");
@@ -198,7 +264,11 @@ export const startSubscription = createServerFn({ method: "POST" })
     const session = await stripeCall<{ url: string }>("/checkout/sessions", {
       mode: "subscription",
       client_reference_id: h.id,
-      ...(h.stripe_customer_id ? { customer: h.stripe_customer_id } : email ? { customer_email: email } : {}),
+      ...(h.stripe_customer_id
+        ? { customer: h.stripe_customer_id }
+        : email
+          ? { customer_email: email }
+          : {}),
       line_items: [
         {
           quantity: 1,
@@ -231,7 +301,11 @@ export const openBillingPortal = createServerFn({ method: "POST" })
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
     const db = await admin();
-    const { data: h } = await db.from("hosts").select("stripe_customer_id").eq("id", data.hostId).single();
+    const { data: h } = await db
+      .from("hosts")
+      .select("stripe_customer_id")
+      .eq("id", data.hostId)
+      .single();
     if (!h?.stripe_customer_id) throw new Error("Add a card first.");
     const { stripeCall } = await import("./stripe.server");
     try {
@@ -256,20 +330,33 @@ export const cancelSubscription = createServerFn({ method: "POST" })
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
     const db = await admin();
-    const { data: h } = await db.from("hosts").select("stripe_subscription_id, subscription_status").eq("id", data.hostId).single();
+    const { data: h } = await db
+      .from("hosts")
+      .select("stripe_subscription_id, subscription_status")
+      .eq("id", data.hostId)
+      .single();
     if (!h) throw new Error("Business not found.");
     if (h.stripe_subscription_id) {
       const { stripeCall } = await import("./stripe.server");
       try {
-        await stripeCall(`/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`, undefined, "DELETE");
+        await stripeCall(
+          `/subscriptions/${encodeURIComponent(h.stripe_subscription_id)}`,
+          undefined,
+          "DELETE",
+        );
       } catch (err) {
         // Already gone at Stripe is fine; anything else must not leave them billed.
-        if (!(err instanceof Error && /No such subscription/i.test(err.message))) throw (await import("./stripe-identity")).stripeFailure(err, "Cancelling");
+        if (!(err instanceof Error && /No such subscription/i.test(err.message)))
+          throw (await import("./stripe-identity")).stripeFailure(err, "Cancelling");
       }
     }
     const { error } = await db
       .from("hosts")
-      .update({ subscription_status: "canceled", canceled_at: new Date().toISOString(), current_period_end: null })
+      .update({
+        subscription_status: "canceled",
+        canceled_at: new Date().toISOString(),
+        current_period_end: null,
+      })
       .eq("id", data.hostId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -286,7 +373,11 @@ export async function applyStripeSubscription(sub: {
   const db = await admin();
   let hostId = sub.metadata?.["host_id"] ?? null;
   if (!hostId) {
-    const { data } = await db.from("hosts").select("id").eq("stripe_subscription_id", sub.id).maybeSingle();
+    const { data } = await db
+      .from("hosts")
+      .select("id")
+      .eq("stripe_subscription_id", sub.id)
+      .maybeSingle();
     hostId = data?.id ?? null;
   }
   if (!hostId) return;
@@ -297,8 +388,12 @@ export async function applyStripeSubscription(sub: {
       subscription_status: status,
       stripe_subscription_id: sub.id,
       stripe_customer_id: sub.customer,
-      current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
-      ...(status === "canceled" ? { canceled_at: new Date().toISOString() } : { canceled_at: null }),
+      current_period_end: sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : null,
+      ...(status === "canceled"
+        ? { canceled_at: new Date().toISOString() }
+        : { canceled_at: null }),
     })
     .eq("id", hostId);
 
@@ -307,7 +402,10 @@ export async function applyStripeSubscription(sub: {
   const { offerPence } = await offerOf(hostId);
   const { offerNowUsed } = await import("./offer");
   if (offerNowUsed(offerPence, sub.status)) {
-    await (db as any).from("hosts").update({ offer_used_at: new Date().toISOString() }).eq("id", hostId);
+    await (db as any)
+      .from("hosts")
+      .update({ offer_used_at: new Date().toISOString() })
+      .eq("id", hostId);
     await updateStripePrice(hostId, "next_bill");
   }
 }

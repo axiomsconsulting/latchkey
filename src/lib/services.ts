@@ -16,24 +16,150 @@ export type ServiceCategory = {
 };
 
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
-  { id: "cleaning", kind: "issue", label: "Room cleaning", icon: "sparkles", guestPricePence: null, defaultUrgency: "normal" },
-  { id: "linen", kind: "issue", label: "Towels & linen", icon: "bed", guestPricePence: null, defaultUrgency: "normal" },
-  { id: "bathroom", kind: "issue", label: "Bathroom", icon: "bath", guestPricePence: null, defaultUrgency: "normal" },
-  { id: "plumbing", kind: "issue", label: "Plumbing / leak", icon: "droplets", guestPricePence: null, defaultUrgency: "urgent" },
-  { id: "heating", kind: "issue", label: "Heating / hot water", icon: "flame", guestPricePence: null, defaultUrgency: "urgent" },
-  { id: "aircon", kind: "issue", label: "Air conditioning / fan", icon: "fan", guestPricePence: null, defaultUrgency: "normal" },
-  { id: "kitchenette", kind: "issue", label: "Kitchenette", icon: "utensils", guestPricePence: null, defaultUrgency: "normal" },
-  { id: "appliance", kind: "issue", label: "Appliance not working", icon: "plug", guestPricePence: null, defaultUrgency: "normal" },
-  { id: "electrical", kind: "issue", label: "Lights / electrics", icon: "zap", guestPricePence: null, defaultUrgency: "urgent" },
-  { id: "breakfast", kind: "extra", label: "Breakfast basket", icon: "coffee", guestPricePence: 1200, defaultUrgency: "normal" },
-  { id: "cycle", kind: "extra", label: "Cycle hire (day)", icon: "bike", guestPricePence: 1800, defaultUrgency: "low" },
-  { id: "taxi", kind: "extra", label: "Taxi booking", icon: "car", guestPricePence: null, defaultUrgency: "normal" },
-  { id: "luggage", kind: "extra", label: "Luggage storage / transfer", icon: "luggage", guestPricePence: 800, defaultUrgency: "low" },
-  { id: "late_checkout", kind: "extra", label: "Late check-out", icon: "clock", guestPricePence: 1500, defaultUrgency: "low" },
-  { id: "boiler_service", kind: "maintenance", label: "Boiler service", icon: "flame", guestPricePence: null, defaultUrgency: "low" },
-  { id: "pat_testing", kind: "maintenance", label: "PAT testing", icon: "plug", guestPricePence: null, defaultUrgency: "low" },
-  { id: "deep_clean", kind: "maintenance", label: "Deep clean", icon: "sparkles", guestPricePence: null, defaultUrgency: "low" },
-  { id: "handyman", kind: "maintenance", label: "Handyman jobs", icon: "wrench", guestPricePence: null, defaultUrgency: "low" },
+  {
+    id: "cleaning",
+    kind: "issue",
+    label: "Room cleaning",
+    icon: "sparkles",
+    guestPricePence: null,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "linen",
+    kind: "issue",
+    label: "Towels & linen",
+    icon: "bed",
+    guestPricePence: null,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "bathroom",
+    kind: "issue",
+    label: "Bathroom",
+    icon: "bath",
+    guestPricePence: null,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "plumbing",
+    kind: "issue",
+    label: "Plumbing / leak",
+    icon: "droplets",
+    guestPricePence: null,
+    defaultUrgency: "urgent",
+  },
+  {
+    id: "heating",
+    kind: "issue",
+    label: "Heating / hot water",
+    icon: "flame",
+    guestPricePence: null,
+    defaultUrgency: "urgent",
+  },
+  {
+    id: "aircon",
+    kind: "issue",
+    label: "Air conditioning / fan",
+    icon: "fan",
+    guestPricePence: null,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "kitchenette",
+    kind: "issue",
+    label: "Kitchenette",
+    icon: "utensils",
+    guestPricePence: null,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "appliance",
+    kind: "issue",
+    label: "Appliance not working",
+    icon: "plug",
+    guestPricePence: null,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "electrical",
+    kind: "issue",
+    label: "Lights / electrics",
+    icon: "zap",
+    guestPricePence: null,
+    defaultUrgency: "urgent",
+  },
+  {
+    id: "breakfast",
+    kind: "extra",
+    label: "Breakfast basket",
+    icon: "coffee",
+    guestPricePence: 1200,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "cycle",
+    kind: "extra",
+    label: "Cycle hire (day)",
+    icon: "bike",
+    guestPricePence: 1800,
+    defaultUrgency: "low",
+  },
+  {
+    id: "taxi",
+    kind: "extra",
+    label: "Taxi booking",
+    icon: "car",
+    guestPricePence: null,
+    defaultUrgency: "normal",
+  },
+  {
+    id: "luggage",
+    kind: "extra",
+    label: "Luggage storage / transfer",
+    icon: "luggage",
+    guestPricePence: 800,
+    defaultUrgency: "low",
+  },
+  {
+    id: "late_checkout",
+    kind: "extra",
+    label: "Late check-out",
+    icon: "clock",
+    guestPricePence: 1500,
+    defaultUrgency: "low",
+  },
+  {
+    id: "boiler_service",
+    kind: "maintenance",
+    label: "Boiler service",
+    icon: "flame",
+    guestPricePence: null,
+    defaultUrgency: "low",
+  },
+  {
+    id: "pat_testing",
+    kind: "maintenance",
+    label: "PAT testing",
+    icon: "plug",
+    guestPricePence: null,
+    defaultUrgency: "low",
+  },
+  {
+    id: "deep_clean",
+    kind: "maintenance",
+    label: "Deep clean",
+    icon: "sparkles",
+    guestPricePence: null,
+    defaultUrgency: "low",
+  },
+  {
+    id: "handyman",
+    kind: "maintenance",
+    label: "Handyman jobs",
+    icon: "wrench",
+    guestPricePence: null,
+    defaultUrgency: "low",
+  },
 ];
 
 export function categoryById(id: string): ServiceCategory | undefined {
@@ -75,7 +201,11 @@ function localParts(d: Date, tz: string): { day: number; hour: number; minute: n
   }).formatToParts(d);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "0";
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  return { day: days.indexOf(get("weekday")), hour: Number(get("hour")), minute: Number(get("minute")) };
+  return {
+    day: days.indexOf(get("weekday")),
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+  };
 }
 
 /**
@@ -137,14 +267,23 @@ export function recommendProviders(
     if (comparablePrice(p) === minP) reasons.push("Best price");
     if (p.rating >= 4.8) reasons.push("Top rated");
     if (p.verified) reasons.push("Verified");
-    return { provider: p, etaIso: eta.toISOString(), score: Math.round(score * 100) / 100, reasons };
+    return {
+      provider: p,
+      etaIso: eta.toISOString(),
+      score: Math.round(score * 100) / 100,
+      reasons,
+    };
   });
 
   return scored.sort((a, b) => b.score - a.score);
 }
 
 export function formatPence(pence: number, currency = "GBP"): string {
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency, minimumFractionDigits: pence % 100 ? 2 : 0 }).format(pence / 100);
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: pence % 100 ? 2 : 0,
+  }).format(pence / 100);
 }
 
 export function rateLabel(p: Pick<Provider, "ratePence" | "rateUnit">, currency = "GBP"): string {

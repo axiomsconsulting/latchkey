@@ -13,9 +13,17 @@ let bookingId: string;
 
 beforeAll(async () => {
   db = await bootDb();
-  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [USERS.owner.email]))[0]!.id;
+  hostId = (
+    await db.as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [
+      USERS.owner.email,
+    ])
+  )[0]!.id;
   propertyId = (
-    await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Hill', 'hill-inv') returning id", [hostId])
+    await db.as<{ id: string }>(
+      "owner",
+      "insert into properties (host_id, name, short_code) values ($1, 'Hill', 'hill-inv') returning id",
+      [hostId],
+    )
   )[0]!.id;
   bookingId = (
     await db.as<{ id: string }>(
@@ -24,7 +32,10 @@ beforeAll(async () => {
       [propertyId],
     )
   )[0]!.id;
-  await db.system("insert into host_members (host_id, user_id, role) values ($1, $2, 'viewer')", [hostId, USERS.viewer.id]);
+  await db.system("insert into host_members (host_id, user_id, role) values ($1, $2, 'viewer')", [
+    hostId,
+    USERS.viewer.id,
+  ]);
 }, 60_000);
 
 const insert = (number: string, token: string) =>
@@ -40,7 +51,9 @@ describe("invoices", () => {
     const a = await db.system<{ n: number }>("select claim_invoice_number($1) as n", [hostId]);
     const b = await db.system<{ n: number }>("select claim_invoice_number($1) as n", [hostId]);
     expect([a[0]!.n, b[0]!.n]).toEqual([1, 2]);
-    await expect(db.as("owner", "select claim_invoice_number($1)", [hostId])).rejects.toThrow(/permission denied/);
+    await expect(db.as("owner", "select claim_invoice_number($1)", [hostId])).rejects.toThrow(
+      /permission denied/,
+    );
   });
 
   it("is visible to the owner, not to viewers or outsiders", async () => {

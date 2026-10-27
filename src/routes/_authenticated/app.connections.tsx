@@ -54,8 +54,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calendarGuides, calendarUi, channels, common, connections as copy, feedCopy, linkTools } from "@/content/copy";
-import { useBookingSites, useConnections, usePropertyBoard, useRole, useWorkspace } from "@/hooks/use-host-data";
+import {
+  calendarGuides,
+  calendarUi,
+  channels,
+  common,
+  connections as copy,
+  feedCopy,
+  linkTools,
+} from "@/content/copy";
+import {
+  useBookingSites,
+  useConnections,
+  usePropertyBoard,
+  useRole,
+  useWorkspace,
+} from "@/hooks/use-host-data";
 import { platformKey, toChannel } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { syncPropertyNow } from "@/lib/guests.functions";
@@ -70,7 +84,8 @@ import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/connections")({
   // ?link=<connection id> lands on that calendar link.
-  validateSearch: (s: Record<string, unknown>): { link?: string } => (typeof s["link"] === "string" ? { link: s["link"] } : {}),
+  validateSearch: (s: Record<string, unknown>): { link?: string } =>
+    typeof s["link"] === "string" ? { link: s["link"] } : {},
   head: () => ({
     meta: [
       { title: rebrand("Connections · Latchkey host dashboard") },
@@ -83,7 +98,15 @@ export const Route = createFileRoute("/_authenticated/app/connections")({
   component: ConnectionsPage,
 });
 
-const CHANNEL_KEYS = ["airbnb", "booking_com", "vrbo", "homestay", "agoda", "direct", "other"] as const;
+const CHANNEL_KEYS = [
+  "airbnb",
+  "booking_com",
+  "vrbo",
+  "homestay",
+  "agoda",
+  "direct",
+  "other",
+] as const;
 
 /** Friendly checks before we bother the platform with a request. */
 function urlIssue(raw: string): string | null {
@@ -146,24 +169,23 @@ function ConnectionDialog({
   // A built-in id or a site the host added; saved as channel plus site_key.
   const [siteKey, setSiteKey] = useState<string>(existing ? platformKey(existing) : "airbnb");
   const channel = toChannel(siteKey).channel;
-  const [roomId, setRoomId] = useState(existing ? (existing.room_id ?? "none") : (roomIdDefault ?? rooms[0]?.id ?? "none"));
+  const [roomId, setRoomId] = useState(
+    existing ? (existing.room_id ?? "none") : (roomIdDefault ?? rooms[0]?.id ?? "none"),
+  );
   const [listing, setListing] = useState(existing?.listing_name ?? "");
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<
-    | null
-    | {
-        ok: boolean;
-        message?: string;
-        total?: number;
-        preview?: Array<{
-          guest: string | null;
-          checkIn: string;
-          checkOut: string;
-          reference: string | null;
-        }>;
-      }
-  >(null);
+  const [preview, setPreview] = useState<null | {
+    ok: boolean;
+    message?: string;
+    total?: number;
+    preview?: Array<{
+      guest: string | null;
+      checkIn: string;
+      checkOut: string;
+      reference: string | null;
+    }>;
+  }>(null);
 
   async function runTest() {
     setTesting(true);
@@ -193,7 +215,10 @@ function ConnectionDialog({
         },
       });
       await qc.invalidateQueries({ queryKey: ["connections"] });
-      toast.success(editing ? linkTools.saved : "Calendar link added", editing ? undefined : { description: calendarUi.howItWorks });
+      toast.success(
+        editing ? linkTools.saved : "Calendar link added",
+        editing ? undefined : { description: calendarUi.howItWorks },
+      );
       setUrl("");
       setPreview(null);
       onOpenChange(false);
@@ -208,8 +233,12 @@ function ConnectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">{editing ? linkTools.editTitle : copy.add}</DialogTitle>
-          <DialogDescription>{editing ? linkTools.editBody(existing?.masked_url ?? "") : copy.linkHelp}</DialogDescription>
+          <DialogTitle className="font-display text-xl">
+            {editing ? linkTools.editTitle : copy.add}
+          </DialogTitle>
+          <DialogDescription>
+            {editing ? linkTools.editBody(existing?.masked_url ?? "") : copy.linkHelp}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="grid gap-4">
@@ -226,9 +255,7 @@ function ConnectionDialog({
               }}
               placeholder="https://www.airbnb.co.uk/calendar/ical/…"
             />
-            {urlIssue(url) ? (
-              <p className="text-sm text-destructive">{urlIssue(url)}</p>
-            ) : null}
+            {urlIssue(url) ? <p className="text-sm text-destructive">{urlIssue(url)}</p> : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -242,7 +269,12 @@ function ConnectionDialog({
                   {sites.map((site) => (
                     <SelectItem key={site.key} value={site.key}>
                       <span className="flex items-center gap-2">
-                        <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} size="1.25em" />
+                        <ChannelIcon
+                          channel={site.key}
+                          iconUrl={site.iconUrl}
+                          label={site.label}
+                          size="1.25em"
+                        />
                         {site.label}
                       </span>
                     </SelectItem>
@@ -290,8 +322,6 @@ function ConnectionDialog({
               </a>
             ) : null}
           </aside>
-
-
 
           <div className="space-y-2">
             <Label htmlFor="ln">{copy.listingLabel}</Label>
@@ -375,7 +405,11 @@ function ConnectionsPage() {
       <div className="mx-auto w-full max-w-3xl">
         <PageHeader title={copy.title} subtitle={copy.subtitle} />
         <div className="mt-6">
-          <EmptyState icon={Plug} title="No rooms set up yet" body="Add a property first, then connect your channel calendars." />
+          <EmptyState
+            icon={Plug}
+            title="No rooms set up yet"
+            body="Add a property first, then connect your channel calendars."
+          />
         </div>
       </div>
     );
@@ -435,7 +469,10 @@ function PropertyLinks({ property }: { property: { id: string; name: string } })
   const syncAll = useServerFn(syncPropertyNow);
   const qc = useQueryClient();
   const { canWrite } = useRole();
-  const [dialog, setDialog] = useState<{ existing: Connection | null; roomId: string | null } | null>(null);
+  const [dialog, setDialog] = useState<{
+    existing: Connection | null;
+    roomId: string | null;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const rooms = (board.data?.rooms ?? []) as Array<{ id: string; display_name: string }>;
@@ -449,7 +486,10 @@ function PropertyLinks({ property }: { property: { id: string; name: string } })
       const res = await syncAll({ data: { propertyId: property.id } });
       if (res.failed.length) toast.error(res.failed.join("\n"));
       else toast.success(linkTools.syncedAll(res.links));
-      await Promise.all([qc.invalidateQueries({ queryKey: ["connections"] }), qc.invalidateQueries({ queryKey: ["board"] })]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["connections"] }),
+        qc.invalidateQueries({ queryKey: ["board"] }),
+      ]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
     } finally {
@@ -475,33 +515,33 @@ function PropertyLinks({ property }: { property: { id: string; name: string } })
         <p className="text-sm text-muted-foreground">{linkTools.noRooms}</p>
       ) : (
         <>
-        {/* What sharing a room's Latchkey calendar does, said once for every room below. */}
-        <RoomFeedNote />
-        <div className="grid gap-4 lg:grid-cols-2">
-          {rooms.map((r) => (
-            <RoomCard
-              key={r.id}
-              title={r.display_name}
-              roomId={r.id}
-              links={items.filter((c) => c.room_id === r.id)}
-              runs={runs}
-              canWrite={canWrite}
-              onAdd={() => setDialog({ existing: null, roomId: r.id })}
-              onEdit={(c) => setDialog({ existing: c, roomId: c.room_id })}
-            />
-          ))}
-          {unlinked.length > 0 ? (
-            <RoomCard
-              title={linkTools.unlinked}
-              roomId={null}
-              links={unlinked}
-              runs={runs}
-              canWrite={canWrite}
-              onAdd={() => setDialog({ existing: null, roomId: null })}
-              onEdit={(c) => setDialog({ existing: c, roomId: c.room_id })}
-            />
-          ) : null}
-        </div>
+          {/* What sharing a room's Latchkey calendar does, said once for every room below. */}
+          <RoomFeedNote />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {rooms.map((r) => (
+              <RoomCard
+                key={r.id}
+                title={r.display_name}
+                roomId={r.id}
+                links={items.filter((c) => c.room_id === r.id)}
+                runs={runs}
+                canWrite={canWrite}
+                onAdd={() => setDialog({ existing: null, roomId: r.id })}
+                onEdit={(c) => setDialog({ existing: c, roomId: c.room_id })}
+              />
+            ))}
+            {unlinked.length > 0 ? (
+              <RoomCard
+                title={linkTools.unlinked}
+                roomId={null}
+                links={unlinked}
+                runs={runs}
+                canWrite={canWrite}
+                onAdd={() => setDialog({ existing: null, roomId: null })}
+                onEdit={(c) => setDialog({ existing: c, roomId: c.room_id })}
+              />
+            ) : null}
+          </div>
         </>
       )}
 
@@ -552,7 +592,13 @@ function RoomCard({
       ) : (
         <ul className="mt-2 divide-y divide-border">
           {links.map((c) => (
-            <LinkRow key={c.id} link={c} runs={runs.filter((r) => r.connection_id === c.id)} canWrite={canWrite} onEdit={() => onEdit(c)} />
+            <LinkRow
+              key={c.id}
+              link={c}
+              runs={runs.filter((r) => r.connection_id === c.id)}
+              canWrite={canWrite}
+              onEdit={() => onEdit(c)}
+            />
           ))}
         </ul>
       )}
@@ -568,7 +614,17 @@ function RoomCard({
   );
 }
 
-function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run[]; canWrite: boolean; onEdit: () => void }) {
+function LinkRow({
+  link,
+  runs,
+  canWrite,
+  onEdit,
+}: {
+  link: Connection;
+  runs: Run[];
+  canWrite: boolean;
+  onEdit: () => void;
+}) {
   const sync = useServerFn(syncConnectionNow);
   const remove = useServerFn(deleteConnection);
   const site = useBookingSites().find((x) => x.key === platformKey(link));
@@ -589,15 +645,25 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
       toast.error(err instanceof Error ? err.message : common.errorBody);
     } finally {
       setBusy(false);
-      await Promise.all([qc.invalidateQueries({ queryKey: ["connections"] }), qc.invalidateQueries({ queryKey: ["board"] })]);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["connections"] }),
+        qc.invalidateQueries({ queryKey: ["board"] }),
+      ]);
     }
   }
 
   async function drop() {
     try {
       const res = await remove({ data: { id: link.id, withBookings: withStays } });
-      toast.success(withStays ? linkTools.removedWithStays(res.removed ?? 0, res.archived ?? 0) : linkTools.removed);
-      await Promise.all([qc.invalidateQueries({ queryKey: ["connections"] }), qc.invalidateQueries({ queryKey: ["board"] })]);
+      toast.success(
+        withStays
+          ? linkTools.removedWithStays(res.removed ?? 0, res.archived ?? 0)
+          : linkTools.removed,
+      );
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["connections"] }),
+        qc.invalidateQueries({ queryKey: ["board"] }),
+      ]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
     }
@@ -605,7 +671,11 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
 
   const checked = link.last_synced_at
     ? `${formatUkDate(link.last_synced_at.slice(0, 10))}, ${formatUkTime(
-        new Date(link.last_synced_at).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" }),
+        new Date(link.last_synced_at).toLocaleTimeString("en-GB", {
+          timeZone: "Europe/London",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       )}`
     : copy.never;
 
@@ -614,14 +684,24 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
       <div className="flex flex-wrap items-center gap-2">
         <ChannelBadge channel={link.channel as Channel} label={site?.label} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{link.listing_name ?? site?.label ?? channels[link.channel as Channel]}</span>
-          <span className="block truncate text-xs text-muted-foreground">{link.masked_url ?? linkTools.noLink}</span>
+          <span className="block truncate text-sm font-medium">
+            {link.listing_name ?? site?.label ?? channels[link.channel as Channel]}
+          </span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {link.masked_url ?? linkTools.noLink}
+          </span>
         </span>
         <StatePill state={state} />
       </div>
 
       {state === "error" || state === "warning" ? (
-        <p className={state === "error" ? "mt-2 rounded-xl bg-destructive/10 p-2 text-sm" : "mt-2 rounded-xl bg-accent/10 p-2 text-sm"}>
+        <p
+          className={
+            state === "error"
+              ? "mt-2 rounded-xl bg-destructive/10 p-2 text-sm"
+              : "mt-2 rounded-xl bg-accent/10 p-2 text-sm"
+          }
+        >
           {explainSyncError(link.last_error)}
         </p>
       ) : null}
@@ -639,19 +719,33 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
         </button>
         {canWrite ? (
           <>
-            <Button variant="ghost" size="sm" onClick={() => void syncNow()} disabled={state === "syncing"}>
-              {state === "syncing" ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void syncNow()}
+              disabled={state === "syncing"}
+            >
+              {state === "syncing" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
               {copy.syncNow}
             </Button>
             <Button variant="ghost" size="sm" onClick={onEdit}>
               <Pencil className="size-4" /> {common.edit}
             </Button>
-            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirm(true)} aria-label={common.remove}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={() => setConfirm(true)}
+              aria-label={common.remove}
+            >
               <Trash2 className="size-4" />
             </Button>
           </>
         ) : null}
-
       </div>
 
       {history ? (
@@ -662,8 +756,11 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
             <ul className="space-y-1 text-muted-foreground">
               {runs.map((r) => (
                 <li key={r.id}>
-                  {formatUkDate(r.started_at.slice(0, 10))}, {formatUkTime(r.started_at.slice(11, 16))} —{" "}
-                  {r.error_message ? explainSyncError(r.error_message) : `${r.created_count} new, ${r.updated_count} updated, ${r.cancelled_count} cancelled`}
+                  {formatUkDate(r.started_at.slice(0, 10))},{" "}
+                  {formatUkTime(r.started_at.slice(11, 16))} —{" "}
+                  {r.error_message
+                    ? explainSyncError(r.error_message)
+                    : `${r.created_count} new, ${r.updated_count} updated, ${r.cancelled_count} cancelled`}
                 </li>
               ))}
             </ul>
@@ -678,7 +775,11 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
             <AlertDialogDescription>{linkTools.removeBody}</AlertDialogDescription>
           </AlertDialogHeader>
           <label className="flex items-start gap-3 rounded-2xl border border-border p-3 text-sm">
-            <Checkbox checked={withStays} onCheckedChange={(v) => setWithStays(v === true)} className="mt-0.5" />
+            <Checkbox
+              checked={withStays}
+              onCheckedChange={(v) => setWithStays(v === true)}
+              className="mt-0.5"
+            />
             <span>
               <span className="block font-medium">{linkTools.withStays}</span>
               <span className="block text-muted-foreground">{linkTools.withStaysHint}</span>
@@ -686,7 +787,10 @@ function LinkRow({ link, runs, canWrite, onEdit }: { link: Connection; runs: Run
           </label>
           <AlertDialogFooter>
             <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => void drop()}>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void drop()}
+            >
               {common.remove}
             </AlertDialogAction>
           </AlertDialogFooter>

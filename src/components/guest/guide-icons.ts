@@ -1,4 +1,19 @@
-import { Bath, BedDouble, BookOpen, CalendarX, Car, CarTaxiFront, DoorOpen, Footprints, LogOut, Moon, Phone, ScrollText, Utensils, type LucideIcon } from "lucide-react";
+import {
+  Bath,
+  BedDouble,
+  BookOpen,
+  CalendarX,
+  Car,
+  CarTaxiFront,
+  DoorOpen,
+  Footprints,
+  LogOut,
+  Moon,
+  Phone,
+  ScrollText,
+  Utensils,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { BuiltInKey } from "@/lib/guide";
 

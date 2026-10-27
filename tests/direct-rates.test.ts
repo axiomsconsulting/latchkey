@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { money, nightsOf, normaliseOffers, offerOn, quoteStay, roomTaken, upcomingOffers } from "../src/lib/direct-rates";
+import {
+  money,
+  nightsOf,
+  normaliseOffers,
+  offerOn,
+  quoteStay,
+  roomTaken,
+  upcomingOffers,
+} from "../src/lib/direct-rates";
 
 const r1 = "11111111-1111-1111-1111-111111111111";
 const r2 = "22222222-2222-2222-2222-222222222222";
@@ -8,7 +16,14 @@ const r2 = "22222222-2222-2222-2222-222222222222";
 describe("direct booking rates", () => {
   it("keeps only sensible offers, earliest first", () => {
     const offers = normaliseOffers([
-      { id: "winter", label: "Winter escape", from: "2026-12-01", to: "2026-12-20", percent: 15, roomIds: null },
+      {
+        id: "winter",
+        label: "Winter escape",
+        from: "2026-12-01",
+        to: "2026-12-20",
+        percent: 15,
+        roomIds: null,
+      },
       { from: "2026-11-10", to: "2026-11-01", percent: 10 },
       { from: "2026-11-01", to: "2026-11-30", percent: 95 },
       { from: "2026-11-01", to: "2026-11-05", percent: 10, roomIds: [r1, "not-a-room"] },
@@ -22,14 +37,32 @@ describe("direct booking rates", () => {
   });
 
   it("counts the nights slept", () => {
-    expect(nightsOf("2026-10-30", "2026-11-02")).toEqual(["2026-10-30", "2026-10-31", "2026-11-01"]);
+    expect(nightsOf("2026-10-30", "2026-11-02")).toEqual([
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+    ]);
     expect(nightsOf("2026-10-30", "2026-10-30")).toEqual([]);
   });
 
   it("takes each night's best offer off, for the rooms it covers", () => {
     const offers = normaliseOffers([
-      { id: "early", label: "Early November", from: "2026-11-01", to: "2026-11-02", percent: 10, roomIds: null },
-      { id: "garden", label: "Garden Room deal", from: "2026-11-02", to: "2026-11-02", percent: 20, roomIds: [r1] },
+      {
+        id: "early",
+        label: "Early November",
+        from: "2026-11-01",
+        to: "2026-11-02",
+        percent: 10,
+        roomIds: null,
+      },
+      {
+        id: "garden",
+        label: "Garden Room deal",
+        from: "2026-11-02",
+        to: "2026-11-02",
+        percent: 20,
+        roomIds: [r1],
+      },
     ]);
     expect(offerOn(offers, r1, "2026-11-02")?.id).toBe("garden");
     expect(offerOn(offers, r2, "2026-11-02")?.id).toBe("early");
@@ -48,7 +81,10 @@ describe("direct booking rates", () => {
   });
 
   it("lists offers still to come and shows money in the property's currency", () => {
-    const offers = normaliseOffers([{ from: "2026-01-01", to: "2026-01-10", percent: 10 }, { from: "2026-12-01", to: "2026-12-10", percent: 10 }]);
+    const offers = normaliseOffers([
+      { from: "2026-01-01", to: "2026-01-10", percent: 10 },
+      { from: "2026-12-01", to: "2026-12-10", percent: 10 },
+    ]);
     expect(upcomingOffers(offers, "2026-10-24").map((o) => o.from)).toEqual(["2026-12-01"]);
     expect(money(12_000, "GBP")).toBe("£120");
     expect(money(12_050, "GBP")).toBe("£120.50");
@@ -59,8 +95,18 @@ describe("direct booking rates", () => {
 describe("the offer to mention when inviting guests back", () => {
   it("prefers the best running offer, then the next one soon", async () => {
     const { offerToMention } = await import("../src/lib/direct-rates");
-    const o = (id: string, from: string, to: string, percent: number, roomIds: string[] | null = null) => ({ id, label: id, from, to, percent, roomIds });
-    const offers = [o("a", "2026-10-01", "2026-11-30", 10), o("b", "2026-10-20", "2026-10-31", 15, ["r1"]), o("c", "2026-12-20", "2027-01-05", 20)];
+    const o = (
+      id: string,
+      from: string,
+      to: string,
+      percent: number,
+      roomIds: string[] | null = null,
+    ) => ({ id, label: id, from, to, percent, roomIds });
+    const offers = [
+      o("a", "2026-10-01", "2026-11-30", 10),
+      o("b", "2026-10-20", "2026-10-31", 15, ["r1"]),
+      o("c", "2026-12-20", "2027-01-05", 20),
+    ];
     expect(offerToMention(offers, "2026-10-25")).toMatchObject({ id: "b", running: true });
     expect(offerToMention(offers, "2026-12-01")).toMatchObject({ id: "c", running: false });
     expect(offerToMention(offers, "2027-02-01")).toBeNull();

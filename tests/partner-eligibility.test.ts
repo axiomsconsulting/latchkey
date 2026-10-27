@@ -103,13 +103,23 @@ describe("partner eligibility", () => {
   });
 
   it("is payable only with transfers and payouts on and nothing due at Stripe (12.4(b))", () => {
-    const ok = { capabilities: { transfers: "active" }, payouts_enabled: true, requirements: { currently_due: [], past_due: [], disabled_reason: null } };
+    const ok = {
+      capabilities: { transfers: "active" },
+      payouts_enabled: true,
+      requirements: { currently_due: [], past_due: [], disabled_reason: null },
+    };
     expect(canReceiveTransfers(ok)).toBe(true);
     expect(canReceiveTransfers({ ...ok, payouts_enabled: false })).toBe(false);
     expect(canReceiveTransfers({ ...ok, capabilities: { transfers: "inactive" } })).toBe(false);
-    expect(canReceiveTransfers({ ...ok, requirements: { currently_due: ["individual.dob.day"] } })).toBe(false);
-    expect(canReceiveTransfers({ ...ok, requirements: { past_due: ["external_account"] } })).toBe(false);
-    expect(canReceiveTransfers({ ...ok, requirements: { disabled_reason: "requirements.past_due" } })).toBe(false);
+    expect(
+      canReceiveTransfers({ ...ok, requirements: { currently_due: ["individual.dob.day"] } }),
+    ).toBe(false);
+    expect(canReceiveTransfers({ ...ok, requirements: { past_due: ["external_account"] } })).toBe(
+      false,
+    );
+    expect(
+      canReceiveTransfers({ ...ok, requirements: { disabled_reason: "requirements.past_due" } }),
+    ).toBe(false);
     expect(canReceiveTransfers({ payouts_enabled: true })).toBe(false);
     expect(canReceiveTransfers(null)).toBe(false);
   });

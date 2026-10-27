@@ -9,9 +9,15 @@ export const Route = createFileRoute("/api/public/brand/icon")({
     handlers: {
       GET: async () => {
         const b = currentBrand();
-        if (b.logoUrl) return new Response(null, { status: 302, headers: { Location: b.logoUrl, "Cache-Control": "public, max-age=300" } });
+        if (b.logoUrl)
+          return new Response(null, {
+            status: 302,
+            headers: { Location: b.logoUrl, "Cache-Control": "public, max-age=300" },
+          });
         const svg = b.logoMark === "initial" ? initialIconSvg(b.name) : brandIconSvg(b.logoMark);
-        return new Response(svg, { headers: { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=300" } });
+        return new Response(svg, {
+          headers: { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=300" },
+        });
       },
     },
   },

@@ -62,7 +62,16 @@ export type BoardCard = {
 const LIVE = (b: BoardStay) => b.status !== "cancelled" && b.status !== "blocked";
 
 /** What the day means for one room. */
-export function occupancyFor(day: string, stays: BoardStay[], closed: boolean): { occupancy: Occupancy; leaving: BoardStay | null; arriving: BoardStay | null; staying: BoardStay | null } {
+export function occupancyFor(
+  day: string,
+  stays: BoardStay[],
+  closed: boolean,
+): {
+  occupancy: Occupancy;
+  leaving: BoardStay | null;
+  arriving: BoardStay | null;
+  staying: BoardStay | null;
+} {
   const live = stays.filter(LIVE);
   const leaving = live.find((b) => b.check_out_date === day) ?? null;
   const arriving = live.find((b) => b.check_in_date === day) ?? null;
@@ -72,8 +81,15 @@ export function occupancyFor(day: string, stays: BoardStay[], closed: boolean): 
   if (arriving) return { occupancy: "arriving", leaving: null, arriving, staying: null };
   if (staying) return { occupancy: "staying", leaving: null, arriving: null, staying };
   // Nights closed by the host, or blocked on a booking site.
-  const blocked = stays.some((b) => b.status === "blocked" && b.check_in_date <= day && b.check_out_date > day);
-  return { occupancy: closed || blocked ? "closed" : "empty", leaving: null, arriving: null, staying: null };
+  const blocked = stays.some(
+    (b) => b.status === "blocked" && b.check_in_date <= day && b.check_out_date > day,
+  );
+  return {
+    occupancy: closed || blocked ? "closed" : "empty",
+    leaving: null,
+    arriving: null,
+    staying: null,
+  };
 }
 
 /** Where the board starts before anyone has touched a room that day. */
@@ -98,9 +114,15 @@ export function buildBoard(input: {
   const saved = new Map(input.readiness.map((r) => [r.room_id, r]));
   return input.rooms.map((room) => {
     const stays = input.stays.filter((b) => b.room_id === room.id);
-    const o = occupancyFor(input.day, stays, !!input.houseClosed || !!input.closedRooms?.has(room.id));
+    const o = occupancyFor(
+      input.day,
+      stays,
+      !!input.houseClosed || !!input.closedRooms?.has(room.id),
+    );
     const row = saved.get(room.id);
-    const dueBy = o.arriving ? (o.arriving.check_in_time ?? input.defaultCheckIn).slice(0, 5) : null;
+    const dueBy = o.arriving
+      ? (o.arriving.check_in_time ?? input.defaultCheckIn).slice(0, 5)
+      : null;
     return {
       roomId: room.id,
       roomName: room.display_name,
@@ -128,7 +150,13 @@ export function notReady(cards: BoardCard[]): BoardCard[] {
   return cards.filter((c) => c.arriving && c.status !== "ready");
 }
 
-export type BoardTotals = { toClean: number; inProgress: number; ready: number; arrivingNotReady: number; outOfService: number };
+export type BoardTotals = {
+  toClean: number;
+  inProgress: number;
+  ready: number;
+  arrivingNotReady: number;
+  outOfService: number;
+};
 
 export function boardTotals(cards: BoardCard[]): BoardTotals {
   return {
@@ -142,8 +170,20 @@ export function boardTotals(cards: BoardCard[]): BoardTotals {
 
 /** Late first: rooms with someone arriving and not ready, by due time; then the rest of the work; then quiet rooms. */
 export function boardOrder(cards: BoardCard[]): BoardCard[] {
-  const rank = (c: BoardCard) => (c.arriving && c.status !== "ready" ? 0 : c.status && c.status !== "ready" ? 1 : c.status === "ready" ? 2 : 3);
-  return [...cards].sort((a, b) => rank(a) - rank(b) || (a.dueBy ?? "99").localeCompare(b.dueBy ?? "99") || a.roomName.localeCompare(b.roomName));
+  const rank = (c: BoardCard) =>
+    c.arriving && c.status !== "ready"
+      ? 0
+      : c.status && c.status !== "ready"
+        ? 1
+        : c.status === "ready"
+          ? 2
+          : 3;
+  return [...cards].sort(
+    (a, b) =>
+      rank(a) - rank(b) ||
+      (a.dueBy ?? "99").localeCompare(b.dueBy ?? "99") ||
+      a.roomName.localeCompare(b.roomName),
+  );
 }
 
 /* -------------------------------- schedule -------------------------------- */
@@ -166,12 +206,27 @@ export type ScheduleWindow = {
 };
 
 /** One window as it falls on a day: "HH:MM" to "HH:MM", for a room or the whole property (roomId null). */
-export type DayWindow = { id: string; roomId: string | null; start: string; end: string; reason: string | null; weekly: boolean };
+export type DayWindow = {
+  id: string;
+  roomId: string | null;
+  start: string;
+  end: string;
+  reason: string | null;
+  weekly: boolean;
+};
 
 const hhmm = (t: string) => t.slice(0, 5);
 const dowOf = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay();
 function zoned(instant: string, tz: string): { date: string; time: string } {
-  const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const f = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
   const p = Object.fromEntries(f.formatToParts(new Date(instant)).map((x) => [x.type, x.value]));
   return { date: `${p["year"]}-${p["month"]}-${p["day"]}`, time: `${p["hour"]}:${p["minute"]}` };
 }
@@ -182,12 +237,27 @@ export function windowsForDay(windows: ScheduleWindow[], day: string, tz: string
   const out: DayWindow[] = [];
   for (const w of windows) {
     if (w.day_of_week !== null && w.start_time && w.end_time) {
-      if (w.day_of_week === dow) out.push({ id: w.id, roomId: w.room_id, start: hhmm(w.start_time), end: hhmm(w.end_time), reason: w.reason, weekly: true });
+      if (w.day_of_week === dow)
+        out.push({
+          id: w.id,
+          roomId: w.room_id,
+          start: hhmm(w.start_time),
+          end: hhmm(w.end_time),
+          reason: w.reason,
+          weekly: true,
+        });
     } else if (w.starts_at && w.ends_at) {
       const s = zoned(w.starts_at, tz);
       const e = zoned(w.ends_at, tz);
       if (s.date <= day && e.date >= day) {
-        out.push({ id: w.id, roomId: w.room_id, start: s.date === day ? s.time : "00:00", end: e.date === day ? e.time : "24:00", reason: w.reason, weekly: false });
+        out.push({
+          id: w.id,
+          roomId: w.room_id,
+          start: s.date === day ? s.time : "00:00",
+          end: e.date === day ? e.time : "24:00",
+          reason: w.reason,
+          weekly: false,
+        });
       }
     }
   }
@@ -195,7 +265,8 @@ export function windowsForDay(windows: ScheduleWindow[], day: string, tz: string
 }
 
 /** A room's windows on the day: its own and the whole property's. */
-export const roomWindows = (dayWindows: DayWindow[], roomId: string) => dayWindows.filter((w) => w.roomId === null || w.roomId === roomId);
+export const roomWindows = (dayWindows: DayWindow[], roomId: string) =>
+  dayWindows.filter((w) => w.roomId === null || w.roomId === roomId);
 
 export const toMinutes = (t: string) => {
   const [h = "0", m = "0"] = t.split(":");
@@ -203,7 +274,12 @@ export const toMinutes = (t: string) => {
 };
 
 /** The hours the day's timeline covers: everything that happens, with an hour either side, at least 08:00–20:00. */
-export function dayAxis(input: { cards: BoardCard[]; windows: DayWindow[]; checkOut: string; checkIn: string }): { from: number; to: number } {
+export function dayAxis(input: {
+  cards: BoardCard[];
+  windows: DayWindow[];
+  checkOut: string;
+  checkIn: string;
+}): { from: number; to: number } {
   const times = [toMinutes(input.checkOut), toMinutes(input.checkIn), 8 * 60, 20 * 60];
   for (const w of input.windows) times.push(toMinutes(w.start), toMinutes(w.end));
   for (const c of input.cards) {
@@ -215,21 +291,32 @@ export function dayAxis(input: { cards: BoardCard[]; windows: DayWindow[]; check
   return { from, to };
 }
 
-export type LaneSegment = { kind: "guest_out" | "window" | "free" | "guest_in" | "staying" | "closed"; from: number; to: number; label?: string | null };
+export type LaneSegment = {
+  kind: "guest_out" | "window" | "free" | "guest_in" | "staying" | "closed";
+  from: number;
+  to: number;
+  label?: string | null;
+};
 
 /**
  * One room's day on the timeline: the leaving guest until they check out,
  * the windows, the free time for cleaning in between, and the arriving
  * guest from their check-in. Minutes from midnight, clipped to the axis.
  */
-export function roomLane(card: BoardCard, windows: DayWindow[], o: { checkOut: string; checkIn: string; axis: { from: number; to: number } }): { segments: LaneSegment[]; out: number | null; due: number | null } {
+export function roomLane(
+  card: BoardCard,
+  windows: DayWindow[],
+  o: { checkOut: string; checkIn: string; axis: { from: number; to: number } },
+): { segments: LaneSegment[]; out: number | null; due: number | null } {
   const { from, to } = o.axis;
   const clip = (s: LaneSegment): LaneSegment | null => {
     const a = Math.max(from, s.from);
     const b = Math.min(to, s.to);
     return b > a ? { ...s, from: a, to: b } : null;
   };
-  const out = card.leaving ? toMinutes((card.leaving.check_out_time ?? o.checkOut).slice(0, 5)) : null;
+  const out = card.leaving
+    ? toMinutes((card.leaving.check_out_time ?? o.checkOut).slice(0, 5))
+    : null;
   const due = card.arriving ? toMinutes(card.dueBy ?? o.checkIn) : null;
   const segs: Array<LaneSegment | null> = [];
   if (card.occupancy === "staying") segs.push(clip({ kind: "staying", from, to }));
@@ -239,15 +326,22 @@ export function roomLane(card: BoardCard, windows: DayWindow[], o: { checkOut: s
     segs.push(clip({ kind: "free", from: out ?? from, to: due ?? to }));
     if (due !== null) segs.push(clip({ kind: "guest_in", from: due, to }));
   }
-  for (const w of windows) segs.push(clip({ kind: "window", from: toMinutes(w.start), to: toMinutes(w.end), label: w.reason }));
+  for (const w of windows)
+    segs.push(
+      clip({ kind: "window", from: toMinutes(w.start), to: toMinutes(w.end), label: w.reason }),
+    );
   return { segments: segs.filter((s): s is LaneSegment => !!s), out, due };
 }
 
 /** The weekly schedule as seven days (Monday first), each with its windows in time order. */
-export function weekGrid(windows: ScheduleWindow[]): Array<{ dow: number; windows: ScheduleWindow[] }> {
+export function weekGrid(
+  windows: ScheduleWindow[],
+): Array<{ dow: number; windows: ScheduleWindow[] }> {
   return [1, 2, 3, 4, 5, 6, 0].map((dow) => ({
     dow,
-    windows: windows.filter((w) => w.day_of_week === dow && w.start_time && w.end_time).sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? "")),
+    windows: windows
+      .filter((w) => w.day_of_week === dow && w.start_time && w.end_time)
+      .sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? "")),
   }));
 }
 
@@ -266,7 +360,17 @@ export function nextOnWeekday(day: string, dow: number): string {
  * time (or the end of it), and where the work has got to. Rooms out of
  * service cover the whole day. Times "HH:MM" on that day.
  */
-export type Turn = { roomId: string; day: string; from: string; to: string; status: Readiness | null; saved: boolean; occupancy: Occupancy; dueBy: string | null; assignee: string | null };
+export type Turn = {
+  roomId: string;
+  day: string;
+  from: string;
+  to: string;
+  status: Readiness | null;
+  saved: boolean;
+  occupancy: Occupancy;
+  dueBy: string | null;
+  assignee: string | null;
+};
 
 const DAY_START = "06:00";
 const DAY_END = "22:00";
@@ -281,12 +385,28 @@ export function turnsFor(input: {
 }): Turn[] {
   const out: Turn[] = [];
   for (const day of input.days) {
-    const cards = buildBoard({ day, rooms: input.rooms, stays: input.stays, readiness: input.readiness.filter((r) => r.day === day), defaultCheckIn: input.checkIn });
+    const cards = buildBoard({
+      day,
+      rooms: input.rooms,
+      stays: input.stays,
+      readiness: input.readiness.filter((r) => r.day === day),
+      defaultCheckIn: input.checkIn,
+    });
     for (const c of cards) {
-      const base = { roomId: c.roomId, day, status: c.status, saved: c.saved, occupancy: c.occupancy, dueBy: c.dueBy, assignee: c.assignee };
+      const base = {
+        roomId: c.roomId,
+        day,
+        status: c.status,
+        saved: c.saved,
+        occupancy: c.occupancy,
+        dueBy: c.dueBy,
+        assignee: c.assignee,
+      };
       if (c.status === "out_of_service") out.push({ ...base, from: "00:00", to: "24:00" });
       else if (c.leaving || c.arriving) {
-        const from = c.leaving ? (c.leaving.check_out_time ?? input.checkOut).slice(0, 5) : DAY_START;
+        const from = c.leaving
+          ? (c.leaving.check_out_time ?? input.checkOut).slice(0, 5)
+          : DAY_START;
         const to = c.arriving ? (c.dueBy ?? input.checkIn) : DAY_END;
         if (from < to) out.push({ ...base, from, to });
       } else if (c.saved && c.status) out.push({ ...base, from: DAY_START, to: DAY_END });
@@ -296,22 +416,40 @@ export function turnsFor(input: {
 }
 
 /** The order of the board's filter and "needs attention" sort. */
-export const STATE_ORDER: Array<Readiness | "none"> = ["to_clean", "cleaning", "clean", "ready", "none", "out_of_service"];
+export const STATE_ORDER: Array<Readiness | "none"> = [
+  "to_clean",
+  "cleaning",
+  "clean",
+  "ready",
+  "none",
+  "out_of_service",
+];
 export type RoomFilter = "all" | "arriving" | Readiness;
 
 /** Rooms in the property's own order, or (when chosen) the ones needing work first; a status change never moves a room otherwise. */
-export function orderRooms<R extends { id: string }>(rooms: R[], cards: BoardCard[], by: "property" | "state"): R[] {
+export function orderRooms<R extends { id: string }>(
+  rooms: R[],
+  cards: BoardCard[],
+  by: "property" | "state",
+): R[] {
   if (by === "property") return rooms;
   const rank = (id: string) => {
     const c = cards.find((x) => x.roomId === id);
     const late = c?.arriving && c.status !== "ready" ? -1 : 0;
     return STATE_ORDER.indexOf(c?.status ?? "none") + late;
   };
-  return rooms.map((r, i) => ({ r, i, k: rank(r.id) })).sort((a, b) => a.k - b.k || a.i - b.i).map((x) => x.r);
+  return rooms
+    .map((r, i) => ({ r, i, k: rank(r.id) }))
+    .sort((a, b) => a.k - b.k || a.i - b.i)
+    .map((x) => x.r);
 }
 
 /** Rooms shown for a filter on the day's cards. */
-export function filterRooms<R extends { id: string }>(rooms: R[], cards: BoardCard[], filter: RoomFilter): R[] {
+export function filterRooms<R extends { id: string }>(
+  rooms: R[],
+  cards: BoardCard[],
+  filter: RoomFilter,
+): R[] {
   if (filter === "all") return rooms;
   return rooms.filter((r) => {
     const c = cards.find((x) => x.roomId === r.id);

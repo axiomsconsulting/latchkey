@@ -43,7 +43,12 @@ export const applyPartnerSetOff = createServerFn({ method: "POST" })
       .object({
         partnerId: z.string().uuid(),
         items: z
-          .array(z.object({ amount_pence: z.number().int().positive().max(10_000_000), note: z.string().trim().min(3).max(300) }))
+          .array(
+            z.object({
+              amount_pence: z.number().int().positive().max(10_000_000),
+              note: z.string().trim().min(3).max(300),
+            }),
+          )
           .max(20),
       })
       .parse(d),

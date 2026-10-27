@@ -16,6 +16,11 @@ export const Route = createFileRoute("/p/$code")({
   }),
   beforeLoad: ({ params, search }) => {
     const code = params.code === "demo" ? "tour" : params.code;
-    throw redirect({ to: "/kiosk/$code", params: { code }, search: search as never, replace: true });
+    throw redirect({
+      to: "/kiosk/$code",
+      params: { code },
+      search: search as never,
+      replace: true,
+    });
   },
 });

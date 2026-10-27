@@ -10,7 +10,12 @@ describe("weather", () => {
     expect(describeWeather(999, true).label).toBe("Changeable");
   });
   it("reads Open-Meteo's answer", () => {
-    expect(readForecast({ current: { temperature_2m: 13.6, weather_code: 3, is_day: 1 }, daily: { temperature_2m_max: [15.2], temperature_2m_min: [8.4] } })).toEqual({ temp: 14, high: 15, low: 8, code: 3, isDay: true });
+    expect(
+      readForecast({
+        current: { temperature_2m: 13.6, weather_code: 3, is_day: 1 },
+        daily: { temperature_2m_max: [15.2], temperature_2m_min: [8.4] },
+      }),
+    ).toEqual({ temp: 14, high: 15, low: 8, code: 3, isDay: true });
     expect(readForecast({})).toBeNull();
   });
   it("tidies UK postcodes", () => {

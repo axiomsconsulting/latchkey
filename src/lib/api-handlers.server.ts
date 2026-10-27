@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Runs Latchkey API actions for the REST endpoints and the MCP server.
  * Every call is authenticated by an API key, checked against the routine
@@ -22,14 +23,23 @@ export class ApiError extends Error {
   }
 }
 
-type Db = { from: (t: string) => any; rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> };
+type Db = {
+  from: (t: string) => any;
+  rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+};
 
 async function admin(): Promise<Db> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin as unknown as Db;
 }
 
-export type ApiCaller = { hostId: string; keyId: string; scopes: string[]; allowance: number; used: number };
+export type ApiCaller = {
+  hostId: string;
+  keyId: string;
+  scopes: string[];
+  allowance: number;
+  used: number;
+};
 
 export function hashKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
@@ -42,31 +52,71 @@ function monthStart(): string {
 
 /** Who is calling, and whether they may. Throws ApiError with a plain reason. */
 export async function authenticate(key: string | null): Promise<ApiCaller> {
-  if (!(await jobAllowed("api"))) throw new ApiError(503, "api_paused", rebrand("The Latchkey API is paused for maintenance. Please try again later."));
+  if (!(await jobAllowed("api")))
+    throw new ApiError(
+      503,
+      "api_paused",
+      rebrand("The Latchkey API is paused for maintenance. Please try again later."),
+    );
   if (!key || !/^lk_[A-Za-z0-9_]{20,80}$/.test(key)) {
-    throw new ApiError(401, "missing_key", rebrand("Send your Latchkey API key as: Authorization: Bearer lk_…"));
+    throw new ApiError(
+      401,
+      "missing_key",
+      rebrand("Send your Latchkey API key as: Authorization: Bearer lk_…"),
+    );
   }
   const db = await admin();
-  const { data: k } = await db.from("api_keys").select("id, host_id, scopes, revoked_at, last_used_at").eq("key_hash", hashKey(key)).maybeSingle();
-  if (!k || k.revoked_at) throw new ApiError(401, "bad_key", "That API key isn't valid. It may have been revoked; make a new one in Settings → API & MCP.");
+  const { data: k } = await db
+    .from("api_keys")
+    .select("id, host_id, scopes, revoked_at, last_used_at")
+    .eq("key_hash", hashKey(key))
+    .maybeSingle();
+  if (!k || k.revoked_at)
+    throw new ApiError(
+      401,
+      "bad_key",
+      "That API key isn't valid. It may have been revoked; make a new one in Settings → API & MCP.",
+    );
 
   const { data: access } = await db.rpc("host_has_access", { _host_id: k.host_id });
-  if (access === false) throw new ApiError(403, "subscription_ended", rebrand("This Latchkey account's trial or subscription has ended."));
+  if (access === false)
+    throw new ApiError(
+      403,
+      "subscription_ended",
+      rebrand("This Latchkey account's trial or subscription has ended."),
+    );
 
   const [{ data: host }, { data: site }, { data: usage }] = await Promise.all([
     db.from("hosts").select("plan_key, api_addon").eq("id", k.host_id).maybeSingle(),
     db.from("site_settings").select("pricing_model").eq("id", 1).maybeSingle(),
-    db.from("usage_daily").select("count").eq("host_id", k.host_id).eq("metric", "api:request").gte("day", monthStart()),
+    db
+      .from("usage_daily")
+      .select("count")
+      .eq("host_id", k.host_id)
+      .eq("metric", "api:request")
+      .gte("day", monthStart()),
   ]);
   const model = normaliseModel((site as { pricing_model?: unknown } | null)?.pricing_model);
   const plan = planFor(model, (host as { plan_key?: string } | null)?.plan_key);
-  const allowance = apiAllowance(model, plan, (host as { api_addon?: boolean } | null)?.api_addon === true);
+  const allowance = apiAllowance(
+    model,
+    plan,
+    (host as { api_addon?: boolean } | null)?.api_addon === true,
+  );
   if (allowance === 0) {
-    throw new ApiError(403, "not_on_plan", "The API and MCP server aren't on this plan. Add them in Billing (API add-on) or move to Pro.");
+    throw new ApiError(
+      403,
+      "not_on_plan",
+      "The API and MCP server aren't on this plan. Add them in Billing (API add-on) or move to Pro.",
+    );
   }
   const used = ((usage ?? []) as Array<{ count: number }>).reduce((n, r) => n + Number(r.count), 0);
   if (used >= allowance) {
-    throw new ApiError(429, "allowance_used", `This month's ${allowance.toLocaleString("en-GB")} requests are used up. It resets on the 1st, or upgrade in Billing.`);
+    throw new ApiError(
+      429,
+      "allowance_used",
+      `This month's ${allowance.toLocaleString("en-GB")} requests are used up. It resets on the 1st, or upgrade in Billing.`,
+    );
   }
   if (!k.last_used_at || Date.now() - Date.parse(k.last_used_at) > 5 * 60_000) {
     await db.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", k.id);
@@ -75,9 +125,18 @@ export async function authenticate(key: string | null): Promise<ApiCaller> {
 }
 
 /** Runs one action for an authenticated caller and counts it. */
-export async function runOperation(caller: ApiCaller, op: Operation, input: ParsedInput, via: "rest" | "mcp"): Promise<unknown> {
+export async function runOperation(
+  caller: ApiCaller,
+  op: Operation,
+  input: ParsedInput,
+  via: "rest" | "mcp",
+): Promise<unknown> {
   if (op.scope === "write" && !caller.scopes.includes("write")) {
-    throw new ApiError(403, "read_only_key", "This key can only read. Make a key with write access to change bookings or message guests.");
+    throw new ApiError(
+      403,
+      "read_only_key",
+      "This key can only read. Make a key with write access to change bookings or message guests.",
+    );
   }
   await bumpUsage(caller.hostId, "api:request");
   await bumpUsage(caller.hostId, `api:${via}`);
@@ -95,7 +154,14 @@ async function myProperties(hostId: string) {
     .select("id, name, short_code, timezone, default_check_in_time, default_check_out_time")
     .eq("host_id", hostId)
     .eq("is_demo", false);
-  return (data ?? []) as Array<{ id: string; name: string; short_code: string; timezone: string | null; default_check_in_time: string | null; default_check_out_time: string | null }>;
+  return (data ?? []) as Array<{
+    id: string;
+    name: string;
+    short_code: string;
+    timezone: string | null;
+    default_check_in_time: string | null;
+    default_check_out_time: string | null;
+  }>;
 }
 
 async function requireProperty(hostId: string, id: string) {
@@ -107,8 +173,13 @@ async function requireProperty(hostId: string, id: string) {
 async function requireBooking(hostId: string, id: string) {
   const db = await admin();
   const ids = (await myProperties(hostId)).map((p) => p.id);
-  const { data } = await db.from("bookings").select("*, rooms(display_name)").eq("id", id).maybeSingle();
-  if (!data || !ids.includes(data.property_id)) throw new ApiError(404, "not_found", "No booking with that id in your account.");
+  const { data } = await db
+    .from("bookings")
+    .select("*, rooms(display_name)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data || !ids.includes(data.property_id))
+    throw new ApiError(404, "not_found", "No booking with that id in your account.");
   return data as any;
 }
 
@@ -136,7 +207,8 @@ function bookingOut(b: any) {
   };
 }
 
-const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+const addDays = (d: string, n: number) =>
+  new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 /* -------------------------------- actions -------------------------------- */
 
@@ -158,7 +230,12 @@ const HANDLERS: Record<string, Handler> = {
   async list_rooms(c, i) {
     await requireProperty(c.hostId, String(i["property_id"]));
     const db = await admin();
-    const { data } = await db.from("rooms").select("*").eq("property_id", i["property_id"]).eq("active", true).order("sort_order");
+    const { data } = await db
+      .from("rooms")
+      .select("*")
+      .eq("property_id", i["property_id"])
+      .eq("active", true)
+      .order("sort_order");
     return {
       data: ((data ?? []) as any[]).map((r) => ({
         id: r.id,
@@ -172,7 +249,9 @@ const HANDLERS: Record<string, Handler> = {
 
   async list_bookings(c, i) {
     const props = await myProperties(c.hostId);
-    const ids = i["property_id"] ? [String((await requireProperty(c.hostId, String(i["property_id"]))).id)] : props.map((p) => p.id);
+    const ids = i["property_id"]
+      ? [String((await requireProperty(c.hostId, String(i["property_id"]))).id)]
+      : props.map((p) => p.id);
     if (!ids.length) return { data: [] };
     const today = todayInZone(props[0]?.timezone ?? "Europe/London");
     const from = String(i["from"] ?? today);
@@ -197,20 +276,30 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   async todays_arrivals(c, i) {
-    const props = i["property_id"] ? [await requireProperty(c.hostId, String(i["property_id"]))] : await myProperties(c.hostId);
+    const props = i["property_id"]
+      ? [await requireProperty(c.hostId, String(i["property_id"]))]
+      : await myProperties(c.hostId);
     const date = String(i["date"] ?? todayInZone(props[0]?.timezone ?? "Europe/London"));
     if (!props.length) return { data: { date, arriving: [], leaving: [], staying: [] } };
     const db = await admin();
     const { data } = await db
       .from("bookings")
       .select("*, rooms(display_name)")
-      .in("property_id", props.map((p) => p.id))
+      .in(
+        "property_id",
+        props.map((p) => p.id),
+      )
       .lte("check_in_date", date)
       .gte("check_out_date", date)
       .is("mirror_of", null)
       .not("status", "in", "(cancelled,blocked)");
     const rows = (data ?? []) as any[];
-    const brief = (b: any) => ({ booking_id: b.id, guest_name: b.guest_full_name ?? null, room: b.rooms?.display_name ?? null, status: b.status });
+    const brief = (b: any) => ({
+      booking_id: b.id,
+      guest_name: b.guest_full_name ?? null,
+      room: b.rooms?.display_name ?? null,
+      status: b.status,
+    });
     return {
       data: {
         date,
@@ -225,12 +314,18 @@ const HANDLERS: Record<string, Handler> = {
     const p = await requireProperty(c.hostId, String(i["property_id"]));
     const db = await admin();
     if (i["room_id"]) {
-      const { data: room } = await db.from("rooms").select("id").eq("id", i["room_id"]).eq("property_id", p.id).maybeSingle();
+      const { data: room } = await db
+        .from("rooms")
+        .select("id")
+        .eq("id", i["room_id"])
+        .eq("property_id", p.id)
+        .maybeSingle();
       if (!room) throw new ApiError(400, "bad_room", "That room isn't in this property.");
     }
     const checkIn = String(i["check_in"]);
     const checkOut = String(i["check_out"]);
-    if (checkOut <= checkIn) throw new ApiError(400, "bad_dates", "check_out must be after check_in.");
+    if (checkOut <= checkIn)
+      throw new ApiError(400, "bad_dates", "check_out must be after check_in.");
     const row: Record<string, unknown> = {
       property_id: p.id,
       room_id: i["room_id"] ?? null,
@@ -252,7 +347,12 @@ const HANDLERS: Record<string, Handler> = {
       delete row["stay_amount_pence"];
       ({ data, error } = await db.from("bookings").insert(row).select("id, status").single());
     }
-    if (error) throw new ApiError(400, "not_saved", "That booking couldn't be saved. Check the dates and room.");
+    if (error)
+      throw new ApiError(
+        400,
+        "not_saved",
+        "That booking couldn't be saved. Check the dates and room.",
+      );
     return { data };
   },
 
@@ -260,23 +360,38 @@ const HANDLERS: Record<string, Handler> = {
     const b = await requireBooking(c.hostId, String(i["booking_id"]));
     const db = await admin();
     const patch: Record<string, unknown> = {};
-    if (i["guest_name"] !== undefined) patch["guest_full_name"] = String(i["guest_name"]).trim().slice(0, 120);
-    if (i["email"] !== undefined) patch["guest_email"] = String(i["email"]).trim().slice(0, 254) || null;
+    if (i["guest_name"] !== undefined)
+      patch["guest_full_name"] = String(i["guest_name"]).trim().slice(0, 120);
+    if (i["email"] !== undefined)
+      patch["guest_email"] = String(i["email"]).trim().slice(0, 254) || null;
     if (i["notes"] !== undefined) patch["notes"] = String(i["notes"]).slice(0, 2000);
     if (i["status"] !== undefined) {
       patch["status"] = i["status"];
-      if (i["status"] === "checked_in" && !b.checked_in_at) patch["checked_in_at"] = new Date().toISOString();
+      if (i["status"] === "checked_in" && !b.checked_in_at)
+        patch["checked_in_at"] = new Date().toISOString();
     }
     if (i["room_id"] !== undefined) {
-      const { data: room } = await db.from("rooms").select("id").eq("id", i["room_id"]).eq("property_id", b.property_id).maybeSingle();
+      const { data: room } = await db
+        .from("rooms")
+        .select("id")
+        .eq("id", i["room_id"])
+        .eq("property_id", b.property_id)
+        .maybeSingle();
       if (!room) throw new ApiError(400, "bad_room", "That room isn't in this booking's property.");
       patch["room_id"] = i["room_id"];
     }
-    if (Object.keys(patch).length === 0) throw new ApiError(400, "nothing_to_change", "Send at least one field to change.");
+    if (Object.keys(patch).length === 0)
+      throw new ApiError(400, "nothing_to_change", "Send at least one field to change.");
     // A host's hand edits win over calendar syncs, the same as in the app.
     const manual = new Set<string>(b.manual_fields ?? []);
-    for (const k of Object.keys(patch)) if (["guest_full_name", "status"].includes(k) && b.source === "ical") manual.add(k);
-    const { data, error } = await db.from("bookings").update({ ...patch, manual_fields: [...manual] }).eq("id", b.id).select("id, status").single();
+    for (const k of Object.keys(patch))
+      if (["guest_full_name", "status"].includes(k) && b.source === "ical") manual.add(k);
+    const { data, error } = await db
+      .from("bookings")
+      .update({ ...patch, manual_fields: [...manual] })
+      .eq("id", b.id)
+      .select("id, status")
+      .single();
     if (error) throw new ApiError(400, "not_saved", "That change couldn't be saved.");
     return { data };
   },
@@ -287,14 +402,33 @@ const HANDLERS: Record<string, Handler> = {
     const db = await admin();
     const openOnly = i["open_only"] !== false;
     const limit = Math.min(100, Number(i["limit"] ?? 30));
-    const { data: bookings } = await db.from("bookings").select("id, guest_full_name").in("property_id", ids);
-    const names = new Map(((bookings ?? []) as Array<{ id: string; guest_full_name: string | null }>).map((b) => [b.id, b.guest_full_name]));
+    const { data: bookings } = await db
+      .from("bookings")
+      .select("id, guest_full_name")
+      .in("property_id", ids);
+    const names = new Map(
+      ((bookings ?? []) as Array<{ id: string; guest_full_name: string | null }>).map((b) => [
+        b.id,
+        b.guest_full_name,
+      ]),
+    );
     const bookingIds = [...names.keys()];
     const [extras, jobs] = await Promise.all([
       bookingIds.length
-        ? db.from("requests").select("id, booking_id, status, items, created_at").in("booking_id", bookingIds).order("created_at", { ascending: false }).limit(limit)
+        ? db
+            .from("requests")
+            .select("id, booking_id, status, items, created_at")
+            .in("booking_id", bookingIds)
+            .order("created_at", { ascending: false })
+            .limit(limit)
         : Promise.resolve({ data: [] }),
-      db.from("service_jobs").select("id, booking_id, title, status, created_at, source").eq("host_id", c.hostId).eq("source", "guest").order("created_at", { ascending: false }).limit(limit),
+      db
+        .from("service_jobs")
+        .select("id, booking_id, title, status, created_at, source")
+        .eq("host_id", c.hostId)
+        .eq("source", "guest")
+        .order("created_at", { ascending: false })
+        .limit(limit),
     ]);
     const done = ["done", "declined", "cancelled", "confirmed", "delivered", "rejected"];
     const rows = [
@@ -302,7 +436,9 @@ const HANDLERS: Record<string, Handler> = {
         id: r.id,
         kind: "extras",
         guest_name: names.get(r.booking_id) ?? null,
-        what: Array.isArray(r.items) ? r.items.map((x: any) => `${x.qty ?? 1} × ${x.name ?? x.key}`).join(", ") : "Extras",
+        what: Array.isArray(r.items)
+          ? r.items.map((x: any) => `${x.qty ?? 1} × ${x.name ?? x.key}`).join(", ")
+          : "Extras",
         status: r.status,
         created_at: r.created_at,
         booking_id: r.booking_id,
@@ -329,7 +465,13 @@ const HANDLERS: Record<string, Handler> = {
     const sentAt = new Date().toISOString();
     const { data, error } = await db
       .from("messages")
-      .insert({ booking_id: b.id, direction: "outbound", channel: "stay_page", body: String(i["message"]).slice(0, 2000), sent_at: sentAt })
+      .insert({
+        booking_id: b.id,
+        direction: "outbound",
+        channel: "stay_page",
+        body: String(i["message"]).slice(0, 2000),
+        sent_at: sentAt,
+      })
       .select("id")
       .single();
     if (error) throw new ApiError(400, "not_sent", "That message couldn't be sent.");
@@ -337,7 +479,9 @@ const HANDLERS: Record<string, Handler> = {
   },
 
   async get_usage(c) {
-    return { data: { month: monthStart().slice(0, 7), requests: c.used + 1, included: c.allowance } };
+    return {
+      data: { month: monthStart().slice(0, 7), requests: c.used + 1, included: c.allowance },
+    };
   },
 };
 
@@ -345,4 +489,3 @@ const HANDLERS: Record<string, Handler> = {
 export function missingHandlers(): string[] {
   return OPERATIONS.filter((o) => !HANDLERS[o.id]).map((o) => o.id);
 }
-

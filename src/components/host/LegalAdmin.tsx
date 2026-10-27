@@ -13,7 +13,16 @@ import { common, legalPageCopy as copy } from "@/content/copy";
 import { DEFAULT_LEGAL, missingLegal, normaliseLegal, type LegalDetails } from "@/lib/legal";
 import { getLegalSettings, saveLegalSettings } from "@/lib/site.functions";
 
-const FIELDS: Array<keyof LegalDetails> = ["companyName", "companyNumber", "registeredAddress", "contactEmail", "privacyEmail", "icoNumber", "vatNumber", "governingLaw"];
+const FIELDS: Array<keyof LegalDetails> = [
+  "companyName",
+  "companyNumber",
+  "registeredAddress",
+  "contactEmail",
+  "privacyEmail",
+  "icoNumber",
+  "vatNumber",
+  "governingLaw",
+];
 
 /** Latchkey admin → Site settings: who runs the service, for /terms and /privacy. */
 export function LegalAdmin() {
@@ -51,22 +60,49 @@ export function LegalAdmin() {
           <h3 className="text-lg">{copy.adminTitle}</h3>
           <p className="text-sm text-muted-foreground">{copy.adminBody}</p>
           <p className="mt-1 flex gap-3 text-sm">
-            <Link to="/terms" target="_blank" className="text-primary hover:underline">{copy.view}: {copy.terms}</Link>
-            <Link to="/privacy" target="_blank" className="text-primary hover:underline">{copy.view}: {copy.privacy}</Link>
+            <Link to="/terms" target="_blank" className="text-primary hover:underline">
+              {copy.view}: {copy.terms}
+            </Link>
+            <Link to="/privacy" target="_blank" className="text-primary hover:underline">
+              {copy.view}: {copy.privacy}
+            </Link>
           </p>
         </div>
-        {q.data.available ? <SaveButton dirty={changed(form, saved)} busy={busy} onClick={() => void save()} /> : null}
+        {q.data.available ? (
+          <SaveButton dirty={changed(form, saved)} busy={busy} onClick={() => void save()} />
+        ) : null}
       </div>
-      {!q.data.available ? <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p> : null}
-      {missing.length ? <p className="rounded-xl bg-accent/15 p-3 text-sm">{copy.missing(missing.map((k) => copy.fields[k]!.toLowerCase()).join(", "))}</p> : null}
+      {!q.data.available ? (
+        <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p>
+      ) : null}
+      {missing.length ? (
+        <p className="rounded-xl bg-accent/15 p-3 text-sm">
+          {copy.missing(missing.map((k) => copy.fields[k]!.toLowerCase()).join(", "))}
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         {FIELDS.map((k) => (
-          <div key={k} className={k === "registeredAddress" ? "space-y-1 sm:col-span-2" : "space-y-1"}>
-            <Label htmlFor={`legal-${k}`} className="text-xs">{copy.fields[k]}</Label>
+          <div
+            key={k}
+            className={k === "registeredAddress" ? "space-y-1 sm:col-span-2" : "space-y-1"}
+          >
+            <Label htmlFor={`legal-${k}`} className="text-xs">
+              {copy.fields[k]}
+            </Label>
             {k === "registeredAddress" ? (
-              <Textarea id={`legal-${k}`} rows={2} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
+              <Textarea
+                id={`legal-${k}`}
+                rows={2}
+                value={form[k]}
+                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+              />
             ) : (
-              <Input id={`legal-${k}`} type={k.endsWith("Email") ? "email" : "text"} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
+              <Input
+                id={`legal-${k}`}
+                type={k.endsWith("Email") ? "email" : "text"}
+                value={form[k]}
+                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+              />
             )}
           </div>
         ))}

@@ -23,7 +23,13 @@ import {
 } from "@/components/ui/select";
 import { bookings as copy, channels, common } from "@/content/copy";
 import { importBookings } from "@/lib/host.functions";
-import { guessMapping, IMPORT_FIELDS, normaliseDate, parseCsv, type ImportFieldKey } from "@/lib/csv";
+import {
+  guessMapping,
+  IMPORT_FIELDS,
+  normaliseDate,
+  parseCsv,
+  type ImportFieldKey,
+} from "@/lib/csv";
 
 type Props = {
   open: boolean;
@@ -70,17 +76,18 @@ export function ImportDialog({ open, onOpenChange, propertyId, rooms }: Props) {
         problems.push(`Row ${i + 2}: the dates could not be read.`);
         return;
       }
-      const channelRaw = cell(row, "channel").toLowerCase().replace(/[^a-z]/g, "");
-      const channel =
-        channelRaw.includes("airbnb")
-          ? "airbnb"
-          : channelRaw.includes("booking")
-            ? "booking_com"
-            : channelRaw.includes("homestay")
-              ? "homestay"
-              : channelRaw.includes("direct")
-                ? "direct"
-                : "other";
+      const channelRaw = cell(row, "channel")
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
+      const channel = channelRaw.includes("airbnb")
+        ? "airbnb"
+        : channelRaw.includes("booking")
+          ? "booking_com"
+          : channelRaw.includes("homestay")
+            ? "homestay"
+            : channelRaw.includes("direct")
+              ? "direct"
+              : "other";
       const phone = cell(row, "phone_last4").replace(/\D/g, "").slice(-4);
       out.push({
         room_id: roomByName.get(cell(row, "room").toLowerCase()) ?? null,

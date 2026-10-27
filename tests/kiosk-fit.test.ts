@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { FIT, calibrationKey, displayChanged, fitFontSize, fitted, keyboardLikely, orientedScreen, personalPhone, settleDisplay, widthCap } from "../src/lib/kiosk-fit";
+import {
+  FIT,
+  calibrationKey,
+  displayChanged,
+  fitFontSize,
+  fitted,
+  keyboardLikely,
+  orientedScreen,
+  personalPhone,
+  settleDisplay,
+  widthCap,
+} from "../src/lib/kiosk-fit";
 
 describe("kiosk fit to screen", () => {
   it("shrinks the page on a phone on its side", () => {
@@ -41,7 +52,13 @@ describe("is the display really different?", () => {
     expect(displayChanged(tablet, { ...tablet, w: 700 }, false)).toBe(true);
   });
   it("fits again when a desktop window is made much shorter", () => {
-    expect(displayChanged({ w: 1400, h: 900, orientation: "landscape" }, { w: 1400, h: 600, orientation: "landscape" }, false)).toBe(true);
+    expect(
+      displayChanged(
+        { w: 1400, h: 900, orientation: "landscape" },
+        { w: 1400, h: 600, orientation: "landscape" },
+        false,
+      ),
+    ).toBe(true);
   });
 
   it("tells a guest's phone held upright from a door tablet turned upright", () => {
@@ -57,7 +74,13 @@ describe("is the display really different?", () => {
 });
 
 describe("the kiosk's display", () => {
-  const tablet = { touch: true, screen: { w: 800, h: 1280 }, typing: false, fullscreen: false, calibrated: null };
+  const tablet = {
+    touch: true,
+    screen: { w: 800, h: 1280 },
+    typing: false,
+    fullscreen: false,
+    calibrated: null,
+  };
   const upright = (h: number) => ({ w: 800, h, orientation: "portrait" as const });
 
   it("holds the screen as the device's, the way it's held", () => {
@@ -78,7 +101,12 @@ describe("the kiosk's display", () => {
   });
 
   it("uses what this tablet remembered, and the whole screen in full screen", () => {
-    expect(settleDisplay(null, upright(640), { ...tablet, calibrated: 1188 })).toEqual({ w: 800, h: 1188, orientation: "portrait", estimated: false });
+    expect(settleDisplay(null, upright(640), { ...tablet, calibrated: 1188 })).toEqual({
+      w: 800,
+      h: 1188,
+      orientation: "portrait",
+      estimated: false,
+    });
     expect(settleDisplay(null, upright(640), { ...tablet, fullscreen: true }).h).toBe(1280);
   });
 
@@ -94,7 +122,11 @@ describe("the kiosk's display", () => {
 
   it("measures again when the device turns", () => {
     const d = upright(1180);
-    expect(settleDisplay(d, { w: 1280, h: 720, orientation: "landscape" }, tablet)).toEqual({ w: 1280, h: 720, orientation: "landscape" });
+    expect(settleDisplay(d, { w: 1280, h: 720, orientation: "landscape" }, tablet)).toEqual({
+      w: 1280,
+      h: 720,
+      orientation: "landscape",
+    });
     // Turned with the keyboard up: from the screen held that way.
     expect(settleDisplay(d, { w: 1280, h: 300, orientation: "landscape" }, tablet).h).toBe(720);
   });

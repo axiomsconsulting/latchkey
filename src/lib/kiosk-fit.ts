@@ -14,14 +14,20 @@ export const FIT = { min: 8, min_upright: 12, max: 26, base: 16 } as const;
  * would just fill `viewportPx`, kept to readable bounds. Content shorter than
  * the screen grows, taller shrinks.
  */
-export function fitFontSize(currentPx: number, contentPx: number, viewportPx: number, bounds: { min: number; max: number } = FIT): number {
+export function fitFontSize(
+  currentPx: number,
+  contentPx: number,
+  viewportPx: number,
+  bounds: { min: number; max: number } = FIT,
+): number {
   if (!(contentPx > 0) || !(viewportPx > 0) || !(currentPx > 0)) return FIT.base;
   const next = currentPx * (viewportPx / contentPx);
   return Math.round(Math.min(bounds.max, Math.max(bounds.min, next)) * 100) / 100;
 }
 
 /** Close enough that refitting would only flicker. */
-export const fitted = (contentPx: number, viewportPx: number) => Math.abs(contentPx - viewportPx) / viewportPx < 0.03;
+export const fitted = (contentPx: number, viewportPx: number) =>
+  Math.abs(contentPx - viewportPx) / viewportPx < 0.03;
 
 /** Wider rem layouts wrap and grow taller instead of filling the screen, so growth also stops at the width. */
 export const FIT_WIDTH_REM = 60;
@@ -60,7 +66,8 @@ export function orientedScreen(s: ScreenSize, o: Orientation): ScreenSize {
 
 /** With no keyboard the page has most of the screen (minus the status and address bars); a keyboard takes far more. */
 export const KEYBOARD_SHARE = 0.72;
-export const keyboardLikely = (pageH: number, screenH: number) => screenH > 0 && pageH < screenH * KEYBOARD_SHARE;
+export const keyboardLikely = (pageH: number, screenH: number) =>
+  screenH > 0 && pageH < screenH * KEYBOARD_SHARE;
 /** What's left of the screen for the page in a browser tab, when it can't be measured (the keyboard is up). */
 export const BROWSER_SHARE = 0.9;
 /** A touch screen only grows its display by more than this (the keyboard was up when it was first measured, or it went full screen). */
@@ -94,7 +101,8 @@ export function settleDisplay(prev: Display | null, now: Display, ctx: DisplayCo
   const same = !!prev && prev.orientation === now.orientation && Math.abs(prev.w - now.w) <= 1;
   if (same) {
     if (keyboard) return prev!;
-    if (prev!.estimated) return Math.abs(now.h - prev!.h) > 1 ? now : { ...prev!, estimated: false };
+    if (prev!.estimated)
+      return Math.abs(now.h - prev!.h) > 1 ? now : { ...prev!, estimated: false };
     return now.h > prev!.h + GROW_STEP ? now : prev!;
   }
   if (!keyboard) return now;
@@ -103,7 +111,8 @@ export function settleDisplay(prev: Display | null, now: Display, ctx: DisplayCo
 }
 
 /** Where this device's page height is remembered: by its screen and the way it's held. */
-export const calibrationKey = (s: ScreenSize, o: Orientation) => `${Math.min(s.w, s.h)}x${Math.max(s.w, s.h)}:${o}`;
+export const calibrationKey = (s: ScreenSize, o: Orientation) =>
+  `${Math.min(s.w, s.h)}x${Math.max(s.w, s.h)}:${o}`;
 
 /** Phones' shorter side is well under this (CSS px); even small tablets' is above it. */
 export const PHONE_SHORT_SIDE = 600;

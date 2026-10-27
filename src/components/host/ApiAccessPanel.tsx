@@ -21,7 +21,10 @@ export function ApiAccessPanel({ hostId, canWrite }: { hostId: string; canWrite:
   const make = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["api-access", hostId], queryFn: () => fetchAccess({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["api-access", hostId],
+    queryFn: () => fetchAccess({ data: { hostId } }),
+  });
   const [name, setName] = useState("");
   const [write, setWrite] = useState(false);
   const [fresh, setFresh] = useState<string | null>(null);
@@ -33,21 +36,23 @@ export function ApiAccessPanel({ hostId, canWrite }: { hostId: string; canWrite:
   if (!d?.available)
     return (
       <section className="card-soft space-y-4 p-5">
-      <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
-          <KeyRound className="size-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg">{copy.title}</h2>
-          <p className="text-sm text-muted-foreground">{copy.body}</p>
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
+            <KeyRound className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg">{copy.title}</h2>
+            <p className="text-sm text-muted-foreground">{copy.body}</p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/developers">
+              <BookOpen className="size-4" /> {copy.docs}
+            </Link>
+          </Button>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/developers">
-            <BookOpen className="size-4" /> {copy.docs}
-          </Link>
-        </Button>
-      </div>
-        <p className="rounded-xl bg-muted p-3 text-sm">{q.isLoading ? copy.loading : copy.unavailable}</p>
+        <p className="rounded-xl bg-muted p-3 text-sm">
+          {q.isLoading ? copy.loading : copy.unavailable}
+        </p>
       </section>
     );
   const live = d.keys.filter((k) => !k.revoked_at);
@@ -105,7 +110,12 @@ export function ApiAccessPanel({ hostId, canWrite }: { hostId: string; canWrite:
         <div className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-3">
           <p className="text-sm font-medium">{copy.keyShownOnce}</p>
           <div className="flex gap-2">
-            <Input readOnly value={fresh} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+            <Input
+              readOnly
+              value={fresh}
+              className="font-mono text-xs"
+              onFocus={(e) => e.currentTarget.select()}
+            />
             <Button
               variant="outline"
               onClick={() =>
@@ -115,7 +125,8 @@ export function ApiAccessPanel({ hostId, canWrite }: { hostId: string; canWrite:
                 })
               }
             >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />} {copied ? copy.copied : copy.copy}
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}{" "}
+              {copied ? copy.copied : copy.copy}
             </Button>
           </div>
         </div>
@@ -133,9 +144,13 @@ export function ApiAccessPanel({ hostId, canWrite }: { hostId: string; canWrite:
                   <span className="block font-medium">{k.name}</span>
                   <span className="block font-mono text-xs text-muted-foreground">{k.prefix}…</span>
                 </span>
-                <Badge variant="outline">{k.scopes.includes("write") ? copy.readWrite : copy.readOnly}</Badge>
+                <Badge variant="outline">
+                  {k.scopes.includes("write") ? copy.readWrite : copy.readOnly}
+                </Badge>
                 <span className="text-xs text-muted-foreground">
-                  {k.last_used_at ? copy.lastUsed(formatUkDate(k.last_used_at.slice(0, 10))) : copy.neverUsed}
+                  {k.last_used_at
+                    ? copy.lastUsed(formatUkDate(k.last_used_at.slice(0, 10)))
+                    : copy.neverUsed}
                 </span>
                 {canWrite ? (
                   <Button
@@ -158,10 +173,20 @@ export function ApiAccessPanel({ hostId, canWrite }: { hostId: string; canWrite:
       </div>
 
       {canWrite && d.allowed ? (
-        <form onSubmit={submit} className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <form
+          onSubmit={submit}
+          className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+        >
           <div className="space-y-1">
             <Label htmlFor="key-name">{copy.keyName}</Label>
-            <Input id="key-name" required maxLength={60} placeholder={copy.keyNamePlaceholder} value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              id="key-name"
+              required
+              maxLength={60}
+              placeholder={copy.keyNamePlaceholder}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
           <Button type="submit" className="self-end" disabled={busy}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : null} {copy.makeKey}

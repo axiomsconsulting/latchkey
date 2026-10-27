@@ -17,28 +17,52 @@ describe("taxTerms", () => {
     expect(taxTerms("CA").name).toBe("GST/HST");
     expect(taxTerms("US").name).toBe("Sales tax");
     expect(taxTerms("FR").numberLabel).toBe("VAT number");
-    expect(taxTerms("BR")).toEqual({ name: "Tax", numberLabel: "Tax registration number", title: "Invoice" });
+    expect(taxTerms("BR")).toEqual({
+      name: "Tax",
+      numberLabel: "Tax registration number",
+      title: "Invoice",
+    });
   });
 });
 
 describe("invoiceTotals", () => {
   it("takes 20% VAT out of a price that includes it", () => {
-    expect(invoiceTotals({ amountPence: 12000, includesTax: true, registered: true, rateBp: 2000 })).toEqual({
-      net: 10000, tax: 2000, total: 12000, rateBp: 2000,
+    expect(
+      invoiceTotals({ amountPence: 12000, includesTax: true, registered: true, rateBp: 2000 }),
+    ).toEqual({
+      net: 10000,
+      tax: 2000,
+      total: 12000,
+      rateBp: 2000,
     });
   });
   it("adds tax to a price that doesn't include it", () => {
-    expect(invoiceTotals({ amountPence: 10000, includesTax: false, registered: true, rateBp: 1500 })).toEqual({
-      net: 10000, tax: 1500, total: 11500, rateBp: 1500,
+    expect(
+      invoiceTotals({ amountPence: 10000, includesTax: false, registered: true, rateBp: 1500 }),
+    ).toEqual({
+      net: 10000,
+      tax: 1500,
+      total: 11500,
+      rateBp: 1500,
     });
   });
   it("shows no tax for a business that isn't registered", () => {
-    expect(invoiceTotals({ amountPence: 9999, includesTax: false, registered: false, rateBp: 2000 })).toEqual({
-      net: 9999, tax: 0, total: 9999, rateBp: 0,
+    expect(
+      invoiceTotals({ amountPence: 9999, includesTax: false, registered: false, rateBp: 2000 }),
+    ).toEqual({
+      net: 9999,
+      tax: 0,
+      total: 9999,
+      rateBp: 0,
     });
   });
   it("never loses a penny to rounding", () => {
-    const t = invoiceTotals({ amountPence: 10001, includesTax: true, registered: true, rateBp: 2000 });
+    const t = invoiceTotals({
+      amountPence: 10001,
+      includesTax: true,
+      registered: true,
+      rateBp: 2000,
+    });
     expect(t.net + t.tax).toBe(10001);
   });
 });
@@ -50,18 +74,27 @@ describe("numbers and wording", () => {
     expect(suggestPrefix("The Hill Rooms & Suites")).toBe("HILL");
   });
   it("describes the stay", () => {
-    expect(stayDescription("Garden Room", 1, "12 Oct", "13 Oct")).toBe("Garden Room, 1 night (12 Oct to 13 Oct)");
+    expect(stayDescription("Garden Room", 1, "12 Oct", "13 Oct")).toBe(
+      "Garden Room, 1 night (12 Oct to 13 Oct)",
+    );
   });
 });
 
 describe("cleanGuestDetails", () => {
   it("tidies an address and accepts a real email", () => {
-    expect(cleanGuestDetails({ email: " jane@example.com ", address: " 1 High St \r\n\n Leeds " })).toEqual({
-      ok: true, email: "jane@example.com", address: "1 High St\nLeeds",
+    expect(
+      cleanGuestDetails({ email: " jane@example.com ", address: " 1 High St \r\n\n Leeds " }),
+    ).toEqual({
+      ok: true,
+      email: "jane@example.com",
+      address: "1 High St\nLeeds",
     });
   });
   it("refuses a broken email", () => {
-    expect(cleanGuestDetails({ email: "jane@", address: "" })).toEqual({ ok: false, problem: "email" });
+    expect(cleanGuestDetails({ email: "jane@", address: "" })).toEqual({
+      ok: false,
+      problem: "email",
+    });
   });
 });
 
@@ -82,7 +115,11 @@ describe("nightlyLines", () => {
     const lines = nightlyLines(10000, "2026-10-12", "2026-10-15", "Suite 1", fmt);
     expect(lines.map((l) => l.amount_pence)).toEqual([3334, 3333, 3333]);
     expect(lines.reduce((n, l) => n + l.amount_pence, 0)).toBe(10000);
-    expect(lines[0]).toEqual({ date: "2026-10-12", description: "Suite 1, night of 2026-10-12", amount_pence: 3334 });
+    expect(lines[0]).toEqual({
+      date: "2026-10-12",
+      description: "Suite 1, night of 2026-10-12",
+      amount_pence: 3334,
+    });
     expect(lines.at(-1)!.date).toBe("2026-10-14");
   });
   it("gives no lines for a stay without nights", () => {

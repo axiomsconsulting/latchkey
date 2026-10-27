@@ -48,7 +48,9 @@ export function send(body: Record<string, unknown>) {
   const json = JSON.stringify(body);
   // text/plain keeps it a simple request; sendBeacon survives the tab closing.
   if (!navigator.sendBeacon?.("/api/public/track", new Blob([json], { type: "text/plain" }))) {
-    void fetch("/api/public/track", { method: "POST", body: json, keepalive: true }).catch(() => undefined);
+    void fetch("/api/public/track", { method: "POST", body: json, keepalive: true }).catch(
+      () => undefined,
+    );
   }
 }
 
@@ -60,7 +62,9 @@ export function send(body: Record<string, unknown>) {
 export function VisitTracker() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const identify = useServerFn(identifyVisit);
-  const view = useRef<{ id: string; path: string; shownMs: number; since: number | null } | null>(null);
+  const view = useRef<{ id: string; path: string; shownMs: number; since: number | null } | null>(
+    null,
+  );
 
   // Time on the current page, counting only while it's on screen.
   const elapsed = () => {
@@ -79,10 +83,16 @@ export function VisitTracker() {
     if (view.current?.path === path) return;
     leave();
     const id = crypto.randomUUID();
-    view.current = { id, path, shownMs: 0, since: document.visibilityState === "visible" ? Date.now() : null };
+    view.current = {
+      id,
+      path,
+      shownMs: 0,
+      since: document.visibilityState === "visible" ? Date.now() : null,
+    };
     const params = new URLSearchParams(window.location.search);
     // An old-style ?ref= link still names its source.
-    if (!params.get("utm_source") && params.get("ref")) params.set("utm_source", params.get("ref")!);
+    if (!params.get("utm_source") && params.get("ref"))
+      params.set("utm_source", params.get("ref")!);
     let ref = document.referrer;
     try {
       if (ref && new URL(ref).host === window.location.host) ref = "";

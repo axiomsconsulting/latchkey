@@ -71,7 +71,9 @@ export function buildPatch(existing: ExistingBooking, incoming: ParsedBooking): 
 
   // A named guest arriving from the platform is a real booking, even where
   // the host had marked those nights "not a booking".
-  const realGuestNow = incoming.status === "upcoming" && (existing.status === "blocked" || existing.status === "needs_details");
+  const realGuestNow =
+    incoming.status === "upcoming" &&
+    (existing.status === "blocked" || existing.status === "needs_details");
 
   const patch: BookingPatch = {};
   for (const key of SYNCABLE_FIELDS) {
@@ -94,7 +96,11 @@ export function buildPatch(existing: ExistingBooking, incoming: ParsedBooking): 
 export function shouldUnhide(existing: ExistingBooking, incoming: ParsedBooking): boolean {
   if (!existing.archived_at) return false;
   if (existing.status === "cancelled") return true;
-  if (incoming.status === "upcoming" && (existing.status === "blocked" || existing.status === "needs_details")) return true;
+  if (
+    incoming.status === "upcoming" &&
+    (existing.status === "blocked" || existing.status === "needs_details")
+  )
+    return true;
   // Dates the host set by hand always differ from the feed, so they don't count.
   const manual = new Set(existing.manual_fields ?? []);
   const moved =

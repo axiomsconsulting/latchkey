@@ -16,7 +16,8 @@ import { cn } from "@/lib/utils";
 
 type OfferDraft = Omit<SeasonalOffer, "percent"> & { percent: string };
 const toDraft = (o: SeasonalOffer): OfferDraft => ({ ...o, percent: String(o.percent) });
-const pounds = (pence: number | null) => (pence === null ? "" : (pence / 100).toFixed(pence % 100 === 0 ? 0 : 2));
+const pounds = (pence: number | null) =>
+  pence === null ? "" : (pence / 100).toFixed(pence % 100 === 0 ? 0 : 2);
 
 /**
  * Direct stays → Rates and seasonal offers, for one property: each room's
@@ -28,11 +29,19 @@ export function DirectRates({ propertyId }: { propertyId: string }) {
   const fetchFn = useServerFn(getDirectRates);
   const saveFn = useServerFn(saveDirectRates);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["direct-rates", propertyId], queryFn: () => fetchFn({ data: { propertyId } }) });
+  const q = useQuery({
+    queryKey: ["direct-rates", propertyId],
+    queryFn: () => fetchFn({ data: { propertyId } }),
+  });
   const [rates, setRates] = useState<Record<string, string>>({});
   const [offers, setOffers] = useState<OfferDraft[]>([]);
   const [busy, setBusy] = useState(false);
-  const saved = q.data ? { rates: Object.fromEntries(q.data.rooms.map((r) => [r.id, pounds(r.ratePence)])), offers: q.data.offers.map(toDraft) } : null;
+  const saved = q.data
+    ? {
+        rates: Object.fromEntries(q.data.rooms.map((r) => [r.id, pounds(r.ratePence)])),
+        offers: q.data.offers.map(toDraft),
+      }
+    : null;
   useEffect(() => {
     if (!saved) return;
     setRates(saved.rates);
@@ -43,10 +52,14 @@ export function DirectRates({ propertyId }: { propertyId: string }) {
   if (q.isLoading || !q.data) return <Skeleton className="h-48 rounded-2xl" />;
   const d = q.data;
   const dirty = !!saved && changed({ rates, offers }, saved);
-  const setOffer = (i: number, patch: Partial<OfferDraft>) => setOffers((os) => os.map((o, j) => (j === i ? { ...o, ...patch } : o)));
+  const setOffer = (i: number, patch: Partial<OfferDraft>) =>
+    setOffers((os) => os.map((o, j) => (j === i ? { ...o, ...patch } : o)));
 
   async function save() {
-    const bad = offers.find((o) => !o.from || !o.to || o.to < o.from || !(Number(o.percent) >= 1 && Number(o.percent) <= 90));
+    const bad = offers.find(
+      (o) =>
+        !o.from || !o.to || o.to < o.from || !(Number(o.percent) >= 1 && Number(o.percent) <= 90),
+    );
     if (bad) return void toast.error(copy.offerProblem);
     setBusy(true);
     try {
@@ -84,8 +97,13 @@ export function DirectRates({ propertyId }: { propertyId: string }) {
         <h3 className="text-sm font-medium">{copy.ratesTitle(d.currency)}</h3>
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {d.rooms.map((r) => (
-            <li key={r.id} className="flex items-center gap-2 rounded-xl border border-border p-2.5">
-              <Label htmlFor={`rate-${r.id}`} className="min-w-0 flex-1 truncate">{r.name}</Label>
+            <li
+              key={r.id}
+              className="flex items-center gap-2 rounded-xl border border-border p-2.5"
+            >
+              <Label htmlFor={`rate-${r.id}`} className="min-w-0 flex-1 truncate">
+                {r.name}
+              </Label>
               <Input
                 id={`rate-${r.id}`}
                 inputMode="decimal"
@@ -103,45 +121,100 @@ export function DirectRates({ propertyId }: { propertyId: string }) {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="flex items-center gap-2 text-sm font-medium"><Tag className="size-4 text-accent" /> {copy.offersTitle}</h3>
+          <h3 className="flex items-center gap-2 text-sm font-medium">
+            <Tag className="size-4 text-accent" /> {copy.offersTitle}
+          </h3>
           <Button
             size="sm"
             variant="outline"
             disabled={offers.length >= 20}
-            onClick={() => setOffers((os) => [...os, { id: `offer-${Date.now().toString(36)}`, label: "", from: "", to: "", percent: "10", roomIds: null }])}
+            onClick={() =>
+              setOffers((os) => [
+                ...os,
+                {
+                  id: `offer-${Date.now().toString(36)}`,
+                  label: "",
+                  from: "",
+                  to: "",
+                  percent: "10",
+                  roomIds: null,
+                },
+              ])
+            }
           >
             <Plus className="size-4" /> {copy.addOffer}
           </Button>
         </div>
-        {offers.length === 0 ? <p className="text-sm text-muted-foreground">{copy.noOffers}</p> : null}
+        {offers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{copy.noOffers}</p>
+        ) : null}
         <ul className="space-y-2">
           {offers.map((o, i) => (
             <li key={o.id} className="space-y-2 rounded-xl border border-border p-3">
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_9rem_6rem_auto] sm:items-end">
                 <div className="space-y-1">
                   <Label className="text-xs">{copy.offerName}</Label>
-                  <Input className="h-10" maxLength={60} placeholder={copy.offerPlaceholder} value={o.label} onChange={(e) => setOffer(i, { label: e.target.value })} />
+                  <Input
+                    className="h-10"
+                    maxLength={60}
+                    placeholder={copy.offerPlaceholder}
+                    value={o.label}
+                    onChange={(e) => setOffer(i, { label: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{copy.from}</Label>
-                  <Input className="h-10" type="date" value={o.from} onChange={(e) => setOffer(i, { from: e.target.value })} />
+                  <Input
+                    className="h-10"
+                    type="date"
+                    value={o.from}
+                    onChange={(e) => setOffer(i, { from: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{copy.to}</Label>
-                  <Input className="h-10" type="date" min={o.from} value={o.to} onChange={(e) => setOffer(i, { to: e.target.value })} />
+                  <Input
+                    className="h-10"
+                    type="date"
+                    min={o.from}
+                    value={o.to}
+                    onChange={(e) => setOffer(i, { to: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{copy.percent}</Label>
-                  <Input className="h-10" inputMode="numeric" value={o.percent} onChange={(e) => setOffer(i, { percent: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
+                  <Input
+                    className="h-10"
+                    inputMode="numeric"
+                    value={o.percent}
+                    onChange={(e) =>
+                      setOffer(i, { percent: e.target.value.replace(/\D/g, "").slice(0, 2) })
+                    }
+                  />
                 </div>
-                <Button variant="ghost" size="icon" className="text-destructive" aria-label={copy.removeOffer} onClick={() => setOffers((os) => os.filter((_, j) => j !== i))}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                  aria-label={copy.removeOffer}
+                  onClick={() => setOffers((os) => os.filter((_, j) => j !== i))}
+                >
                   <Trash2 className="size-4" />
                 </Button>
               </div>
               {/* Every room, or just the ones picked. */}
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="text-muted-foreground">{copy.appliesTo}</span>
-                <button type="button" onClick={() => setOffer(i, { roomIds: null })} className={cn("rounded-full border px-2.5 py-1", o.roomIds === null ? "border-primary bg-primary/10" : "border-border text-muted-foreground")}>
+                <button
+                  type="button"
+                  onClick={() => setOffer(i, { roomIds: null })}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1",
+                    o.roomIds === null
+                      ? "border-primary bg-primary/10"
+                      : "border-border text-muted-foreground",
+                  )}
+                >
                   {copy.allRooms}
                 </button>
                 {d.rooms.map((r) => {
@@ -152,10 +225,15 @@ export function DirectRates({ propertyId }: { propertyId: string }) {
                       type="button"
                       aria-pressed={on}
                       onClick={() => {
-                        const next = on ? (o.roomIds ?? []).filter((x) => x !== r.id) : [...(o.roomIds ?? []), r.id];
+                        const next = on
+                          ? (o.roomIds ?? []).filter((x) => x !== r.id)
+                          : [...(o.roomIds ?? []), r.id];
                         setOffer(i, { roomIds: next.length ? next : null });
                       }}
-                      className={cn("rounded-full border px-2.5 py-1", on ? "border-primary bg-primary/10" : "border-border text-muted-foreground")}
+                      className={cn(
+                        "rounded-full border px-2.5 py-1",
+                        on ? "border-primary bg-primary/10" : "border-border text-muted-foreground",
+                      )}
                     >
                       {r.name}
                     </button>

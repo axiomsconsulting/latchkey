@@ -95,7 +95,9 @@ function InvitePage() {
           {email === undefined ? (
             <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
           ) : isDemo ? (
-            <p role="alert" className="text-destructive">{copy.demo}</p>
+            <p role="alert" className="text-destructive">
+              {copy.demo}
+            </p>
           ) : email === null ? (
             <>
               <p className="text-muted-foreground">{copy.signInFirst(peek.emailMasked)}</p>
@@ -106,14 +108,20 @@ function InvitePage() {
               </Button>
             </>
           ) : wrongEmail ? (
-            <p role="alert" className="text-destructive">{copy.wrongEmail(peek.emailMasked)}</p>
+            <p role="alert" className="text-destructive">
+              {copy.wrongEmail(peek.emailMasked)}
+            </p>
           ) : (
             <Button size="lg" className="w-full" disabled={busy} onClick={() => void join()}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : null}
               {busy ? copy.accepting : copy.accept}
             </Button>
           )}
-          {error ? <p role="alert" className="text-destructive">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="text-destructive">
+              {error}
+            </p>
+          ) : null}
         </div>
       </main>
     </GuestFrame>

@@ -31,8 +31,10 @@ export type Board<B extends TodayBooking = TodayBooking> = {
   doubleBooked: B[];
 };
 
-const byTime = (field: "check_in_time" | "check_out_time", fallback: string) => (a: TodayBooking, b: TodayBooking) =>
-  (a[field] ?? fallback).localeCompare(b[field] ?? fallback);
+const byTime =
+  (field: "check_in_time" | "check_out_time", fallback: string) =>
+  (a: TodayBooking, b: TodayBooking) =>
+    (a[field] ?? fallback).localeCompare(b[field] ?? fallback);
 
 /**
  * Arriving, staying and leaving go by dates, even while a stay still needs a
@@ -40,13 +42,24 @@ const byTime = (field: "check_in_time" | "check_out_time", fallback: string) => 
  * Closed nights (blocks, mirrors), cancelled and archived stays never count.
  */
 export function todayBoard<B extends TodayBooking>(bookings: B[], today: string): Board<B> {
-  const live = bookings.filter((b) => !b.archived_at && !b.mirror_of && b.status !== "cancelled" && b.status !== "blocked");
-  const state = (b: B) => stayState(b.status === "needs_details" ? { ...b, status: "upcoming" } : b, today);
+  const live = bookings.filter(
+    (b) => !b.archived_at && !b.mirror_of && b.status !== "cancelled" && b.status !== "blocked",
+  );
+  const state = (b: B) =>
+    stayState(b.status === "needs_details" ? { ...b, status: "upcoming" } : b, today);
   return {
-    arriving: live.filter((b) => state(b) === "arriving_today").sort(byTime("check_in_time", "15:00")),
-    staying: live.filter((b) => state(b) === "in_stay").sort((a, b) => a.check_out_date.localeCompare(b.check_out_date)),
-    leaving: live.filter((b) => state(b) === "departing_today").sort(byTime("check_out_time", "11:00")),
-    needsDetails: live.filter((b) => b.status === "needs_details" && b.check_out_date >= today).sort((a, b) => a.check_in_date.localeCompare(b.check_in_date)),
+    arriving: live
+      .filter((b) => state(b) === "arriving_today")
+      .sort(byTime("check_in_time", "15:00")),
+    staying: live
+      .filter((b) => state(b) === "in_stay")
+      .sort((a, b) => a.check_out_date.localeCompare(b.check_out_date)),
+    leaving: live
+      .filter((b) => state(b) === "departing_today")
+      .sort(byTime("check_out_time", "11:00")),
+    needsDetails: live
+      .filter((b) => b.status === "needs_details" && b.check_out_date >= today)
+      .sort((a, b) => a.check_in_date.localeCompare(b.check_in_date)),
     doubleBooked: live.filter((b) => b.status === "flagged" && b.check_out_date >= today),
   };
 }
@@ -56,7 +69,12 @@ const minutes = (t: string | null | undefined, fallback: string) => {
   return Number(h) * 60 + Number(m);
 };
 
-export type Turnaround = { roomId: string; leavingId: string; arrivingId: string; gapMinutes: number };
+export type Turnaround = {
+  roomId: string;
+  leavingId: string;
+  arrivingId: string;
+  gapMinutes: number;
+};
 
 /** The same room emptying and filling today with under two hours to clean. */
 export function tightTurnarounds(board: Board, limitMinutes = 120): Turnaround[] {
@@ -66,17 +84,27 @@ export function tightTurnarounds(board: Board, limitMinutes = 120): Turnaround[]
     const next = board.arriving.find((a) => a.room_id === out_.room_id);
     if (!next) continue;
     const gap = minutes(next.check_in_time, "15:00") - minutes(out_.check_out_time, "11:00");
-    if (gap < limitMinutes) out.push({ roomId: out_.room_id, leavingId: out_.id, arrivingId: next.id, gapMinutes: gap });
+    if (gap < limitMinutes)
+      out.push({ roomId: out_.room_id, leavingId: out_.id, arrivingId: next.id, gapMinutes: gap });
   }
   return out;
 }
 
-export type Window = { id: string; room_id: string | null; day_of_week: number | null; start_time: string | null; end_time: string | null; reason: string | null };
+export type Window = {
+  id: string;
+  room_id: string | null;
+  day_of_week: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  reason: string | null;
+};
 
 /** Cleaning and other closed times that apply today, earliest first. */
 export function windowsToday<W extends Window>(windows: W[], today: string): W[] {
   const dow = dayOfWeek(today);
-  return windows.filter((w) => w.day_of_week === dow).sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+  return windows
+    .filter((w) => w.day_of_week === dow)
+    .sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
 }
 
 export type Job = {
@@ -96,7 +124,11 @@ const OPEN = ["new", "acknowledged", "booked", "in_progress"];
 export function openGuestRequests<J extends Job>(jobs: J[]): J[] {
   return jobs
     .filter((j) => !j.archived_at && j.source === "guest" && OPEN.includes(j.status))
-    .sort((a, b) => Number(b.status === "new") - Number(a.status === "new") || a.created_at.localeCompare(b.created_at));
+    .sort(
+      (a, b) =>
+        Number(b.status === "new") - Number(a.status === "new") ||
+        a.created_at.localeCompare(b.created_at),
+    );
 }
 
 /** The host's own jobs (maintenance, cleaning) booked from today for the next `days` days, soonest first. */
@@ -105,7 +137,9 @@ export function maintenanceAhead<J extends Job>(jobs: J[], now: Date, days = 7):
   start.setUTCHours(0, 0, 0, 0);
   const end = start.getTime() + days * 86_400_000;
   return jobs
-    .filter((j) => !j.archived_at && j.source !== "guest" && OPEN.includes(j.status) && j.scheduled_at)
+    .filter(
+      (j) => !j.archived_at && j.source !== "guest" && OPEN.includes(j.status) && j.scheduled_at,
+    )
     .filter((j) => {
       const t = Date.parse(j.scheduled_at!);
       return t >= start.getTime() && t < end;
@@ -114,7 +148,10 @@ export function maintenanceAhead<J extends Job>(jobs: J[], now: Date, days = 7):
 }
 
 /** Which guide sections the house guide has written, and which are still empty. */
-export function guideProgress<K extends string>(all: K[], written: Array<{ roomId: string | null; sectionKey: K }>): { done: K[]; missing: K[] } {
+export function guideProgress<K extends string>(
+  all: K[],
+  written: Array<{ roomId: string | null; sectionKey: K }>,
+): { done: K[]; missing: K[] } {
   const house = new Set(written.filter((s) => s.roomId === null).map((s) => s.sectionKey));
   return { done: all.filter((k) => house.has(k)), missing: all.filter((k) => !house.has(k)) };
 }

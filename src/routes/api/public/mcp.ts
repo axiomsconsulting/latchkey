@@ -12,7 +12,8 @@ export const Route = createFileRoute("/api/public/mcp")({
           headers: {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Authorization, Content-Type, Mcp-Session-Id, Mcp-Protocol-Version",
+            "Access-Control-Allow-Headers":
+              "Authorization, Content-Type, Mcp-Session-Id, Mcp-Protocol-Version",
           },
         }),
     },

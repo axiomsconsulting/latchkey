@@ -24,9 +24,16 @@ export type Privacy = {
 export const DEFAULT_PRIVACY: Privacy = { guestDetailsDays: 90, messagesDays: 0 };
 
 export function normalisePrivacy(raw: unknown): Privacy {
-  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
-  const details = DETAIL_DAY_CHOICES.includes(r["guestDetailsDays"] as DetailDays) ? (r["guestDetailsDays"] as DetailDays) : DEFAULT_PRIVACY.guestDetailsDays;
-  const messages = MESSAGE_DAY_CHOICES.includes(r["messagesDays"] as MessageDays) ? (r["messagesDays"] as MessageDays) : DEFAULT_PRIVACY.messagesDays;
+  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const details = DETAIL_DAY_CHOICES.includes(r["guestDetailsDays"] as DetailDays)
+    ? (r["guestDetailsDays"] as DetailDays)
+    : DEFAULT_PRIVACY.guestDetailsDays;
+  const messages = MESSAGE_DAY_CHOICES.includes(r["messagesDays"] as MessageDays)
+    ? (r["messagesDays"] as MessageDays)
+    : DEFAULT_PRIVACY.messagesDays;
   return { guestDetailsDays: details, messagesDays: messages };
 }
 

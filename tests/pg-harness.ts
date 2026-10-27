@@ -35,7 +35,11 @@ export type Who = keyof typeof USERS;
 
 export type Db = {
   /** Runs SQL as a signed-in user (or anon), with RLS. */
-  as: <T = Record<string, unknown>>(who: Who | "anon", sql: string, params?: unknown[]) => Promise<T[]>;
+  as: <T = Record<string, unknown>>(
+    who: Who | "anon",
+    sql: string,
+    params?: unknown[],
+  ) => Promise<T[]>;
   /** Runs SQL as Latchkey's server: no user, RLS bypassed. */
   system: <T = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<T[]>;
 };
@@ -48,11 +52,16 @@ export async function bootDb(): Promise<Db> {
   // its journal (0021_site_settings_admin_read, before the table exists). The live database has all of
   // them, so here: a fully commented-out file runs as written, and one that needs a later table runs at the end.
   const later: string[] = [];
-  for (const f of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+  for (const f of readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
     let sql = readFileSync(join(dir, f), "utf8").replace(/\r/g, "");
     const lines = sql.split("\n").filter((l) => l.trim());
     if (lines.length && lines.every((l) => l.startsWith("--") || /^select 1;?$/i.test(l.trim()))) {
-      sql = sql.replace(/^-- Switched off:.*$/m, "").replace(/^select 1;?$/im, "").replace(/^-- ?/gm, "");
+      sql = sql
+        .replace(/^-- Switched off:.*$/m, "")
+        .replace(/^select 1;?$/im, "")
+        .replace(/^-- ?/gm, "");
     }
     try {
       await pg.exec(sql);
@@ -65,12 +74,17 @@ export async function bootDb(): Promise<Db> {
   await pg.exec(`grant select, insert, update, delete on all tables in schema public to authenticated, service_role;
                  grant usage, select on all sequences in schema public to authenticated, service_role;`);
   for (const u of Object.values(USERS)) {
-    await pg.query("insert into auth.users (id, email, email_confirmed_at) values ($1, $2, now())", [u.id, u.email]);
+    await pg.query(
+      "insert into auth.users (id, email, email_confirmed_at) values ($1, $2, now())",
+      [u.id, u.email],
+    );
   }
 
   async function as<T>(who: Who | "anon", sql: string, params: unknown[] = []): Promise<T[]> {
     const claims =
-      who === "anon" ? { role: "anon" } : { sub: USERS[who].id, email: USERS[who].email, role: "authenticated" };
+      who === "anon"
+        ? { role: "anon" }
+        : { sub: USERS[who].id, email: USERS[who].email, role: "authenticated" };
     await pg.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify(claims)]);
     await pg.exec(`set role ${who === "anon" ? "anon" : "authenticated"}`);
     try {

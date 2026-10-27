@@ -32,12 +32,17 @@ export function WifiCard({
   useEffect(() => setKind(joinKind(navigator.userAgent)), []);
   useEffect(() => {
     if (wifi.locked || kind !== "other") return;
-    void QRCode.toDataURL(wifiQrText(wifi.name, wifi.password), { margin: 1, width: 220 }).then(setQr).catch(() => setQr(null));
+    void QRCode.toDataURL(wifiQrText(wifi.name, wifi.password), { margin: 1, width: 220 })
+      .then(setQr)
+      .catch(() => setQr(null));
   }, [wifi, kind]);
 
   const copyPassword = async () => {
     if (!wifi.password) return;
-    await navigator.clipboard.writeText(wifi.password).then(() => toast.success(copy.copied), () => undefined);
+    await navigator.clipboard.writeText(wifi.password).then(
+      () => toast.success(copy.copied),
+      () => undefined,
+    );
   };
   const android = async () => {
     await copyPassword();
@@ -59,7 +64,12 @@ export function WifiCard({
             <dd className="flex items-center gap-2">
               <span className="break-all font-mono font-medium">{wifi.password ?? copy.open}</span>
               {wifi.password ? (
-                <button type="button" onClick={() => void copyPassword()} aria-label={copy.copy} className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-secondary">
+                <button
+                  type="button"
+                  onClick={() => void copyPassword()}
+                  aria-label={copy.copy}
+                  className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-secondary"
+                >
                   <Copy className="size-4" />
                 </button>
               ) : null}
@@ -93,7 +103,9 @@ export function WifiCard({
           <Button size="lg" onClick={() => void android()}>
             <Wifi /> {copy.join}
           </Button>
-          <p className="text-sm text-muted-foreground">{wifi.password ? copy.androidHelp : copy.androidOpenHelp}</p>
+          <p className="text-sm text-muted-foreground">
+            {wifi.password ? copy.androidHelp : copy.androidOpenHelp}
+          </p>
         </div>
       ) : qr ? (
         <div className="flex flex-wrap items-center gap-4">

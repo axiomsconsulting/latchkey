@@ -7,7 +7,17 @@ import { readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_PROGRESS, JOURNEYS, coverage, moveStep, nextJourney, readProgress, selectorFor, startJourney, stepsFor } from "@/lib/tour";
+import {
+  EMPTY_PROGRESS,
+  JOURNEYS,
+  coverage,
+  moveStep,
+  nextJourney,
+  readProgress,
+  selectorFor,
+  startJourney,
+  stepsFor,
+} from "@/lib/tour";
 import { NAV_BUILT_INS } from "@/lib/ui-config";
 
 const root = join(__dirname, "../src");
@@ -22,19 +32,34 @@ const all = files.map((f) => readFileSync(f, "utf8")).join("\n");
 // Named in the code as data-tour="x", tourName="x", tour: "x", or a quoted name inside data-tour={...}.
 const literal = new Set([
   ...[...all.matchAll(/(?:data-tour=|tourName=|tour: )"([a-z0-9-]+)"/g)].map((m) => m[1]!),
-  ...[...all.matchAll(/data-tour=\{([^}]*)\}/g)].flatMap((m) => [...m[1]!.matchAll(/"([a-z0-9-]+)"/g)].map((x) => x[1]!)),
+  ...[...all.matchAll(/data-tour=\{([^}]*)\}/g)].flatMap((m) =>
+    [...m[1]!.matchAll(/"([a-z0-9-]+)"/g)].map((x) => x[1]!),
+  ),
 ]);
 const today = readFileSync(join(root, "routes/_authenticated/app.today.tsx"), "utf8");
 const todayIds = new Set([...today.matchAll(/(?:id: |<Card id=)"([A-Za-z]+)"/g)].map((m) => m[1]!));
 const settings = readFileSync(join(root, "routes/_authenticated/app.settings.tsx"), "utf8");
-const focus = new Set([...(/const FOCUS = \[([^\]]+)\]/.exec(settings)?.[1] ?? "").matchAll(/"([A-Za-z0-9]+)"/g)].map((m) => m[1]!));
-const groups = new Set([...(/const SETTINGS_GROUPS = \[([\s\S]+?)\] as const/.exec(settings)?.[1] ?? "").matchAll(/id: "([a-z]+)"/g)].map((m) => m[1]!));
+const focus = new Set(
+  [...(/const FOCUS = \[([^\]]+)\]/.exec(settings)?.[1] ?? "").matchAll(/"([A-Za-z0-9]+)"/g)].map(
+    (m) => m[1]!,
+  ),
+);
+const groups = new Set(
+  [
+    ...(/const SETTINGS_GROUPS = \[([\s\S]+?)\] as const/.exec(settings)?.[1] ?? "").matchAll(
+      /id: "([a-z]+)"/g,
+    ),
+  ].map((m) => m[1]!),
+);
 const navIds = new Set(NAV_BUILT_INS.map((n) => n.id));
-const routeFile = (page: string) => join(root, "routes/_authenticated", `${page.replace(/^\//, "").replace(/\//g, ".")}.tsx`);
+const routeFile = (page: string) =>
+  join(root, "routes/_authenticated", `${page.replace(/^\//, "").replace(/\//g, ".")}.tsx`);
 
 describe("guided tour", () => {
   it("only visits pages that exist", () => {
-    for (const j of JOURNEYS) for (const s of j.steps) expect(() => statSync(routeFile(s.page)), `${j.id}/${s.id}: ${s.page}`).not.toThrow();
+    for (const j of JOURNEYS)
+      for (const s of j.steps)
+        expect(() => statSync(routeFile(s.page)), `${j.id}/${s.id}: ${s.page}`).not.toThrow();
   });
 
   it("only points at parts of the app that exist", () => {
@@ -44,7 +69,15 @@ describe("guided tour", () => {
           if (!t) continue;
           const [kind, id] = t.includes(":") ? t.split(":", 2) : ["", t];
           const ok =
-            kind === "nav" ? navIds.has(id!) : kind === "today" ? todayIds.has(id!) : kind === "settings" ? focus.has(id!) : kind === "settings-tab" ? groups.has(id!) : literal.has(t);
+            kind === "nav"
+              ? navIds.has(id!)
+              : kind === "today"
+                ? todayIds.has(id!)
+                : kind === "settings"
+                  ? focus.has(id!)
+                  : kind === "settings-tab"
+                    ? groups.has(id!)
+                    : literal.has(t);
           expect(ok, `${j.id}/${s.id} points at ${t}, which isn't in the app any more`).toBe(true);
         }
       }
@@ -57,7 +90,8 @@ describe("guided tour", () => {
       expect(new Set(j.steps.map((s) => s.id)).size, j.id).toBe(j.steps.length);
       expect(stepsFor(j, "quick").length).toBeGreaterThan(0);
       expect(stepsFor(j, "quick").length).toBeLessThanOrEqual(j.steps.length);
-      for (const s of j.steps) expect(s.title.length > 2 && s.body.length > 10, `${j.id}/${s.id}`).toBe(true);
+      for (const s of j.steps)
+        expect(s.title.length > 2 && s.body.length > 10, `${j.id}/${s.id}`).toBe(true);
     }
   });
 
@@ -86,7 +120,12 @@ describe("guided tour", () => {
     expect(coverage(p)).toEqual({ done: 1, total: JOURNEYS.length });
     expect(nextJourney(p)?.id).toBe(JOURNEYS[1]!.id);
     // Saved progress is read safely.
-    expect(readProgress({ journeys: { today: { at: 99, done: false, mode: "quick" }, gone: { at: 1 } }, active: "nope" }).journeys).toEqual({ today: { at: n - 1, done: false, mode: "quick" } });
+    expect(
+      readProgress({
+        journeys: { today: { at: 99, done: false, mode: "quick" }, gone: { at: 1 } },
+        active: "nope",
+      }).journeys,
+    ).toEqual({ today: { at: n - 1, done: false, mode: "quick" } });
     expect(readProgress(null)).toEqual(EMPTY_PROGRESS);
   });
 });

@@ -64,13 +64,20 @@ export function guessMapping(headers: string[]): Partial<Record<ImportFieldKey, 
     const key = h.toLowerCase().replace(/[^a-z]/g, "");
     if (/guestname|name|guest$/.test(key) && guess.guest_full_name === undefined)
       guess.guest_full_name = i;
-    else if (/(checkin|arrival|from|startdate|start)/.test(key) && guess.check_in_date === undefined)
+    else if (
+      /(checkin|arrival|from|startdate|start)/.test(key) &&
+      guess.check_in_date === undefined
+    )
       guess.check_in_date = i;
     else if (/(checkout|departure|to|enddate|end)/.test(key) && guess.check_out_date === undefined)
       guess.check_out_date = i;
     else if (/room/.test(key) && guess.room === undefined) guess.room = i;
-    else if (/(channel|source|platform)/.test(key) && guess.channel === undefined) guess.channel = i;
-    else if (/(reference|code|confirmation|booking)/.test(key) && guess.reservation_code === undefined)
+    else if (/(channel|source|platform)/.test(key) && guess.channel === undefined)
+      guess.channel = i;
+    else if (
+      /(reference|code|confirmation|booking)/.test(key) &&
+      guess.reservation_code === undefined
+    )
       guess.reservation_code = i;
     else if (/(guests|people|pax|adults)/.test(key) && guess.guest_count === undefined)
       guess.guest_count = i;

@@ -15,12 +15,23 @@ import { LOGO_PRESETS, normaliseTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 /** Settings → Business → Group brand: the business's own logo, and where it shows instead of (or beside) each property's. */
-export function GroupBrandSettings({ hostId, isOwner, themeConfig }: { hostId: string; isOwner: boolean; themeConfig: unknown }) {
+export function GroupBrandSettings({
+  hostId,
+  isOwner,
+  themeConfig,
+}: {
+  hostId: string;
+  isOwner: boolean;
+  themeConfig: unknown;
+}) {
   const fetchFn = useServerFn(getGroupBrand);
   const saveFn = useServerFn(saveGroupBrand);
   const uploadFn = useServerFn(uploadGroupLogo);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["group-brand", hostId], queryFn: () => fetchFn({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["group-brand", hostId],
+    queryFn: () => fetchFn({ data: { hostId } }),
+  });
   const [form, setForm] = useState<GroupBrand>(DEFAULT_GROUP_BRAND);
   const [busy, setBusy] = useState<"save" | "upload" | null>(null);
   useEffect(() => {
@@ -64,13 +75,17 @@ export function GroupBrandSettings({ hostId, isOwner, themeConfig }: { hostId: s
   return (
     <section id="settings-group" className="card-soft scroll-mt-24 space-y-4 p-5">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary"><Building className="size-5" /></span>
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
+          <Building className="size-5" />
+        </span>
         <div className="min-w-0">
           <h2 className="text-lg">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
       </div>
-      {q.data && !q.data.available ? <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p> : null}
+      {q.data && !q.data.available ? (
+        <p className="rounded-xl bg-muted p-3 text-sm">{copy.notReady}</p>
+      ) : null}
 
       <fieldset disabled={!editable || busy !== null} className="space-y-4">
         <div className="space-y-2">
@@ -80,7 +95,12 @@ export function GroupBrandSettings({ hostId, isOwner, themeConfig }: { hostId: s
               type="button"
               aria-pressed={!form.logoUrl && !form.logoPreset}
               onClick={() => void save({ ...form, logoUrl: null, logoPreset: null })}
-              className={cn("min-h-14 rounded-2xl border px-3 text-xs", !form.logoUrl && !form.logoPreset ? "border-primary ring-2 ring-primary/30" : "border-border")}
+              className={cn(
+                "min-h-14 rounded-2xl border px-3 text-xs",
+                !form.logoUrl && !form.logoPreset
+                  ? "border-primary ring-2 ring-primary/30"
+                  : "border-border",
+              )}
             >
               {copy.noLogo}
             </button>
@@ -92,17 +112,47 @@ export function GroupBrandSettings({ hostId, isOwner, themeConfig }: { hostId: s
                 aria-label={themeStudio.logoNames[l] ?? l}
                 aria-pressed={!form.logoUrl && form.logoPreset === l}
                 onClick={() => void save({ ...form, logoUrl: null, logoPreset: l })}
-                className={cn("rounded-2xl p-1", !form.logoUrl && form.logoPreset === l ? "ring-2 ring-primary" : "")}
+                className={cn(
+                  "rounded-2xl p-1",
+                  !form.logoUrl && form.logoPreset === l ? "ring-2 ring-primary" : "",
+                )}
               >
                 <ThemeScope theme={theme} className="rounded-xl bg-transparent">
-                  <LogoMark theme={{ logoPreset: l, logoUrl: null }} name={q.data?.name || "Group"} className="size-12" />
+                  <LogoMark
+                    theme={{ logoPreset: l, logoUrl: null }}
+                    name={q.data?.name || "Group"}
+                    className="size-12"
+                  />
                 </ThemeScope>
               </button>
             ))}
-            {form.logoUrl ? <img src={form.logoUrl} alt="" className="size-14 rounded-2xl border border-primary object-contain ring-2 ring-primary/30" /> : null}
-            <label className="flex size-14 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-border" aria-label={copy.upload} title={copy.upload}>
-              {busy === "upload" ? <Loader2 className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
-              <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
+            {form.logoUrl ? (
+              <img
+                src={form.logoUrl}
+                alt=""
+                className="size-14 rounded-2xl border border-primary object-contain ring-2 ring-primary/30"
+              />
+            ) : null}
+            <label
+              className="flex size-14 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-border"
+              aria-label={copy.upload}
+              title={copy.upload}
+            >
+              {busy === "upload" ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : (
+                <ImagePlus className="size-5" />
+              )}
+              <input
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp,.svg"
+                className="sr-only"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) void upload(f);
+                }}
+              />
             </label>
           </div>
         </div>
@@ -110,8 +160,17 @@ export function GroupBrandSettings({ hostId, isOwner, themeConfig }: { hostId: s
         <div role="radiogroup" aria-label={copy.propertyLogos} className="space-y-2">
           <p className="text-sm font-medium">{copy.propertyLogos}</p>
           {(["own", "group"] as const).map((v) => (
-            <label key={v} className="flex items-start gap-3 rounded-2xl border border-border p-3 text-sm">
-              <input type="radio" name="property-logos" className="mt-1" checked={form.propertyLogos === v} onChange={() => void save({ ...form, propertyLogos: v })} />
+            <label
+              key={v}
+              className="flex items-start gap-3 rounded-2xl border border-border p-3 text-sm"
+            >
+              <input
+                type="radio"
+                name="property-logos"
+                className="mt-1"
+                checked={form.propertyLogos === v}
+                onChange={() => void save({ ...form, propertyLogos: v })}
+              />
               <span>{copy[v]}</span>
             </label>
           ))}
@@ -119,17 +178,25 @@ export function GroupBrandSettings({ hostId, isOwner, themeConfig }: { hostId: s
 
         <label className="flex items-start justify-between gap-4">
           <span>
-            <span className="block text-sm font-medium">{copy.guestPages.replace("{group}", q.data?.name || "your group")}</span>
+            <span className="block text-sm font-medium">
+              {copy.guestPages.replace("{group}", q.data?.name || "your group")}
+            </span>
             <span className="block text-xs text-muted-foreground">{copy.guestPagesHelp}</span>
           </span>
-          <Switch checked={form.showOnGuestPages} onCheckedChange={(v) => void save({ ...form, showOnGuestPages: v })} />
+          <Switch
+            checked={form.showOnGuestPages}
+            onCheckedChange={(v) => void save({ ...form, showOnGuestPages: v })}
+          />
         </label>
         <label className="flex items-start justify-between gap-4">
           <span>
             <span className="block text-sm font-medium">{copy.invoices}</span>
             <span className="block text-xs text-muted-foreground">{copy.invoicesHelp}</span>
           </span>
-          <Switch checked={form.showOnInvoices} onCheckedChange={(v) => void save({ ...form, showOnInvoices: v })} />
+          <Switch
+            checked={form.showOnInvoices}
+            onCheckedChange={(v) => void save({ ...form, showOnInvoices: v })}
+          />
         </label>
       </fieldset>
       {!isOwner ? <p className="text-xs text-muted-foreground">{copy.ownerOnly}</p> : null}

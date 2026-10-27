@@ -3,7 +3,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { team as copy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
 import { displayRole } from "@/lib/roles";
@@ -73,7 +79,11 @@ export function useAccessWatch() {
     if (!data || data.pendingInvite) return;
     const prev = last.current;
     const name = (data.host as { business_name?: string } | null)?.business_name ?? "";
-    if (prev && prev.hostId !== data.hostId && !data.memberships.some((m) => m.hostId === prev.hostId)) {
+    if (
+      prev &&
+      prev.hostId !== data.hostId &&
+      !data.memberships.some((m) => m.hostId === prev.hostId)
+    ) {
       forgetProperty();
       toast.message(copy.accessRemoved(prev.name || "that host"));
     }

@@ -60,7 +60,8 @@ export function BookingBar({
     setFocus(f);
     setOpen((o) => !(o && focus === f));
   };
-  const box = "flex min-h-14 min-w-0 items-center gap-2 rounded-2xl border bg-surface px-3 py-2 text-left transition-colors hover:border-primary sm:gap-3";
+  const box =
+    "flex min-h-14 min-w-0 items-center gap-2 rounded-2xl border bg-surface px-3 py-2 text-left transition-colors hover:border-primary sm:gap-3";
 
   return (
     <section aria-label={copy.barLabel} className="card-soft space-y-3 p-3 sm:p-4">
@@ -71,16 +72,25 @@ export function BookingBar({
             type="button"
             onClick={() => openAt(f)}
             aria-expanded={open && focus === f}
-            className={cn(box, open && focus === f ? "border-primary ring-2 ring-primary/30" : "border-border")}
+            className={cn(
+              box,
+              open && focus === f ? "border-primary ring-2 ring-primary/30" : "border-border",
+            )}
           >
             <CalendarDays className="size-5 shrink-0 text-primary" />
             <span className="min-w-0">
               <span className="block truncate text-xs uppercase tracking-wide text-muted-foreground">
                 {f === "in" ? copy.arrive : copy.leave}
               </span>
-              <span className="block truncate font-medium">{formatUkDate(f === "in" ? stay.checkIn : stay.checkOut)}</span>
+              <span className="block truncate font-medium">
+                {formatUkDate(f === "in" ? stay.checkIn : stay.checkOut)}
+              </span>
             </span>
-            {f === "out" ? <span className="ml-auto hidden shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs sm:inline">{copy.nightsShort(nights)}</span> : null}
+            {f === "out" ? (
+              <span className="ml-auto hidden shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs sm:inline">
+                {copy.nightsShort(nights)}
+              </span>
+            ) : null}
           </button>
         ))}
         <Popover>
@@ -88,15 +98,34 @@ export function BookingBar({
             <button type="button" className={cn(box, "col-span-2 border-border sm:col-span-1")}>
               <Users className="size-5 shrink-0 text-primary" />
               <span className="min-w-0">
-                <span className="block text-xs uppercase tracking-wide text-muted-foreground">{copy.guestsBox}</span>
-                <span className="block truncate font-medium">{partyText(adults, askChildren ? children : 0)}</span>
+                <span className="block text-xs uppercase tracking-wide text-muted-foreground">
+                  {copy.guestsBox}
+                </span>
+                <span className="block truncate font-medium">
+                  {partyText(adults, askChildren ? children : 0)}
+                </span>
               </span>
               <ChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
             </button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-72 space-y-3">
-            <Counter label={copy.adults} value={adults} min={1} max={maxGuests - (askChildren ? children : 0)} onChange={(v) => onParty(v, children)} />
-            {askChildren ? <Counter label={copy.children} hint={copy.childrenHint} value={children} min={0} max={Math.min(19, maxGuests - adults)} onChange={(v) => onParty(adults, v)} /> : null}
+            <Counter
+              label={copy.adults}
+              value={adults}
+              min={1}
+              max={maxGuests - (askChildren ? children : 0)}
+              onChange={(v) => onParty(v, children)}
+            />
+            {askChildren ? (
+              <Counter
+                label={copy.children}
+                hint={copy.childrenHint}
+                value={children}
+                min={0}
+                max={Math.min(19, maxGuests - adults)}
+                onChange={(v) => onParty(adults, v)}
+              />
+            ) : null}
           </PopoverContent>
         </Popover>
       </div>
@@ -117,7 +146,9 @@ export function BookingBar({
             onDone={() => window.setTimeout(() => setOpen(false), 250)}
           />
           <div className="mt-3 flex justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>{copy.done}</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              {copy.done}
+            </Button>
           </div>
         </div>
       ) : null}
@@ -125,7 +156,21 @@ export function BookingBar({
   );
 }
 
-function Counter({ label, hint, value, min, max, onChange }: { label: string; hint?: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
+function Counter({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span>
@@ -133,11 +178,27 @@ function Counter({ label, hint, value, min, max, onChange }: { label: string; hi
         {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
       </span>
       <span className="flex items-center gap-2">
-        <Button type="button" variant="outline" size="icon" aria-label={copy.fewerOf(label)} disabled={value <= min} onClick={() => onChange(value - 1)}>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={copy.fewerOf(label)}
+          disabled={value <= min}
+          onClick={() => onChange(value - 1)}
+        >
           <Minus className="size-4" />
         </Button>
-        <span className="w-6 text-center tabular-nums" aria-live="polite">{value}</span>
-        <Button type="button" variant="outline" size="icon" aria-label={copy.moreOf(label)} disabled={value >= max} onClick={() => onChange(value + 1)}>
+        <span className="w-6 text-center tabular-nums" aria-live="polite">
+          {value}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={copy.moreOf(label)}
+          disabled={value >= max}
+          onClick={() => onChange(value + 1)}
+        >
           <Plus className="size-4" />
         </Button>
       </span>

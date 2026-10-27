@@ -46,7 +46,10 @@ export function MenuStrip({
     for (const child of Array.from(el.children)) observer.observe(child);
     el.addEventListener("scroll", measure, { passive: true });
     // The page you're on, in view.
-    el.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    el.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
     return () => {
       observer.disconnect();
       el.removeEventListener("scroll", measure);
@@ -68,17 +71,39 @@ export function MenuStrip({
   );
 
   return (
-    <div className={cn("flex min-h-0 min-w-0", vertical ? "flex-col" : "flex-row items-center", className)}>
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0",
+        vertical ? "flex-col" : "flex-row items-center",
+        className,
+      )}
+    >
       {more.before ? (
-        <button type="button" className={arrow} aria-label={`${label}: ${vertical ? "scroll up" : "scroll left"}`} onClick={() => scroll(-1)}>
+        <button
+          type="button"
+          className={arrow}
+          aria-label={`${label}: ${vertical ? "scroll up" : "scroll left"}`}
+          onClick={() => scroll(-1)}
+        >
           <Before className="size-4" />
         </button>
       ) : null}
-      <div ref={box} className={cn("no-scrollbar flex min-h-0 min-w-0 flex-1 gap-1 overscroll-contain", vertical ? "flex-col overflow-y-auto" : "flex-row items-center overflow-x-auto")}>
+      <div
+        ref={box}
+        className={cn(
+          "no-scrollbar flex min-h-0 min-w-0 flex-1 gap-1 overscroll-contain",
+          vertical ? "flex-col overflow-y-auto" : "flex-row items-center overflow-x-auto",
+        )}
+      >
         {children}
       </div>
       {more.after ? (
-        <button type="button" className={arrow} aria-label={`${label}: ${vertical ? "scroll down" : "scroll right"}`} onClick={() => scroll(1)}>
+        <button
+          type="button"
+          className={arrow}
+          aria-label={`${label}: ${vertical ? "scroll down" : "scroll right"}`}
+          onClick={() => scroll(1)}
+        >
           <After className="size-4" />
         </button>
       ) : null}

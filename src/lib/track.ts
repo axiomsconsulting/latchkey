@@ -19,5 +19,13 @@ export function trackEvent(name: EventName, props?: Record<string, string | numb
   } catch {
     // Storage blocked: still count it, at worst twice.
   }
-  send({ t: "event", name, v: visitorId(), id: crypto.randomUUID(), path: window.location.pathname, utm: sessionUtm(), ...(props ? { props } : {}) });
+  send({
+    t: "event",
+    name,
+    v: visitorId(),
+    id: crypto.randomUUID(),
+    path: window.location.pathname,
+    utm: sessionUtm(),
+    ...(props ? { props } : {}),
+  });
 }

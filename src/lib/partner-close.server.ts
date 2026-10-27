@@ -263,7 +263,9 @@ export async function closeAndPlan(
   if (ids.length) {
     const { data: ps } = await db
       .from("partners")
-      .select("id, status, country, payout_route, payouts_enabled, terminated_at, termination_for_breach, set_off_done_at")
+      .select(
+        "id, status, country, payout_route, payouts_enabled, terminated_at, termination_for_breach, set_off_done_at",
+      )
       .in("id", ids);
     const { data: pflags } = await db
       .from("fraud_flags")
@@ -330,7 +332,9 @@ export async function approveAndSend(
   const partner = check(
     await db
       .from("partners")
-      .select("id, status, stripe_account_id, payouts_enabled, termination_for_breach, terminated_at, set_off_done_at")
+      .select(
+        "id, status, stripe_account_id, payouts_enabled, termination_for_breach, terminated_at, set_off_done_at",
+      )
       .eq("id", p.partner_id)
       .single(),
   ) as {
@@ -570,7 +574,9 @@ export async function partnerStatement(
   const partner = check(
     await db
       .from("partners")
-      .select("id, legal_name, business_name, referral_code, postal_address, vat_number, self_billing_opt_out")
+      .select(
+        "id, legal_name, business_name, referral_code, postal_address, vat_number, self_billing_opt_out",
+      )
       .eq("id", partnerId)
       .single(),
   ) as {
@@ -632,7 +638,11 @@ export async function partnerStatement(
     if (onHold.note === "fraud_check") return HOLD_WORDS["fraud_check"]!;
     return HOLD_WORDS["dispute"]!;
   };
-  const { data: settings } = await db.from("site_settings").select("legal").eq("id", 1).maybeSingle();
+  const { data: settings } = await db
+    .from("site_settings")
+    .select("legal")
+    .eq("id", 1)
+    .maybeSingle();
   const legal = (settings?.legal ?? {}) as Record<string, string | undefined>;
   return statementCsv(
     (
@@ -680,9 +690,18 @@ export async function partnerStatement(
         vatNumber: partner.vat_number,
       },
       selfBilled: !partner.self_billing_opt_out,
-      setOffPence: -L.filter((l) => l.kind === "set_off" && l.state !== "void").reduce((n, l) => n + l.amount_pence, 0),
-      payablePence: ((payableNow ?? []) as Array<{ amount_pence: number }>).reduce((n, l) => n + l.amount_pence, 0),
-      paidPence: ((paid ?? []) as Array<{ amount_pence: number }>).reduce((n, l) => n + l.amount_pence, 0),
+      setOffPence: -L.filter((l) => l.kind === "set_off" && l.state !== "void").reduce(
+        (n, l) => n + l.amount_pence,
+        0,
+      ),
+      payablePence: ((payableNow ?? []) as Array<{ amount_pence: number }>).reduce(
+        (n, l) => n + l.amount_pence,
+        0,
+      ),
+      paidPence: ((paid ?? []) as Array<{ amount_pence: number }>).reduce(
+        (n, l) => n + l.amount_pence,
+        0,
+      ),
     },
   );
 }
@@ -714,8 +733,16 @@ export async function purgePartnerHashes(
     .delete()
     .in("kind", ["ip_hash", "device_hash"])
     .lt("seen_at", cutoff);
-  await db.from("partner_events").update({ ip_hash: null }).lt("created_at", cutoff).not("ip_hash", "is", null);
-  await db.from("partner_id_access_log").update({ ip_hash: null }).lt("viewed_at", cutoff).not("ip_hash", "is", null);
+  await db
+    .from("partner_events")
+    .update({ ip_hash: null })
+    .lt("created_at", cutoff)
+    .not("ip_hash", "is", null);
+  await db
+    .from("partner_id_access_log")
+    .update({ ip_hash: null })
+    .lt("viewed_at", cutoff)
+    .not("ip_hash", "is", null);
   return (cleared.data ?? []).length;
 }
 
@@ -732,21 +759,42 @@ export async function purgePartnerIdImages(db: AnyDb, asOf: number): Promise<num
     .lte("images_delete_after", now)
     .is("images_deleted_at", null)
     .limit(300);
-  const rows = (data ?? []) as Array<{ id: string; id_image_path: string | null; selfie_image_path: string | null }>;
+  const rows = (data ?? []) as Array<{
+    id: string;
+    id_image_path: string | null;
+    selfie_image_path: string | null;
+  }>;
   if (rows.length) {
     const { removePrivate } = await import("./private-store.server");
     await removePrivate(rows.flatMap((r) => [r.id_image_path, r.selfie_image_path]));
     await db
       .from("partner_id_checks")
       .update({ id_image_path: null, selfie_image_path: null, images_deleted_at: now })
-      .in("id", rows.map((r) => r.id));
+      .in(
+        "id",
+        rows.map((r) => r.id),
+      );
   }
-  const { data: old } = await db.from("partner_id_checks").select("id, id_image_path, selfie_image_path").lte("retain_until", now).limit(300);
-  const gone = (old ?? []) as Array<{ id: string; id_image_path: string | null; selfie_image_path: string | null }>;
+  const { data: old } = await db
+    .from("partner_id_checks")
+    .select("id, id_image_path, selfie_image_path")
+    .lte("retain_until", now)
+    .limit(300);
+  const gone = (old ?? []) as Array<{
+    id: string;
+    id_image_path: string | null;
+    selfie_image_path: string | null;
+  }>;
   if (gone.length) {
     const { removePrivate } = await import("./private-store.server");
     await removePrivate(gone.flatMap((r) => [r.id_image_path, r.selfie_image_path]));
-    await db.from("partner_id_checks").delete().in("id", gone.map((r) => r.id));
+    await db
+      .from("partner_id_checks")
+      .delete()
+      .in(
+        "id",
+        gone.map((r) => r.id),
+      );
   }
   return rows.length;
 }
@@ -756,14 +804,24 @@ export async function purgePartnerIdImages(db: AnyDb, asOf: number): Promise<num
  * ended on or after a breach Stop Date are cancelled (state void, bonus
  * reversed with reason breach_stop). Returns the cancelled line ids.
  */
-export async function voidBreachBonuses(db: AnyDb, asOf: number, actor: string | null): Promise<string[]> {
+export async function voidBreachBonuses(
+  db: AnyDb,
+  asOf: number,
+  actor: string | null,
+): Promise<string[]> {
   const { data: ps } = await db
     .from("partners")
     .select("id, terminated_at, termination_for_breach")
     .eq("termination_for_breach", true)
     .not("terminated_at", "is", null);
   const partners = new Map(
-    ((ps ?? []) as Array<{ id: string; terminated_at: string | null; termination_for_breach: boolean }>).map((p) => [p.id, p]),
+    (
+      (ps ?? []) as Array<{
+        id: string;
+        terminated_at: string | null;
+        termination_for_breach: boolean;
+      }>
+    ).map((p) => [p.id, p]),
   );
   if (!partners.size) return [];
   const { data: lines } = await db
@@ -772,21 +830,36 @@ export async function voidBreachBonuses(db: AnyDb, asOf: number, actor: string |
     .eq("kind", "launch_bonus")
     .in("state", ["held", "on_hold", "payable"])
     .in("partner_id", [...partners.keys()]);
-  const list = (lines ?? []) as Array<Pick<LedgerLine, "id" | "kind" | "state" | "partner_id" | "referral_id">>;
+  const list = (lines ?? []) as Array<
+    Pick<LedgerLine, "id" | "kind" | "state" | "partner_id" | "referral_id">
+  >;
   if (!list.length) return [];
   const refIds = [...new Set(list.map((l) => l.referral_id).filter((x): x is string => !!x))];
-  const { data: refs } = await db.from("referrals").select("id, first_paid_month_end").in("id", refIds);
+  const { data: refs } = await db
+    .from("referrals")
+    .select("id, first_paid_month_end")
+    .in("id", refIds);
   const fpme = new Map(
-    ((refs ?? []) as Array<{ id: string; first_paid_month_end: string | null }>).map((r) => [r.id, r.first_paid_month_end]),
+    ((refs ?? []) as Array<{ id: string; first_paid_month_end: string | null }>).map((r) => [
+      r.id,
+      r.first_paid_month_end,
+    ]),
   );
   const ids = breachVoidedBonuses(list, partners, fpme, asOf);
   if (!ids.length) return [];
   // Only lines not already in a payout being sent.
   check(await db.from("commission_ledger").update({ state: "void" }).in("id", ids));
-  const voidedRefs = list.filter((l) => ids.includes(l.id)).map((l) => l.referral_id).filter((x): x is string => !!x);
+  const voidedRefs = list
+    .filter((l) => ids.includes(l.id))
+    .map((l) => l.referral_id)
+    .filter((x): x is string => !!x);
   await db
     .from("referrals")
-    .update({ bonus_status: "reversed", bonus_ineligible_reason: "breach_stop", updated_at: new Date(asOf).toISOString() })
+    .update({
+      bonus_status: "reversed",
+      bonus_ineligible_reason: "breach_stop",
+      updated_at: new Date(asOf).toISOString(),
+    })
     .in("id", voidedRefs);
   await db.from("launch_bonus_claims").update({ status: "reversed" }).in("referral_id", voidedRefs);
   for (const l of list.filter((x) => ids.includes(x.id)))
@@ -813,7 +886,8 @@ export async function applySetOff(
   actor: string,
 ) {
   for (const i of items) {
-    if (!(Number.isInteger(i.amount_pence) && i.amount_pence > 0)) throw new Error("Each set-off must be a positive amount in pence.");
+    if (!(Number.isInteger(i.amount_pence) && i.amount_pence > 0))
+      throw new Error("Each set-off must be a positive amount in pence.");
     if (i.note.trim().length < 3) throw new Error("Each set-off needs a note.");
   }
   if (items.length)
@@ -830,7 +904,12 @@ export async function applySetOff(
         })),
       ),
     );
-  check(await db.from("partners").update({ set_off_done_at: new Date().toISOString() }).eq("id", partnerId));
+  check(
+    await db
+      .from("partners")
+      .update({ set_off_done_at: new Date().toISOString() })
+      .eq("id", partnerId),
+  );
   await logPartnerEvent(db, {
     partner_id: partnerId,
     actor,

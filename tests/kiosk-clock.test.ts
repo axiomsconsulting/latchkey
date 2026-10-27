@@ -15,11 +15,17 @@ describe("kiosk clocks", () => {
   it("says when it's already tomorrow somewhere", () => {
     const late = new Date("2026-10-17T22:30:00Z"); // 23:30 London, 07:30 next day Tokyo
     expect(clockHands(late, "Asia/Tokyo", "Europe/London").dayShift).toBe(1);
-    expect(clockHands(new Date("2026-10-17T01:00:00Z"), "America/New_York", "Europe/London").dayShift).toBe(-1);
+    expect(
+      clockHands(new Date("2026-10-17T01:00:00Z"), "America/New_York", "Europe/London").dayShift,
+    ).toBe(-1);
   });
 
   it("shows the date and time in the property's zone", () => {
-    expect(kioskNow(at, "Europe/London")).toEqual({ date: "Saturday 17 October", shortDate: "Sat 17 Oct", time: "14:30" });
+    expect(kioskNow(at, "Europe/London")).toEqual({
+      date: "Saturday 17 October",
+      shortDate: "Sat 17 Oct",
+      time: "14:30",
+    });
   });
 
   it("drifts slowly within a small box, never jumping", () => {
@@ -44,13 +50,24 @@ describe("reception clocks around the property's own time", () => {
   it("puts London in the middle, two behind and two ahead", async () => {
     const { worldClocksFor } = await import("../src/lib/kiosk-clock");
     const c = worldClocksFor("Europe/London", "London", oct);
-    expect(c.map((x) => x.city)).toEqual(["Los Angeles", "New York", "London", "New Delhi", "Tokyo"]);
+    expect(c.map((x) => x.city)).toEqual([
+      "Los Angeles",
+      "New York",
+      "London",
+      "New Delhi",
+      "Tokyo",
+    ]);
     expect(c[2]!.home).toBe(true);
   });
 
   it("works for properties anywhere, west to east, never two with the same time", async () => {
     const { worldClocksFor, utcOffset } = await import("../src/lib/kiosk-clock");
-    for (const [tz, city] of [["America/New_York", "New York"], ["Asia/Kolkata", "New Delhi"], ["Australia/Sydney", "Sydney"], ["Europe/Dublin", "Dublin"]] as const) {
+    for (const [tz, city] of [
+      ["America/New_York", "New York"],
+      ["Asia/Kolkata", "New Delhi"],
+      ["Australia/Sydney", "Sydney"],
+      ["Europe/Dublin", "Dublin"],
+    ] as const) {
       for (const at of [oct, jan]) {
         const c = worldClocksFor(tz, city, at);
         expect(c.length).toBe(5);
@@ -84,15 +101,28 @@ describe("quiet hours on the kiosk", () => {
   it("knows overnight quiet hours in the property's time zone", async () => {
     const { quietNow } = await import("../src/lib/kiosk-clock");
     // 22:30 and 06:59 London (BST) are quiet; 07:00 and 21:59 aren't.
-    expect(quietNow(at("2026-10-17T21:30:00Z"), "Europe/London", "22:00", "07:00")).toEqual({ active: true, until: "07:00" });
-    expect(quietNow(at("2026-10-18T05:59:00Z"), "Europe/London", "22:00", "07:00").active).toBe(true);
-    expect(quietNow(at("2026-10-18T06:00:00Z"), "Europe/London", "22:00", "07:00").active).toBe(false);
-    expect(quietNow(at("2026-10-17T20:59:00Z"), "Europe/London", "22:00", "07:00").active).toBe(false);
+    expect(quietNow(at("2026-10-17T21:30:00Z"), "Europe/London", "22:00", "07:00")).toEqual({
+      active: true,
+      until: "07:00",
+    });
+    expect(quietNow(at("2026-10-18T05:59:00Z"), "Europe/London", "22:00", "07:00").active).toBe(
+      true,
+    );
+    expect(quietNow(at("2026-10-18T06:00:00Z"), "Europe/London", "22:00", "07:00").active).toBe(
+      false,
+    );
+    expect(quietNow(at("2026-10-17T20:59:00Z"), "Europe/London", "22:00", "07:00").active).toBe(
+      false,
+    );
   });
   it("handles daytime spans and no quiet hours", async () => {
     const { quietNow } = await import("../src/lib/kiosk-clock");
-    expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "14:00", "16:00").active).toBe(true);
-    expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "07:00", "07:00").active).toBe(false);
+    expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "14:00", "16:00").active).toBe(
+      true,
+    );
+    expect(quietNow(at("2026-10-17T13:30:00Z"), "Europe/London", "07:00", "07:00").active).toBe(
+      false,
+    );
   });
 });
 

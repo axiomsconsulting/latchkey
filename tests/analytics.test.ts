@@ -1,16 +1,37 @@
 import { describe, expect, it } from "vitest";
 
-import { botReason, duration, parseUserAgent, periodKey, placeOf, sourceOf, summarise, type ProfileIn, type VisitIn, type VisitorIn } from "../src/lib/analytics";
+import {
+  botReason,
+  duration,
+  parseUserAgent,
+  periodKey,
+  placeOf,
+  sourceOf,
+  summarise,
+  type ProfileIn,
+  type VisitIn,
+  type VisitorIn,
+} from "../src/lib/analytics";
 
-const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
-const MAC_CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+const IPHONE =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+const MAC_CHROME =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 const GOOGLEBOT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
 
 describe("reading the browser", () => {
   it("names browser, system and device", () => {
     expect(parseUserAgent(IPHONE)).toEqual({ browser: "Safari", os: "iOS", device: "Phone" });
-    expect(parseUserAgent(MAC_CHROME)).toEqual({ browser: "Chrome", os: "macOS", device: "Desktop" });
-    expect(parseUserAgent("Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 Chrome/141 Safari/537.36").device).toBe("Tablet");
+    expect(parseUserAgent(MAC_CHROME)).toEqual({
+      browser: "Chrome",
+      os: "macOS",
+      device: "Desktop",
+    });
+    expect(
+      parseUserAgent(
+        "Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 Chrome/141 Safari/537.36",
+      ).device,
+    ).toBe("Tablet");
     expect(parseUserAgent(null).device).toBe("Unknown");
   });
 
@@ -20,7 +41,9 @@ describe("reading the browser", () => {
     expect(botReason("Mozilla/5.0 HeadlessChrome/120")).toMatch(/headless/);
     expect(botReason("")).toBe("No browser name");
     expect(botReason(MAC_CHROME, { webdriver: true })).toBe("Automated browser");
-    expect(botReason(MAC_CHROME, { pagesInVisit: 60, secondsInVisit: 30 })).toBe("Too many pages too fast");
+    expect(botReason(MAC_CHROME, { pagesInVisit: 60, secondsInVisit: 30 })).toBe(
+      "Too many pages too fast",
+    );
     expect(botReason(IPHONE)).toBeNull();
   });
 
@@ -30,7 +53,9 @@ describe("reading the browser", () => {
     expect(sourceOf("https://latchkey.app/about", "latchkey.app")).toBe("Direct");
     expect(sourceOf("https://www.airbnb.co.uk/rooms/1")).toBe("airbnb.co.uk");
     expect(sourceOf("not a url")).toBe("Direct");
-    expect(placeOf({ city: "Amersham", region: "England", country: "GB" })).toBe("Amersham, England, GB");
+    expect(placeOf({ city: "Amersham", region: "England", country: "GB" })).toBe(
+      "Amersham, England, GB",
+    );
     expect(placeOf({})).toBe("Unknown");
   });
 
@@ -47,7 +72,12 @@ describe("reading the browser", () => {
 });
 
 describe("the dashboard summary", () => {
-  const visit = (id: string, visitorId: string, startedAt: string, extra: Partial<VisitIn> = {}): VisitIn => ({
+  const visit = (
+    id: string,
+    visitorId: string,
+    startedAt: string,
+    extra: Partial<VisitIn> = {},
+  ): VisitIn => ({
     id,
     visitorId,
     startedAt,
@@ -63,7 +93,11 @@ describe("the dashboard summary", () => {
     isBot: false,
     ...extra,
   });
-  const visitor = (id: string, profileId: string | null, extra: Partial<VisitorIn> = {}): VisitorIn => ({
+  const visitor = (
+    id: string,
+    profileId: string | null,
+    extra: Partial<VisitorIn> = {},
+  ): VisitorIn => ({
     id,
     profileId,
     firstSeen: "2026-10-01T09:00:00Z",
@@ -76,8 +110,24 @@ describe("the dashboard summary", () => {
     ...extra,
   });
   const profiles: ProfileIn[] = [
-    { id: "P1", userId: "u1", email: "sam@example.com", hostId: null, knownAt: "2026-10-05T10:00:00Z", firstSeen: "2026-10-01T09:00:00Z", isTeam: false },
-    { id: "P2", userId: "u2", email: "me@example.com", hostId: null, knownAt: "2026-09-01T00:00:00Z", firstSeen: "2026-09-01T00:00:00Z", isTeam: true },
+    {
+      id: "P1",
+      userId: "u1",
+      email: "sam@example.com",
+      hostId: null,
+      knownAt: "2026-10-05T10:00:00Z",
+      firstSeen: "2026-10-01T09:00:00Z",
+      isTeam: false,
+    },
+    {
+      id: "P2",
+      userId: "u2",
+      email: "me@example.com",
+      hostId: null,
+      knownAt: "2026-09-01T00:00:00Z",
+      firstSeen: "2026-09-01T00:00:00Z",
+      isTeam: true,
+    },
   ];
   const input = {
     profiles,
@@ -119,18 +169,30 @@ describe("the dashboard summary", () => {
     expect(sam.ips).toHaveLength(2);
     expect(sam.devices).toEqual(["Safari · iOS · Phone", "Chrome · macOS · Desktop"]);
     expect(sam.sources).toEqual(["Google", "Direct"]);
-    expect(summarise(input, all, "month").rows.find((r) => r.key === "p:P1")!.clubs).toEqual([{ period: "2026-10-01", visits: 3, pages: 6, ms: 180_000 }]);
+    expect(summarise(input, all, "month").rows.find((r) => r.key === "p:P1")!.clubs).toEqual([
+      { period: "2026-10-01", visits: 3, pages: 6, ms: 180_000 },
+    ]);
   });
 
   it("hides bots and the team when asked, and filters people", () => {
     const s = summarise(input, all, "day");
     expect(s.botsHidden).toBe(1);
     expect(s.rows.some((r) => r.isBot)).toBe(false);
-    expect(summarise(input, { ...all, hideBots: false }, "day").rows.some((r) => r.isBot)).toBe(true);
-    expect(summarise(input, { ...all, hideTeam: true }, "day").rows.some((r) => r.isTeam)).toBe(false);
-    expect(summarise(input, { ...all, who: "anonymous" }, "day").rows.map((r) => r.status)).toEqual(["anonymous"]);
-    expect(summarise(input, { ...all, who: "converted" }, "day").rows.map((r) => r.label)).toEqual(["sam@example.com"]);
-    expect(summarise(input, { ...all, search: "amersham" }, "day").rows.map((r) => r.label)).toEqual(["sam@example.com"]);
+    expect(summarise(input, { ...all, hideBots: false }, "day").rows.some((r) => r.isBot)).toBe(
+      true,
+    );
+    expect(summarise(input, { ...all, hideTeam: true }, "day").rows.some((r) => r.isTeam)).toBe(
+      false,
+    );
+    expect(summarise(input, { ...all, who: "anonymous" }, "day").rows.map((r) => r.status)).toEqual(
+      ["anonymous"],
+    );
+    expect(summarise(input, { ...all, who: "converted" }, "day").rows.map((r) => r.label)).toEqual([
+      "sam@example.com",
+    ]);
+    expect(
+      summarise(input, { ...all, search: "amersham" }, "day").rows.map((r) => r.label),
+    ).toEqual(["sam@example.com"]);
   });
 
   it("counts totals, pages and sources for the people shown", () => {
@@ -143,6 +205,10 @@ describe("the dashboard summary", () => {
     expect(s.sources.find((x) => x.key === "newsletter")?.visits).toBe(1);
     expect(s.known).toBe(2);
     expect(s.converted).toBe(1);
-    expect(s.devices.find((d) => d.key === "Phone")).toEqual({ key: "Phone", visits: 2, visitors: 1 });
+    expect(s.devices.find((d) => d.key === "Phone")).toEqual({
+      key: "Phone",
+      visits: 2,
+      visitors: 1,
+    });
   });
 });

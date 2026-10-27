@@ -86,11 +86,13 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
     // Where this visit came from, kept for the session before anything redirects (/tour, /p, the demo).
-    if (typeof window !== "undefined") captureAttribution(new URLSearchParams(window.location.search));
+    if (typeof window !== "undefined")
+      captureAttribution(new URLSearchParams(window.location.search));
     const site = await loadSite().catch(() => null);
     if (site) setBrand(site.brand);
     const code = site?.tenant?.shortCode;
-    if (code && PLATFORM_ONLY.test(location.pathname)) throw redirect({ to: "/$slug", params: { slug: code } });
+    if (code && PLATFORM_ONLY.test(location.pathname))
+      throw redirect({ to: "/$slug", params: { slug: code } });
     return { site };
   },
   head: () => ({
@@ -100,8 +102,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: rebrand("Latchkey — guest operations for independent accommodation") },
       {
         name: "description",
-        content:
-          rebrand("Latchkey handles guest arrivals, house rules and extras for hosts letting rooms across Airbnb, Booking.com, Homestay.com and direct."),
+        content: rebrand(
+          "Latchkey handles guest arrivals, house rules and extras for hosts letting rooms across Airbnb, Booking.com, Homestay.com and direct.",
+        ),
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -152,7 +155,10 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
-  const { queryClient, site } = Route.useRouteContext() as { queryClient: QueryClient; site?: { brand: unknown } | null };
+  const { queryClient, site } = Route.useRouteContext() as {
+    queryClient: QueryClient;
+    site?: { brand: unknown } | null;
+  };
   // The brand the server rendered with (beforeLoad doesn't run again in the browser on
   // first load): set before any page draws a logo or a name, so they never fall back to the default.
   if (site) setBrand(site.brand);

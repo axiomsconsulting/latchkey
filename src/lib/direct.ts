@@ -42,13 +42,17 @@ export function enquiryProblem(e: EnquiryInput, today: string): string | null {
   if (!e.name.trim()) return "Please add your name.";
   if (!EMAIL.test(e.email.trim())) return "Please check your email address.";
   // A phone number in full international form (+44…), so the host can reach the guest.
-  if (!e.phone || !/^\+[1-9]\d{6,14}$/.test(e.phone.trim())) return "Please add a phone number we can reach you on.";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(e.checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(e.checkOut)) return "Please pick your dates.";
+  if (!e.phone || !/^\+[1-9]\d{6,14}$/.test(e.phone.trim()))
+    return "Please add a phone number we can reach you on.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(e.checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(e.checkOut))
+    return "Please pick your dates.";
   if (e.checkIn < today) return "Your arrival date has passed.";
   if (e.checkOut <= e.checkIn) return "Your leaving date must be after your arrival.";
-  if (e.checkOut > addDays(e.checkIn, MAX_NIGHTS)) return `Please ask about up to ${MAX_NIGHTS} nights at a time.`;
+  if (e.checkOut > addDays(e.checkIn, MAX_NIGHTS))
+    return `Please ask about up to ${MAX_NIGHTS} nights at a time.`;
   if (e.checkIn > addDays(today, 730)) return "Please ask about dates within the next two years.";
-  if (!Number.isInteger(e.guests) || e.guests < 1 || e.guests > MAX_GUESTS) return `Please say how many guests (1 to ${MAX_GUESTS}).`;
+  if (!Number.isInteger(e.guests) || e.guests < 1 || e.guests > MAX_GUESTS)
+    return `Please say how many guests (1 to ${MAX_GUESTS}).`;
   return null;
 }
 
@@ -71,11 +75,19 @@ export function nightsBetween(a: string, b: string): number {
  * A reply from the host's own mailbox: the guest's address, a subject naming
  * the dates, and a line on how to stop hearing from the business.
  */
-export function replyMailto(input: { email: string; business: string; checkIn?: string | null; checkOut?: string | null; name?: string | null; withdrawUrl?: string | null }): string {
+export function replyMailto(input: {
+  email: string;
+  business: string;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  name?: string | null;
+  withdrawUrl?: string | null;
+}): string {
   const dates = input.checkIn && input.checkOut ? ` (${input.checkIn} to ${input.checkOut})` : "";
   const subject = `Your stay at ${input.business}${dates}`;
   const first = (input.name ?? "").trim().split(/\s+/)[0] ?? "";
   const lines = [`${first ? `Hello ${first},` : "Hello,"}`, "", "", "", `${input.business}`];
-  if (input.withdrawUrl) lines.push("", `Prefer not to hear from us about future stays? ${input.withdrawUrl}`);
+  if (input.withdrawUrl)
+    lines.push("", `Prefer not to hear from us about future stays? ${input.withdrawUrl}`);
   return `mailto:${encodeURIComponent(input.email.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
 }

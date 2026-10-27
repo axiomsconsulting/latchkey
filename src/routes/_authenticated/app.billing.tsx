@@ -22,7 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { billingCopy as copy, common, offerCopy } from "@/content/copy";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
-import { cancelSubscription, changePlan, getBilling, openBillingPortal, startSubscription } from "@/lib/billing.functions";
+import {
+  cancelSubscription,
+  changePlan,
+  getBilling,
+  openBillingPortal,
+  startSubscription,
+} from "@/lib/billing.functions";
 import { monthlyPrice, type Plan } from "@/lib/pricing-model";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -33,7 +39,8 @@ import { money } from "@/lib/pricing";
 import { rebrand } from "@/lib/brand";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
-  validateSearch: (s: Record<string, unknown>): { done?: boolean } => (s["done"] ? { done: true } : {}),
+  validateSearch: (s: Record<string, unknown>): { done?: boolean } =>
+    s["done"] ? { done: true } : {},
   head: () => ({ meta: [{ title: rebrand("Subscription · Latchkey host dashboard") }] }),
   component: BillingPage,
 });
@@ -51,7 +58,11 @@ function BillingPage() {
   const portal = useServerFn(openBillingPortal);
   const cancel = useServerFn(cancelSubscription);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["billing", hostId], enabled: !!hostId, queryFn: () => fetchBilling({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["billing", hostId],
+    enabled: !!hostId,
+    queryFn: () => fetchBilling({ data: { hostId } }),
+  });
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [problem, setProblem] = useState<AppError | null>(null);
@@ -103,12 +114,22 @@ function BillingPage() {
           </span>
           <div>
             <h2 className="text-xl">{heading}</h2>
-            <p className="text-muted-foreground">{copy.price(money(b.price.pence, b.price.currency), b.price.properties, b.price.rooms)}</p>
+            <p className="text-muted-foreground">
+              {copy.price(
+                money(b.price.pence, b.price.currency),
+                b.price.properties,
+                b.price.rooms,
+              )}
+            </p>
           </div>
         </div>
         {b.price.offerPence !== null && b.price.offerPence < b.price.pence ? (
           <p className="rounded-xl bg-accent/10 p-3 text-sm font-medium ring-1 ring-accent/30">
-            {offerCopy.billing(b.price.offerLabel ?? "Launch offer", money(b.price.offerPence, b.price.currency), money(b.price.pence, b.price.currency))}
+            {offerCopy.billing(
+              b.price.offerLabel ?? "Launch offer",
+              money(b.price.offerPence, b.price.currency),
+              money(b.price.pence, b.price.currency),
+            )}
           </p>
         ) : null}
 
@@ -117,7 +138,9 @@ function BillingPage() {
             {copy.trialEnds(day(b.trialEndsAt))} {copy.chargeNote(day(b.trialEndsAt))}
           </p>
         ) : null}
-        {(b.phase === "trial_ended" || b.phase === "canceled") && !subscribed ? <p>{copy.chargeNow}</p> : null}
+        {(b.phase === "trial_ended" || b.phase === "canceled") && !subscribed ? (
+          <p>{copy.chargeNow}</p>
+        ) : null}
         {subscribed && b.currentPeriodEnd ? <p>{copy.renews(day(b.currentPeriodEnd))}</p> : null}
 
         {!isOwner ? (
@@ -127,18 +150,31 @@ function BillingPage() {
         ) : b.phase === "comped" ? null : (
           <div className="flex flex-wrap gap-2">
             {!subscribed ? (
-              <Button variant="accent" disabled={busy !== null} onClick={() => void go("start", () => start({ data: { hostId, returnTo } }))}>
+              <Button
+                variant="accent"
+                disabled={busy !== null}
+                onClick={() => void go("start", () => start({ data: { hostId, returnTo } }))}
+              >
                 {busy === "start" ? <Loader2 className="size-4 animate-spin" /> : null}
                 {b.phase === "canceled" ? copy.reactivate : copy.addCard}
               </Button>
             ) : (
-              <Button variant="outline" disabled={busy !== null} onClick={() => void go("portal", () => portal({ data: { hostId, returnTo } }))}>
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => void go("portal", () => portal({ data: { hostId, returnTo } }))}
+              >
                 {busy === "portal" ? <Loader2 className="size-4 animate-spin" /> : null}
                 {copy.updateCard}
               </Button>
             )}
             {b.phase !== "canceled" && b.phase !== "trial_ended" ? (
-              <Button variant="ghost" className="text-destructive" disabled={busy !== null} onClick={() => setConfirm(true)}>
+              <Button
+                variant="ghost"
+                className="text-destructive"
+                disabled={busy !== null}
+                onClick={() => setConfirm(true)}
+              >
                 {copy.cancel}
               </Button>
             ) : null}
@@ -165,7 +201,10 @@ function BillingPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => void doCancel()}>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void doCancel()}
+            >
               {copy.cancelConfirm}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -187,7 +226,11 @@ function PlanPicker({
   canChange,
 }: {
   hostId: string;
-  plans: { currency: string; apiAddon: { pricePence: number; includedRequests: number }; plans: PlanWithLabels[] };
+  plans: {
+    currency: string;
+    apiAddon: { pricePence: number; includedRequests: number };
+    plans: PlanWithLabels[];
+  };
   current: string | null;
   apiAddon: boolean;
   rooms: number;
@@ -196,7 +239,12 @@ function PlanPicker({
   const change = useServerFn(changePlan);
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
-  const model = { currency: plans.currency, trialDays: 0, plans: plans.plans, apiAddon: plans.apiAddon };
+  const model = {
+    currency: plans.currency,
+    trialDays: 0,
+    plans: plans.plans,
+    apiAddon: plans.apiAddon,
+  };
   const currentPlan = plans.plans.find((p) => p.key === current);
 
   async function pick(planKey: string, addon: boolean) {
@@ -220,7 +268,14 @@ function PlanPicker({
         {plans.plans.map((p) => {
           const yours = p.key === current;
           return (
-            <article key={p.key} className={cn("card-soft flex flex-col p-5", p.highlight && "ring-2 ring-primary", yours && "bg-secondary/40")}>
+            <article
+              key={p.key}
+              className={cn(
+                "card-soft flex flex-col p-5",
+                p.highlight && "ring-2 ring-primary",
+                yours && "bg-secondary/40",
+              )}
+            >
               <div className="flex items-center gap-2">
                 <h3 className="text-lg">{p.name}</h3>
                 {p.highlight ? <Badge>{copy.recommended}</Badge> : null}
@@ -229,20 +284,48 @@ function PlanPicker({
               <p className="text-sm text-muted-foreground">{p.tagline}</p>
               <p className="mt-3 text-3xl font-semibold">
                 {money(p.basePence, plans.currency)}
-                <span className="text-base font-normal text-muted-foreground"> {copy.perMonth}</span>
+                <span className="text-base font-normal text-muted-foreground">
+                  {" "}
+                  {copy.perMonth}
+                </span>
               </p>
-              <p className="text-sm text-muted-foreground">{copy.planRooms(p.includedRooms, money(p.extraRoomPence, plans.currency), p.maxProperties)}</p>
-              <p className="mt-1 text-sm">{copy.youWouldPay(money(monthlyPrice(model, p, { rooms: Math.max(1, rooms), properties: 1, apiAddon: apiAddon && p.apiRequests === 0 }), plans.currency), rooms)}</p>
+              <p className="text-sm text-muted-foreground">
+                {copy.planRooms(
+                  p.includedRooms,
+                  money(p.extraRoomPence, plans.currency),
+                  p.maxProperties,
+                )}
+              </p>
+              <p className="mt-1 text-sm">
+                {copy.youWouldPay(
+                  money(
+                    monthlyPrice(model, p, {
+                      rooms: Math.max(1, rooms),
+                      properties: 1,
+                      apiAddon: apiAddon && p.apiRequests === 0,
+                    }),
+                    plans.currency,
+                  ),
+                  rooms,
+                )}
+              </p>
               <ul className="mt-3 flex-1 space-y-1 text-sm">
                 {p.featureLabels.map((f) => (
                   <li key={f} className="flex gap-2">
                     <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {f}
                   </li>
                 ))}
-                {p.apiRequests > 0 ? <li className="text-muted-foreground">{copy.apiIncluded(p.apiRequests)}</li> : null}
+                {p.apiRequests > 0 ? (
+                  <li className="text-muted-foreground">{copy.apiIncluded(p.apiRequests)}</li>
+                ) : null}
               </ul>
               {canChange && !yours ? (
-                <Button className="mt-4" variant={p.highlight ? "default" : "outline"} disabled={busy !== null} onClick={() => void pick(p.key, apiAddon)}>
+                <Button
+                  className="mt-4"
+                  variant={p.highlight ? "default" : "outline"}
+                  disabled={busy !== null}
+                  onClick={() => void pick(p.key, apiAddon)}
+                >
                   {busy === p.key ? <Loader2 className="size-4 animate-spin" /> : null}
                   {copy.choosePlan(p.name)}
                 </Button>
@@ -256,7 +339,10 @@ function PlanPicker({
           <div className="min-w-0 flex-1">
             <h3 className="font-medium">{copy.apiAddonTitle}</h3>
             <p className="text-sm text-muted-foreground">
-              {copy.apiAddonBody(money(plans.apiAddon.pricePence, plans.currency), plans.apiAddon.includedRequests)}
+              {copy.apiAddonBody(
+                money(plans.apiAddon.pricePence, plans.currency),
+                plans.apiAddon.includedRequests,
+              )}
             </p>
           </div>
           <Switch

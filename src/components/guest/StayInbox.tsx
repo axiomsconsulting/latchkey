@@ -4,7 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, MessageCircle, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { guest as copy } from "@/content/copy";
 import { getStayInbox, markGuestRead, sendGuestMessage } from "@/lib/messages.functions";
@@ -85,7 +92,12 @@ export function StayInbox({ token }: { token: string }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="lg" className="relative h-14 gap-2 rounded-full px-5" aria-label={copy.inboxOpen}>
+        <Button
+          variant="outline"
+          size="lg"
+          className="relative h-14 gap-2 rounded-full px-5"
+          aria-label={copy.inboxOpen}
+        >
           <MessageCircle className="size-5" />
           <span className="hidden sm:inline">{copy.inboxTitle}</span>
           {unread > 0 ? (
@@ -116,7 +128,12 @@ export function StayInbox({ token }: { token: string }) {
                 )}
               >
                 <p className="whitespace-pre-wrap">{m.body}</p>
-                <p className={cn("mt-1 text-xs", m.fromHost ? "text-muted-foreground" : "opacity-80")}>
+                <p
+                  className={cn(
+                    "mt-1 text-xs",
+                    m.fromHost ? "text-muted-foreground" : "opacity-80",
+                  )}
+                >
                   {m.fromHost ? copy.inboxHost : copy.inboxYou} · {when(m.createdAt, tz)}
                 </p>
               </div>
@@ -160,8 +177,17 @@ export function StayInbox({ token }: { token: string }) {
             maxLength={1000}
             className="min-h-14 flex-1 text-base"
           />
-          <Button type="submit" size="lg" className="h-14" disabled={!draft.trim() || post.isPending}>
-            {post.isPending ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
+          <Button
+            type="submit"
+            size="lg"
+            className="h-14"
+            disabled={!draft.trim() || post.isPending}
+          >
+            {post.isPending ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Send className="size-5" />
+            )}
             <span className="sr-only">{copy.inboxSend}</span>
           </Button>
         </form>

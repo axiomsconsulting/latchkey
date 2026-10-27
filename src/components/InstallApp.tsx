@@ -10,7 +10,15 @@ import { installWay, onInstallChange, promptInstall, type InstallWay } from "@/l
  * Install Latchkey (or the kiosk) as an app: the browser's own prompt where
  * there is one, step-by-step for iPhone and iPad, a pointer elsewhere.
  */
-export function InstallApp({ kiosk = false, size = "default", className }: { kiosk?: boolean; size?: "default" | "sm"; className?: string }) {
+export function InstallApp({
+  kiosk = false,
+  size = "default",
+  className,
+}: {
+  kiosk?: boolean;
+  size?: "default" | "sm";
+  className?: string;
+}) {
   const [way, setWay] = useState<InstallWay | null>(null);
   useEffect(() => {
     const update = () => setWay(installWay());
@@ -22,14 +30,21 @@ export function InstallApp({ kiosk = false, size = "default", className }: { kio
 
   if (way === "installed") {
     return (
-      <span className={`inline-flex items-center gap-1.5 text-sm text-muted-foreground ${className ?? ""}`}>
+      <span
+        className={`inline-flex items-center gap-1.5 text-sm text-muted-foreground ${className ?? ""}`}
+      >
         <Check className="size-4 text-success" /> {copy.installed}
       </span>
     );
   }
   if (way === "prompt") {
     return (
-      <Button size={size} variant="outline" className={className} onClick={() => void promptInstall()}>
+      <Button
+        size={size}
+        variant="outline"
+        className={className}
+        onClick={() => void promptInstall()}
+      >
         <Download className="size-4" /> {label}
       </Button>
     );

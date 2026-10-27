@@ -35,9 +35,23 @@ export type SaverDefaults = {
 };
 export type SaverLook = { brightness: number; size: number };
 
-export const DEFAULT_SAVER: SaverDefaults = { brightness: 1.6, sizeMin: 0.8, sizeMax: 1.8, size: 1, resetMinutes: 5, saverMinutes: 10, welcomeMinutes: 15, qrStyle: "panel" };
+export const DEFAULT_SAVER: SaverDefaults = {
+  brightness: 1.6,
+  sizeMin: 0.8,
+  sizeMax: 1.8,
+  size: 1,
+  resetMinutes: 5,
+  saverMinutes: 10,
+  welcomeMinutes: 15,
+  qrStyle: "panel",
+};
 
-const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : null);
+const num = (v: unknown) =>
+  typeof v === "number" && Number.isFinite(v)
+    ? v
+    : typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))
+      ? Number(v)
+      : null;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 /** Two decimals, so stored values stay tidy. */
 const tidy = (v: number) => Math.round(v * 100) / 100;
@@ -45,24 +59,53 @@ const tidy = (v: number) => Math.round(v * 100) / 100;
 /** The super admin's settings, safe against anything stored. */
 export function normaliseDefaults(raw: unknown): SaverDefaults {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-  const brightness = tidy(clamp(num(r["brightness"]) ?? DEFAULT_SAVER.brightness, BRIGHTNESS.min, BRIGHTNESS.max));
+  const brightness = tidy(
+    clamp(num(r["brightness"]) ?? DEFAULT_SAVER.brightness, BRIGHTNESS.min, BRIGHTNESS.max),
+  );
   let sizeMin = tidy(clamp(num(r["sizeMin"]) ?? DEFAULT_SAVER.sizeMin, SIZE.min, SIZE.max));
   let sizeMax = tidy(clamp(num(r["sizeMax"]) ?? DEFAULT_SAVER.sizeMax, SIZE.min, SIZE.max));
   if (sizeMin > sizeMax) [sizeMin, sizeMax] = [sizeMax, sizeMin];
   const size = tidy(clamp(num(r["size"]) ?? DEFAULT_SAVER.size, sizeMin, sizeMax));
-  const whole = (v: unknown, fallback: number, lo: number, hi: number) => Math.round(clamp(num(v) ?? fallback, lo, hi));
-  const resetMinutes = whole(r["resetMinutes"], DEFAULT_SAVER.resetMinutes, TIMING.reset.min, TIMING.reset.max);
-  const saverMinutes = whole(r["saverMinutes"], DEFAULT_SAVER.saverMinutes, Math.max(TIMING.saver.min, resetMinutes), TIMING.saver.max);
-  const welcomeMinutes = whole(r["welcomeMinutes"], DEFAULT_SAVER.welcomeMinutes, TIMING.welcome.min, TIMING.welcome.max);
+  const whole = (v: unknown, fallback: number, lo: number, hi: number) =>
+    Math.round(clamp(num(v) ?? fallback, lo, hi));
+  const resetMinutes = whole(
+    r["resetMinutes"],
+    DEFAULT_SAVER.resetMinutes,
+    TIMING.reset.min,
+    TIMING.reset.max,
+  );
+  const saverMinutes = whole(
+    r["saverMinutes"],
+    DEFAULT_SAVER.saverMinutes,
+    Math.max(TIMING.saver.min, resetMinutes),
+    TIMING.saver.max,
+  );
+  const welcomeMinutes = whole(
+    r["welcomeMinutes"],
+    DEFAULT_SAVER.welcomeMinutes,
+    TIMING.welcome.min,
+    TIMING.welcome.max,
+  );
   const qrStyle = r["qrStyle"] === "icon" ? "icon" : "panel";
-  return { brightness, sizeMin, sizeMax, size, resetMinutes, saverMinutes, welcomeMinutes, qrStyle };
+  return {
+    brightness,
+    sizeMin,
+    sizeMax,
+    size,
+    resetMinutes,
+    saverMinutes,
+    welcomeMinutes,
+    qrStyle,
+  };
 }
 
 /** What a kiosk shows: the host's own choice where they made one, kept inside today's limits. */
 export function lookFor(defaults: SaverDefaults, own: unknown): SaverLook {
   const o = (own && typeof own === "object" ? own : {}) as Record<string, unknown>;
   return {
-    brightness: tidy(clamp(num(o["brightness"]) ?? defaults.brightness, BRIGHTNESS.min, BRIGHTNESS.max)),
+    brightness: tidy(
+      clamp(num(o["brightness"]) ?? defaults.brightness, BRIGHTNESS.min, BRIGHTNESS.max),
+    ),
     size: tidy(clamp(num(o["size"]) ?? defaults.size, defaults.sizeMin, defaults.sizeMax)),
   };
 }

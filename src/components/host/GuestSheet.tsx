@@ -2,7 +2,20 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, ArchiveRestore, BadgeCheck, BedDouble, Loader2, MessageCircle, MessageSquare, MonitorUp, Pencil, Phone, Send, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  BadgeCheck,
+  BedDouble,
+  Loader2,
+  MessageCircle,
+  MessageSquare,
+  MonitorUp,
+  Pencil,
+  Phone,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
@@ -21,7 +34,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { common, guestCard as copy, invoiceCopy } from "@/content/copy";
 import { useBookingSites, useRole, useWorkspace } from "@/hooks/use-host-data";
@@ -85,7 +104,9 @@ export function GuestSheet({
   // Opening the card counts as reading the guest's messages.
   useEffect(() => {
     if (!bookingId || !canWrite) return;
-    void markRead({ data: { bookingId } }).then(() => qc.invalidateQueries({ queryKey: ["board"] }));
+    void markRead({ data: { bookingId } }).then(() =>
+      qc.invalidateQueries({ queryKey: ["board"] }),
+    );
   }, [bookingId, canWrite, markRead, qc]);
 
   async function act(key: string, fn: () => Promise<unknown>, done: string, close = false) {
@@ -115,9 +136,15 @@ export function GuestSheet({
   const d = details.data;
   const b = d?.booking;
   // The property's kiosk, for a welcome written for this guest.
-  const shortCode = b ? (((ws.data?.properties ?? []) as Array<{ id: string; short_code: string }>).find((p) => p.id === b.propertyId)?.short_code ?? null) : null;
+  const shortCode = b
+    ? (((ws.data?.properties ?? []) as Array<{ id: string; short_code: string }>).find(
+        (p) => p.id === b.propertyId,
+      )?.short_code ?? null)
+    : null;
   const nights = b ? nightsBetween(b.checkIn, b.checkOut) : 0;
-  const site = b ? sites.find((x) => x.key === platformKey({ channel: b.channel, site_key: b.siteKey })) : undefined;
+  const site = b
+    ? sites.find((x) => x.key === platformKey({ channel: b.channel, site_key: b.siteKey }))
+    : undefined;
 
   return (
     <Sheet open={!!bookingId} onOpenChange={onOpenChange}>
@@ -125,7 +152,9 @@ export function GuestSheet({
         {!b ? (
           <div className="grid h-full place-items-center">
             {details.error ? (
-              <p className="text-muted-foreground">{details.error instanceof Error ? details.error.message : common.errorBody}</p>
+              <p className="text-muted-foreground">
+                {details.error instanceof Error ? details.error.message : common.errorBody}
+              </p>
             ) : (
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
             )}
@@ -141,18 +170,42 @@ export function GuestSheet({
               </SheetTitle>
               <SheetDescription className="flex flex-wrap items-center gap-2">
                 <ChannelBadge channel={b.channel as Channel} label={site?.label} />
-                <StatusBadge state={stayState({ status: b.status, check_in_date: b.checkIn, check_out_date: b.checkOut }, today)} />
-                {b.archived ? <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{copy.archived}</span> : null}
+                <StatusBadge
+                  state={stayState(
+                    { status: b.status, check_in_date: b.checkIn, check_out_date: b.checkOut },
+                    today,
+                  )}
+                />
+                {b.archived ? (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{copy.archived}</span>
+                ) : null}
               </SheetDescription>
             </SheetHeader>
 
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 px-4 text-sm">
-              <Fact label={copy.room} value={b.roomName ? `${b.roomName}${b.roomTitle ? ` · ${b.roomTitle}` : ""}` : copy.noRoom} wide />
-              <Fact label={copy.arrives} value={`${formatUkDate(b.checkIn, { withYear: true })}${b.checkInTime ? `, ${formatUkTime(b.checkInTime)}` : ""}`} />
-              <Fact label={copy.leaves} value={`${formatUkDate(b.checkOut, { withYear: true })}${b.checkOutTime ? `, ${formatUkTime(b.checkOutTime)}` : ""}`} />
+              <Fact
+                label={copy.room}
+                value={
+                  b.roomName
+                    ? `${b.roomName}${b.roomTitle ? ` · ${b.roomTitle}` : ""}`
+                    : copy.noRoom
+                }
+                wide
+              />
+              <Fact
+                label={copy.arrives}
+                value={`${formatUkDate(b.checkIn, { withYear: true })}${b.checkInTime ? `, ${formatUkTime(b.checkInTime)}` : ""}`}
+              />
+              <Fact
+                label={copy.leaves}
+                value={`${formatUkDate(b.checkOut, { withYear: true })}${b.checkOutTime ? `, ${formatUkTime(b.checkOutTime)}` : ""}`}
+              />
               <Fact label={copy.nights} value={String(nights)} />
               <Fact label={copy.guests} value={String(b.guestCount ?? 1)} />
-              <Fact label={copy.bookedOn} value={b.listingName ?? site?.label ?? b.channel.replace("_", ".")} />
+              <Fact
+                label={copy.bookedOn}
+                value={b.listingName ?? site?.label ?? b.channel.replace("_", ".")}
+              />
               <Fact label={copy.reference} value={b.reservationCode ?? "—"} />
               {b.email ? <Fact label={copy.email} value={b.email} /> : null}
               {b.address ? <Fact label={copy.address} value={b.address} wide /> : null}
@@ -160,7 +213,11 @@ export function GuestSheet({
                 <div className="col-span-2">
                   <dt className="text-xs text-muted-foreground">{copy.phone}</dt>
                   <dd className="flex flex-wrap items-center gap-2">
-                    <span className="mr-1 tabular-nums">{checkPhone(b.phone, "GB").ok ? (checkPhone(b.phone, "GB") as { display: string }).display : b.phone}</span>
+                    <span className="mr-1 tabular-nums">
+                      {checkPhone(b.phone, "GB").ok
+                        ? (checkPhone(b.phone, "GB") as { display: string }).display
+                        : b.phone}
+                    </span>
                     {/* tel: and sms: go to the phone app, or to whatever makes calls on this computer. */}
                     <Button asChild variant="outline" size="sm" title={copy.callHint}>
                       <a href={phoneLinks(b.phone).call}>
@@ -173,7 +230,11 @@ export function GuestSheet({
                       </a>
                     </Button>
                     <Button asChild variant="outline" size="sm">
-                      <a href={phoneLinks(b.phone).whatsapp} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={phoneLinks(b.phone).whatsapp}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <MessageCircle className="size-4" /> {copy.whatsapp}
                       </a>
                     </Button>
@@ -182,56 +243,80 @@ export function GuestSheet({
               ) : b.phoneLast4 ? (
                 <Fact label={copy.phone} value={`•••• ${b.phoneLast4}`} />
               ) : null}
-              {b.checkedInAt ? <Fact label={copy.checkedIn} value={when.format(new Date(b.checkedInAt))} /> : null}
+              {b.checkedInAt ? (
+                <Fact label={copy.checkedIn} value={when.format(new Date(b.checkedInAt))} />
+              ) : null}
               {b.notes ? <Fact label={copy.notes} value={b.notes} wide /> : null}
             </dl>
 
             {canWrite ? (
               <div className="mt-4 space-y-2 px-4">
-              <div className="flex flex-wrap gap-2">
-                {onEdit ? (
-                  <Button variant="outline" size="sm" onClick={() => onEdit(b.id)}>
-                    <Pencil className="size-4" /> {common.edit}
+                <div className="flex flex-wrap gap-2">
+                  {onEdit ? (
+                    <Button variant="outline" size="sm" onClick={() => onEdit(b.id)}>
+                      <Pencil className="size-4" /> {common.edit}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy !== null}
+                    onClick={() =>
+                      void act(
+                        "archive",
+                        () => archive({ data: { ids: [b.id], archived: !b.archived } }),
+                        b.archived ? copy.restored : copy.archivedToast,
+                        !b.archived,
+                      )
+                    }
+                  >
+                    {b.archived ? (
+                      <ArchiveRestore className="size-4" />
+                    ) : (
+                      <Archive className="size-4" />
+                    )}
+                    {b.archived ? copy.restore : copy.archive}
                   </Button>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy !== null}
-                  onClick={() =>
-                    void act("archive", () => archive({ data: { ids: [b.id], archived: !b.archived } }), b.archived ? copy.restored : copy.archivedToast, !b.archived)
-                  }
-                >
-                  {b.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-                  {b.archived ? copy.restore : copy.archive}
-                </Button>
-                <Button variant="ghost" size="sm" className="text-destructive" disabled={busy !== null} onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="size-4" /> {common.remove}
-                </Button>
-              </div>
-              {/* Reaching the guest: their guide link, and a welcome on the kiosk written for them. */}
-              <div className="flex flex-wrap gap-2">
-                <span data-tour="guest-guide-link" className="inline-flex">
-                  <GuideLinkButton bookingId={b.id} size="sm" />
-                </span>
-                {shortCode ? (
-                  <Button variant={welcomeOpen ? "secondary" : "outline"} size="sm" aria-expanded={welcomeOpen} onClick={() => setWelcomeOpen((o) => !o)} data-tour="guest-kiosk-welcome">
-                    <MonitorUp className="size-4" /> {welcomeOpen ? copy.kioskWelcomeHide : copy.kioskWelcome}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive"
+                    disabled={busy !== null}
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 className="size-4" /> {common.remove}
                   </Button>
-                ) : null}
-              </div>
-              {welcomeOpen && shortCode ? (
-                <div className="rounded-2xl border border-border p-3">
-                  <KioskWelcomePanel
-                    bare
-                    propertyId={b.propertyId}
-                    shortCode={shortCode}
-                    arriving={[]}
-                    forBooking={{ id: b.id, guest_full_name: b.guestName }}
-                    onDone={() => setWelcomeOpen(false)}
-                  />
                 </div>
-              ) : null}
+                {/* Reaching the guest: their guide link, and a welcome on the kiosk written for them. */}
+                <div className="flex flex-wrap gap-2">
+                  <span data-tour="guest-guide-link" className="inline-flex">
+                    <GuideLinkButton bookingId={b.id} size="sm" />
+                  </span>
+                  {shortCode ? (
+                    <Button
+                      variant={welcomeOpen ? "secondary" : "outline"}
+                      size="sm"
+                      aria-expanded={welcomeOpen}
+                      onClick={() => setWelcomeOpen((o) => !o)}
+                      data-tour="guest-kiosk-welcome"
+                    >
+                      <MonitorUp className="size-4" />{" "}
+                      {welcomeOpen ? copy.kioskWelcomeHide : copy.kioskWelcome}
+                    </Button>
+                  ) : null}
+                </div>
+                {welcomeOpen && shortCode ? (
+                  <div className="rounded-2xl border border-border p-3">
+                    <KioskWelcomePanel
+                      bare
+                      propertyId={b.propertyId}
+                      shortCode={shortCode}
+                      arriving={[]}
+                      forBooking={{ id: b.id, guest_full_name: b.guestName }}
+                      onDone={() => setWelcomeOpen(false)}
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -254,10 +339,18 @@ export function GuestSheet({
               ) : (
                 <ul className="space-y-2">
                   {d.messages.map((m) => (
-                    <li key={m.id} className={m.fromHost ? "ml-8 rounded-2xl bg-primary/10 p-3 text-sm" : "mr-8 rounded-2xl bg-secondary p-3 text-sm"}>
+                    <li
+                      key={m.id}
+                      className={
+                        m.fromHost
+                          ? "ml-8 rounded-2xl bg-primary/10 p-3 text-sm"
+                          : "mr-8 rounded-2xl bg-secondary p-3 text-sm"
+                      }
+                    >
                       <p className="whitespace-pre-wrap">{m.body}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {m.fromHost ? copy.you : (b.guestName?.split(" ")[0] ?? copy.guest)} · {when.format(new Date(m.createdAt))}
+                        {m.fromHost ? copy.you : (b.guestName?.split(" ")[0] ?? copy.guest)} ·{" "}
+                        {when.format(new Date(m.createdAt))}
                       </p>
                     </li>
                   ))}
@@ -269,12 +362,31 @@ export function GuestSheet({
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (!reply.trim()) return;
-                    void act("send", () => send({ data: { bookingId: b.id, body: reply.trim() } }), copy.sent).then(() => setReply(""));
+                    void act(
+                      "send",
+                      () => send({ data: { bookingId: b.id, body: reply.trim() } }),
+                      copy.sent,
+                    ).then(() => setReply(""));
                   }}
                 >
-                  <Textarea rows={2} value={reply} onChange={(e) => setReply(e.target.value)} placeholder={copy.replyPlaceholder} aria-label={copy.replyPlaceholder} />
-                  <Button type="submit" size="icon" disabled={busy === "send" || !reply.trim()} aria-label={copy.send}>
-                    {busy === "send" ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                  <Textarea
+                    rows={2}
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    placeholder={copy.replyPlaceholder}
+                    aria-label={copy.replyPlaceholder}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={busy === "send" || !reply.trim()}
+                    aria-label={copy.send}
+                  >
+                    {busy === "send" ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
                   </Button>
                 </form>
               ) : null}
@@ -287,9 +399,14 @@ export function GuestSheet({
                 <ul className="space-y-2 text-sm">
                   {d.requests.map((r) => (
                     <li key={r.id} className="rounded-xl border border-border p-3">
-                      <p>{r.items.map((i) => `${i.qty} × ${i.name}`).join(", ") || copy.extrasRequest}</p>
+                      <p>
+                        {r.items.map((i) => `${i.qty} × ${i.name}`).join(", ") ||
+                          copy.extrasRequest}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {r.status.replace("_", " ")} · {r.totalPence ? money(r.totalPence) : copy.free} · {when.format(new Date(r.createdAt))}
+                        {r.status.replace("_", " ")} ·{" "}
+                        {r.totalPence ? money(r.totalPence) : copy.free} ·{" "}
+                        {when.format(new Date(r.createdAt))}
                       </p>
                     </li>
                   ))}
@@ -303,7 +420,10 @@ export function GuestSheet({
                   ))}
                 </ul>
               )}
-              <Link to="/app/services" className="mt-2 inline-block text-sm underline underline-offset-4">
+              <Link
+                to="/app/services"
+                className="mt-2 inline-block text-sm underline underline-offset-4"
+              >
                 {copy.openServices}
               </Link>
             </Section>
@@ -313,7 +433,8 @@ export function GuestSheet({
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   {d.presence.map((p) => (
                     <li key={p.id} className="flex items-center gap-2">
-                      <BedDouble className="size-4" /> {copy.presence[p.event] ?? p.event} · {when.format(new Date(p.createdAt))}
+                      <BedDouble className="size-4" /> {copy.presence[p.event] ?? p.event} ·{" "}
+                      {when.format(new Date(p.createdAt))}
                     </li>
                   ))}
                 </ul>
@@ -323,14 +444,27 @@ export function GuestSheet({
             <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{copy.deleteTitle(b.guestName ?? copy.noName)}</AlertDialogTitle>
-                  <AlertDialogDescription>{b.source === "ical" ? `${copy.deleteBody} ${copy.deleteSynced}` : copy.deleteBody}</AlertDialogDescription>
+                  <AlertDialogTitle>
+                    {copy.deleteTitle(b.guestName ?? copy.noName)}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {b.source === "ical"
+                      ? `${copy.deleteBody} ${copy.deleteSynced}`
+                      : copy.deleteBody}
+                  </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={() => void act("delete", () => remove({ data: { ids: [b.id] } }), copy.deleted, true)}
+                    onClick={() =>
+                      void act(
+                        "delete",
+                        () => remove({ data: { ids: [b.id] } }),
+                        copy.deleted,
+                        true,
+                      )
+                    }
                   >
                     {common.remove}
                   </AlertDialogAction>
@@ -353,7 +487,15 @@ function Fact({ label, value, wide }: { label: string; value: string; wide?: boo
   );
 }
 
-function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mt-6 border-t border-border px-4 pt-4">
       <h3 className="mb-2 text-lg">

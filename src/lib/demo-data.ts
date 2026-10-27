@@ -277,15 +277,48 @@ export const DEMO_CONNECTIONS = [
 
 /** A guest request and a maintenance job, so Services and the housekeeping board have something open. */
 export const DEMO_JOBS = [
-  { roomKey: "r3", guest: "Ade Okafor", source: "guest" as const, category: "linen", title: "Extra towels", note: "Two more bath towels, please.", urgency: "normal" as const, status: "new" as const },
-  { roomKey: "r2", guest: null, source: "maintenance" as const, category: "handyman", title: "Shower drips after use", note: "Check the mixer seal before the weekend.", urgency: "low" as const, status: "acknowledged" as const },
+  {
+    roomKey: "r3",
+    guest: "Ade Okafor",
+    source: "guest" as const,
+    category: "linen",
+    title: "Extra towels",
+    note: "Two more bath towels, please.",
+    urgency: "normal" as const,
+    status: "new" as const,
+  },
+  {
+    roomKey: "r2",
+    guest: null,
+    source: "maintenance" as const,
+    category: "handyman",
+    title: "Shower drips after use",
+    note: "Check the mixer seal before the weekend.",
+    urgency: "low" as const,
+    status: "acknowledged" as const,
+  },
 ];
 
 /** A short conversation (answered) and a question still waiting, minutes before now. */
 export const DEMO_MESSAGES = [
-  { guest: "Ade Okafor", direction: "inbound" as const, minutesAgo: 190, body: "Hi, could we have two more towels please?" },
-  { guest: "Ade Okafor", direction: "outbound" as const, minutesAgo: 170, body: "Of course. I'll leave them outside your door by 6pm." },
-  { guest: "Jane Brown", direction: "inbound" as const, minutesAgo: 40, body: "We're on the train, arriving around 9pm. Is the door code the same as in the guide?" },
+  {
+    guest: "Ade Okafor",
+    direction: "inbound" as const,
+    minutesAgo: 190,
+    body: "Hi, could we have two more towels please?",
+  },
+  {
+    guest: "Ade Okafor",
+    direction: "outbound" as const,
+    minutesAgo: 170,
+    body: "Of course. I'll leave them outside your door by 6pm.",
+  },
+  {
+    guest: "Jane Brown",
+    direction: "inbound" as const,
+    minutesAgo: 40,
+    body: "We're on the train, arriving around 9pm. Is the door code the same as in the guide?",
+  },
 ];
 
 export function demoDates(today: string, b: DemoBooking) {
@@ -299,14 +332,52 @@ export function demoDates(today: string, b: DemoBooking) {
 
 /** Fictional guests for the screen-recording account (never real people). */
 export const RECORDING_GUESTS = [
-  "Amelia Hart", "Jonas Weber", "Priya Nair", "Callum Reid", "Sofia Ricci", "Daniel Okoye", "Maya Lindqvist", "Tom Fletcher",
-  "Aisha Rahman", "Lucas Moreau", "Grace Whitfield", "Mateo García", "Hannah Brooks", "Kenji Sato", "Isla Campbell", "Omar Haddad",
-  "Freya Nilsen", "Ben Carter", "Zara Malik", "Noah Fischer", "Ella Byrne", "Arjun Mehta", "Chloe Dupont", "Leo Martins",
+  "Amelia Hart",
+  "Jonas Weber",
+  "Priya Nair",
+  "Callum Reid",
+  "Sofia Ricci",
+  "Daniel Okoye",
+  "Maya Lindqvist",
+  "Tom Fletcher",
+  "Aisha Rahman",
+  "Lucas Moreau",
+  "Grace Whitfield",
+  "Mateo García",
+  "Hannah Brooks",
+  "Kenji Sato",
+  "Isla Campbell",
+  "Omar Haddad",
+  "Freya Nilsen",
+  "Ben Carter",
+  "Zara Malik",
+  "Noah Fischer",
+  "Ella Byrne",
+  "Arjun Mehta",
+  "Chloe Dupont",
+  "Leo Martins",
 ];
 
-const RECORDING_CHANNELS: DemoBooking["channel"][] = ["airbnb", "booking_com", "direct", "airbnb", "booking_com", "direct", "airbnb"];
+const RECORDING_CHANNELS: DemoBooking["channel"][] = [
+  "airbnb",
+  "booking_com",
+  "direct",
+  "airbnb",
+  "booking_com",
+  "direct",
+  "airbnb",
+];
 // Nights and the gap after each stay: about 70% of nights are occupied.
-const STAY_PATTERN: Array<[nights: number, gap: number]> = [[3, 1], [2, 0], [4, 2], [1, 1], [3, 0], [2, 2], [5, 1], [2, 0]];
+const STAY_PATTERN: Array<[nights: number, gap: number]> = [
+  [3, 1],
+  [2, 0],
+  [4, 2],
+  [1, 1],
+  [3, 0],
+  [2, 2],
+  [5, 1],
+  [2, 0],
+];
 
 /**
  * Bookings for the recording account: every room from 7 days ago to 21 days
@@ -329,7 +400,10 @@ export type StayOptions = {
   flagOne?: boolean;
 };
 
-export function buildRecordingBookings(rooms: Array<Pick<DemoRoom, "key" | "max_guests">> = DEMO_ROOMS, o: StayOptions = {}): DemoBooking[] {
+export function buildRecordingBookings(
+  rooms: Array<Pick<DemoRoom, "key" | "max_guests">> = DEMO_ROOMS,
+  o: StayOptions = {},
+): DemoBooking[] {
   const guests = o.guests ?? RECORDING_GUESTS;
   const channels = o.channels ?? RECORDING_CHANNELS;
   const from = o.from ?? -7;
@@ -349,14 +423,22 @@ export function buildRecordingBookings(rooms: Array<Pick<DemoRoom, "key" | "max_
       if (outOff > from) {
         const isLate = n % 5 === 2;
         const unnamedToday = inOff === 0 && n % 2 === 0 && !o.namedToday;
-        const status: DemoBooking["status"] = outOff <= 0 ? "checked_out" : inOff < 0 ? "checked_in" : unnamedToday ? "needs_details" : "upcoming";
+        const status: DemoBooking["status"] =
+          outOff <= 0
+            ? "checked_out"
+            : inOff < 0
+              ? "checked_in"
+              : unnamedToday
+                ? "needs_details"
+                : "upcoming";
         const channel = channels[n % channels.length]!;
         out.push({
           roomKey: room.key,
           channel,
           source: channel === "direct" ? "manual" : "ical",
           guest_full_name: status === "needs_details" ? null : guests[n % guests.length]!,
-          reservation_code: channel === "direct" ? null : `RX${(48210 + n * 37).toString(36).toUpperCase()}`,
+          reservation_code:
+            channel === "direct" ? null : `RX${(48210 + n * 37).toString(36).toUpperCase()}`,
           guest_count: Math.min(room.max_guests, 1 + (n % 3)),
           phone_last4: String(1000 + ((n * 7919) % 9000)),
           check_in_offset: inOff,
@@ -374,17 +456,40 @@ export function buildRecordingBookings(rooms: Array<Pick<DemoRoom, "key" | "max_
   });
   // The tour always has someone named arriving today.
   if (o.namedToday && !out.some((b) => b.check_in_offset === 0)) {
-    const free = rooms.find((room) => !out.some((b) => b.roomKey === room.key && b.check_in_offset <= 0 && b.check_out_offset > 0));
+    const free = rooms.find(
+      (room) =>
+        !out.some(
+          (b) => b.roomKey === room.key && b.check_in_offset <= 0 && b.check_out_offset > 0,
+        ),
+    );
     if (free) {
-      const before = out.filter((b) => b.roomKey === free.key && b.check_in_offset > 0).sort((a, b) => a.check_in_offset - b.check_in_offset)[0];
+      const before = out
+        .filter((b) => b.roomKey === free.key && b.check_in_offset > 0)
+        .sort((a, b) => a.check_in_offset - b.check_in_offset)[0];
       const until = Math.min(2, before ? before.check_in_offset : 2);
       if (until > 0)
-        out.push({ roomKey: free.key, channel: channels[0]!, source: "ical", guest_full_name: guests[guests.length - 1]!, reservation_code: "RXTODAY", guest_count: 1, phone_last4: "4821", check_in_offset: 0, check_out_offset: until, check_in_time: checkIn, check_out_time: o.checkOut ?? "11:00", status: "upcoming", notes: null });
+        out.push({
+          roomKey: free.key,
+          channel: channels[0]!,
+          source: "ical",
+          guest_full_name: guests[guests.length - 1]!,
+          reservation_code: "RXTODAY",
+          guest_count: 1,
+          phone_last4: "4821",
+          check_in_offset: 0,
+          check_out_offset: until,
+          check_in_time: checkIn,
+          check_out_time: o.checkOut ?? "11:00",
+          status: "upcoming",
+          notes: null,
+        });
     }
   }
   // One upcoming stay waits on an ID check, so that screen can be shown.
   if (o.flagOne !== false) {
-    const flag = out.find((b) => b.status === "upcoming" && b.check_in_offset >= 1 && b.guest_full_name);
+    const flag = out.find(
+      (b) => b.status === "upcoming" && b.check_in_offset >= 1 && b.guest_full_name,
+    );
     if (flag) {
       flag.status = "flagged";
       flag.notes = "ID check needs a look: the name on the ID didn't match the booking.";

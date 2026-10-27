@@ -6,7 +6,13 @@ import { cn } from "@/lib/utils";
 
 /** Six built-in monograms drawn in the theme's colours (currentColor + accent var). */
 function Glyph({ preset }: { preset: LogoPreset }) {
-  const common = { fill: "none", stroke: "currentColor", strokeWidth: 2.4, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const common = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2.4,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
   switch (preset) {
     case "key":
       return (
@@ -28,7 +34,10 @@ function Glyph({ preset }: { preset: LogoPreset }) {
       return (
         <g {...common}>
           <path d="M24 40V10" />
-          <path d="M24 16c-5-1-8-4-9-7M24 22c-6-1-10-4-11-8M24 28c-6 0-10-3-12-6M24 16c5-1 8-4 9-7M24 22c6-1 10-4 11-8M24 28c6 0 10-3 12-6" stroke="var(--accent)" />
+          <path
+            d="M24 16c-5-1-8-4-9-7M24 22c-6-1-10-4-11-8M24 28c-6 0-10-3-12-6M24 16c5-1 8-4 9-7M24 22c6-1 10-4 11-8M24 28c6 0 10-3 12-6"
+            stroke="var(--accent)"
+          />
         </g>
       );
     case "knot":
@@ -57,7 +66,13 @@ function Glyph({ preset }: { preset: LogoPreset }) {
             const y1 = 38 - Math.cos(r) * 14;
             const x2 = 24 + Math.sin(r) * 22;
             const y2 = 38 - Math.cos(r) * 22;
-            return <path key={a} d={`M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`} stroke="var(--accent)" />;
+            return (
+              <path
+                key={a}
+                d={`M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`}
+                stroke="var(--accent)"
+              />
+            );
           })}
           <path d="M8 38h32" />
         </g>
@@ -68,7 +83,10 @@ function Glyph({ preset }: { preset: LogoPreset }) {
           <path d="M19 9h10l-2 4h-6zM21 9l3-4 3 4" />
           <path d="M18 15h12l-1 16H19zM24 18c2 2 2 6 0 8-2-2-2-6 0-8Z" />
           <path d="M18 34c-6-2-9-8-9-14M30 34c6-2 9-8 9-14" stroke="var(--accent)" />
-          <path d="M11 24c2 0 4 1 5 3M37 24c-2 0-4 1-5 3M12 18c2 1 3 2 4 4M36 18c-2 1-3 2-4 4" stroke="var(--accent)" />
+          <path
+            d="M11 24c2 0 4 1 5 3M37 24c-2 0-4 1-5 3M12 18c2 1 3 2 4 4M36 18c-2 1-3 2-4 4"
+            stroke="var(--accent)"
+          />
           <path d="M20 38h8" />
         </g>
       );
@@ -96,28 +114,71 @@ export function LogoMark({
 }) {
   const [broken, setBroken] = useState(false);
   if (theme.logoUrl && !broken) {
-    return <img src={theme.logoUrl} alt={`${name} logo`} onError={() => setBroken(true)} className={cn("size-10 rounded-xl object-contain", className)} />;
+    return (
+      <img
+        src={theme.logoUrl}
+        alt={`${name} logo`}
+        onError={() => setBroken(true)}
+        className={cn("size-10 rounded-xl object-contain", className)}
+      />
+    );
   }
   if (theme.logoPreset === "site") return <SiteLogoMark className={cn("rounded-xl", className)} />;
-  const own = theme.logoPreset === "antique-key" ? "key" : theme.logoPreset === "portico" ? "arch" : theme.logoPreset === "serif-l" ? "monogram" : null;
+  const own =
+    theme.logoPreset === "antique-key"
+      ? "key"
+      : theme.logoPreset === "portico"
+        ? "arch"
+        : theme.logoPreset === "serif-l"
+          ? "monogram"
+          : null;
   if (own) {
     // Latchkey's marks in the host's colours: line work in the text colour, the jewel in the accent.
     return (
-      <span className={cn("grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground", className)} aria-label={`${name} logo`}>
-        <svg viewBox="0 0 48 48" className="size-full" aria-hidden="true" dangerouslySetInnerHTML={{ __html: markArt(own, "currentColor", "var(--accent)") }} />
+      <span
+        className={cn(
+          "grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground",
+          className,
+        )}
+        aria-label={`${name} logo`}
+      >
+        <svg
+          viewBox="0 0 48 48"
+          className="size-full"
+          aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: markArt(own, "currentColor", "var(--accent)") }}
+        />
       </span>
     );
   }
   if (theme.logoPreset === "monogram") {
-    const initials = name.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w) && w.toLowerCase() !== "the").slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "L";
+    const initials =
+      name
+        .split(/\s+/)
+        .filter((w) => /^[A-Za-z]/.test(w) && w.toLowerCase() !== "the")
+        .slice(0, 2)
+        .map((w) => w[0]!.toUpperCase())
+        .join("") || "L";
     return (
-      <span className={cn("grid size-10 place-items-center rounded-xl bg-primary font-display text-lg text-primary-foreground ring-2 ring-accent/60 ring-offset-2 ring-offset-background", className)} aria-label={`${name} logo`}>
+      <span
+        className={cn(
+          "grid size-10 place-items-center rounded-xl bg-primary font-display text-lg text-primary-foreground ring-2 ring-accent/60 ring-offset-2 ring-offset-background",
+          className,
+        )}
+        aria-label={`${name} logo`}
+      >
         {initials}
       </span>
     );
   }
   return (
-    <span className={cn("grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground", className)} aria-label={`${name} logo`}>
+    <span
+      className={cn(
+        "grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground",
+        className,
+      )}
+      aria-label={`${name} logo`}
+    >
       <svg viewBox="0 0 48 48" className="size-[80%]" aria-hidden="true">
         <Glyph preset={theme.logoPreset} />
       </svg>

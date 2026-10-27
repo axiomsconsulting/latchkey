@@ -13,7 +13,15 @@ import { formatUkDate } from "@/lib/dates";
  * The owner decides whether Latchkey support may make changes: on for 30
  * days at a time, off whenever they like. Without it support is read-only.
  */
-export function SupportAccess({ hostId, until, isOwner }: { hostId: string; until: string | null | undefined; isOwner: boolean }) {
+export function SupportAccess({
+  hostId,
+  until,
+  isOwner,
+}: {
+  hostId: string;
+  until: string | null | undefined;
+  isOwner: boolean;
+}) {
   const save = useServerFn(setSupportAccess);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -41,11 +49,20 @@ export function SupportAccess({ hostId, until, isOwner }: { hostId: string; unti
         <div className="min-w-0 flex-1">
           <h2 className="text-lg">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
-          {on ? <p className="mt-2 text-sm font-medium">{copy.until(formatUkDate(until!.slice(0, 10), { withYear: true }))}</p> : null}
+          {on ? (
+            <p className="mt-2 text-sm font-medium">
+              {copy.until(formatUkDate(until!.slice(0, 10), { withYear: true }))}
+            </p>
+          ) : null}
         </div>
       </div>
       {isOwner ? (
-        <Button className="mt-4 h-auto min-h-10 whitespace-normal py-2 text-left" variant={on ? "outline" : "default"} disabled={busy} onClick={() => void set(!on)}>
+        <Button
+          className="mt-4 h-auto min-h-10 whitespace-normal py-2 text-left"
+          variant={on ? "outline" : "default"}
+          disabled={busy}
+          onClick={() => void set(!on)}
+        >
           {busy ? <Loader2 className="size-4 animate-spin" /> : null}
           {on ? copy.stop : copy.allow}
         </Button>

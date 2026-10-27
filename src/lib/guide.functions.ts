@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Host guide editor: house sections, room overrides, photos, basic/detailed
  * per room, starter text, and private guide links for bookings.
@@ -35,14 +36,22 @@ export const getGuideEditor = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const [{ data: rooms }, { data: guides }] = await Promise.all([
-      supabase.from("rooms").select("id, display_name, guide_mode, amenities").eq("property_id", data.propertyId).order("sort_order"),
+      supabase
+        .from("rooms")
+        .select("id, display_name, guide_mode, amenities")
+        .eq("property_id", data.propertyId)
+        .order("sort_order"),
       supabase
         .from("guides")
-        .select("id, room_id, section_key, title, published, summary, is_starter, pinned, sort_order, guide_steps(id, heading, body, image_url, sort_order)")
+        .select(
+          "id, room_id, section_key, title, published, summary, is_starter, pinned, sort_order, guide_steps(id, heading, body, image_url, sort_order)",
+        )
         .eq("property_id", data.propertyId)
         .not("section_key", "is", null),
     ]);
-    const paths = (guides ?? []).flatMap((g) => (g.guide_steps ?? []).map((s) => s.image_url).filter((p): p is string => !!p));
+    const paths = (guides ?? []).flatMap((g) =>
+      (g.guide_steps ?? []).map((s) => s.image_url).filter((p): p is string => !!p),
+    );
     const signed = await signPaths(paths);
     const { startersOffForProperty } = await import("./guide-starters.server");
     return {
@@ -60,7 +69,12 @@ export const getGuideEditor = createServerFn({ method: "GET" })
         sortOrder: g.sort_order ?? 0,
         steps: [...(g.guide_steps ?? [])]
           .sort((a, b) => a.sort_order - b.sort_order)
-          .map((s) => ({ heading: s.heading, body: s.body, imagePath: s.image_url, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
+          .map((s) => ({
+            heading: s.heading,
+            body: s.body,
+            imagePath: s.image_url,
+            imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null,
+          })),
       })),
     };
   });
@@ -93,10 +107,15 @@ async function houseRow(supabase: any, propertyId: string, key: SectionKey): Pro
 /** Pins or unpins a section on the "things people usually forget" card. */
 export const setSectionPin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid, sectionKey, pinned: z.boolean() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ propertyId: uuid, sectionKey, pinned: z.boolean() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const id = await houseRow(context.supabase, data.propertyId, data.sectionKey);
-    const { error } = await context.supabase.from("guides").update({ pinned: data.pinned }).eq("id", id);
+    const { error } = await context.supabase
+      .from("guides")
+      .update({ pinned: data.pinned })
+      .eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -104,11 +123,16 @@ export const setSectionPin = createServerFn({ method: "POST" })
 /** Saves the host's running order for the whole guide, in one go. */
 export const reorderSections = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid, order: z.array(sectionKey).max(40) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ propertyId: uuid, order: z.array(sectionKey).max(40) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     for (let i = 0; i < data.order.length; i++) {
       const id = await houseRow(context.supabase, data.propertyId, data.order[i]!);
-      const { error } = await context.supabase.from("guides").update({ sort_order: i + 1 }).eq("id", id);
+      const { error } = await context.supabase
+        .from("guides")
+        .update({ sort_order: i + 1 })
+        .eq("id", id);
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -124,7 +148,13 @@ export const saveGuideSection = createServerFn({ method: "POST" })
         sectionKey,
         summary: z.string().max(500).nullable().default(null),
         steps: z
-          .array(z.object({ heading: z.string().max(120), body: z.string().max(2000).nullable().default(null), imagePath: z.string().max(300).nullable().default(null) }))
+          .array(
+            z.object({
+              heading: z.string().max(120),
+              body: z.string().max(2000).nullable().default(null),
+              imagePath: z.string().max(300).nullable().default(null),
+            }),
+          )
           .max(20),
       })
       .parse(d),
@@ -134,14 +164,26 @@ export const saveGuideSection = createServerFn({ method: "POST" })
     let title = SECTIONS.find((s) => s.key === data.sectionKey)?.title ?? "";
     if (!title) {
       // The host's own section: its title lives on the whole-property row.
-      const { data: houseRowData } = await supabase.from("guides").select("title").eq("property_id", data.propertyId).eq("section_key", data.sectionKey).is("room_id", null).maybeSingle();
+      const { data: houseRowData } = await supabase
+        .from("guides")
+        .select("title")
+        .eq("property_id", data.propertyId)
+        .eq("section_key", data.sectionKey)
+        .is("room_id", null)
+        .maybeSingle();
       if (!houseRowData) throw new Error("That section no longer exists. Refresh and try again.");
       title = houseRowData.title;
     }
     // Only allow photo paths inside this property's folder.
-    for (const s of data.steps) if (s.imagePath && !s.imagePath.startsWith(`${data.propertyId}/`)) throw new Error("Invalid photo.");
+    for (const s of data.steps)
+      if (s.imagePath && !s.imagePath.startsWith(`${data.propertyId}/`))
+        throw new Error("Invalid photo.");
 
-    let q = supabase.from("guides").select("id").eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
+    let q = supabase
+      .from("guides")
+      .select("id")
+      .eq("property_id", data.propertyId)
+      .eq("section_key", data.sectionKey);
     q = data.roomId ? q.eq("room_id", data.roomId) : q.is("room_id", null);
     const { data: existing } = await q.maybeSingle();
 
@@ -156,7 +198,14 @@ export const saveGuideSection = createServerFn({ method: "POST" })
     } else {
       const { data: row, error } = await supabase
         .from("guides")
-        .insert({ property_id: data.propertyId, room_id: data.roomId, section_key: data.sectionKey, title, summary: data.summary, published: true })
+        .insert({
+          property_id: data.propertyId,
+          room_id: data.roomId,
+          section_key: data.sectionKey,
+          title,
+          summary: data.summary,
+          published: true,
+        })
         .select("id")
         .single();
       if (error) throw new Error(error.message);
@@ -165,7 +214,13 @@ export const saveGuideSection = createServerFn({ method: "POST" })
     const steps = data.steps.filter((s) => s.heading.trim() || s.body?.trim() || s.imagePath);
     if (steps.length) {
       const { error } = await supabase.from("guide_steps").insert(
-        steps.map((s, i) => ({ guide_id: guideId!, heading: s.heading.trim(), body: s.body?.trim() || null, image_url: s.imagePath, sort_order: i })),
+        steps.map((s, i) => ({
+          guide_id: guideId!,
+          heading: s.heading.trim(),
+          body: s.body?.trim() || null,
+          image_url: s.imagePath,
+          sort_order: i,
+        })),
       );
       if (error) throw new Error(error.message);
     }
@@ -190,11 +245,23 @@ export const removeRoomSection = createServerFn({ method: "POST" })
 export const uploadGuidePhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ propertyId: uuid, dataUrl: z.string().max(7_000_000).regex(/^data:image\/(jpeg|png|webp);base64,/) }).parse(d),
+    z
+      .object({
+        propertyId: uuid,
+        dataUrl: z
+          .string()
+          .max(7_000_000)
+          .regex(/^data:image\/(jpeg|png|webp);base64,/),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
-    const { data: prop } = await context.supabase.from("properties").select("id, host_id").eq("id", data.propertyId).maybeSingle();
+    const { data: prop } = await context.supabase
+      .from("properties")
+      .select("id, host_id")
+      .eq("id", data.propertyId)
+      .maybeSingle();
     if (!prop) throw new Error("Property not found.");
     await requireWrite(context.supabase, prop.host_id);
     const m = /^data:image\/(jpeg|png|webp);base64,(.+)$/.exec(data.dataUrl)!;
@@ -203,7 +270,9 @@ export const uploadGuidePhoto = createServerFn({ method: "POST" })
     const ext = m[1] === "jpeg" ? "jpg" : m[1]!;
     const path = `${data.propertyId}/${crypto.randomUUID()}.${ext}`;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const up = await supabaseAdmin.storage.from("guides").upload(path, bytes, { contentType: `image/${m[1]}` });
+    const up = await supabaseAdmin.storage
+      .from("guides")
+      .upload(path, bytes, { contentType: `image/${m[1]}` });
     if (up.error) throw new Error(up.error.message);
     const signed = await signPaths([path], 60 * 5);
     return { path, url: signed[path] ?? null };
@@ -211,9 +280,14 @@ export const uploadGuidePhoto = createServerFn({ method: "POST" })
 
 export const setRoomGuideMode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ roomId: uuid, mode: z.enum(["basic", "detailed"]) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ roomId: uuid, mode: z.enum(["basic", "detailed"]) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("rooms").update({ guide_mode: data.mode }).eq("id", data.roomId);
+    const { error } = await context.supabase
+      .from("rooms")
+      .update({ guide_mode: data.mode })
+      .eq("id", data.roomId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -238,12 +312,27 @@ export const addStarterGuide = createServerFn({ method: "POST" })
       if (!st.summary && st.steps.length === 0) continue;
       const { data: g, error } = await supabase
         .from("guides")
-        .insert({ property_id: data.propertyId, room_id: null, section_key: s.key, title: s.title, summary: st.summary || null, is_starter: true, published: true })
+        .insert({
+          property_id: data.propertyId,
+          room_id: null,
+          section_key: s.key,
+          title: s.title,
+          summary: st.summary || null,
+          is_starter: true,
+          published: true,
+        })
         .select("id")
         .single();
       if (error) throw new Error(error.message);
       if (st.steps.length) {
-        await supabase.from("guide_steps").insert(st.steps.map((x, i) => ({ guide_id: g.id, heading: x.heading, body: x.body, sort_order: i })));
+        await supabase.from("guide_steps").insert(
+          st.steps.map((x, i) => ({
+            guide_id: g.id,
+            heading: x.heading,
+            body: x.body,
+            sort_order: i,
+          })),
+        );
       }
       added++;
     }
@@ -258,16 +347,24 @@ export const createGuideLink = createServerFn({ method: "POST" })
     // RLS: only staff of this booking's host can read it.
     const { data: b } = await context.supabase
       .from("bookings")
-      .select("id, property_id, check_in_date, check_out_date, check_out_time, status, properties(timezone, default_check_out_time)")
+      .select(
+        "id, property_id, check_in_date, check_out_date, check_out_time, status, properties(timezone, default_check_out_time)",
+      )
       .eq("id", data.bookingId)
       .maybeSingle();
     if (!b) throw new Error("Booking not found.");
     // Viewers can read bookings, but minting a guest link is a write.
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, b.property_id));
-    if (b.status === "cancelled" || b.status === "blocked") throw new Error("This booking has no guest.");
+    if (b.status === "cancelled" || b.status === "blocked")
+      throw new Error("This booking has no guest.");
     const p = (b as any).properties ?? {};
     const tz = p.timezone ?? "Europe/London";
-    const w = guideWindow(b.check_in_date, b.check_out_date, (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5), tz);
+    const w = guideWindow(
+      b.check_in_date,
+      b.check_out_date,
+      (b.check_out_time ?? p.default_check_out_time ?? "11:00").slice(0, 5),
+      tz,
+    );
     if (w.expiresAt.getTime() < Date.now()) throw new Error("This stay has already ended.");
     const { admin, newToken } = await import("./checkin.server");
     const db = await admin();
@@ -286,10 +383,15 @@ export const createGuideLink = createServerFn({ method: "POST" })
 export const saveRoomAmenities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ roomId: uuid, amenities: z.array(z.string().trim().min(1).max(60)).max(30) }).parse(d),
+    z
+      .object({ roomId: uuid, amenities: z.array(z.string().trim().min(1).max(60)).max(30) })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("rooms").update({ amenities: data.amenities }).eq("id", data.roomId);
+    const { error } = await context.supabase
+      .from("rooms")
+      .update({ amenities: data.amenities })
+      .eq("id", data.roomId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -313,28 +415,56 @@ export const getRoomGuideCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    type R = { id: string; display_name: string; public_title: string | null; guide_code: string | null; guide_words?: string | null; active: boolean };
+    type R = {
+      id: string;
+      display_name: string;
+      public_title: string | null;
+      guide_code: string | null;
+      guide_words?: string | null;
+      active: boolean;
+    };
     const sb = context.supabase as any;
     const { withLegacy } = await import("./checkin.server");
     // Three-word codes come with migration 0059; before it, the random codes.
     const { data: rooms, error } = await withLegacy<any>(
-      () => sb.from("rooms").select("id, display_name, public_title, guide_code, guide_words, active").eq("property_id", data.propertyId).order("sort_order"),
-      () => sb.from("rooms").select("id, display_name, public_title, guide_code, active").eq("property_id", data.propertyId).order("sort_order"),
+      () =>
+        sb
+          .from("rooms")
+          .select("id, display_name, public_title, guide_code, guide_words, active")
+          .eq("property_id", data.propertyId)
+          .order("sort_order"),
+      () =>
+        sb
+          .from("rooms")
+          .select("id, display_name, public_title, guide_code, active")
+          .eq("property_id", data.propertyId)
+          .order("sort_order"),
     );
-    if (error) return { available: false as const, rooms: [] as Array<{ id: string; name: string; code: string | null }> };
+    if (error)
+      return {
+        available: false as const,
+        rooms: [] as Array<{ id: string; name: string; code: string | null }>,
+      };
     const list = (rooms ?? []) as R[];
     const hasWords = list.length === 0 || list.some((r) => "guide_words" in r);
     const missing = list.filter((r) => (hasWords ? !r.guide_words : !r.guide_code));
     if (missing.length) {
       // Only people who can change the property make codes; viewers just see what's there.
       try {
-        await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+        await requireWrite(
+          context.supabase,
+          await hostOfProperty(context.supabase, data.propertyId),
+        );
         for (const r of missing) {
           // Words are unique across every room everywhere: try again on the rare clash.
           for (let tries = 0; tries < 6; tries++) {
             const code = hasWords ? await freshRoomWords() : newRoomCode();
             const col = hasWords ? "guide_words" : "guide_code";
-            const { error: e } = await sb.from("rooms").update({ [col]: code }).eq("id", r.id).is(col, null);
+            const { error: e } = await sb
+              .from("rooms")
+              .update({ [col]: code })
+              .eq("id", r.id)
+              .is(col, null);
             if (!e) {
               if (hasWords) r.guide_words = code;
               else r.guide_code = code;
@@ -348,7 +478,9 @@ export const getRoomGuideCodes = createServerFn({ method: "POST" })
     }
     return {
       available: true as const,
-      rooms: list.filter((r) => r.active !== false).map((r) => ({ id: r.id, name: r.display_name, code: r.guide_words ?? r.guide_code })),
+      rooms: list
+        .filter((r) => r.active !== false)
+        .map((r) => ({ id: r.id, name: r.display_name, code: r.guide_words ?? r.guide_code })),
     };
   });
 
@@ -362,7 +494,12 @@ async function freshRoomWords(): Promise<string> {
   const { newRoomWords } = await import("./room-words");
   for (let i = 0; i < 6; i++) {
     const words = newRoomWords();
-    const { data, error } = await (await retiredWords()).select("words").eq("words", words).maybeSingle();
+    const { data, error } = await (
+      await retiredWords()
+    )
+      .select("words")
+      .eq("words", words)
+      .maybeSingle();
     if (error || !data) return words;
   }
   return newRoomWords();
@@ -378,20 +515,35 @@ export const resetRoomWords = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ roomId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
-    const { data: room } = await sb.from("rooms").select("id, property_id").eq("id", data.roomId).maybeSingle();
+    const { data: room } = await sb
+      .from("rooms")
+      .select("id, property_id")
+      .eq("id", data.roomId)
+      .maybeSingle();
     if (!room) throw new Error("Room not found.");
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, room.property_id));
-    const { data: before } = await sb.from("rooms").select("guide_words").eq("id", room.id).maybeSingle();
+    const { data: before } = await sb
+      .from("rooms")
+      .select("guide_words")
+      .eq("id", room.id)
+      .maybeSingle();
     // Unique across every room, and never words another card once carried: draw again on the rare clash.
     for (let tries = 0; tries < 8; tries++) {
       const words = await freshRoomWords();
-      const { error } = await sb.from("rooms").update({ guide_words: words, guide_code: null }).eq("id", room.id);
+      const { error } = await sb
+        .from("rooms")
+        .update({ guide_words: words, guide_code: null })
+        .eq("id", room.id);
       if (!error) {
         // The old words are retired for good (migration 0060), so no other room can ever get them.
-        if (before?.guide_words) await retiredWords().then((t) => t.insert({ words: before.guide_words })).catch(() => undefined);
+        if (before?.guide_words)
+          await retiredWords()
+            .then((t) => t.insert({ words: before.guide_words }))
+            .catch(() => undefined);
         return { code: words };
       }
-      if (/guide_words/.test(error.message) && !/duplicate|unique/i.test(error.message)) throw new Error("New words need the latest update (migration 0059).");
+      if (/guide_words/.test(error.message) && !/duplicate|unique/i.test(error.message))
+        throw new Error("New words need the latest update (migration 0059).");
     }
     throw new Error("Couldn't make new words just now. Please try again.");
   });
@@ -407,32 +559,48 @@ export const getRoomGuide = createServerFn({ method: "GET" })
     const { admin } = await import("./checkin.server");
     const db = (await admin()) as any;
     const { roomByCode } = await import("./room-code.server");
-    const room = await roomByCode<any>(db, data.code, "id, property_id, display_name, public_title, guide_mode, amenities, active");
+    const room = await roomByCode<any>(
+      db,
+      data.code,
+      "id, property_id, display_name, public_title, guide_mode, amenities, active",
+    );
     if (!room || room.active === false) return { found: false as const };
     const [{ data: p }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")
-        .select("id, host_id, is_demo, name, short_code, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, active")
+        .select(
+          "id, host_id, is_demo, name, short_code, timezone, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, theme_config, active",
+        )
         .eq("id", room.property_id)
         .single(),
       db
         .from("guides")
-        .select("room_id, section_key, title, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)")
+        .select(
+          "room_id, section_key, title, summary, published, pinned, sort_order, guide_steps(heading, body, image_url, sort_order)",
+        )
         .eq("property_id", room.property_id)
         // Removed sections come too, so they stay out even where Latchkey could fill them in.
         .not("section_key", "is", null),
-      db.from("unavailability_windows").select("room_id, reason, starts_at, ends_at, day_of_week, start_time, end_time").eq("property_id", room.property_id),
+      db
+        .from("unavailability_windows")
+        .select("room_id, reason, starts_at, ends_at, day_of_week, start_time, end_time")
+        .eq("property_id", room.property_id),
     ]);
     if (!p || p.active === false) return { found: false as const };
 
-    const { buildGuide, forgetCard, weeklyLines, windowsOn, DOOR_SECTIONS } = await import("./guide");
+    const { buildGuide, forgetCard, weeklyLines, windowsOn, DOOR_SECTIONS } =
+      await import("./guide");
     const { normaliseTheme } = await import("./theme");
     const tz = p.timezone ?? "Europe/London";
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
     const mode = (room.guide_mode === "basic" ? "basic" : "detailed") as "basic" | "detailed";
     const paths =
       mode === "detailed"
-        ? ((guides ?? []) as any[]).flatMap((g) => (g.guide_steps ?? []).map((s: any) => s.image_url).filter((x: string | null): x is string => !!x))
+        ? ((guides ?? []) as any[]).flatMap((g) =>
+            (g.guide_steps ?? [])
+              .map((s: any) => s.image_url)
+              .filter((x: string | null): x is string => !!x),
+          )
         : [];
     const signed = await signPaths(paths);
     const stored = ((guides ?? []) as any[]).map((g) => ({
@@ -445,7 +613,11 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       published: g.published !== false,
       steps: [...(g.guide_steps ?? [])]
         .sort((a: any, c: any) => a.sort_order - c.sort_order)
-        .map((s: any) => ({ heading: s.heading, body: s.body, imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null })),
+        .map((s: any) => ({
+          heading: s.heading,
+          body: s.body,
+          imageUrl: s.image_url ? (signed[s.image_url] ?? null) : null,
+        })),
     }));
     // The room's own network, else the property's; no password before check-in when the host asks (anyone in the room can scan this code).
     const { stayAccessFor, guestWifi } = await import("./stay-access.server");
@@ -484,7 +656,12 @@ export const getRoomGuide = createServerFn({ method: "GET" })
     ]);
     const sections = buildGuide(stored, room.id, mode, facts, off, Object.keys(files))
       .filter((sec) => !DOOR_SECTIONS.includes(sec.key))
-      .map((sec) => ({ ...sec, attachments: (files as Record<string, import("./attachments.server").GuestAttachment[]>)[sec.key] ?? [] }));
+      .map((sec) => ({
+        ...sec,
+        attachments:
+          (files as Record<string, import("./attachments.server").GuestAttachment[]>)[sec.key] ??
+          [],
+      }));
     const forget = forgetCard(sections, windowsOn(windows ?? [], room.id, today, tz));
     const reminded = new Set(forget.map((i) => i.key));
     return {
@@ -496,12 +673,19 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       demoCode: p.is_demo === true ? (p.short_code as string) : null,
       tiles,
       roomPhoto: photo,
-      room: { name: room.display_name as string, title: (room.public_title as string | null) ?? null },
+      room: {
+        name: room.display_name as string,
+        title: (room.public_title as string | null) ?? null,
+      },
       wifi,
       // The host lets this QR open the guest's own guide before check-in (when their phone is shown to be here).
       early: access.roomQrEarly,
-      amenities: Array.isArray(room.amenities) ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string") : [],
-      theme: await (await import("./group-brand.server")).withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
+      amenities: Array.isArray(room.amenities)
+        ? (room.amenities as unknown[]).filter((a): a is string => typeof a === "string")
+        : [],
+      theme: await (
+        await import("./group-brand.server")
+      ).withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
       forget,
       guide: sections.filter((sec) => !reminded.has(sec.key)),
     };
@@ -517,7 +701,11 @@ export const addGuideSection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
-      .object({ propertyId: uuid, sectionKey: sectionKey.optional(), title: z.string().trim().min(1).max(80).optional() })
+      .object({
+        propertyId: uuid,
+        sectionKey: sectionKey.optional(),
+        title: z.string().trim().min(1).max(80).optional(),
+      })
       .refine((v) => v.sectionKey || v.title, "Choose a section or give yours a name")
       .parse(d),
   )
@@ -530,11 +718,23 @@ export const addGuideSection = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return { key: data.sectionKey };
     }
-    const { data: last } = await sb.from("guides").select("sort_order").eq("property_id", data.propertyId).is("room_id", null).order("sort_order", { ascending: false }).limit(1).maybeSingle();
-    const key = `custom_${[...crypto.getRandomValues(new Uint8Array(8))].map((b) => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("")}`;
-    const { error } = await sb
+    const { data: last } = await sb
       .from("guides")
-      .insert({ property_id: data.propertyId, room_id: null, section_key: key, title: data.title, published: true, sort_order: Math.max(100 + SECTIONS.length, (last?.sort_order ?? 0) + 1) });
+      .select("sort_order")
+      .eq("property_id", data.propertyId)
+      .is("room_id", null)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const key = `custom_${[...crypto.getRandomValues(new Uint8Array(8))].map((b) => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("")}`;
+    const { error } = await sb.from("guides").insert({
+      property_id: data.propertyId,
+      room_id: null,
+      section_key: key,
+      title: data.title,
+      published: true,
+      sort_order: Math.max(100 + SECTIONS.length, (last?.sort_order ?? 0) + 1),
+    });
     if (error) throw new Error(error.message);
     return { key };
   });
@@ -553,12 +753,19 @@ export const removeGuideSection = createServerFn({ method: "POST" })
     const { deleteAttachments } = await import("./attachments.server");
     await deleteAttachments(data.propertyId, data.sectionKey).catch(() => undefined);
     if (isCustom(data.sectionKey)) {
-      const { error } = await sb.from("guides").delete().eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
+      const { error } = await sb
+        .from("guides")
+        .delete()
+        .eq("property_id", data.propertyId)
+        .eq("section_key", data.sectionKey);
       if (error) throw new Error(error.message);
       return { deleted: true };
     }
     const id = await houseRow(sb, data.propertyId, data.sectionKey);
-    const { error } = await sb.from("guides").update({ published: false, pinned: false }).eq("id", id);
+    const { error } = await sb
+      .from("guides")
+      .update({ published: false, pinned: false })
+      .eq("id", id);
     if (error) throw new Error(error.message);
     return { deleted: false };
   });
@@ -566,11 +773,18 @@ export const removeGuideSection = createServerFn({ method: "POST" })
 /** Renames one of the host's own sections. */
 export const renameGuideSection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid, sectionKey, title: z.string().trim().min(1).max(80) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ propertyId: uuid, sectionKey, title: z.string().trim().min(1).max(80) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
-    if (!isCustom(data.sectionKey)) throw new Error(rebrand("Latchkey's own sections keep their names."));
+    if (!isCustom(data.sectionKey))
+      throw new Error(rebrand("Latchkey's own sections keep their names."));
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
-    const { error } = await (context.supabase as any).from("guides").update({ title: data.title }).eq("property_id", data.propertyId).eq("section_key", data.sectionKey);
+    const { error } = await (context.supabase as any)
+      .from("guides")
+      .update({ title: data.title })
+      .eq("property_id", data.propertyId)
+      .eq("section_key", data.sectionKey);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

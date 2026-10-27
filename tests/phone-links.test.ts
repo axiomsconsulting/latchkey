@@ -13,6 +13,10 @@ describe("calling and messaging a guest", () => {
     expect(lastFour("+447700900123")).toBe("0123");
   });
   it("makes links every device understands", () => {
-    expect(phoneLinks("+447700900123")).toEqual({ call: "tel:+447700900123", text: "sms:+447700900123", whatsapp: "https://wa.me/447700900123" });
+    expect(phoneLinks("+447700900123")).toEqual({
+      call: "tel:+447700900123",
+      text: "sms:+447700900123",
+      whatsapp: "https://wa.me/447700900123",
+    });
   });
 });

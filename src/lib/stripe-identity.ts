@@ -67,9 +67,14 @@ export function shortAccount(id: string | null | undefined): string {
  * connected account from its Connect list; a host opens their own account's
  * details page after signing in to Stripe, which shows the same acct_ ID.
  */
-export function stripeDashboardUrl(kind: "connected" | "own", id: string | null, live: boolean): string {
+export function stripeDashboardUrl(
+  kind: "connected" | "own",
+  id: string | null,
+  live: boolean,
+): string {
   const test = live ? "" : "/test";
-  if (kind === "connected" && id) return `https://dashboard.stripe.com${test}/connect/accounts/${encodeURIComponent(id)}`;
+  if (kind === "connected" && id)
+    return `https://dashboard.stripe.com${test}/connect/accounts/${encodeURIComponent(id)}`;
   return `https://dashboard.stripe.com${test}/settings/account`;
 }
 
@@ -79,9 +84,21 @@ export function stripeDashboardUrl(kind: "connected" | "own", id: string | null,
  * and its sign-up link with this key, and guest payments are made in the
  * host's account with it too.
  */
-export const RESTRICTED_KEY_NEEDS: Array<{ resource: string; access: "Read" | "Write"; why: string }> = [
-  { resource: "Connect → Accounts", access: "Write", why: "create each host's Stripe account and its sign-up link, and check it" },
-  { resource: "Checkout Sessions", access: "Write", why: "guest card payments (in the host's account) and subscriptions" },
+export const RESTRICTED_KEY_NEEDS: Array<{
+  resource: string;
+  access: "Read" | "Write";
+  why: string;
+}> = [
+  {
+    resource: "Connect → Accounts",
+    access: "Write",
+    why: "create each host's Stripe account and its sign-up link, and check it",
+  },
+  {
+    resource: "Checkout Sessions",
+    access: "Write",
+    why: "guest card payments (in the host's account) and subscriptions",
+  },
   { resource: "Products", access: "Write", why: "price lists sent to hosts' accounts" },
   { resource: "Prices", access: "Write", why: "price lists sent to hosts' accounts" },
   { resource: "Subscriptions", access: "Write", why: "hosts' Latchkey plans" },
@@ -90,8 +107,18 @@ export const RESTRICTED_KEY_NEEDS: Array<{ resource: string; access: "Read" | "W
 
 /** Stripe refusing because of Latchkey's own set-up, not anything the host did. */
 export function stripeSetupProblem(message: string): "permission" | "connect_off" | null {
-  if (/does not have the required permissions|connected_account_write|_write'?\)? permissions/i.test(message)) return "permission";
-  if (/signed up for Connect|sign up for Connect|platform profile|Connect.*(not|isn't) enabled/i.test(message)) return "connect_off";
+  if (
+    /does not have the required permissions|connected_account_write|_write'?\)? permissions/i.test(
+      message,
+    )
+  )
+    return "permission";
+  if (
+    /signed up for Connect|sign up for Connect|platform profile|Connect.*(not|isn't) enabled/i.test(
+      message,
+    )
+  )
+    return "connect_off";
   return null;
 }
 
@@ -107,11 +134,19 @@ export function stripeFailure(e: unknown, action: string): Error {
     code: setup ? `stripe_${setup}` : "stripe_refused",
     title: `${action} didn't work`,
     body: setup
-      ? rebrand("This is on Latchkey's side, not yours: Latchkey's Stripe set-up needs a change. Nothing is wrong with your details.")
+      ? rebrand(
+          "This is on Latchkey's side, not yours: Latchkey's Stripe set-up needs a change. Nothing is wrong with your details.",
+        )
       : "Stripe, which handles card payments, didn't accept the request. This usually clears if you try again.",
     steps: setup
-      ? [{ text: rebrand("Press Send to Latchkey support below so we know.") }, { text: "We'll email you when it's fixed; then try again." }]
-      : [{ text: "Wait a minute and try again." }, { text: rebrand("If it happens again, press Send to Latchkey support below.") }],
+      ? [
+          { text: rebrand("Press Send to Latchkey support below so we know.") },
+          { text: "We'll email you when it's fixed; then try again." },
+        ]
+      : [
+          { text: "Wait a minute and try again." },
+          { text: rebrand("If it happens again, press Send to Latchkey support below.") },
+        ],
     detail: msg,
   });
 }

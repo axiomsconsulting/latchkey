@@ -14,4 +14,3 @@ export function loadSite(): Promise<SiteContext> {
 export function forgetSite() {
   siteOnce = null;
 }
-

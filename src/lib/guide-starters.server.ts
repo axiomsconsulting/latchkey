@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Server only: which starter guide sections a property's host didn't start
  * with (the super admin took them out for new hosts before this host signed
@@ -17,7 +18,13 @@ export async function starterSettings(): Promise<{ removed: Record<string, strin
   if (cache && Date.now() - cache.at < 60_000) return { removed: cache.removed };
   let removed: Record<string, string> = {};
   try {
-    const { data, error } = await (await db()).from("site_settings").select("guide_starters").eq("id", 1).maybeSingle();
+    const { data, error } = await (
+      await db()
+    )
+      .from("site_settings")
+      .select("guide_starters")
+      .eq("id", 1)
+      .maybeSingle();
     if (!error) removed = normaliseStarters(data?.guide_starters).removed;
   } catch {
     removed = {};
@@ -33,6 +40,15 @@ export function forgetStarters() {
 export async function startersOffForProperty(propertyId: string): Promise<BuiltInKey[]> {
   const { removed } = await starterSettings();
   if (!Object.keys(removed).length) return [];
-  const { data } = await (await db()).from("properties").select("hosts(created_at)").eq("id", propertyId).maybeSingle();
-  return startersOffFor(removed, (data?.hosts as { created_at?: string } | null)?.created_at ?? null);
+  const { data } = await (
+    await db()
+  )
+    .from("properties")
+    .select("hosts(created_at)")
+    .eq("id", propertyId)
+    .maybeSingle();
+  return startersOffFor(
+    removed,
+    (data?.hosts as { created_at?: string } | null)?.created_at ?? null,
+  );
 }

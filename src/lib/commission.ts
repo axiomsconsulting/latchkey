@@ -789,7 +789,11 @@ export function breachVoidedBonuses(
   now: number,
 ): string[] {
   return lines
-    .filter((l) => l.kind === "launch_bonus" && (l.state === "held" || l.state === "on_hold" || l.state === "payable"))
+    .filter(
+      (l) =>
+        l.kind === "launch_bonus" &&
+        (l.state === "held" || l.state === "on_hold" || l.state === "payable"),
+    )
     .filter((l) => {
       const p = partners.get(l.partner_id);
       const stop = ms(p?.terminated_at ?? null);
@@ -914,7 +918,11 @@ export type PayoutPartner = {
 
 /** 20.4(b): a breach stop has come and OMS hasn't finished the set-off yet. */
 export function breachSetOffPending(
-  p: { terminated_at?: string | null; termination_for_breach?: boolean; set_off_done_at?: string | null },
+  p: {
+    terminated_at?: string | null;
+    termination_for_breach?: boolean;
+    set_off_done_at?: string | null;
+  },
   now: number,
 ): boolean {
   const stop = ms(p.terminated_at ?? null);

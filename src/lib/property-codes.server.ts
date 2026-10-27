@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Server only: free guest links and door PINs, checked against every
  * property with the server's access.
@@ -15,7 +16,11 @@ async function db(): Promise<Loose> {
 const secureRandom = () => crypto.getRandomValues(new Uint32Array(1))[0]! / 2 ** 32;
 
 /** Which of these values another property already uses in `column`. */
-export async function takenAmong(column: "short_code" | "check_in_pin", values: string[], propertyId?: string | null): Promise<Set<string>> {
+export async function takenAmong(
+  column: "short_code" | "check_in_pin",
+  values: string[],
+  propertyId?: string | null,
+): Promise<Set<string>> {
   if (!values.length) return new Set();
   let q = (await db()).from("properties").select(`id, ${column}`).in(column, values);
   if (propertyId) q = q.neq("id", propertyId);
@@ -49,4 +54,3 @@ export async function freeDoorPin(propertyId?: string | null): Promise<string> {
   }
   throw new Error("Couldn't find a free door PIN. Please try again.");
 }
-

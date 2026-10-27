@@ -43,7 +43,10 @@ export function usesListFlow(methods: CheckinMethods): boolean {
  * The identity methods to try, in order. Self-declaration is always the last
  * resort so a guest is never left stuck at the door.
  */
-export function methodSequence(methods: CheckinMethods, available: { last4: boolean }): CheckinMethod[] {
+export function methodSequence(
+  methods: CheckinMethods,
+  available: { last4: boolean },
+): CheckinMethod[] {
   const seq = methods.order.filter((m) => {
     if (m === "self_declare") return false;
     if (!methods.enabled[m]) return false;
@@ -101,10 +104,19 @@ export function arrivalCandidates(bookings: MatchableBooking[], today: string): 
  * telling them their booking doesn't exist.
  */
 export function stayingCandidates(bookings: MatchableBooking[], today: string): MatchableBooking[] {
-  return bookings.filter((b) => b.status === "checked_in" && !b.mirror_of && b.check_in_date <= today && b.check_out_date > today);
+  return bookings.filter(
+    (b) =>
+      b.status === "checked_in" &&
+      !b.mirror_of &&
+      b.check_in_date <= today &&
+      b.check_out_date > today,
+  );
 }
 
-function matches(b: MatchableBooking, answers: { letter: string; checkOut: string; channel: string }): boolean {
+function matches(
+  b: MatchableBooking,
+  answers: { letter: string; checkOut: string; channel: string },
+): boolean {
   return (
     surnameInitial(b.guest_full_name) === answers.letter.toUpperCase() &&
     b.check_out_date === answers.checkOut &&
@@ -156,7 +168,8 @@ export function resolveArrival(
 ): Resolution {
   const letter = answers.letter.toUpperCase();
   const fits = (b: MatchableBooking) =>
-    b.check_out_date === answers.checkOut && (!answers.channel || platformKey(b) === answers.channel);
+    b.check_out_date === answers.checkOut &&
+    (!answers.channel || platformKey(b) === answers.channel);
 
   const arriving = bookings.filter(
     (b) =>
@@ -167,7 +180,9 @@ export function resolveArrival(
       fits(b),
   );
   const named = arriving.filter((b) => hasName(b) && surnameInitial(b.guest_full_name) === letter);
-  const staying = stayingCandidates(bookings, today).filter((b) => fits(b) && surnameInitial(b.guest_full_name) === letter);
+  const staying = stayingCandidates(bookings, today).filter(
+    (b) => fits(b) && surnameInitial(b.guest_full_name) === letter,
+  );
   const nameless = arriving.filter((b) => !hasName(b));
 
   const hits = named.length ? named : staying.length ? staying : nameless;
@@ -176,7 +191,12 @@ export function resolveArrival(
   if (!answers.channel && channels.length > 1) return { kind: "choose", channels };
   if (hits.length !== 1) return { kind: "none" };
   const booking = hits[0]!;
-  return { kind: "match", booking, needsName: !hasName(booking), returning: booking.status === "checked_in" };
+  return {
+    kind: "match",
+    booking,
+    needsName: !hasName(booking),
+    returning: booking.status === "checked_in",
+  };
 }
 
 /** A full name a guest types at check-in: two or more words, letters first. */

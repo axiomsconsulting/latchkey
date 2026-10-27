@@ -23,7 +23,12 @@ export function deviceOrientation(): Orientation {
 export function useLandscapeDisplay(): boolean {
   const [wide, setWide] = useState(false);
   useEffect(() => {
-    const update = () => setWide(isTouchDevice() ? deviceOrientation() === "landscape" : window.innerWidth > window.innerHeight);
+    const update = () =>
+      setWide(
+        isTouchDevice()
+          ? deviceOrientation() === "landscape"
+          : window.innerWidth > window.innerHeight,
+      );
     update();
     window.addEventListener("resize", update);
     window.addEventListener("orientationchange", update);

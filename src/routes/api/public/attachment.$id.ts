@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 import { createFileRoute } from "@tanstack/react-router";
 
 /**
@@ -13,8 +14,13 @@ export const Route = createFileRoute("/api/public/attachment/$id")({
         const sig = url.searchParams.get("s") ?? "";
         const { verifyAttachment } = await import("@/lib/attachments");
         const { signingSecret } = await import("@/lib/attachments.server");
-        if (!/^[0-9a-f-]{36}$/i.test(params.id) || !(await verifyAttachment(signingSecret(), params.id, expires, sig))) {
-          return new Response("This link has expired. Reopen the guide to see it.", { status: 403 });
+        if (
+          !/^[0-9a-f-]{36}$/i.test(params.id) ||
+          !(await verifyAttachment(signingSecret(), params.id, expires, sig))
+        ) {
+          return new Response("This link has expired. Reopen the guide to see it.", {
+            status: 403,
+          });
         }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data } = await (supabaseAdmin as unknown as { from: (t: string) => any })
@@ -25,7 +31,8 @@ export const Route = createFileRoute("/api/public/attachment/$id")({
         if (!data) return new Response("Not found.", { status: 404 });
         const { readAttachment } = await import("@/lib/drive.server");
         const res = await readAttachment(data.file_id, data.kind);
-        if (!res.ok || !res.body) return new Response("Couldn't open this attachment just now.", { status: 502 });
+        if (!res.ok || !res.body)
+          return new Response("Couldn't open this attachment just now.", { status: 502 });
         const type = data.kind === "image" ? data.mime : "application/pdf";
         const ext = type === "application/pdf" ? "pdf" : (data.mime.split("/")[1] ?? "bin");
         return new Response(res.body, {

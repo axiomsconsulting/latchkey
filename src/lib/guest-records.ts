@@ -39,9 +39,15 @@ export const DEFAULT_RECORDS: GuestRecords = {
 };
 
 export function normaliseRecords(raw: unknown): GuestRecords {
-  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
-  const bool = (k: keyof GuestRecords) => (typeof r[k] === "boolean" ? (r[k] as boolean) : (DEFAULT_RECORDS[k] as boolean));
-  const keep = KEEP_DAY_CHOICES.includes(r["keepDays"] as KeepDays) ? (r["keepDays"] as KeepDays) : DEFAULT_RECORDS.keepDays;
+  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const bool = (k: keyof GuestRecords) =>
+    typeof r[k] === "boolean" ? (r[k] as boolean) : (DEFAULT_RECORDS[k] as boolean);
+  const keep = KEEP_DAY_CHOICES.includes(r["keepDays"] as KeepDays)
+    ? (r["keepDays"] as KeepDays)
+    : DEFAULT_RECORDS.keepDays;
   return {
     askWhoIsStaying: bool("askWhoIsStaying"),
     checkEveryAdult: bool("checkEveryAdult"),
@@ -126,7 +132,8 @@ export type IdRead = {
   hasHolderPhoto: boolean;
   /** Handwritten, a plain sheet of paper, or shown on a screen. */
   looksHomemade: boolean;
-  documentType: "passport" | "driving_licence" | "national_id" | "residence_permit" | "other" | null;
+  documentType:
+    "passport" | "driving_licence" | "national_id" | "residence_permit" | "other" | null;
   fullName: string | null;
   dateOfBirth: string | null;
   expiryDate: string | null;
@@ -141,8 +148,7 @@ export type IdRead = {
 };
 
 export type IdVerdict =
-  | { ok: true; expired: boolean }
-  | { ok: false; reason: "unreadable" | "not_photo_id" };
+  { ok: true; expired: boolean } | { ok: false; reason: "unreadable" | "not_photo_id" };
 
 /**
  * A real photo ID only: a printed passport, driving licence or ID card with
@@ -151,9 +157,12 @@ export type IdVerdict =
  * someone is, so it passes and the host is told.
  */
 export function judgeId(read: IdRead, today: string): IdVerdict {
-  if (!read.isIdDocument || read.looksHomemade || !read.hasHolderPhoto) return { ok: false, reason: "not_photo_id" };
-  if (!read.fullName || read.fullName.trim().split(/\s+/).length < 2) return { ok: false, reason: "unreadable" };
-  const expired = !!read.expiryDate && /^\d{4}-\d{2}-\d{2}$/.test(read.expiryDate) && read.expiryDate < today;
+  if (!read.isIdDocument || read.looksHomemade || !read.hasHolderPhoto)
+    return { ok: false, reason: "not_photo_id" };
+  if (!read.fullName || read.fullName.trim().split(/\s+/).length < 2)
+    return { ok: false, reason: "unreadable" };
+  const expired =
+    !!read.expiryDate && /^\d{4}-\d{2}-\d{2}$/.test(read.expiryDate) && read.expiryDate < today;
   return { ok: true, expired };
 }
 

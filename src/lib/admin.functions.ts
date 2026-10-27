@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * The super admin's tools: every business at a glance, billing and trial
  * overrides, trial-abuse flags, feedback, announcements and site settings,
@@ -50,7 +51,12 @@ export type HostStats = {
   stripe?: StripeLink;
 };
 
-export type StripeLink = { mode: "platform" | "connected" | "none"; account: string | null; ready: boolean; checkedAt: string | null };
+export type StripeLink = {
+  mode: "platform" | "connected" | "none";
+  account: string | null;
+  ready: boolean;
+  checkedAt: string | null;
+};
 
 export const getAdminOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -59,24 +65,61 @@ export const getAdminOverview = createServerFn({ method: "GET" })
     const db = loose(context.supabase);
     const [{ data: hosts, error }, { data: flags }, { data: pricing }] = await Promise.all([
       db.rpc("admin_host_stats"),
-      db.from("trial_flags").select("id, host_id, matched_host_id, reason, detail, created_at, resolved_at, resolution").order("created_at", { ascending: false }).limit(200),
-      db.from("platform_pricing").select("base_pence, extra_room_pence, extra_property_pence, trial_days, currency").eq("id", 1).maybeSingle(),
+      db
+        .from("trial_flags")
+        .select("id, host_id, matched_host_id, reason, detail, created_at, resolved_at, resolution")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      db
+        .from("platform_pricing")
+        .select("base_pence, extra_room_pence, extra_property_pence, trial_days, currency")
+        .eq("id", 1)
+        .maybeSingle(),
     ]);
     if (error) throw new Error(error.message);
     // Plans arrive with migration 0027; before that the column is missing and plans stay blank.
-    const { data: plans } = await loose(await admin()).from("hosts").select("id, plan_key, api_addon");
-    const byId = new Map(((plans ?? []) as Array<{ id: string; plan_key: string; api_addon: boolean }>).map((p) => [p.id, p]));
+    const { data: plans } = await loose(await admin())
+      .from("hosts")
+      .select("id, plan_key, api_addon");
+    const byId = new Map(
+      ((plans ?? []) as Array<{ id: string; plan_key: string; api_addon: boolean }>).map((p) => [
+        p.id,
+        p,
+      ]),
+    );
     // Which Stripe account takes each business's guest payments.
-    type StripeRow = { id: string; stripe_account_id: string | null; stripe_account_ready: boolean | null; stripe_account_checked_at: string | null; uses_platform_stripe: boolean | null };
-    const { data: stripeRows } = await loose(await admin()).from("hosts").select("id, stripe_account_id, stripe_account_ready, stripe_account_checked_at, uses_platform_stripe");
+    type StripeRow = {
+      id: string;
+      stripe_account_id: string | null;
+      stripe_account_ready: boolean | null;
+      stripe_account_checked_at: string | null;
+      uses_platform_stripe: boolean | null;
+    };
+    const { data: stripeRows } = await loose(await admin())
+      .from("hosts")
+      .select(
+        "id, stripe_account_id, stripe_account_ready, stripe_account_checked_at, uses_platform_stripe",
+      );
     const stripeById = new Map(((stripeRows ?? []) as StripeRow[]).map((r) => [r.id, r]));
     const stripeOf = (id: string): StripeLink => {
       const r = stripeById.get(id);
-      if (r?.uses_platform_stripe) return { mode: "platform", account: null, ready: true, checkedAt: null };
-      if (r?.stripe_account_id) return { mode: "connected", account: r.stripe_account_id, ready: !!r.stripe_account_ready, checkedAt: r.stripe_account_checked_at };
+      if (r?.uses_platform_stripe)
+        return { mode: "platform", account: null, ready: true, checkedAt: null };
+      if (r?.stripe_account_id)
+        return {
+          mode: "connected",
+          account: r.stripe_account_id,
+          ready: !!r.stripe_account_ready,
+          checkedAt: r.stripe_account_checked_at,
+        };
       return { mode: "none", account: null, ready: false, checkedAt: null };
     };
-    const merged = ((hosts ?? []) as HostStats[]).map((h) => ({ ...h, plan_key: byId.get(h.host_id)?.plan_key ?? null, api_addon: byId.get(h.host_id)?.api_addon ?? false, stripe: stripeOf(h.host_id) }));
+    const merged = ((hosts ?? []) as HostStats[]).map((h) => ({
+      ...h,
+      plan_key: byId.get(h.host_id)?.plan_key ?? null,
+      api_addon: byId.get(h.host_id)?.api_addon ?? false,
+      stripe: stripeOf(h.host_id),
+    }));
     return { hosts: merged, flags: flags ?? [], pricing };
   });
 
@@ -117,16 +160,20 @@ export const viewAsHost = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ hostId: uuid.nullable() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
-    const { error } = await loose(context.supabase)
-      .from("user_prefs")
-      .upsert({ user_id: context.userId, support_host_id: data.hostId, updated_at: new Date().toISOString() });
+    const { error } = await loose(context.supabase).from("user_prefs").upsert({
+      user_id: context.userId,
+      support_host_id: data.hostId,
+      updated_at: new Date().toISOString(),
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const resolveTrialFlag = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: uuid, resolution: z.string().trim().max(400) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ id: uuid, resolution: z.string().trim().max(400) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const { error } = await loose(context.supabase)
@@ -165,10 +212,15 @@ export const listAllFeedback = createServerFn({ method: "GET" })
 
 export const setFeedbackStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: uuid, status: z.enum(["new", "seen", "planned", "done"]) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ id: uuid, status: z.enum(["new", "seen", "planned", "done"]) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
-    const { error } = await loose(context.supabase).from("feedback").update({ status: data.status }).eq("id", data.id);
+    const { error } = await loose(context.supabase)
+      .from("feedback")
+      .update({ status: data.status })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -217,7 +269,9 @@ export const sendAnnouncement = createServerFn({ method: "POST" })
         host_id: data.hostId,
         title: data.title,
         body: data.body,
-        expires_at: data.expiresInDays ? new Date(Date.now() + data.expiresInDays * 86_400_000).toISOString() : null,
+        expires_at: data.expiresInDays
+          ? new Date(Date.now() + data.expiresInDays * 86_400_000).toISOString()
+          : null,
       });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -228,7 +282,10 @@ export const setAnnouncementActive = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid, active: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
-    const { error } = await loose(context.supabase).from("announcements").update({ active: data.active }).eq("id", data.id);
+    const { error } = await loose(context.supabase)
+      .from("announcements")
+      .update({ active: data.active })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -239,46 +296,73 @@ export const myAnnouncements = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const db = loose(context.supabase);
     const [{ data: list, error }, { data: seen }] = await Promise.all([
-      db.from("announcements").select("id, host_id, title, body, created_at").eq("active", true).order("created_at", { ascending: true }).limit(20),
+      db
+        .from("announcements")
+        .select("id, host_id, title, body, created_at")
+        .eq("active", true)
+        .order("created_at", { ascending: true })
+        .limit(20),
       db.from("announcement_dismissals").select("announcement_id").eq("user_id", context.userId),
     ]);
     if (error) return [];
-    const done = new Set(((seen ?? []) as Array<{ announcement_id: string }>).map((d) => d.announcement_id));
+    const done = new Set(
+      ((seen ?? []) as Array<{ announcement_id: string }>).map((d) => d.announcement_id),
+    );
     const { data: isAdmin } = await db.rpc("is_super_admin");
     // The super admin reads every message in the admin page, not as pop-ups.
-    return ((list ?? []) as Array<{ id: string; host_id: string | null; title: string; body: string; created_at: string }>).filter(
-      (a) => !done.has(a.id) && !(isAdmin === true && a.host_id),
-    );
+    return (
+      (list ?? []) as Array<{
+        id: string;
+        host_id: string | null;
+        title: string;
+        body: string;
+        created_at: string;
+      }>
+    ).filter((a) => !done.has(a.id) && !(isAdmin === true && a.host_id));
   });
 
 export const dismissAnnouncement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    await loose(context.supabase).from("announcement_dismissals").insert({ announcement_id: data.id, user_id: context.userId });
+    await loose(context.supabase)
+      .from("announcement_dismissals")
+      .insert({ announcement_id: data.id, user_id: context.userId });
     return { ok: true };
   });
 
 /* ------------------------------ site settings ----------------------------- */
 
-type SiteSettings = { signups_open: boolean; support_email: string | null; notice: string | null; invoice_nightly_lines: boolean };
+type SiteSettings = {
+  signups_open: boolean;
+  support_email: string | null;
+  notice: string | null;
+  invoice_nightly_lines: boolean;
+};
 
-export const getSiteSettings = createServerFn({ method: "GET" }).handler(async (): Promise<SiteSettings> => {
-  const db = await admin();
-  const { withLegacy } = await import("./checkin.server");
-  const cols = "signups_open, support_email, notice";
-  const { data } = await withLegacy(
-    () => loose(db).from("site_settings").select(`${cols}, invoice_nightly_lines`).eq("id", 1).maybeSingle(),
-    () => loose(db).from("site_settings").select(cols).eq("id", 1).maybeSingle(),
-  );
-  const row = (data ?? {}) as Partial<SiteSettings>;
-  return {
-    signups_open: row.signups_open ?? true,
-    support_email: row.support_email ?? null,
-    notice: row.notice ?? null,
-    invoice_nightly_lines: row.invoice_nightly_lines ?? true,
-  };
-});
+export const getSiteSettings = createServerFn({ method: "GET" }).handler(
+  async (): Promise<SiteSettings> => {
+    const db = await admin();
+    const { withLegacy } = await import("./checkin.server");
+    const cols = "signups_open, support_email, notice";
+    const { data } = await withLegacy(
+      () =>
+        loose(db)
+          .from("site_settings")
+          .select(`${cols}, invoice_nightly_lines`)
+          .eq("id", 1)
+          .maybeSingle(),
+      () => loose(db).from("site_settings").select(cols).eq("id", 1).maybeSingle(),
+    );
+    const row = (data ?? {}) as Partial<SiteSettings>;
+    return {
+      signups_open: row.signups_open ?? true,
+      support_email: row.support_email ?? null,
+      notice: row.notice ?? null,
+      invoice_nightly_lines: row.invoice_nightly_lines ?? true,
+    };
+  },
+);
 
 export const saveSiteSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -316,7 +400,11 @@ export const getKioskSaverDefaults = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await requireSuperAdmin(context.supabase);
     const { normaliseDefaults } = await import("./kiosk-saver");
-    const { data, error } = await loose(await admin()).from("site_settings").select("kiosk_saver").eq("id", 1).maybeSingle();
+    const { data, error } = await loose(await admin())
+      .from("site_settings")
+      .select("kiosk_saver")
+      .eq("id", 1)
+      .maybeSingle();
     return { available: !error, defaults: normaliseDefaults(error ? null : data?.kiosk_saver) };
   });
 
@@ -340,7 +428,10 @@ export const saveKioskSaverDefaults = createServerFn({ method: "POST" })
     await requireSuperAdmin(context.supabase);
     const { normaliseDefaults } = await import("./kiosk-saver");
     const kiosk_saver = normaliseDefaults(data);
-    const { error } = await loose(context.supabase).from("site_settings").update({ kiosk_saver, updated_at: new Date().toISOString() }).eq("id", 1);
+    const { error } = await loose(context.supabase)
+      .from("site_settings")
+      .update({ kiosk_saver, updated_at: new Date().toISOString() })
+      .eq("id", 1);
     if (error) throw new Error(error.message);
     return { ok: true, defaults: kiosk_saver };
   });
@@ -355,7 +446,11 @@ export const setSupportAccess = createServerFn({ method: "POST" })
     await requireOwner(context.supabase, data.hostId);
     const { error } = await context.supabase
       .from("hosts")
-      .update({ support_access_until: data.allow ? new Date(Date.now() + 30 * 86_400_000).toISOString() : null })
+      .update({
+        support_access_until: data.allow
+          ? new Date(Date.now() + 30 * 86_400_000).toISOString()
+          : null,
+      })
       .eq("id", data.hostId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -374,7 +469,9 @@ export const listSuperAdmins = createServerFn({ method: "GET" })
       () => loose(db).from("super_admins").select("email, added_by, added_at").order("email"),
       () => loose(db).from("super_admins").select("email").order("email"),
     );
-    return ((data ?? []) as Array<{ email: string; added_by?: string | null; added_at?: string | null }>).map((r) => ({
+    return (
+      (data ?? []) as Array<{ email: string; added_by?: string | null; added_at?: string | null }>
+    ).map((r) => ({
       email: r.email,
       addedBy: r.added_by ?? null,
       addedAt: r.added_at ?? null,
@@ -384,16 +481,23 @@ export const listSuperAdmins = createServerFn({ method: "GET" })
 
 export const addSuperAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ email: z.string().trim().toLowerCase().email().max(254) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ email: z.string().trim().toLowerCase().email().max(254) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const db = await admin();
     const { error } = await loose(db)
       .from("super_admins")
-      .upsert({ email: data.email, added_by: String(context.claims?.email ?? "") || null }, { onConflict: "email" });
+      .upsert(
+        { email: data.email, added_by: String(context.claims?.email ?? "") || null },
+        { onConflict: "email" },
+      );
     if (error) {
       // Before migration 0026 there are no added_by/added_at columns.
-      const { error: e2 } = await loose(db).from("super_admins").upsert({ email: data.email }, { onConflict: "email" });
+      const { error: e2 } = await loose(db)
+        .from("super_admins")
+        .upsert({ email: data.email }, { onConflict: "email" });
       if (e2) throw new Error(e2.message);
     }
     return { ok: true };
@@ -401,11 +505,15 @@ export const addSuperAdmin = createServerFn({ method: "POST" })
 
 export const removeSuperAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ email: z.string().trim().toLowerCase().email() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ email: z.string().trim().toLowerCase().email() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const db = await admin();
-    const { count } = await loose(db).from("super_admins").select("email", { count: "exact", head: true });
+    const { count } = await loose(db)
+      .from("super_admins")
+      .select("email", { count: "exact", head: true });
     if ((count ?? 0) <= 1) throw new Error(rebrand("Latchkey needs at least one super admin."));
     const { error } = await loose(db).from("super_admins").delete().eq("email", data.email);
     if (error) throw new Error(error.message);
@@ -418,7 +526,11 @@ export const getPublicApiPlans = createServerFn({ method: "GET" }).handler(async
   let stored: unknown = null;
   try {
     const db = await admin();
-    const { data } = await loose(db).from("site_settings").select("pricing_model").eq("id", 1).maybeSingle();
+    const { data } = await loose(db)
+      .from("site_settings")
+      .select("pricing_model")
+      .eq("id", 1)
+      .maybeSingle();
     stored = data?.pricing_model ?? null;
   } catch {
     stored = null;
@@ -442,9 +554,14 @@ async function usageSince(since: string): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   try {
     const db = await admin();
-    const { data, error } = await loose(db).from("usage_daily").select("metric, count").gte("day", since).limit(20000);
+    const { data, error } = await loose(db)
+      .from("usage_daily")
+      .select("metric, count")
+      .gte("day", since)
+      .limit(20000);
     if (error) return out;
-    for (const r of (data ?? []) as Array<{ metric: string; count: number }>) out[r.metric] = (out[r.metric] ?? 0) + Number(r.count);
+    for (const r of (data ?? []) as Array<{ metric: string; count: number }>)
+      out[r.metric] = (out[r.metric] ?? 0) + Number(r.count);
   } catch {
     // Before migration 0027: nothing counted yet.
   }
@@ -457,7 +574,13 @@ async function hostRows(supabase: unknown) {
   const db = await admin();
   const plans = new Map<string, { plan_key: string | null; api_addon: boolean }>();
   const { data, error } = await loose(db).from("hosts").select("id, plan_key, api_addon");
-  if (!error) for (const r of (data ?? []) as Array<{ id: string; plan_key: string | null; api_addon: boolean }>) plans.set(r.id, r);
+  if (!error)
+    for (const r of (data ?? []) as Array<{
+      id: string;
+      plan_key: string | null;
+      api_addon: boolean;
+    }>)
+      plans.set(r.id, r);
   return ((stats ?? []) as HostStats[]).map((h) => ({
     hostId: h.host_id,
     planKey: plans.get(h.host_id)?.plan_key ?? null,
@@ -471,7 +594,11 @@ async function hostRows(supabase: unknown) {
 
 async function siteModels() {
   const db = await admin();
-  const { data, error } = await loose(db).from("site_settings").select("pricing_model, cost_model, projection").eq("id", 1).maybeSingle();
+  const { data, error } = await loose(db)
+    .from("site_settings")
+    .select("pricing_model, cost_model, projection")
+    .eq("id", 1)
+    .maybeSingle();
   const pm = await import("./pricing-model");
   return {
     migrationPending: !!error,
@@ -484,8 +611,16 @@ async function siteModels() {
 
 async function saveSite(patch: Record<string, unknown>) {
   const db = await admin();
-  const { error } = await loose(db).from("site_settings").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", 1);
-  if (error) throw new Error(error.message.includes("column") ? "Run migration 0027 first (Lovable applies it on the next sync)." : error.message);
+  const { error } = await loose(db)
+    .from("site_settings")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error)
+    throw new Error(
+      error.message.includes("column")
+        ? "Run migration 0027 first (Lovable applies it on the next sync)."
+        : error.message,
+    );
 }
 
 export const getPricingStudio = createServerFn({ method: "GET" })
@@ -493,7 +628,11 @@ export const getPricingStudio = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await requireSuperAdmin(context.supabase);
     const since = isoDay(new Date(Date.now() - 30 * 86_400_000));
-    const [site, hosts, usage30] = await Promise.all([siteModels(), hostRows(context.supabase), usageSince(since)]);
+    const [site, hosts, usage30] = await Promise.all([
+      siteModels(),
+      hostRows(context.supabase),
+      usageSince(since),
+    ]);
     return { ...site, hosts, usage30, today: isoDay(new Date()) };
   });
 
@@ -524,7 +663,10 @@ export const publishPricingModel = createServerFn({ method: "POST" })
           currency: z.string().regex(/^[A-Z]{3}$/),
           trialDays: z.number().int().min(0).max(90),
           plans: z.array(planSchema).min(1).max(5),
-          apiAddon: z.object({ pricePence: z.number().int().min(0).max(1_000_000), includedRequests: z.number().int().min(0).max(10_000_000) }),
+          apiAddon: z.object({
+            pricePence: z.number().int().min(0).max(1_000_000),
+            includedRequests: z.number().int().min(0).max(10_000_000),
+          }),
         }),
         moveSubscribers: z.boolean(),
       })
@@ -541,7 +683,11 @@ export const publishPricingModel = createServerFn({ method: "POST" })
     let failed = 0;
     if (data.moveSubscribers) {
       const db = await admin();
-      const { data: subs } = await loose(db).from("hosts").select("id").in("subscription_status", ["active", "past_due"]).not("stripe_subscription_id", "is", null);
+      const { data: subs } = await loose(db)
+        .from("hosts")
+        .select("id")
+        .in("subscription_status", ["active", "past_due"])
+        .not("stripe_subscription_id", "is", null);
       const { updateStripePrice } = await import("./billing.functions");
       for (const h of (subs ?? []) as Array<{ id: string }>) {
         try {
@@ -566,7 +712,9 @@ export const unpublishPricingModel = createServerFn({ method: "POST" })
 
 export const saveCostModel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ costs: z.record(z.string(), z.number().min(0).max(1_000_000)) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ costs: z.record(z.string(), z.number().min(0).max(1_000_000)) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const { normaliseCosts } = await import("./pricing-model");
@@ -576,13 +724,17 @@ export const saveCostModel = createServerFn({ method: "POST" })
 
 export const saveProjection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ projection: z.record(z.string(), z.unknown()) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ projection: z.record(z.string(), z.unknown()) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const { normaliseProjection } = await import("./pricing-model");
     const current = (await siteModels()).projection;
     // History only changes through calibration.
-    await saveSite({ projection: { ...normaliseProjection(data.projection), history: current.history } });
+    await saveSite({
+      projection: { ...normaliseProjection(data.projection), history: current.history },
+    });
     return { ok: true };
   });
 
@@ -604,12 +756,24 @@ export const rebaseProjection = createServerFn({ method: "POST" })
  */
 export const calibrateCosts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ totalCredits: z.number().min(0).max(1_000_000), aiCredits: z.number().min(0).max(1_000_000) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        totalCredits: z.number().min(0).max(1_000_000),
+        aiCredits: z.number().min(0).max(1_000_000),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
-    if (data.aiCredits > data.totalCredits) throw new Error("AI credits can't be more than the total.");
+    if (data.aiCredits > data.totalCredits)
+      throw new Error("AI credits can't be more than the total.");
     const since = isoDay(new Date(Date.now() - 30 * 86_400_000));
-    const [site, hosts, usage] = await Promise.all([siteModels(), hostRows(context.supabase), usageSince(since)]);
+    const [site, hosts, usage] = await Promise.all([
+      siteModels(),
+      hostRows(context.supabase),
+      usageSince(since),
+    ]);
     const pm = await import("./pricing-model");
     const summary = pm.summariseHosts(site.model, hosts);
     const costs = pm.calibrate(site.costs, {
@@ -632,11 +796,22 @@ export const calibrateCosts = createServerFn({ method: "POST" })
 /** The super admin moves a business to a plan, or turns its API add-on on or off. */
 export const setHostPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ hostId: uuid, planKey: z.string().regex(/^[a-z0-9_]{2,30}$/), apiAddon: z.boolean() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        hostId: uuid,
+        planKey: z.string().regex(/^[a-z0-9_]{2,30}$/),
+        apiAddon: z.boolean(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const db = await admin();
-    const { error } = await loose(db).from("hosts").update({ plan_key: data.planKey, api_addon: data.apiAddon }).eq("id", data.hostId);
+    const { error } = await loose(db)
+      .from("hosts")
+      .update({ plan_key: data.planKey, api_addon: data.apiAddon })
+      .eq("id", data.hostId);
     if (error) throw new Error(error.message);
     // Their card is charged the new price from the next bill, no surprise charge now.
     try {
@@ -664,27 +839,51 @@ export const listRoutines = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await requireSuperAdmin(context.supabase);
     const db = await admin();
-    const { data, error } = await loose(db).from("job_settings").select("key, enabled, every_minutes, last_run_at, last_status, last_duration_ms");
+    const { data, error } = await loose(db)
+      .from("job_settings")
+      .select("key, enabled, every_minutes, last_run_at, last_status, last_duration_ms");
     const now = new Date();
     const monthStart = `${isoDay(now).slice(0, 7)}-01`;
     const [usageMonth, site] = await Promise.all([usageSince(monthStart), siteModels()]);
-    return { settings: (error ? [] : data ?? []) as RoutineRow[], usageMonth, costs: site.costs, migrationPending: !!error };
+    return {
+      settings: (error ? [] : (data ?? [])) as RoutineRow[],
+      usageMonth,
+      costs: site.costs,
+      migrationPending: !!error,
+    };
   });
 
 export const saveRoutine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ key: z.string().regex(/^[a-z0-9_]{2,40}$/), enabled: z.boolean(), everyMinutes: z.number().int().min(5).max(44_640).nullable() }).parse(d),
+    z
+      .object({
+        key: z.string().regex(/^[a-z0-9_]{2,40}$/),
+        enabled: z.boolean(),
+        everyMinutes: z.number().int().min(5).max(44_640).nullable(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const { JOBS } = await import("./jobs");
     if (!JOBS.some((j) => j.key === data.key)) throw new Error("Unknown routine.");
     const db = await admin();
-    const { error } = await loose(db)
-      .from("job_settings")
-      .upsert({ key: data.key, enabled: data.enabled, every_minutes: data.everyMinutes, updated_at: new Date().toISOString() }, { onConflict: "key" });
-    if (error) throw new Error(error.message.includes("job_settings") ? "Run migration 0027 first (Lovable applies it on the next sync)." : error.message);
+    const { error } = await loose(db).from("job_settings").upsert(
+      {
+        key: data.key,
+        enabled: data.enabled,
+        every_minutes: data.everyMinutes,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "key" },
+    );
+    if (error)
+      throw new Error(
+        error.message.includes("job_settings")
+          ? "Run migration 0027 first (Lovable applies it on the next sync)."
+          : error.message,
+      );
     const { forgetJobSettings } = await import("./usage.server");
     forgetJobSettings();
     return { ok: true };
@@ -693,7 +892,9 @@ export const saveRoutine = createServerFn({ method: "POST" })
 /** Runs a routine now, whether or not it's switched on or due. */
 export const runRoutineNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ key: z.enum(["calendar_sync", "retention", "demo_tour"]) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ key: z.enum(["calendar_sync", "retention", "demo_tour"]) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const { recordRun } = await import("./usage.server");
@@ -730,7 +931,11 @@ export const getPublicOffer = createServerFn({ method: "GET" }).handler(async ()
   const { normaliseOffer, offerRunning, ukToday } = await import("./offer");
   try {
     const db = await admin();
-    const { data, error } = await loose(db).from("site_settings").select("offer").eq("id", 1).maybeSingle();
+    const { data, error } = await loose(db)
+      .from("site_settings")
+      .select("offer")
+      .eq("id", 1)
+      .maybeSingle();
     if (error || !data?.offer) return null;
     const offer = normaliseOffer(data.offer);
     return offerRunning(offer, ukToday()) ? offer : null;
@@ -745,10 +950,26 @@ export const getOfferSettings = createServerFn({ method: "GET" })
     await requireSuperAdmin(context.supabase);
     const { normaliseOffer, DEFAULT_OFFER } = await import("./offer");
     const db = await admin();
-    const { data, error } = await loose(db).from("site_settings").select("offer").eq("id", 1).maybeSingle();
-    const { count: waiting } = await loose(db).from("hosts").select("id", { count: "exact", head: true }).not("offer_pence", "is", null).is("offer_used_at", null);
-    const { count: used } = await loose(db).from("hosts").select("id", { count: "exact", head: true }).not("offer_used_at", "is", null);
-    return { migrationPending: !!error, offer: data?.offer ? normaliseOffer(data.offer) : DEFAULT_OFFER, waiting: waiting ?? 0, used: used ?? 0 };
+    const { data, error } = await loose(db)
+      .from("site_settings")
+      .select("offer")
+      .eq("id", 1)
+      .maybeSingle();
+    const { count: waiting } = await loose(db)
+      .from("hosts")
+      .select("id", { count: "exact", head: true })
+      .not("offer_pence", "is", null)
+      .is("offer_used_at", null);
+    const { count: used } = await loose(db)
+      .from("hosts")
+      .select("id", { count: "exact", head: true })
+      .not("offer_used_at", "is", null);
+    return {
+      migrationPending: !!error,
+      offer: data?.offer ? normaliseOffer(data.offer) : DEFAULT_OFFER,
+      waiting: waiting ?? 0,
+      used: used ?? 0,
+    };
   });
 
 /** Sets the campaign. Accounts already opened keep the offer they joined with. */
@@ -767,10 +988,19 @@ export const saveOffer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
-    if (data.endsOn < data.startsOn) throw new Error("The offer has to end on or after the day it starts.");
+    if (data.endsOn < data.startsOn)
+      throw new Error("The offer has to end on or after the day it starts.");
     const db = await admin();
-    const { error } = await loose(db).from("site_settings").update({ offer: data, updated_at: new Date().toISOString() }).eq("id", 1);
-    if (error) throw new Error(error.message.includes("offer") ? "Run migration 0029 first (Lovable applies it on the next sync)." : error.message);
+    const { error } = await loose(db)
+      .from("site_settings")
+      .update({ offer: data, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error)
+      throw new Error(
+        error.message.includes("offer")
+          ? "Run migration 0029 first (Lovable applies it on the next sync)."
+          : error.message,
+      );
     return { ok: true };
   });
 
@@ -789,17 +1019,28 @@ export const getIntegrationStatus = createServerFn({ method: "GET" })
       const me = await i.telegramCall<{ username: string }>("getMe", {});
       bot = me.ok ? (me.result?.username ?? null) : null;
       const info = await i.telegramCall<{ url: string }>("getWebhookInfo", {});
-      webhook = info.ok ? (info.result?.url || null) : null;
+      webhook = info.ok ? info.result?.url || null : null;
     }
     const origin = i.publicOrigin();
     const secret = i.inboundSecret();
     // Listing import: the Firecrawl key, and the routine switch (off until the super admin turns it on).
-    const { data: listingRow } = await loose(await admin()).from("job_settings").select("enabled").eq("key", "listing_import").maybeSingle();
+    const { data: listingRow } = await loose(await admin())
+      .from("job_settings")
+      .select("enabled")
+      .eq("key", "listing_import")
+      .maybeSingle();
     return {
       origin,
-      firecrawl: { keySet: !!(process.env["FIRECRAWL_API_KEY"] ?? "").trim(), enabled: listingRow?.enabled === true },
+      firecrawl: {
+        keySet: !!(process.env["FIRECRAWL_API_KEY"] ?? "").trim(),
+        enabled: listingRow?.enabled === true,
+      },
       push: { ready: !!i.pushKeys() },
-      telegram: { tokenSet: !!i.telegramToken(), bot, webhookSet: !!webhook && webhook.startsWith(origin) },
+      telegram: {
+        tokenSet: !!i.telegramToken(),
+        bot,
+        webhookSet: !!webhook && webhook.startsWith(origin),
+      },
       sms: { ready: !!i.twilio() },
       inbound: {
         secretSet: !!secret,
@@ -813,16 +1054,35 @@ export const getIntegrationStatus = createServerFn({ method: "GET" })
 export const saveIntegrationSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ inboundAddress: z.string().trim().max(200).refine((v) => v === "" || (v.includes("{code}") && /@/.test(v)), "Include {code} and an @") }).parse(d),
+    z
+      .object({
+        inboundAddress: z
+          .string()
+          .trim()
+          .max(200)
+          .refine(
+            (v) => v === "" || (v.includes("{code}") && /@/.test(v)),
+            "Include {code} and an @",
+          ),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const db = await admin();
     const { error } = await loose(db)
       .from("site_settings")
-      .update({ integrations: { inboundAddress: data.inboundAddress || null }, updated_at: new Date().toISOString() })
+      .update({
+        integrations: { inboundAddress: data.inboundAddress || null },
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", 1);
-    if (error) throw new Error(error.message.includes("integrations") ? "Run migration 0032 first (Lovable applies it on the next sync)." : error.message);
+    if (error)
+      throw new Error(
+        error.message.includes("integrations")
+          ? "Run migration 0032 first (Lovable applies it on the next sync)."
+          : error.message,
+      );
     return { ok: true };
   });
 
@@ -859,6 +1119,9 @@ export const sendTestSms = createServerFn({ method: "POST" })
     await requireSuperAdmin(context.supabase);
     const { sendSms } = await import("./integrations.server");
     const ok = await sendSms(data.to, rebrand("Latchkey test: SMS alerts are working."));
-    if (!ok) throw new Error("Twilio didn't send it. Check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM.");
+    if (!ok)
+      throw new Error(
+        "Twilio didn't send it. Check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM.",
+      );
     return { ok: true };
   });

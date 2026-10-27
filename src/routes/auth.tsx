@@ -22,7 +22,9 @@ import { rebrand } from "@/lib/brand";
 
 /** Only same-site paths, so a crafted link can't send people elsewhere. */
 function safeNext(value: unknown): string | undefined {
-  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : undefined;
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : undefined;
 }
 
 export const Route = createFileRoute("/auth")({
@@ -202,10 +204,18 @@ function AuthPage() {
             {/* Email is one more option, folded until chosen. */}
             {!emailOpen ? (
               <div className="relative mt-2">
-                <Button type="button" variant="outline" size="lg" className="h-12 w-full gap-3 text-base" onClick={() => setEmailOpen(true)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="h-12 w-full gap-3 text-base"
+                  onClick={() => setEmailOpen(true)}
+                >
                   <Mail className="size-5" /> {mode === "sign_in" ? extra.email : extra.emailSignUp}
                 </Button>
-                {mode === "sign_in" && (last === "password" || last === "email_link") ? <LastUsed method={last} current={last} /> : null}
+                {mode === "sign_in" && (last === "password" || last === "email_link") ? (
+                  <LastUsed method={last} current={last} />
+                ) : null}
               </div>
             ) : (
               <>
@@ -248,18 +258,29 @@ function AuthPage() {
                     </Button>
                     {mode === "sign_in" ? <LastUsed method="password" current={last} /> : null}
                   </div>
-                  {mode === "sign_up" ? <AgreeNote className="text-center text-xs text-muted-foreground" /> : null}
+                  {mode === "sign_up" ? (
+                    <AgreeNote className="text-center text-xs text-muted-foreground" />
+                  ) : null}
                 </form>
 
                 {mode === "sign_in" ? (
                   <>
                     <div className="relative mt-3">
-                      <Button type="button" variant="outline" className="w-full" size="lg" disabled={busy} onClick={() => void sendLink()}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        size="lg"
+                        disabled={busy}
+                        onClick={() => void sendLink()}
+                      >
                         <Sparkles className="size-4" /> {copy.magicCta}
                       </Button>
                       <LastUsed method="email_link" current={last} />
                     </div>
-                    <p className="mt-2 text-center text-xs text-muted-foreground">{extra.magicNoPassword}</p>
+                    <p className="mt-2 text-center text-xs text-muted-foreground">
+                      {extra.magicNoPassword}
+                    </p>
                   </>
                 ) : null}
               </>

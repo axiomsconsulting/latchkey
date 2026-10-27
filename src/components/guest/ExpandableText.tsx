@@ -27,7 +27,10 @@ export function ExpandableText({ text, className = "" }: { text: string; classNa
         className="inline-flex min-h-11 items-center gap-1 text-base font-medium text-primary underline-offset-4 hover:underline"
       >
         {open ? gcopy.showLess : gcopy.showMore}
-        <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+        <ChevronDown
+          className={`size-4 transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
       </button>
     </div>
   );

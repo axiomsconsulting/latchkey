@@ -24,7 +24,9 @@ export function billingPhase(h: BillingHost, now: Date = new Date()): Phase {
     case "canceled":
       return "canceled";
     default:
-      return !h.trial_ends_at || Date.parse(h.trial_ends_at) > now.getTime() ? "trial" : "trial_ended";
+      return !h.trial_ends_at || Date.parse(h.trial_ends_at) > now.getTime()
+        ? "trial"
+        : "trial_ended";
   }
 }
 

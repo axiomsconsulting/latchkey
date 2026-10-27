@@ -26,9 +26,15 @@ export function PageSections({
   decorate?: (id: string) => ReactNode;
 }) {
   const ui = useUi();
-  const items = Children.toArray(children).filter((c): c is ReactElement<{ id: string }> => isValidElement(c) && typeof (c.props as { id?: unknown }).id === "string");
+  const items = Children.toArray(children).filter(
+    (c): c is ReactElement<{ id: string }> =>
+      isValidElement(c) && typeof (c.props as { id?: unknown }).id === "string",
+  );
   const byId = new Map(items.map((c) => [c.props.id, c]));
-  const ids = arrange(ui.pages[page], items.map((c) => c.props.id)).filter((id) => !only || only(id));
+  const ids = arrange(
+    ui.pages[page],
+    items.map((c) => c.props.id),
+  ).filter((id) => !only || only(id));
   return (
     <>
       {ids.map((id) =>

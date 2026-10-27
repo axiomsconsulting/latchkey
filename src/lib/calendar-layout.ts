@@ -31,10 +31,14 @@ export function spanFor(days: string[], checkIn: string, checkOut: string): Span
 }
 
 /** Puts overlapping stays on separate lines, earliest first. Returns the line per id. */
-export function lanes<T extends { id: string; span: Span }>(items: T[]): { lane: Record<string, number>; count: number } {
+export function lanes<T extends { id: string; span: Span }>(
+  items: T[],
+): { lane: Record<string, number>; count: number } {
   const ends: number[] = [];
   const lane: Record<string, number> = {};
-  for (const it of [...items].sort((a, b) => a.span.start - b.span.start || b.span.length - a.span.length)) {
+  for (const it of [...items].sort(
+    (a, b) => a.span.start - b.span.start || b.span.length - a.span.length,
+  )) {
     let l = ends.findIndex((end) => end <= it.span.start);
     if (l < 0) l = ends.length;
     ends[l] = it.span.start + it.span.length;

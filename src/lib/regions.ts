@@ -98,7 +98,10 @@ export const REGIONS: Record<CountryCode, Region> = {
   },
 };
 
-export const COUNTRY_CHOICES = Object.values(REGIONS).map((r) => ({ code: r.code, country: r.country }));
+export const COUNTRY_CHOICES = Object.values(REGIONS).map((r) => ({
+  code: r.code,
+  country: r.country,
+}));
 
 /** Falls back to the UK: the demo business and most early hosts are British. */
 export function region(code: string | null | undefined): Region {

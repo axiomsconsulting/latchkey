@@ -61,8 +61,10 @@ async function readStream(body: ReadableStream<Uint8Array>): Promise<string> {
       if (!payload || payload === "[DONE]") continue;
       try {
         const event = JSON.parse(payload) as { type?: string; delta?: string; text?: string };
-        if (event.type === "response.output_text.delta" && typeof event.delta === "string") text += event.delta;
-        if (event.type === "response.output_text.done" && typeof event.text === "string" && !text) text = event.text;
+        if (event.type === "response.output_text.delta" && typeof event.delta === "string")
+          text += event.delta;
+        if (event.type === "response.output_text.done" && typeof event.text === "string" && !text)
+          text = event.text;
       } catch {
         // partial frame: ignore and wait for the rest
       }
@@ -105,13 +107,16 @@ export async function suggestTrades(input: {
       store: false,
       reasoning: { effort: "low", summary: "auto" },
       include: ["reasoning.encrypted_content"],
-      text: { format: { type: "json_schema", name: "trade_shortlist", strict: true, schema: SCHEMA } },
+      text: {
+        format: { type: "json_schema", name: "trade_shortlist", strict: true, schema: SCHEMA },
+      },
     }),
   });
 
   if (!res.ok || !res.body) {
     const detail = await res.text().catch(() => "");
-    if (res.status === 429) throw new Error("The AI service is busy. Please try again in a minute.");
+    if (res.status === 429)
+      throw new Error("The AI service is busy. Please try again in a minute.");
     if (res.status === 402) throw new Error("This workspace has run out of AI credits.");
     throw new Error(detail.slice(0, 200) || "The AI suggestion service is unavailable right now.");
   }

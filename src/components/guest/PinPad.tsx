@@ -31,7 +31,10 @@ export function PinPad({
   return (
     // data-kx: on a door tablet with expanded buttons, the keys grow to fill the space (styles.css).
     <div data-kx="pad" className="mx-auto w-full max-w-xs space-y-6">
-      <div className="flex justify-center gap-3" aria-label={`${value.length} of ${length} digits entered`}>
+      <div
+        className="flex justify-center gap-3"
+        aria-label={`${value.length} of ${length} digits entered`}
+      >
         {Array.from({ length }, (_, i) => (
           <span
             key={i}

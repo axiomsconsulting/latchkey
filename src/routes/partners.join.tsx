@@ -86,7 +86,9 @@ function JoinPage() {
           </li>
         </ul>
         <p className="text-sm text-muted-foreground">{copy.joinSteps}</p>
-        {preview && !open ? <p className="text-sm font-medium text-accent">{copy.previewNote}</p> : null}
+        {preview && !open ? (
+          <p className="text-sm font-medium text-accent">{copy.previewNote}</p>
+        ) : null}
         {user === undefined ? null : signedIn ? (
           <ApplyForm email={user.email ?? ""} />
         ) : (
@@ -317,7 +319,11 @@ function ComingSoon() {
         <h1 className="text-3xl">{copy.comingSoonTitle}</h1>
         <p className="text-lg text-muted-foreground">{copy.comingSoonBody}</p>
         <Button asChild variant="outline">
-          <Link to="/auth" search={{ next: "/partners", for: "partner" }} onClick={markPartnerIntent}>
+          <Link
+            to="/auth"
+            search={{ next: "/partners", for: "partner" }}
+            onClick={markPartnerIntent}
+          >
             {copy.comingSoonSignIn}
           </Link>
         </Button>

@@ -42,7 +42,11 @@ async function openCamera(facing: "environment" | "user"): Promise<MediaStream> 
     } catch (err) {
       last = err;
       // Permission refused: asking again in another way won't help.
-      if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError")) break;
+      if (
+        err instanceof DOMException &&
+        (err.name === "NotAllowedError" || err.name === "SecurityError")
+      )
+        break;
     }
   }
   throw last ?? new Error("no camera");
@@ -51,7 +55,15 @@ async function openCamera(facing: "environment" | "user"): Promise<MediaStream> 
 /** A grey outline of a driving licence: photo on the left, lines of text on the right. */
 function LicenceOutline() {
   return (
-    <svg viewBox="0 0 172 108" className="h-auto w-[62%]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+    <svg
+      viewBox="0 0 172 108"
+      className="h-auto w-[62%]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden
+    >
       <rect x="2" y="2" width="168" height="104" rx="10" />
       <rect x="14" y="22" width="44" height="56" rx="5" />
       <circle cx="36" cy="42" r="9" />
@@ -64,7 +76,15 @@ function LicenceOutline() {
 /** A grey outline of a passport's photo page, held open. */
 function PassportOutline() {
   return (
-    <svg viewBox="0 0 172 124" className="h-auto w-[62%]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+    <svg
+      viewBox="0 0 172 124"
+      className="h-auto w-[62%]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden
+    >
       <rect x="2" y="2" width="168" height="120" rx="8" />
       <path d="M2 58h168" strokeDasharray="4 5" />
       <rect x="14" y="66" width="34" height="44" rx="3" />
@@ -91,11 +111,18 @@ function IdHint() {
     };
   }, []);
   return (
-    <div className="pointer-events-none absolute inset-0 grid place-items-center text-neutral-300/70" aria-hidden>
-      <div className={`col-start-1 row-start-1 grid w-full place-items-center transition-opacity duration-300 ${stage === 0 ? "opacity-100" : "opacity-0"}`}>
+    <div
+      className="pointer-events-none absolute inset-0 grid place-items-center text-neutral-300/70"
+      aria-hidden
+    >
+      <div
+        className={`col-start-1 row-start-1 grid w-full place-items-center transition-opacity duration-300 ${stage === 0 ? "opacity-100" : "opacity-0"}`}
+      >
         <LicenceOutline />
       </div>
-      <div className={`col-start-1 row-start-1 grid w-full place-items-center transition-opacity duration-300 ${stage === 1 ? "opacity-100" : "opacity-0"}`}>
+      <div
+        className={`col-start-1 row-start-1 grid w-full place-items-center transition-opacity duration-300 ${stage === 1 ? "opacity-100" : "opacity-0"}`}
+      >
         <PassportOutline />
       </div>
     </div>
@@ -103,7 +130,10 @@ function IdHint() {
 }
 
 /** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
-const SMALL = { environment: { max: 1024, quality: 0.62 }, user: { max: 480, quality: 0.6 } } as const;
+const SMALL = {
+  environment: { max: 1024, quality: 0.62 },
+  user: { max: 480, quality: 0.6 },
+} as const;
 
 /**
  * Live camera preview that captures one still. `full` is sent once for
@@ -175,7 +205,11 @@ export function IdCamera({
   }
 
   return (
-    <div className={side ? "grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-center gap-8" : "space-y-4"}>
+    <div
+      className={
+        side ? "grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-center gap-8" : "space-y-4"
+      }
+    >
       <div className="relative overflow-hidden rounded-2xl bg-muted">
         <video
           ref={videoRef}
@@ -184,7 +218,13 @@ export function IdCamera({
           // Stacked: never taller than about half the screen, so the button below stays in view.
           // Beside the buttons: as tall as the screen allows once the heading and the rest (sized in rem) fit,
           // so the text keeps its size and the camera takes what's left.
-          className={cn("aspect-[4/3] w-full object-cover", side ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]" : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]", facing === "user" && "-scale-x-100")}
+          className={cn(
+            "aspect-[4/3] w-full object-cover",
+            side
+              ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]"
+              : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]",
+            facing === "user" && "-scale-x-100",
+          )}
         />
         {ready && facing === "environment" ? <IdHint /> : null}
         {!ready ? (
@@ -194,7 +234,9 @@ export function IdCamera({
         ) : null}
       </div>
       <div className="space-y-4">
-        <p className={cn("text-center text-muted-foreground", side && "text-lg")}>{help ?? copy.idCameraHelp}</p>
+        <p className={cn("text-center text-muted-foreground", side && "text-lg")}>
+          {help ?? copy.idCameraHelp}
+        </p>
         <Button size="touch-xl" className="w-full" onClick={capture} disabled={!ready || busy}>
           {busy ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
           {busy ? (busyLabel ?? copy.idChecking) : (cta ?? copy.idTakePhoto)}

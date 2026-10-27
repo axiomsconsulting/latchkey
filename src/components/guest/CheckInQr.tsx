@@ -12,7 +12,16 @@ import { headerIconClass } from "@/components/guest/KioskClocks";
 /** A phone outline with a small QR square on its screen. */
 export function PhoneQrIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <rect x="5.5" y="2" width="13" height="20" rx="2.5" />
       <path d="M10.5 19h3" />
       <rect x="8" y="6" width="3" height="3" rx="0.4" />
@@ -24,7 +33,10 @@ export function PhoneQrIcon({ className }: { className?: string }) {
 }
 
 /** Draws the QR once per URL; the image is small enough to keep in state. */
-export function useQrImage(url: string | null, colours: { dark: string; light: string } = { dark: "#1f3d2b", light: "#fdfaf4" }) {
+export function useQrImage(
+  url: string | null,
+  colours: { dark: string; light: string } = { dark: "#1f3d2b", light: "#fdfaf4" },
+) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
@@ -104,12 +116,22 @@ export function CheckInQr({
  * The QR opens inline for another phone; on the kiosk it starts open,
  * because the link itself is no use on a shared screen.
  */
-export function GuideLink({ url, kiosk = false, beside = false }: { url: string; kiosk?: boolean; /** Beside the guide button on a door tablet on its side, filling its half. */ beside?: boolean }) {
+export function GuideLink({
+  url,
+  kiosk = false,
+  beside = false,
+}: {
+  url: string;
+  kiosk?: boolean;
+  /** Beside the guide button on a door tablet on its side, filling its half. */ beside?: boolean;
+}) {
   const [qrOpen, setQrOpen] = useState(kiosk);
   const [copied, setCopied] = useState(false);
   const src = useQrImage(qrOpen ? url : null);
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
-  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const mac =
+    typeof navigator !== "undefined" &&
+    /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
   const touch = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 
   async function copyLink() {
@@ -123,7 +145,13 @@ export function GuideLink({ url, kiosk = false, beside = false }: { url: string;
   }
 
   return (
-    <div className={cn("mx-auto rounded-2xl border border-border bg-card p-5 text-left", beside ? "w-full max-w-lg" : kiosk ? "mt-8 w-full max-w-xl" : "mt-8 max-w-md", kiosk && "sm:p-6")}>
+    <div
+      className={cn(
+        "mx-auto rounded-2xl border border-border bg-card p-5 text-left",
+        beside ? "w-full max-w-lg" : kiosk ? "mt-8 w-full max-w-xl" : "mt-8 max-w-md",
+        kiosk && "sm:p-6",
+      )}
+    >
       {/* On the kiosk, the same sizes as the rest of the check-in (headings, body text). */}
       <h2 className={kiosk ? "text-2xl" : "text-xl"}>{copy.guideLinkTitle}</h2>
       {!kiosk ? (
@@ -142,38 +170,63 @@ export function GuideLink({ url, kiosk = false, beside = false }: { url: string;
               {copied ? copy.guideLinkCopied : copy.guideLinkCopy}
             </Button>
             {canShare ? (
-              <Button variant="outline" size="lg" onClick={() => void navigator.share({ title: copy.guideLinkTitle, url }).catch(() => {})}>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() =>
+                  void navigator.share({ title: copy.guideLinkTitle, url }).catch(() => {})
+                }
+              >
                 <Share2 className="size-5" /> {copy.guideLinkShare}
               </Button>
             ) : null}
           </div>
-          {!touch ? <p className="mt-2 text-sm text-muted-foreground">{copy.guideLinkBookmarkKeys(mac)}</p> : null}
+          {!touch ? (
+            <p className="mt-2 text-sm text-muted-foreground">{copy.guideLinkBookmarkKeys(mac)}</p>
+          ) : null}
         </>
       ) : null}
 
       {/* On the kiosk the square is the only way to take the link away, so it simply shows. */}
       {!kiosk ? (
-      <button
-        type="button"
-        aria-expanded={qrOpen}
-        onClick={() => setQrOpen((o) => !o)}
-        className={cn("mt-4 flex min-h-11 w-full items-center justify-between rounded-xl px-1 text-left font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", kiosk && "min-h-14 text-lg")}
-      >
-        <span className="flex items-center gap-2">
-          <QrCode className="size-5" /> {qrOpen ? copy.guideLinkQrHide : copy.guideLinkQrShow}
-        </span>
-        <ChevronDown className={cn("size-5 transition-transform", qrOpen && "rotate-180")} />
-      </button>
+        <button
+          type="button"
+          aria-expanded={qrOpen}
+          onClick={() => setQrOpen((o) => !o)}
+          className={cn(
+            "mt-4 flex min-h-11 w-full items-center justify-between rounded-xl px-1 text-left font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            kiosk && "min-h-14 text-lg",
+          )}
+        >
+          <span className="flex items-center gap-2">
+            <QrCode className="size-5" /> {qrOpen ? copy.guideLinkQrHide : copy.guideLinkQrShow}
+          </span>
+          <ChevronDown className={cn("size-5 transition-transform", qrOpen && "rotate-180")} />
+        </button>
       ) : null}
       {qrOpen ? (
         <div className="mt-2 text-center animate-in fade-in slide-in-from-top-1">
           {/* On the kiosk the square is as big as the screen allows, never squeezed by the text. */}
           {src ? (
-            <img src={src} alt={copy.qrAlt} className={cn("mx-auto aspect-square w-full rounded-xl", kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]")} />
+            <img
+              src={src}
+              alt={copy.qrAlt}
+              className={cn(
+                "mx-auto aspect-square w-full rounded-xl",
+                kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]",
+              )}
+            />
           ) : (
-            <div className={cn("mx-auto aspect-square w-full rounded-xl bg-muted", kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]")} />
+            <div
+              className={cn(
+                "mx-auto aspect-square w-full rounded-xl bg-muted",
+                kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]",
+              )}
+            />
           )}
-          <p className={cn("mt-2 text-muted-foreground", kiosk ? "text-lg" : "text-sm")}>{copy.guideLinkQrBody}</p>
+          <p className={cn("mt-2 text-muted-foreground", kiosk ? "text-lg" : "text-sm")}>
+            {copy.guideLinkQrBody}
+          </p>
         </div>
       ) : null}
     </div>
@@ -209,10 +262,17 @@ export function KioskQr({
   if (large) {
     return (
       <aside className="rounded-3xl border bg-card p-4 text-center shadow-soft sm:p-6">
-        <Smartphone className="mx-auto mb-2 size-7 text-primary [@media(max-height:560px)]:hidden" aria-hidden />
+        <Smartphone
+          className="mx-auto mb-2 size-7 text-primary [@media(max-height:560px)]:hidden"
+          aria-hidden
+        />
         <h2 className="font-display text-xl sm:text-2xl">{copy.kioskQrTitle}</h2>
         {/* Sized by the screen's height too, so it fits a small tablet on its side. */}
-        <img src={src} alt={copy.qrAlt} className="mx-auto my-3 aspect-square w-full max-h-[calc(var(--kiosk-h,100vh)*0.42)] max-w-[15rem] rounded-2xl object-contain" />
+        <img
+          src={src}
+          alt={copy.qrAlt}
+          className="mx-auto my-3 aspect-square w-full max-h-[calc(var(--kiosk-h,100vh)*0.42)] max-w-[15rem] rounded-2xl object-contain"
+        />
         <p className="text-sm text-muted-foreground sm:text-base">{copy.kioskQrBody}</p>
       </aside>
     );
@@ -224,7 +284,11 @@ export function KioskQr({
       onClick={() => setOpen(true)}
       aria-label={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
       title={others ? copy.othersHeading : carryOn ? copy.qrOpen : copy.kioskQrTitle}
-      className={cn(headerIconClass, others && "text-primary hover:text-primary", !target && "fixed bottom-5 right-5 z-40")}
+      className={cn(
+        headerIconClass,
+        others && "text-primary hover:text-primary",
+        !target && "fixed bottom-5 right-5 z-40",
+      )}
     >
       <PhoneQrIcon className="size-[2.5em]" />
     </button>
@@ -237,10 +301,14 @@ export function KioskQr({
         {/* kiosk-qr-dialog / kiosk-close: a larger square and close button on expanded door tablets (styles.css). */}
         <DialogContent className="kiosk-qr-dialog max-w-sm" closeClassName="kiosk-close">
           <DialogHeader>
-            <DialogTitle>{others ? copy.othersHeading : carryOn ? copy.qrHeading : copy.kioskQrTitle}</DialogTitle>
+            <DialogTitle>
+              {others ? copy.othersHeading : carryOn ? copy.qrHeading : copy.kioskQrTitle}
+            </DialogTitle>
           </DialogHeader>
           <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[18rem] rounded-2xl" />
-          <p className="text-center text-sm text-muted-foreground">{others ? copy.othersBlurb : carryOn ? copy.qrBlurb : copy.kioskQrBody}</p>
+          <p className="text-center text-sm text-muted-foreground">
+            {others ? copy.othersBlurb : carryOn ? copy.qrBlurb : copy.kioskQrBody}
+          </p>
         </DialogContent>
       </Dialog>
     </>

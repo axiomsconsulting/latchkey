@@ -235,10 +235,15 @@ export function partnerConfig(overrides?: unknown): PartnerConfig {
     if (allowed) {
       if (typeof v === "string" && allowed.includes(v)) (out as Record<string, unknown>)[key] = v;
     } else if (key === "launchDate") {
-      if (v === null || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v))) out.launchDate = v;
+      if (v === null || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)))
+        out.launchDate = v;
     } else if (key === "noticeEmail") {
       if (v === null || v === "") out.noticeEmail = null;
-      else if (typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) && v.length <= 254)
+      else if (
+        typeof v === "string" &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) &&
+        v.length <= 254
+      )
         out.noticeEmail = v.trim().toLowerCase();
     } else if (key === "maxFeeRatioBps") {
       if (v === null || (typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 10_000))

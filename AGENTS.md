@@ -7,7 +7,7 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
-- Workflow: every change goes on a feature branch; run the type check and tests (lint has thousands of old formatting errors on main, so check new files only), then merge into main as one squashed commit (a new commit, never a rewrite). Never commit or push to main directly. Merging syncs Lovable (code, and migrations to the live database), but the live site only changes when the owner presses Publish. Migrations must be additive and safe on live data.
+- Workflow: every change goes on a feature branch; run the type check, tests and `npm run lint` (0 errors since 27 Oct 2026: keep it that way; Prettier formats .ts/.tsx, never docs/legal or migrations), then merge into main as one squashed commit (a new commit, never a rewrite). Never commit or push to main directly. Merging syncs Lovable (code, and migrations to the live database), but the live site only changes when the owner presses Publish. Migrations must be additive and safe on live data.
 <!-- LOVABLE:END -->
 - Cross-platform matching per room lives in src/lib/room-reconcile.ts (pure, tested) and runs after every calendar sync; nameless entries overlapping a real stay on another platform are stored as blocked mirrors (bookings.mirror_of), named overlaps become flagged. Why: hosts without a channel manager link calendars to each other, so one stay shows up on several feeds.
 - Every outside integration (ID reading, host email, guest messages) has a per-host demo/live switch in hosts.integration_modes (src/lib/integration-modes.ts); server code checks it before calling out. Why: the host tests each connection safely before going live.

@@ -21,9 +21,17 @@ const insert = () =>
 
 beforeAll(async () => {
   db = await bootDb();
-  hostId = (await db.as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [USERS.owner.email]))[0]!.id;
+  hostId = (
+    await db.as<{ id: string }>("owner", "select create_host_workspace('Hill', $1) as id", [
+      USERS.owner.email,
+    ])
+  )[0]!.id;
   propertyId = (
-    await db.as<{ id: string }>("owner", "insert into properties (host_id, name, short_code) values ($1, 'Hill', 'hill-reg') returning id", [hostId])
+    await db.as<{ id: string }>(
+      "owner",
+      "insert into properties (host_id, name, short_code) values ($1, 'Hill', 'hill-reg') returning id",
+      [hostId],
+    )
   )[0]!.id;
   bookingId = (
     await db.as<{ id: string }>(
@@ -32,13 +40,18 @@ beforeAll(async () => {
       [propertyId],
     )
   )[0]!.id;
-  await db.system("insert into host_members (host_id, user_id, role) values ($1, $2, 'viewer')", [hostId, USERS.viewer.id]);
+  await db.system("insert into host_members (host_id, user_id, role) values ($1, $2, 'viewer')", [
+    hostId,
+    USERS.viewer.id,
+  ]);
   await insert();
 }, 60_000);
 
 describe("guest register", () => {
   it("is visible to the owner, not to viewers or outsiders", async () => {
-    expect(await db.as("owner", "select full_name from guest_register")).toEqual([{ full_name: "Priya Shah" }]);
+    expect(await db.as("owner", "select full_name from guest_register")).toEqual([
+      { full_name: "Priya Shah" },
+    ]);
     expect(await db.as("viewer", "select id from guest_register")).toEqual([]);
     expect(await db.as("outsider", "select id from guest_register")).toEqual([]);
   });
@@ -84,7 +97,9 @@ describe("guest register", () => {
 
   it("outlives the stay it came from", async () => {
     await db.system("delete from bookings where id = $1", [bookingId]);
-    const rows = await db.system<{ booking_id: string | null }>("select booking_id from guest_register where full_name = 'Priya Shah'");
+    const rows = await db.system<{ booking_id: string | null }>(
+      "select booking_id from guest_register where full_name = 'Priya Shah'",
+    );
     expect(rows).toEqual([{ booking_id: null }]);
   });
 });

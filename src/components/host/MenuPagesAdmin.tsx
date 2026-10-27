@@ -1,7 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowDown, ArrowUp, Eye, EyeOff, LayoutList, Loader2, Menu as MenuIcon, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Eye,
+  EyeOff,
+  LayoutList,
+  Loader2,
+  Menu as MenuIcon,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { NAV_ICONS, NavIcon } from "@/components/NavIcon";
@@ -10,13 +22,28 @@ import { Button } from "@/components/ui/button";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { adminCopy, common, hostNav, menuAdminCopy as copy } from "@/content/copy";
 import { useUi } from "@/hooks/use-site";
 import { forgetSite } from "@/lib/site-client";
 import { saveUiConfig } from "@/lib/site.functions";
-import { MAX_ICON_DATA_URL, NAV_BUILT_INS, PAGES, cleanHref, normaliseUi, resolveNav, type NavEntry, type PageLayouts } from "@/lib/ui-config";
+import {
+  MAX_ICON_DATA_URL,
+  NAV_BUILT_INS,
+  PAGES,
+  cleanHref,
+  normaliseUi,
+  resolveNav,
+  type NavEntry,
+  type PageLayouts,
+} from "@/lib/ui-config";
 import { cn } from "@/lib/utils";
 
 const move = <T,>(list: T[], from: number, to: number): T[] => {
@@ -48,30 +75,60 @@ async function iconFromFile(file: File): Promise<string> {
   }
 }
 
-const labels: Record<string, string> = { ...(hostNav as unknown as Record<string, string>), admin: adminCopy.navLabel };
+const labels: Record<string, string> = {
+  ...(hostNav as unknown as Record<string, string>),
+  admin: adminCopy.navLabel,
+};
 
 /** Edits one of the super admin's own menu items. */
-function ItemEditor({ entry, onDone, onCancel }: { entry: NavEntry; onDone: (e: NavEntry) => void; onCancel: () => void }) {
+function ItemEditor({
+  entry,
+  onDone,
+  onCancel,
+}: {
+  entry: NavEntry;
+  onDone: (e: NavEntry) => void;
+  onCancel: () => void;
+}) {
   const [label, setLabel] = useState(entry.label ?? "");
-  const [kind, setKind] = useState<"app" | "web">(entry.href?.startsWith("https://") ? "web" : "app");
+  const [kind, setKind] = useState<"app" | "web">(
+    entry.href?.startsWith("https://") ? "web" : "app",
+  );
   const [href, setHref] = useState(entry.href ?? "/app/");
   const [icon, setIcon] = useState(entry.icon ?? "link");
   const [iconUrl, setIconUrl] = useState<string | undefined>(entry.iconUrl);
   const [iconColour, setIconColour] = useState(!!entry.iconColour);
   const file = useRef<HTMLInputElement | null>(null);
-  const ok = !!label.trim() && !!cleanHref(href) && (kind === "web" ? href.startsWith("https://") : href.startsWith("/"));
+  const ok =
+    !!label.trim() &&
+    !!cleanHref(href) &&
+    (kind === "web" ? href.startsWith("https://") : href.startsWith("/"));
 
   return (
     <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor={`l-${entry.id}`}>{copy.label}</Label>
-          <Input id={`l-${entry.id}`} className="h-10" maxLength={30} value={label} onChange={(e) => setLabel(e.target.value)} />
+          <Input
+            id={`l-${entry.id}`}
+            className="h-10"
+            maxLength={30}
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+          />
         </div>
         <div className="space-y-1">
           <Label>{copy.linkKind}</Label>
-          <Select value={kind} onValueChange={(v) => { setKind(v as "app" | "web"); setHref(v === "web" ? "https://" : "/app/"); }}>
-            <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+          <Select
+            value={kind}
+            onValueChange={(v) => {
+              setKind(v as "app" | "web");
+              setHref(v === "web" ? "https://" : "/app/");
+            }}
+          >
+            <SelectTrigger className="h-10">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="app">{copy.inApp}</SelectItem>
               <SelectItem value="web">{copy.external}</SelectItem>
@@ -81,7 +138,14 @@ function ItemEditor({ entry, onDone, onCancel }: { entry: NavEntry; onDone: (e: 
       </div>
       <div className="space-y-1">
         <Label htmlFor={`h-${entry.id}`}>{kind === "web" ? copy.url : copy.path}</Label>
-        <Input id={`h-${entry.id}`} className="h-10 font-mono" value={href} onChange={(e) => setHref(e.target.value.trim())} spellCheck={false} autoCapitalize="none" />
+        <Input
+          id={`h-${entry.id}`}
+          className="h-10 font-mono"
+          value={href}
+          onChange={(e) => setHref(e.target.value.trim())}
+          spellCheck={false}
+          autoCapitalize="none"
+        />
       </div>
       <div className="space-y-2">
         <Label>{copy.icon}</Label>
@@ -93,8 +157,16 @@ function ItemEditor({ entry, onDone, onCancel }: { entry: NavEntry; onDone: (e: 
               title={k}
               aria-label={k}
               aria-pressed={!iconUrl && icon === k}
-              onClick={() => { setIcon(k); setIconUrl(undefined); }}
-              className={cn("grid size-10 place-items-center rounded-lg border", !iconUrl && icon === k ? "border-primary bg-primary/10 text-primary" : "border-transparent hover:bg-secondary")}
+              onClick={() => {
+                setIcon(k);
+                setIconUrl(undefined);
+              }}
+              className={cn(
+                "grid size-10 place-items-center rounded-lg border",
+                !iconUrl && icon === k
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-transparent hover:bg-secondary",
+              )}
             >
               <NavIcon icon={k} />
             </button>
@@ -140,7 +212,16 @@ function ItemEditor({ entry, onDone, onCancel }: { entry: NavEntry; onDone: (e: 
         <Button
           size="sm"
           disabled={!ok}
-          onClick={() => onDone({ id: entry.id, label: label.trim(), href, icon, ...(iconUrl ? { iconUrl, ...(iconColour ? { iconColour: true } : {}) } : {}), ...(entry.hidden ? { hidden: true } : {}) })}
+          onClick={() =>
+            onDone({
+              id: entry.id,
+              label: label.trim(),
+              href,
+              icon,
+              ...(iconUrl ? { iconUrl, ...(iconColour ? { iconColour: true } : {}) } : {}),
+              ...(entry.hidden ? { hidden: true } : {}),
+            })
+          }
         >
           {copy.done}
         </Button>
@@ -191,7 +272,8 @@ export function MenuPagesAdmin() {
     }
   }
 
-  const iconBtn = "grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40";
+  const iconBtn =
+    "grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40";
 
   return (
     <div className="space-y-6">
@@ -212,17 +294,57 @@ export function MenuPagesAdmin() {
             return (
               <li key={r.id} className="space-y-3 px-3 py-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={cn("grid size-9 place-items-center rounded-lg bg-secondary", hidden && "opacity-50")}>
+                  <span
+                    className={cn(
+                      "grid size-9 place-items-center rounded-lg bg-secondary",
+                      hidden && "opacity-50",
+                    )}
+                  >
                     <NavIcon icon={r.icon} iconUrl={r.iconUrl} iconColour={r.iconColour} />
                   </span>
-                  <span className={cn("min-w-0 flex-1 truncate", hidden && "text-muted-foreground line-through")}>{r.label}</span>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate",
+                      hidden && "text-muted-foreground line-through",
+                    )}
+                  >
+                    {r.label}
+                  </span>
                   {r.locked ? <Badge variant="secondary">{copy.always}</Badge> : null}
                   {!r.builtIn ? <Badge variant="outline">{copy.yours}</Badge> : null}
                   {hidden ? <Badge variant="outline">{copy.hiddenBadge}</Badge> : null}
-                  <button type="button" className={iconBtn} disabled={i === 0} aria-label={copy.up(r.label)} onClick={() => setNav((n) => move(n, n.findIndex((x) => x.id === r.id), n.findIndex((x) => x.id === r.id) - 1))}>
+                  <button
+                    type="button"
+                    className={iconBtn}
+                    disabled={i === 0}
+                    aria-label={copy.up(r.label)}
+                    onClick={() =>
+                      setNav((n) =>
+                        move(
+                          n,
+                          n.findIndex((x) => x.id === r.id),
+                          n.findIndex((x) => x.id === r.id) - 1,
+                        ),
+                      )
+                    }
+                  >
                     <ArrowUp className="size-4" />
                   </button>
-                  <button type="button" className={iconBtn} disabled={i === rows.length - 1} aria-label={copy.down(r.label)} onClick={() => setNav((n) => move(n, n.findIndex((x) => x.id === r.id), n.findIndex((x) => x.id === r.id) + 1))}>
+                  <button
+                    type="button"
+                    className={iconBtn}
+                    disabled={i === rows.length - 1}
+                    aria-label={copy.down(r.label)}
+                    onClick={() =>
+                      setNav((n) =>
+                        move(
+                          n,
+                          n.findIndex((x) => x.id === r.id),
+                          n.findIndex((x) => x.id === r.id) + 1,
+                        ),
+                      )
+                    }
+                  >
                     <ArrowDown className="size-4" />
                   </button>
                   <button
@@ -231,16 +353,28 @@ export function MenuPagesAdmin() {
                     disabled={r.locked}
                     aria-label={hidden ? copy.show(r.label) : copy.hide(r.label)}
                     title={r.locked ? copy.always : undefined}
-                    onClick={() => setNav((n) => n.map((x) => (x.id === r.id ? { ...x, hidden: !x.hidden } : x)))}
+                    onClick={() =>
+                      setNav((n) => n.map((x) => (x.id === r.id ? { ...x, hidden: !x.hidden } : x)))
+                    }
                   >
                     {hidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                   {!r.builtIn ? (
                     <>
-                      <button type="button" className={iconBtn} aria-label={`${copy.edit} ${r.label}`} onClick={() => setEditing(r.id)}>
+                      <button
+                        type="button"
+                        className={iconBtn}
+                        aria-label={`${copy.edit} ${r.label}`}
+                        onClick={() => setEditing(r.id)}
+                      >
                         <Pencil className="size-4" />
                       </button>
-                      <button type="button" className={cn(iconBtn, "hover:text-destructive")} aria-label={`${copy.remove} ${r.label}`} onClick={() => setNav((n) => n.filter((x) => x.id !== r.id))}>
+                      <button
+                        type="button"
+                        className={cn(iconBtn, "hover:text-destructive")}
+                        aria-label={`${copy.remove} ${r.label}`}
+                        onClick={() => setNav((n) => n.filter((x) => x.id !== r.id))}
+                      >
                         <Trash2 className="size-4" />
                       </button>
                     </>
@@ -274,7 +408,9 @@ export function MenuPagesAdmin() {
         </ul>
         <Button
           variant="outline"
-          disabled={!!editing || nav.filter((e) => !NAV_BUILT_INS.some((b) => b.id === e.id)).length >= 12}
+          disabled={
+            !!editing || nav.filter((e) => !NAV_BUILT_INS.some((b) => b.id === e.id)).length >= 12
+          }
           onClick={() => setEditing(`custom_${Math.random().toString(36).slice(2, 10)}`)}
         >
           <Plus className="size-4" /> {copy.add}
@@ -294,10 +430,14 @@ export function MenuPagesAdmin() {
         <div className="space-y-1">
           <Label>{copy.page}</Label>
           <Select value={page} onValueChange={setPage}>
-            <SelectTrigger className="h-10 w-60"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 w-60">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {Object.entries(PAGES).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                <SelectItem key={k} value={k}>
+                  {v.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -307,16 +447,36 @@ export function MenuPagesAdmin() {
             const sec = sections.find((x) => x.id === id);
             if (!sec) return null;
             const hidden = layout.hidden.includes(id);
-            const set = (next: { order?: string[]; hidden?: string[] }) => setPages((p) => ({ ...p, [page]: { ...layout, ...next } }));
+            const set = (next: { order?: string[]; hidden?: string[] }) =>
+              setPages((p) => ({ ...p, [page]: { ...layout, ...next } }));
             return (
               <li key={id} className="flex items-center gap-2 px-3 py-2">
-                <span className={cn("min-w-0 flex-1 truncate", hidden && "text-muted-foreground line-through")}>{sec.label}</span>
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate",
+                    hidden && "text-muted-foreground line-through",
+                  )}
+                >
+                  {sec.label}
+                </span>
                 {sec.locked ? <Badge variant="secondary">{copy.always}</Badge> : null}
                 {hidden ? <Badge variant="outline">{copy.hiddenBadge}</Badge> : null}
-                <button type="button" className={iconBtn} disabled={i === 0} aria-label={copy.up(sec.label)} onClick={() => set({ order: move(layout.order, i, i - 1) })}>
+                <button
+                  type="button"
+                  className={iconBtn}
+                  disabled={i === 0}
+                  aria-label={copy.up(sec.label)}
+                  onClick={() => set({ order: move(layout.order, i, i - 1) })}
+                >
                   <ArrowUp className="size-4" />
                 </button>
-                <button type="button" className={iconBtn} disabled={i === layout.order.length - 1} aria-label={copy.down(sec.label)} onClick={() => set({ order: move(layout.order, i, i + 1) })}>
+                <button
+                  type="button"
+                  className={iconBtn}
+                  disabled={i === layout.order.length - 1}
+                  aria-label={copy.down(sec.label)}
+                  onClick={() => set({ order: move(layout.order, i, i + 1) })}
+                >
                   <ArrowDown className="size-4" />
                 </button>
                 <button
@@ -324,7 +484,13 @@ export function MenuPagesAdmin() {
                   className={iconBtn}
                   disabled={sec.locked}
                   aria-label={hidden ? copy.show(sec.label) : copy.hide(sec.label)}
-                  onClick={() => set({ hidden: hidden ? layout.hidden.filter((x) => x !== id) : [...layout.hidden, id] })}
+                  onClick={() =>
+                    set({
+                      hidden: hidden
+                        ? layout.hidden.filter((x) => x !== id)
+                        : [...layout.hidden, id],
+                    })
+                  }
                 >
                   {hidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -333,7 +499,6 @@ export function MenuPagesAdmin() {
           })}
         </ul>
       </section>
-
     </div>
   );
 }

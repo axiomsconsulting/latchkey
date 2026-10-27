@@ -19,12 +19,29 @@ export type GroupBrand = {
   showOnInvoices: boolean;
 };
 
-export const DEFAULT_GROUP_BRAND: GroupBrand = { logoUrl: null, logoPreset: null, propertyLogos: "own", showOnGuestPages: false, showOnInvoices: true };
+export const DEFAULT_GROUP_BRAND: GroupBrand = {
+  logoUrl: null,
+  logoPreset: null,
+  propertyLogos: "own",
+  showOnGuestPages: false,
+  showOnInvoices: true,
+};
 
 export function normaliseGroupBrand(raw: unknown): GroupBrand {
-  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
-  const url = typeof r["logoUrl"] === "string" && /^https:\/\/\S{1,1990}$/.test(r["logoUrl"]) ? r["logoUrl"] : null;
-  const preset = typeof r["logoPreset"] === "string" && (LOGO_PRESETS as readonly string[]).includes(r["logoPreset"]) && r["logoPreset"] !== "site" ? (r["logoPreset"] as LogoPreset) : null;
+  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  const url =
+    typeof r["logoUrl"] === "string" && /^https:\/\/\S{1,1990}$/.test(r["logoUrl"])
+      ? r["logoUrl"]
+      : null;
+  const preset =
+    typeof r["logoPreset"] === "string" &&
+    (LOGO_PRESETS as readonly string[]).includes(r["logoPreset"]) &&
+    r["logoPreset"] !== "site"
+      ? (r["logoPreset"] as LogoPreset)
+      : null;
   return {
     logoUrl: url,
     logoPreset: preset,
@@ -44,8 +61,17 @@ export function hasOwnLogo(t: Pick<ThemeConfig, "logoUrl" | "logoPreset">): bool
 }
 
 /** The logo a property shows: its own, the group's (by the host's choice or because it has none), or the site logo. */
-export function effectiveLogo(t: Pick<ThemeConfig, "logoUrl" | "logoPreset">, g: GroupBrand): Pick<ThemeConfig, "logoUrl" | "logoPreset"> & { source: "property" | "group" | "site" } {
-  const group = hasGroupLogo(g) ? { logoUrl: g.logoUrl, logoPreset: g.logoPreset ?? ("site" as LogoPreset), source: "group" as const } : null;
+export function effectiveLogo(
+  t: Pick<ThemeConfig, "logoUrl" | "logoPreset">,
+  g: GroupBrand,
+): Pick<ThemeConfig, "logoUrl" | "logoPreset"> & { source: "property" | "group" | "site" } {
+  const group = hasGroupLogo(g)
+    ? {
+        logoUrl: g.logoUrl,
+        logoPreset: g.logoPreset ?? ("site" as LogoPreset),
+        source: "group" as const,
+      }
+    : null;
   if (group && g.propertyLogos === "group") return group;
   if (hasOwnLogo(t)) return { logoUrl: t.logoUrl, logoPreset: t.logoPreset, source: "property" };
   return group ?? { logoUrl: null, logoPreset: "site", source: "site" };
@@ -58,11 +84,21 @@ export type GroupLine = { name: string; logoUrl: string | null; logoPreset: Logo
  * effectiveLogo() says, and "Part of {group}" when the host shows it (and the
  * group isn't simply the property itself).
  */
-export function applyGroup<T extends ThemeConfig>(theme: T, g: GroupBrand, group: { name: string; propertyName: string }): T & { group?: GroupLine } {
+export function applyGroup<T extends ThemeConfig>(
+  theme: T,
+  g: GroupBrand,
+  group: { name: string; propertyName: string },
+): T & { group?: GroupLine } {
   const logo = effectiveLogo(theme, g);
-  const out = { ...theme, logoUrl: logo.logoUrl, logoPreset: logo.logoPreset } as T & { group?: GroupLine };
+  const out = { ...theme, logoUrl: logo.logoUrl, logoPreset: logo.logoPreset } as T & {
+    group?: GroupLine;
+  };
   const name = group.name.trim();
-  if (g.showOnGuestPages && name && name.toLowerCase() !== group.propertyName.trim().toLowerCase()) {
+  if (
+    g.showOnGuestPages &&
+    name &&
+    name.toLowerCase() !== group.propertyName.trim().toLowerCase()
+  ) {
     out.group = { name, logoUrl: g.logoUrl, logoPreset: g.logoPreset ?? "site" };
   }
   return out;

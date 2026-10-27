@@ -16,7 +16,10 @@ export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
       { title: rebrand("About and what's new — Latchkey") },
-      { name: "description", content: rebrand("Every change to Latchkey, and every feature it has.") },
+      {
+        name: "description",
+        content: rebrand("Every change to Latchkey, and every feature it has."),
+      },
     ],
   }),
   component: AboutPage,
@@ -60,7 +63,9 @@ function AboutPage() {
                   <ul className="mt-3 space-y-2">
                     {r.items.map((i) => (
                       <li key={i.text} className="flex items-start gap-3">
-                        <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${kindStyle[i.kind]}`}>
+                        <span
+                          className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${kindStyle[i.kind]}`}
+                        >
                           {copy.kinds[i.kind]}
                         </span>
                         <span>{i.text}</span>

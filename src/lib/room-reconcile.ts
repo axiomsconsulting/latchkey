@@ -35,7 +35,9 @@ function isNamed(b: RoomBooking): boolean {
 function sharedNights(a: RoomBooking, b: RoomBooking): number {
   const start = a.check_in_date > b.check_in_date ? a.check_in_date : b.check_in_date;
   const end = a.check_out_date < b.check_out_date ? a.check_out_date : b.check_out_date;
-  return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000);
+  return Math.round(
+    (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000,
+  );
 }
 
 export function reconcileRoom(bookings: RoomBooking[]): RoomChange[] {

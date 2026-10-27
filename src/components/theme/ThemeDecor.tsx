@@ -10,12 +10,23 @@ import { cn } from "@/lib/utils";
 
 /* ------------------------------- line art -------------------------------- */
 
-const line = { fill: "none", stroke: "currentColor", strokeWidth: 1.4, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+const line = {
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.4,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
 
 /** A town's roofline: spires, a dome, towers and gables. */
 function Skyline() {
   return (
-    <svg viewBox="0 0 640 220" preserveAspectRatio="xMinYMax meet" className="h-full w-full" aria-hidden>
+    <svg
+      viewBox="0 0 640 220"
+      preserveAspectRatio="xMinYMax meet"
+      className="h-full w-full"
+      aria-hidden
+    >
       <g {...line}>
         <path d="M0 220V170h40v-30h18v30h22V120l14-40 14 40v100" />
         <path d="M108 220V150h50v70M120 150v-20h26v20" />
@@ -36,7 +47,12 @@ function Skyline() {
 /** A classical facade with a lamp post, for one side of the screen. */
 function Palace() {
   return (
-    <svg viewBox="0 0 260 420" preserveAspectRatio="xMinYMax meet" className="h-full w-full" aria-hidden>
+    <svg
+      viewBox="0 0 260 420"
+      preserveAspectRatio="xMinYMax meet"
+      className="h-full w-full"
+      aria-hidden
+    >
       <g {...line}>
         <path d="M10 420V130h170v290M0 130h190M5 118h180M20 118l75-48 75 48" />
         <path d="M95 70V50M88 50h14M95 50a7 7 0 0 1 0-14" />
@@ -61,7 +77,12 @@ function Palace() {
 /** Dunes under a star, with a palm. */
 function Dunes() {
   return (
-    <svg viewBox="0 0 640 200" preserveAspectRatio="xMinYMax meet" className="h-full w-full" aria-hidden>
+    <svg
+      viewBox="0 0 640 200"
+      preserveAspectRatio="xMinYMax meet"
+      className="h-full w-full"
+      aria-hidden
+    >
       <g {...line}>
         <path d="M0 160c80-40 160-40 240 0s160 40 240 0 120-30 160-10" />
         <path d="M0 190c100-30 200-30 300 0s200 30 340-10" />
@@ -76,7 +97,12 @@ function Dunes() {
 /** Waves, a lighthouse and a gull. */
 function Coast() {
   return (
-    <svg viewBox="0 0 640 200" preserveAspectRatio="xMinYMax meet" className="h-full w-full" aria-hidden>
+    <svg
+      viewBox="0 0 640 200"
+      preserveAspectRatio="xMinYMax meet"
+      className="h-full w-full"
+      aria-hidden
+    >
       <g {...line}>
         <path d="M0 170c20-10 40-10 60 0s40 10 60 0 40-10 60 0 40 10 60 0 40-10 60 0 40 10 60 0 40-10 60 0 40 10 60 0 40-10 60 0 40 10 60 0" />
         <path d="M0 190c20-10 40-10 60 0s40 10 60 0 40-10 60 0 40 10 60 0 40-10 60 0 40 10 60 0 40-10 60 0 40 10 60 0 40-10 60 0 40 10 60 0" />
@@ -90,7 +116,12 @@ function Coast() {
 /** Rolling hills, a cottage and trees. */
 function Hills() {
   return (
-    <svg viewBox="0 0 640 200" preserveAspectRatio="xMinYMax meet" className="h-full w-full" aria-hidden>
+    <svg
+      viewBox="0 0 640 200"
+      preserveAspectRatio="xMinYMax meet"
+      className="h-full w-full"
+      aria-hidden
+    >
       <g {...line}>
         <path d="M0 150c100-60 200-60 320-10s220 40 320-20" />
         <path d="M0 185c140-40 300-40 420-10s160 20 220 0" />
@@ -102,7 +133,13 @@ function Hills() {
   );
 }
 
-const ART: Record<Exclude<Artwork, "none">, () => ReactNode> = { skyline: Skyline, palace: Palace, dunes: Dunes, coast: Coast, hills: Hills };
+const ART: Record<Exclude<Artwork, "none">, () => ReactNode> = {
+  skyline: Skyline,
+  palace: Palace,
+  dunes: Dunes,
+  coast: Coast,
+  hills: Hills,
+};
 
 /** One of the theme's line drawings on its own (for a panel), in the current text colour. */
 export function ThemeArt({ artwork, className }: { artwork: Artwork; className?: string }) {
@@ -136,7 +173,11 @@ function Flourish({ className }: { className?: string }) {
 export function ThemeBackdrop({ theme }: { theme: ThemeConfig }) {
   const Art = theme.artwork !== "none" ? ART[theme.artwork] : null;
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" style={{ color: "var(--accent)" }}>
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      style={{ color: "var(--accent)" }}
+    >
       {Art ? (
         theme.artwork === "palace" ? (
           <div style={{ opacity: theme.artworkOpacity }}>
@@ -148,17 +189,26 @@ export function ThemeBackdrop({ theme }: { theme: ThemeConfig }) {
             </div>
           </div>
         ) : (
-          <div className="absolute bottom-0 left-0 h-[26%] max-h-56 w-[60%] min-w-[20rem]" style={{ opacity: theme.artworkOpacity }}>
+          <div
+            className="absolute bottom-0 left-0 h-[26%] max-h-56 w-[60%] min-w-[20rem]"
+            style={{ opacity: theme.artworkOpacity }}
+          >
             <Art />
           </div>
         )
       ) : null}
       {theme.frame !== "none" ? (
         <div className="absolute inset-2 sm:inset-3">
-          <div className="absolute inset-0 border" style={{ borderColor: "color-mix(in srgb, var(--accent) 65%, transparent)" }} />
+          <div
+            className="absolute inset-0 border"
+            style={{ borderColor: "color-mix(in srgb, var(--accent) 65%, transparent)" }}
+          />
           {theme.frame === "ornate" ? (
             <>
-              <div className="absolute inset-1.5 border" style={{ borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)" }} />
+              <div
+                className="absolute inset-1.5 border"
+                style={{ borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)" }}
+              />
               <Flourish className="left-0 top-0" />
               <Flourish className="right-0 top-0 -scale-x-100" />
               <Flourish className="bottom-0 left-0 -scale-y-100" />
@@ -188,7 +238,17 @@ function Ruled({ children, className }: { children: ReactNode; className?: strin
  * The property's mark as the theme shows it on welcome screens: centred
  * (crest, name in the heading style, the line under it ruled) or to the left.
  */
-export function BrandBlock({ theme, name, size = "lg", className }: { theme: ThemeConfig; name: string; size?: "md" | "lg"; className?: string }) {
+export function BrandBlock({
+  theme,
+  name,
+  size = "lg",
+  className,
+}: {
+  theme: ThemeConfig;
+  name: string;
+  size?: "md" | "lg";
+  className?: string;
+}) {
   if (theme.layout === "centred") {
     return (
       <div className={cn("flex flex-col items-center text-center", className)}>
@@ -196,40 +256,78 @@ export function BrandBlock({ theme, name, size = "lg", className }: { theme: The
         <LogoMark
           theme={theme}
           name={name}
-          className={cn(size === "lg" ? "size-20 text-3xl" : "size-14 text-2xl", !theme.logoUrl && theme.logoPreset !== "monogram" && "bg-transparent text-primary")}
+          className={cn(
+            size === "lg" ? "size-20 text-3xl" : "size-14 text-2xl",
+            !theme.logoUrl && theme.logoPreset !== "monogram" && "bg-transparent text-primary",
+          )}
         />
         <p
           className="mt-4 font-display uppercase tracking-[0.18em]"
-          style={{ fontSize: size === "lg" ? "1.5rem" : "1.15rem", fontWeight: theme.headingWeight }}
+          style={{
+            fontSize: size === "lg" ? "1.5rem" : "1.15rem",
+            fontWeight: theme.headingWeight,
+          }}
         >
           {name}
         </p>
-        {theme.subname ? <Ruled className="mt-1.5 text-sm uppercase tracking-[0.3em] text-muted-foreground">{theme.subname}</Ruled> : null}
+        {theme.subname ? (
+          <Ruled className="mt-1.5 text-sm uppercase tracking-[0.3em] text-muted-foreground">
+            {theme.subname}
+          </Ruled>
+        ) : null}
       </div>
     );
   }
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <LogoMark theme={theme} name={name} className={size === "lg" ? "size-16 text-2xl" : "size-11"} />
+      <LogoMark
+        theme={theme}
+        name={name}
+        className={size === "lg" ? "size-16 text-2xl" : "size-11"}
+      />
       <div className="min-w-0">
-        <p className="truncate font-display text-xl leading-tight sm:text-2xl" style={{ fontWeight: theme.headingWeight }}>
+        <p
+          className="truncate font-display text-xl leading-tight sm:text-2xl"
+          style={{ fontWeight: theme.headingWeight }}
+        >
           {name}
         </p>
-        {theme.subname ? <p className="truncate font-display text-lg leading-tight text-primary">{theme.subname}</p> : null}
-        {theme.tagline ? <p className="mt-0.5 truncate text-xs uppercase tracking-[0.2em] text-muted-foreground">{theme.tagline}</p> : null}
+        {theme.subname ? (
+          <p className="truncate font-display text-lg leading-tight text-primary">
+            {theme.subname}
+          </p>
+        ) : null}
+        {theme.tagline ? (
+          <p className="mt-0.5 truncate text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            {theme.tagline}
+          </p>
+        ) : null}
       </div>
     </div>
   );
 }
 
 /** An icon in the theme's own style: its colour, line weight and (optional) circle or square. */
-export function ThemeIcon({ theme, icon, className }: { theme: ThemeConfig; icon: string; className?: string | undefined }) {
+export function ThemeIcon({
+  theme,
+  icon,
+  className,
+}: {
+  theme: ThemeConfig;
+  icon: string;
+  className?: string | undefined;
+}) {
   const Icon = NAV_ICONS[icon] ?? NAV_ICONS["sparkles"]!;
-  const glyph = <Icon className={cn("size-6", className)} style={{ color: "var(--icon)" }} aria-hidden />;
+  const glyph = (
+    <Icon className={cn("size-6", className)} style={{ color: "var(--icon)" }} aria-hidden />
+  );
   if (theme.iconFrame === "none") return glyph;
   return (
     <span
-      className={cn("grid size-12 shrink-0 place-items-center", theme.iconFrame === "circle" ? "rounded-full" : "rounded-md")}
+      className={cn(
+        "grid size-12 shrink-0 place-items-center",
+        theme.iconFrame === "circle" ? "rounded-full" : "rounded-md",
+      )}
       style={{ background: "color-mix(in srgb, var(--icon) 12%, transparent)" }}
     >
       {glyph}
@@ -258,13 +356,24 @@ export function ThemeSideNotes({ theme }: { theme: ThemeConfig }) {
   if (!left && !right) return null;
   const note = (text: string, side: "left" | "right") =>
     text ? (
-      <div className={cn("absolute top-24 hidden max-w-[11rem] text-xs uppercase leading-relaxed tracking-[0.3em] min-[1360px]:block", side === "left" ? "left-10 text-left" : "right-10 text-right")} style={{ color: "var(--accent)" }}>
+      <div
+        className={cn(
+          "absolute top-24 hidden max-w-[11rem] text-xs uppercase leading-relaxed tracking-[0.3em] min-[1360px]:block",
+          side === "left" ? "left-10 text-left" : "right-10 text-right",
+        )}
+        style={{ color: "var(--accent)" }}
+      >
         {text.split("·").map((t) => (
           <span key={t} className="block">
             {t.trim()}
           </span>
         ))}
-        <span className={cn("mt-3 block h-px w-12 bg-current opacity-60", side === "right" ? "ml-auto" : "")} />
+        <span
+          className={cn(
+            "mt-3 block h-px w-12 bg-current opacity-60",
+            side === "right" ? "ml-auto" : "",
+          )}
+        />
       </div>
     ) : null;
   return (
@@ -279,18 +388,28 @@ export function ThemeSideNotes({ theme }: { theme: ThemeConfig }) {
 export function ThemeFooter({ theme, className }: { theme: ThemeConfig; className?: string }) {
   if (!theme.tagline && !theme.poweredBy && !theme.group) return null;
   return (
-    <footer className={cn("flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted-foreground", className)}>
+    <footer
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted-foreground",
+        className,
+      )}
+    >
       <span className="uppercase tracking-[0.25em]">{theme.tagline}</span>
       {/* The group this property belongs to, when the host shows it. */}
       {theme.group ? (
         <span className="flex items-center gap-2">
-          <LogoMark theme={{ logoPreset: theme.group.logoPreset, logoUrl: theme.group.logoUrl }} name={theme.group.name} className="size-6 rounded-md text-[10px]" />
+          <LogoMark
+            theme={{ logoPreset: theme.group.logoPreset, logoUrl: theme.group.logoUrl }}
+            name={theme.group.name}
+            className="size-6 rounded-md text-[10px]"
+          />
           {groupCopy.partOf(theme.group.name)}
         </span>
       ) : null}
       {theme.poweredBy ? (
         <span className="flex items-center gap-1.5">
-          Powered by <SiteLogoMark className="size-4 rounded-[5px]" /> <span className="font-semibold text-foreground">{brandName()}</span>
+          Powered by <SiteLogoMark className="size-4 rounded-[5px]" />{" "}
+          <span className="font-semibold text-foreground">{brandName()}</span>
         </span>
       ) : null}
     </footer>

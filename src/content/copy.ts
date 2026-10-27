@@ -30,10 +30,12 @@ export const demoCopy = branded({
   openingHost: "Opening the host dashboard…",
   pageTitle: "See it for yourself",
   regionsTitle: "Around the world",
-  regionsBody: "Four fictional properties, one on each hotel theme, with local rooms, guests, prices and breakfast menus.",
+  regionsBody:
+    "Four fictional properties, one on each hotel theme, with local rooms, guests, prices and breakfast menus.",
   asGuest: "As a guest",
   asHost: "As the host",
-  pageBody: "No sign-up needed. Walk through a guest's check-in and stay, or look around the host's dashboard.",
+  pageBody:
+    "No sign-up needed. Walk through a guest's check-in and stay, or look around the host's dashboard.",
   error: "The demo couldn't start just now. Please try again.",
 });
 
@@ -90,24 +92,55 @@ export const marketing = branded({
   privacyLink: "Privacy policy",
   /** The three outcomes, right under the hero. */
   benefits: [
-    { title: "Fewer late-night arrivals", body: "Guests check themselves in at your door tablet or on their own phone, at any hour. No waiting up, no key handovers." },
-    { title: "Fewer messages across apps", body: "Arrivals, requests, extras and repairs from every booking site land in one calm workspace, with alerts where you want them." },
-    { title: "A more professional stay", body: "Your logo, colours and guide from the first tap, so the stay feels like your business, not just the booking platform's." },
+    {
+      title: "Fewer late-night arrivals",
+      body: "Guests check themselves in at your door tablet or on their own phone, at any hour. No waiting up, no key handovers.",
+    },
+    {
+      title: "Fewer messages across apps",
+      body: "Arrivals, requests, extras and repairs from every booking site land in one calm workspace, with alerts where you want them.",
+    },
+    {
+      title: "A more professional stay",
+      body: "Your logo, colours and guide from the first tap, so the stay feels like your business, not just the booking platform's.",
+    },
   ],
   audience: {
     title: "Built for independent accommodation",
     body: "From one owner-run property to a small portfolio with a team, without a front desk or an enterprise hotel system.",
-    kinds: ["Serviced accommodation", "Guest houses and B&Bs", "Boutique stays", "Airbnb and Booking.com hosts", "Multi-property operators", "Short-stay shared houses"],
+    kinds: [
+      "Serviced accommodation",
+      "Guest houses and B&Bs",
+      "Boutique stays",
+      "Airbnb and Booking.com hosts",
+      "Multi-property operators",
+      "Short-stay shared houses",
+    ],
   },
   journey: {
     eyebrow: "The guest journey",
     title: "From booking to check-out, in one flow.",
     steps: [
-      { title: "A booking arrives", body: "On any site. Its calendar link brings it into one list, with the same stay matched across sites." },
-      { title: "The guest checks in", body: "At your door tablet or on their own phone, any hour, the whole group on their own phones if you like." },
-      { title: "A branded stay guide", body: "Wi-Fi, getting in, house rules and room details, in your look, with a QR guide in every room." },
-      { title: "Help and extras", body: "Towels, a late check-out or a repair: asked from the stay page, paid by card when you charge." },
-      { title: "You see it all", body: "Arrivals, requests and messages on Today, with alerts by push, Telegram, email or text." },
+      {
+        title: "A booking arrives",
+        body: "On any site. Its calendar link brings it into one list, with the same stay matched across sites.",
+      },
+      {
+        title: "The guest checks in",
+        body: "At your door tablet or on their own phone, any hour, the whole group on their own phones if you like.",
+      },
+      {
+        title: "A branded stay guide",
+        body: "Wi-Fi, getting in, house rules and room details, in your look, with a QR guide in every room.",
+      },
+      {
+        title: "Help and extras",
+        body: "Towels, a late check-out or a repair: asked from the stay page, paid by card when you charge.",
+      },
+      {
+        title: "You see it all",
+        body: "Arrivals, requests and messages on Today, with alerts by push, Telegram, email or text.",
+      },
     ],
   },
   pillars: {
@@ -174,22 +207,62 @@ export const marketing = branded({
   /** Booking platforms vs Latchkey, and what it does not replace. */
   gap: {
     eyebrow: "Booking platforms vs Latchkey",
-    title: "Booking platforms help guests find you. Latchkey runs the stay, and helps them return to you.",
+    title:
+      "Booking platforms help guests find you. Latchkey runs the stay, and helps them return to you.",
     theyLabel: "Booking platforms",
     usLabel: "Latchkey",
     rows: [
-      { topic: "Arrival", they: "Notes buried in their app", us: "Self check-in at your door or on the guest's phone" },
-      { topic: "Identity", they: "Check the person who booked", us: "Checks each adult at check-in, as you choose" },
-      { topic: "Records", they: "Not their job", us: "Supports the UK guest register, kept 12 months" },
-      { topic: "Calendars", they: "One each, dates only", us: "One list, the same stay matched across sites" },
-      { topic: "During the stay", they: "A message thread", us: "Requests, paid extras and repairs in one flow" },
-      { topic: "Your brand", they: "Their brand, their app", us: "Your logo, guide and web address on every stay" },
-      { topic: "Coming back", they: "Through the platform again", us: "Your own enquiry page, and past guests who asked to hear from you" },
+      {
+        topic: "Arrival",
+        they: "Notes buried in their app",
+        us: "Self check-in at your door or on the guest's phone",
+      },
+      {
+        topic: "Identity",
+        they: "Check the person who booked",
+        us: "Checks each adult at check-in, as you choose",
+      },
+      {
+        topic: "Records",
+        they: "Not their job",
+        us: "Supports the UK guest register, kept 12 months",
+      },
+      {
+        topic: "Calendars",
+        they: "One each, dates only",
+        us: "One list, the same stay matched across sites",
+      },
+      {
+        topic: "During the stay",
+        they: "A message thread",
+        us: "Requests, paid extras and repairs in one flow",
+      },
+      {
+        topic: "Your brand",
+        they: "Their brand, their app",
+        us: "Your logo, guide and web address on every stay",
+      },
+      {
+        topic: "Coming back",
+        they: "Through the platform again",
+        us: "Your own enquiry page, and past guests who asked to hear from you",
+      },
     ],
     keepTitle: "Keep using your booking sites for",
-    keep: ["Listings and being found", "Rates, availability and distribution", "Taking the booking and its payment", "Their own inbox (forward it to Latchkey if you like)"],
+    keep: [
+      "Listings and being found",
+      "Rates, availability and distribution",
+      "Taking the booking and its payment",
+      "Their own inbox (forward it to Latchkey if you like)",
+    ],
     oursTitle: "Latchkey runs what happens after the booking",
-    ours: ["Arrivals and self check-in", "Stay and room guides", "Requests, extras and repairs", "Guest records and the register", "Operations across every site"],
+    ours: [
+      "Arrivals and self check-in",
+      "Stay and room guides",
+      "Requests, extras and repairs",
+      "Guest records and the register",
+      "Operations across every site",
+    ],
     note: "Latchkey works alongside your booking sites and any channel manager. It isn't a channel manager, a booking engine or a hotel PMS.",
   },
   next: {
@@ -197,7 +270,10 @@ export const marketing = branded({
     title: "Next for your guest journey",
     body: "Built around the work that starts after the booking. Not available yet.",
     items: [
-      { title: "Automated stay messages", body: "Your own pre-arrival, arrival-day and check-out reminders, on the stay page and by email." },
+      {
+        title: "Automated stay messages",
+        body: "Your own pre-arrival, arrival-day and check-out reminders, on the stay page and by email.",
+      },
     ],
   },
   developers: {
@@ -223,13 +299,16 @@ export const auth = branded({
   genericError: "Something went wrong. Please try again.",
   signOut: "Sign out",
   magicCta: "Email me a magic link",
-  magicSent: (email: string) => `We've sent a magic link to ${email}. Open it on this device to sign in.`,
+  magicSent: (email: string) =>
+    `We've sent a magic link to ${email}. Open it on this device to sign in.`,
   magicNeedsEmail: "Type your email address first.",
   orPassword: "or sign in with your password",
   partnerSignInTitle: "Commission Partner sign in",
-  partnerSignInBody: "Sign in to your Commission Partner account to apply, share your link or see your commission.",
+  partnerSignInBody:
+    "Sign in to your Commission Partner account to apply, share your link or see your commission.",
   partnerSignUpTitle: "Create your Commission Partner account",
-  partnerSignUpBody: "This account is only for introducing hosts. It isn't a host account and has no rooms. Next you'll fill in your application.",
+  partnerSignUpBody:
+    "This account is only for introducing hosts. It isn't a host account and has no rooms. Next you'll fill in your application.",
   partnerSwitchToSignUp: "New Commission Partner? Create an account",
 });
 
@@ -248,15 +327,18 @@ export const authExtraCopy = branded({
   socialFailed: "Signing in didn't finish. Please try again.",
   trialSaved: "Your trial is saved to your account. Everything you set up is here.",
   saveTitle: "Save your trial",
-  saveBody: "Your property is set up. Save it to your account so you can come back to it on any device. No password needed.",
+  saveBody:
+    "Your property is set up. Save it to your account so you can come back to it on any device. No password needed.",
   yourName: "Your name",
   emailTitle: "Or use your email",
   emailHint: "We'll send a link to confirm it. You can choose a password afterwards.",
   sendLink: "Email me a link",
-  linkSent: (email: string) => `Check ${email} and open the link. Everything you've set up stays as it is.`,
+  linkSent: (email: string) =>
+    `Check ${email} and open the link. Everything you've set up stays as it is.`,
   later: "Skip for now",
   passwordTitle: "Choose a password",
-  passwordBody: "Your email is confirmed. Add a password to sign in quickly next time, or keep using email links.",
+  passwordBody:
+    "Your email is confirmed. Add a password to sign in quickly next time, or keep using email links.",
   password: "Password",
   passwordConfirm: "Type it again",
   passwordMismatch: "The two passwords don't match.",
@@ -270,7 +352,8 @@ export const trial = branded({
   starting: "Setting up your free trial…",
   closed: "New free trials are paused for the moment. Please check back soon.",
   aboutTitle: "About you",
-  aboutBody: "So we can save your setup and send you your sign-in link later. No password needed now.",
+  aboutBody:
+    "So we can save your setup and send you your sign-in link later. No password needed now.",
   name: "Your name",
   email: "Your email address",
   emailHint: "We'll only use it for your Latchkey account.",
@@ -284,8 +367,10 @@ export const trial = branded({
   bannerCta: "Save my account",
   bannerEmail: "Email address",
   bannerSend: "Send my sign-in link",
-  bannerSent: (email: string) => `Check ${email} and open the link to finish saving your account. Everything you've set up stays as it is.`,
-  bannerTaken: "That email already has a Latchkey account. Sign in to it instead, or use another email.",
+  bannerSent: (email: string) =>
+    `Check ${email} and open the link to finish saving your account. Everything you've set up stays as it is.`,
+  bannerTaken:
+    "That email already has a Latchkey account. Sign in to it instead, or use another email.",
   bannerLater: "Later",
   setupDone: "Your property is ready. Save your account any time from the bar at the top.",
   next: "Next: your property",
@@ -321,7 +406,10 @@ export const hostNav = branded({
     settings: "Sett.",
   } as Record<string, string>,
   menuGrab: "Menu size: drag, or use the arrow keys",
-  menuModes: { full: "Full menu", rail: "Icons only", top: "Menu along the top" } as Record<string, string>,
+  menuModes: { full: "Full menu", rail: "Icons only", top: "Menu along the top" } as Record<
+    string,
+    string
+  >,
   menuToSide: "Show the menu down the side",
 });
 
@@ -357,7 +445,14 @@ export const channels = branded({
  */
 export const calendarGuides: Record<
   string,
-  { title: string; steps: string[]; helpUrl: string | null; helpLabel: string; note?: string; screenshot: string | null }
+  {
+    title: string;
+    steps: string[];
+    helpUrl: string | null;
+    helpLabel: string;
+    note?: string;
+    screenshot: string | null;
+  }
 > = branded({
   airbnb: {
     title: "Where do I find my Airbnb calendar link?",
@@ -432,7 +527,9 @@ export const calendarGuides: Record<
   },
   direct: {
     title: "Direct bookings",
-    steps: ["Direct bookings are added by hand in Latchkey, so there is no calendar link to paste."],
+    steps: [
+      "Direct bookings are added by hand in Latchkey, so there is no calendar link to paste.",
+    ],
     helpUrl: null,
     helpLabel: "",
     screenshot: null,
@@ -453,7 +550,8 @@ export const today = branded({
   allClear: "Nothing is waiting on you. Everything is up to date.",
   saveDetails: "Save details",
   doubleBookedTitle: "Possible double-booking",
-  doubleBookedBody: "Two platforms show different guests in the same room on the same nights. Check both and cancel one.",
+  doubleBookedBody:
+    "Two platforms show different guests in the same room on the same nights. Check both and cancel one.",
   maybeBlock: "Dates you closed yourself?",
   markBlocked: "Not a booking, mark as blocked",
   cleaningToday: "Cleaning window today",
@@ -467,8 +565,10 @@ export const pwaCopy = branded({
   installed: "Installed on this device",
   iosStep1: "Tap the Share button at the bottom (or top) of Safari.",
   iosStep2: "Choose “Add to Home Screen”, then Add.",
-  iosStep3: "Open Latchkey from your home screen. Alerts on iPhone and iPad need it opened this way.",
-  iosKiosk: "Open the check-in icon from the home screen: it runs full screen. Turn on Guided Access (Settings → Accessibility) to keep it on the kiosk.",
+  iosStep3:
+    "Open Latchkey from your home screen. Alerts on iPhone and iPad need it opened this way.",
+  iosKiosk:
+    "Open the check-in icon from the home screen: it runs full screen. Turn on Guided Access (Settings → Accessibility) to keep it on the kiosk.",
   menuInstall: "Open your browser's menu and choose “Install app” or “Add to Home screen”.",
   androidKiosk:
     "Then open the check-in icon from the home screen: it runs full screen, without the bottom navigation bar. If your tablet's own browser can't install apps, use Chrome. To keep the tablet on the kiosk, turn on screen pinning (Settings → Security → App pinning) and pin it.",
@@ -478,21 +578,25 @@ export const pwaCopy = branded({
 export const notifyCopy = branded({
   title: "App and alerts",
   body: "Get alerts the moment a guest is locked out, asks for something or messages you. Pick as many ways as you like; they're all free except texts.",
-  install: "Install Latchkey on your phone or tablet for one-tap access and alerts on the lock screen.",
+  install:
+    "Install Latchkey on your phone or tablet for one-tap access and alerts on the lock screen.",
   channels: {
     push: ["Alerts on this device", "Free. Shows on your lock screen, like a text."],
     telegram: ["Telegram", "Free. Alerts from the Latchkey bot, with a button to open the stay."],
     email: ["Email", "To your business email address."],
     sms: ["Text messages (SMS)", "About 4p a text. Urgent alerts only, unless you choose all."],
   } as Record<string, [string, string]>,
-  smsUrgentOnly: "Only urgent alerts by text (locked out, wants you to check them in, more guests than booked)",
+  smsUrgentOnly:
+    "Only urgent alerts by text (locked out, wants you to check them in, more guests than booked)",
   thisDevice: "This device",
   turnOn: "Turn on here",
   turnOff: "Turn off here",
   on: "On",
   pushNeedsApp: "Open Latchkey in its own tab or as an installed app to turn on alerts here.",
-  pushBlocked: "Alerts are blocked for Latchkey in this browser's settings. Allow notifications, then try again.",
-  pushIos: "On iPhone and iPad, install Latchkey to your home screen first, then turn alerts on from there.",
+  pushBlocked:
+    "Alerts are blocked for Latchkey in this browser's settings. Allow notifications, then try again.",
+  pushIos:
+    "On iPhone and iPad, install Latchkey to your home screen first, then turn alerts on from there.",
   pushOn: "Alerts turned on for this device.",
   pushOff: "Alerts turned off for this device.",
   devices: (n: number) => `${n} device${n === 1 ? "" : "s"} getting alerts`,
@@ -502,19 +606,22 @@ export const notifyCopy = branded({
   telegramLinked: (n: number) => `${n} chat${n === 1 ? "" : "s"} linked`,
   unlink: "Unlink",
   notReady: "Not available yet: Latchkey's team is setting this up.",
-  emailDemo: "Email alerts are in demo mode for this business. Switch host email to live to receive them.",
+  emailDemo:
+    "Email alerts are in demo mode for this business. Switch host email to live to receive them.",
   noEmail: "Add a business email above first.",
   noPhone: "Add a mobile number above (with its country) to get texts.",
   test: "Send a test alert",
-  testResult: (parts: string[]) => (parts.length ? `Test sent by ${parts.join(", ")}.` : "Nothing was sent: switch on at least one way above."),
+  testResult: (parts: string[]) =>
+    parts.length
+      ? `Test sent by ${parts.join(", ")}.`
+      : "Nothing was sent: switch on at least one way above.",
   saved: "Saved",
 });
 
 /** Settings: booking-site messages forwarded by email. */
 export const platformMsgCopy = branded({
   title: "Airbnb and Booking.com messages",
-  body:
-    "Booking sites don't let other apps read your guest chats, but they email you each message. Forward those emails to Latchkey and each message lands in that guest's conversation here, next to their requests and payments. Free.",
+  body: "Booking sites don't let other apps read your guest chats, but they email you each message. Forward those emails to Latchkey and each message lands in that guest's conversation here, next to their requests and payments. Free.",
   address: "Your private forwarding address",
   copy: "Copy",
   copied: "Copied",
@@ -526,9 +633,12 @@ export const platformMsgCopy = branded({
     "Gmail sends a confirmation code. It appears below within a minute: copy it into Gmail, or open the link.",
     "Create a filter: in the search box type from:(airbnb.com OR booking.com OR vrbo.com OR expedia.com), then Create filter → Forward it to → your Latchkey address.",
   ],
-  outlook: "Outlook: Settings → Mail → Rules → Add new rule: when the sender address includes airbnb.com or booking.com, forward to your Latchkey address.",
-  reply: "To reply, use the Reply by email button in the conversation: it opens your own email with the platform's reply address, so the guest gets it on Airbnb or Booking.com.",
-  privacy: "Only emails you forward reach Latchkey. Messages are kept with the stay and follow its privacy rules.",
+  outlook:
+    "Outlook: Settings → Mail → Rules → Add new rule: when the sender address includes airbnb.com or booking.com, forward to your Latchkey address.",
+  reply:
+    "To reply, use the Reply by email button in the conversation: it opens your own email with the platform's reply address, so the guest gets it on Airbnb or Booking.com.",
+  privacy:
+    "Only emails you forward reach Latchkey. Messages are kept with the stay and follow its privacy rules.",
   confirm: "Gmail asked you to confirm forwarding",
   confirmOpen: "Open Gmail's confirmation",
   recent: "Recently received",
@@ -577,8 +687,7 @@ export const integrationsCopy = branded({
   },
   inbound: {
     title: "Booking-site messages by email (free)",
-    body:
-      "Easiest: a free Postmark account → Servers → Inbound stream. Postmark gives you an address like abc123@inbound.postmarkapp.com: enter it below with +{code} before the @. Set the inbound webhook to the URL below (with your secret), and add the secret INBOUND_EMAIL_SECRET (any long random text). Or use Cloudflare Email Routing with the worker in docs/inbound-email-worker.js.",
+    body: "Easiest: a free Postmark account → Servers → Inbound stream. Postmark gives you an address like abc123@inbound.postmarkapp.com: enter it below with +{code} before the @. Set the inbound webhook to the URL below (with your secret), and add the secret INBOUND_EMAIL_SECRET (any long random text). Or use Cloudflare Email Routing with the worker in docs/inbound-email-worker.js.",
     address: "Forwarding address pattern",
     placeholder: "abc123+{code}@inbound.postmarkapp.com",
     webhook: "Webhook URL (add your secret at the end)",
@@ -592,7 +701,10 @@ export const guestMessagesCopy = branded({
   title: "Guest messages",
   usp: "Only in Latchkey: one recorded conversation per stay. Messages, extras, charges and requests sit together with the booking, so there's always a record of what was asked, agreed and paid, whichever site the guest booked on.",
   showLabel: "Show",
-  scopes: { now: "Staying now", upcoming: "Arriving soon", past: "Past 30 days" } as Record<string, string>,
+  scopes: { now: "Staying now", upcoming: "Arriving soon", past: "Past 30 days" } as Record<
+    string,
+    string
+  >,
   onlyWaiting: "Only what's waiting on me",
   empty: {
     now: "Nobody is staying today.",
@@ -630,7 +742,15 @@ export const guestMessagesCopy = branded({
     declined: "Declined",
     cancelled: "Cancelled",
   } as Record<string, string>,
-  jobStatus: { new: "New", acknowledged: "Seen", booked: "Booked", in_progress: "In progress", done: "Done", declined: "Declined", cancelled: "Cancelled" } as Record<string, string>,
+  jobStatus: {
+    new: "New",
+    acknowledged: "Seen",
+    booked: "Booked",
+    in_progress: "In progress",
+    done: "Done",
+    declined: "Declined",
+    cancelled: "Cancelled",
+  } as Record<string, string>,
 });
 
 /** Today: a welcome on the front-door kiosk for an arriving guest. */
@@ -642,13 +762,21 @@ export const kioskWelcomeCopy = branded({
   body: "Smaller words (optional)",
   for: "Show for",
   defaultHeadline: (first: string) => (first ? `Welcome, ${first}` : "Welcome"),
-  defaultBody: "We're so glad you're here. Tap anywhere to check in and we'll get you to your room.",
-  durations: { "30": "30 minutes", "60": "1 hour", "120": "2 hours", "240": "4 hours", "480": "8 hours" } as Record<string, string>,
+  defaultBody:
+    "We're so glad you're here. Tap anywhere to check in and we'll get you to your room.",
+  durations: {
+    "30": "30 minutes",
+    "60": "1 hour",
+    "120": "2 hours",
+    "240": "4 hours",
+    "480": "8 hours",
+  } as Record<string, string>,
   show: "Show on the kiosk",
   update: "Update the kiosk",
   shown: "Showing on the kiosk now.",
   updated: "Updated on the kiosk.",
-  showing: (since: string, until: string) => `On the kiosk since ${since}, until ${until} unless the guest taps it.`,
+  showing: (since: string, until: string) =>
+    `On the kiosk since ${since}, until ${until} unless the guest taps it.`,
   tapped: (at: string) => `The guest tapped it at ${at} and went on to check in.`,
   edit: "Change it",
   remove: "Remove",
@@ -715,7 +843,8 @@ export const todayDash = branded({
   downloadInvoice: "Download",
   invoiceSent: "Invoice emailed to the guest.",
   invoiceNoEmail: "No email for this guest yet. Add it on their booking, then send.",
-  invoiceDemo: "Guest messages are in demo mode, so nothing was emailed. Switch them to live in Settings.",
+  invoiceDemo:
+    "Guest messages are in demo mode, so nothing was emailed. Switch them to live in Settings.",
   invoiceFailed: "The email didn't go. Try again, or download it and send it yourself.",
   invoiceByPlatform: "Invoiced by the booking site",
   emailedOn: (when: string) => `Emailed ${when}`,
@@ -735,7 +864,8 @@ export const todayDash = branded({
   cleaningTitle: "Cleaning and closed times today",
   cleaningEmpty: "No cleaning or closed times today.",
   wholeHouse: "Whole house",
-  turnaround: (room: string, gap: number) => `${room}: only ${gap < 0 ? 0 : gap} minutes between guests`,
+  turnaround: (room: string, gap: number) =>
+    `${room}: only ${gap < 0 ? 0 : gap} minutes between guests`,
   setTimes: "Cleaning times",
   maintenanceTitle: "Maintenance booked",
   maintenanceEmpty: "Nothing booked for the next 7 days.",
@@ -764,21 +894,26 @@ export const todayDash = branded({
   guideMissing: "Still to write",
   guideComplete: "Every section is written.",
   guideToday: "Send today's arrivals their guide",
-  guideTodayBody: "Copy each guest's private guide link and send it however you usually message them.",
+  guideTodayBody:
+    "Copy each guest's private guide link and send it however you usually message them.",
   welcomeTitle: "Guest welcome",
   welcomeBody: "Greet an arriving guest by name, full screen on the kiosk, until they tap it.",
   wholeProperty: "Whole property",
-  roomOwnSections: (n: number) => `${n} section${n === 1 ? "" : "s"} written just for this room; the rest come from the whole-property guide.`,
-  roomUsesHouse: "Uses the whole-property guide. Add this room's own heating, shower or layout notes.",
+  roomOwnSections: (n: number) =>
+    `${n} section${n === 1 ? "" : "s"} written just for this room; the rest come from the whole-property guide.`,
+  roomUsesHouse:
+    "Uses the whole-property guide. Add this room's own heating, shower or layout notes.",
   roomOwnShort: (n: number) => `${n} own`,
   roomHouseShort: "house guide",
   roomQrPeek: "Print this room's QR code: guests scan it in the room for how everything works.",
   roomQrLabel: (room: string) => `Print the QR code for ${room}`,
-  roomQrNudge: "Put each room's QR code by the bed or on the door: the guide guests use without asking.",
+  roomQrNudge:
+    "Put each room's QR code by the bed or on the door: the guide guests use without asking.",
   printRoomQrs: "Print room QR codes",
   editGuide: "Edit guide",
   kioskTitle: "Kiosk and QR code",
-  kioskBody: "Guests check themselves in on a tablet by the door, or by scanning the QR code with their phone.",
+  kioskBody:
+    "Guests check themselves in on a tablet by the door, or by scanning the QR code with their phone.",
   openKiosk: "Open kiosk",
   guestPage: "Guest check-in page",
   printQr: "Print QR code",
@@ -788,11 +923,20 @@ export const todayDash = branded({
   qrPeek: "A printable sign with your QR code and simple steps for guests.",
   settingsTitle: "Useful settings",
   settingsBody: "Shortcuts to the settings you'll change most often.",
-  settingsGroups: { property: "Property and rooms", guests: "Guests and check-in", messages: "Messages and alerts", money: "Payments and billing", team: "Team and connected apps" } as Record<string, string>,
+  settingsGroups: {
+    property: "Property and rooms",
+    guests: "Guests and check-in",
+    messages: "Messages and alerts",
+    money: "Payments and billing",
+    team: "Team and connected apps",
+  } as Record<string, string>,
   settingsLinks: {
     property: ["Property details", "Address, check-in and check-out times, wifi, door PIN."],
     checkin: ["Check-in methods", "Kiosk, QR code, PIN and which checks guests go through."],
-    records: ["Guest records and ID", "Asking about adults and children, photo ID and how long it's kept."],
+    records: [
+      "Guest records and ID",
+      "Asking about adults and children, photo ID and how long it's kept.",
+    ],
     rooms: ["Rooms", "Names, numbers, guests per room and calendar links per room."],
     cleaning: ["Cleaning times", "Times rooms or the house are closed each week."],
     team: ["Team", "Invite people and choose what they can do."],
@@ -800,8 +944,14 @@ export const todayDash = branded({
     invoices: ["Invoices", "Your business details and tax on invoices for direct stays."],
     api: ["API & MCP keys", "Make keys to connect AI assistants and other apps."],
     alerts: ["App and alerts", "Install the app; get alerts by push, Telegram, email or text."],
-    platformMessages: ["Airbnb and Booking.com messages", "Forward their message emails so each lands in the guest's conversation."],
-    apiGuide: ["API & MCP guide", "Step-by-step set-up for Claude, ChatGPT, Cursor and your own tools, with every action explained."],
+    platformMessages: [
+      "Airbnb and Booking.com messages",
+      "Forward their message emails so each lands in the guest's conversation.",
+    ],
+    apiGuide: [
+      "API & MCP guide",
+      "Step-by-step set-up for Claude, ChatGPT, Cursor and your own tools, with every action explained.",
+    ],
     billing: ["Subscription", "Your plan, card and invoices from Latchkey."],
     register: ["Guest register", "The UK record of every guest aged 16 or over."],
   } as Record<string, [string, string]>,
@@ -816,7 +966,8 @@ export const bookings = branded({
   guestEmailHint: "Lets the guest confirm who they are at check-in",
   guestAddress: "Guest's postal address (optional)",
   guestAddressHint: "Printed under their name on invoices",
-  mirrorNote: "Another platform is showing this stay as closed. It is linked to the real booking, so it is not counted twice.",
+  mirrorNote:
+    "Another platform is showing this stay as closed. It is linked to the real booking, so it is not counted twice.",
   listing: "Listing",
   tentative: "The platform marks this stay as not yet confirmed.",
   openOnPlatform: "Open on the platform",
@@ -886,7 +1037,8 @@ export const connections = branded({
   title: "Connections",
   subtitle: "Calendar links that keep your bookings in step.",
   byRoomTitle: "Each room across platforms",
-  byRoomBody: "Link every platform that lets the same room. Latchkey matches the entries so one stay is never counted twice.",
+  byRoomBody:
+    "Link every platform that lets the same room. Latchkey matches the entries so one stay is never counted twice.",
   noLinks: "No calendars linked to this room yet.",
   add: "Add calendar link",
   test: "Test link",
@@ -903,7 +1055,8 @@ export const connections = branded({
   noHistory: "No sync history yet.",
   testOk: "That link works.",
   managerTitle: "Channel manager (Beds24, Smoobu, Hostaway)",
-  managerBody: "Latchkey works alongside channel managers through calendar links. It doesn't sync rates or availability with them.",
+  managerBody:
+    "Latchkey works alongside channel managers through calendar links. It doesn't sync rates or availability with them.",
   comingSoon: "Coming soon",
   conflictTitle: "Something needs your eye",
   syncedToast: "Calendar checked",
@@ -924,7 +1077,8 @@ export const settings = branded({
   demoTitle: "Demo content",
   demoBody:
     "Load The Hill Suites in Amersham: three rooms, bookings across four channels, and Tuesday and Thursday cleaning windows.",
-  demoOwnerBody: "Your business still has the sample rooms and bookings from the demo. Remove them when you're ready to run your own.",
+  demoOwnerBody:
+    "Your business still has the sample rooms and bookings from the demo. Remove them when you're ready to run your own.",
   loadDemo: "Load demo rooms",
   resetDemo: "Reset demo dates",
   removeDemo: "Remove demo data",
@@ -932,7 +1086,7 @@ export const settings = branded({
   removing: "Removing…",
   channelsTitle: "What you call each booking site",
   channelsBody:
-    "Guests see these names and icons when they check in. Rename any of them — for example \"Booked directly\" to \"Our website\" — tap an icon to upload your own, and add new sites as you start using them. Leave a name blank to keep the standard one. Your calendars and reports are unaffected.",
+    'Guests see these names and icons when they check in. Rename any of them — for example "Booked directly" to "Our website" — tap an icon to upload your own, and add new sites as you start using them. Leave a name blank to keep the standard one. Your calendars and reports are unaffected.',
   channelsSaved: "Booking sites saved",
   channelsAdd: "Add a booking site",
   channelsNewName: "Site name",
@@ -975,10 +1129,12 @@ export const kioskRestCopy = branded({
   title: "Screen saver",
   body: "What the door tablet shows when nobody is using it. Any touch wakes it, ready to check in.",
   nightLight: "Night light",
-  nightLightHelp: "Bright, softly changing colours that light the hallway at night, instead of the clock screensaver. A fine shimmer keeps every pixel changing, so nothing burns in.",
+  nightLightHelp:
+    "Bright, softly changing colours that light the hallway at night, instead of the clock screensaver. A fine shimmer keeps every pixel changing, so nothing burns in.",
   when: "When",
   whenOptions: { always: "Whenever the kiosk rests", quiet: "Only during quiet hours" },
-  quietBetween: (start: string, end: string) => `${start} to ${end}, from the property's quiet hours`,
+  quietBetween: (start: string, end: string) =>
+    `${start} to ${end}, from the property's quiet hours`,
   style: "Style",
   modes: {
     glow: { label: "Glow", help: "One colour at a time, gently swelling" },
@@ -995,26 +1151,41 @@ export const kioskRestCopy = branded({
   },
   speed: "Speed",
   speedEnds: ["Slow", "Lively"],
-  speedValue: (n: number) => ["Very slow", "Slow", "Gentle", "Lively", "Very lively"][n - 1] ?? "Gentle",
+  speedValue: (n: number) =>
+    ["Very slow", "Slow", "Gentle", "Lively", "Very lively"][n - 1] ?? "Gentle",
   otherwise: "At rest",
   otherwiseOff: "When the night light is off",
   otherwiseQuiet: "Outside quiet hours",
   otherwiseOptions: {
-    clock: { label: "Clock screensaver", help: "World clocks, dimmed, with the date and quiet hours." },
+    clock: {
+      label: "Clock screensaver",
+      help: "World clocks, dimmed, with the date and quiet hours.",
+    },
     blank: { label: "Screen off", help: "A dark screen until someone touches it." },
   },
   clockQr: "Check-in QR code while the kiosk rests",
-  clockQrHelp: "Shown on the clock screensaver, the night light and with the screen off, so guests can scan it without touching the kiosk. It's never a white block (light on dark, or dark on the night light) and moves every few minutes so nothing burns in.",
+  clockQrHelp:
+    "Shown on the clock screensaver, the night light and with the screen off, so guests can scan it without touching the kiosk. It's never a white block (light on dark, or dark on the night light) and moves every few minutes so nothing burns in.",
   preview: "Preview",
   previewQuiet: "Quiet hours",
   previewDay: "Rest of the day",
-  previewShowing: { night: "Night light", clock: "Clock screensaver", blank: "Screen off" } as Record<string, string>,
-  bandsNote: "On the kiosk, slide the left edge for brightness and the right edge for colour depth.",
+  previewShowing: {
+    night: "Night light",
+    clock: "Clock screensaver",
+    blank: "Screen off",
+  } as Record<string, string>,
+  bandsNote:
+    "On the kiosk, slide the left edge for brightness and the right edge for colour depth.",
   saved: "Screen saver saved. The kiosk has been told.",
   quickTitle: "Screen saver",
   quick: { night: "Night light", clock: "Clocks", blank: "Screen off" },
-  quickDone: { night: "Night light on. An idle kiosk lights up now.", clock: "The kiosk shows the clocks at rest.", blank: "The kiosk's screen goes dark at rest." },
-  quickQuiet: (start: string, end: string, otherwise: string) => `Night light from ${start} to ${end}; ${otherwise.toLowerCase()} otherwise.`,
+  quickDone: {
+    night: "Night light on. An idle kiosk lights up now.",
+    clock: "The kiosk shows the clocks at rest.",
+    blank: "The kiosk's screen goes dark at rest.",
+  },
+  quickQuiet: (start: string, end: string, otherwise: string) =>
+    `Night light from ${start} to ${end}; ${otherwise.toLowerCase()} otherwise.`,
 });
 
 export const checkinSettings = branded({
@@ -1028,35 +1199,45 @@ export const checkinSettings = branded({
     self_declare: "Guest self-declaration",
   } as Record<string, string>,
   methodHelp: {
-    photo_id: "Guest photographs their ID. We read the name, keep only the result and never store the photo.",
-    last4: "Guest enters the last 4 of their booking reference or phone, or their email, whichever the booking has.",
-    self_declare: "Always offered as the last resort so no one is stuck at the door. You'll get an alert to check ID in person.",
+    photo_id:
+      "Guest photographs their ID. We read the name, keep only the result and never store the photo.",
+    last4:
+      "Guest enters the last 4 of their booking reference or phone, or their email, whichever the booking has.",
+    self_declare:
+      "Always offered as the last resort so no one is stuck at the door. You'll get an alert to check ID in person.",
   } as Record<string, string>,
   primary: "Ask first",
-  fallbackNote: "If the camera won't start or a guest needs more than 2 photo tries, Latchkey moves to the next option automatically.",
-  listFlowNote: "ID checks are off: guests choose their platform, then pick their booking from a list showing first name and initial only.",
+  fallbackNote:
+    "If the camera won't start or a guest needs more than 2 photo tries, Latchkey moves to the next option automatically.",
+  listFlowNote:
+    "ID checks are off: guests choose their platform, then pick their booking from a list showing first name and initial only.",
   saved: "Check-in settings saved",
   records: {
     title: "Who's staying and ID records",
     body: "Ask how many people arrived, check every adult's ID, and choose what you keep. Children only give their age.",
     askWhoIsStaying: "Ask who's staying",
-    askWhoIsStayingHelp: "Guests say how many adults and children arrived. You're told if it differs from the booking or the room's size.",
+    askWhoIsStayingHelp:
+      "Guests say how many adults and children arrived. You're told if it differs from the booking or the room's size.",
     checkEveryAdult: "Check every adult's ID",
-    checkEveryAdultHelp: "After the lead guest, each adult photographs their own photo ID. Anyone without one can carry on, and you're told.",
+    checkEveryAdultHelp:
+      "After the lead guest, each adult photographs their own photo ID. Anyone without one can carry on, and you're told.",
     idPhoto: "Keep a small copy of each ID",
-    idPhotoHelp: "Low-resolution, still readable on your phone. Without this, only the main details are kept: name, date of birth, ID type, country and last 4 of the number.",
+    idPhotoHelp:
+      "Low-resolution, still readable on your phone. Without this, only the main details are kept: name, date of birth, ID type, country and last 4 of the number.",
     facePhoto: "Take a face photo",
     facePhotoHelp: "Each adult takes a quick photo so you can see it matches their ID.",
     keepDays: "Keep details and photos for",
     keepDaysOption: (n: number) => `${n} days after check-out`,
-    regulator: "I'm registered with the ICO (or my country's data regulator) and my privacy notice tells guests about ID photos",
+    regulator:
+      "I'm registered with the ICO (or my country's data regulator) and my privacy notice tells guests about ID photos",
     regulatorHelp:
       "Keeping photos of IDs and faces is personal data. In the UK you normally need to pay the ICO data protection fee and tell guests why you keep them and for how long. Photo options stay off until you tick this.",
     regulatorNeeded: "Tick the registration box above to keep photos.",
     askRequiredUk: "Always on in the UK: the guest register needs to know who's staying.",
     lawNoteUk:
       "UK guest register: everyone aged 16 or over gives their full name and nationality at check-in, and guests who aren't British, Irish or Commonwealth citizens also give their passport or ID number, where it was issued and where they're going next (Immigration (Hotel Records) Order 1972). This is always on, kept for 12 months from arrival whatever you choose above, and found under Guest register.",
-    lawNoteElsewhere: "This property isn't in the UK, so the UK guest register doesn't apply. Check what your local law asks you to record.",
+    lawNoteElsewhere:
+      "This property isn't in the UK, so the UK guest register doesn't apply. Check what your local law asks you to record.",
   },
   back: "Back to properties",
   print: "Print",
@@ -1076,13 +1257,22 @@ export const guest = branded({
   welcomeTap: "Tap here to check in",
   saverStart: "Rest the screen",
   quietTitle: (until: string) => `Quiet hours until ${until}`,
-  quietBody: "Other guests are sleeping. Please keep noise and movement to a minimum, close doors gently and keep voices low. Thank you.",
+  quietBody:
+    "Other guests are sleeping. Please keep noise and movement to a minimum, close doors gently and keep voices low. Thank you.",
   saverHere: "Here",
   tomorrow: "tomorrow",
   yesterday: "yesterday",
   saverWake: "Touch to start checking in",
   saverTouch: "Touch the screen to check in",
-  dayPhases: { night: "Night", dawn: "Dawn", morning: "Morning", midday: "Midday", afternoon: "Afternoon", dusk: "Dusk", evening: "Evening" } as Record<string, string>,
+  dayPhases: {
+    night: "Night",
+    dawn: "Dawn",
+    morning: "Morning",
+    midday: "Midday",
+    afternoon: "Afternoon",
+    dusk: "Dusk",
+    evening: "Evening",
+  } as Record<string, string>,
   attachmentOpen: (name: string) => `Open ${name}`,
   attachmentPrev: "Previous",
   attachmentNext: "Next",
@@ -1094,7 +1284,8 @@ export const guest = branded({
   nightWake: "Touch to wake the screen",
   nightDepth: "Colour depth",
   kioskQrTitle: "Check in on your phone",
-  kioskQrBody: "Scan with your phone's camera to check in there instead. Your details stay on your phone.",
+  kioskQrBody:
+    "Scan with your phone's camera to check in there instead. Your details stay on your phone.",
   propertyName: "The Hill Suites",
   location: "Amersham",
   welcome: "Welcome to The Hill Suites",
@@ -1114,7 +1305,8 @@ export const guest = branded({
   stepCheckout: "Which day do you check out?",
   stepPlatform: "Where did you book?",
   stepPickBooking: "Which booking is yours?",
-  noArrivals: "We can't see any arrivals on that platform today. Please try another, or call your host.",
+  noArrivals:
+    "We can't see any arrivals on that platform today. Please try another, or call your host.",
   platforms: {
     airbnb: "Airbnb",
     booking_com: "Booking.com",
@@ -1123,7 +1315,8 @@ export const guest = branded({
     other: "Somewhere else",
   } as Record<string, string>,
   noMatchTitle: "We couldn't find that booking",
-  noMatchBody: "Please check your answers and try again. If it still doesn't work, your host is happy to help.",
+  noMatchBody:
+    "Please check your answers and try again. If it still doesn't work, your host is happy to help.",
   welcomeBack: (name: string) => `Welcome back, ${name}`,
   welcomeBackBody:
     "You're already checked in. Just confirm it's you and we'll open your guest guide, where you can reread the house rules or ask for anything you need.",
@@ -1139,8 +1332,7 @@ export const guest = branded({
   confirmYes: "Yes, that's me",
   confirmNo: "No, start again",
   idTitle: "A quick ID check",
-  idConsent:
-    "We only check your name matches your booking. We don't keep a copy of your ID.",
+  idConsent: "We only check your name matches your booking. We don't keep a copy of your ID.",
   idConsentDetails: (days: number) =>
     `We check your name matches your booking. Your host keeps your name, date of birth and the type of ID for ${days} days after you leave, then it's deleted. We don't keep a copy of the photo.`,
   idConsentPhoto: (days: number) =>
@@ -1158,7 +1350,8 @@ export const guest = branded({
   handoverBody: "We've let them know you're here. Give them a call if you like, or wait nearby.",
   handoverResume: "Carry on checking in myself",
   idUseOther: "Use another way",
-  idCameraHelp: "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
+  idCameraHelp:
+    "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
   idTakePhoto: "Take photo",
   idChecking: "Checking your name…",
   idRetry: (left: number) =>
@@ -1181,11 +1374,13 @@ export const guest = branded({
     "Thank you. Your host will say hello and check your ID in person during your stay. Nothing more to do for now.",
   continue: "Continue",
   doneTitle: (name: string) => `You're all checked in, ${name}`,
-  roomLine: (room: string, title: string | null) => `You're in ${room}${title ? `, ${title}` : ""}.`,
+  roomLine: (room: string, title: string | null) =>
+    `You're in ${room}${title ? `, ${title}` : ""}.`,
   noRoom: "Your host will show you to your room.",
   stayGuideCta: "Open your guest guide",
   guideLinkTitle: "Your guest guide link",
-  guideLinkBody: "This link is just for your booking. Bookmark it or add it to your home screen, and you can open your guide any time without checking in again.",
+  guideLinkBody:
+    "This link is just for your booking. Bookmark it or add it to your home screen, and you can open your guide any time without checking in again.",
   guideLinkCopy: "Copy link",
   guideLinkCopied: "Link copied",
   guideLinkShare: "Share or save",
@@ -1210,22 +1405,32 @@ export const guest = branded({
     checkout: (date: string) => `Demo: tap ${date}.`,
     platform: (platform: string) => `Demo: tap ${platform}.`,
     pick: (name: string) => `Demo: tap ${name}${name.endsWith(".") ? "" : "."}`,
-    noMatch: (letter: string, date: string) => `Demo: that wasn't the demo booking. Tap Start again, then ${letter} and ${date}.`,
+    noMatch: (letter: string, date: string) =>
+      `Demo: that wasn't the demo booking. Tap Start again, then ${letter} and ${date}.`,
     guestName: "Demo: type any first name and surname, then tap Continue.",
     confirm: "Demo: tap Yes, that's me.",
-    party: "Demo: try adding a guest or a child to see how the room's size is checked, then tap Continue.",
+    party:
+      "Demo: try adding a guest or a child to see how the room's size is checked, then tap Continue.",
     idConsent: "Demo: tap I'm happy to continue. Nothing you photograph is kept.",
     idCamera: "Demo: photograph anything. The demo treats it as a passport with the booking name.",
     last4: (ref: string | null, phone: string | null) =>
-      ["Demo:", ref ? `booking reference ends ${ref}` : null, ref && phone ? "or" : null, phone ? `phone ends ${phone}` : null]
+      [
+        "Demo:",
+        ref ? `booking reference ends ${ref}` : null,
+        ref && phone ? "or" : null,
+        phone ? `phone ends ${phone}` : null,
+      ]
         .filter(Boolean)
         .join(" ") + ".",
     selfDeclare: "Demo: tap I confirm I'm the guest on this booking.",
-    register: "Demo: check the details and pick a nationality. Try one outside the UK, Ireland and the Commonwealth to see the extra questions. Nothing is saved.",
-    companionReady: "Demo: tap I'm ready, or They don't have ID with them to see what your host is told.",
+    register:
+      "Demo: check the details and pick a nationality. Try one outside the UK, Ireland and the Commonwealth to see the extra questions. Nothing is saved.",
+    companionReady:
+      "Demo: tap I'm ready, or They don't have ID with them to see what your host is told.",
     companionCamera: "Demo: photograph anything for the other guest's ID.",
     face: "Demo: take any photo, or tap Skip this. Nothing is kept.",
-    handover: "Demo: in a real stay your host gets an alert now. Tap Carry on checking in myself to continue.",
+    handover:
+      "Demo: in a real stay your host gets an alert now. Tap Carry on checking in myself to continue.",
     done: "Demo: that's the end. Open the guest guide, or copy its link or QR code to open it on another phone.",
   },
   pinBody: "You'll find the 6-digit PIN in your booking message or by the front door.",
@@ -1233,7 +1438,8 @@ export const guest = branded({
   clear: "Clear",
   backspace: "Delete last digit",
   notFound: "We couldn't find that property. Please check the link or ask your host.",
-  checkinPaused: "Online check-in isn't available here at the moment. Please contact your host to check in.",
+  checkinPaused:
+    "Online check-in isn't available here at the moment. Please contact your host to check in.",
   error: "Something went wrong. Please try again, or call your host.",
   // Who's staying
   partyTitle: "Who's staying?",
@@ -1255,28 +1461,33 @@ export const guest = branded({
     `Your booking says ${booked}, and you've said ${total}. That's fine, we'll let your host know.`,
   partyOver: (capacity: number) =>
     `This room sleeps ${capacity}. We'll let your host know so they can help.`,
-  partyChildrenNotAllowed: "This room is for adults only. We'll let your host know so they can help.",
+  partyChildrenNotAllowed:
+    "This room is for adults only. We'll let your host know so they can help.",
   partyContinue: "Continue",
   partyAgesMissing: "Please choose each child's age.",
   // Everyone else's ID
   companionTitle: (n: number, total: number) => `Now adult ${n} of ${total}`,
   // Other guests on their own phones
   othersHeading: "Others can use their own phone",
-  othersBlurb: "Everyone else on this booking can scan this square and fill in their own details at the same time. No need to pass this phone around.",
+  othersBlurb:
+    "Everyone else on this booking can scan this square and fill in their own details at the same time. No need to pass this phone around.",
   onTheirPhone: (who: string) => `${who} is filling this in on their own phone.`,
-  guestLabel: (kind: "adult" | "child", n: number) => (kind === "adult" ? `Adult ${n}` : `Child ${n}`),
+  guestLabel: (kind: "adult" | "child", n: number) =>
+    kind === "adult" ? `Adult ${n}` : `Child ${n}`,
   waitingTitle: "Nearly there",
   waitingBody: "Waiting for the others to finish on their phones. This screen moves on by itself.",
   slotPhone: "Filling in on their phone",
   slotDone: "Done",
   slotOpen: "Not started",
   waitingSkip: "Carry on without them",
-  joinTitle: (lead: string | null, place: string) => (lead ? `Checking in with ${lead} at ${place}` : `Checking in at ${place}`),
+  joinTitle: (lead: string | null, place: string) =>
+    lead ? `Checking in with ${lead} at ${place}` : `Checking in at ${place}`,
   joinBody: "Fill in your own details here while the others carry on. Who are you filling in for?",
   joinAdult: "Me (an adult)",
   joinChild: "A child with me",
   joinLeft: (n: number) => `${n} still to fill in`,
-  joinFull: "Everyone on this booking has been filled in already. If someone is missing, ask the person who started the check-in to change how many are staying.",
+  joinFull:
+    "Everyone on this booking has been filled in already. If someone is missing, ask the person who started the check-in to change how many are staying.",
   joinNameTitle: (n: number) => `Adult ${n}: your name`,
   joinChildTitle: "About the child",
   joinName: "Full name",
@@ -1366,7 +1577,6 @@ export const guest = branded({
   inboxHost: "Your host",
 });
 
-
 export const hostPlaceholders = branded({
   comingSoon: "Coming in a later stage",
 });
@@ -1392,8 +1602,13 @@ export const services = branded({
   liveBadge: "Live",
   guestTold: "Guest has been told the arrival time.",
   statuses: {
-    new: "New", acknowledged: "Acknowledged", booked: "Booked", in_progress: "In progress",
-    done: "Done", declined: "Declined", cancelled: "Cancelled",
+    new: "New",
+    acknowledged: "Acknowledged",
+    booked: "Booked",
+    in_progress: "In progress",
+    done: "Done",
+    declined: "Declined",
+    cancelled: "Cancelled",
   } as Record<string, string>,
 });
 
@@ -1415,7 +1630,8 @@ export const stayServices = branded({
 
 export const themeStudio = branded({
   title: "Look and feel",
-  subtitle: "Your whole look for guests: colours, type, shapes, icons, backdrop and words on the kiosk, guest guide and your page. Start from a template; changes preview instantly.",
+  subtitle:
+    "Your whole look for guests: colours, type, shapes, icons, backdrop and words on the kiosk, guest guide and your page. Start from a template; changes preview instantly.",
   presets: "Templates",
   colours: "Colours",
   primary: "Main colour",
@@ -1469,7 +1685,8 @@ export const themeStudio = branded({
   anyGoogleFont: "Any Google font, by name",
   useForHeadings: "Use for headings",
   useForText: "Use for text",
-  googleFontHelp: "Type the name exactly as on fonts.google.com. It loads for guests straight from Google Fonts.",
+  googleFontHelp:
+    "Type the name exactly as on fonts.google.com. It loads for guests straight from Google Fonts.",
   usingFont: (name: string) => `Using “${name}” for headings`,
   stopFont: "Stop using uploaded font",
   icons: "Icons",
@@ -1483,17 +1700,26 @@ export const themeStudio = branded({
   background_style: "Background",
   plain: "Plain",
   artwork: "Line art",
-  artworks: { none: "None", skyline: "Town skyline", palace: "Palace and lamp", dunes: "Desert dunes", coast: "Coast and lighthouse", hills: "Hills and cottage" } as Record<string, string>,
+  artworks: {
+    none: "None",
+    skyline: "Town skyline",
+    palace: "Palace and lamp",
+    dunes: "Desert dunes",
+    coast: "Coast and lighthouse",
+    hills: "Hills and cottage",
+  } as Record<string, string>,
   artworkStrength: "Line art strength",
   frame: "Frame",
   lineFrame: "A fine line",
   ornate: "Ornate corners",
   headerBand: "Name on a band of colour",
-  headerBandHelp: "Your logo and name across the top of your guest guide and page, on your main colour.",
+  headerBandHelp:
+    "Your logo and name across the top of your guest guide and page, on your main colour.",
   cover: "Cover photo",
   uploadCover: "Upload a photo",
   removeCover: "Remove",
-  coverHelp: "Shown on your guest page and guest guide. Landscape JPG or PNG, at least 1600 px wide, under 3 MB.",
+  coverHelp:
+    "Shown on your guest page and guest guide. Landscape JPG or PNG, at least 1600 px wide, under 3 MB.",
   words: "Words",
   layout: "Welcome layout",
   layoutLeft: "Name and logo to the left",
@@ -1513,15 +1739,20 @@ export const themeStudio = branded({
   kioskTouchHelp: "Guests' own phones always keep the standard size.",
   kioskTouches: {
     standard: { label: "Standard", help: "Buttons as designed, centred on the screen." },
-    expanded: { label: "Expanded", help: "Uses the whole screen with a thin margin: bigger letters, dates, number pads, buttons and corner icons, easy to press with any finger." },
+    expanded: {
+      label: "Expanded",
+      help: "Uses the whole screen with a thin margin: bigger letters, dates, number pads, buttons and corner icons, easy to press with any finger.",
+    },
   },
   sharedBadge: "Shared",
   yoursBadge: "Yours",
   templateName: "Name this look to save it as a template",
   saveTemplate: "Save as template",
   shareTemplate: "Share with every host",
-  templateHelp: "Templates keep the whole look so you (or every host, if shared) can start from it. Shared templates leave out your own logo and photo.",
-  templatesNotReady: "Saving templates becomes available once the latest database update is applied.",
+  templateHelp:
+    "Templates keep the whole look so you (or every host, if shared) can start from it. Shared templates leave out your own logo and photo.",
+  templatesNotReady:
+    "Saving templates becomes available once the latest database update is applied.",
   templateSaved: "Saved as one of your templates",
   templateShared: "Shared with every host",
   deleteTemplate: "Delete template",
@@ -1534,15 +1765,28 @@ export const themeStudio = branded({
 
 export const integrations = branded({
   title: "Integrations: demo or live (Latchkey admin)",
-  subtitle: "Only Latchkey's admins see this. Test each of this business's connections in demo mode, then switch it live once it's set up.",
+  subtitle:
+    "Only Latchkey's admins see this. Test each of this business's connections in demo mode, then switch it live once it's set up.",
   demo: "Demo",
   live: "Live",
   ready: "Ready",
   needsSetup: "Needs setup",
   items: {
-    id_check: { name: "Photo ID reading", demo: "Any photo passes as a match, no AI call.", live: "AI reads the name on the ID and compares it." },
-    host_email: { name: "Email alerts to you", demo: "Alerts show on Today only.", live: "Also emails you. Needs a sender email address." },
-    guest_messages: { name: "Guest updates", demo: "Updates show on the guest's stay page.", live: "Stay page plus email to the guest when a sender address is set up." },
+    id_check: {
+      name: "Photo ID reading",
+      demo: "Any photo passes as a match, no AI call.",
+      live: "AI reads the name on the ID and compares it.",
+    },
+    host_email: {
+      name: "Email alerts to you",
+      demo: "Alerts show on Today only.",
+      live: "Also emails you. Needs a sender email address.",
+    },
+    guest_messages: {
+      name: "Guest updates",
+      demo: "Updates show on the guest's stay page.",
+      live: "Stay page plus email to the guest when a sender address is set up.",
+    },
   },
   saved: "Switches saved",
 });
@@ -1552,8 +1796,7 @@ export const inRoomCopy = branded({
   why: "Why it helps",
   whyHide: "Hide",
   title: "Put a QR code in every room",
-  body:
-    "Booking sites keep their guidebooks inside their own app, and only for that booking. Latchkey's in-room guide is on the wall of the room itself: one scan shows how that room works and lets the guest reach you, whichever site they booked on.",
+  body: "Booking sites keep their guidebooks inside their own app, and only for that booking. Latchkey's in-room guide is on the wall of the room itself: one scan shows how that room works and lets the guest reach you, whichever site they booked on.",
   points: [
     "This room's own heating, shower and wifi, not the whole house",
     "Today's cleaning and closed times, kept up to date",
@@ -1564,7 +1807,8 @@ export const inRoomCopy = branded({
   printQr: "Print QR",
   printAll: (n: number) => `Print all ${n} rooms`,
   askOwner: "An owner or manager makes this room's code",
-  notReady: "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
+  notReady:
+    "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
 });
 
 /** Printing each room's QR code. */
@@ -1578,11 +1822,13 @@ export const roomQrCopy = branded({
   textSaved: "Saved for every room's card.",
   newWords: "New words",
   newWordsTitle: (room: string) => `New words for ${room}?`,
-  newWordsBody: "This room gets three new words. The words on its current card (and any older code) stop working straight away, so print the new card and replace the old one. Guests who already have their stay open aren't affected.",
+  newWordsBody:
+    "This room gets three new words. The words on its current card (and any older code) stop working straight away, so print the new card and replace the old one. Guests who already have their stay open aren't affected.",
   newWordsConfirm: "Make new words",
   newWordsDone: (code: string) => `New words: ${code}. Print the new card.`,
   qrAlt: (room: string) => `QR code for the ${room} guide`,
-  notReady: "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
+  notReady:
+    "Room QR codes need the latest update. Lovable applies it on the next sync (migration 0031).",
   none: "No rooms yet. Add rooms to this property first.",
 });
 
@@ -1605,8 +1851,10 @@ export const roomGuideCopy = branded({
 export const guideCopy = branded({
   quickTitle: "Jump to",
   quickExtras: "Extras",
-  listHelp: "Guests read these in this order. Drag the grip to move a section; open one to write it. The pin puts it on the reminder card at the top of their guide.",
-  listHelpRoom: "This room uses the whole-property guide unless you write its own version of a section. The order is the same for every room.",
+  listHelp:
+    "Guests read these in this order. Drag the grip to move a section; open one to write it. The pin puts it on the reminder card at the top of their guide.",
+  listHelpRoom:
+    "This room uses the whole-property guide unless you write its own version of a section. The order is the same for every room.",
   dragTip: "Drag to move (or use the arrow keys)",
   dragLabel: (title: string) => `Move ${title}: drag, or use the arrow keys`,
   pinTip: "Put on the reminder card",
@@ -1628,9 +1876,12 @@ export const guideCopy = branded({
   sectionName: "Section name",
   renamed: "Renamed",
   deleteTitle: (title: string) => `Delete “${title}”?`,
-  deleteBody: "This removes the section and everything written in it, for the whole property and every room. It can't be undone.",
-  removeWithFiles: "This takes the section out of the guide. You can add it back later, but not its attachments.",
-  filesGoToo: (n: number) => `Its ${n === 1 ? "attachment is" : `${n} attachments are`} deleted too.`,
+  deleteBody:
+    "This removes the section and everything written in it, for the whole property and every room. It can't be undone.",
+  removeWithFiles:
+    "This takes the section out of the guide. You can add it back later, but not its attachments.",
+  filesGoToo: (n: number) =>
+    `Its ${n === 1 ? "attachment is" : `${n} attachments are`} deleted too.`,
   removeConfirm: "Remove",
   deleteConfirm: "Delete section",
   deletedToast: "Section deleted",
@@ -1642,7 +1893,8 @@ export const guideCopy = branded({
   modeLabel: "Guide style for this room",
   basic: "Basic",
   detailed: "Detailed",
-  basicHelp: "Basic shows one short line per section, no photos. Detailed shows every step and photo.",
+  basicHelp:
+    "Basic shows one short line per section, no photos. Detailed shows every step and photo.",
   summary: "Short summary (shown in basic and detailed)",
   addStep: "Add step",
   stepHeading: "Step title",
@@ -1658,7 +1910,8 @@ export const guideCopy = branded({
   addStarter: "Add starter text",
   starterAdded: (n: number) => `Starter text added to ${n} sections`,
   doorLocked: (when: string) => `Door and lock details appear here from ${when}.`,
-  readOnly: "Your stay has ended. This guide stays open for 24 hours in case you left something behind.",
+  readOnly:
+    "Your stay has ended. This guide stays open for 24 hours in case you left something behind.",
   forgetTitle: "Good to know for a comfortable stay",
   guideLink: "Copy guide link",
   guideLinkCopied: "Guide link copied. It opens on arrival day and stops at check-out.",
@@ -1668,10 +1921,10 @@ export const guideCopy = branded({
   showLess: "Less",
   amenitiesTitle: "Already in your room",
   amenitiesBody: "No need to ask for these — they're waiting for you.",
-  pinLabel: "Show on \"Good to know\"",
+  pinLabel: 'Show on "Good to know"',
   pinHelp:
-    "Pick the few things that matter most for a comfortable stay. Whatever you pin appears in the \"Good to know for a comfortable stay\" card at the top of the guide, and is left out of the list below so it's never said twice.",
-  pinnedBadge: "On \"Good to know\"",
+    'Pick the few things that matter most for a comfortable stay. Whatever you pin appears in the "Good to know for a comfortable stay" card at the top of the guide, and is left out of the list below so it\'s never said twice.',
+  pinnedBadge: 'On "Good to know"',
   pinLimit: "Four reminders is about as many as anyone reads.",
   orderTitle: "Running order",
   orderHelp: "Move sections so the guide reads the way you'd explain it in person.",
@@ -1689,7 +1942,12 @@ export const extrasCopy = branded({
   basket: "Your request",
   empty: "Tap items above to add them.",
   when: "When?",
-  windows: { asap: "As soon as possible", evening: "This evening (18:00–21:00)", morning: "Tomorrow morning (08:00–10:00)", door: "Leave it outside my door" } as Record<string, string>,
+  windows: {
+    asap: "As soon as possible",
+    evening: "This evening (18:00–21:00)",
+    morning: "Tomorrow morning (08:00–10:00)",
+    door: "Leave it outside my door",
+  } as Record<string, string>,
   hostOut: (t: string) => `Your host is out until ${t}`,
   lateTitle: "Late check-out",
   earlyTitle: "Early check-in",
@@ -1701,7 +1959,8 @@ export const extrasCopy = branded({
   loanNote: "Please leave it in the room at check-out.",
   send: "Send request",
   sent: "Request sent",
-  cartButton: (n: number, t: string) => `Basket · ${n} item${n === 1 ? "" : "s"}${t ? ` · ${t}` : ""}`,
+  cartButton: (n: number, t: string) =>
+    `Basket · ${n} item${n === 1 ? "" : "s"}${t ? ` · ${t}` : ""}`,
   cartTitle: "Your basket",
   cartClose: "Keep browsing",
   cartEmpty: "Nothing in your basket yet. Tap items to add them.",
@@ -1743,8 +2002,15 @@ export const extrasCopy = branded({
   cancel: "Cancel",
   suggested: (w: string) => `Your host suggested: ${w}`,
   statuses: {
-    requested: "Waiting for host", approved: "Approved", awaiting_payment: "Awaiting payment", suggested: "New time suggested",
-    confirmed: "Booked", delivered: "Delivered", declined: "Declined", cancelled: "Cancelled", expired: "Expired",
+    requested: "Waiting for host",
+    approved: "Approved",
+    awaiting_payment: "Awaiting payment",
+    suggested: "New time suggested",
+    confirmed: "Booked",
+    delivered: "Delivered",
+    declined: "Declined",
+    cancelled: "Cancelled",
+    expired: "Expired",
   } as Record<string, string>,
   // host
   priceList: "Extras price list",
@@ -1752,7 +2018,10 @@ export const extrasCopy = branded({
   autoApprove: "Auto-approve",
   active: "Offered",
   max: "Max",
-  units: { item: "each", hour: "per hour", bag_day: "per bag per day", pack: "per pack" } as Record<string, string>,
+  units: { item: "each", hour: "per hour", bag_day: "per bag per day", pack: "per pack" } as Record<
+    string,
+    string
+  >,
   money: "Tax, bank and availability",
   taxTitle: "Sales tax",
   taxRegistered: "Registered for sales tax (e.g. VAT, GST)",
@@ -1771,7 +2040,8 @@ export const extrasCopy = branded({
   save: "Save",
   saved: "Saved",
   inbox: "Extras requests",
-  inboxEmpty: "No extras requests yet. When guests ask for towels or late check-out, they'll appear here.",
+  inboxEmpty:
+    "No extras requests yet. When guests ask for towels or late check-out, they'll appear here.",
   approve: "Approve",
   decline: "Decline",
   suggest: "Suggest another time",
@@ -1804,9 +2074,11 @@ export const listingImportCopy = branded({
   openHint: "Experimental: fill in this property and its rooms from your own public listings.",
   title: "Import from your listings",
   experimental: "Experimental",
-  intro: "Paste the links to your own listings. Latchkey reads each public page, the way a guest would see it, and shows you what it found before anything is added.",
+  intro:
+    "Paste the links to your own listings. Latchkey reads each public page, the way a guest would see it, and shows you what it found before anything is added.",
   linksLabel: "Links to your listings (one per line, or several at once)",
-  linksPlaceholder: "https://www.airbnb.co.uk/rooms/12345678\nhttps://www.booking.com/hotel/gb/your-place.html",
+  linksPlaceholder:
+    "https://www.airbnb.co.uk/rooms/12345678\nhttps://www.booking.com/hotel/gb/your-place.html",
   add: "Add links",
   sites: "Works with",
   notListing: "This looks like a search or home page, not your listing.",
@@ -1815,7 +2087,8 @@ export const listingImportCopy = branded({
   hidden: "Not public (add these yourself)",
   remove: "Remove link",
   prices: "Also read prices for these dates",
-  pricesHelp: "Most sites only show a price for chosen dates. Prices are shown for reference; Latchkey doesn't manage your rates.",
+  pricesHelp:
+    "Most sites only show a price for chosen dates. Prices are shown for reference; Latchkey doesn't manage your rates.",
   checkIn: "Arriving",
   checkOut: "Leaving",
   read: (n: number) => (n === 1 ? "Read 1 page" : `Read ${n} pages`),
@@ -1833,7 +2106,15 @@ export const listingImportCopy = branded({
   propertyTitle: "Your property",
   current: (v: string) => `Now: ${v}`,
   empty: "not set",
-  fields: { name: "Name", address: "Address", postcode: "Postcode", country: "Country", checkIn: "Check-in from", checkOut: "Check-out by", parking: "Parking notes" } as Record<string, string>,
+  fields: {
+    name: "Name",
+    address: "Address",
+    postcode: "Postcode",
+    country: "Country",
+    checkIn: "Check-in from",
+    checkOut: "Check-out by",
+    parking: "Parking notes",
+  } as Record<string, string>,
   rules: (n: number) => `Add ${n} house rules to your stay guide`,
   rulesHelp: "Only if your guide's House rules section is still empty.",
   coverTitle: "Cover photo for your guest pages",
@@ -1848,14 +2129,20 @@ export const listingImportCopy = branded({
   amenities: (n: number) => (n === 1 ? "1 amenity" : `${n} amenities`),
   photo: "Room photo",
   noPhoto: "No photo",
-  price: (amount: string, site: string) => `Listed at ${amount} on ${site}. For reference only: Latchkey doesn't store rates.`,
+  price: (amount: string, site: string) =>
+    `Listed at ${amount} on ${site}. For reference only: Latchkey doesn't store rates.`,
   apply: (n: number) => (n === 1 ? "Add 1 change" : `Add ${n} changes`),
   applying: "Adding to your property…",
   applied: (r: { roomsAdded: number; roomsUpdated: number; photos: number }) =>
-    [r.roomsAdded ? `${r.roomsAdded} room${r.roomsAdded === 1 ? "" : "s"} added` : null, r.roomsUpdated ? `${r.roomsUpdated} updated` : null, r.photos ? `${r.photos} photo${r.photos === 1 ? "" : "s"} saved` : null]
+    [
+      r.roomsAdded ? `${r.roomsAdded} room${r.roomsAdded === 1 ? "" : "s"} added` : null,
+      r.roomsUpdated ? `${r.roomsUpdated} updated` : null,
+      r.photos ? `${r.photos} photo${r.photos === 1 ? "" : "s"} saved` : null,
+    ]
       .filter(Boolean)
       .join(", ") || "Your property is up to date",
-  photosSkipped: (n: number) => `${n} photo${n === 1 ? "" : "s"} couldn't be copied; add ${n === 1 ? "it" : "them"} on Stay guides.`,
+  photosSkipped: (n: number) =>
+    `${n} photo${n === 1 ? "" : "s"} couldn't be copied; add ${n === 1 ? "it" : "them"} on Stay guides.`,
   finished: "Done. Check your rooms below; you can change anything at any time.",
   close: "Close",
 });
@@ -1867,7 +2154,8 @@ export const saveCopy = branded({
 export const listingLinksCopy = branded({
   label: "Your listings on booking sites",
   placeholder: "https://www.airbnb.co.uk/rooms/12345678",
-  propertyHint: "Links to this property's own pages (one per line). Their icons open them straight from Properties.",
+  propertyHint:
+    "Links to this property's own pages (one per line). Their icons open them straight from Properties.",
   roomHint: "Links to this room's own listings (one per line), e.g. its Airbnb listing.",
   otherSite: "Website",
   open: (site: string) => `Open on ${site}`,
@@ -1875,8 +2163,7 @@ export const listingLinksCopy = branded({
 
 export const feedCopy = branded({
   title: "Share each room's Latchkey calendar",
-  body:
-    "Only needed if you take direct bookings in Latchkey. If your platforms already sync with each other, leave this off.",
+  body: "Only needed if you take direct bookings in Latchkey. If your platforms already sync with each other, leave this off.",
   detail:
     "The feed includes direct bookings and whole-day blocks you created here. It never repeats bookings imported from a platform, and it doesn't include cleaning or late check-out times.",
   enable: "Share this calendar",
@@ -1890,8 +2177,16 @@ export const feedCopy = branded({
 export const responseNotes = branded({
   label: "Add a note for the guest",
   custom: "Write your own note",
-  approve: ["Left outside your door", "Will bring it at 18:30", "Ready to collect from the hallway"],
-  decline: ["Room needed for an arrival", "Sorry, we've run out today", "Outside our service hours"],
+  approve: [
+    "Left outside your door",
+    "Will bring it at 18:30",
+    "Ready to collect from the hallway",
+  ],
+  decline: [
+    "Room needed for an arrival",
+    "Sorry, we've run out today",
+    "Outside our service hours",
+  ],
   suggest: ["This is the earliest I can manage", "Cleaner is in the house until then"],
   fromHost: (note: string) => `Note from your host: ${note}`,
   send: "Send",
@@ -1908,7 +2203,10 @@ export const todayRequests = branded({
 
 /** Adding and editing price list items. */
 export const priceListUi = branded({
-  currencyLine: (cur: string, host: string) => (cur === host ? `Prices in ${cur}, your business's currency. A property abroad can charge in its own:` : `Prices in ${cur} for this property (your business uses ${host}).`),
+  currencyLine: (cur: string, host: string) =>
+    cur === host
+      ? `Prices in ${cur}, your business's currency. A property abroad can charge in its own:`
+      : `Prices in ${cur} for this property (your business uses ${host}).`,
   currencySaved: "Currency saved for this property.",
   addItem: "Add an item",
   editItem: "Edit item",
@@ -1953,14 +2251,19 @@ export const payments = branded({
   backDone: "Thanks. Your Stripe account is connected and ready for payments.",
   backPending: "Stripe still needs a few details. Pick up where you left off any time.",
   platformTitle: "Payments go to Latchkey's own Stripe account",
-  platformBody: "As the super admin, your businesses can use Latchkey's account for guest payments. Connect a separate account any time to keep them apart.",
+  platformBody:
+    "As the super admin, your businesses can use Latchkey's account for guest payments. Connect a separate account any time to keep them apart.",
   usePlatform: "Use Latchkey's Stripe account instead",
   useOwn: "Connect a separate Stripe account",
   notAvailable: "Card payments aren't available yet. Please contact Latchkey support.",
   webhookMissing: "Almost there: add the webhook signing secret so payments confirm automatically.",
   syncButton: "Send price list to Stripe",
-  syncedCount: (n: number) => (n === 0 ? "No items sent to Stripe yet." : `${n} paid item${n === 1 ? "" : "s"} set up in Stripe.`),
-  synced: (created: number, updated: number) => `Sent to Stripe: ${created} new, ${updated} updated.`,
+  syncedCount: (n: number) =>
+    n === 0
+      ? "No items sent to Stripe yet."
+      : `${n} paid item${n === 1 ? "" : "s"} set up in Stripe.`,
+  synced: (created: number, updated: number) =>
+    `Sent to Stripe: ${created} new, ${updated} updated.`,
   syncFailed: "Stripe wouldn't accept that. Please try again.",
   ownerOnly: "Only the owner can connect Stripe.",
   connectFailed: "Stripe couldn't be connected",
@@ -1994,14 +2297,20 @@ export const stripeAccountCopy = branded({
   unreachable: "Stripe didn't answer just now, so these details may be out of date.",
   howTitle: "How to check it's yours",
   how: "Sign in to Stripe, open Settings → Business → Account details, and compare the account ID there with the one above. They must match exactly. In your Stripe payments list, guest payments show the same statement name.",
-  howAdmin: "In Latchkey's Stripe dashboard, Connect → Accounts lists every business's account by this ID. Open in Stripe goes straight to it.",
+  howAdmin:
+    "In Latchkey's Stripe dashboard, Connect → Accounts lists every business's account by this ID. Open in Stripe goes straight to it.",
   keyKind: (kind: string) => (kind === "restricted" ? "Restricted key (rk_)" : "Secret key (sk_)"),
   key: "Key in Secrets",
   webhooks: "Webhook secrets",
-  webhookSet: (main: boolean, connect: boolean) => [main ? "platform ✓" : "platform missing", connect ? "connected accounts ✓" : "connected accounts missing"].join(" · "),
+  webhookSet: (main: boolean, connect: boolean) =>
+    [
+      main ? "platform ✓" : "platform missing",
+      connect ? "connected accounts ✓" : "connected accounts missing",
+    ].join(" · "),
   notSet: "No Stripe key in Secrets yet.",
   needsTitle: "This restricted key must allow",
-  needsBody: "Hosts never paste keys: Latchkey's key creates each host's Stripe account and takes guest payments in it. In Stripe → Developers → API keys, edit this key and give it these permissions (or use a full secret key), and switch on Connect for the account.",
+  needsBody:
+    "Hosts never paste keys: Latchkey's key creates each host's Stripe account and takes guest payments in it. In Stripe → Developers → API keys, edit this key and give it these permissions (or use a full secret key), and switch on Connect for the account.",
   colStripe: "Stripe",
   modeNone: "Not connected",
   modePlatform: "Latchkey's account",
@@ -2030,33 +2339,40 @@ export const wifiCopy = branded({
   copy: "Copy the password",
   copied: "Password copied. Paste it when your phone asks.",
   join: "Join Wi-Fi",
-  iosHelp: "Tap Join, then Allow. Open Settings, tap Profile Downloaded and Install: your phone joins straight away and whenever you're here.",
+  iosHelp:
+    "Tap Join, then Allow. Open Settings, tap Profile Downloaded and Install: your phone joins straight away and whenever you're here.",
   androidHelp: "We'll copy the password and open your Wi-Fi: pick the network and paste it.",
   androidOpenHelp: "We'll open your Wi-Fi: pick the network.",
   qrHelp: "Point your phone's camera at this code and tap the Wi-Fi prompt to join.",
   qrAlt: (name: string) => `Code to join ${name}`,
-  locked: "The Wi-Fi password appears here once you've checked in. It only takes a couple of minutes.",
+  locked:
+    "The Wi-Fi password appears here once you've checked in. It only takes a couple of minutes.",
   checkIn: "Check in",
 });
 
 /** The stay guide's "your stay" line, the host's mid-stay message and the check-in nudge. */
 export const stayProgressCopy = branded({
   before: (nights: number) => `${nights} ${nights === 1 ? "night" : "nights"} with us`,
-  arrival: (nights: number) => `Welcome! ${nights} ${nights === 1 ? "night" : "nights"} with us, starting tonight`,
-  during: (night: number, nights: number, left: number) => `Night ${night} of ${nights} · ${left <= 1 ? "your last night" : `${left - 1} ${left - 1 === 1 ? "night" : "nights"} to go`}`,
+  arrival: (nights: number) =>
+    `Welcome! ${nights} ${nights === 1 ? "night" : "nights"} with us, starting tonight`,
+  during: (night: number, nights: number, left: number) =>
+    `Night ${night} of ${nights} · ${left <= 1 ? "your last night" : `${left - 1} ${left - 1 === 1 ? "night" : "nights"} to go`}`,
   leaving: "Today's your last day: safe travels",
   dates: (from: string, to: string) => `${from} to ${to}`,
-  nudgeTitle: (name: string | null) => (name ? `${name}, please finish checking in` : "Please finish checking in"),
+  nudgeTitle: (name: string | null) =>
+    name ? `${name}, please finish checking in` : "Please finish checking in",
   nudgeBody: "Two minutes on your phone: your details for the guest register, and you're all set.",
   nudgeCta: "Finish now",
   nudgeFailed: "That didn't open. Please try again, or ask us at the property.",
   messageUs: "Message us",
   needElse: "Need something else?",
-  weather: (temp: number, label: string, high: number | null, low: number | null) => `${temp}°C, ${label.toLowerCase()}${high !== null && low !== null ? ` (${low}° to ${high}° today)` : ""}`,
+  weather: (temp: number, label: string, high: number | null, low: number | null) =>
+    `${temp}°C, ${label.toLowerCase()}${high !== null && low !== null ? ` (${low}° to ${high}° today)` : ""}`,
   nudgeLater: "Later",
   roomTitle: "Staying in this room?",
   roomBody: "Opening your own guide…",
-  roomAway: "To open your own guide, connect to the Wi-Fi here, or let us check you're at the property.",
+  roomAway:
+    "To open your own guide, connect to the Wi-Fi here, or let us check you're at the property.",
   roomLocate: "Check I'm here",
   roomLocating: "Checking…",
   roomNotHere: "We couldn't tell you're at the property. Please check in to open your guide.",
@@ -2069,23 +2385,30 @@ export const stayAccessCopy = branded({
   body: "What guests can open from the QR code in their room, and how they get on the Wi-Fi.",
   notReady: "These settings appear once the latest database update (migration 0057) is applied.",
   early: "Open the guest's own guide from their room's QR code before they've checked in",
-  earlyHelp: "Whoever is booked into that room today (with a name on the stay) gets their own guide: their name, dates, messages and extras. A banner keeps asking them to finish checking in for the guest register. It only opens when their phone is shown to be here; otherwise they check in first.",
+  earlyHelp:
+    "Whoever is booked into that room today (with a name on the stay) gets their own guide: their name, dates, messages and extras. A banner keeps asking them to finish checking in for the guest register. It only opens when their phone is shown to be here; otherwise they check in first.",
   presence: "How a phone is shown to be here",
   presenceNetwork: "On your Wi-Fi",
-  presenceNetworkHelp: "Same internet connection as your door tablet. Works on a separate guest network too. Nothing to tap for the guest.",
+  presenceNetworkHelp:
+    "Same internet connection as your door tablet. Works on a separate guest network too. Nothing to tap for the guest.",
   presenceBoth: "On your Wi-Fi, or close by",
-  presenceBothHelp: "Also lets a guest on mobile data confirm they're within about 150 m of the door tablet. Locations can be faked by someone determined, so choose Wi-Fi only if that matters to you.",
+  presenceBothHelp:
+    "Also lets a guest on mobile data confirm they're within about 150 m of the door tablet. Locations can be faked by someone determined, so choose Wi-Fi only if that matters to you.",
   tablets: "Door tablets",
-  tabletsNone: "No door tablet is paired yet. On the tablet, press and hold the top-right corner and enter your PIN once (or open the kiosk while signed in). Allow its location when asked if you'd like the \"close by\" check.",
-  tabletLine: (seen: string | null, located: boolean, by: string) => `${seen ? `Last seen ${seen}` : "Not seen yet"} · ${located ? "location known" : "no location"} · paired ${by}`,
+  tabletsNone:
+    'No door tablet is paired yet. On the tablet, press and hold the top-right corner and enter your PIN once (or open the kiosk while signed in). Allow its location when asked if you\'d like the "close by" check.',
+  tabletLine: (seen: string | null, located: boolean, by: string) =>
+    `${seen ? `Last seen ${seen}` : "Not seen yet"} · ${located ? "location known" : "no location"} · paired ${by}`,
   pairedBy: { pin: "with your PIN", host: "while signed in" } as Record<string, string>,
   forget: "Remove",
   forgotten: "Tablet removed.",
-  message: "\"Need something else?\" on the guide",
-  messageHelp: "Invites questions the guide doesn't answer, with a Message us button, just before \"How was your stay?\". Feedback has its own card, so keep this about asking.",
+  message: '"Need something else?" on the guide',
+  messageHelp:
+    'Invites questions the guide doesn\'t answer, with a Message us button, just before "How was your stay?". Feedback has its own card, so keep this about asking.',
   wifiTitle: "Wi-Fi",
   wifiAfter: "Show the Wi-Fi password only after check-in",
-  wifiAfterHelp: "Guests see the network and a Check in button; the password (and one-tap join) appears once their details are in. Room networks are set on each room in Properties.",
+  wifiAfterHelp:
+    "Guests see the network and a Check in button; the password (and one-tap join) appears once their details are in. Room networks are set on each room in Properties.",
   saved: "Saved.",
 });
 
@@ -2113,11 +2436,13 @@ export const homeArtCopy = branded({
   previewBody: "How the words read over the first photo with these settings.",
   previewBox: "A box on the home page, as it will look.",
   glassTitle: "Glass boxes",
-  glassBody: "The home page's boxes as frosted glass, like an iPhone: each keeps its own colour as a light tint and the photo behind shows through softly. Off makes them solid.",
+  glassBody:
+    "The home page's boxes as frosted glass, like an iPhone: each keeps its own colour as a light tint and the photo behind shows through softly. Off makes them solid.",
   glassClear: "See-through",
   glassBlur: "Blur",
   glassSaturate: "Colour behind",
-  notReady: "Home page pictures can be changed once the latest database update (migration 0058) is applied. Until then the defaults show.",
+  notReady:
+    "Home page pictures can be changed once the latest database update (migration 0058) is applied. Until then the defaults show.",
   where: "Where",
   side: "Keep in view",
   right: "Right of the photo",
@@ -2129,7 +2454,8 @@ export const homeArtCopy = branded({
   none: "No pictures: the home page shows text only.",
   addTitle: "Add a picture",
   upload: "Upload your own",
-  uploadHint: "JPEG, PNG or WebP photo (royalty-free or your own), under 2 MB. Portrait shapes look best. Latchkey's own set is free to use with no credit needed.",
+  uploadHint:
+    "JPEG, PNG or WebP photo (royalty-free or your own), under 2 MB. Portrait shapes look best. Latchkey's own set is free to use with no credit needed.",
   reset: "Back to Latchkey's pictures",
   saved: "Home page pictures saved.",
   slots: {
@@ -2150,12 +2476,14 @@ export const homeArtCopy = branded({
 export const reviewNudgeCopy = branded({
   title: (site: string) => `A review on ${site} would mean a lot`,
   titleDirect: "How was your stay?",
-  onSite: (site: string) => `${site} will send you a short email or app message after you leave: that's where your review goes. Thank you!`,
+  onSite: (site: string) =>
+    `${site} will send you a short email or app message after you leave: that's where your review goes. Thank you!`,
   scoreLabel: "Your score out of 10",
   low: "1 · not good",
   high: "10 · loved it",
   comment: "What made your stay? Anything we could do better? (optional)",
-  publicOk: (place: string) => `Show my score and words, with my first name, on ${place}'s booking page.`,
+  publicOk: (place: string) =>
+    `Show my score and words, with my first name, on ${place}'s booking page.`,
   optional: "(optional)",
   send: "Send my review",
   thanks: "Thank you! Your review means a lot to us.",
@@ -2167,11 +2495,13 @@ export const reviewSettingsCopy = branded({
   body: "On the last day of a stay, guests see a short, friendly ask for a review next to the logo of the site they booked with.",
   notReady: "These settings appear once the latest database update (migration 0057) is applied.",
   ask: "Ask guests for a review on their last day",
-  askHelp: "Booked on a site: we remind them that site will ask for their review. Booked directly: they score their stay out of 10 right on their guide, and only you see it unless they agree to share it.",
+  askHelp:
+    "Booked on a site: we remind them that site will ask for their review. Booked directly: they score their stay out of 10 right on their guide, and only you see it unless they agree to share it.",
   text: "What it says",
   textHelp: "Shown under the five stars. Keep it warm and short.",
   show: "Show direct guests' reviews on your booking page",
-  showHelp: "Only reviews scoring 9 or more out of 10, from guests who booked directly and ticked to share theirs, with their first name and the month. You can hide any review from the list on Today.",
+  showHelp:
+    "Only reviews scoring 9 or more out of 10, from guests who booked directly and ticked to share theirs, with their first name and the month. You can hide any review from the list on Today.",
   saved: "Saved.",
 });
 
@@ -2201,9 +2531,18 @@ export const stayTimesCopy = branded({
   noneOffered: "nothing (the limit leaves no whole block)",
   free: "free",
   buffer: "Buffer between guests",
-  bufferHelp: "Kept free in a room between one guest leaving and the next arriving, for cleaning. Applies to everything guests can buy, and warns you if you set a time by hand that eats into it.",
-  minutes: (m: number) => (m === 0 ? "None" : m < 60 ? `${m} minutes` : m % 60 === 0 ? `${m / 60} ${m === 60 ? "hour" : "hours"}` : `${Math.floor(m / 60)} h ${m % 60} min`),
-  override: "To give one guest a different time, edit their stay in Bookings and change the check-in or check-out time: they're told in their messages, and the timelines, housekeeping and the next guest's choices all follow.",
+  bufferHelp:
+    "Kept free in a room between one guest leaving and the next arriving, for cleaning. Applies to everything guests can buy, and warns you if you set a time by hand that eats into it.",
+  minutes: (m: number) =>
+    m === 0
+      ? "None"
+      : m < 60
+        ? `${m} minutes`
+        : m % 60 === 0
+          ? `${m / 60} ${m === 60 ? "hour" : "hours"}`
+          : `${Math.floor(m / 60)} h ${m % 60} min`,
+  override:
+    "To give one guest a different time, edit their stay in Bookings and change the check-in or check-out time: they're told in their messages, and the timelines, housekeeping and the next guest's choices all follow.",
   saved: "Saved.",
 });
 
@@ -2214,12 +2553,14 @@ export const trades = branded({
     "Pick what needs doing and search Google Maps for the nearest firms, with reviews, opening hours and phone numbers. Below, the sites people in your country use, and what each is best for.",
   mapsSearch: (term: string, area: string) => `Search Google Maps for “${term}” near ${area}`,
   whoTitle: (country: string) => `Who's best for what in ${country}`,
-  whoBody: "Opens each site in a new tab. A tick marks an official register: check anyone doing gas or electrical work is on it.",
+  whoBody:
+    "Opens each site in a new tab. A tick marks an official register: check anyone doing gas or electrical work is on it.",
   official: "Official register",
   jobLabel: "What needs doing",
   termLabel: "Search words",
   areaLabel: "Postcode or town",
-  needArea: "Add a postcode to this property, or type a town above, and the searches will open for that area.",
+  needArea:
+    "Add a postcode to this property, or type a town above, and the searches will open for that area.",
   searching: (term: string, area: string) => `Searching for “${term}” near ${area}.`,
   searchNow: (name: string) => `Search ${name} now`,
   openOn: (name: string) => `Search ${name}`,
@@ -2230,7 +2571,8 @@ export const trades = branded({
 
 export const hostInbox = branded({
   via: (platform: string) => `From ${platform}`,
-  platformReplyHint: (platform: string) => `Replying here sends it in Latchkey. To answer on ${platform}, reply by email from your own mailbox.`,
+  platformReplyHint: (platform: string) =>
+    `Replying here sends it in Latchkey. To answer on ${platform}, reply by email from your own mailbox.`,
   replyByEmail: "Reply by email",
   title: "Guest messages",
   open: "Open guest messages",
@@ -2247,16 +2589,19 @@ export const tradesCopy = branded({
   title: "Your trades and helpers",
   blurb:
     "Your own list of people you actually call. One tap to ring, text, WhatsApp or email them from this device.",
-  empty: "No contacts yet. Add someone, bring in a spreadsheet, or let Latchkey suggest who you'll need.",
+  empty:
+    "No contacts yet. Add someone, bring in a spreadsheet, or let Latchkey suggest who you'll need.",
   add: "Add a contact",
   edit: "Edit contact",
   importCta: "Import a spreadsheet",
   importTitle: "Import contacts",
-  importBlurb: "Drop in a CSV from your phone, email or accountant. You'll check the columns before anything is saved.",
+  importBlurb:
+    "Drop in a CSV from your phone, email or accountant. You'll check the columns before anything is saved.",
   importChoose: "Choose a CSV file",
   importMap: "Match your columns",
   importPreview: (n: number) => `${n} contact${n === 1 ? "" : "s"} ready to add`,
-  importSkipped: (n: number) => `${n} row${n === 1 ? "" : "s"} skipped — no name or no way to contact them.`,
+  importSkipped: (n: number) =>
+    `${n} row${n === 1 ? "" : "s"} skipped — no name or no way to contact them.`,
   importConfirm: "Add these contacts",
   importIgnore: "Ignore this column",
   suggestCta: "Suggest who I'll need",
@@ -2272,7 +2617,8 @@ export const tradesCopy = branded({
   whatsapp: "WhatsApp",
   email: "Email",
   preferred: "First call",
-  noneForJob: "No saved contacts yet. Add someone in the address book above, or search the directories below.",
+  noneForJob:
+    "No saved contacts yet. Add someone in the address book above, or search the directories below.",
   noContact: "No number or email saved yet.",
   deleteConfirm: "Remove this contact?",
   fields: {
@@ -2306,7 +2652,8 @@ export const pricingCopy = branded({
   after: (days: number) => `After your ${days}-day free trial`,
   perMonth: "a month",
   demoTitle: "Like what you see? Run your own rooms this way.",
-  demoBody: (days: number) => `Register as a host and try Latchkey free for ${days} days, with a money-back guarantee.`,
+  demoBody: (days: number) =>
+    `Register as a host and try Latchkey free for ${days} days, with a money-back guarantee.`,
   adminTitle: "Subscription pricing (super admin)",
   adminBody: "Amounts in pence. Changes show on the home page straight away.",
   saved: "Pricing saved",
@@ -2318,7 +2665,8 @@ export const worldCopy = branded({
   findCurrency: "Search currencies (name, code or symbol)",
   findZone: "Search time zones (city or region)",
   findCountry: "Search countries or codes",
-  badPhone: (country: string, example: string) => `That doesn't look like a ${country} number${example ? `, e.g. ${example}` : ""}.`,
+  badPhone: (country: string, example: string) =>
+    `That doesn't look like a ${country} number${example ? `, e.g. ${example}` : ""}.`,
   fixPhone: "Please check the phone number first.",
 });
 
@@ -2330,11 +2678,17 @@ export const offerCopy = branded({
   badge: (label: string, until: string) => `${label} · join by ${until}`,
   firstMonth: "for your first month",
   thenUsual: (usual: string) => `then ${usual} a month`,
-  journey: (days: number, price: string, usual: string) => [`${days} days free`, `${price} for your first month`, `${usual} a month after that`],
-  newOnly: (until: string) => `For accounts opened by ${until}. The offer is for one month only; after that it's the usual price.`,
+  journey: (days: number, price: string, usual: string) => [
+    `${days} days free`,
+    `${price} for your first month`,
+    `${usual} a month after that`,
+  ],
+  newOnly: (until: string) =>
+    `For accounts opened by ${until}. The offer is for one month only; after that it's the usual price.`,
   billing: (label: string, price: string, usual: string) =>
     `${label}: your first paid month is ${price} instead of ${usual}. After that it's ${usual} a month.`,
-  demo: (price: string, until: string) => `Join by ${until} and your first paid month is just ${price}.`,
+  demo: (price: string, until: string) =>
+    `Join by ${until} and your first paid month is just ${price}.`,
   adminTitle: "Offer for new hosts",
   adminBody:
     "New accounts opened between these days (UK time) pay the offer price for their first paid month, after the free trial, then the usual price. Accounts keep the offer they joined with, even if you change or end it later.",
@@ -2345,7 +2699,8 @@ export const offerCopy = branded({
   endsOn: "Last day to join",
   save: "Save offer",
   saved: "Offer saved. The home page shows it straight away.",
-  counts: (waiting: number, used: number) => `${waiting} account${waiting === 1 ? "" : "s"} still to use it · ${used} used`,
+  counts: (waiting: number, used: number) =>
+    `${waiting} account${waiting === 1 ? "" : "s"} still to use it · ${used} used`,
   live: "Running today",
   notLive: "Not running today",
 });
@@ -2406,7 +2761,8 @@ export const team = branded({
   nameSaved: "Name saved",
   signInEmail: "Sign-in email",
   changeEmail: "Change",
-  emailHint: "We'll email a confirmation link to the new address; the change happens when you open it.",
+  emailHint:
+    "We'll email a confirmation link to the new address; the change happens when you open it.",
   emailCheck: (email: string) => `Check ${email} for a link to confirm the change.`,
   accessRemoved: (host: string) => `Your access to ${host} was removed.`,
 });
@@ -2418,14 +2774,16 @@ export const invite = branded({
   signIn: "Sign in or create account",
   accept: "Accept invitation",
   accepting: "Joining…",
-  wrongEmail: (email: string) => `This invite was sent to ${email}. Sign in with that email address to accept it.`,
+  wrongEmail: (email: string) =>
+    `This invite was sent to ${email}. Sign in with that email address to accept it.`,
   used: "This invitation has already been used. If it was yours, just sign in.",
   expired: "This invitation has expired. Ask the owner to send a new one.",
   revoked: "This invitation was cancelled. Ask the owner if you still need access.",
   missing: "We couldn't find this invitation. Check the link in your email.",
   demo: "The shared demo can't join a team. Sign out and use your own account.",
   pendingTitle: "You've been invited",
-  pendingBody: "Someone has invited this email address to their team. Open the link in your invitation email to join.",
+  pendingBody:
+    "Someone has invited this email address to their team. Open the link in your invitation email to join.",
   pendingOwn: "Start my own workspace instead",
 });
 
@@ -2478,7 +2836,8 @@ export const guestCard = branded({
   call: "Call",
   text: "Text",
   whatsapp: "WhatsApp",
-  callHint: "Opens your phone, or the app that makes calls on this computer (iPhone on a Mac, Phone Link on Windows).",
+  callHint:
+    "Opens your phone, or the app that makes calls on this computer (iPhone on a Mac, Phone Link on Windows).",
   kioskWelcome: "Kiosk welcome",
   kioskWelcomeHide: "Close the welcome",
   checkedIn: "Checked in",
@@ -2500,10 +2859,17 @@ export const guestCard = branded({
   free: "free",
   openServices: "Open Services",
   activity: "Arrivals and departures",
-  presence: { arrived: "Arrived", left: "Left", returned: "Came back", checked_out: "Checked out" } as Record<string, string>,
+  presence: {
+    arrived: "Arrived",
+    left: "Left",
+    returned: "Came back",
+    checked_out: "Checked out",
+  } as Record<string, string>,
   deleteTitle: (name: string) => `Remove ${name}?`,
-  deleteBody: "This deletes the stay with its messages, requests and alerts. It can't be undone. Hide it instead if you might need it later. Guest register entries are kept for 12 months, as UK law requires.",
-  deleteSynced: "It came from a calendar link, so it will come back on the next sync if the platform still lists it.",
+  deleteBody:
+    "This deletes the stay with its messages, requests and alerts. It can't be undone. Hide it instead if you might need it later. Guest register entries are kept for 12 months, as UK law requires.",
+  deleteSynced:
+    "It came from a calendar link, so it will come back on the next sync if the platform still lists it.",
   deleted: "Stay removed",
   whoStaying: "Who's staying",
   arrivedCount: (adults: number, children: number) =>
@@ -2524,7 +2890,13 @@ export const guestCard = branded({
   idPhoto: "ID photo",
   facePhoto: "Face photo",
   noPhotos: "No photos kept for this guest.",
-  docType: { passport: "Passport", driving_licence: "Driving licence", national_id: "ID card", residence_permit: "Residence permit", other: "Other ID" } as Record<string, string>,
+  docType: {
+    passport: "Passport",
+    driving_licence: "Driving licence",
+    national_id: "ID card",
+    residence_permit: "Residence permit",
+    other: "Other ID",
+  } as Record<string, string>,
   detailName: "Name on ID",
   detailDob: "Date of birth",
   detailDoc: "ID type",
@@ -2541,7 +2913,8 @@ export const guestCard = branded({
 });
 
 export const bookingTools = branded({
-  showing: (what: string, n: number) => `Showing ${what.toLowerCase()}: ${n} ${n === 1 ? "stay" : "stays"}`,
+  showing: (what: string, n: number) =>
+    `Showing ${what.toLowerCase()}: ${n} ${n === 1 ? "stay" : "stays"}`,
   showLabels: {
     arriving: "Arriving today",
     staying: "Staying now",
@@ -2566,10 +2939,12 @@ export const bookingTools = branded({
   restoredToast: (n: number) => `${n} back in your bookings`,
   deletedToast: (n: number) => `${n} removed`,
   syncAll: "Sync calendars",
-  syncedToast: (created: number, updated: number) => `Calendars synced · ${created} new, ${updated} updated`,
+  syncedToast: (created: number, updated: number) =>
+    `Calendars synced · ${created} new, ${updated} updated`,
   noLinks: "This property has no calendar links yet.",
   archiveEmpty: "Nothing hidden.",
-  archiveHint: "Hidden stays are left out of Today and Bookings, and stay hidden on later calendar syncs unless the platform changes them (new dates, a guest books, or it's reopened). Guests can still use their links.",
+  archiveHint:
+    "Hidden stays are left out of Today and Bookings, and stay hidden on later calendar syncs unless the platform changes them (new dates, a guest books, or it's reopened). Guests can still use their links.",
   rowAddName: "Add the guest's name",
   rowNotBooking: "Not a booking: close these nights",
   rowUnblock: "It's a booking: reopen to add the guest",
@@ -2582,7 +2957,8 @@ export const bookingTools = branded({
 
 export const stayCalendar = branded({
   title: "Next two weeks",
-  subtitle: "Who is where, what is blocked, and who is waiting on you. Tap a stay for the guest's details.",
+  subtitle:
+    "Who is where, what is blocked, and who is waiting on you. Tap a stay for the guest's details.",
   room: "Room",
   checkedIn: "Checked in",
   unread: (n: number) => `${n} unread ${n === 1 ? "message" : "messages"}`,
@@ -2604,7 +2980,8 @@ export const jobTools = branded({
   archived: "Moved to the archive",
   restored: "Back on the board",
   deleteTitle: (title: string) => `Delete "${title}"?`,
-  deleteBody: "This removes the job for good. Archive it instead if you might want to look it up later.",
+  deleteBody:
+    "This removes the job for good. Archive it instead if you might want to look it up later.",
   deleted: "Job deleted",
 });
 
@@ -2615,19 +2992,28 @@ export const linkTools = branded({
   noRooms: "Add rooms to this property first.",
   noLink: "No link saved",
   editTitle: "Edit calendar link",
-  editBody: (masked: string) => `Change the room, platform or name. To replace the link (${masked || "none saved"}), paste the new one; leave it empty to keep it.`,
+  editBody: (masked: string) =>
+    `Change the room, platform or name. To replace the link (${masked || "none saved"}), paste the new one; leave it empty to keep it.`,
   testNeedsLink: "Paste a link to test it",
   saved: "Calendar link updated",
-  syncResult: (created: number, updated: number, cancelled: number) => `Synced · ${created} new, ${updated} updated, ${cancelled} cancelled`,
+  syncResult: (created: number, updated: number, cancelled: number) =>
+    `Synced · ${created} new, ${updated} updated, ${cancelled} cancelled`,
   syncedAll: (n: number) => `${n} calendar ${n === 1 ? "link" : "links"} synced`,
   removeTitle: "Remove this calendar link?",
-  removeBody: "Latchkey stops reading this calendar. Bookings it brought in stay unless you tick the box.",
+  removeBody:
+    "Latchkey stops reading this calendar. Bookings it brought in stay unless you tick the box.",
   withStays: "Also remove the stays this link brought in",
   withStaysHint: "Their messages and requests go too. Any with payments are hidden instead.",
   removed: "Calendar link removed",
   removedWithStays: (removed: number, archived: number) =>
     `Calendar link removed with ${removed} ${removed === 1 ? "stay" : "stays"}${archived ? `; ${archived} with payments hidden` : ""}`,
-  states: { syncing: "Syncing…", ok: "Working", warning: "Needs a look", error: "Not working", never: "Not checked yet" },
+  states: {
+    syncing: "Syncing…",
+    ok: "Working",
+    warning: "Needs a look",
+    error: "Not working",
+    never: "Not checked yet",
+  },
 });
 
 /** The UK guest register (Immigration (Hotel Records) Order 1972). */
@@ -2635,7 +3021,8 @@ export const registerPage = branded({
   stayDetails: "ID photos and check-in details",
   hideDetails: "Hide ID photos and details",
   photosTitle: "ID photographs",
-  noPhotosKept: "No ID photographs are kept for this stay. They're only kept when your guest records settings ask for them, and are deleted automatically after the days you chose.",
+  noPhotosKept:
+    "No ID photographs are kept for this stay. They're only kept when your guest records settings ask for them, and are deleted automatically after the days you chose.",
   preview: "Preview",
   downloadPhoto: "Download",
   downloadFailed: "Couldn't download that photo. Open the preview and save it from there.",
@@ -2665,8 +3052,7 @@ export const registerPage = branded({
   title: "Guest register",
   subtitle:
     "UK law asks you to record the full name and nationality of every guest aged 16 or over, and keep it for 12 months. Guests fill this in when they check in.",
-  law:
-    "Guests who aren't British, Irish or Commonwealth citizens also give their passport or ID number, where it was issued, and where they're going next. Show this register to the police or an immigration officer if they ask to inspect it. Entries are removed automatically 12 months after arrival.",
+  law: "Guests who aren't British, Irish or Commonwealth citizens also give their passport or ID number, where it was issued, and where they're going next. Show this register to the police or an immigration officer if they ask to inspect it. Entries are removed automatically 12 months after arrival.",
   notUk: "None of your properties are in the UK, so there's nothing to record here.",
   staffOnly: "Only owners and managers can see the guest register.",
   allProperties: "All properties",
@@ -2709,7 +3095,8 @@ export const invoiceCopy = branded({
   email: "Email address",
   address: "Postal address (optional)",
   addressHint: "Each line on its own line, for example street, town and postcode.",
-  lockNote: "Once it's made, these details can't be changed here. Your host can update it if anything is wrong.",
+  lockNote:
+    "Once it's made, these details can't be changed here. Your host can update it if anything is wrong.",
   create: "Make my invoice",
   creating: "Making your invoice…",
   ready: (number: string) => `Invoice ${number} is ready.`,
@@ -2739,8 +3126,10 @@ export const invoiceCopy = branded({
   notFound: "We couldn't find that invoice. Please ask your host for a new link.",
   // Host
   hostSection: "Invoice",
-  hostNone: "No invoice yet. The guest can make one from their guest guide, or you can make it now.",
-  hostNotDirect: "Invoices are for direct bookings. This stay came from a booking site, which invoices the guest itself.",
+  hostNone:
+    "No invoice yet. The guest can make one from their guest guide, or you can make it now.",
+  hostNotDirect:
+    "Invoices are for direct bookings. This stay came from a booking site, which invoices the guest itself.",
   hostNeedsAmount: "Add the amount the guest paid (edit the booking) to make an invoice.",
   hostOff: "Invoices are switched off. Turn them on in Settings → Invoices.",
   hostMake: "Make invoice",
@@ -2759,12 +3148,15 @@ export const invoiceCopy = branded({
   amountLabel: (currency: string) => `Amount charged (${currency})`,
   includesTax: (tax: string) => `This amount includes ${tax}`,
   useBookingAmount: (amount: string) => `Use the booking's amount (${amount})`,
-  notRegistered: "You're not registered for tax, so no tax line is shown. Change this in Settings → Extras.",
-  totalsPreview: (net: string, tax: string, total: string, name: string) => `${net} + ${tax} ${name} = ${total}`,
+  notRegistered:
+    "You're not registered for tax, so no tax line is shown. Change this in Settings → Extras.",
+  totalsPreview: (net: string, tax: string, total: string, name: string) =>
+    `${net} + ${tax} ${name} = ${total}`,
   saved: "Invoice saved",
   // Settings
   settingsTitle: "Invoices",
-  settingsBody: "Let guests on direct bookings download an invoice from their guest guide. Nothing is made until they, or you, ask for one.",
+  settingsBody:
+    "Let guests on direct bookings download an invoice from their guest guide. Nothing is made until they, or you, ask for one.",
   enable: "Offer invoices on direct bookings",
   taxNumber: (label: string) => `${label} (optional)`,
   taxNumberHint: (name: string) => `Shown on invoices when you're registered for ${name}.`,
@@ -2819,7 +3211,8 @@ export const billingCopy = branded({
   perMonth: "a month",
   planRooms: (rooms: number, extra: string, maxProps: number | null) =>
     `Includes ${rooms} rooms, then ${extra} a room${maxProps ? `. Up to ${maxProps} ${maxProps === 1 ? "property" : "properties"}` : ". Any number of properties"}.`,
-  youWouldPay: (amount: string, rooms: number) => `With your ${rooms} ${rooms === 1 ? "room" : "rooms"}: ${amount} a month.`,
+  youWouldPay: (amount: string, rooms: number) =>
+    `With your ${rooms} ${rooms === 1 ? "room" : "rooms"}: ${amount} a month.`,
   apiIncluded: (n: number) => `Includes ${n.toLocaleString("en-GB")} API and MCP requests a month.`,
   choosePlan: (name: string) => `Choose ${name}`,
   planChanged: "Plan updated. Any difference is adjusted on your next payment.",
@@ -2827,8 +3220,10 @@ export const billingCopy = branded({
   apiAddonBody: (price: string, n: number) =>
     `Connect AI assistants and other apps to Latchkey. ${price} a month for ${n.toLocaleString("en-GB")} requests.`,
   lockedTitle: "Your Latchkey access has ended",
-  lockedTrial: "Your free trial has finished. Subscribe to carry on where you left off: everything you set up is still here.",
-  lockedCanceled: "Your subscription was cancelled. Subscribe again to carry on: everything you set up is still here.",
+  lockedTrial:
+    "Your free trial has finished. Subscribe to carry on where you left off: everything you set up is still here.",
+  lockedCanceled:
+    "Your subscription was cancelled. Subscribe again to carry on: everything you set up is still here.",
   lockedCta: "Go to Billing",
   lockedRegister: "You can still open your guest register.",
   bannerTrial: (days: number) => `${days} ${days === 1 ? "day" : "days"} left of your free trial.`,
@@ -2845,8 +3240,10 @@ export const supportCopy = branded({
   stop: "Stop support access now",
   allowed: "Support access is on for 30 days.",
   stopped: "Support access is off.",
-  bannerReadOnly: (name: string) => `Support view of ${name}: read-only. The host hasn't allowed changes.`,
-  bannerWritable: (name: string, date: string) => `Support view of ${name}: changes allowed until ${date}.`,
+  bannerReadOnly: (name: string) =>
+    `Support view of ${name}: read-only. The host hasn't allowed changes.`,
+  bannerWritable: (name: string, date: string) =>
+    `Support view of ${name}: changes allowed until ${date}.`,
   exit: "Back to admin",
 });
 
@@ -2876,14 +3273,16 @@ export const feedbackCopy = branded({
   reviewsTitle: "What guests said",
   reviewOnPage: "Shown on your booking page (the guest agreed)",
   reviewsEmpty: "No guest feedback yet. Guests can rate their stay from their guest guide.",
-  reviewsAverage: (avg: string, n: number) => `${avg} average from ${n} ${n === 1 ? "guest" : "guests"}`,
+  reviewsAverage: (avg: string, n: number) =>
+    `${avg} average from ${n} ${n === 1 ? "guest" : "guests"}`,
 });
 
 /** The super admin's area. */
 export const adminCopy = branded({
   siteSettingsTitle: "Sign-ups, support and notices",
   viewingTitle: (name: string) => `The business you're viewing${name ? `: ${name}` : ""}`,
-  viewingBody: "Latchkey's own switches for this business: whether each connection is in demo or live, and its sample data. Use \"View as host\" below to open another business.",
+  viewingBody:
+    'Latchkey\'s own switches for this business: whether each connection is in demo or live, and its sample data. Use "View as host" below to open another business.',
   sampleLoaded: "Demo rooms loaded",
   sampleRemoved: "Demo content removed",
   navLabel: "Latchkey admin",
@@ -2928,12 +3327,18 @@ export const adminCopy = branded({
   platformStripeOff: "Guest payments: host's own Stripe",
   supportOn: "Support allowed",
   flagsEmpty: "No repeat sign-ups spotted.",
-  flagReason: { same_address: "Same address as another account", same_email: "Same email as another account" } as Record<string, string>,
+  flagReason: {
+    same_address: "Same address as another account",
+    same_email: "Same email as another account",
+  } as Record<string, string>,
   resolve: "Mark reviewed",
   resolved: "Reviewed",
   feedbackEmpty: "No feedback yet.",
   kinds: { host_rating: "Rating", feature: "Feature idea", bug: "Bug" } as Record<string, string>,
-  statuses: { new: "New", seen: "Seen", planned: "Planned", done: "Done" } as Record<string, string>,
+  statuses: { new: "New", seen: "Seen", planned: "Planned", done: "Done" } as Record<
+    string,
+    string
+  >,
   sendTitle: "Send an announcement or message",
   audience: "To",
   everyone: "Every host",
@@ -2949,25 +3354,35 @@ export const adminCopy = branded({
   signupsOpen: "New free trials are open",
   nightlyLines: "Invoices: one line per night",
   kioskSaverTitle: "Kiosk screensaver",
-  kioskSaverHelp: "Every kiosk starts at this brightness and clock size. Hosts can change them on the screensaver (slide the left edge for brightness, the right edge for size), within the size limits here.",
+  kioskSaverHelp:
+    "Every kiosk starts at this brightness and clock size. Hosts can change them on the screensaver (slide the left edge for brightness, the right edge for size), within the size limits here.",
   kioskSaverBrightness: "Starting brightness",
   kioskSaverSize: "Starting clock size",
   kioskSaverSizeMin: "Smallest clock size hosts can choose",
   kioskSaverSizeMax: "Largest clock size hosts can choose",
   kioskTimingsTitle: "Kiosk timings",
   kioskQrTitle: "Check in on a phone instead",
-  kioskQrHelp: "How door tablets offer guests the square to scan with their own phone on the welcome screen. After the welcome it's always the small icon at the top.",
+  kioskQrHelp:
+    "How door tablets offer guests the square to scan with their own phone on the welcome screen. After the welcome it's always the small icon at the top.",
   kioskQrStyles: {
-    panel: { label: "Full panel on the right", help: "A large square beside the welcome, with a short explanation." },
-    icon: { label: "Small icon at the top", help: "A phone icon beside the time; tapping it opens the square." },
+    panel: {
+      label: "Full panel on the right",
+      help: "A large square beside the welcome, with a short explanation.",
+    },
+    icon: {
+      label: "Small icon at the top",
+      help: "A phone icon beside the time; tapping it opens the square.",
+    },
   },
   kioskResetMinutes: "Unfinished check-in goes back to the start after (minutes with no touch)",
   kioskSaverMinutes: "Screensaver starts after (minutes with no touch)",
   kioskSaverMinutesHelp: "Counted from the last touch, so never sooner than the check-in reset.",
   kioskWelcomeMinutes: "A host's welcome closes by itself after (minutes on screen)",
   kioskWelcomeMinutesHelp: "0 keeps it up until the end time the host chose.",
-  kioskSaverNotReady: "Kiosk screensaver settings appear once the latest database update is applied.",
-  nightlyLinesHelp: "Each night of the stay gets its own line with its share of the price, then the total. Off: one line for the whole stay. Applies to invoices made or edited from now on.",
+  kioskSaverNotReady:
+    "Kiosk screensaver settings appear once the latest database update is applied.",
+  nightlyLinesHelp:
+    "Each night of the stay gets its own line with its share of the price, then the total. Off: one line for the whole stay. Applies to invoices made or edited from now on.",
   supportEmail: "Support email shown to hosts",
   notice: "Site notice (shown at the top of every host's dashboard)",
   saved: "Saved",
@@ -2988,8 +3403,10 @@ export const adminCopy = branded({
 /** Super admin: plans, costs, recommendations and projections. */
 export const studioCopy = branded({
   published: "Published: hosts see these plans on Billing.",
-  notPublished: "Not published yet: hosts pay the original per-room price. Publish when you're happy.",
-  migration: "Run migration 0027 first (Lovable applies it on the next sync); until then nothing here can be saved.",
+  notPublished:
+    "Not published yet: hosts pay the original per-room price. Publish when you're happy.",
+  migration:
+    "Run migration 0027 first (Lovable applies it on the next sync); until then nothing here can be saved.",
   nowTitle: "Where you are now",
   payers: "Paying hosts",
   trials: "On trial",
@@ -2997,7 +3414,9 @@ export const studioCopy = branded({
   cost: "Monthly cost (estimate)",
   profit: "Profit",
   breakEven: (n: number, m: number | null, pct: number) =>
-    m === null ? `Breaks even at ${n} paying hosts; ${pct}% isn't reachable at these prices.` : `Breaks even at ${n} paying hosts, ${pct}% profit from ${m}.`,
+    m === null
+      ? `Breaks even at ${n} paying hosts; ${pct}% isn't reachable at these prices.`
+      : `Breaks even at ${n} paying hosts, ${pct}% profit from ${m}.`,
   losing: "Every host costs more than they pay: raise prices or lower costs.",
   plansTitle: "Plans and features",
   plansBody:
@@ -3022,7 +3441,10 @@ export const studioCopy = branded({
   moveSubs: "Also move current subscribers to these prices from their next bill",
   publish: "Publish plans",
   unpublish: "Go back to per-room pricing",
-  publishedToast: (moved: number, failed: number) => (moved || failed ? `Published. ${moved} subscribers moved${failed ? `, ${failed} couldn't be (check Stripe)` : ""}.` : "Published."),
+  publishedToast: (moved: number, failed: number) =>
+    moved || failed
+      ? `Published. ${moved} subscribers moved${failed ? `, ${failed} couldn't be (check Stripe)` : ""}.`
+      : "Published.",
   costsTitle: "What Latchkey costs to run",
   costsBody:
     "Lovable charges in Run credits and doesn't publish a rate per request, so these start as estimates. Each month, copy the credits from Lovable (Settings → Usage, last 30 days) into Calibrate and they're tuned to what really happened.",
@@ -3030,7 +3452,10 @@ export const studioCopy = branded({
     usdPerCredit: ["US$ per Run credit", "Pro plan top-ups are $0.30"],
     gbpPerUsd: ["£ per US$", "Exchange rate"],
     fixedPence: ["Fixed costs a month (pence)", "Lovable plan, domain, email"],
-    fixedCredits: ["Baseline credits a month", "Database, scheduler and demo, whatever the number of hosts"],
+    fixedCredits: [
+      "Baseline credits a month",
+      "Database, scheduler and demo, whatever the number of hosts",
+    ],
     creditsPerRoom: ["Credits per room a month", "Calendar syncs, guest pages, storage"],
     creditsPer1kApi: ["Credits per 1,000 API requests", ""],
     creditsPerAiRead: ["Credits per AI ID read", ""],
@@ -3042,7 +3467,8 @@ export const studioCopy = branded({
   calibrateTitle: "Calibrate from Lovable",
   totalCredits: "Total credits, last 30 days",
   aiCredits: "Of which AI credits",
-  counted: (rooms: number, ai: number, api: number) => `Latchkey counted: ${rooms} active rooms, ${ai} AI ID reads, ${api} API requests in the same 30 days.`,
+  counted: (rooms: number, ai: number, api: number) =>
+    `Latchkey counted: ${rooms} active rooms, ${ai} AI ID reads, ${api} API requests in the same 30 days.`,
   calibrate: "Calibrate",
   calibrated: "Calibrated, and this month's actuals recorded.",
   projTitle: "Projection and actuals",
@@ -3087,7 +3513,8 @@ export const visitorsCopy = branded({
   hideBots: "Hide bots and crawlers",
   hideTeam: "Hide Latchkey team",
   search: "Search email, place, IP, device or source",
-  migration: "Run migration 0028 first (Lovable applies it on the next sync); visits are recorded from then on.",
+  migration:
+    "Run migration 0028 first (Lovable applies it on the next sync); visits are recorded from then on.",
   tPeople: "People",
   tVisitors: "Browsers",
   tVisits: "Visits",
@@ -3096,7 +3523,8 @@ export const visitorsCopy = branded({
   tKnown: "Known",
   tConverted: "Became known",
   botsHidden: (n: number) => `${n} visit${n === 1 ? "" : "s"} by bots and crawlers hidden.`,
-  truncated: "Showing the latest 20,000 visits in this period; pick a shorter period for everything.",
+  truncated:
+    "Showing the latest 20,000 visits in this period; pick a shorter period for everything.",
   pages: "Pages",
   page: "Page",
   views: "Views",
@@ -3127,7 +3555,8 @@ export const visitorsCopy = branded({
   knownSince: "Known since",
   ips: "IP addresses",
   clubbed: (p: string) => `Visits by ${p}`,
-  clubLine: (visits: number, pages: number, time: string) => `${visits} visit${visits === 1 ? "" : "s"}, ${pages} pages, ${time}`,
+  clubLine: (visits: number, pages: number, time: string) =>
+    `${visits} visit${visits === 1 ? "" : "s"}, ${pages} pages, ${time}`,
   weekOf: (d: string) => `Week of ${d}`,
   via: "from",
   empty: "No visits in this period.",
@@ -3139,7 +3568,8 @@ export const visitorsCopy = branded({
 /** Super admin: every routine that spends Lovable Run credits. */
 export const routinesCopy = branded({
   demoLinksTitle: "Public demo links",
-  demoLinksBody: "Share these. Each regional link carries its own campaign name unless the link already has utm_* tags; results show in Visitors → Launch funnel.",
+  demoLinksBody:
+    "Share these. Each regional link carries its own campaign name unless the link already has utm_* tags; results show in Visitors → Launch funnel.",
   demoHill: "The Hill Suites · Amersham",
   demoGuest: "Guest journey",
   demoHost: "Host dashboard",
@@ -3147,17 +3577,18 @@ export const routinesCopy = branded({
   demoCopy: "Copy",
   demoCopied: "Link copied.",
   recordingTitle: "Recording account",
-  recordingBody: "Refill the separate account you record videos from: three weeks of stays at about 70%, turnovers, a late arrival, an ID check, requests and a conversation. The sign-in comes from RECORDING_HOST_EMAIL in Lovable Cloud → Secrets; only its sample data is replaced.",
+  recordingBody:
+    "Refill the separate account you record videos from: three weeks of stays at about 70%, turnovers, a late arrival, an ID check, requests and a conversation. The sign-in comes from RECORDING_HOST_EMAIL in Lovable Cloud → Secrets; only its sample data is replaced.",
   recordingButton: "Reseed recording account",
   recordingDone: (n: number) => `Recording account refilled with ${n} stays.`,
   title: "Routines that use Run credits",
-  body:
-    "Everything Latchkey runs on Lovable's servers. Scheduled ones are woken by Lovable's scheduler (set in Lovable under Cloud → Cron); when one is off or not due, the wake-up stops before any real work. Switching off a feature that runs when used turns that feature off for every host.",
+  body: "Everything Latchkey runs on Lovable's servers. Scheduled ones are woken by Lovable's scheduler (set in Lovable under Cloud → Cron); when one is off or not due, the wake-up stops before any real work. Switching off a feature that runs when used turns that feature off for every host.",
   scheduled: "Scheduled",
   onUse: "Runs when used",
   wakes: (w: string) => `Lovable wakes it: ${w.toLowerCase()}`,
   every: "Run at most",
-  lastRun: (when: string, status: string, ms: number | null) => `Last run ${when}${ms !== null ? ` (${(ms / 1000).toFixed(1)}s)` : ""}: ${status}`,
+  lastRun: (when: string, status: string, ms: number | null) =>
+    `Last run ${when}${ms !== null ? ` (${(ms / 1000).toFixed(1)}s)` : ""}: ${status}`,
   never: "Not run yet",
   thisMonth: (n: number) => `${n.toLocaleString("en-GB")} this month`,
   credits: (c: string, gbp: string) => `≈ ${c} credits (${gbp})`,
@@ -3189,7 +3620,8 @@ export const bookingTable = branded({
   platforms: "Platforms",
   showPast: "Show past stays",
   clear: "Show everything",
-  shown: (n: number, total: number) => (n === total ? `${n} ${n === 1 ? "stay" : "stays"}` : `${n} of ${total} stays`),
+  shown: (n: number, total: number) =>
+    n === total ? `${n} ${n === 1 ? "stay" : "stays"}` : `${n} of ${total} stays`,
   noRoom: "No room",
   groups: {
     here: "Staying now",
@@ -3220,12 +3652,16 @@ export const bookingTable = branded({
 export const apiCopy = branded({
   title: "API & MCP",
   loading: "Loading your keys…",
-  unavailable: "API keys aren't available for this business yet. Read the guide to see what you can connect.",
+  unavailable:
+    "API keys aren't available for this business yet. Read the guide to see what you can connect.",
   body: "Connect Latchkey to AI assistants (Claude, ChatGPT, Cursor and others) and to your own tools. Ask an assistant who's arriving today, or let your website add direct bookings.",
-  notOnPlan: "The API and MCP server aren't on your plan yet. Add the API add-on or choose Pro in Billing.",
-  notPublished: "The API and MCP server will be available with the new plans. Ask Latchkey support to turn it on for you.",
+  notOnPlan:
+    "The API and MCP server aren't on your plan yet. Add the API add-on or choose Pro in Billing.",
+  notPublished:
+    "The API and MCP server will be available with the new plans. Ask Latchkey support to turn it on for you.",
   toBilling: "Open Billing",
-  usage: (used: number, allowance: number) => `${used.toLocaleString("en-GB")} of ${allowance.toLocaleString("en-GB")} requests used this month`,
+  usage: (used: number, allowance: number) =>
+    `${used.toLocaleString("en-GB")} of ${allowance.toLocaleString("en-GB")} requests used this month`,
   keysTitle: "Your API keys",
   noKeys: "No keys yet.",
   keyName: "Name it (where you'll use it)",
@@ -3277,15 +3713,23 @@ export const brandAdminCopy = branded({
   preview: (name: string) => `Pages will say “${name}”.`,
   saved: "Brand saved. Pages pick it up within a minute.",
   logoTitle: "Site logo",
-  logoHelp: "Shown in the website header, on sign-in, in the browser tab and on the installed app. Hosts who haven't picked their own logo show it too.",
-  logoMarks: { key: "Antique key", arch: "Doorway and keyhole", monogram: "Serif L with key", initial: "First letter of the name" } as Record<string, string>,
+  logoHelp:
+    "Shown in the website header, on sign-in, in the browser tab and on the installed app. Hosts who haven't picked their own logo show it too.",
+  logoMarks: {
+    key: "Antique key",
+    arch: "Doorway and keyhole",
+    monogram: "Serif L with key",
+    initial: "First letter of the name",
+  } as Record<string, string>,
   uploadLogo: "Upload your own",
   uploadHint: "PNG, JPG, WebP or SVG, square, under 1 MB. Used instead of the mark while it's set.",
   removeLogo: "Use the mark instead",
-  appIconNote: "The installed app's icon follows the mark; an uploaded logo is used where the browser accepts it.",
+  appIconNote:
+    "The installed app's icon follows the mark; an uploaded logo is used where the browser accepts it.",
   notReady: "Brand settings appear once the latest database update is applied.",
   domainsTitle: "Hosts' own web addresses",
-  domainsHelp: "When a host proves an address is theirs, add it to the hosting (in Lovable: Project settings → Domains), then switch it on here. Guests there see the host's name.",
+  domainsHelp:
+    "When a host proves an address is theirs, add it to the hosting (in Lovable: Project settings → Domains), then switch it on here. Guests there see the host's name.",
   domainsEmpty: "No host has added an address yet.",
   verified: "Proved",
   waiting: "Waiting for DNS proof",
@@ -3323,12 +3767,14 @@ export const domainCopy = branded({
 export const guideAttachCopy = branded({
   title: "Photos and documents",
   add: "Attach",
-  empty: "Attach photos, PDFs or Word, Excel and PowerPoint files. Guests open them right inside their guide. Shared by every room.",
+  empty:
+    "Attach photos, PDFs or Word, Excel and PowerPoint files. Guests open them right inside their guide. Shared by every room.",
   notReady: "Attachments will be available here soon.",
   added: "Attached",
   removed: "Attachment removed",
   remove: (name: string) => `Remove ${name}`,
-  wrongType: (name: string) => `${name} can't be shown to guests. Attach photos, PDFs, or Word, Excel or PowerPoint files.`,
+  wrongType: (name: string) =>
+    `${name} can't be shown to guests. Attach photos, PDFs, or Word, Excel or PowerPoint files.`,
   tooBig: (name: string) => `${name} is over 10 MB. Try a smaller file.`,
   roomNote: "Photos and documents are added on the whole-property guide and shared by every room.",
 });
@@ -3336,9 +3782,11 @@ export const guideAttachCopy = branded({
 export const menuAdminCopy = branded({
   tab: "Menu and pages",
   menuTitle: "Menu",
-  menuHelp: "The order and items every host sees in their menu. Latchkey admin is always there for super admins.",
+  menuHelp:
+    "The order and items every host sees in their menu. Latchkey admin is always there for super admins.",
   pagesTitle: "Page sections",
-  pagesHelp: "The order of each page's sections, and which show, for every host. On Today, hosts can still rearrange their own copy.",
+  pagesHelp:
+    "The order of each page's sections, and which show, for every host. On Today, hosts can still rearrange their own copy.",
   up: (label: string) => `Move ${label} up`,
   down: (label: string) => `Move ${label} down`,
   show: (label: string) => `Show ${label}`,
@@ -3384,15 +3832,20 @@ export const driveAdminCopy = branded({
   title: "Google Drive: attachments and private records",
   help: "The Google Drive you connect holds hosts' guide attachments (a folder per host) and Latchkey's private records: guests' ID photos (a folder per business), Commission Partners' ID photos, drawn signatures and signed agreements (a folder per partner), all under \"Latchkey private records (restricted, do not share)\". Nothing there is ever shared: people see files only through short-lived links from Latchkey. If Drive can't be reached, files wait in Latchkey's private storage and move across once it's back, then the copy is removed.",
   queueEmpty: "Nothing waiting for Google Drive.",
-  queueWaiting: (n: number) => (n === 1 ? "1 private file is waiting to move to Google Drive." : `${n} private files are waiting to move to Google Drive.`),
+  queueWaiting: (n: number) =>
+    n === 1
+      ? "1 private file is waiting to move to Google Drive."
+      : `${n} private files are waiting to move to Google Drive.`,
   queueMove: "Move them now",
-  queueMoved: (moved: number, left: number) => `${moved} moved to Google Drive${left ? `, ${left} still waiting` : ""}.`,
+  queueMoved: (moved: number, left: number) =>
+    `${moved} moved to Google Drive${left ? `, ${left} still waiting` : ""}.`,
   connected: (email: string) => `Connected to ${email}`,
   notConnected: "Not connected",
   connect: "Connect Google Drive",
   reconnect: "Reconnect",
   disconnect: "Disconnect",
-  disconnected: "Disconnected. Existing attachments stay in the Drive but can't be shown until you reconnect.",
+  disconnected:
+    "Disconnected. Existing attachments stay in the Drive but can't be shown until you reconnect.",
   setupTitle: "One-off set-up in Google Cloud (free)",
   setup: [
     "In Google Cloud Console, create a project, then enable the Google Drive API.",
@@ -3401,15 +3854,22 @@ export const driveAdminCopy = branded({
     "Copy the client ID and secret into Lovable Cloud secrets as GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then press Connect here.",
   ],
   missingSecrets: "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Lovable Cloud first.",
-  results: { connected: "Google Drive connected.", cancelled: "Connecting was cancelled.", expired: "That took too long. Please try again.", failed: "Google didn't finish connecting. Please try again." } as Record<string, string>,
-  scopeNote: "Latchkey only asks for permission to see the files it creates (drive.file), nothing else in the Drive.",
+  results: {
+    connected: "Google Drive connected.",
+    cancelled: "Connecting was cancelled.",
+    expired: "That took too long. Please try again.",
+    failed: "Google didn't finish connecting. Please try again.",
+  } as Record<string, string>,
+  scopeNote:
+    "Latchkey only asks for permission to see the files it creates (drive.file), nothing else in the Drive.",
 });
 
 export const stayHeroCopy = branded({
   coverLabel: "Your stay",
   tileDownload: (name: string) => `Download ${name}`,
   tileOpenSite: "Open in a new tab",
-  tileLinkHint: "If the page stays blank, that site doesn't allow being shown here: open it in a new tab.",
+  tileLinkHint:
+    "If the page stays blank, that site doesn't allow being shown here: open it in a new tab.",
   tileMissing: "This file couldn't be loaded. Please try again in a moment.",
   tileTimes: "Times",
   eyebrow: "Make it special",
@@ -3438,12 +3898,15 @@ export const privacyCopy = branded({
   afterDays: (d: number) => (d === 365 ? "1 year after check-out" : `${d} days after check-out`),
   keepMessages: "Keep until the stay is deleted",
   saved: "Privacy choices saved. The nightly clear-up follows them from tonight.",
-  notReady: "These choices can be saved once the latest database update is applied. Until then: details 90 days, messages kept.",
+  notReady:
+    "These choices can be saved once the latest database update is applied. Until then: details 90 days, messages kept.",
   ownerOnly: "Only the owner can change these.",
   otherTitle: "What else is kept, and for how long",
-  idPhotos: "ID checks, ID copies and face photos: whether they're taken, and 7, 14 or 30 days, are set for each property.",
+  idPhotos:
+    "ID checks, ID copies and face photos: whether they're taken, and 7, 14 or 30 days, are set for each property.",
   idPhotosLink: "Who's staying settings",
-  register: "UK guest register (law: Immigration (Hotel Records) Order 1972): 12 months from arrival, whatever you choose here.",
+  register:
+    "UK guest register (law: Immigration (Hotel Records) Order 1972): 12 months from arrival, whatever you choose here.",
   registerLink: "Open the register",
   fixed: [
     "Invoices: kept for your tax records.",
@@ -3470,7 +3933,10 @@ export const guideTilesCopy = branded({
   labelPlaceholder: (d: string) => (d ? `Label (default: ${d})` : "Label"),
   ownTitle: "Tile name (needed)",
   contentType: "What it opens",
-  contentTypes: { text: "Text", link: "Web page", image: "Photo", doc: "PDF" } as Record<string, string>,
+  contentTypes: { text: "Text", link: "Web page", image: "Photo", doc: "PDF" } as Record<
+    string,
+    string
+  >,
   textPlaceholder: "What guests read when they tap the tile.",
   uploadImage: "Upload photo",
   uploadDoc: "Upload PDF",
@@ -3481,7 +3947,8 @@ export const guideTilesCopy = branded({
   full: "8 tiles: the most",
   count: (n: number) => `${n} of 8`,
   saved: "Tiles saved. Guests see them next time the guide opens.",
-  notReady: "Quick tiles can be chosen once the latest database update is applied. Until then guests see the automatic tiles.",
+  notReady:
+    "Quick tiles can be chosen once the latest database update is applied. Until then guests see the automatic tiles.",
   kinds: {
     wifi: "Wi-Fi",
     section: "A guide section",
@@ -3491,7 +3958,13 @@ export const guideTilesCopy = branded({
     checkin: "Check in",
     custom: "Your own: text, link, photo or PDF",
   } as Record<string, string>,
-  kindLabels: { wifi: "Wi-Fi", extras: "Extras", messages: "Message host", times: "Times", checkin: "Check in" },
+  kindLabels: {
+    wifi: "Wi-Fi",
+    extras: "Extras",
+    messages: "Message host",
+    times: "Times",
+    checkin: "Check in",
+  },
 });
 
 export const roomPhotoCopy = branded({
@@ -3507,7 +3980,15 @@ export const roomPhotoCopy = branded({
 /** The Settings menu: its groups (tabs) and which section sits in which. */
 export const settingsMenuCopy = branded({
   label: "Settings menu",
-  groups: { business: "Business", checkin: "Check-in and records", rooms: "Room QR and Wi-Fi", reviews: "Reviews", money: "Payments", look: "Look", apps: "Alerts and apps" } as Record<string, string>,
+  groups: {
+    business: "Business",
+    checkin: "Check-in and records",
+    rooms: "Room QR and Wi-Fi",
+    reviews: "Reviews",
+    money: "Payments",
+    look: "Look",
+    apps: "Alerts and apps",
+  } as Record<string, string>,
   sections: {
     business: ["Business details", "business"],
     group: ["Group brand", "business"],
@@ -3551,7 +4032,12 @@ export const omniCopy = branded({
   logoChoice: "Logo you can choose",
   siteLogo: "Site logo",
   demoLive: "Demo / live switch",
-  groups: { guests: "Guests and bookings", yours: "Your business", pages: "Pages and settings", features: "Features" } as Record<string, string>,
+  groups: {
+    guests: "Guests and bookings",
+    yours: "Your business",
+    pages: "Pages and settings",
+    features: "Features",
+  } as Record<string, string>,
   kinds: {
     page: "Page",
     setting: "Setting",
@@ -3602,7 +4088,8 @@ export const omniCopy = branded({
     demo: "sample data demo rooms",
     checkin: "check-in methods photo id last digits phone self declare kiosk qr print",
     records: "who's staying adults children id photo face register keep days",
-    stayAccess: "room qr code wifi wi-fi password network door tablet presence location guide before check-in message",
+    stayAccess:
+      "room qr code wifi wi-fi password network door tablet presence location guide before check-in message",
     reviews: "reviews review stars score ask last day booking page feedback",
     kioskRest: "night light screensaver clock qr screen off tablet",
   } as Record<string, string>,
@@ -3614,14 +4101,24 @@ export const timelineCopy = branded({
   earlier: "Earlier",
   later: "Later",
   zoom: "How much to show",
-  zooms: { day: "Day", "3days": "3 days", week: "Week", "2weeks": "2 weeks", month: "Month" } as Record<string, string>,
-  zoomsShort: { day: "1d", "3days": "3d", week: "1w", "2weeks": "2w", month: "1m" } as Record<string, string>,
+  zooms: {
+    day: "Day",
+    "3days": "3 days",
+    week: "Week",
+    "2weeks": "2 weeks",
+    month: "Month",
+  } as Record<string, string>,
+  zoomsShort: { day: "1d", "3days": "3d", week: "1w", "2weeks": "2w", month: "1m" } as Record<
+    string,
+    string
+  >,
   hint: "Swipe or drag sideways to move through time; pinch, or Ctrl/⌘ and scroll, to zoom.",
 });
 
 export const housekeepingCopy = branded({
   title: "Housekeeping",
-  subtitle: "Room by room: what the day means, where cleaning has got to, and which rooms are ready for guests.",
+  subtitle:
+    "Room by room: what the day means, where cleaning has got to, and which rooms are ready for guests.",
   noProperty: "Add a property first.",
   noRooms: "No rooms yet",
   noRoomsBody: "Add rooms to this property to see them on the board.",
@@ -3630,7 +4127,8 @@ export const housekeepingCopy = branded({
   todayLabel: (d: string) => `Today, ${d}`,
   backToToday: "Back to today",
   summary: "The day at a glance",
-  notReady: "The board shows what today's bookings mean for each room. Saving progress starts once the latest database update is applied.",
+  notReady:
+    "The board shows what today's bookings mean for each room. Saving progress starts once the latest database update is applied.",
   totals: {
     toClean: (n: number) => `${n} to clean`,
     inProgress: (n: number) => `${n} in progress`,
@@ -3641,12 +4139,26 @@ export const housekeepingCopy = branded({
     notReady: (n: number) => (n === 1 ? "1 arrival not ready" : `${n} arrivals not ready`),
     outOfService: (n: number) => `${n} out of service`,
   },
-  occupancy: { turnover: "Turnover: out and in today", leaving: "Guest leaving", arriving: "Guest arriving", staying: "Guest staying", empty: "Empty", closed: "Closed" } as Record<string, string>,
-  status: { to_clean: "To clean", cleaning: "Cleaning", clean: "Clean", ready: "Ready", out_of_service: "Out of service" } as Record<string, string>,
+  occupancy: {
+    turnover: "Turnover: out and in today",
+    leaving: "Guest leaving",
+    arriving: "Guest arriving",
+    staying: "Guest staying",
+    empty: "Empty",
+    closed: "Closed",
+  } as Record<string, string>,
+  status: {
+    to_clean: "To clean",
+    cleaning: "Cleaning",
+    clean: "Clean",
+    ready: "Ready",
+    out_of_service: "Out of service",
+  } as Record<string, string>,
   statusLabel: (room: string) => `Cleaning progress for ${room}`,
   guest: "Guest",
   out: (name: string, time: string) => (time ? `Out: ${name}, by ${time}` : `Out: ${name}`),
-  in: (name: string, people: number | null) => (people && people > 1 ? `In: ${name}, ${people} guests` : `In: ${name}`),
+  in: (name: string, people: number | null) =>
+    people && people > 1 ? `In: ${name}, ${people} guests` : `In: ${name}`,
   staying: (name: string, until: string) => `${name}, until ${until}`,
   dueBy: (t: string) => `Ready by ${t}`,
   overdue: (t: string) => `Was due at ${t}`,
@@ -3661,10 +4173,13 @@ export const housekeepingCopy = branded({
   backInService: "Back in service",
   readyToast: (room: string) => `${room} is ready for guests.`,
   you: "you",
-  lastChange: (status: string, who: string | null, at: string) => (who ? `${status}: ${who} at ${at}` : `${status} at ${at}`),
+  lastChange: (status: string, who: string | null, at: string) =>
+    who ? `${status}: ${who} at ${at}` : `${status} at ${at}`,
   suggested: "From today's bookings",
-  subtitleFull: "The day's turnovers on one timeline with your cleaning windows, where each room has got to, and the weekly schedule behind it.",
-  subtitleShort: "Each room's turnovers on the bookings timeline, coloured by where cleaning has got to. Tap a room or a turnover to move it on.",
+  subtitleFull:
+    "The day's turnovers on one timeline with your cleaning windows, where each room has got to, and the weekly schedule behind it.",
+  subtitleShort:
+    "Each room's turnovers on the bookings timeline, coloured by where cleaning has got to. Tap a room or a turnover to move it on.",
   todayShort: "Today",
   windowDefault: "Cleaning",
   orderProperty: "Property order",
@@ -3675,14 +4190,23 @@ export const housekeepingCopy = branded({
     body: "Each room from the guest leaving to the next arriving, with the cleaning and unavailable times. Tap a room to go to its card.",
     wholeHouse: "Whole property",
     now: "Now",
-    legend: { guest_out: "Guest leaving", free: "Free to clean", window: "Cleaning or unavailable", guest_in: "Guest arriving", staying: "Guest staying", closed: "Closed" } as Record<string, string>,
+    legend: {
+      guest_out: "Guest leaving",
+      free: "Free to clean",
+      window: "Cleaning or unavailable",
+      guest_in: "Guest arriving",
+      staying: "Guest staying",
+      closed: "Closed",
+    } as Record<string, string>,
     outAt: (t: string) => `Out ${t}`,
     dueAt: (t: string) => `Ready by ${t}`,
   },
-  windowLine: (reason: string | null, start: string, end: string, house: boolean) => `${reason || (house ? "House cleaning" : "Room cleaning")} ${start}–${end}${house ? " (whole property)" : ""}`,
+  windowLine: (reason: string | null, start: string, end: string, house: boolean) =>
+    `${reason || (house ? "House cleaning" : "Room cleaning")} ${start}–${end}${house ? " (whole property)" : ""}`,
   schedule: {
     title: "Schedule",
-    summary: (out: string, inn: string, n: number) => `Out by ${out}, in from ${inn} · ${n === 1 ? "1 weekly window" : `${n} weekly windows`}`,
+    summary: (out: string, inn: string, n: number) =>
+      `Out by ${out}, in from ${inn} · ${n === 1 ? "1 weekly window" : `${n} weekly windows`}`,
     body: "Your standard times and the weekly cleaning and unavailable times. They show on the timeline above and in guests' stay guides; check-in isn't offered for a room during its windows.",
     times: "Standard times",
     checkOut: "Check-out by",
@@ -3715,29 +4239,42 @@ export const housekeepingCopy = branded({
 
 export const reportsCopy = branded({
   title: "Reports",
-  subtitle: "How your operation is running, across every booking site: occupancy, arrivals, check-ins, rooms ready, guest service and extras.",
+  subtitle:
+    "How your operation is running, across every booking site: occupancy, arrivals, check-ins, rooms ready, guest service and extras.",
   staffOnly: "Reports are for owners and managers.",
   noProperty: "Add a property first.",
   download: "Download days (CSV)",
   property: "Property",
   allProperties: "All properties",
   period: "Period",
-  presets: { "7d": "Last 7 days", "30d": "Last 30 days", month: "This month", lastMonth: "Last month", custom: "Choose dates" } as Record<string, string>,
+  presets: {
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    month: "This month",
+    lastMonth: "Last month",
+    custom: "Choose dates",
+  } as Record<string, string>,
   from: "From",
   to: "To (inclusive)",
   rangeLine: (a: string, b: string) => `${a} to ${b}`,
   occupancy: "Occupancy",
-  occupancyHint: (occ: number, avail: number) => `${occ} of ${avail} room-nights, closed nights left out`,
+  occupancyHint: (occ: number, avail: number) =>
+    `${occ} of ${avail} room-nights, closed nights left out`,
   checkIns: "Checked in",
-  checkInsHint: (arr: number, dep: number) => `of arrivals so far · ${arr} arriving, ${dep} leaving`,
+  checkInsHint: (arr: number, dep: number) =>
+    `of arrivals so far · ${arr} arriving, ${dep} leaving`,
   ready: "Ready on arrival",
   readyHint: "Rooms marked ready on the housekeeping board by arrival day",
   readyNotYet: "Starts once the housekeeping board is saving",
   extras: "Extras paid",
   extrasHint: (paid: number, asked: number) => `${paid} paid · ${asked} asked for`,
   byDay: "Night by night",
-  byDayHint: (rooms: number) => (rooms === 1 ? "Share of your 1 room occupied each night." : `Share of your ${rooms} rooms occupied each night.`),
-  dayTitle: (day: string, occ: number, avail: number, arr: number, dep: number) => `${day}: ${occ} of ${avail} rooms · ${arr} in, ${dep} out`,
+  byDayHint: (rooms: number) =>
+    rooms === 1
+      ? "Share of your 1 room occupied each night."
+      : `Share of your ${rooms} rooms occupied each night.`,
+  dayTitle: (day: string, occ: number, avail: number, arr: number, dep: number) =>
+    `${day}: ${occ} of ${avail} rooms · ${arr} in, ${dep} out`,
   arrivals: "Arrivals",
   departures: "Departures",
   averageStay: "Average stay",
@@ -3752,27 +4289,61 @@ export const reportsCopy = branded({
   noStays: "No stays in this period.",
   service: "Guest service",
   replies: "Reply to guests",
-  repliesHint: (n: number) => (n ? `Typical time to answer a guest's message (${n} conversations)` : "No guest messages in this period"),
+  repliesHint: (n: number) =>
+    n
+      ? `Typical time to answer a guest's message (${n} conversations)`
+      : "No guest messages in this period",
   requests: "Guest requests",
   requestsHint: (made: number, done: number, open: number, hours: number | null) =>
     `Typical time to acknowledge · ${made} made, ${done} done, ${open} open now${hours !== null ? ` · done in about ${hours} h` : ""}`,
   maintenance: "Maintenance open",
-  maintenanceHint: (made: number, done: number) => `${made} jobs added, ${done} finished in this period`,
-  duration: (min: number) => (min < 60 ? `${min} min` : min < 60 * 48 ? `${Math.round(min / 6) / 10} h` : `${Math.round(min / 144) / 10} days`),
-  footnote: "Built from every stay in Latchkey, whichever site it came from. Not revenue management: no rates or forecasts.",
+  maintenanceHint: (made: number, done: number) =>
+    `${made} jobs added, ${done} finished in this period`,
+  duration: (min: number) =>
+    min < 60
+      ? `${min} min`
+      : min < 60 * 48
+        ? `${Math.round(min / 6) / 10} h`
+        : `${Math.round(min / 144) / 10} days`,
+  footnote:
+    "Built from every stay in Latchkey, whichever site it came from. Not revenue management: no rates or forecasts.",
 });
 
 export const reservationCopy = branded({
   pageTitle: "Your booking",
-  notFound: "We couldn't find that booking. Please check the link in your email, or contact the property.",
+  notFound:
+    "We couldn't find that booking. Please check the link in your email, or contact the property.",
   checking: "Checking your payment…",
   states: {
-    paid: { title: "Booked and paid", body: (business: string) => `Thank you. ${business} has your booking and payment.` },
-    confirmed: { title: "Booked", body: (business: string) => `Thank you. ${business} has your booking; you'll pay at the property.` },
-    awaitingTransfer: { title: "Booked: please pay by bank transfer", body: (by: string) => `Your room is held. Please send the payment by ${by}, quoting your reference.` },
-    awaitingCard: { title: "Waiting for your card payment", body: (_business: string) => "Your room is held for 30 minutes while you pay. If you closed the payment page, go back to the booking page and book again." },
-    expired: { title: "Not paid in time", body: (_business: string) => "The card payment wasn't completed, so the room has been released. You can book again from the property's page." },
-    cancelled: { title: "Cancelled", body: (business: string) => `This booking has been cancelled. Please contact ${business} with any questions.` },
+    paid: {
+      title: "Booked and paid",
+      body: (business: string) => `Thank you. ${business} has your booking and payment.`,
+    },
+    confirmed: {
+      title: "Booked",
+      body: (business: string) =>
+        `Thank you. ${business} has your booking; you'll pay at the property.`,
+    },
+    awaitingTransfer: {
+      title: "Booked: please pay by bank transfer",
+      body: (by: string) =>
+        `Your room is held. Please send the payment by ${by}, quoting your reference.`,
+    },
+    awaitingCard: {
+      title: "Waiting for your card payment",
+      body: (_business: string) =>
+        "Your room is held for 30 minutes while you pay. If you closed the payment page, go back to the booking page and book again.",
+    },
+    expired: {
+      title: "Not paid in time",
+      body: (_business: string) =>
+        "The card payment wasn't completed, so the room has been released. You can book again from the property's page.",
+    },
+    cancelled: {
+      title: "Cancelled",
+      body: (business: string) =>
+        `This booking has been cancelled. Please contact ${business} with any questions.`,
+    },
   },
   reference: "Reference",
   room: "Room",
@@ -3785,9 +4356,13 @@ export const reservationCopy = branded({
   nonRef: "Non-refundable",
   total: "Total",
   payment: "Payment",
-  methods: { card: "Card", bank: "Bank transfer", property: "At the property" } as Record<string, string>,
+  methods: { card: "Card", bank: "Bank transfer", property: "At the property" } as Record<
+    string,
+    string
+  >,
   bankTitle: "Bank transfer details",
-  bankBody: (amount: string) => `Please send ${amount}, quoting your reference so it's matched to your booking.`,
+  bankBody: (amount: string) =>
+    `Please send ${amount}, quoting your reference so it's matched to your booking.`,
   useReference: "Reference to quote",
   copyLabel: (what: string) => `Copy ${what}`,
   copied: "Copied",
@@ -3806,29 +4381,39 @@ export const enquiryCopy = branded({
   nonRefNote: (saving: string) => `Save ${saving} a night · no refunds`,
   reserve: "Reserve",
   approx: (amount: string) => `≈ ${amount}`,
-  fxLine: (amount: string, ours: string, rate: number, theirs: string) => `About ${amount} at today's rate (1 ${ours} = ${rate.toFixed(4)} ${theirs}). You're charged in ${ours}.`,
+  fxLine: (amount: string, ours: string, rate: number, theirs: string) =>
+    `About ${amount} at today's rate (1 ${ours} = ${rate.toFixed(4)} ${theirs}). You're charged in ${ours}.`,
   checkoutTitle: "Your booking",
   changeRoom: "Change room or rate",
   country: "Your country",
   howToPay: "How would you like to pay?",
   methods: {
     card: { label: "Card", help: "Pay now, securely through Stripe." },
-    bank: { label: "Bank transfer", help: (days: number) => `You'll see the bank details next. Please pay within ${days} ${days === 1 ? "day" : "days"}.` },
+    bank: {
+      label: "Bank transfer",
+      help: (days: number) =>
+        `You'll see the bank details next. Please pay within ${days} ${days === 1 ? "day" : "days"}.`,
+    },
     property: { label: "Pay at the property", help: "Pay when you arrive." },
   },
-  bookingAgree: (business: string) => `I agree to the rate's cancellation terms, and ${business} may contact me about this booking.`,
+  bookingAgree: (business: string) =>
+    `I agree to the rate's cancellation terms, and ${business} may contact me about this booking.`,
   bookingAgreeNeeded: "Please tick the box to agree to the cancellation terms.",
   bookAndPay: (amount: string) => `Book and pay ${amount}`,
   bookNow: "Book now",
   cardNote: "You'll pay on Stripe's secure page; your room is held for 30 minutes while you do.",
-  bookingNote: "Your room is booked straight away. You'll see your confirmation and reference next.",
+  bookingNote:
+    "Your room is booked straight away. You'll see your confirmation and reference next.",
   pageTitle: (place: string) => `Stay with us at ${place}`,
-  metaDescription: "Pick your dates, choose a room and send a booking request directly. The host confirms.",
+  metaDescription:
+    "Pick your dates, choose a room and send a booking request directly. The host confirms.",
   notFound: "This page isn't taking enquiries. Please check the link.",
   eyebrow: "Stay with us",
   title: (place: string) => `Stay at ${place}`,
-  introBook: (business: string) => `Choose your dates and a room and book directly with ${business}: the best rate, straight to them. Rooms without a price can be requested.`,
-  intro: (business: string) => `Choose your dates and a room, and send ${business} a booking request. They'll confirm your stay and how to pay; nothing is booked or paid on this page.`,
+  introBook: (business: string) =>
+    `Choose your dates and a room and book directly with ${business}: the best rate, straight to them. Rooms without a price can be requested.`,
+  intro: (business: string) =>
+    `Choose your dates and a room, and send ${business} a booking request. They'll confirm your stay and how to pay; nothing is booked or paid on this page.`,
   offersTitle: "Seasonal offers",
   offerLine: (percent: number, from: string, to: string) => `${percent}% off, ${from} to ${to}`,
   offerDaysHint: "Underlined dates have an offer.",
@@ -3855,7 +4440,8 @@ export const enquiryCopy = branded({
   generalEnquiry: "Send a general enquiry",
   requestTitle: (room: string) => `Request ${room}`,
   enquiryTitle: "Your details",
-  summary: (from: string, to: string, nights: number, guests: number) => `${from} to ${to} · ${nights} ${nights === 1 ? "night" : "nights"} · ${guests} ${guests === 1 ? "guest" : "guests"}`,
+  summary: (from: string, to: string, nights: number, guests: number) =>
+    `${from} to ${to} · ${nights} ${nights === 1 ? "night" : "nights"} · ${guests} ${guests === 1 ? "guest" : "guests"}`,
   estimate: (total: string) => `estimated ${total}`,
   name: "Your name",
   email: "Email",
@@ -3868,10 +4454,11 @@ export const enquiryCopy = branded({
   sendRequest: "Send booking request",
   failed: "That request couldn't be sent. Please try again.",
   sentTitle: "Thank you, request sent",
-  sentBody: (business: string) => `${business} will confirm your stay and how to pay by email. Nothing is booked yet.`,
-  notBooked: "This is a booking request: the host confirms the room, the price and how to pay. Prices shown are estimates.",
+  sentBody: (business: string) =>
+    `${business} will confirm your stay and how to pay by email. Nothing is booked yet.`,
+  notBooked:
+    "This is a booking request: the host confirms the room, the price and how to pay. Prices shown are estimates.",
 });
-
 
 /** /book/$code: the booking page's bar, calendar, room tiles, booking panel and enquiry box. */
 export const bookPageCopy = branded({
@@ -3888,7 +4475,8 @@ export const bookPageCopy = branded({
   done: "Done",
   prevMonth: "Previous month",
   nextMonth: "Next month",
-  calendarHelp: "Tap your arrival, then your leaving day. Or drag across the days, or drag your stay to move it (on a phone, press and hold first).",
+  calendarHelp:
+    "Tap your arrival, then your leaving day. Or drag across the days, or drag your stay to move it (on a phone, press and hold first).",
   legendOffer: "Offer",
   legendFull: "no rooms free",
   legendFullShort: "No rooms free",
@@ -3908,14 +4496,16 @@ export const bookPageCopy = branded({
   removeRoom: (room: string) => `Remove ${room}`,
   enquire: "Enquire",
   enquireAbout: (room: string) => `Ask about ${room}`,
-  enquirySummary: (from: string, to: string, nights: number, party: string) => `${from} to ${to} · ${nights} ${nights === 1 ? "night" : "nights"} · ${party}`,
+  enquirySummary: (from: string, to: string, nights: number, party: string) =>
+    `${from} to ${to} · ${nights} ${nights === 1 ? "night" : "nights"} · ${party}`,
   name: "Your name",
   email: "Email",
   phone: "Phone",
   close: "Close",
   panelTitle: "Your booking",
   panelEmpty: "Add a room to book it. You can book more than one room together.",
-  panelRequest: (business: string) => `Choose a room and press Enquire, and ${business} will reply with the price and how to book.`,
+  panelRequest: (business: string) =>
+    `Choose a room and press Enquire, and ${business} will reply with the price and how to book.`,
   needMore: (n: number) => `Add a room for ${n} more ${n === 1 ? "guest" : "guests"}.`,
   tooManyRooms: "Each room needs at least one guest: remove a room or add guests.",
   rate: "Rate",
@@ -3937,9 +4527,15 @@ export const stayAgainCopy = branded({
     `${label} is on now: ${percent}% off${someRooms ? " selected rooms" : ""} for stays until ${until}, only when you book with us directly.`,
   offerSoon: (label: string, percent: number, from: string, to: string, someRooms: boolean) =>
     `${label}: ${percent}% off${someRooms ? " selected rooms" : ""} for stays from ${from} to ${to}, only when you book with us directly.`,
-  nonRef: (percent: number) => `Book with us directly and save ${percent}% with our non-refundable rate.`,
-  plain: (business: string) => `Our best rate is always the one you get by booking with ${business} directly.`,
-  perks: ["Our best rate, no booking-site fees", "Pick your favourite room", "Talk to us, not a call centre"],
+  nonRef: (percent: number) =>
+    `Book with us directly and save ${percent}% with our non-refundable rate.`,
+  plain: (business: string) =>
+    `Our best rate is always the one you get by booking with ${business} directly.`,
+  perks: [
+    "Our best rate, no booking-site fees",
+    "Pick your favourite room",
+    "Talk to us, not a call centre",
+  ],
   bookDirect: "Book direct",
   askDirect: "See dates and prices",
   hearFirst: "Hear about offers before anyone else? (optional)",
@@ -3951,7 +4547,8 @@ export const stayAgainCopy = branded({
   onList: (business: string) => `${business} can get in touch about future stays.`,
   changedMind: "Changed your mind?",
   withdrawTitle: "Stop hearing about future stays?",
-  withdrawBody: "You'll be taken off this business's list of past guests to contact. Your stay and its records aren't affected.",
+  withdrawBody:
+    "You'll be taken off this business's list of past guests to contact. Your stay and its records aren't affected.",
   withdrawButton: "Yes, stop",
   withdrawnTitle: "Done",
   withdrawnBody: "You won't hear from them about future stays.",
@@ -3969,14 +4566,19 @@ export const bankCopy = branded({
 export const directBookingCopy = branded({
   title: "Book and pay here",
   body: "Let guests book a free room straight away on your Stay with us page, Booking.com style, and pay you directly. Off: they send a request and you confirm.",
-  notReady: "Booking and paying here appears once the latest database update (migration 0053) is applied.",
+  notReady:
+    "Booking and paying here appears once the latest database update (migration 0053) is applied.",
   instant: "Guests can book free rooms straight away",
-  instantHelp: "Rooms are free when none of your calendars (from every booking site) has a stay on those nights. Rooms without a nightly rate can only be requested.",
+  instantHelp:
+    "Rooms are free when none of your calendars (from every booking site) has a stay on those nights. Rooms without a nightly rate can only be requested.",
   children: "Ask about children",
-  childrenHelp: "Guests choose adults and children on your booking page. Children count towards how many each room sleeps.",
-  calendarWarning: (rooms: string) => `Other booking sites can't see direct bookings for: ${rooms}. Share each room's Latchkey calendar and add it on Airbnb, Booking.com and the rest, or a room could be booked twice.`,
+  childrenHelp:
+    "Guests choose adults and children on your booking page. Children count towards how many each room sleeps.",
+  calendarWarning: (rooms: string) =>
+    `Other booking sites can't see direct bookings for: ${rooms}. Share each room's Latchkey calendar and add it on Airbnb, Booking.com and the rest, or a room could be booked twice.`,
   calendarLink: "Share calendars in Connections",
-  calendarReminder: "Every room's Latchkey calendar is shared: make sure each booking site imports it, so direct bookings block those nights there too.",
+  calendarReminder:
+    "Every room's Latchkey calendar is shared: make sure each booking site imports it, so direct bookings block those nights there too.",
   ratesTitle: "Rates",
   flex: "Refundable (your nightly rate)",
   freeCancelBefore: "Free cancellation until",
@@ -3985,10 +4587,16 @@ export const directBookingCopy = branded({
   cheaperBy: "Cheaper by",
   perNightIn: (currency: string) => `${currency} a night`,
   payTitle: "How guests can pay",
-  methods: { card: "Card (through your Stripe account)", bank: "Bank transfer", atProperty: "Pay at the property" } as Record<string, string>,
-  cardHelp: "Guests pay on Stripe's secure page; the money goes straight to your Stripe account. Unpaid after 30 minutes, the room is released.",
+  methods: {
+    card: "Card (through your Stripe account)",
+    bank: "Bank transfer",
+    atProperty: "Pay at the property",
+  } as Record<string, string>,
+  cardHelp:
+    "Guests pay on Stripe's secure page; the money goes straight to your Stripe account. Unpaid after 30 minutes, the room is released.",
   connectStripe: "Connect Stripe in Settings → Money",
-  bankHelp: (days: number) => `Guests see your bank details (local or international, by their country) and a reference, and pay within ${days} ${days === 1 ? "day" : "days"}. Mark it paid when it arrives.`,
+  bankHelp: (days: number) =>
+    `Guests see your bank details (local or international, by their country) and a reference, and pay within ${days} ${days === 1 ? "day" : "days"}. Mark it paid when it arrives.`,
   addBank: "Add your bank details in Settings → Money",
   propertyHelp: "Guests pay when they arrive. Only if you take payments on site.",
   bankDaysLabel: "Bank transfers due within",
@@ -3998,7 +4606,7 @@ export const directBookingCopy = branded({
 
 export const directRatesCopy = branded({
   title: "Rates and seasonal offers",
-  body: "What your \"Stay with us\" page shows: each room's nightly rate and any offers, so guests see an estimated total for their dates before they send a request. You confirm every stay and how they pay.",
+  body: 'What your "Stay with us" page shows: each room\'s nightly rate and any offers, so guests see an estimated total for their dates before they send a request. You confirm every stay and how they pay.',
   notReady: "Rates and offers appear once the latest database update (migration 0052) is applied.",
   ratesTitle: (currency: string) => `Nightly rate (${currency})`,
   rateFor: (room: string) => `Nightly rate for ${room}`,
@@ -4020,11 +4628,23 @@ export const directRatesCopy = branded({
 });
 
 export const directCopy = branded({
-  bookingsTab: (pending: number) => (pending ? `Bookings made here (${pending} waiting)` : "Bookings made here"),
+  bookingsTab: (pending: number) =>
+    pending ? `Bookings made here (${pending} waiting)` : "Bookings made here",
   noBookings: "No bookings made here yet",
-  noBookingsBody: "Turn on \"Book and pay here\" below, and guests can book free rooms on your Stay with us page.",
-  resStatus: { pending: "Waiting for card payment", awaitingTransfer: "Waiting for transfer", confirmed: "Pay at property", paid: "Paid", cancelled: "Cancelled", expired: "Not paid in time" } as Record<string, string>,
-  resMethod: { card: "Card", bank: "Bank transfer", property: "At the property" } as Record<string, string>,
+  noBookingsBody:
+    'Turn on "Book and pay here" below, and guests can book free rooms on your Stay with us page.',
+  resStatus: {
+    pending: "Waiting for card payment",
+    awaitingTransfer: "Waiting for transfer",
+    confirmed: "Pay at property",
+    paid: "Paid",
+    cancelled: "Cancelled",
+    expired: "Not paid in time",
+  } as Record<string, string>,
+  resMethod: { card: "Card", bank: "Bank transfer", property: "At the property" } as Record<
+    string,
+    string
+  >,
   resFlex: (until: string | null) => (until ? `refundable until ${until}` : "refundable"),
   resNonRef: "non-refundable",
   payBy: (date: string) => `due by ${date}`,
@@ -4032,15 +4652,18 @@ export const directCopy = branded({
   markPaid: "Mark paid",
   markedPaid: "Marked as paid.",
   cancel: "Cancel",
-  cancelConfirm: "Cancel this booking? The room is freed. Any refund for a card payment is made in your Stripe account.",
+  cancelConfirm:
+    "Cancel this booking? The room is freed. Any refund for a card payment is made in your Stripe account.",
   cancelled: "Booking cancelled.",
   quoted: (amount: string) => `estimated ${amount}`,
   title: "Direct stays",
-  subtitle: "Booking platforms help guests find you. This helps them come back to you: enquiries from your own page, and past guests who asked to hear from you.",
+  subtitle:
+    "Booking platforms help guests find you. This helps them come back to you: enquiries from your own page, and past guests who asked to hear from you.",
   staffOnly: "Direct stays are for owners and managers.",
   notReady: "Direct stays start once the latest database update is applied.",
   linkTitle: "Your enquiry page",
-  linkBody: "Share it on your website, in your guide or in a thank-you email. Guests ask about dates; you reply from your own email. Nothing is booked until you agree it with them.",
+  linkBody:
+    "Share it on your website, in your guide or in a thank-you email. Guests ask about dates; you reply from your own email. Nothing is booked until you agree it with them.",
   copy: "Copy link",
   copied: "Link copied.",
   open: "Open",
@@ -4048,12 +4671,18 @@ export const directCopy = branded({
   guestsTab: (n: number) => `Returning guests (${n})`,
   noEnquiries: "No enquiries yet",
   noEnquiriesBody: "Share your enquiry page to start getting direct enquiries.",
-  guestsBody: "Guests who ticked the box to hear from you about future stays, with the words they agreed to. Email them from your own mailbox; each email includes their link to stop. Nothing is sent automatically.",
+  guestsBody:
+    "Guests who ticked the box to hear from you about future stays, with the words they agreed to. Email them from your own mailbox; each email includes their link to stop. Nothing is sent automatically.",
   noGuests: "No returning guests yet",
-  noGuestsBody: "Guests can ask to hear from you on their stay guide, or when they send an enquiry.",
-  dates: (a: string, b: string, n: number, g: number) => `${a} to ${b} · ${n === 1 ? "1 night" : `${n} nights`} · ${g === 1 ? "1 guest" : `${g} guests`}`,
+  noGuestsBody:
+    "Guests can ask to hear from you on their stay guide, or when they send an enquiry.",
+  dates: (a: string, b: string, n: number, g: number) =>
+    `${a} to ${b} · ${n === 1 ? "1 night" : `${n} nights`} · ${g === 1 ? "1 guest" : `${g} guests`}`,
   returning: "Returning",
-  status: { new: "New", offered: "Replied", booked: "Booked", declined: "Declined" } as Record<string, string>,
+  status: { new: "New", offered: "Replied", booked: "Booked", declined: "Declined" } as Record<
+    string,
+    string
+  >,
   statusLabel: "Enquiry status",
   received: (when: string) => `received ${when}`,
   reply: "Reply by email",
@@ -4083,19 +4712,31 @@ export const funnelCopy = branded({
   lastDays: (d: number) => `Last ${d} days`,
   notReady: "The funnel starts once the latest database update is applied.",
   empty: "No funnel events yet.",
-  columns: ["Source", "Campaign", "Tour views", "Tours finished", "Host demo", "Trials started", "Trials saved", "Demo → trial"],
+  columns: [
+    "Source",
+    "Campaign",
+    "Tour views",
+    "Tours finished",
+    "Host demo",
+    "Trials started",
+    "Trials saved",
+    "Demo → trial",
+  ],
 });
 
 /** /privacy: the statistics switch inside the Privacy policy (the policy's wording is in src/content/legal.ts). */
 export const privacyPageCopy = branded({
-  intro: "How Latchkey handles personal data for website visitors, hosts and their guests, and how to switch off website statistics.",
+  intro:
+    "How Latchkey handles personal data for website visitors, hosts and their guests, and how to switch off website statistics.",
   switchTitle: "Counting this browser",
   switchLabel: "Count my visits",
   checking: "Checking…",
   onNow: "Your visits are counted, without your IP address or exact location.",
   offNow: "Your visits aren't counted in this browser.",
-  browserSignal: "Your browser asks sites not to track it (Global Privacy Control or Do Not Track), so we never count it.",
-  switchHint: "This browser remembers your choice. You can also add ?notrack=1 to any of our links.",
+  browserSignal:
+    "Your browser asks sites not to track it (Global Privacy Control or Do Not Track), so we never count it.",
+  switchHint:
+    "This browser remembers your choice. You can also add ?notrack=1 to any of our links.",
 });
 
 /** /terms and /privacy page frame, footer links and the super admin's legal details form. */
@@ -4110,9 +4751,11 @@ export const legalPageCopy = branded({
   agree: "By continuing you agree to the",
   and: "and",
   adminTitle: "Legal details",
-  adminBody: "Who runs Latchkey, for the Terms of service and Privacy policy. The wording itself is in the code (src/content/legal.ts); have it checked by a solicitor before launch.",
+  adminBody:
+    "Who runs Latchkey, for the Terms of service and Privacy policy. The wording itself is in the code (src/content/legal.ts); have it checked by a solicitor before launch.",
   missing: (fields: string) => `Still missing on the published pages: ${fields}.`,
-  notReady: "Legal details can be saved once the latest database update (0054) is applied. Until then the pages use the brand name.",
+  notReady:
+    "Legal details can be saved once the latest database update (0054) is applied. Until then the pages use the brand name.",
   saved: "Legal details saved.",
   view: "View",
   fields: {
@@ -4130,7 +4773,11 @@ export const legalPageCopy = branded({
 export const breakfastCopy = branded({
   title: "Breakfast menu",
   body: "Your own à la carte breakfast, for each way you serve it. Guests order from their stay guide for a morning and time, and it's charged like any extra.",
-  styles: { packed: "Light or packed", delivered: "Delivered to the room", dining: "In the dining room" } as Record<string, string>,
+  styles: {
+    packed: "Light or packed",
+    delivered: "Delivered to the room",
+    dining: "In the dining room",
+  } as Record<string, string>,
   styleHelp: {
     packed: "Something light or to take away: a pastry bag, a breakfast box for an early start.",
     delivered: "Brought to the guest's door or room at the time they choose.",
@@ -4186,7 +4833,8 @@ export const groupBrandCopy = branded({
   guestPages: "Show “Part of {group}” on guest pages",
   guestPagesHelp: "On the guest guide, room guides and kiosk, with your group logo.",
   invoices: "Show the group on invoices",
-  invoicesHelp: "Your group name and logo at the top. Off: the property's name and logo instead; your business details always stay in the small print.",
+  invoicesHelp:
+    "Your group name and logo at the top. Off: the property's name and logo instead; your business details always stay in the small print.",
   saved: "Group brand saved.",
   notReady: "The group brand can be set once the latest database update is applied.",
   ownerOnly: "Only the owner can change the group brand.",
@@ -4208,11 +4856,11 @@ export const demoDockCopy = branded({
   leaveGuest: "Back to Latchkey",
 });
 
-
 export const tourCopy = branded({
   navLabel: "Guided tour",
   pickerTitle: "Take a guided tour",
-  pickerBody: "Pick a journey and we'll walk you through it on the real dashboard: what you're looking at, where to tap, and what else to notice. You can stop at any time and carry on later.",
+  pickerBody:
+    "Pick a journey and we'll walk you through it on the real dashboard: what you're looking at, where to tap, and what else to notice. You can stop at any time and carry on later.",
   modeLabel: "How long",
   quick: "Quick (a few steps)",
   full: "Comprehensive",
@@ -4225,7 +4873,8 @@ export const tourCopy = branded({
   journeys: "Journeys",
   close: "Stop the tour",
   elsewhere: "This step is on another page.",
-  missing: "This part isn't showing right now (it may be empty in the demo, or need a wider screen). Read on, then tap Next.",
+  missing:
+    "This part isn't showing right now (it may be empty in the demo, or need a wider screen). Read on, then tap Next.",
   clickIt: "Tap the highlighted part to carry on.",
   back: "Back",
   next: "Next",
@@ -4239,19 +4888,22 @@ export const tourCopy = branded({
 /** Commission Partner programme: the user-facing name is always "Commission Partner". */
 export const partnerCopy = branded({
   codeLabel: "Referral code (from your Commission Partner)",
-  codeHint: "Optional. If an independent Latchkey Commission Partner told you about Latchkey, enter their code.",
+  codeHint:
+    "Optional. If an independent Latchkey Commission Partner told you about Latchkey, enter their code.",
   codeAdd: "Add code",
   codeAdded: "Thanks: we've noted your Commission Partner.",
   codeFromLink: "Code from the link you followed",
   joinTitle: "Become an independent Latchkey Commission Partner",
-  joinIntro: "Know hosts who run guest houses, B&Bs, serviced apartments or short lets? Introduce them to Latchkey and earn commission on what they pay.",
+  joinIntro:
+    "Know hosts who run guest houses, B&Bs, serviced apartments or short lets? Introduce them to Latchkey and earn commission on what they pay.",
   joinPoints: [
     "10% of what each host you refer pays for Latchkey, for their first 12 paid months.",
     "Paid monthly through Stripe once your balance is £10 or more.",
     "No limit on how many hosts you refer.",
     "You're an independent business, not an employee or agent of Latchkey.",
   ],
-  joinTermsNote: "The Commission Partner agreement sets out the full terms, including when commission is held, refunds and any Launch Bonus.",
+  joinTermsNote:
+    "The Commission Partner agreement sets out the full terms, including when commission is held, refunds and any Launch Bonus.",
   joinSignUp: "Create an account to apply",
   joinSignIn: "I already have an account",
   formTitle: "Your details",
@@ -4266,14 +4918,17 @@ export const partnerCopy = branded({
   phone: "Phone",
   vat: "VAT number (optional)",
   taxAck: "I'm responsible for my own tax on what I earn.",
-  independentAck: "I'm applying as an independent business, not as an employee or agent of Latchkey.",
+  independentAck:
+    "I'm applying as an independent business, not as an employee or agent of Latchkey.",
   apply: "Apply",
   applied: "Thanks: we'll check your application and email you.",
   accountTitle: "Your Commission Partner account",
   statusPending: "We're checking your application. We'll email you once it's approved.",
-  statusWaitlisted: "Commission Partners in your country are on a waiting list for now. We'll email you when we can pay partners there.",
+  statusWaitlisted:
+    "Commission Partners in your country are on a waiting list for now. We'll email you when we can pay partners there.",
   statusSuspended: "Your Commission Partner account is paused. Please contact us.",
-  statusTerminated: "Your Commission Partner arrangement has ended. Amounts already due are still paid as the agreement says.",
+  statusTerminated:
+    "Your Commission Partner arrangement has ended. Amounts already due are still paid as the agreement says.",
   yourLink: "Your referral link",
   yourCode: "Your referral code",
   copy: "Copy",
@@ -4289,26 +4944,33 @@ export const partnerCopy = branded({
   heldHint: "Waiting out the 45-day hold after each payment",
   payable: "Due at the next payout",
   paid: "Paid so far",
-  minNote: (min: string) => `Payouts are monthly once you're owed ${min} or more; smaller amounts carry forward.`,
+  minNote: (min: string) =>
+    `Payouts are monthly once you're owed ${min} or more; smaller amounts carry forward.`,
   hostsTitle: "Hosts you've referred",
-  hostsEmpty: "No hosts yet. Share your link: a host who signs up through it within 60 days is yours.",
+  hostsEmpty:
+    "No hosts yet. Share your link: a host who signs up through it within 60 days is yours.",
   monthsUsed: (n: number) => `${n} of 12 paid months`,
   bonus: "Launch Bonus",
   payoutsList: "Payout history",
   testMode: "Test mode: no real money moves.",
   notSetUp: "The Commission Partner programme isn't open yet.",
   heldHintDays: (days: number) => `Waiting out the ${days}-day hold after each payment`,
-  hostsEmptyDays: (days: number) => `No hosts yet. Share your link: a host who signs up through it within ${days} days is yours.`,
+  hostsEmptyDays: (days: number) =>
+    `No hosts yet. Share your link: a host who signs up through it within ${days} days is yours.`,
   monthsUsedOf: (n: number, cap: number) => `${n} of ${cap} paid months`,
   comingSoonTitle: "The Commission Partner programme is coming soon",
-  comingSoonBody: "We're getting ready to welcome independent Latchkey Commission Partners. Please check back soon. If you already have a Commission Partner account, you can still sign in.",
+  comingSoonBody:
+    "We're getting ready to welcome independent Latchkey Commission Partners. Please check back soon. If you already have a Commission Partner account, you can still sign in.",
   comingSoonSignIn: "Sign in to your Commission Partner account",
   previewNote: "Preview: applications are closed to the public.",
   readAgreement: "Read the Commission Partner agreement",
-  joinSteps: "How joining works: apply, read and sign the agreement online, verify your identity with a photo ID and a selfie, then we check and activate your account.",
+  joinSteps:
+    "How joining works: apply, read and sign the agreement online, verify your identity with a photo ID and a selfie, then we check and activate your account.",
   agreementPdf: "Download PDF",
-  agreementUnavailable: "The agreement isn't available just now. Please try again in a few minutes.",
-  agreementFingerprint: (version: string, hash: string) => `Version ${version} · text fingerprint ${hash}`,
+  agreementUnavailable:
+    "The agreement isn't available just now. Please try again in a few minutes.",
+  agreementFingerprint: (version: string, hash: string) =>
+    `Version ${version} · text fingerprint ${hash}`,
   agreementContents: "Contents",
   agreementEnd: "End of the agreement. The signing section follows.",
   signTitle: "Sign the agreement",
@@ -4323,7 +4985,8 @@ export const partnerCopy = branded({
   signName: "Full legal name (typed)",
   signPosition: "Your position",
   signDraw: "Your signature (drawn)",
-  signRecordNote: "When you sign, we record the agreement's version and fingerprint, the date and time, your typed name and drawn signature, the boxes you ticked, your IP address and your device and browser details (clause 4.3). We then email you a link to your signed copy.",
+  signRecordNote:
+    "When you sign, we record the agreement's version and fingerprint, the date and time, your typed name and drawn signature, the boxes you ticked, your IP address and your device and browser details (clause 4.3). We then email you a link to your signed copy.",
   signSubmit: "Sign the agreement",
   stepsTitle: "Getting your account ready",
   stepSign: "Sign the Commission Partner agreement",
@@ -4334,14 +4997,16 @@ export const partnerCopy = branded({
   stepWaiting: "Waiting for us",
   stepToDo: "To do",
   stepOpen: "Open",
-  needsAgreementAndId: "Your referral code works once you've signed the agreement and we've approved your identity check.",
+  needsAgreementAndId:
+    "Your referral code works once you've signed the agreement and we've approved your identity check.",
   yourAgreement: "Your agreement",
   agreementSigned: (version: string, when: string) => `Version ${version}, signed ${when}.`,
   agreementConfirmed: "Confirmed by Latchkey.",
   agreementUnconfirmed: "Waiting for Latchkey to confirm.",
   downloadSigned: "Download your signed copy",
   stopTitle: "Stop being a Commission Partner",
-  stopBody: "You can stop at any time, without penalty (clause 20.1). If you signed as a consumer, this is also how you cancel within 14 days (clause 21.2). Your code and link stop working for new sign-ups straight away; commission already earned, and on hosts who paid before today, is still paid as clause 20.3 says.",
+  stopBody:
+    "You can stop at any time, without penalty (clause 20.1). If you signed as a consumer, this is also how you cancel within 14 days (clause 21.2). Your code and link stop working for new sign-ups straight away; commission already earned, and on hosts who paid before today, is still paid as clause 20.3 says.",
   stopConfirmLabel: "Type STOP to confirm",
   stopButton: "Stop being a Commission Partner",
   stopped: "You've stopped being a Commission Partner. We've emailed you a confirmation.",
@@ -4349,21 +5014,29 @@ export const partnerCopy = branded({
   verifyContinue: "I'm happy to continue",
   verifyPrivacyLink: "Partner section of the privacy notice",
   verifyIdStep: "Photograph your passport, photocard driving licence or national ID card",
-  verifyIdHelp: "Use the original document, flat, in good light, with the whole of it in the frame.",
+  verifyIdHelp:
+    "Use the original document, flat, in good light, with the whole of it in the frame.",
   verifySelfieStep: "Now take a selfie",
   verifySelfieHelp: "Look at the camera, with your face clearly visible.",
   verifyChecking: "Checking…",
-  verifyNoCamera: "We couldn't open your camera. Allow camera access for this site, or try on your phone.",
+  verifyNoCamera:
+    "We couldn't open your camera. Allow camera access for this site, or try on your phone.",
   verifyWaiting: "Thanks. We're checking your identity and will email you once it's done.",
   verifyApproved: "Your identity is verified.",
-  verifyRejected: "We couldn't verify your identity. Please contact us, or try again with another document.",
-  verifyAttemptsLeft: (n: number) => (n === 1 ? "You have 1 more automatic attempt; after that, we check by hand." : `You have ${n} more automatic attempts.`),
+  verifyRejected:
+    "We couldn't verify your identity. Please contact us, or try again with another document.",
+  verifyAttemptsLeft: (n: number) =>
+    n === 1
+      ? "You have 1 more automatic attempt; after that, we check by hand."
+      : `You have ${n} more automatic attempts.`,
   verifyTryAgain: "Try again",
   verifySignFirst: "Sign the agreement first: we compare your ID with the name you sign with.",
   statementTitle: "Your details for statements",
-  statementBody: "Each monthly statement is a self-billed invoice that we issue for you (clause 12.7), unless you opt out. It shows your name and address, and your VAT number if you're VAT-registered.",
+  statementBody:
+    "Each monthly statement is a self-billed invoice that we issue for you (clause 12.7), unless you opt out. It shows your name and address, and your VAT number if you're VAT-registered.",
   statementAddress: "Postal address",
-  statementOptOut: "I'll send my own invoices instead of self-billing (they must match each statement).",
+  statementOptOut:
+    "I'll send my own invoices instead of self-billing (they must match each statement).",
   statementSave: "Save details",
   statementSaved: "Saved.",
 });

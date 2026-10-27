@@ -4,7 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { ReleaseList } from "@/components/host/ReleaseList";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { LATEST_VERSION, releasesFor, unseen, type HostRelease } from "@/content/changelog";
 import { whatsNewCopy as copy } from "@/content/copy";
 import { getSeenRelease, markReleaseSeen } from "@/lib/whatsnew.functions";
@@ -33,7 +39,7 @@ export function WhatsNewPopup({ admin, skip }: { admin: boolean; skip: boolean }
       } catch {
         local = null;
       }
-      const seen = server.available ? server.seen ?? local : local;
+      const seen = server.available ? (server.seen ?? local) : local;
       if (!seen) {
         // First time here: nothing to catch up on.
         remember();

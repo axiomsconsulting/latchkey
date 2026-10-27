@@ -21,9 +21,19 @@ export type ListBooking = {
 };
 
 /** Where a stay sits for the host, in the order they care about. */
-export type StayGroup = "here" | "arriving" | "leaving" | "upcoming" | "attention" | "past" | "cancelled" | "closed";
+export type StayGroup =
+  "here" | "arriving" | "leaving" | "upcoming" | "attention" | "past" | "cancelled" | "closed";
 
-export const GROUP_ORDER: StayGroup[] = ["here", "arriving", "leaving", "upcoming", "attention", "past", "cancelled", "closed"];
+export const GROUP_ORDER: StayGroup[] = [
+  "here",
+  "arriving",
+  "leaving",
+  "upcoming",
+  "attention",
+  "past",
+  "cancelled",
+  "closed",
+];
 
 /** Shown unless the host ticks them: past stays. */
 export const HIDDEN_BY_DEFAULT: StayGroup[] = ["past"];
@@ -39,10 +49,14 @@ export function stayGroup(b: ListBooking, today: string): StayGroup {
   return "upcoming";
 }
 
-export type SortKey = "smart" | "guest" | "room" | "checkIn" | "checkOut" | "nights" | "platform" | "status" | "amount";
+export type SortKey =
+  "smart" | "guest" | "room" | "checkIn" | "checkOut" | "nights" | "platform" | "status" | "amount";
 
 export function nights(b: ListBooking): number {
-  return Math.max(0, Math.round((Date.parse(b.check_out_date) - Date.parse(b.check_in_date)) / 86_400_000));
+  return Math.max(
+    0,
+    Math.round((Date.parse(b.check_out_date) - Date.parse(b.check_in_date)) / 86_400_000),
+  );
 }
 
 /**
@@ -54,7 +68,9 @@ function smartCompare(a: ListBooking, b: ListBooking, today: string): number {
   const gb = GROUP_ORDER.indexOf(stayGroup(b, today));
   if (ga !== gb) return ga - gb;
   const behind = ["past", "cancelled", "closed"].includes(stayGroup(a, today));
-  const byDate = a.check_in_date.localeCompare(b.check_in_date) || a.check_out_date.localeCompare(b.check_out_date);
+  const byDate =
+    a.check_in_date.localeCompare(b.check_in_date) ||
+    a.check_out_date.localeCompare(b.check_out_date);
   return behind ? -byDate : byDate;
 }
 
@@ -69,12 +85,14 @@ export function sortBookings(
   const cmp: Record<SortKey, (a: ListBooking, b: ListBooking) => number> = {
     smart: (a, b) => smartCompare(a, b, today),
     guest: (a, b) => text(a.guest_full_name).localeCompare(text(b.guest_full_name)),
-    room: (a, b) => label.room(a.room_id).localeCompare(label.room(b.room_id), "en-GB", { numeric: true }),
+    room: (a, b) =>
+      label.room(a.room_id).localeCompare(label.room(b.room_id), "en-GB", { numeric: true }),
     checkIn: (a, b) => a.check_in_date.localeCompare(b.check_in_date),
     checkOut: (a, b) => a.check_out_date.localeCompare(b.check_out_date),
     nights: (a, b) => nights(a) - nights(b),
     platform: (a, b) => label.platform(a).localeCompare(label.platform(b)),
-    status: (a, b) => GROUP_ORDER.indexOf(stayGroup(a, today)) - GROUP_ORDER.indexOf(stayGroup(b, today)),
+    status: (a, b) =>
+      GROUP_ORDER.indexOf(stayGroup(a, today)) - GROUP_ORDER.indexOf(stayGroup(b, today)),
     amount: (a, b) => (a.stay_amount_pence ?? -1) - (b.stay_amount_pence ?? -1),
   };
   const sign = key === "smart" || dir === "asc" ? 1 : -1;
@@ -90,9 +108,19 @@ export type ListFilters = {
   hidePlatforms: string[];
 };
 
-export const DEFAULT_FILTERS: ListFilters = { search: "", hideGroups: [...HIDDEN_BY_DEFAULT], hideRooms: [], hidePlatforms: [] };
+export const DEFAULT_FILTERS: ListFilters = {
+  search: "",
+  hideGroups: [...HIDDEN_BY_DEFAULT],
+  hideRooms: [],
+  hidePlatforms: [],
+};
 
-export function filterBookings(list: ListBooking[], f: ListFilters, today: string, platform: (b: ListBooking) => string): ListBooking[] {
+export function filterBookings(
+  list: ListBooking[],
+  f: ListFilters,
+  today: string,
+  platform: (b: ListBooking) => string,
+): ListBooking[] {
   const q = f.search.trim().toLocaleLowerCase("en-GB");
   return list.filter((b) => {
     if (f.hideGroups.includes(stayGroup(b, today))) return false;
@@ -100,7 +128,8 @@ export function filterBookings(list: ListBooking[], f: ListFilters, today: strin
     if (f.hidePlatforms.includes(platform(b))) return false;
     if (!q) return true;
     return (
-      (b.guest_full_name ?? "").toLocaleLowerCase("en-GB").includes(q) || (b.reservation_code ?? "").toLocaleLowerCase("en-GB").includes(q)
+      (b.guest_full_name ?? "").toLocaleLowerCase("en-GB").includes(q) ||
+      (b.reservation_code ?? "").toLocaleLowerCase("en-GB").includes(q)
     );
   });
 }
@@ -109,10 +138,13 @@ export function filterBookings(list: ListBooking[], f: ListFilters, today: strin
 export function readFilters(raw: string | null): ListFilters {
   try {
     const v = JSON.parse(raw ?? "") as Partial<ListFilters>;
-    const strings = (x: unknown) => (Array.isArray(x) ? x.filter((s): s is string => typeof s === "string").slice(0, 100) : []);
+    const strings = (x: unknown) =>
+      Array.isArray(x) ? x.filter((s): s is string => typeof s === "string").slice(0, 100) : [];
     return {
       search: "",
-      hideGroups: strings(v.hideGroups).filter((g): g is StayGroup => GROUP_ORDER.includes(g as StayGroup)),
+      hideGroups: strings(v.hideGroups).filter((g): g is StayGroup =>
+        GROUP_ORDER.includes(g as StayGroup),
+      ),
       hideRooms: strings(v.hideRooms),
       hidePlatforms: strings(v.hidePlatforms),
     };
@@ -147,7 +179,11 @@ export function closedReason(
  * the nights belong to on the other site. Empty when there's nothing to add
  * (the status icon already says it's closed, and the platform icon where).
  */
-export function closedNote(b: ListBooking, all: ListBooking[], platform: (b: ListBooking) => string): string {
+export function closedNote(
+  b: ListBooking,
+  all: ListBooking[],
+  platform: (b: ListBooking) => string,
+): string {
   if (b.mirror_of) {
     const original = all.find((x) => x.id === b.mirror_of);
     return original?.guest_full_name?.trim() || (original ? platform(original) : "");
@@ -165,13 +201,19 @@ const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function stayDates(checkIn: string, checkOut: string, today: string): string {
   const parts = (iso: string) => {
     const d = new Date(`${iso}T12:00:00Z`);
-    return { y: d.getUTCFullYear(), m: d.getUTCMonth(), day: d.getUTCDate(), dow: DAY[d.getUTCDay()]! };
+    return {
+      y: d.getUTCFullYear(),
+      m: d.getUTCMonth(),
+      day: d.getUTCDate(),
+      dow: DAY[d.getUTCDay()]!,
+    };
   };
   const a = parts(checkIn);
   const b = parts(checkOut);
   const thisYear = Number(today.slice(0, 4));
   const yearB = b.y !== thisYear || a.y !== b.y ? ` ${b.y}` : "";
   const yearA = a.y !== b.y ? ` ${a.y}` : "";
-  if (a.y === b.y && a.m === b.m) return `${a.dow} ${a.day} – ${b.dow} ${b.day} ${MONTH[b.m]}${yearB}`;
+  if (a.y === b.y && a.m === b.m)
+    return `${a.dow} ${a.day} – ${b.dow} ${b.day} ${MONTH[b.m]}${yearB}`;
   return `${a.dow} ${a.day} ${MONTH[a.m]}${yearA} – ${b.dow} ${b.day} ${MONTH[b.m]}${yearB}`;
 }

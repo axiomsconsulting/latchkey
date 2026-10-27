@@ -25,7 +25,9 @@ const context = z.object({
 export const suggestGuestLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => context.parse(d))
-  .handler(async ({ data }) => ({ code: await (await server()).freeGuestLink(data, data.propertyId) }));
+  .handler(async ({ data }) => ({
+    code: await (await server()).freeGuestLink(data, data.propertyId),
+  }));
 
 /** Whether the link typed is usable and free; if taken, up to three free ones like it. */
 export const checkGuestLink = createServerFn({ method: "POST" })
@@ -35,19 +37,31 @@ export const checkGuestLink = createServerFn({ method: "POST" })
     const { takenAmong } = await server();
     const code = cleanLink(data.code);
     const problem = linkProblem(code);
-    if (problem && problem !== "reserved") return { code, problem, available: false, suggestions: [] as string[] };
-    const taken = problem === "reserved" ? new Set([code]) : await takenAmong("short_code", [code], data.propertyId);
-    if (!taken.has(code)) return { code, problem: null, available: true, suggestions: [] as string[] };
+    if (problem && problem !== "reserved")
+      return { code, problem, available: false, suggestions: [] as string[] };
+    const taken =
+      problem === "reserved"
+        ? new Set([code])
+        : await takenAmong("short_code", [code], data.propertyId);
+    if (!taken.has(code))
+      return { code, problem: null, available: true, suggestions: [] as string[] };
     // Ask about a generous batch at once, then offer the first three free ones.
     const pool = linkAlternatives(code, data, () => true, 40);
     const used = await takenAmong("short_code", pool, data.propertyId);
-    return { code, problem, available: false, suggestions: linkAlternatives(code, data, (c) => !used.has(c)) };
+    return {
+      code,
+      problem,
+      available: false,
+      suggestions: linkAlternatives(code, data, (c) => !used.has(c)),
+    };
   });
 
 /** Whether a door PIN typed is free (and whether it's an easy guess). Slowed a little so it can't be used to sweep PINs. */
 export const checkDoorPin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ pin: z.string().regex(/^\d{6}$/), propertyId: uuid.nullish() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ pin: z.string().regex(/^\d{6}$/), propertyId: uuid.nullish() }).parse(d),
+  )
   .handler(async ({ data }) => {
     await new Promise((r) => setTimeout(r, 400));
     const { takenAmong } = await server();

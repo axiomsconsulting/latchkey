@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SAVER, bandFraction, bandValue, glow, idleActions, lookFor, normaliseDefaults } from "../src/lib/kiosk-saver";
+import {
+  DEFAULT_SAVER,
+  bandFraction,
+  bandValue,
+  glow,
+  idleActions,
+  lookFor,
+  normaliseDefaults,
+} from "../src/lib/kiosk-saver";
 
 describe("kiosk screensaver look", () => {
   it("falls back to Latchkey's defaults for anything missing or broken", () => {
@@ -9,14 +17,30 @@ describe("kiosk screensaver look", () => {
   });
 
   it("keeps the admin's limits inside the hard bounds, in order", () => {
-    expect(normaliseDefaults({ brightness: 9, sizeMin: 0.1, sizeMax: 9 })).toMatchObject({ brightness: 3, sizeMin: 0.6, sizeMax: 2.5, size: 1 });
-    expect(normaliseDefaults({ sizeMin: 2, sizeMax: 1.2 })).toMatchObject({ sizeMin: 1.2, sizeMax: 2, size: 1.2 });
+    expect(normaliseDefaults({ brightness: 9, sizeMin: 0.1, sizeMax: 9 })).toMatchObject({
+      brightness: 3,
+      sizeMin: 0.6,
+      sizeMax: 2.5,
+      size: 1,
+    });
+    expect(normaliseDefaults({ sizeMin: 2, sizeMax: 1.2 })).toMatchObject({
+      sizeMin: 1.2,
+      sizeMax: 2,
+      size: 1.2,
+    });
   });
 
   it("keeps the kiosk timings whole minutes, in range, and the screensaver never before the reset", () => {
-    expect(normaliseDefaults({ resetMinutes: 0, saverMinutes: 999, welcomeMinutes: -3 })).toMatchObject({ resetMinutes: 1, saverMinutes: 240, welcomeMinutes: 0 });
-    expect(normaliseDefaults({ resetMinutes: 20, saverMinutes: 5 })).toMatchObject({ resetMinutes: 20, saverMinutes: 20 });
-    expect(normaliseDefaults({ resetMinutes: 2.6, saverMinutes: "7", welcomeMinutes: 0 })).toMatchObject({ resetMinutes: 3, saverMinutes: 7, welcomeMinutes: 0 });
+    expect(
+      normaliseDefaults({ resetMinutes: 0, saverMinutes: 999, welcomeMinutes: -3 }),
+    ).toMatchObject({ resetMinutes: 1, saverMinutes: 240, welcomeMinutes: 0 });
+    expect(normaliseDefaults({ resetMinutes: 20, saverMinutes: 5 })).toMatchObject({
+      resetMinutes: 20,
+      saverMinutes: 20,
+    });
+    expect(
+      normaliseDefaults({ resetMinutes: 2.6, saverMinutes: "7", welcomeMinutes: 0 }),
+    ).toMatchObject({ resetMinutes: 3, saverMinutes: 7, welcomeMinutes: 0 });
   });
 
   it("shows the full phone panel unless the admin chose the small icon", () => {
@@ -51,19 +75,36 @@ describe("idle kiosk", () => {
   const t = { resetMinutes: 5, saverMinutes: 10 };
   const min = 60_000;
   it("does nothing while someone is using it", () => {
-    expect(idleActions(2 * min, t, { atWelcome: false, resetDone: false, saver: false })).toEqual({ reset: false, saver: false });
+    expect(idleActions(2 * min, t, { atWelcome: false, resetDone: false, saver: false })).toEqual({
+      reset: false,
+      saver: false,
+    });
   });
   it("goes back to the welcome after the reset time, once", () => {
-    expect(idleActions(5 * min, t, { atWelcome: false, resetDone: false, saver: false }).reset).toBe(true);
-    expect(idleActions(6 * min, t, { atWelcome: false, resetDone: true, saver: false }).reset).toBe(false);
-    expect(idleActions(6 * min, t, { atWelcome: true, resetDone: false, saver: false }).reset).toBe(false);
+    expect(
+      idleActions(5 * min, t, { atWelcome: false, resetDone: false, saver: false }).reset,
+    ).toBe(true);
+    expect(idleActions(6 * min, t, { atWelcome: false, resetDone: true, saver: false }).reset).toBe(
+      false,
+    );
+    expect(idleActions(6 * min, t, { atWelcome: true, resetDone: false, saver: false }).reset).toBe(
+      false,
+    );
   });
   it("starts the screensaver after its time from the last touch, even after a reset", () => {
-    expect(idleActions(9 * min, t, { atWelcome: true, resetDone: true, saver: false }).saver).toBe(false);
-    expect(idleActions(10 * min, t, { atWelcome: true, resetDone: true, saver: false }).saver).toBe(true);
-    expect(idleActions(11 * min, t, { atWelcome: true, resetDone: true, saver: true }).saver).toBe(false);
+    expect(idleActions(9 * min, t, { atWelcome: true, resetDone: true, saver: false }).saver).toBe(
+      false,
+    );
+    expect(idleActions(10 * min, t, { atWelcome: true, resetDone: true, saver: false }).saver).toBe(
+      true,
+    );
+    expect(idleActions(11 * min, t, { atWelcome: true, resetDone: true, saver: true }).saver).toBe(
+      false,
+    );
   });
   it("catches up at once after the tablet slept", () => {
-    expect(idleActions(3 * 60 * min, t, { atWelcome: false, resetDone: false, saver: false })).toEqual({ reset: true, saver: true });
+    expect(
+      idleActions(3 * 60 * min, t, { atWelcome: false, resetDone: false, saver: false }),
+    ).toEqual({ reset: true, saver: true });
   });
 });

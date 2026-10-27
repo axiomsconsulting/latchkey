@@ -17,7 +17,11 @@ export function GuestReviews({ hostId }: { hostId: string }) {
   const fetchReviews = useServerFn(listGuestReviews);
   const setShown = useServerFn(setReviewShown);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["guest-reviews", hostId], enabled: !!hostId, queryFn: () => fetchReviews({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["guest-reviews", hostId],
+    enabled: !!hostId,
+    queryFn: () => fetchReviews({ data: { hostId } }),
+  });
   const rows = q.data ?? [];
   const rated = rows.filter((r) => r.rating);
   const avg = rated.length ? rated.reduce((n, r) => n + (r.rating ?? 0), 0) / rated.length : null;
@@ -30,7 +34,8 @@ export function GuestReviews({ hostId }: { hostId: string }) {
       action={
         avg !== null ? (
           <span className="flex items-center gap-2 text-muted-foreground">
-            <Stars value={Math.round(avg)} size="size-4" /> {copy.reviewsAverage(avg.toFixed(1), rated.length)}
+            <Stars value={Math.round(avg)} size="size-4" />{" "}
+            {copy.reviewsAverage(avg.toFixed(1), rated.length)}
           </span>
         ) : null
       }
@@ -43,7 +48,11 @@ export function GuestReviews({ hostId }: { hostId: string }) {
             <li key={r.id} className="rounded-xl border border-border p-3">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 {r.rating ? <Stars value={r.rating} size="size-4" /> : null}
-                {r.score ? <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums">{r.score}/10</span> : null}
+                {r.score ? (
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums">
+                    {r.score}/10
+                  </span>
+                ) : null}
                 <span className="font-medium">{r.bookings?.guest_full_name ?? "Guest"}</span>
                 <span className="text-muted-foreground">
                   {r.properties?.name ? `${r.properties.name} · ` : ""}
@@ -59,7 +68,9 @@ export function GuestReviews({ hostId }: { hostId: string }) {
                     onCheckedChange={(v) =>
                       void setShown({ data: { id: r.id, shown: v } })
                         .then(() => qc.invalidateQueries({ queryKey: ["guest-reviews", hostId] }))
-                        .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+                        .catch((e: unknown) =>
+                          toast.error(e instanceof Error ? e.message : common.errorBody),
+                        )
                     }
                     aria-label={copy.reviewOnPage}
                   />

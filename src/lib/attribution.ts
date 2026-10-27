@@ -6,7 +6,13 @@
  * guarded storage (private windows and blocked storage just skip it).
  */
 
-export const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
+export const UTM_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
 export type UtmKey = (typeof UTM_KEYS)[number];
 export type Utm = Partial<Record<UtmKey, string>>;
 
@@ -26,6 +32,7 @@ const clean = (v: unknown): string | null => {
   const t = v.trim();
   // Overlong values are dropped, not cut: they're junk or tracking blobs.
   if (!t || t.length > MAX) return null;
+  // eslint-disable-next-line no-control-regex -- strips control characters from text people type
   return t.replace(/[\u0000-\u001f<>]/g, "");
 };
 
@@ -41,17 +48,30 @@ export function pickUtm(search: Record<string, unknown> | URLSearchParams): Utm 
 }
 
 /** What a landing adds: utm_*, ref, and whether an ad click id came with it. */
-export function attributionFrom(search: Record<string, unknown> | URLSearchParams, path: string, now = new Date()): Attribution | null {
+export function attributionFrom(
+  search: Record<string, unknown> | URLSearchParams,
+  path: string,
+  now = new Date(),
+): Attribution | null {
   const get = (k: string) => (search instanceof URLSearchParams ? search.get(k) : search[k]);
   const utm = pickUtm(search);
   const ref = clean(get("ref"));
   const clickId = !!(clean(get("gclid")) || clean(get("fbclid")));
   if (!Object.keys(utm).length && !ref && !clickId) return null;
-  return { ...utm, ...(ref ? { ref } : {}), ...(clickId ? { clickId: true } : {}), landing_path: path.slice(0, 200), captured_at: now.toISOString() };
+  return {
+    ...utm,
+    ...(ref ? { ref } : {}),
+    ...(clickId ? { clickId: true } : {}),
+    landing_path: path.slice(0, 200),
+    captured_at: now.toISOString(),
+  };
 }
 
 /** First touch for the session; a landing with new utm_* values replaces it. */
-export function mergeAttribution(stored: Attribution | null, incoming: Attribution | null): Attribution | null {
+export function mergeAttribution(
+  stored: Attribution | null,
+  incoming: Attribution | null,
+): Attribution | null {
   if (!incoming) return stored;
   if (!stored) return incoming;
   const fresh = UTM_KEYS.some((k) => incoming[k] && incoming[k] !== stored[k]);
@@ -80,13 +100,21 @@ function read(): Attribution | null {
 }
 
 /** Call once per page load (the root does), before anything redirects. */
-export function captureAttribution(search: Record<string, unknown> | URLSearchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : {}): Attribution | null {
+export function captureAttribution(
+  search: Record<string, unknown> | URLSearchParams = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : {},
+): Attribution | null {
   if (typeof window === "undefined") return null;
   const next = mergeAttribution(read(), attributionFrom(search, window.location.pathname));
   // A Commission Partner's link: kept in a cookie for the window and reported once (server checks the code).
   captureReferral(search, (code, device) => {
     void import("@/lib/partner-referrals.functions")
-      .then(({ recordReferralClick }) => recordReferralClick({ data: { code, path: window.location.pathname.slice(0, 200), deviceId: device } }))
+      .then(({ recordReferralClick }) =>
+        recordReferralClick({
+          data: { code, path: window.location.pathname.slice(0, 200), deviceId: device },
+        }),
+      )
       .catch(() => undefined);
   });
   try {
@@ -115,7 +143,17 @@ export function defaultCampaign(campaign: string) {
   const now = read();
   if (now && UTM_KEYS.some((k) => now[k])) return;
   try {
-    window.sessionStorage.setItem(KEY, JSON.stringify({ ...(now ?? {}), utm_source: "latchkey", utm_medium: "demo-link", utm_campaign: campaign, landing_path: window.location.pathname.slice(0, 200), captured_at: new Date().toISOString() }));
+    window.sessionStorage.setItem(
+      KEY,
+      JSON.stringify({
+        ...(now ?? {}),
+        utm_source: "latchkey",
+        utm_medium: "demo-link",
+        utm_campaign: campaign,
+        landing_path: window.location.pathname.slice(0, 200),
+        captured_at: new Date().toISOString(),
+      }),
+    );
   } catch {
     // Storage blocked: nothing kept.
   }
@@ -159,17 +197,24 @@ export function cleanRefCode(v: unknown): string | null {
 }
 
 /** The referral cookie's value, if it's still within the window. */
-export function readRefCookie(cookieHeader: string, now: number, windowDays: number): RefCookie | null {
+export function readRefCookie(
+  cookieHeader: string,
+  now: number,
+  windowDays: number,
+): RefCookie | null {
   const raw = cookieHeader
     .split(";")
     .map((c) => c.trim())
     .find((c) => c.startsWith(`${REF_COOKIE}=`));
   if (!raw) return null;
   try {
-    const v = JSON.parse(decodeURIComponent(raw.slice(REF_COOKIE.length + 1))) as Partial<RefCookie>;
+    const v = JSON.parse(
+      decodeURIComponent(raw.slice(REF_COOKIE.length + 1)),
+    ) as Partial<RefCookie>;
     const code = cleanRefCode(v.code);
     const at = Date.parse(String(v.clicked_at));
-    if (!code || Number.isNaN(at) || now - at > windowDays * 86_400_000 || at > now + 60_000) return null;
+    if (!code || Number.isNaN(at) || now - at > windowDays * 86_400_000 || at > now + 60_000)
+      return null;
     return { code, clicked_at: new Date(at).toISOString() };
   } catch {
     return null;
@@ -177,10 +222,18 @@ export function readRefCookie(cookieHeader: string, now: number, windowDays: num
 }
 
 /** The Set-Cookie value for a new referral, or null to keep the one there (first valid code wins). */
-export function nextRefCookie(existing: RefCookie | null, code: string, now: number, windowDays: number, secure = true): string | null {
+export function nextRefCookie(
+  existing: RefCookie | null,
+  code: string,
+  now: number,
+  windowDays: number,
+  secure = true,
+): string | null {
   const clean = cleanRefCode(code);
   if (!clean || existing) return null;
-  const value = encodeURIComponent(JSON.stringify({ code: clean, clicked_at: new Date(now).toISOString() }));
+  const value = encodeURIComponent(
+    JSON.stringify({ code: clean, clicked_at: new Date(now).toISOString() }),
+  );
   return `${REF_COOKIE}=${value}; Max-Age=${windowDays * 86_400}; Path=/; SameSite=Lax${secure ? "; Secure" : ""}`;
 }
 
@@ -219,12 +272,22 @@ export function storedReferral(windowDays = 60): RefCookie | null {
  * Keeps ?ref=CODE in the referral cookie (first valid code wins) and reports
  * the click once. Called from captureAttribution on every landing.
  */
-export function captureReferral(search: Record<string, unknown> | URLSearchParams, onNewClick?: (code: string, deviceId: string | null) => void, windowDays = 60) {
+export function captureReferral(
+  search: Record<string, unknown> | URLSearchParams,
+  onNewClick?: (code: string, deviceId: string | null) => void,
+  windowDays = 60,
+) {
   if (typeof document === "undefined" || noTracking()) return;
   const get = (k: string) => (search instanceof URLSearchParams ? search.get(k) : search[k]);
   const code = cleanRefCode(get("ref"));
   if (!code) return;
-  const set = nextRefCookie(storedReferral(windowDays), code, Date.now(), windowDays, location.protocol === "https:");
+  const set = nextRefCookie(
+    storedReferral(windowDays),
+    code,
+    Date.now(),
+    windowDays,
+    location.protocol === "https:",
+  );
   if (!set) return;
   document.cookie = set;
   onNewClick?.(code, deviceId(windowDays));

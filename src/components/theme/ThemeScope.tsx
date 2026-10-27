@@ -7,7 +7,10 @@ import { cn } from "@/lib/utils";
 export function useThemeFonts(theme: ThemeConfig | null | undefined) {
   const links = theme ? googleFontLinks(theme) : [];
   const key = links.map((l) => l.family).join("|");
-  const custom = theme?.customFontUrl && theme.customFontName ? { url: theme.customFontUrl, name: theme.customFontName } : null;
+  const custom =
+    theme?.customFontUrl && theme.customFontName
+      ? { url: theme.customFontUrl, name: theme.customFontName }
+      : null;
 
   useEffect(() => {
     for (const l of links) {
@@ -76,7 +79,10 @@ export function ThemeScope({
     <div
       style={style}
       {...(full && theme ? { "data-themed": "" } : {})}
-      className={cn("bg-background font-sans text-foreground [&_h1,&_h2,&_h3,&_h4]:font-display", className)}
+      className={cn(
+        "bg-background font-sans text-foreground [&_h1,&_h2,&_h3,&_h4]:font-display",
+        className,
+      )}
     >
       {children}
     </div>

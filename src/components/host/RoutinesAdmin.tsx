@@ -6,7 +6,13 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { common, routinesCopy as copy, studioCopy } from "@/content/copy";
@@ -18,7 +24,8 @@ import { JOBS, type Job } from "@/lib/jobs";
 import { creditPence, type CostModel } from "@/lib/pricing-model";
 import { money } from "@/lib/pricing";
 
-const when = (iso: string) => `${formatUkDate(iso.slice(0, 10))} ${new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+const when = (iso: string) =>
+  `${formatUkDate(iso.slice(0, 10))} ${new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 
 /** Credits a routine spent this month, where Latchkey can tell. */
 function creditsFor(job: Job, uses: number, c: CostModel): number | null {
@@ -40,18 +47,36 @@ export function RoutinesAdmin() {
       <div className="card-soft space-y-2 p-5">
         <h2 className="text-xl">{copy.title}</h2>
         <p className="text-muted-foreground">{copy.body}</p>
-        {migrationPending ? <p className="rounded-xl bg-warning/15 p-3 text-sm">{studioCopy.migration}</p> : null}
+        {migrationPending ? (
+          <p className="rounded-xl bg-warning/15 p-3 text-sm">{studioCopy.migration}</p>
+        ) : null}
       </div>
       <DemoLinks />
       <RecordingAccount />
       {JOBS.map((job) => (
-        <RoutineCard key={job.key} job={job} row={settings.find((s) => s.key === job.key)} uses={usageMonth[job.metric] ?? 0} costs={costs} />
+        <RoutineCard
+          key={job.key}
+          job={job}
+          row={settings.find((s) => s.key === job.key)}
+          uses={usageMonth[job.metric] ?? 0}
+          costs={costs}
+        />
       ))}
     </section>
   );
 }
 
-function RoutineCard({ job, row, uses, costs }: { job: Job; row: RoutineRow | undefined; uses: number; costs: CostModel }) {
+function RoutineCard({
+  job,
+  row,
+  uses,
+  costs,
+}: {
+  job: Job;
+  row: RoutineRow | undefined;
+  uses: number;
+  costs: CostModel;
+}) {
   const save = useServerFn(saveRoutine);
   const run = useServerFn(runRoutineNow);
   const qc = useQueryClient();
@@ -79,7 +104,19 @@ function RoutineCard({ job, row, uses, costs }: { job: Job; row: RoutineRow | un
   const store = (next: { enabled?: boolean; everyMinutes?: number | null }) =>
     void act(
       "save",
-      () => save({ data: { key: job.key, enabled: next.enabled ?? enabled, everyMinutes: next.everyMinutes !== undefined ? next.everyMinutes : job.kind === "scheduled" ? every : null } }),
+      () =>
+        save({
+          data: {
+            key: job.key,
+            enabled: next.enabled ?? enabled,
+            everyMinutes:
+              next.everyMinutes !== undefined
+                ? next.everyMinutes
+                : job.kind === "scheduled"
+                  ? every
+                  : null,
+          },
+        }),
       () => copy.saved,
     );
 
@@ -95,22 +132,40 @@ function RoutineCard({ job, row, uses, costs }: { job: Job; row: RoutineRow | un
           {!enabled ? <Badge variant="destructive">{copy.off}</Badge> : null}
         </div>
         <p className="text-sm text-muted-foreground">{job.what}</p>
-        {job.wakes ? <p className="text-sm text-muted-foreground">{copy.wakes(job.wakes)}</p> : null}
+        {job.wakes ? (
+          <p className="text-sm text-muted-foreground">{copy.wakes(job.wakes)}</p>
+        ) : null}
         <p className="text-sm">
           {copy.thisMonth(uses)} ·{" "}
-          {credits !== null ? copy.credits(credits.toFixed(1), money(Math.round(credits * creditPence(costs)), "GBP")) : copy.inRoomCost}
+          {credits !== null
+            ? copy.credits(
+                credits.toFixed(1),
+                money(Math.round(credits * creditPence(costs)), "GBP"),
+              )
+            : copy.inRoomCost}
         </p>
         <p className="text-xs text-muted-foreground">
-          {row?.last_run_at ? copy.lastRun(when(row.last_run_at), row.last_status ?? "", row.last_duration_ms) : copy.never}
+          {row?.last_run_at
+            ? copy.lastRun(when(row.last_run_at), row.last_status ?? "", row.last_duration_ms)
+            : copy.never}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3 md:flex-col md:items-end">
         <label className="flex items-center gap-2 text-sm">
           {enabled ? copy.on : copy.off}
-          <Switch checked={enabled} disabled={busy !== null} onCheckedChange={(v) => store({ enabled: v })} aria-label={`${job.name}: ${enabled ? copy.on : copy.off}`} />
+          <Switch
+            checked={enabled}
+            disabled={busy !== null}
+            onCheckedChange={(v) => store({ enabled: v })}
+            aria-label={`${job.name}: ${enabled ? copy.on : copy.off}`}
+          />
         </label>
         {job.kind === "scheduled" ? (
-          <Select value={String(every ?? job.defaultEvery)} disabled={busy !== null} onValueChange={(v) => store({ everyMinutes: Number(v) })}>
+          <Select
+            value={String(every ?? job.defaultEvery)}
+            disabled={busy !== null}
+            onValueChange={(v) => store({ everyMinutes: Number(v) })}
+          >
             <SelectTrigger className="w-48" aria-label={copy.every}>
               <SelectValue />
             </SelectTrigger>
@@ -131,12 +186,18 @@ function RoutineCard({ job, row, uses, costs }: { job: Job; row: RoutineRow | un
             onClick={() =>
               void act(
                 "run",
-                () => run({ data: { key: job.key as "calendar_sync" | "retention" | "demo_tour" } }),
+                () =>
+                  run({ data: { key: job.key as "calendar_sync" | "retention" | "demo_tour" } }),
                 (r) => copy.ran((r as { status: string }).status),
               )
             }
           >
-            {busy === "run" ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />} {copy.runNow}
+            {busy === "run" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Play className="size-4" />
+            )}{" "}
+            {copy.runNow}
           </Button>
         ) : null}
       </div>
@@ -151,7 +212,9 @@ function RecordingAccount() {
   return (
     <div className="card-soft flex flex-wrap items-center gap-3 p-5">
       <div className="min-w-0 flex-1 basis-64">
-        <h3 className="flex items-center gap-2 font-display text-lg"><Clapperboard className="size-5 text-primary" /> {copy.recordingTitle}</h3>
+        <h3 className="flex items-center gap-2 font-display text-lg">
+          <Clapperboard className="size-5 text-primary" /> {copy.recordingTitle}
+        </h3>
         <p className="text-sm text-muted-foreground">{copy.recordingBody}</p>
       </div>
       <Button
@@ -179,14 +242,32 @@ function RecordingAccount() {
 function DemoLinks() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const rows = [
-    { label: copy.demoHill, guest: "/tour", host: "/demo/host", guestCampaign: "", hostCampaign: "" },
-    ...SHOWCASE.map((s) => ({ label: `${s.property.name} · ${s.label} (${s.themeName})`, guest: `/tour/${s.key}`, host: `/demo/host/${s.key}`, guestCampaign: s.campaign.guest, hostCampaign: s.campaign.host })),
+    {
+      label: copy.demoHill,
+      guest: "/tour",
+      host: "/demo/host",
+      guestCampaign: "",
+      hostCampaign: "",
+    },
+    ...SHOWCASE.map((s) => ({
+      label: `${s.property.name} · ${s.label} (${s.themeName})`,
+      guest: `/tour/${s.key}`,
+      host: `/demo/host/${s.key}`,
+      guestCampaign: s.campaign.guest,
+      hostCampaign: s.campaign.host,
+    })),
   ];
-  const copyLink = (url: string) => void navigator.clipboard.writeText(url).then(() => toast.success(copy.demoCopied), () => toast.error(common.errorBody));
+  const copyLink = (url: string) =>
+    void navigator.clipboard.writeText(url).then(
+      () => toast.success(copy.demoCopied),
+      () => toast.error(common.errorBody),
+    );
   return (
     <div className="card-soft space-y-3 p-5">
       <div>
-        <h3 className="flex items-center gap-2 font-display text-lg"><Link2 className="size-5 text-primary" /> {copy.demoLinksTitle}</h3>
+        <h3 className="flex items-center gap-2 font-display text-lg">
+          <Link2 className="size-5 text-primary" /> {copy.demoLinksTitle}
+        </h3>
         <p className="text-sm text-muted-foreground">{copy.demoLinksBody}</p>
       </div>
       <ul className="divide-y divide-border rounded-2xl border border-border">
@@ -199,9 +280,18 @@ function DemoLinks() {
             ].map((l) => (
               <div key={l.path} className="flex flex-wrap items-center gap-2">
                 <span className="w-24 shrink-0 text-xs text-muted-foreground">{l.kind}</span>
-                <code className="min-w-0 flex-1 basis-48 truncate rounded-lg bg-muted px-2 py-1 text-xs">{origin}{l.path}</code>
-                {l.campaign ? <span className="text-xs text-muted-foreground">{copy.demoCampaign(l.campaign)}</span> : null}
-                <Button size="sm" variant="ghost" onClick={() => copyLink(`${origin}${l.path}`)}>{copy.demoCopy}</Button>
+                <code className="min-w-0 flex-1 basis-48 truncate rounded-lg bg-muted px-2 py-1 text-xs">
+                  {origin}
+                  {l.path}
+                </code>
+                {l.campaign ? (
+                  <span className="text-xs text-muted-foreground">
+                    {copy.demoCampaign(l.campaign)}
+                  </span>
+                ) : null}
+                <Button size="sm" variant="ghost" onClick={() => copyLink(`${origin}${l.path}`)}>
+                  {copy.demoCopy}
+                </Button>
               </div>
             ))}
           </li>
@@ -210,4 +300,3 @@ function DemoLinks() {
     </div>
   );
 }
-

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,20 +25,36 @@ export function PricingAdmin() {
   const save = useServerFn(savePricing);
   const qc = useQueryClient();
   const admin = useQuery({ queryKey: ["admin-status"], queryFn: () => status() });
-  const pricing = useQuery({ queryKey: ["pricing"], queryFn: () => fetchPricing(), enabled: !!admin.data?.isAdmin });
+  const pricing = useQuery({
+    queryKey: ["pricing"],
+    queryFn: () => fetchPricing(),
+    enabled: !!admin.data?.isAdmin,
+  });
   const [form, setForm] = useState<Record<string, number>>({ ...DEFAULT_PRICING } as any);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (pricing.data) setForm({ ...pricing.data } as any); }, [pricing.data]);
+  useEffect(() => {
+    if (pricing.data) setForm({ ...pricing.data } as any);
+  }, [pricing.data]);
   if (!admin.data?.isAdmin) return null;
 
   async function submit() {
     setBusy(true);
     try {
-      await save({ data: { base_pence: form["base_pence"] ?? 0, extra_room_pence: form["extra_room_pence"] ?? 0, extra_property_pence: form["extra_property_pence"] ?? 0, trial_days: form["trial_days"] ?? 0 } });
+      await save({
+        data: {
+          base_pence: form["base_pence"] ?? 0,
+          extra_room_pence: form["extra_room_pence"] ?? 0,
+          extra_property_pence: form["extra_property_pence"] ?? 0,
+          trial_days: form["trial_days"] ?? 0,
+        },
+      });
       await qc.invalidateQueries({ queryKey: ["pricing"] });
       toast.success(c.saved);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Please try again."); }
-    finally { setBusy(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -48,11 +65,21 @@ export function PricingAdmin() {
         {FIELDS.map(([k, label]) => (
           <div key={k} className="space-y-1">
             <Label htmlFor={k}>{label}</Label>
-            <Input id={k} type="number" min={0} value={form[k] ?? 0} onChange={(e) => setForm({ ...form, [k]: Math.max(0, Math.round(Number(e.target.value) || 0)) })} />
+            <Input
+              id={k}
+              type="number"
+              min={0}
+              value={form[k] ?? 0}
+              onChange={(e) =>
+                setForm({ ...form, [k]: Math.max(0, Math.round(Number(e.target.value) || 0)) })
+              }
+            />
           </div>
         ))}
       </div>
-      <Button className="mt-4" onClick={submit} disabled={busy}>{busy ? <Loader2 className="size-4 animate-spin" /> : null}Save pricing</Button>
+      <Button className="mt-4" onClick={submit} disabled={busy}>
+        {busy ? <Loader2 className="size-4 animate-spin" /> : null}Save pricing
+      </Button>
     </section>
   );
 }

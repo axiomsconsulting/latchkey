@@ -24,8 +24,14 @@ export function useLandOn(id: string | null | undefined, ready = true) {
       if (!found || stopped) return;
       const r = found.getBoundingClientRect();
       const fits = r.height < window.innerHeight * 0.8;
-      const visible = fits ? r.top >= 72 && r.bottom <= window.innerHeight - 16 : r.top >= 72 && r.top <= window.innerHeight * 0.3;
-      if (!visible) found.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: fits ? "center" : "start" });
+      const visible = fits
+        ? r.top >= 72 && r.bottom <= window.innerHeight - 16
+        : r.top >= 72 && r.top <= window.innerHeight * 0.3;
+      if (!visible)
+        found.scrollIntoView({
+          behavior: smooth ? "smooth" : "auto",
+          block: fits ? "center" : "start",
+        });
     };
 
     let tries = 0;

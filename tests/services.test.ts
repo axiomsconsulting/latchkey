@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { earliestArrival, formatPence, recommendProviders, type Provider } from "../src/lib/services";
+import {
+  earliestArrival,
+  formatPence,
+  recommendProviders,
+  type Provider,
+} from "../src/lib/services";
 import { normaliseTheme, readableOn, themeVars } from "../src/lib/theme";
 import { normaliseModes } from "../src/lib/integration-modes";
 
@@ -8,7 +13,10 @@ const tz = "Europe/London";
 
 // Fixtures only: Latchkey no longer ships a sample provider list, because no
 // marketplace it can reach actually supplies cleaners or heating engineers.
-const base: Omit<Provider, "id" | "name" | "categories" | "responseMinutes" | "workDays" | "startHour" | "endHour"> = {
+const base: Omit<
+  Provider,
+  "id" | "name" | "categories" | "responseMinutes" | "workDays" | "startHour" | "endHour"
+> = {
   headline: "Test provider",
   contraUrl: "https://example.com",
   rating: 4.5,
@@ -19,21 +27,64 @@ const base: Omit<Provider, "id" | "name" | "categories" | "responseMinutes" | "w
 };
 
 const PROVIDERS: Provider[] = [
-  { ...base, id: "sparkle", name: "Sparkle", categories: ["cleaning"], responseMinutes: 60, workDays: [1, 2, 3, 4, 5, 6], startHour: 8, endHour: 18 },
-  { ...base, id: "slow-clean", name: "Slow Clean", categories: ["cleaning"], responseMinutes: 600, workDays: [1, 2, 3, 4, 5], startHour: 9, endHour: 17 },
-  { ...base, id: "pipes", name: "Pipes", categories: ["plumbing"], responseMinutes: 90, workDays: [0, 1, 2, 3, 4, 5, 6], startHour: 7, endHour: 21 },
-  { ...base, id: "chiltern-heat", name: "Chiltern Heat", categories: ["heating"], responseMinutes: 120, workDays: [1, 2, 3, 4, 5], startHour: 8, endHour: 18 },
+  {
+    ...base,
+    id: "sparkle",
+    name: "Sparkle",
+    categories: ["cleaning"],
+    responseMinutes: 60,
+    workDays: [1, 2, 3, 4, 5, 6],
+    startHour: 8,
+    endHour: 18,
+  },
+  {
+    ...base,
+    id: "slow-clean",
+    name: "Slow Clean",
+    categories: ["cleaning"],
+    responseMinutes: 600,
+    workDays: [1, 2, 3, 4, 5],
+    startHour: 9,
+    endHour: 17,
+  },
+  {
+    ...base,
+    id: "pipes",
+    name: "Pipes",
+    categories: ["plumbing"],
+    responseMinutes: 90,
+    workDays: [0, 1, 2, 3, 4, 5, 6],
+    startHour: 7,
+    endHour: 21,
+  },
+  {
+    ...base,
+    id: "chiltern-heat",
+    name: "Chiltern Heat",
+    categories: ["heating"],
+    responseMinutes: 120,
+    workDays: [1, 2, 3, 4, 5],
+    startHour: 8,
+    endHour: 18,
+  },
 ];
 
 describe("recommendProviders", () => {
   it("only returns providers for the category", () => {
-    const recs = recommendProviders(PROVIDERS, "plumbing", { now: new Date("2026-09-29T09:00:00Z"), tz });
+    const recs = recommendProviders(PROVIDERS, "plumbing", {
+      now: new Date("2026-09-29T09:00:00Z"),
+      tz,
+    });
     expect(recs.length).toBeGreaterThan(0);
     expect(recs.every((r) => r.provider.categories.includes("plumbing"))).toBe(true);
   });
 
   it("favours the fastest provider for urgent jobs", () => {
-    const recs = recommendProviders(PROVIDERS, "cleaning", { now: new Date("2026-09-29T09:00:00Z"), tz, urgency: "urgent" });
+    const recs = recommendProviders(PROVIDERS, "cleaning", {
+      now: new Date("2026-09-29T09:00:00Z"),
+      tz,
+      urgency: "urgent",
+    });
     expect(recs[0]!.provider.id).toBe("sparkle");
     expect(recs[0]!.reasons).toContain("Soonest");
   });
@@ -68,6 +119,10 @@ describe("formatting and theme", () => {
     expect(themeVars(normaliseTheme({}))["--radius"]).toBe("1rem");
   });
   it("normalises integration modes", () => {
-    expect(normaliseModes({ contra: "live", id_check: "bogus" })).toEqual({ id_check: "live", host_email: "demo", guest_messages: "demo" });
+    expect(normaliseModes({ contra: "live", id_check: "bogus" })).toEqual({
+      id_check: "live",
+      host_email: "demo",
+      guest_messages: "demo",
+    });
   });
 });

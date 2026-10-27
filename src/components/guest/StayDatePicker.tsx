@@ -2,7 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { bookPageCopy as copy } from "@/content/copy";
-import { inStay, monthGrid, moveStay, paintStay, tapDay, type Bounds, type Focus, type Stay } from "@/lib/date-pick";
+import {
+  inStay,
+  monthGrid,
+  moveStay,
+  paintStay,
+  tapDay,
+  type Bounds,
+  type Focus,
+  type Stay,
+} from "@/lib/date-pick";
 import { cn } from "@/lib/utils";
 
 /** How long a finger rests on a day before dragging starts (so a swipe still scrolls the page). */
@@ -37,7 +46,10 @@ export function StayDatePicker({
   full: (day: string) => boolean;
   offer: (day: string) => boolean;
 }) {
-  const [view, setView] = useState(() => ({ y: Number(stay.checkIn.slice(0, 4)), m: Number(stay.checkIn.slice(5, 7)) - 1 }));
+  const [view, setView] = useState(() => ({
+    y: Number(stay.checkIn.slice(0, 4)),
+    m: Number(stay.checkIn.slice(5, 7)) - 1,
+  }));
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
   const suppressClick = useRef(false);
@@ -119,7 +131,10 @@ export function StayDatePicker({
       if (dragRef.current) {
         e.preventDefault();
         over(dayAt(t.clientX, t.clientY));
-      } else if (hold.current && Math.hypot(t.clientX - hold.current.x, t.clientY - hold.current.y) > 8) {
+      } else if (
+        hold.current &&
+        Math.hypot(t.clientX - hold.current.x, t.clientY - hold.current.y) > 8
+      ) {
         window.clearTimeout(hold.current.timer);
         hold.current = null;
       }
@@ -152,78 +167,143 @@ export function StayDatePicker({
     if (r.done) onDone?.();
   }
 
-  const shift = (n: number) => setView((v) => {
-    const d = new Date(Date.UTC(v.y, v.m + n, 1));
-    return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
-  });
+  const shift = (n: number) =>
+    setView((v) => {
+      const d = new Date(Date.UTC(v.y, v.m + n, 1));
+      return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
+    });
   const minMonth = Number(bounds.min.slice(0, 4)) * 12 + Number(bounds.min.slice(5, 7)) - 1;
   const atStart = view.y * 12 + view.m <= minMonth;
   const shownMonths = Array.from({ length: months }, (_, i) => {
     const d = new Date(Date.UTC(view.y, view.m + i, 1));
     return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
   });
-  const title = (y: number, m: number) => new Date(Date.UTC(y, m, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+  const title = (y: number, m: number) =>
+    new Date(Date.UTC(y, m, 1)).toLocaleDateString("en-GB", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
 
   return (
     <div className="select-none">
-      <div ref={gridRef} onPointerDown={onPointerDown} className={cn("grid gap-6", months === 2 && "md:grid-cols-2")}>
+      <div
+        ref={gridRef}
+        onPointerDown={onPointerDown}
+        className={cn("grid gap-6", months === 2 && "md:grid-cols-2")}
+      >
         {shownMonths.map(({ y, m }, i) => (
           <div key={`${y}-${m}`}>
             <div className="mb-2 flex h-10 items-center justify-between">
               {i === 0 ? (
-                <button type="button" onClick={() => shift(-1)} disabled={atStart} aria-label={copy.prevMonth} className="grid size-10 place-items-center rounded-full hover:bg-secondary disabled:opacity-30">
+                <button
+                  type="button"
+                  onClick={() => shift(-1)}
+                  disabled={atStart}
+                  aria-label={copy.prevMonth}
+                  className="grid size-10 place-items-center rounded-full hover:bg-secondary disabled:opacity-30"
+                >
                   <ChevronLeft className="size-5" />
                 </button>
-              ) : <span className="size-10" />}
+              ) : (
+                <span className="size-10" />
+              )}
               <p className="font-semibold">{title(y, m)}</p>
               {i === shownMonths.length - 1 ? (
-                <button type="button" onClick={() => shift(1)} aria-label={copy.nextMonth} className="grid size-10 place-items-center rounded-full hover:bg-secondary">
+                <button
+                  type="button"
+                  onClick={() => shift(1)}
+                  aria-label={copy.nextMonth}
+                  className="grid size-10 place-items-center rounded-full hover:bg-secondary"
+                >
                   <ChevronRight className="size-5" />
                 </button>
-              ) : <span className="size-10" />}
+              ) : (
+                <span className="size-10" />
+              )}
             </div>
-            <div className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground" aria-hidden>
-              {["M", "T", "W", "T", "F", "S", "S"].map((d, k) => <span key={k} className="py-1">{d}</span>)}
+            <div
+              className="grid grid-cols-7 text-center text-xs font-medium text-muted-foreground"
+              aria-hidden
+            >
+              {["M", "T", "W", "T", "F", "S", "S"].map((d, k) => (
+                <span key={k} className="py-1">
+                  {d}
+                </span>
+              ))}
             </div>
             <div role="grid" aria-label={title(y, m)} className="grid grid-cols-7">
-              {monthGrid(y, m).flat().map((day, k) => {
-                if (!day) return <span key={k} />;
-                const past = day < bounds.min || day > bounds.max;
-                const start = day === shown.checkIn;
-                const end = day === shown.checkOut;
-                const within = day > shown.checkIn && day < shown.checkOut;
-                const isFull = !past && full(day);
-                return (
-                  <div key={day} className={cn("relative py-0.5", within && "bg-primary/12", start && shown.checkOut > shown.checkIn && "bg-gradient-to-r from-transparent from-50% to-primary/12 to-50%", end && "bg-gradient-to-l from-transparent from-50% to-primary/12 to-50%")}>
-                    <button
-                      type="button"
-                      data-day={past ? undefined : day}
-                      disabled={past}
-                      onClick={() => tap(day)}
-                      aria-label={new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }) + (isFull ? `, ${copy.legendFull}` : "")}
-                      aria-pressed={start || end}
+              {monthGrid(y, m)
+                .flat()
+                .map((day, k) => {
+                  if (!day) return <span key={k} />;
+                  const past = day < bounds.min || day > bounds.max;
+                  const start = day === shown.checkIn;
+                  const end = day === shown.checkOut;
+                  const within = day > shown.checkIn && day < shown.checkOut;
+                  const isFull = !past && full(day);
+                  return (
+                    <div
+                      key={day}
                       className={cn(
-                        "relative mx-auto grid aspect-square w-full max-w-11 place-items-center rounded-full text-sm tabular-nums transition-colors",
-                        past ? "text-muted-foreground/40" : "hover:bg-secondary",
-                        isFull && !start && !end && "text-muted-foreground line-through decoration-1",
-                        (start || end) && "bg-primary font-semibold text-primary-foreground hover:bg-primary",
-                        drag?.moved && (start || end) && "ring-2 ring-primary/40 ring-offset-2",
-                        inStay(stay, day) && !drag && "cursor-grab",
+                        "relative py-0.5",
+                        within && "bg-primary/12",
+                        start &&
+                          shown.checkOut > shown.checkIn &&
+                          "bg-gradient-to-r from-transparent from-50% to-primary/12 to-50%",
+                        end && "bg-gradient-to-l from-transparent from-50% to-primary/12 to-50%",
                       )}
                     >
-                      {Number(day.slice(8))}
-                      {offer(day) && !past ? <span className={cn("absolute bottom-1 size-1 rounded-full", start || end ? "bg-primary-foreground" : "bg-accent")} aria-hidden /> : null}
-                    </button>
-                  </div>
-                );
-              })}
+                      <button
+                        type="button"
+                        data-day={past ? undefined : day}
+                        disabled={past}
+                        onClick={() => tap(day)}
+                        aria-label={
+                          new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "long",
+                            timeZone: "UTC",
+                          }) + (isFull ? `, ${copy.legendFull}` : "")
+                        }
+                        aria-pressed={start || end}
+                        className={cn(
+                          "relative mx-auto grid aspect-square w-full max-w-11 place-items-center rounded-full text-sm tabular-nums transition-colors",
+                          past ? "text-muted-foreground/40" : "hover:bg-secondary",
+                          isFull &&
+                            !start &&
+                            !end &&
+                            "text-muted-foreground line-through decoration-1",
+                          (start || end) &&
+                            "bg-primary font-semibold text-primary-foreground hover:bg-primary",
+                          drag?.moved && (start || end) && "ring-2 ring-primary/40 ring-offset-2",
+                          inStay(stay, day) && !drag && "cursor-grab",
+                        )}
+                      >
+                        {Number(day.slice(8))}
+                        {offer(day) && !past ? (
+                          <span
+                            className={cn(
+                              "absolute bottom-1 size-1 rounded-full",
+                              start || end ? "bg-primary-foreground" : "bg-accent",
+                            )}
+                            aria-hidden
+                          />
+                        ) : null}
+                      </button>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         ))}
       </div>
       <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>{copy.calendarHelp}</span>
-        <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-accent" aria-hidden /> {copy.legendOffer}</span>
+        <span className="flex items-center gap-1">
+          <span className="size-1.5 rounded-full bg-accent" aria-hidden /> {copy.legendOffer}
+        </span>
         <span className="line-through">{copy.legendFullShort}</span>
       </p>
     </div>

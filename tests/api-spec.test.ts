@@ -18,11 +18,20 @@ describe("API definition", () => {
 
   it("checks and converts inputs", () => {
     const op = OPERATIONS.find((o) => o.id === "list_bookings")!;
-    expect(parseInput(op, { limit: "20", from: "2026-10-14" })).toEqual({ ok: true, input: { limit: 20, from: "2026-10-14" } });
-    expect(parseInput(op, { from: "14/10/2026" })).toEqual({ ok: false, problem: "from must be a date like 2026-10-14." });
+    expect(parseInput(op, { limit: "20", from: "2026-10-14" })).toEqual({
+      ok: true,
+      input: { limit: 20, from: "2026-10-14" },
+    });
+    expect(parseInput(op, { from: "14/10/2026" })).toEqual({
+      ok: false,
+      problem: "from must be a date like 2026-10-14.",
+    });
     expect(parseInput(op, { status: "partying" }).ok).toBe(false);
     const create = OPERATIONS.find((o) => o.id === "create_booking")!;
-    expect(parseInput(create, { guest_name: "Sam" })).toEqual({ ok: false, problem: "property_id is required." });
+    expect(parseInput(create, { guest_name: "Sam" })).toEqual({
+      ok: false,
+      problem: "property_id is required.",
+    });
   });
 
   it("describes tools for MCP and the API for OpenAPI", () => {
@@ -30,6 +39,8 @@ describe("API definition", () => {
     expect(inputSchema(send).required).toEqual(["booking_id", "message"]);
     const doc = openApi("https://example.com");
     expect(Object.keys(doc.paths)).toContain("/bookings/{booking_id}");
-    expect((doc.paths["/bookings"] as Record<string, { operationId: string }>)["post"]!.operationId).toBe("create_booking");
+    expect(
+      (doc.paths["/bookings"] as Record<string, { operationId: string }>)["post"]!.operationId,
+    ).toBe("create_booking");
   });
 });

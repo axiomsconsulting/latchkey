@@ -31,13 +31,18 @@ export function OfferSettings() {
 
   if (q.isLoading || !q.data || !form) return <Skeleton className="h-48 rounded-2xl" />;
   const live = offerRunning(form, ukToday());
-  const dirty = changed({ ...form, price }, { ...q.data.offer, price: (q.data.offer.pricePence / 100).toFixed(2) });
+  const dirty = changed(
+    { ...form, price },
+    { ...q.data.offer, price: (q.data.offer.pricePence / 100).toFixed(2) },
+  );
 
   async function submit() {
     if (!form) return;
     setBusy(true);
     try {
-      await save({ data: { ...form, pricePence: Math.max(0, Math.round(Number(price || 0) * 100)) } });
+      await save({
+        data: { ...form, pricePence: Math.max(0, Math.round(Number(price || 0) * 100)) },
+      });
       await qc.invalidateQueries({ queryKey: ["offer-settings"] });
       await qc.invalidateQueries({ queryKey: ["public-offer"] });
       toast.success(copy.saved);
@@ -54,29 +59,62 @@ export function OfferSettings() {
         <Sparkles className="size-5 text-accent" />
         <h2 className="text-xl">{copy.adminTitle}</h2>
         <Badge variant={live ? "default" : "secondary"}>{live ? copy.live : copy.notLive}</Badge>
-        <SaveButton className="ml-auto" dirty={dirty} busy={busy} label={copy.save} onClick={() => void submit()} />
+        <SaveButton
+          className="ml-auto"
+          dirty={dirty}
+          busy={busy}
+          label={copy.save}
+          onClick={() => void submit()}
+        />
       </div>
       <p className="text-muted-foreground">{copy.adminBody}</p>
-      {q.data.migrationPending ? <p className="rounded-xl bg-muted p-3 text-sm">Run migration 0029 first (Lovable applies it on the next sync).</p> : null}
+      {q.data.migrationPending ? (
+        <p className="rounded-xl bg-muted p-3 text-sm">
+          Run migration 0029 first (Lovable applies it on the next sync).
+        </p>
+      ) : null}
       <label className="flex items-center gap-2">
-        <Switch checked={form.enabled} onCheckedChange={(v) => setForm({ ...form, enabled: v })} /> {copy.enabled}
+        <Switch checked={form.enabled} onCheckedChange={(v) => setForm({ ...form, enabled: v })} />{" "}
+        {copy.enabled}
       </label>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <Label htmlFor="offer-price">{copy.price}</Label>
-          <Input id="offer-price" type="number" min={0} step="0.5" value={price} onChange={(e) => setPrice(e.target.value)} />
+          <Input
+            id="offer-price"
+            type="number"
+            min={0}
+            step="0.5"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="offer-label">{copy.label}</Label>
-          <Input id="offer-label" maxLength={60} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
+          <Input
+            id="offer-label"
+            maxLength={60}
+            value={form.label}
+            onChange={(e) => setForm({ ...form, label: e.target.value })}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="offer-start">{copy.startsOn}</Label>
-          <Input id="offer-start" type="date" value={form.startsOn} onChange={(e) => setForm({ ...form, startsOn: e.target.value })} />
+          <Input
+            id="offer-start"
+            type="date"
+            value={form.startsOn}
+            onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="offer-end">{copy.endsOn}</Label>
-          <Input id="offer-end" type="date" value={form.endsOn} onChange={(e) => setForm({ ...form, endsOn: e.target.value })} />
+          <Input
+            id="offer-end"
+            type="date"
+            value={form.endsOn}
+            onChange={(e) => setForm({ ...form, endsOn: e.target.value })}
+          />
         </div>
       </div>
       <p className="text-sm text-muted-foreground">{copy.counts(q.data.waiting, q.data.used)}</p>

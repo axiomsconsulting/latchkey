@@ -28,7 +28,8 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
         // Commission Partner month close: off until switched on; drafts payouts, never sends them.
         if (task === "commission_close") {
           const { jobAllowed, recordRun } = await import("@/lib/usage.server");
-          if (!(await jobAllowed("commission_close"))) return Response.json({ task, skipped: true });
+          if (!(await jobAllowed("commission_close")))
+            return Response.json({ task, skipped: true });
           const started = Date.now();
           const { adminDb, loadPartnerConfig } = await import("@/lib/partner-data.server");
           const { closeAndPlan, runReversals } = await import("@/lib/partner-close.server");
@@ -36,7 +37,11 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
           const config = await loadPartnerConfig(db);
           const summary = await closeAndPlan(db, config);
           if (config.clawbackMethod === "offset_then_reversal") await runReversals(db);
-          await recordRun("commission_close", `${summary.drafted} payouts drafted, ${summary.bonusesEarned} bonuses earned`, started);
+          await recordRun(
+            "commission_close",
+            `${summary.drafted} payouts drafted, ${summary.bonusesEarned} bonuses earned`,
+            started,
+          );
           return Response.json({ task, ...summary });
         }
 

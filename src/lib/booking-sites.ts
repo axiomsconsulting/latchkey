@@ -5,7 +5,15 @@
  * database enum never change. Pure, so it can be unit tested.
  */
 
-export const BUILT_IN_SITES = ["airbnb", "booking_com", "homestay", "vrbo", "agoda", "direct", "other"] as const;
+export const BUILT_IN_SITES = [
+  "airbnb",
+  "booking_com",
+  "homestay",
+  "vrbo",
+  "agoda",
+  "direct",
+  "other",
+] as const;
 export type BuiltInSite = (typeof BUILT_IN_SITES)[number];
 
 /** As stored in hosts.booking_sites: label and icon for any site, built-in or added. */
@@ -40,7 +48,11 @@ function cleanIcon(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const v = raw.trim();
   if (/^https:\/\/[^\s"'<>]+$/i.test(v) && v.length <= 2000) return v;
-  if (/^data:image\/(png|jpeg|webp|x-icon|vnd\.microsoft\.icon);base64,[a-z0-9+/=]+$/i.test(v) && v.length <= 40_000) return v;
+  if (
+    /^data:image\/(png|jpeg|webp|x-icon|vnd\.microsoft\.icon);base64,[a-z0-9+/=]+$/i.test(v) &&
+    v.length <= 40_000
+  )
+    return v;
   return null;
 }
 

@@ -37,7 +37,8 @@ export function TodayRequests({ propertyId }: { propertyId: string }) {
           <li key={r.id} className="flex flex-wrap items-center gap-2">
             <span className="flex-1">
               {r.guest}
-              {r.room ? ` · ${r.room}` : ""} · {r.breakfast ? "Breakfast: " : ""}{r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}
+              {r.room ? ` · ${r.room}` : ""} · {r.breakfast ? "Breakfast: " : ""}
+              {r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}
               {r.totalPence > 0 ? ` · ${formatPence(r.totalPence)}` : ""}
             </span>
             <Button size="sm" onClick={() => act(r.id, "approve")}>

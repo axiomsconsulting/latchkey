@@ -5,7 +5,14 @@ import { useQrImage } from "@/components/guest/CheckInQr";
 import { SaverBand, useNow, type useSaverLook } from "@/components/guest/KioskClocks";
 import { guest as copy } from "@/content/copy";
 import { quietNow } from "@/lib/kiosk-clock";
-import { NIGHT_LOOK, carePattern, nightFrame, qrSpot, restNow, type KioskRest } from "@/lib/kiosk-rest";
+import {
+  NIGHT_LOOK,
+  carePattern,
+  nightFrame,
+  qrSpot,
+  restNow,
+  type KioskRest,
+} from "@/lib/kiosk-rest";
 import { cn } from "@/lib/utils";
 
 /**
@@ -68,7 +75,15 @@ export function NightGlow({
 }
 
 /** The whole screen as a night light. Any touch wakes the kiosk, except the bands: brightness on the left, colour depth on the right. */
-export function KioskNightLight({ saver, onWake, qrUrl = null }: { saver: ReturnType<typeof useSaverLook>; onWake: () => void; qrUrl?: string | null }) {
+export function KioskNightLight({
+  saver,
+  onWake,
+  qrUrl = null,
+}: {
+  saver: ReturnType<typeof useSaverLook>;
+  onWake: () => void;
+  qrUrl?: string | null;
+}) {
   const { rest, night, setNight, commitNight } = saver;
   return (
     <div
@@ -114,7 +129,13 @@ export function KioskNightLight({ saver, onWake, qrUrl = null }: { saver: Return
 }
 
 /** Screen off: black until touched (with the QR code, moving, if the host chose it). */
-export function KioskBlank({ onWake, qrUrl = null }: { onWake: () => void; qrUrl?: string | null }) {
+export function KioskBlank({
+  onWake,
+  qrUrl = null,
+}: {
+  onWake: () => void;
+  qrUrl?: string | null;
+}) {
   return (
     <div
       role="button"
@@ -143,20 +164,36 @@ export function KioskBlank({ onWake, qrUrl = null }: { onWake: () => void; qrUrl
 export function RestQr({ url, on }: { url: string; on: "light" | "dark" }) {
   const now = useNow(30_000);
   const spot = qrSpot(now);
-  const src = useQrImage(url, on === "light" ? { dark: "#000000e6", light: "#00000000" } : { dark: "#b8b8b8ff", light: "#00000000" });
+  const src = useQrImage(
+    url,
+    on === "light"
+      ? { dark: "#000000e6", light: "#00000000" }
+      : { dark: "#b8b8b8ff", light: "#00000000" },
+  );
   if (!src) return null;
   return (
     <figure
       className={cn(
         "pointer-events-none absolute flex flex-col items-center gap-2 transition-all duration-1000",
         // Clear of the edge bands (brightness, colour depth) and the screen's edges.
-        spot.x === "left" ? "left-28" : spot.x === "right" ? "right-28" : "left-1/2 -translate-x-1/2",
+        spot.x === "left"
+          ? "left-28"
+          : spot.x === "right"
+            ? "right-28"
+            : "left-1/2 -translate-x-1/2",
         spot.y === "top" ? "top-10" : "bottom-10",
       )}
       aria-label={copy.saverQr}
     >
       <img src={src} alt={copy.qrAlt} className="size-[min(11rem,30vmin)]" />
-      <figcaption className={cn("text-center text-xs uppercase tracking-[0.2em]", on === "light" ? "text-black/75" : "text-white/55")}>{copy.saverQr}</figcaption>
+      <figcaption
+        className={cn(
+          "text-center text-xs uppercase tracking-[0.2em]",
+          on === "light" ? "text-black/75" : "text-white/55",
+        )}
+      >
+        {copy.saverQr}
+      </figcaption>
     </figure>
   );
 }

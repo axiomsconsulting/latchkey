@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Latchkey-wide integrations, set by the super admin. Secrets live in the
  * server's environment (Lovable Cloud → Secrets); everything else in
@@ -17,9 +18,16 @@ export type IntegrationSettings = {
 export async function integrationSettings(): Promise<IntegrationSettings> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await (supabaseAdmin as unknown as { from: (t: string) => any }).from("site_settings").select("integrations").eq("id", 1).maybeSingle();
+    const { data } = await (supabaseAdmin as unknown as { from: (t: string) => any })
+      .from("site_settings")
+      .select("integrations")
+      .eq("id", 1)
+      .maybeSingle();
     const raw = (data?.integrations ?? {}) as Partial<IntegrationSettings>;
-    const inbound = typeof raw.inboundAddress === "string" && raw.inboundAddress.includes("{code}") ? raw.inboundAddress : null;
+    const inbound =
+      typeof raw.inboundAddress === "string" && raw.inboundAddress.includes("{code}")
+        ? raw.inboundAddress
+        : null;
     return { inboundAddress: inbound };
   } catch {
     return { inboundAddress: null };
@@ -30,7 +38,11 @@ export function pushKeys() {
   const publicKey = env("VAPID_PUBLIC_KEY");
   const privateKey = env("VAPID_PRIVATE_KEY");
   if (!publicKey || !privateKey) return null;
-  return { publicKey, privateKey, subject: env("VAPID_SUBJECT") ?? "mailto:support@latchkey.omsestates.uk" };
+  return {
+    publicKey,
+    privateKey,
+    subject: env("VAPID_SUBJECT") ?? "mailto:support@latchkey.omsestates.uk",
+  };
 }
 
 export function telegramToken() {
@@ -40,8 +52,14 @@ export function telegramToken() {
 export async function telegramSecret(): Promise<string | null> {
   const token = telegramToken();
   if (!token) return null;
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`latchkey-telegram:${token}`));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 40);
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`latchkey-telegram:${token}`),
+  );
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 40);
 }
 
 export function twilio() {
@@ -62,7 +80,10 @@ export function publicOrigin(): string {
 
 /* ------------------------------- Telegram -------------------------------- */
 
-export async function telegramCall<T = unknown>(method: string, body: Record<string, unknown>): Promise<{ ok: boolean; result?: T; description?: string }> {
+export async function telegramCall<T = unknown>(
+  method: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; result?: T; description?: string }> {
   const token = telegramToken();
   if (!token) return { ok: false, description: "No Telegram bot set up." };
   try {
@@ -87,11 +108,17 @@ export async function sendSms(to: string, body: string): Promise<boolean> {
   if (t.from.startsWith("MG")) form.set("MessagingServiceSid", t.from);
   else form.set("From", t.from);
   try {
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(t.sid)}/Messages.json`, {
-      method: "POST",
-      headers: { Authorization: `Basic ${btoa(`${t.sid}:${t.token}`)}`, "Content-Type": "application/x-www-form-urlencoded" },
-      body: form,
-    });
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(t.sid)}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`${t.sid}:${t.token}`)}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: form,
+      },
+    );
     return res.ok;
   } catch {
     return false;

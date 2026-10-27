@@ -22,7 +22,21 @@ describe("who the Order treats as an alien", () => {
   });
 
   it("is not British, Irish or Commonwealth", () => {
-    for (const c of ["GB", "GB-OTC", "GB-BNO", "GB-BPP", "IE", "IN", "AU", "CA", "NG", "LK", "ZW", "GA", "TG"]) {
+    for (const c of [
+      "GB",
+      "GB-OTC",
+      "GB-BNO",
+      "GB-BPP",
+      "IE",
+      "IN",
+      "AU",
+      "CA",
+      "NG",
+      "LK",
+      "ZW",
+      "GA",
+      "TG",
+    ]) {
       expect(isAlien(c)).toBe(false);
     }
     for (const c of ["FR", "DE", "US", "CN", "BR", "HK", "XX"]) expect(isAlien(c)).toBe(true);
@@ -71,10 +85,23 @@ describe("who is registered", () => {
 
 describe("cleanRegisterEntry", () => {
   it("needs only name and nationality from British, Irish and Commonwealth guests", () => {
-    const r = cleanRegisterEntry({ fullName: " Priya  Shah ", nationality: "in", documentNumber: "X123", nextDestination: "Leeds" });
+    const r = cleanRegisterEntry({
+      fullName: " Priya  Shah ",
+      nationality: "in",
+      documentNumber: "X123",
+      nextDestination: "Leeds",
+    });
     expect(r).toEqual({
       ok: true,
-      entry: { fullName: "Priya Shah", nationality: "IN", alien: false, documentNumber: null, placeOfIssue: null, nextDestination: null, nextAddress: null },
+      entry: {
+        fullName: "Priya Shah",
+        nationality: "IN",
+        alien: false,
+        documentNumber: null,
+        placeOfIssue: null,
+        nextDestination: null,
+        nextAddress: null,
+      },
     });
   });
 
@@ -83,12 +110,25 @@ describe("cleanRegisterEntry", () => {
       ok: false,
       missing: ["document", "place", "destination"],
     });
-    const r = cleanRegisterEntry({ fullName: "Jean Dupont", nationality: "FR", documentNumber: "18ab12345", placeOfIssue: "Paris", nextDestination: "Edinburgh" });
-    expect(r.ok && r.entry).toMatchObject({ alien: true, documentNumber: "18AB12345", nextAddress: null });
+    const r = cleanRegisterEntry({
+      fullName: "Jean Dupont",
+      nationality: "FR",
+      documentNumber: "18ab12345",
+      placeOfIssue: "Paris",
+      nextDestination: "Edinburgh",
+    });
+    expect(r.ok && r.entry).toMatchObject({
+      alien: true,
+      documentNumber: "18AB12345",
+      nextAddress: null,
+    });
   });
 
   it("refuses a single name or an unknown nationality", () => {
-    expect(cleanRegisterEntry({ fullName: "Priya", nationality: "ZZ" })).toEqual({ ok: false, missing: ["name", "nationality"] });
+    expect(cleanRegisterEntry({ fullName: "Priya", nationality: "ZZ" })).toEqual({
+      ok: false,
+      missing: ["name", "nationality"],
+    });
   });
 });
 
@@ -107,6 +147,8 @@ describe("registerCsv", () => {
         room_name: "Garden",
       },
     ]);
-    expect(csv.split("\r\n")[1]).toBe(`2026-10-12,"'=Jean, Dupont",France,18AB12345,Paris,Edinburgh,,Hill,Garden`);
+    expect(csv.split("\r\n")[1]).toBe(
+      `2026-10-12,"'=Jean, Dupont",France,18AB12345,Paris,Edinburgh,,Hill,Garden`,
+    );
   });
 });

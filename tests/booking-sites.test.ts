@@ -44,9 +44,19 @@ describe("booking sites", () => {
       ],
       DEFAULTS,
     );
-    expect(sites[0]).toEqual({ key: "airbnb", label: "Airbnb", iconUrl: "https://x.test/a.png", builtIn: true });
+    expect(sites[0]).toEqual({
+      key: "airbnb",
+      label: "Airbnb",
+      iconUrl: "https://x.test/a.png",
+      builtIn: true,
+    });
     expect(sites.find((s) => s.key === "direct")?.label).toBe("Our website");
-    expect(sites.at(-1)).toEqual({ key: "site_abcd1234", label: "Expedia", iconUrl: null, builtIn: false });
+    expect(sites.at(-1)).toEqual({
+      key: "site_abcd1234",
+      label: "Expedia",
+      iconUrl: null,
+      builtIn: false,
+    });
   });
 
   it("stores an added site as 'other' plus its key", () => {

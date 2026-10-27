@@ -8,7 +8,15 @@ import { common, guideCopy as copy } from "@/content/copy";
 import { createGuideLink } from "@/lib/guide.functions";
 
 /** Makes a fresh private guide link for a booking and copies it. */
-export function GuideLinkButton({ bookingId, className, size }: { bookingId: string; className?: string; size?: "sm" }) {
+export function GuideLinkButton({
+  bookingId,
+  className,
+  size,
+}: {
+  bookingId: string;
+  className?: string;
+  size?: "sm";
+}) {
   const make = useServerFn(createGuideLink);
   const [busy, setBusy] = useState(false);
 
@@ -27,7 +35,14 @@ export function GuideLinkButton({ bookingId, className, size }: { bookingId: str
   }
 
   return (
-    <Button type="button" variant="outline" size={size} onClick={run} disabled={busy} className={className}>
+    <Button
+      type="button"
+      variant="outline"
+      size={size}
+      onClick={run}
+      disabled={busy}
+      className={className}
+    >
       {busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
       {copy.guideLink}
     </Button>

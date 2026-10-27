@@ -30,12 +30,23 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { common, listingLinksCopy as linksCopy, properties as copy, roomWifiCopy } from "@/content/copy";
+import {
+  common,
+  listingLinksCopy as linksCopy,
+  properties as copy,
+  roomWifiCopy,
+} from "@/content/copy";
 import { COUNTRY_CHOICES, region } from "@/lib/regions";
 import { usePropertyBoard, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { formatUkTime } from "@/lib/dates";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
-import { deleteRoom, saveListingLinks, saveProperty, saveRoom, saveRoomWifi } from "@/lib/host.functions";
+import {
+  deleteRoom,
+  saveListingLinks,
+  saveProperty,
+  saveRoom,
+  saveRoomWifi,
+} from "@/lib/host.functions";
 import { ListingLinkIcons, ListingLinksField, linksText } from "@/components/host/ListingLinks";
 import { normaliseListingLinks } from "@/lib/listing-links";
 import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
@@ -48,8 +59,12 @@ const FOCUS = ["property", "checkin", "records", "rooms", "cleaning"] as const;
 
 export const Route = createFileRoute("/_authenticated/app/properties")({
   // ?focus=<section> lands on that part of the property (e.g. cleaning times); ?tab=extras opens the Extras tab.
-  validateSearch: (s: Record<string, unknown>): { focus?: (typeof FOCUS)[number]; tab?: "extras" } => ({
-    ...(typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"]) ? { focus: s["focus"] as (typeof FOCUS)[number] } : {}),
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { focus?: (typeof FOCUS)[number]; tab?: "extras" } => ({
+    ...(typeof s["focus"] === "string" && (FOCUS as readonly string[]).includes(s["focus"])
+      ? { focus: s["focus"] as (typeof FOCUS)[number] }
+      : {}),
     ...(s["tab"] === "extras" ? { tab: "extras" as const } : {}),
   }),
   head: () => ({
@@ -123,7 +138,10 @@ function RoomDialog({
   const [busy, setBusy] = useState(false);
   const [links, setLinks] = useState(() => linksText(room?.listing_links));
   // The room's own network; empty uses the property's.
-  const [wifi, setWifi] = useState({ name: room?.wifi_name ?? "", password: room?.wifi_password ?? "" });
+  const [wifi, setWifi] = useState({
+    name: room?.wifi_name ?? "",
+    password: room?.wifi_password ?? "",
+  });
   const [form, setForm] = useState({
     display_name: room?.display_name ?? "",
     room_number: room?.room_number ?? "",
@@ -155,7 +173,10 @@ function RoomDialog({
       });
       if (links !== linksText(room?.listing_links)) {
         const roomId = room?.id ?? (saved as { id?: string } | null)?.id;
-        if (roomId) await saveLinks({ data: { propertyId, roomId, urls: normaliseListingLinks(links).map((l) => l.url) } });
+        if (roomId)
+          await saveLinks({
+            data: { propertyId, roomId, urls: normaliseListingLinks(links).map((l) => l.url) },
+          });
       }
       if (wifi.name !== (room?.wifi_name ?? "") || wifi.password !== (room?.wifi_password ?? "")) {
         const roomId = room?.id ?? (saved as { id?: string } | null)?.id;
@@ -256,16 +277,40 @@ function RoomDialog({
             <p className="text-xs text-muted-foreground">{roomWifiCopy.hint}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="rw-name" className="text-xs">{roomWifiCopy.name}</Label>
-                <Input id="rw-name" className="h-11" maxLength={64} autoComplete="off" value={wifi.name} onChange={(e) => setWifi((w) => ({ ...w, name: e.target.value }))} />
+                <Label htmlFor="rw-name" className="text-xs">
+                  {roomWifiCopy.name}
+                </Label>
+                <Input
+                  id="rw-name"
+                  className="h-11"
+                  maxLength={64}
+                  autoComplete="off"
+                  value={wifi.name}
+                  onChange={(e) => setWifi((w) => ({ ...w, name: e.target.value }))}
+                />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="rw-pass" className="text-xs">{roomWifiCopy.password}</Label>
-                <Input id="rw-pass" className="h-11" maxLength={128} autoComplete="off" disabled={!wifi.name.trim()} value={wifi.password} onChange={(e) => setWifi((w) => ({ ...w, password: e.target.value }))} />
+                <Label htmlFor="rw-pass" className="text-xs">
+                  {roomWifiCopy.password}
+                </Label>
+                <Input
+                  id="rw-pass"
+                  className="h-11"
+                  maxLength={128}
+                  autoComplete="off"
+                  disabled={!wifi.name.trim()}
+                  value={wifi.password}
+                  onChange={(e) => setWifi((w) => ({ ...w, password: e.target.value }))}
+                />
               </div>
             </div>
           </fieldset>
-          <ListingLinksField id="room-links" value={links} onChange={setLinks} hint={linksCopy.roomHint} />
+          <ListingLinksField
+            id="room-links"
+            value={links}
+            onChange={setLinks}
+            hint={linksCopy.roomHint}
+          />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {common.cancel}
@@ -343,7 +388,14 @@ function PropertyDialog({
           host_contact_phone: form.host_contact_phone.trim() || null,
         },
       });
-      if (links !== linksText(property.listing_links)) await saveLinks({ data: { propertyId: property.id, roomId: null, urls: normaliseListingLinks(links).map((l) => l.url) } });
+      if (links !== linksText(property.listing_links))
+        await saveLinks({
+          data: {
+            propertyId: property.id,
+            roomId: null,
+            urls: normaliseListingLinks(links).map((l) => l.url),
+          },
+        });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["board"] }),
         qc.invalidateQueries({ queryKey: ["workspace"] }),
@@ -486,7 +538,12 @@ function PropertyDialog({
             />
           </div>
           <div className="sm:col-span-2">
-            <ListingLinksField id="property-links" value={links} onChange={setLinks} hint={linksCopy.propertyHint} />
+            <ListingLinksField
+              id="property-links"
+              value={links}
+              onChange={setLinks}
+              hint={linksCopy.propertyHint}
+            />
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="pk">Parking notes</Label>
@@ -514,7 +571,8 @@ function PropertyDialog({
 
 function PropertiesPage() {
   const workspace = useWorkspace();
-  const propertyList = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
+  const propertyList = workspace.data?.properties as
+    Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(propertyList);
   const board = usePropertyBoard(selectedId);
   const { focus, tab } = Route.useSearch();
@@ -579,17 +637,24 @@ function PropertiesPage() {
 
       {/* Two parts: the property and its rooms, and what guests can add to their stay. */}
       <nav aria-label={copy.tabsLabel} className="flex gap-1 rounded-2xl bg-muted p-1">
-        {([
-          [undefined, copy.tabProperty, Home],
-          ["extras", copy.tabExtras, ShoppingBasket],
-        ] as const).map(([key, label, Icon]) => (
+        {(
+          [
+            [undefined, copy.tabProperty, Home],
+            ["extras", copy.tabExtras, ShoppingBasket],
+          ] as const
+        ).map(([key, label, Icon]) => (
           <Link
             key={label}
             to="/app/properties"
             search={key ? { tab: key } : {}}
             aria-current={tab === key ? "page" : undefined}
             data-tour={key === "extras" ? "properties-extras-tab" : undefined}
-            className={cn("flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium", tab === key ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium",
+              tab === key
+                ? "bg-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
           >
             <Icon className="size-4" /> {label}
           </Link>
@@ -599,128 +664,139 @@ function PropertiesPage() {
       {tab === "extras" ? (
         <div className="space-y-6">
           <StayTimesSettings propertyId={selectedId} />
-          {workspace.data ? <ExtrasPriceList propertyId={selectedId} hostId={workspace.data.hostId} parts="items" /> : null}
+          {workspace.data ? (
+            <ExtrasPriceList propertyId={selectedId} hostId={workspace.data.hostId} parts="items" />
+          ) : null}
         </div>
       ) : (
-      <>
-      {property ? (
-        <section id="property-property" className="card-soft scroll-mt-24 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl">{property.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                {[property.address, property.postcode].filter(Boolean).join(", ") ||
-                  "No address yet"}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* The property's own pages on the booking sites, one tap away. */}
-              <ListingLinkIcons links={property.listing_links} />
-              <Badge variant="secondary">/kiosk/{property.short_code}</Badge>
-              {property.check_in_pin ? (
-                <Badge variant="outline">
-                  {copy.doorPin} {property.check_in_pin}
-                </Badge>
-              ) : null}
-            </div>
-          </div>
+        <>
+          {property ? (
+            <section id="property-property" className="card-soft scroll-mt-24 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl">{property.name}</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {[property.address, property.postcode].filter(Boolean).join(", ") ||
+                      "No address yet"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* The property's own pages on the booking sites, one tap away. */}
+                  <ListingLinkIcons links={property.listing_links} />
+                  <Badge variant="secondary">/kiosk/{property.short_code}</Badge>
+                  {property.check_in_pin ? (
+                    <Badge variant="outline">
+                      {copy.doorPin} {property.check_in_pin}
+                    </Badge>
+                  ) : null}
+                </div>
+              </div>
 
-          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-muted-foreground">{copy.checkInWindow}</dt>
-              <dd className="font-medium">
-                {formatUkTime(property.default_check_in_time)} →{" "}
-                {formatUkTime(property.default_check_out_time)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{copy.quietHours}</dt>
-              <dd className="font-medium">
-                {formatUkTime(property.quiet_hours_start)} –{" "}
-                {formatUkTime(property.quiet_hours_end)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{copy.wifi}</dt>
-              <dd className="font-medium">{property.wifi_name || "Not set"}</dd>
-            </div>
-          </dl>
-        </section>
-      ) : null}
+              <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+                <div>
+                  <dt className="text-muted-foreground">{copy.checkInWindow}</dt>
+                  <dd className="font-medium">
+                    {formatUkTime(property.default_check_in_time)} →{" "}
+                    {formatUkTime(property.default_check_out_time)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{copy.quietHours}</dt>
+                  <dd className="font-medium">
+                    {formatUkTime(property.quiet_hours_start)} –{" "}
+                    {formatUkTime(property.quiet_hours_end)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">{copy.wifi}</dt>
+                  <dd className="font-medium">{property.wifi_name || "Not set"}</dd>
+                </div>
+              </dl>
+            </section>
+          ) : null}
 
-      {/* Moved: guest records and the kiosk at rest to Settings, cleaning times to Housekeeping. */}
-      <nav aria-label={copy.elsewhereTitle} className="card-soft p-5">
-        <h2 className="text-lg">{copy.elsewhereTitle}</h2>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {([
-            ["checkin", "/app/settings", { focus: "checkin" }],
-            ["records", "/app/settings", { focus: "records" }],
-            ["stayAccess", "/app/settings", { focus: "stayAccess" }],
-            ["kioskRest", "/app/settings", { focus: "kioskRest" }],
-            ["schedule", "/app/housekeeping", { focus: "schedule" }],
-            ["calendars", "/app/connections", {}],
-          ] as const).map(([key, to, search]) => (
-            <li key={key}>
-              <Link to={to} search={search} className="flex h-full flex-col rounded-xl border border-border p-3 text-sm hover:bg-secondary">
-                <span className="font-medium">{copy.elsewhere[key]![0]}</span>
-                <span className="text-muted-foreground">{copy.elsewhere[key]![1]}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+          {/* Moved: guest records and the kiosk at rest to Settings, cleaning times to Housekeeping. */}
+          <nav aria-label={copy.elsewhereTitle} className="card-soft p-5">
+            <h2 className="text-lg">{copy.elsewhereTitle}</h2>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {(
+                [
+                  ["checkin", "/app/settings", { focus: "checkin" }],
+                  ["records", "/app/settings", { focus: "records" }],
+                  ["stayAccess", "/app/settings", { focus: "stayAccess" }],
+                  ["kioskRest", "/app/settings", { focus: "kioskRest" }],
+                  ["schedule", "/app/housekeeping", { focus: "schedule" }],
+                  ["calendars", "/app/connections", {}],
+                ] as const
+              ).map(([key, to, search]) => (
+                <li key={key}>
+                  <Link
+                    to={to}
+                    search={search}
+                    className="flex h-full flex-col rounded-xl border border-border p-3 text-sm hover:bg-secondary"
+                  >
+                    <span className="font-medium">{copy.elsewhere[key]![0]}</span>
+                    <span className="text-muted-foreground">{copy.elsewhere[key]![1]}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-      <section id="property-rooms" className="scroll-mt-24 space-y-3 rounded-2xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl">Rooms</h2>
-          <Button onClick={() => setRoomDialog({ open: true, room: null })}>
-            <Plus className="size-4" />
-            {copy.addRoom}
-          </Button>
-        </div>
+          <section id="property-rooms" className="scroll-mt-24 space-y-3 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl">Rooms</h2>
+              <Button onClick={() => setRoomDialog({ open: true, room: null })}>
+                <Plus className="size-4" />
+                {copy.addRoom}
+              </Button>
+            </div>
 
-        {rooms.length === 0 ? (
-          <EmptyState icon={BedDouble} title={copy.noRooms} />
-        ) : (
-          <ul className="card-soft overflow-hidden p-0">
-            {rooms.map((r) => (
-              <li
-                key={r.id}
-                className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-4 last:border-0"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="flex min-w-0 items-center gap-1">
-                    <span className="truncate font-medium">{r.display_name}</span>
-                    <ListingLinkIcons links={r.listing_links} className="inline-flex shrink-0 items-center" />
-                  </span>
-                  <span className="block text-sm text-muted-foreground">
-                    Sleeps {r.max_guests}
-                    {r.children_allowed === false ? " · Adults only" : ""}
-                    {r.has_ensuite ? " · En-suite" : ""}
-                    {r.room_number ? ` · Room ${r.room_number}` : ""}
-                  </span>
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRoomDialog({ open: true, room: r })}
-                >
-                  {common.edit}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => dropRoom(r.id)}
-                  aria-label={`${common.remove} ${r.display_name}`}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      </>
+            {rooms.length === 0 ? (
+              <EmptyState icon={BedDouble} title={copy.noRooms} />
+            ) : (
+              <ul className="card-soft overflow-hidden p-0">
+                {rooms.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-4 last:border-0"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center gap-1">
+                        <span className="truncate font-medium">{r.display_name}</span>
+                        <ListingLinkIcons
+                          links={r.listing_links}
+                          className="inline-flex shrink-0 items-center"
+                        />
+                      </span>
+                      <span className="block text-sm text-muted-foreground">
+                        Sleeps {r.max_guests}
+                        {r.children_allowed === false ? " · Adults only" : ""}
+                        {r.has_ensuite ? " · En-suite" : ""}
+                        {r.room_number ? ` · Room ${r.room_number}` : ""}
+                      </span>
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRoomDialog({ open: true, room: r })}
+                    >
+                      {common.edit}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => dropRoom(r.id)}
+                      aria-label={`${common.remove} ${r.display_name}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
       )}
 
       {roomDialog.open ? (

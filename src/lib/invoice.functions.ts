@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 /**
  * Invoices for direct stays. Nothing is generated until someone asks: the
  * guest from their guest guide (who may correct their email and postal
@@ -71,28 +72,31 @@ async function draftFor(bookingId: string): Promise<Draft | null> {
     .eq("id", bookingId)
     .maybeSingle();
   if (!b) return null;
-  const room = (b as { rooms?: { display_name: string; public_title: string | null } | null }).rooms;
-  const p = (b as unknown as {
-    properties: {
-      id: string;
-      name: string;
-      address: string | null;
-      postcode: string | null;
-      country_code: string | null;
-      host_id: string;
-      hosts: {
-        business_name: string;
-        currency: string;
-        tax_registered: boolean;
-        tax_label: string | null;
-        tax_rate_bp: number | null;
-        prices_include_tax: boolean | null;
-        tax_number: string | null;
-        invoice_prefix: string | null;
-        invoices_enabled: boolean | null;
+  const room = (b as { rooms?: { display_name: string; public_title: string | null } | null })
+    .rooms;
+  const p = (
+    b as unknown as {
+      properties: {
+        id: string;
+        name: string;
+        address: string | null;
+        postcode: string | null;
+        country_code: string | null;
+        host_id: string;
+        hosts: {
+          business_name: string;
+          currency: string;
+          tax_registered: boolean;
+          tax_label: string | null;
+          tax_rate_bp: number | null;
+          prices_include_tax: boolean | null;
+          tax_number: string | null;
+          invoice_prefix: string | null;
+          invoices_enabled: boolean | null;
+        } | null;
       } | null;
-    } | null;
-  }).properties;
+    }
+  ).properties;
   if (!p) return null;
   const h = p.hosts;
   const terms = taxTerms(p.country_code);
@@ -108,7 +112,12 @@ async function draftFor(bookingId: string): Promise<Draft | null> {
     sellerName: p.name,
     sellerRoom: roomName,
     sellerAddress: [p.address, p.postcode].filter(Boolean).join("\n") || null,
-    taxLabel: registered && h?.tax_number ? (h.tax_label ? `${h.tax_label} number` : terms.numberLabel) : null,
+    taxLabel:
+      registered && h?.tax_number
+        ? h.tax_label
+          ? `${h.tax_label} number`
+          : terms.numberLabel
+        : null,
     taxNumber: registered ? (h?.tax_number ?? null) : null,
     taxName: h?.tax_label || terms.name,
     registered,
@@ -126,7 +135,10 @@ async function draftFor(bookingId: string): Promise<Draft | null> {
     checkOut: b.check_out_date,
     amountPence: b.stay_amount_pence ?? 0,
     includesTax: b.stay_amount_includes_tax ?? h?.prices_include_tax ?? true,
-    prefix: h?.invoice_prefix && h.invoice_prefix !== "INV" ? h.invoice_prefix : suggestPrefix(h?.business_name),
+    prefix:
+      h?.invoice_prefix && h.invoice_prefix !== "INV"
+        ? h.invoice_prefix
+        : suggestPrefix(h?.business_name),
     nightly: await nightlySetting(),
   };
 }
@@ -165,13 +177,18 @@ function fieldsFrom(d: Draft, e: Edits) {
   return {
     title: d.title,
     seller_name: (e.sellerName ?? d.sellerName).trim().slice(0, 200),
-    seller_room: (e.sellerRoom === undefined ? d.sellerRoom : e.sellerRoom)?.trim().slice(0, 120) || null,
-    seller_address: (e.sellerAddress === undefined ? d.sellerAddress : e.sellerAddress)?.trim().slice(0, 400) || null,
+    seller_room:
+      (e.sellerRoom === undefined ? d.sellerRoom : e.sellerRoom)?.trim().slice(0, 120) || null,
+    seller_address:
+      (e.sellerAddress === undefined ? d.sellerAddress : e.sellerAddress)?.trim().slice(0, 400) ||
+      null,
     seller_tax_label: d.taxLabel,
     seller_tax_number: d.taxNumber,
     buyer_name: (e.buyerName ?? d.buyerName).trim().slice(0, 200) || "Guest",
     buyer_email: (e.buyerEmail === undefined ? d.buyerEmail : e.buyerEmail)?.trim() || null,
-    buyer_address: (e.buyerAddress === undefined ? d.buyerAddress : e.buyerAddress)?.trim().slice(0, 400) || null,
+    buyer_address:
+      (e.buyerAddress === undefined ? d.buyerAddress : e.buyerAddress)?.trim().slice(0, 400) ||
+      null,
     description: (e.description ?? d.description).trim().slice(0, 300),
     check_in_date: d.checkIn,
     check_out_date: d.checkOut,
@@ -202,7 +219,8 @@ function fieldsFrom(d: Draft, e: Edits) {
 async function createInvoice(d: Draft, e: Edits, by: "guest" | "host") {
   const db = await admin();
   const { data: n, error: numErr } = await db.rpc("claim_invoice_number", { _host_id: d.hostId });
-  if (numErr || typeof n !== "number") throw new Error("We couldn't number the invoice. Please try again.");
+  if (numErr || typeof n !== "number")
+    throw new Error("We couldn't number the invoice. Please try again.");
   const { randomBytes } = await import("crypto");
   const row = {
     ...fieldsFrom(d, e),
@@ -218,7 +236,11 @@ async function createInvoice(d: Draft, e: Edits, by: "guest" | "host") {
   const { data, error } = await db.from("invoices").insert(row).select("access_token").single();
   if (error) {
     // Someone created it at the same moment: theirs stands.
-    const { data: existing } = await db.from("invoices").select("access_token").eq("booking_id", d.bookingId).maybeSingle();
+    const { data: existing } = await db
+      .from("invoices")
+      .select("access_token")
+      .eq("booking_id", d.bookingId)
+      .maybeSingle();
     if (existing) return existing.access_token;
     throw new Error("We couldn't create the invoice. Please try again.");
   }
@@ -263,7 +285,13 @@ export const getStayInvoice = createServerFn({ method: "GET" })
     return {
       offered: true as const,
       invoice: inv
-        ? { token: inv.access_token, number: inv.number, total: inv.total_pence, currency: inv.currency, email: inv.buyer_email }
+        ? {
+            token: inv.access_token,
+            number: inv.number,
+            total: inv.total_pence,
+            currency: inv.currency,
+            email: inv.buyer_email,
+          }
         : null,
       draft: { buyerName: d.buyerName, buyerEmail: d.buyerEmail },
     };
@@ -273,7 +301,11 @@ export const getStayInvoice = createServerFn({ method: "GET" })
 export const createStayInvoice = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
-      .object({ token, email: z.string().max(300).nullish(), address: z.string().max(600).nullish() })
+      .object({
+        token,
+        email: z.string().max(300).nullish(),
+        address: z.string().max(600).nullish(),
+      })
       .parse(d),
   )
   .handler(async ({ data }) => {
@@ -282,12 +314,28 @@ export const createStayInvoice = createServerFn({ method: "POST" })
     const d = await draftFor(bookingId);
     if (!d?.offered) throw new Error("Invoices aren't available for this stay.");
     const db = await admin();
-    const { data: existing } = await db.from("invoices").select("access_token").eq("booking_id", bookingId).maybeSingle();
+    const { data: existing } = await db
+      .from("invoices")
+      .select("access_token")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
     // Once made, it's locked to the guest; the host can still change it.
     if (existing) return { token: existing.access_token };
-    const clean = cleanGuestDetails({ email: data.email ?? d.buyerEmail, address: data.address ?? d.buyerAddress });
-    if (!clean.ok) throw new Error(clean.problem === "email" ? "Please check the email address." : "That address is too long.");
-    return { token: await createInvoice(d, { buyerEmail: clean.email, buyerAddress: clean.address }, "guest") };
+    const clean = cleanGuestDetails({
+      email: data.email ?? d.buyerEmail,
+      address: data.address ?? d.buyerAddress,
+    });
+    if (!clean.ok)
+      throw new Error(
+        clean.problem === "email" ? "Please check the email address." : "That address is too long.",
+      );
+    return {
+      token: await createInvoice(
+        d,
+        { buyerEmail: clean.email, buyerAddress: clean.address },
+        "guest",
+      ),
+    };
   });
 
 /** The printable invoice behind its private link. */
@@ -299,28 +347,54 @@ export const getInvoice = createServerFn({ method: "GET" })
     const cols =
       "number, issued_on, title, seller_name, seller_room, seller_address, seller_tax_label, seller_tax_number, buyer_name, buyer_email, buyer_address, description, check_in_date, check_out_date, currency, tax_name, tax_rate_bp, net_pence, tax_pence, total_pence, amended_at";
     const { data: inv } = await withLegacy(
-      () => db.from("invoices").select(`${cols}, lines`).eq("access_token", data.token).maybeSingle(),
+      () =>
+        db.from("invoices").select(`${cols}, lines`).eq("access_token", data.token).maybeSingle(),
       () => db.from("invoices").select(cols).eq("access_token", data.token).maybeSingle(),
     );
     if (!inv) return { found: false as const };
     // The top of the invoice: the group's name and logo, or the property's (the host's choice, migration 0048).
     let header: { name: string; logoUrl: string | null; logoPreset: string } | null = null;
     try {
-      const { data: ids } = await db.from("invoices").select("host_id, property_id").eq("access_token", data.token).maybeSingle();
+      const { data: ids } = await db
+        .from("invoices")
+        .select("host_id, property_id")
+        .eq("access_token", data.token)
+        .maybeSingle();
       const [{ data: host }, { data: prop }] = await Promise.all([
-        (db as any).from("hosts").select("business_name, group_brand").eq("id", ids?.host_id).maybeSingle(),
-        ids?.property_id ? db.from("properties").select("name, theme_config").eq("id", ids.property_id).maybeSingle() : Promise.resolve({ data: null }),
+        (db as any)
+          .from("hosts")
+          .select("business_name, group_brand")
+          .eq("id", ids?.host_id)
+          .maybeSingle(),
+        ids?.property_id
+          ? db
+              .from("properties")
+              .select("name, theme_config")
+              .eq("id", ids.property_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
       ]);
       const { normaliseGroupBrand, effectiveLogo } = await import("./group-brand");
       const { normaliseTheme } = await import("./theme");
       const g = normaliseGroupBrand(host?.group_brand);
       const theme = normaliseTheme((prop as { theme_config?: unknown } | null)?.theme_config);
       if (g.showOnInvoices || !prop) {
-        const logo = g.logoUrl || g.logoPreset ? { logoUrl: g.logoUrl, logoPreset: g.logoPreset ?? "site" } : effectiveLogo(theme, g);
-        header = { name: (host?.business_name as string | null) ?? inv.seller_name, logoUrl: logo.logoUrl, logoPreset: logo.logoPreset };
+        const logo =
+          g.logoUrl || g.logoPreset
+            ? { logoUrl: g.logoUrl, logoPreset: g.logoPreset ?? "site" }
+            : effectiveLogo(theme, g);
+        header = {
+          name: (host?.business_name as string | null) ?? inv.seller_name,
+          logoUrl: logo.logoUrl,
+          logoPreset: logo.logoPreset,
+        };
       } else {
         const logo = effectiveLogo(theme, { ...g, propertyLogos: "own" });
-        header = { name: (prop as { name: string }).name, logoUrl: logo.logoUrl, logoPreset: logo.logoPreset };
+        header = {
+          name: (prop as { name: string }).name,
+          logoUrl: logo.logoUrl,
+          logoPreset: logo.logoPreset,
+        };
       }
     } catch {
       header = null;
@@ -336,7 +410,11 @@ export const getBookingInvoice = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ bookingId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     // RLS: the caller must be able to see the stay.
-    const { data: visible } = await context.supabase.from("bookings").select("id").eq("id", data.bookingId).maybeSingle();
+    const { data: visible } = await context.supabase
+      .from("bookings")
+      .select("id")
+      .eq("id", data.bookingId)
+      .maybeSingle();
     if (!visible) throw new Error("We couldn't find that stay.");
     const { data: inv, error } = await context.supabase
       .from("invoices")
@@ -367,16 +445,32 @@ export const saveBookingInvoice = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ bookingId: uuid, edits: hostEdits }).parse(d))
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
-    const { data: b } = await context.supabase.from("bookings").select("property_id").eq("id", data.bookingId).maybeSingle();
+    const { data: b } = await context.supabase
+      .from("bookings")
+      .select("property_id")
+      .eq("id", data.bookingId)
+      .maybeSingle();
     if (!b) throw new Error("We couldn't find that stay.");
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, b.property_id));
-    const email = cleanGuestDetails({ email: data.edits.buyerEmail, address: data.edits.buyerAddress });
-    if (!email.ok) throw new Error(email.problem === "email" ? "Please check the guest's email address." : "That address is too long.");
+    const email = cleanGuestDetails({
+      email: data.edits.buyerEmail,
+      address: data.edits.buyerAddress,
+    });
+    if (!email.ok)
+      throw new Error(
+        email.problem === "email"
+          ? "Please check the guest's email address."
+          : "That address is too long.",
+      );
     const d = await draftFor(data.bookingId);
     if (!d) throw new Error("We couldn't find that stay.");
     const edits = { ...data.edits, buyerEmail: email.email, buyerAddress: email.address };
     const db = await admin();
-    const { data: existing } = await db.from("invoices").select("id, access_token").eq("booking_id", data.bookingId).maybeSingle();
+    const { data: existing } = await db
+      .from("invoices")
+      .select("id, access_token")
+      .eq("booking_id", data.bookingId)
+      .maybeSingle();
     if (!existing) return { token: await createInvoice(d, edits, "host") };
     const { error } = await db
       .from("invoices")
@@ -395,7 +489,11 @@ export const saveInvoiceSettings = createServerFn({ method: "POST" })
         hostId: uuid,
         enabled: z.boolean(),
         taxNumber: z.string().trim().max(40),
-        prefix: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,12}$/, "Letters, numbers and dashes only, up to 12."),
+        prefix: z
+          .string()
+          .trim()
+          .toUpperCase()
+          .regex(/^[A-Z0-9-]{1,12}$/, "Letters, numbers and dashes only, up to 12."),
       })
       .parse(d),
   )
@@ -403,7 +501,11 @@ export const saveInvoiceSettings = createServerFn({ method: "POST" })
     await requireOwner(context.supabase, data.hostId);
     const { error } = await context.supabase
       .from("hosts")
-      .update({ invoices_enabled: data.enabled, tax_number: data.taxNumber || null, invoice_prefix: data.prefix })
+      .update({
+        invoices_enabled: data.enabled,
+        tax_number: data.taxNumber || null,
+        invoice_prefix: data.prefix,
+      })
       .eq("id", data.hostId);
     if (error) throw new Error("Couldn't save your invoice settings.");
     return { ok: true };
@@ -415,7 +517,9 @@ export const getInvoiceSettings = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: h, error } = await context.supabase
       .from("hosts")
-      .select("business_name, invoices_enabled, tax_number, invoice_prefix, tax_registered, tax_label, tax_rate_bp, prices_include_tax")
+      .select(
+        "business_name, invoices_enabled, tax_number, invoice_prefix, tax_registered, tax_label, tax_rate_bp, prices_include_tax",
+      )
       .eq("id", data.hostId)
       .single();
     if (error) return { available: false as const };
@@ -430,7 +534,10 @@ export const getInvoiceSettings = createServerFn({ method: "GET" })
       available: true as const,
       enabled: h.invoices_enabled,
       taxNumber: h.tax_number ?? "",
-      prefix: h.invoice_prefix && h.invoice_prefix !== "INV" ? h.invoice_prefix : suggestPrefix(h.business_name),
+      prefix:
+        h.invoice_prefix && h.invoice_prefix !== "INV"
+          ? h.invoice_prefix
+          : suggestPrefix(h.business_name),
       registered: h.tax_registered,
       taxLabel: h.tax_label,
       rateBp: h.tax_rate_bp,
@@ -457,18 +564,25 @@ export const getInvoiceStatuses = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<InvoiceStatus[]> => {
     if (!data.bookingIds.length) return [];
     // RLS: only stays the caller can see.
-    const { data: visible } = await context.supabase.from("bookings").select("id").in("id", data.bookingIds);
+    const { data: visible } = await context.supabase
+      .from("bookings")
+      .select("id")
+      .in("id", data.bookingIds);
     const ids = (visible ?? []).map((b) => b.id);
     const db = await admin();
     const { data: invs, error } = await (db as unknown as { from: (t: string) => any })
       .from("invoices")
       .select("booking_id, access_token, buyer_email, emailed_at")
       .in("booking_id", ids);
-    const byBooking = new Map(((error ? [] : invs) ?? []).map((i: { booking_id: string }) => [i.booking_id, i]));
+    const byBooking = new Map(
+      ((error ? [] : invs) ?? []).map((i: { booking_id: string }) => [i.booking_id, i]),
+    );
     const out: InvoiceStatus[] = [];
     for (const id of ids) {
       const d = await draftFor(id);
-      const inv = byBooking.get(id) as { access_token: string; buyer_email: string | null; emailed_at?: string | null } | undefined;
+      const inv = byBooking.get(id) as
+        | { access_token: string; buyer_email: string | null; emailed_at?: string | null }
+        | undefined;
       out.push({
         bookingId: id,
         offered: !!d?.offered || !!inv,
@@ -486,14 +600,25 @@ export const ensureBookingInvoice = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ bookingId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
-    const { data: b } = await context.supabase.from("bookings").select("property_id").eq("id", data.bookingId).maybeSingle();
+    const { data: b } = await context.supabase
+      .from("bookings")
+      .select("property_id")
+      .eq("id", data.bookingId)
+      .maybeSingle();
     if (!b) throw new Error("We couldn't find that stay.");
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, b.property_id));
     const db = await admin();
-    const { data: existing } = await db.from("invoices").select("access_token").eq("booking_id", data.bookingId).maybeSingle();
+    const { data: existing } = await db
+      .from("invoices")
+      .select("access_token")
+      .eq("booking_id", data.bookingId)
+      .maybeSingle();
     if (existing) return { token: existing.access_token };
     const d = await draftFor(data.bookingId);
-    if (!d?.offered) throw new Error("Invoices are for direct stays with a price. Add the price on the booking first.");
+    if (!d?.offered)
+      throw new Error(
+        "Invoices are for direct stays with a price. Add the price on the booking first.",
+      );
     return { token: await createInvoice(d, {}, "host") };
   });
 
@@ -506,7 +631,11 @@ export const emailBookingInvoice = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ bookingId: uuid, origin: z.string().url() }).parse(d))
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
-    const { data: b } = await context.supabase.from("bookings").select("property_id").eq("id", data.bookingId).maybeSingle();
+    const { data: b } = await context.supabase
+      .from("bookings")
+      .select("property_id")
+      .eq("id", data.bookingId)
+      .maybeSingle();
     if (!b) throw new Error("We couldn't find that stay.");
     const hostId = await hostOfProperty(context.supabase, b.property_id);
     await requireWrite(context.supabase, hostId);
@@ -517,18 +646,29 @@ export const emailBookingInvoice = createServerFn({ method: "POST" })
       .select("id, access_token, number, buyer_email, total_pence, currency, seller_name")
       .eq("booking_id", data.bookingId)
       .maybeSingle();
-    if (!existing && !d?.offered) throw new Error("Invoices are for direct stays with a price. Add the price on the booking first.");
+    if (!existing && !d?.offered)
+      throw new Error(
+        "Invoices are for direct stays with a price. Add the price on the booking first.",
+      );
     const to = existing?.buyer_email ?? d?.buyerEmail ?? null;
     if (!to) return { sent: false as const, reason: "no_email" as const };
 
     const { hostModes } = await import("./checkin.server");
-    if ((await hostModes(hostId)).guest_messages !== "live") return { sent: false as const, reason: "demo" as const };
+    if ((await hostModes(hostId)).guest_messages !== "live")
+      return { sent: false as const, reason: "demo" as const };
 
     const token = existing?.access_token ?? (await createInvoice(d!, {}, "host"));
-    const { data: inv } = await db.from("invoices").select("id, number, total_pence, currency, seller_name").eq("access_token", token).single();
+    const { data: inv } = await db
+      .from("invoices")
+      .select("id, number, total_pence, currency, seller_name")
+      .eq("access_token", token)
+      .single();
     if (!inv) throw new Error("We couldn't find the invoice.");
     const link = `${new URL(data.origin).origin}/invoice/${token}`;
-    const total = new Intl.NumberFormat("en-GB", { style: "currency", currency: inv.currency }).format(inv.total_pence / 100);
+    const total = new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: inv.currency,
+    }).format(inv.total_pence / 100);
     const { sendGuestEmail } = await import("./alert-email.server");
     const sent = await sendGuestEmail({
       to,

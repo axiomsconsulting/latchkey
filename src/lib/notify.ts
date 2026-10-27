@@ -8,7 +8,16 @@ import { rebrand } from "@/lib/brand";
 export type Channel = "email" | "push" | "telegram" | "sms";
 export const CHANNELS: Channel[] = ["email", "push", "telegram", "sms"];
 
-export type AlertKind = "lockout" | "id_mismatch" | "id_partial" | "self_declared" | "service_request" | "party" | "handover" | "direct_enquiry" | "test";
+export type AlertKind =
+  | "lockout"
+  | "id_mismatch"
+  | "id_partial"
+  | "self_declared"
+  | "service_request"
+  | "party"
+  | "handover"
+  | "direct_enquiry"
+  | "test";
 
 /** Kinds that need the host now: the only ones sent by SMS unless the host asks for everything. */
 export const URGENT: AlertKind[] = ["lockout", "handover", "party"];
@@ -22,10 +31,18 @@ export type NotifyPrefs = {
   smsUrgentOnly: boolean;
 };
 
-export const DEFAULT_PREFS: NotifyPrefs = { email: true, push: true, telegram: true, sms: false, smsUrgentOnly: true };
+export const DEFAULT_PREFS: NotifyPrefs = {
+  email: true,
+  push: true,
+  telegram: true,
+  sms: false,
+  smsUrgentOnly: true,
+};
 
 export function normalisePrefs(raw: unknown): NotifyPrefs {
-  const r = (raw && typeof raw === "object" ? raw : {}) as Partial<Record<keyof NotifyPrefs, unknown>>;
+  const r = (raw && typeof raw === "object" ? raw : {}) as Partial<
+    Record<keyof NotifyPrefs, unknown>
+  >;
   const out = { ...DEFAULT_PREFS };
   for (const k of Object.keys(DEFAULT_PREFS) as Array<keyof NotifyPrefs>) {
     if (typeof r[k] === "boolean") out[k] = r[k] as boolean;
@@ -42,7 +59,12 @@ export function channelsFor(kind: AlertKind, prefs: NotifyPrefs, available: Avai
   if (prefs.push && available.push) out.push("push");
   if (prefs.telegram && available.telegram) out.push("telegram");
   if (prefs.email && available.email) out.push("email");
-  if (prefs.sms && available.sms && (!prefs.smsUrgentOnly || URGENT.includes(kind) || kind === "test")) out.push("sms");
+  if (
+    prefs.sms &&
+    available.sms &&
+    (!prefs.smsUrgentOnly || URGENT.includes(kind) || kind === "test")
+  )
+    out.push("sms");
   return out;
 }
 

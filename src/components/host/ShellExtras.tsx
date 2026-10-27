@@ -6,12 +6,23 @@ import { AlertTriangle, Eye, Lock, Megaphone, MessageSquareHeart, Star } from "l
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { billingCopy, common, feedbackCopy, supportCopy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
-import { dismissAnnouncement, getSiteSettings, myAnnouncements, viewAsHost } from "@/lib/admin.functions";
+import {
+  dismissAnnouncement,
+  getSiteSettings,
+  myAnnouncements,
+  viewAsHost,
+} from "@/lib/admin.functions";
 import { formatUkDate } from "@/lib/dates";
 import { sendFeedback } from "@/lib/feedback.functions";
 import { cn } from "@/lib/utils";
@@ -27,7 +38,8 @@ export function AccessGate({ children }: { children: ReactNode }) {
   const ws = useWorkspace();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const d = ws.data;
-  if (!d || d.access || d.support || d.isSuperAdmin || ALWAYS_OPEN.some((p) => path.startsWith(p))) return <>{children}</>;
+  if (!d || d.access || d.support || d.isSuperAdmin || ALWAYS_OPEN.some((p) => path.startsWith(p)))
+    return <>{children}</>;
   return (
     <div className="mx-auto max-w-xl py-16 text-center">
       <Lock className="mx-auto size-12 text-primary" />
@@ -54,10 +66,15 @@ export function ShellBanners() {
   const qc = useQueryClient();
   const exit = useServerFn(viewAsHost);
   const fetchSite = useServerFn(getSiteSettings);
-  const site = useQuery({ queryKey: ["site-settings"], queryFn: () => fetchSite(), staleTime: 10 * 60_000 });
+  const site = useQuery({
+    queryKey: ["site-settings"],
+    queryFn: () => fetchSite(),
+    staleTime: 10 * 60_000,
+  });
   const d = ws.data;
   if (!d) return null;
-  const banner = "mx-auto mb-4 flex w-full max-w-5xl flex-wrap items-center gap-3 rounded-2xl p-3 text-sm print:hidden";
+  const banner =
+    "mx-auto mb-4 flex w-full max-w-5xl flex-wrap items-center gap-3 rounded-2xl p-3 text-sm print:hidden";
 
   return (
     <>
@@ -66,7 +83,10 @@ export function ShellBanners() {
           <Eye className="size-4 shrink-0" />
           <span className="flex-1">
             {d.support.writable
-              ? supportCopy.bannerWritable(d.support.businessName, formatUkDate((d.support.until ?? "").slice(0, 10), { withYear: true }))
+              ? supportCopy.bannerWritable(
+                  d.support.businessName,
+                  formatUkDate((d.support.until ?? "").slice(0, 10), { withYear: true }),
+                )
               : supportCopy.bannerReadOnly(d.support.businessName)}
           </span>
           <Button
@@ -84,7 +104,8 @@ export function ShellBanners() {
       ) : null}
       {site.data?.notice ? (
         <div className={cn(banner, "bg-secondary")}>
-          <Megaphone className="size-4 shrink-0" /> <span className="flex-1">{site.data.notice}</span>
+          <Megaphone className="size-4 shrink-0" />{" "}
+          <span className="flex-1">{site.data.notice}</span>
         </div>
       ) : null}
       {!d.support && d.billingPhase === "past_due" ? (
@@ -96,7 +117,10 @@ export function ShellBanners() {
           </Button>
         </div>
       ) : null}
-      {!d.support && d.billingPhase === "trial" && d.trialDaysLeft !== null && d.trialDaysLeft <= 7 ? (
+      {!d.support &&
+      d.billingPhase === "trial" &&
+      d.trialDaysLeft !== null &&
+      d.trialDaysLeft <= 7 ? (
         <div className={cn(banner, "bg-accent/10")}>
           <span className="flex-1">{billingCopy.bannerTrial(d.trialDaysLeft)}</span>
           <Button asChild size="sm" variant="outline">
@@ -113,14 +137,21 @@ export function AnnouncementPopup() {
   const fetchList = useServerFn(myAnnouncements);
   const dismiss = useServerFn(dismissAnnouncement);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["announcements"], queryFn: () => fetchList(), staleTime: 5 * 60_000 });
+  const q = useQuery({
+    queryKey: ["announcements"],
+    queryFn: () => fetchList(),
+    staleTime: 5 * 60_000,
+  });
   const first = q.data?.[0];
   if (!first) return null;
   return (
     <Dialog
       open
       onOpenChange={(o) => {
-        if (!o) void dismiss({ data: { id: first.id } }).then(() => qc.invalidateQueries({ queryKey: ["announcements"] }));
+        if (!o)
+          void dismiss({ data: { id: first.id } }).then(() =>
+            qc.invalidateQueries({ queryKey: ["announcements"] }),
+          );
       }}
     >
       <DialogContent className="max-w-md rounded-3xl">
@@ -128,10 +159,16 @@ export function AnnouncementPopup() {
           <DialogTitle className="flex items-center gap-2 font-display text-xl">
             <Megaphone className="size-5 text-primary" /> {first.title}
           </DialogTitle>
-          <DialogDescription className="whitespace-pre-line text-base text-foreground">{first.body}</DialogDescription>
+          <DialogDescription className="whitespace-pre-line text-base text-foreground">
+            {first.body}
+          </DialogDescription>
         </DialogHeader>
         <Button
-          onClick={() => void dismiss({ data: { id: first.id } }).then(() => qc.invalidateQueries({ queryKey: ["announcements"] }))}
+          onClick={() =>
+            void dismiss({ data: { id: first.id } }).then(() =>
+              qc.invalidateQueries({ queryKey: ["announcements"] }),
+            )
+          }
         >
           {feedbackCopy.gotIt}
         </Button>
@@ -141,7 +178,13 @@ export function AnnouncementPopup() {
 }
 
 /** Rate Latchkey, suggest a feature or report a bug. Goes to the Latchkey team. */
-export function FeedbackButton({ compact = false, className }: { compact?: boolean; className?: string }) {
+export function FeedbackButton({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -205,20 +248,41 @@ export function FeedbackDialog({ onClose }: { onClose: () => void }) {
         </DialogHeader>
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList className="grid h-11 w-full grid-cols-3 rounded-2xl p-1">
-            <TabsTrigger value="host_rating" className="rounded-xl">{feedbackCopy.tabRate}</TabsTrigger>
-            <TabsTrigger value="feature" className="rounded-xl">{feedbackCopy.tabFeature}</TabsTrigger>
-            <TabsTrigger value="bug" className="rounded-xl">{feedbackCopy.tabBug}</TabsTrigger>
+            <TabsTrigger value="host_rating" className="rounded-xl">
+              {feedbackCopy.tabRate}
+            </TabsTrigger>
+            <TabsTrigger value="feature" className="rounded-xl">
+              {feedbackCopy.tabFeature}
+            </TabsTrigger>
+            <TabsTrigger value="bug" className="rounded-xl">
+              {feedbackCopy.tabBug}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="host_rating" className="mt-4 space-y-3">
             <p>{feedbackCopy.rateLabel}</p>
             <Stars value={rating} onChange={setRating} />
-            <Textarea rows={3} placeholder={feedbackCopy.comment} value={message} onChange={(e) => setMessage(e.target.value)} />
+            <Textarea
+              rows={3}
+              placeholder={feedbackCopy.comment}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
           </TabsContent>
           <TabsContent value="feature" className="mt-4">
-            <Textarea rows={5} placeholder={feedbackCopy.feature} value={message} onChange={(e) => setMessage(e.target.value)} />
+            <Textarea
+              rows={5}
+              placeholder={feedbackCopy.feature}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
           </TabsContent>
           <TabsContent value="bug" className="mt-4">
-            <Textarea rows={5} placeholder={feedbackCopy.bug} value={message} onChange={(e) => setMessage(e.target.value)} />
+            <Textarea
+              rows={5}
+              placeholder={feedbackCopy.bug}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
           </TabsContent>
         </Tabs>
         <Button onClick={() => void submit()} disabled={busy}>
@@ -230,12 +294,26 @@ export function FeedbackDialog({ onClose }: { onClose: () => void }) {
 }
 
 /** Five tappable stars. */
-export function Stars({ value, onChange, size = "size-9" }: { value: number | null; onChange?: (n: number) => void; size?: string }) {
+export function Stars({
+  value,
+  onChange,
+  size = "size-9",
+}: {
+  value: number | null;
+  onChange?: (n: number) => void;
+  size?: string;
+}) {
   return (
-    <div className="flex gap-1" role={onChange ? "radiogroup" : undefined} aria-label={value ? feedbackCopy.star(value) : undefined}>
+    <div
+      className="flex gap-1"
+      role={onChange ? "radiogroup" : undefined}
+      aria-label={value ? feedbackCopy.star(value) : undefined}
+    >
       {[1, 2, 3, 4, 5].map((n) => {
         const on = value !== null && n <= value;
-        const star = <Star className={cn(size, on ? "fill-accent text-accent" : "text-muted-foreground/50")} />;
+        const star = (
+          <Star className={cn(size, on ? "fill-accent text-accent" : "text-muted-foreground/50")} />
+        );
         return onChange ? (
           <button
             key={n}

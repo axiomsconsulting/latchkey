@@ -18,7 +18,9 @@ function who(d: LegalDetails) {
   const company = d.companyName
     ? `${d.companyName}${d.companyNumber ? `, a company registered in ${d.governingLaw} under number ${d.companyNumber}` : ""}${d.registeredAddress ? `, whose registered office is at ${d.registeredAddress}` : ""}`
     : name;
-  const reach = d.contactEmail ? `email ${d.contactEmail}` : "use Send feedback in the dashboard menu";
+  const reach = d.contactEmail
+    ? `email ${d.contactEmail}`
+    : "use Send feedback in the dashboard menu";
   const privacy = privacyContact(d);
   const reachPrivacy = privacy ? `email ${privacy}` : reach;
   return { name, operator, company, reach, reachPrivacy };
@@ -38,7 +40,11 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
         title: "Who we are",
         body: [
           `${name} is run by ${company}.`,
-          ...(d.icoNumber ? [`We are registered with the UK Information Commissioner's Office (ICO) under number ${d.icoNumber}.`] : []),
+          ...(d.icoNumber
+            ? [
+                `We are registered with the UK Information Commissioner's Office (ICO) under number ${d.icoNumber}.`,
+              ]
+            : []),
           `For anything about your data, ${reachPrivacy}.`,
         ],
       },
@@ -134,7 +140,9 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
       {
         id: "statistics",
         title: "Website statistics",
-        body: [`We record visits to this website to see what's useful, how people find and use ${name}, and to improve it. You can switch this off for your browser below.`],
+        body: [
+          `We record visits to this website to see what's useful, how people find and use ${name}, and to improve it. You can switch this off for your browser below.`,
+        ],
         points: [
           "What we record: pages opened, how long they're looked at and the page you came from; campaign tags on the link you followed (like utm_source=linkedin); browser and device type, language, time zone, country and region; and steps in our demo and free trial. Your browser keeps a random visitor number so visits from the same browser can be put together.",
           `Visitor profiles: when you sign in, start a trial or give us your email, we link that browser's visits to a profile with your account and email address, and join visits from other browsers or devices where you sign in with the same account or email. ${operator} uses these profiles to understand which pages, campaigns and steps lead people to try and keep using ${name}, to improve the website and service, and to help you when you ask for support (our legitimate interests). We don't sell them, share them with advertisers or use advertising networks.`,
@@ -200,7 +208,9 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
       {
         id: "changes",
         title: "Changes to this policy",
-        body: [`When we change this policy, we update the date at the top and tell hosts about important changes in the app. For questions, ${reach}.`],
+        body: [
+          `When we change this policy, we update the date at the top and tell hosts about important changes in the app. For questions, ${reach}.`,
+        ],
       },
     ],
   };
@@ -350,7 +360,9 @@ export function termsOfService(d: LegalDetails): LegalDoc {
       {
         id: "changes",
         title: "Changes to these terms",
-        body: ["We may update these terms. We'll change the date at the top and tell you about important changes in the app or by email at least 30 days before they apply. If you keep using the service after that, the new terms apply."],
+        body: [
+          "We may update these terms. We'll change the date at the top and tell you about important changes in the app or by email at least 30 days before they apply. If you keep using the service after that, the new terms apply.",
+        ],
       },
       {
         id: "law",
@@ -369,7 +381,9 @@ export function termsOfService(d: LegalDetails): LegalDoc {
       {
         id: "contact",
         title: "Contact",
-        body: [`${company}. To reach us, ${reach}.${d.vatNumber ? ` VAT number ${d.vatNumber}.` : ""}`],
+        body: [
+          `${company}. To reach us, ${reach}.${d.vatNumber ? ` VAT number ${d.vatNumber}.` : ""}`,
+        ],
       },
     ],
   };

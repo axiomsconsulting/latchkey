@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { branded, brandName, DEFAULT_BRAND, footerText, normaliseBrand, rebrand, setBrand } from "../src/lib/brand";
+import {
+  branded,
+  brandName,
+  DEFAULT_BRAND,
+  footerText,
+  normaliseBrand,
+  rebrand,
+  setBrand,
+} from "../src/lib/brand";
 
 afterEach(() => setBrand(DEFAULT_BRAND));
 
@@ -17,7 +25,11 @@ describe("white label", () => {
     expect(normaliseBrand({ logoMark: "spaceship" }).logoMark).toBe("key");
     expect(normaliseBrand({ name: "StayEasy" }).logoMark).toBe("initial");
     expect(normaliseBrand({ name: "StayEasy", logoMark: "monogram" }).logoMark).toBe("monogram");
-    expect(normaliseBrand({ logoUrl: "https://x.supabase.co/storage/v1/object/sign/branding/site/logo.png?token=a" }).logoUrl).toMatch(/^https:/);
+    expect(
+      normaliseBrand({
+        logoUrl: "https://x.supabase.co/storage/v1/object/sign/branding/site/logo.png?token=a",
+      }).logoUrl,
+    ).toMatch(/^https:/);
     expect(normaliseBrand({ logoUrl: "javascript:alert(1)" }).logoUrl).toBe("");
     expect(normaliseBrand({ logoUrl: "http://plain.example/logo.png" }).logoUrl).toBe("");
   });

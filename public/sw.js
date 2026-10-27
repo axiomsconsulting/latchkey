@@ -11,17 +11,33 @@ const SHELL = `${VERSION}-shell`;
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
 const META = "lk-meta";
-const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const PRECACHE = [
+  "/offline.html",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches
+      .open(SHELL)
+      .then((c) => c.addAll(PRECACHE))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("lk-v") && !k.startsWith(VERSION)).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k.startsWith("lk-v") && !k.startsWith(VERSION))
+            .map((k) => caches.delete(k)),
+        ),
+      )
       .then(() => self.clients.claim()),
   );
 });
@@ -47,7 +63,12 @@ self.addEventListener("fetch", (event) => {
           }
           return res;
         })
-        .catch(async () => (await caches.match(req, { cacheName: PAGES })) || (await caches.match("/offline.html")) || Response.error()),
+        .catch(
+          async () =>
+            (await caches.match(req, { cacheName: PAGES })) ||
+            (await caches.match("/offline.html")) ||
+            Response.error(),
+        ),
     );
     return;
   }
@@ -87,11 +108,18 @@ self.addEventListener("message", (event) => {
 self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
-      let alert = { title: "New alert", body: "Something needs you. Tap to open Today.", url: "/app/today", tag: "latchkey" };
+      let alert = {
+        title: "New alert",
+        body: "Something needs you. Tap to open Today.",
+        url: "/app/today",
+        tag: "latchkey",
+      };
       try {
         const token = await deviceToken();
         if (token) {
-          const res = await fetch(`/api/public/push/latest?t=${encodeURIComponent(token)}`, { cache: "no-store" });
+          const res = await fetch(`/api/public/push/latest?t=${encodeURIComponent(token)}`, {
+            cache: "no-store",
+          });
           if (res.ok) alert = { ...alert, ...(await res.json()) };
         }
       } catch (e) {

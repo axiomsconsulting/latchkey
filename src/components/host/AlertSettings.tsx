@@ -31,7 +31,10 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
   const unlinkTg = useServerFn(removeTelegramLink);
   const testFn = useServerFn(sendTestAlert);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["notify-settings", hostId], queryFn: () => fetchFn({ data: { hostId } }) });
+  const q = useQuery({
+    queryKey: ["notify-settings", hostId],
+    queryFn: () => fetchFn({ data: { hostId } }),
+  });
   const [device, setDevice] = useState<PushState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   useEffect(() => {
@@ -51,15 +54,27 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
       if (done) toast.success(done);
     } catch (e) {
       const m = e instanceof Error ? e.message : "";
-      toast.error(m === "needs-app" ? copy.pushNeedsApp : m === "blocked" ? copy.pushBlocked : m || common.errorBody);
+      toast.error(
+        m === "needs-app"
+          ? copy.pushNeedsApp
+          : m === "blocked"
+            ? copy.pushBlocked
+            : m || common.errorBody,
+      );
     } finally {
       setBusy(null);
       setDevice(await pushState());
     }
   }
-  const setPref = (patch: Partial<NotifyPrefs>) => run("prefs", () => saveFn({ data: { hostId, prefs: { ...prefs, ...patch } } }), copy.saved);
+  const setPref = (patch: Partial<NotifyPrefs>) =>
+    run("prefs", () => saveFn({ data: { hostId, prefs: { ...prefs, ...patch } } }), copy.saved);
 
-  const ready = { push: d.push.ready, telegram: d.telegram.ready, email: !!d.email.address, sms: d.sms.ready && !!d.sms.phone };
+  const ready = {
+    push: d.push.ready,
+    telegram: d.telegram.ready,
+    email: !!d.email.address,
+    sms: d.sms.ready && !!d.sms.phone,
+  };
   const why: Record<string, string | null> = {
     push: d.push.ready ? null : copy.notReady,
     telegram: d.telegram.ready ? null : copy.notReady,
@@ -108,7 +123,18 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
                   {device === "on" ? (
                     <>
                       <span className="font-medium text-success">{copy.on}</span>
-                      <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => void run("push", () => turnOffPush((endpoint) => removePush({ data: { endpoint } })), copy.pushOff)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy !== null}
+                        onClick={() =>
+                          void run(
+                            "push",
+                            () => turnOffPush((endpoint) => removePush({ data: { endpoint } })),
+                            copy.pushOff,
+                          )
+                        }
+                      >
                         {copy.turnOff}
                       </Button>
                     </>
@@ -118,17 +144,33 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
                       variant="outline"
                       disabled={busy !== null}
                       onClick={() =>
-                        void run("push", () => turnOnPush(d.push.publicKey!, (endpoint, dev) => savePush({ data: { hostId, endpoint, device: dev } })), copy.pushOn)
+                        void run(
+                          "push",
+                          () =>
+                            turnOnPush(d.push.publicKey!, (endpoint, dev) =>
+                              savePush({ data: { hostId, endpoint, device: dev } }),
+                            ),
+                          copy.pushOn,
+                        )
                       }
                     >
-                      {busy === "push" ? <Loader2 className="size-4 animate-spin" /> : null} {copy.turnOn}
+                      {busy === "push" ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
+                      {copy.turnOn}
                     </Button>
                   ) : (
                     <span className="text-xs text-muted-foreground">
-                      {device === "blocked" ? copy.pushBlocked : device === "ios-install" ? copy.pushIos : copy.pushNeedsApp}
+                      {device === "blocked"
+                        ? copy.pushBlocked
+                        : device === "ios-install"
+                          ? copy.pushIos
+                          : copy.pushNeedsApp}
                     </span>
                   )}
-                  {d.devices.length ? <span className="ml-auto text-xs text-muted-foreground">{copy.devices(d.devices.length)}</span> : null}
+                  {d.devices.length ? (
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {copy.devices(d.devices.length)}
+                    </span>
+                  ) : null}
                 </div>
               ) : null}
               {ch === "push" && d.devices.length ? (
@@ -137,7 +179,11 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
                     <li key={dev.id} className="flex items-center gap-2">
                       <span className="flex-1">{dev.device ?? "Device"}</span>
                       {canWrite || dev.user_id === d.me ? (
-                        <button type="button" className="underline-offset-4 hover:underline" onClick={() => void run("rm", () => removePush({ data: { id: dev.id } }))}>
+                        <button
+                          type="button"
+                          className="underline-offset-4 hover:underline"
+                          onClick={() => void run("rm", () => removePush({ data: { id: dev.id } }))}
+                        >
                           {copy.removeDevice}
                         </button>
                       ) : null}
@@ -155,21 +201,37 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
                     onClick={() => {
                       // Open the tab first so the browser doesn't block it.
                       const tab = window.open("", "_blank");
-                      void run("tg", async () => {
-                        const { url } = await linkTg({ data: { hostId } });
-                        if (tab) tab.location.href = url;
-                        else window.location.href = url;
-                      }, copy.telegramOpened);
+                      void run(
+                        "tg",
+                        async () => {
+                          const { url } = await linkTg({ data: { hostId } });
+                          if (tab) tab.location.href = url;
+                          else window.location.href = url;
+                        },
+                        copy.telegramOpened,
+                      );
                     }}
                   >
                     <Send className="size-4" /> {copy.connectTelegram}
                   </Button>
-                  {d.chats.length ? <span className="text-xs text-muted-foreground">{copy.telegramLinked(d.chats.length)}</span> : null}
+                  {d.chats.length ? (
+                    <span className="text-xs text-muted-foreground">
+                      {copy.telegramLinked(d.chats.length)}
+                    </span>
+                  ) : null}
                   {d.chats.map((c) => (
-                    <span key={c.id} className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs">
+                    <span
+                      key={c.id}
+                      className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"
+                    >
                       {c.username ? `@${c.username}` : "Telegram"}
                       {canWrite ? (
-                        <button type="button" className="text-muted-foreground hover:text-destructive" onClick={() => void run("untg", () => unlinkTg({ data: { id: c.id } }))} aria-label={copy.unlink}>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => void run("untg", () => unlinkTg({ data: { id: c.id } }))}
+                          aria-label={copy.unlink}
+                        >
                           ×
                         </button>
                       ) : null}
@@ -180,7 +242,11 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
 
               {ch === "sms" && ready.sms && prefs.sms ? (
                 <label className="flex items-center gap-2 pl-1 text-sm">
-                  <Switch checked={prefs.smsUrgentOnly} disabled={!canWrite || busy !== null} onCheckedChange={(v) => void setPref({ smsUrgentOnly: v })} />
+                  <Switch
+                    checked={prefs.smsUrgentOnly}
+                    disabled={!canWrite || busy !== null}
+                    onCheckedChange={(v) => void setPref({ smsUrgentOnly: v })}
+                  />
                   {copy.smsUrgentOnly}
                 </label>
               ) : null}
@@ -196,12 +262,19 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
           onClick={() =>
             void run("test", async () => {
               const r = await testFn({ data: { hostId } });
-              const sent = Object.entries(r).filter(([, v]) => v === "sent").map(([k]) => copy.channels[k]![0].toLowerCase());
+              const sent = Object.entries(r)
+                .filter(([, v]) => v === "sent")
+                .map(([k]) => copy.channels[k]![0].toLowerCase());
               toast.message(copy.testResult(sent));
             })
           }
         >
-          {busy === "test" ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />} {copy.test}
+          {busy === "test" ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <BellRing className="size-4" />
+          )}{" "}
+          {copy.test}
         </Button>
       ) : null}
     </section>
