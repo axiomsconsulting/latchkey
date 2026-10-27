@@ -112,6 +112,14 @@ export type PartnerConfig = {
   postStopResumeCounts: boolean;
   strongMatchAction: StrongMatchAction;
   ipHashRetentionDays: number;
+  /** The programme's public launch (agreement Annex B, clause 9). YYYY-MM-DD, or null: "to be confirmed". */
+  launchDate: string | null;
+  /** Where partners send notices to OMS (agreement 21.2, 23.2). Signing stays closed until it is set. */
+  noticeEmail: string | null;
+  /** The join page takes applications (Phase 0). Off: a "coming soon" page; super admins can preview. */
+  signupsOpen: boolean;
+  /** Partner ID and selfie photos are kept for review (agreement 17.1). Off: only the details read are kept. */
+  idImagesStored: boolean;
 };
 
 export const PARTNER_DEFAULTS: PartnerConfig = {
@@ -175,15 +183,20 @@ export const PARTNER_DEFAULTS: PartnerConfig = {
   reviewRequired: true,
   // Agreement 6.5: increases reach existing referrals only by a terms row with a written-notice reference.
   raisesApplyToExisting: false,
-  // TODO(D22): Swapnil to confirm 11.2(b). Off: a Qualifying Payment after the stop date earns nothing.
+  // Agreement v1.0 20.3(b): no Commission on a host whose Qualifying Payment is on or after the Stop Date. Keep off.
   postStopSignupCounts: false,
   postStopPaymentDeadlineDays: 60,
-  // TODO(D25): Swapnil to decide. Off: after the stop date, a missed month ends commission for that host.
+  // Agreement v1.0 20.3(a): after the Stop Date, a missed payment ends Commission on that host for good. Keep off.
   postStopResumeCounts: false,
   // TODO(D20): Swapnil to decide.
   strongMatchAction: "auto_reject_with_override",
   // TODO(D21): Swapnil to decide; the privacy notice must say the same (8.5).
   ipHashRetentionDays: 180,
+  launchDate: null,
+  noticeEmail: null,
+  // Closed until the super admin opens it (Latchkey admin → Commission Partners → Programme decisions).
+  signupsOpen: false,
+  idImagesStored: true,
 };
 
 const ENUMS: Partial<Record<keyof PartnerConfig, readonly string[]>> = {
@@ -221,6 +234,12 @@ export function partnerConfig(overrides?: unknown): PartnerConfig {
     const allowed = ENUMS[key];
     if (allowed) {
       if (typeof v === "string" && allowed.includes(v)) (out as Record<string, unknown>)[key] = v;
+    } else if (key === "launchDate") {
+      if (v === null || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v))) out.launchDate = v;
+    } else if (key === "noticeEmail") {
+      if (v === null || v === "") out.noticeEmail = null;
+      else if (typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) && v.length <= 254)
+        out.noticeEmail = v.trim().toLowerCase();
     } else if (key === "maxFeeRatioBps") {
       if (v === null || (typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 10_000))
         out.maxFeeRatioBps = v;

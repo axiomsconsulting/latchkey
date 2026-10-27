@@ -26,6 +26,20 @@ describe("legal details", () => {
     expect(privacyPolicy(d).sections.some((s) => s.id === "statistics")).toBe(true);
     expect(JSON.stringify(termsOfService(d))).toContain("England and Wales");
   });
+  it("describes what's really collected: partners, profiles, cookies and Google Drive", () => {
+    const d = normaliseLegal({ companyName: "Example Ltd" });
+    const doc = privacyPolicy(d);
+    const text = JSON.stringify(doc);
+    const partners = doc.sections.find((s) => s.id === "partners");
+    expect(partners).toBeDefined();
+    expect(JSON.stringify(partners)).toMatch(/30 days after we approve or reject/);
+    expect(JSON.stringify(partners)).toMatch(/180 days/);
+    expect(text).toMatch(/Visitor profiles/);
+    expect(text).toMatch(/lk_ref/);
+    expect(text).not.toMatch(/no cookies/i);
+    expect(text).not.toMatch(/not used to train models/);
+    expect(text).toMatch(/Google Drive/);
+  });
   it("never leaves an empty placeholder when details are missing", () => {
     const text = JSON.stringify([privacyPolicy(normaliseLegal({})), termsOfService(normaliseLegal({}))]);
     expect(text).not.toMatch(/undefined|null|\(\)|: \.|  /);

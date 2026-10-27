@@ -128,7 +128,18 @@ export const driveStatus = createServerFn({ method: "GET" })
     await requireSuperAdmin(context.supabase);
     const { driveConfigured, driveConnection } = await import("./drive.server");
     const c = await driveConnection().catch(() => null);
-    return { configured: driveConfigured(), connected: !!c, email: c?.email ?? null, connectedAt: c?.connectedAt ?? null, callback: callbackUrl() };
+    const { driveQueueStatus } = await import("./private-store.server");
+    const queue = await driveQueueStatus().catch(() => null);
+    return { configured: driveConfigured(), connected: !!c, email: c?.email ?? null, connectedAt: c?.connectedAt ?? null, callback: callbackUrl(), queue };
+  });
+
+/** Moves private files waiting for Google Drive now (the daily clean-up does it too). */
+export const syncPrivateQueue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { syncDriveQueue } = await import("./private-store.server");
+    return syncDriveQueue(100);
   });
 
 /** Where to send the super admin to connect their Google account. */

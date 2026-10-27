@@ -13,6 +13,8 @@ import {
   bonusEligibility,
   bonusLine,
   billingInterval,
+  breachSetOffPending,
+  breachVoidedBonuses,
   clawbackNext,
   commissionFor,
   dayEnd,
@@ -33,6 +35,7 @@ import {
   releaseHeld,
   roundHalfUp,
   termsFor,
+  withinDaysEnd,
   type LedgerLine,
   type PartnerState,
   type ReferralState,
@@ -1125,3 +1128,139 @@ describe("release, fraud and payouts (9.2-9.4)", () => {
     expect(plan.bonus).toEqual({ status: "reversed", reason: "fraud" });
   });
 });
+
+describe("agreement v1.0 fixes", () => {
+  const SNAP_B = SNAP;
+  const bonus = (
+    referral: Partial<ReferralState>,
+    partner: PartnerState,
+    now: string,
+    extra: { qpPaid?: number } = {},
+  ) =>
+    bonusEligibility({
+      referral: ref(referral),
+      qpPaidPence: extra.qpPaid ?? 2900,
+      snapshot: SNAP_B,
+      now: T(now),
+      priorClaim: false,
+      strongFlagOpen: false,
+      partner,
+      config: C,
+      earnedBefore: 0,
+    });
+  const r = {
+    sign_up_at: "2026-11-01T10:00:00Z",
+    qualifying_payment_at: "2026-12-01T00:00:00Z",
+    first_paid_month_end: "2027-01-01T00:00:00Z",
+    qualifying_charge_id: "ch_1",
+  };
+
+  it("8.2(f), 20.4(a): a breach stop after the Qualifying Payment but before month 1 ends cancels the bonus", () => {
+    const breach = { terminated_at: "2026-12-15T00:00:00Z", termination_for_breach: true };
+    expect(bonus(r, breach, "2027-01-02T00:00:00Z")).toMatchObject({ status: "not_eligible", reason: "breach_stop" });
+  });
+
+  it("8.2(f): a breach stop after month 1 ended keeps the bonus (its payout waits for the set-off)", () => {
+    const breach = { terminated_at: "2027-01-10T00:00:00Z", termination_for_breach: true };
+    expect(bonus(r, breach, "2027-01-20T00:00:00Z").status).toBe("earned");
+    expect(breachSetOffPending({ ...breach }, T("2027-01-20T00:00:00Z"))).toBe(true);
+    expect(breachSetOffPending({ ...breach, set_off_done_at: "2027-01-21T00:00:00Z" }, T("2027-01-22T00:00:00Z"))).toBe(false);
+  });
+
+  it("a breach stop dated in the future doesn't block yet, then does once it comes", () => {
+    const breach = { terminated_at: "2027-01-01T00:00:00Z", termination_for_breach: true };
+    expect(bonus(r, breach, "2026-12-20T00:00:00Z")).toMatchObject({ status: "pending", reason: "first_month_not_complete" });
+    expect(bonus(r, breach, "2027-01-02T00:00:00Z").reason).toBe("breach_stop");
+  });
+
+  it("20.3(c): an ordinary stop after the Qualifying Payment still earns the bonus", () => {
+    const stop = { terminated_at: "2026-12-15T00:00:00Z", termination_for_breach: false };
+    expect(bonus(r, stop, "2027-01-02T00:00:00Z").status).toBe("earned");
+  });
+
+  it("cancels bonus lines not yet paid once a breach Stop Date has come", () => {
+    const lines: LedgerLine[] = [
+      { id: "b1", partner_id: "p", referral_id: "r1", kind: "launch_bonus", state: "held", amount_pence: 5000, payable_after: null },
+      { id: "b2", partner_id: "p", referral_id: "r2", kind: "launch_bonus", state: "held", amount_pence: 5000, payable_after: null },
+      { id: "b3", partner_id: "p", referral_id: "r3", kind: "launch_bonus", state: "paid", amount_pence: 5000, payable_after: null },
+      { id: "c1", partner_id: "p", referral_id: "r1", kind: "commission", state: "held", amount_pence: 290, payable_after: null },
+    ];
+    const partners = new Map([["p", { terminated_at: "2027-01-10T00:00:00Z", termination_for_breach: true }]]);
+    const ends = new Map<string, string | null>([
+      ["r1", "2027-01-12T00:00:00Z"],
+      ["r2", "2027-01-05T00:00:00Z"],
+      ["r3", "2027-01-20T00:00:00Z"],
+    ]);
+    expect(breachVoidedBonuses(lines, partners, ends, T("2027-02-01T00:00:00Z"))).toEqual(["b1"]);
+    expect(breachVoidedBonuses(lines, partners, ends, T("2027-01-09T00:00:00Z"))).toEqual([]);
+    expect(releaseHeld(lines, T("2027-12-01T00:00:00Z"), new Set(), new Set(), new Set(["b1"]))).not.toContain("b1");
+  });
+
+  it("20.4(b): drafts no payout after a breach stop until the set-off is applied", () => {
+    const P = { id: "p", status: "active", country: "GB", payout_route: "express" as const, payouts_enabled: true, flagged: false };
+    const line: LedgerLine = { id: "a", partner_id: "p", referral_id: "r", kind: "commission", state: "payable", amount_pence: 5000, payable_after: "2027-01-15T00:00:00Z" };
+    const asOf = T("2027-02-01T00:00:00Z");
+    const stopped = { ...P, terminated_at: "2027-01-20T00:00:00Z", termination_for_breach: true };
+    expect(planPayouts([stopped], [line], C, FEE_TABLE, asOf).carried[0]!.reason).toBe("breach_stop_set_off_review");
+    const setOff: LedgerLine = { id: "s", partner_id: "p", referral_id: null, kind: "set_off" as LedgerLine["kind"], state: "payable", amount_pence: -1500, payable_after: null };
+    const done = planPayouts([{ ...stopped, set_off_done_at: "2027-01-25T00:00:00Z" }], [line, setOff], C, FEE_TABLE, asOf);
+    expect(done.payouts[0]).toMatchObject({ amount_pence: 3500 });
+  });
+
+  it("2.2, 8.2(b): 60 days means calendar days to the end of the 60th day, UK time", () => {
+    // Sign-up 1 November: the deadline is the end of 31 December, UK time (GMT).
+    expect(withinDaysEnd(T("2026-11-01T10:00:00Z"), 60)).toBe(T("2027-01-01T00:00:00Z"));
+    expect(bonus({ ...r, qualifying_payment_at: "2026-12-31T23:59:59Z", first_paid_month_end: "2027-01-31T00:00:00Z" }, ACTIVE, "2027-02-01T00:00:00Z").status).toBe("earned");
+    expect(bonus({ ...r, qualifying_payment_at: "2027-01-01T00:00:01Z", first_paid_month_end: "2027-02-01T00:00:00Z" }, ACTIVE, "2027-02-02T00:00:00Z").reason).toBe("qualifying_payment_too_late");
+    // Across the October clock change: a sign-up at 00:30 BST on 2 September counts as 2 September,
+    // so the 60th day is 1 November, which ends at midnight GMT.
+    expect(withinDaysEnd(T("2026-09-01T23:30:00Z"), 60)).toBe(T("2026-11-02T00:00:00Z"));
+    // The Bonus End Date is judged in UK time, never UTC.
+    expect(dayEnd("2026-07-31", "Europe/London")).toBe(T("2026-07-31T23:00:00Z"));
+  });
+
+  it("7.3(c), 7.6: a proration-only invoice is not a Paid Month; prorations inside a regular invoice count", () => {
+    const prorationOnly = inv({
+      id: "in_p",
+      billing_reason: "subscription_update",
+      lines: { data: [{ amount: 500, proration: true, period: { start: sec("2026-11-10T00:00:00Z"), end: sec("2026-12-01T00:00:00Z") }, price: { recurring: { interval: "month", interval_count: 1 } } }] },
+    } as Partial<StripeInvoice>);
+    expect(isPaidMonth(prorationOnly, HOST)).toBe(false);
+    const regular = inv({
+      id: "in_r",
+      amount_paid: 3400,
+      total: 3400,
+      total_excluding_tax: 3400,
+      lines: {
+        data: [
+          { amount: 2900, period: { start: sec("2026-12-01T00:00:00Z"), end: sec("2027-01-01T00:00:00Z") }, price: { recurring: { interval: "month", interval_count: 1 } } },
+          { amount: 500, proration: true, period: { start: sec("2026-11-10T00:00:00Z"), end: sec("2026-12-01T00:00:00Z") }, price: { recurring: { interval: "month", interval_count: 1 } } },
+        ],
+      },
+      start: "2026-12-01T00:00:00Z",
+    } as Partial<StripeInvoice> & { start: string });
+    expect(isPaidMonth(regular, HOST)).toBe(true);
+    expect(netReceipts(regular)).toBe(3400);
+  });
+
+  it("10.3: a partial refund of an annual Qualifying Payment cancels the bonus and reduces commission in proportion", () => {
+    const commissionLine: LedgerLine = { id: "L", partner_id: "p", referral_id: "r", kind: "commission", state: "held", amount_pence: 660, months_covered: 12, stripe_charge_id: "ch_y", payable_after: null };
+    const bonusLine: LedgerLine = { id: "B", partner_id: "p", referral_id: "r", kind: "launch_bonus", state: "held", amount_pence: 5000, payable_after: null };
+    // Month 4 of the year: £16.50 of £66 refunded.
+    const plan = applyClawback(
+      { cause: "refund", charge_id: "ch_y", paid_pence: 6600, amount_pence: 1650, full: false },
+      [commissionLine, bonusLine],
+      { qualifying_charge_id: "ch_y" },
+      C,
+    );
+    expect(plan.voids).toContain("B");
+    expect(plan.lines).toEqual([expect.objectContaining({ amount_pence: -165, reverses_ledger_id: "L" })]);
+    expect(C.bonusPartialRefund).toBe("full");
+  });
+
+  it("20.3(a), (b): post-stop sign-ups and resumed payments don't count", () => {
+    expect(C.postStopSignupCounts).toBe(false);
+    expect(C.postStopResumeCounts).toBe(false);
+  });
+});
+

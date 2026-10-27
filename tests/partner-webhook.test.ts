@@ -108,6 +108,16 @@ class Mem implements PartnerStore {
   async saveCharge(c: ChargeRecord) {
     if (!this.records.some((x) => x.charge_id === c.charge_id)) this.records.push({ ...c });
   }
+  pending: Record<string, { status: "open" | "won" | "lost"; amount_pence: number | null; applied: boolean }> = {};
+  async savePendingDispute(id: string, status: "open" | "won" | "lost", amount: number | null) {
+    this.pending[id] = { status, amount_pence: amount, applied: false };
+  }
+  async takePendingDispute(id: string) {
+    const p = this.pending[id];
+    if (!p || p.applied) return null;
+    p.applied = true;
+    return { status: p.status, amount_pence: p.amount_pence };
+  }
   async updateCharge(id: string, patch: Partial<ChargeRecord>) {
     Object.assign(
       this.records.find((c) => c.charge_id === id)!,
@@ -350,7 +360,12 @@ describe("partner webhook", () => {
       await processPartnerEvent(
         ev(
           "account.updated",
-          { id: "acct_partner", payouts_enabled: true, requirements: { currently_due: [] } },
+          {
+            id: "acct_partner",
+            payouts_enabled: true,
+            capabilities: { transfers: "active" },
+            requirements: { currently_due: [] },
+          },
           { account: "acct_partner" },
         ),
         s,
@@ -501,6 +516,38 @@ describe("partner webhook", () => {
     );
     expect(s.lines.find((l) => l.stripe_invoice_id === "in_2026-11")!.state).toBe("void");
     expect(s.referrals[0]).toMatchObject({ qp_dispute: "lost", paid_months_used: 1 });
+  });
+
+  it("holds a payment whose dispute arrived before the payment was recorded (10.4)", async () => {
+    const s = setup();
+    charge(s, "ch_2026-11");
+    const early = await processPartnerEvent(
+      ev("charge.dispute.created", { id: "dp_e", charge: "ch_2026-11", amount: 2900, status: "needs_response" }),
+      s,
+    );
+    expect(early).toBe("not_ours");
+    expect(s.pending["ch_2026-11"]).toMatchObject({ status: "open" });
+    await processPartnerEvent(invoicePaid("2026-11"), s);
+    expect(s.lines.find((l) => l.stripe_invoice_id === "in_2026-11")!.state).toBe("on_hold");
+    expect(s.referrals[0]!.qp_dispute).toBe("open");
+  });
+
+  it("claws back a payment whose dispute was lost before the payment was recorded", async () => {
+    const s = setup();
+    charge(s, "ch_2026-11");
+    await processPartnerEvent(ev("charge.dispute.created", { id: "dp_l", charge: "ch_2026-11", amount: 2900, status: "needs_response" }), s);
+    await processPartnerEvent(ev("charge.dispute.closed", { id: "dp_l", charge: "ch_2026-11", amount: 2900, status: "lost" }), s);
+    await processPartnerEvent(invoicePaid("2026-11"), s);
+    expect(s.lines.find((l) => l.stripe_invoice_id === "in_2026-11")!.state).toBe("void");
+    expect(s.referrals[0]!.qp_dispute).toBe("lost");
+  });
+
+  it("ignores a dispute won before the payment was recorded", async () => {
+    const s = setup();
+    charge(s, "ch_2026-11");
+    await processPartnerEvent(ev("charge.dispute.closed", { id: "dp_w", charge: "ch_2026-11", amount: 2900, status: "won" }), s);
+    await processPartnerEvent(invoicePaid("2026-11"), s);
+    expect(s.lines.find((l) => l.stripe_invoice_id === "in_2026-11")!.state).not.toBe("on_hold");
   });
 
   it("counts an annual payment as 12 Paid Months in one line", async () => {

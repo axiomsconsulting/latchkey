@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- the 0061/0062 tables aren't in the generated types yet */
 /**
  * Commission Partner referrals: a click on a partner's link, attaching a new
  * business to its partner at set-up (the Sign-up Date, clause 3), and the
@@ -41,13 +42,9 @@ export const recordReferralClick = createServerFn({ method: "POST" })
       const { adminDb, check } = await import("./partner-data.server");
       const db = await adminDb();
       const partner = check(
-        await db
-          .from("partners")
-          .select("id, status, terminated_at")
-          .ilike("referral_code", code)
-          .maybeSingle(),
-      ) as { id: string; status: string; terminated_at: string | null } | null;
-      if (!partner || partner.status !== "active" || partner.terminated_at) return { ok: false };
+        await db.from("partners").select("*").ilike("referral_code", code).maybeSingle(),
+      ) as ({ id: string } & Record<string, any>) | null;
+      if (!partner || !(await partnerCanRefer(db, partner))) return { ok: false };
       const { ipHash, deviceHash } = await requestHashes(data.deviceId);
       if (ipHash) {
         const { count } = await db
@@ -141,13 +138,10 @@ export const attachReferral = createServerFn({ method: "POST" })
     try {
       const config = await loadPartnerConfig(db);
       const partner = check(
-        await db
-          .from("partners")
-          .select("id, user_id, status, terminated_at")
-          .ilike("referral_code", code)
-          .maybeSingle(),
-      ) as { id: string; user_id: string; status: string; terminated_at: string | null } | null;
-      if (!partner || partner.status !== "active" || partner.terminated_at)
+        await db.from("partners").select("*").ilike("referral_code", code).maybeSingle(),
+      ) as ({ id: string; user_id: string } & Record<string, any>) | null;
+      // 3.6, 19.4, 20.3(e): only an activated partner on the version in force, not stopped.
+      if (!partner || !(await partnerCanRefer(db, partner)))
         return { ok: false, reason: "unknown_code" };
       const existing = check(
         await db.from("referrals").select("id").eq("host_id", data.hostId).maybeSingle(),
@@ -159,7 +153,11 @@ export const attachReferral = createServerFn({ method: "POST" })
       const paying =
         facts.subscriptionStatus === "active" || facts.subscriptionStatus === "past_due";
       const { lateCodeAllowed } = await import("./partner-fraud");
-      if (!lateCodeAllowed(config, facts.createdAt, now, paying))
+      const { count: properties } = await db
+        .from("properties")
+        .select("id", { count: "exact", head: true })
+        .eq("host_id", data.hostId);
+      if (!lateCodeAllowed(config, facts.createdAt, now, paying, (properties ?? 0) > 0))
         return { ok: false, reason: "too_late" };
       const userId = context.userId ?? null;
       if (partner.user_id === userId || facts.ownerIds.includes(partner.user_id))
@@ -363,3 +361,13 @@ export const reassignReferral = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+/** Whether a partner's code may create a Referred Host now (partner-activation.ts). */
+async function partnerCanRefer(
+  db: import("./partner-data.server").AnyDb,
+  partner: Record<string, any>,
+): Promise<boolean> {
+  const { activationFor } = await import("./partner-agreement.functions");
+  const { canRefer } = await import("./partner-activation");
+  return canRefer(await activationFor(db, partner), Date.now());
+}

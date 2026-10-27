@@ -779,11 +779,11 @@ async function savePerson(
 
   const stale: string[] = [];
   if (fields.idPhoto && keepsIdPhoto(rec) && !tour) {
-    row["id_photo_path"] = await storeGuestPhoto(ctx.booking.id, "id", fields.idPhoto);
+    row["id_photo_path"] = await storeGuestPhoto(ctx.booking.id, "id", fields.idPhoto, ctx.property.id);
     if (prev?.id_photo_path) stale.push(prev.id_photo_path);
   }
   if (fields.facePhoto && takesFacePhoto(rec) && !tour) {
-    row["face_photo_path"] = await storeGuestPhoto(ctx.booking.id, "face", fields.facePhoto);
+    row["face_photo_path"] = await storeGuestPhoto(ctx.booking.id, "face", fields.facePhoto, ctx.property.id);
     if (prev?.face_photo_path) stale.push(prev.face_photo_path);
   }
 

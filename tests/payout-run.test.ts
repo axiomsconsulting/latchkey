@@ -16,6 +16,7 @@ import {
   hashPurgeBefore,
   sendPayout,
   statementCsv,
+  statementNumber,
   type BonusCandidate,
   type PayoutToSend,
 } from "../src/lib/partner-close";
@@ -270,11 +271,44 @@ describe("statements and retention", () => {
     ]);
     const lines = csv.split("\n");
     expect(lines[0]).toBe(
-      "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Launch Bonus (£),Held (£),Clawback (£)",
+      "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Launch Bonus (£),Held (£),Held because,Clawback (£)",
     );
-    expect(lines[1]).toBe("H.S. · Amersham,paying,2,29.00,2.90,50.00,52.90,0.00");
-    expect(lines[2]).toBe('"A ""B"", C",paused,1,0.00,0.00,0.00,0.00,1.45');
-    expect(lines[3]).toBe("Total,,,29.00,2.90,50.00,52.90,1.45");
+    expect(lines[1]).toBe("H.S. · Amersham,paying,2,29.00,2.90,50.00,52.90,Hold Period (45 days),0.00");
+    expect(lines[2]).toBe('"A ""B"", C",paused,1,0.00,0.00,0.00,0.00,,1.45');
+    expect(lines[3]).toBe("Total,,,29.00,2.90,50.00,52.90,,1.45");
+  });
+
+  it("is a self-billed invoice with set-off and the payable balance, and never a Stripe fee (12.7, 10.6, 13.1)", () => {
+    const row = {
+      host: "H.S. · Amersham",
+      status: "paying",
+      paidMonths: 2,
+      netReceiptsPence: 2900,
+      commissionPence: 290,
+      bonusPence: 0,
+      heldPence: 290,
+      clawbackPence: 0,
+      heldReason: "Payment dispute open",
+    };
+    const meta = {
+      number: statementNumber("OMS-AB12C", "p", "2026-11"),
+      issuedOn: "2026-12-01",
+      oms: { name: "Omnispace Estates Ltd", companyNumber: "16889713", address: "49 Trinity Circle, High Wycombe, HP11 1FB", vatNumber: "" },
+      partner: { name: "Pat Partner", address: "1 High Street", vatNumber: "GB123" },
+      selfBilled: true,
+      setOffPence: 500,
+      payablePence: 1200,
+      paidPence: 0,
+    };
+    const csv = statementCsv([row], meta);
+    expect(csv.split("\n")[0]).toBe("Self-billed invoice,SB-OMS-AB12C-202611");
+    expect(csv).toContain("Partner VAT number,GB123");
+    expect(csv).toContain("to be confirmed by OMS's accountant");
+    expect(csv).toContain("Payment dispute open");
+    expect(csv).toContain("Set-off this month (£),5.00");
+    expect(csv).toContain("Payable balance after clawbacks and set-off (£),12.00");
+    expect(csv).toContain("None deducted by OMS (13.1).");
+    expect(statementCsv([row], { ...meta, selfBilled: false }).split("\n")[0]).toBe("Statement,SB-OMS-AB12C-202611");
   });
 
   it("clears IP hashes after 180 days", () => {

@@ -15,6 +15,7 @@ import { deviceId } from "@/lib/attribution";
 import { markPartnerIntent } from "@/lib/partner-intent";
 import { rebrand } from "@/lib/brand";
 import { applyAsPartner } from "@/lib/partners.functions";
+import { partnerProgrammeOpen } from "@/lib/partner-agreement.functions";
 import { phoneCountries } from "@/lib/world";
 
 /** Public page: what being an independent Latchkey Commission Partner means, and the application form once signed in. */
@@ -30,6 +31,8 @@ export const Route = createFileRoute("/partners/join")({
       },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { preview?: string } =>
+    typeof s["preview"] === "string" ? { preview: s["preview"] } : {},
   component: JoinPage,
 });
 
@@ -49,6 +52,18 @@ function JoinPage() {
       );
   }, []);
   const signedIn = !!user && !user.anonymous;
+  const search = Route.useSearch();
+  const openFn = useServerFn(partnerProgrammeOpen);
+  const [open, setOpen] = useState<boolean | null>(null);
+  const [preview, setPreview] = useState(false);
+  useEffect(() => {
+    void openFn().then((r) => setOpen(r.open));
+  }, [openFn]);
+  useEffect(() => {
+    if (!search.preview || !signedIn) return;
+    void supabase.rpc("is_super_admin" as never).then(({ data }) => setPreview(data === true));
+  }, [search.preview, signedIn]);
+  if (open === false && !preview) return <ComingSoon />;
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
@@ -63,8 +78,15 @@ function JoinPage() {
               <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" /> {p}
             </li>
           ))}
-          <li className="text-sm text-muted-foreground">{copy.joinTermsNote}</li>
+          <li className="text-sm text-muted-foreground">
+            {copy.joinTermsNote}{" "}
+            <Link to="/partners/agreement" className="text-primary underline">
+              {copy.readAgreement}
+            </Link>
+          </li>
         </ul>
+        <p className="text-sm text-muted-foreground">{copy.joinSteps}</p>
+        {preview && !open ? <p className="text-sm font-medium text-accent">{copy.previewNote}</p> : null}
         {user === undefined ? null : signedIn ? (
           <ApplyForm email={user.email ?? ""} />
         ) : (
@@ -282,6 +304,24 @@ function Field({ id, label, children }: { id: string; label: string; children: R
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       {children}
+    </div>
+  );
+}
+
+/** Phase 0: the programme isn't taking applications yet. Existing partners can still sign in. */
+function ComingSoon() {
+  return (
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+      <main className="mx-auto max-w-2xl space-y-5 px-4 pb-32 pt-8 sm:px-5 md:pb-16">
+        <h1 className="text-3xl">{copy.comingSoonTitle}</h1>
+        <p className="text-lg text-muted-foreground">{copy.comingSoonBody}</p>
+        <Button asChild variant="outline">
+          <Link to="/auth" search={{ next: "/partners", for: "partner" }} onClick={markPartnerIntent}>
+            {copy.comingSoonSignIn}
+          </Link>
+        </Button>
+      </main>
     </div>
   );
 }

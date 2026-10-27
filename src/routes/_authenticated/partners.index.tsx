@@ -4,13 +4,20 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { Check, Copy, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { Check, CheckCircle2, Circle, Clock, Copy, Download, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { partnerCopy as copy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
 import { reasonText } from "@/lib/commission";
+import {
+  myPartnerSteps,
+  savePartnerStatementDetails,
+  stopBeingPartner,
+} from "@/lib/partner-agreement.functions";
+import { ukDateTime } from "@/lib/partner-agreement";
 import {
   myPartnerAccount,
   partnerStripeDashboard,
@@ -60,7 +67,12 @@ function PartnerAccount() {
           </p>
         ) : null}
         {d?.setUp && d.partner ? (
-          <Account data={d as Extract<typeof d, { partner: object }>} />
+          <>
+            <Steps />
+            <Account data={d as Extract<typeof d, { partner: object }>} />
+            <StatementDetails />
+            <Stop />
+          </>
         ) : null}
       </main>
     </div>
@@ -77,10 +89,13 @@ function Account({ data: d }: { data: any }) {
       {p.status === "waitlisted" ? <p className="card-soft p-5">{copy.statusWaitlisted}</p> : null}
       {p.status === "suspended" ? <p className="card-soft p-5">{copy.statusSuspended}</p> : null}
       {p.status === "terminated" ? <p className="card-soft p-5">{copy.statusTerminated}</p> : null}
-      {p.status === "active" && d.link ? <ShareLink link={d.link} code={p.referral_code} /> : null}
+      {p.status === "active" && d.link && d.canRefer ? <ShareLink link={d.link} code={p.referral_code} /> : null}
+      {p.status === "active" && !d.canRefer && !p.terminated_at ? (
+        <p className="card-soft p-5">{copy.needsAgreementAndId}</p>
+      ) : null}
       {p.status === "active" || p.status === "terminated" ? <Payouts partner={p} /> : null}
       <section className="grid gap-3 sm:grid-cols-3">
-        <Tile label={copy.held} value={formatPence(d.balance.held)} hint={copy.heldHint} />
+        <Tile label={copy.held} value={formatPence(d.balance.held)} hint={copy.heldHintDays(d.holdDays)} />
         <Tile label={copy.payable} value={formatPence(d.balance.payable)} />
         <Tile label={copy.paid} value={formatPence(d.balance.paid)} />
       </section>
@@ -88,7 +103,7 @@ function Account({ data: d }: { data: any }) {
       <section className="card-soft space-y-3 p-5">
         <h2 className="text-xl">{copy.hostsTitle}</h2>
         {d.referrals.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{copy.hostsEmpty}</p>
+          <p className="text-sm text-muted-foreground">{copy.hostsEmptyDays(d.attributionWindowDays)}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -120,7 +135,9 @@ function Account({ data: d }: { data: any }) {
                           ? "Being checked"
                           : (STATUS_WORDS[r.status_detail] ?? r.status_detail)}
                     </td>
-                    <td className="py-2 pr-3">{copy.monthsUsed(r.paid_months_used)}</td>
+                    <td className="py-2 pr-3">
+                      {copy.monthsUsedOf(r.paid_months_used, r.terms_snapshot?.paid_months_cap ?? 12)}
+                    </td>
                     <td className="py-2 pr-3">
                       {BONUS_WORDS[r.bonus_status] ?? r.bonus_status}
                       {r.bonus_ineligible_reason ? (
@@ -244,6 +261,192 @@ function Payouts({ partner: p }: { partner: any }) {
               <RefreshCw className="size-4" /> {copy.payoutsCheck}
             </Button>
           ) : null}
+        </div>
+      )}
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/** The partner's way to activation (agreement 3.6) and their signed copy (4.4). */
+function Steps() {
+  const load = useServerFn(myPartnerSteps);
+  const q = useQuery({ queryKey: ["partner-steps"], queryFn: () => load() });
+  const s = q.data;
+  if (!s?.partner || s.stopped) return null;
+  const m = s.missing;
+  const signDone = !m.includes("agreement") && !m.includes("new_version");
+  const idDone = s.idCheckStatus === "approved";
+  const idWaiting = s.idCheckStatus === "pending" || s.idCheckStatus === "manual_review";
+  const rows: Array<{ label: string; state: "done" | "todo" | "waiting"; to?: "/partners/agreement" | "/partners/verify" }> = [
+    { label: m.includes("new_version") ? copy.stepNewVersion : copy.stepSign, state: signDone ? "done" : "todo", to: "/partners/agreement" },
+    { label: copy.stepVerify, state: idDone ? "done" : idWaiting ? "waiting" : "todo", to: "/partners/verify" },
+    { label: copy.stepApproval, state: m.length === 0 ? "done" : "waiting" },
+  ];
+  return (
+    <>
+      {m.length ? (
+        <section className="card-soft space-y-3 p-5">
+          <h2 className="text-xl">{copy.stepsTitle}</h2>
+          <ol className="space-y-3">
+            {rows.map((r) => (
+              <li key={r.label} className="flex flex-wrap items-center gap-3">
+                {r.state === "done" ? (
+                  <CheckCircle2 className="size-5 text-primary" />
+                ) : r.state === "waiting" ? (
+                  <Clock className="size-5 text-muted-foreground" />
+                ) : (
+                  <Circle className="size-5 text-muted-foreground" />
+                )}
+                <span className="min-w-0 flex-1">{r.label}</span>
+                {r.state === "todo" && r.to ? (
+                  <Button asChild size="sm">
+                    <Link to={r.to}>{copy.stepOpen}</Link>
+                  </Button>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    {r.state === "done" ? copy.stepDone : r.state === "waiting" ? copy.stepWaiting : copy.stepToDo}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+      {s.agreement ? (
+        <section className="card-soft space-y-2 p-5">
+          <h2 className="text-xl">{copy.yourAgreement}</h2>
+          <p className="text-sm">
+            {copy.agreementSigned(s.agreement.version, ukDateTime(s.agreement.signedAt))}{" "}
+            {s.agreement.confirmed ? copy.agreementConfirmed : copy.agreementUnconfirmed}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {s.agreement.pdfUrl ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={s.agreement.pdfUrl} target="_blank" rel="noopener">
+                  <Download className="size-4" /> {copy.downloadSigned}
+                </a>
+              </Button>
+            ) : null}
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/partners/agreement">{copy.readAgreement}</Link>
+            </Button>
+          </div>
+        </section>
+      ) : null}
+    </>
+  );
+}
+
+/** Address, VAT number and the self-billing choice for statements (12.7). */
+function StatementDetails() {
+  const load = useServerFn(myPartnerSteps);
+  const q = useQuery({ queryKey: ["partner-steps"], queryFn: () => load() });
+  const save = useServerFn(savePartnerStatementDetails);
+  const qc = useQueryClient();
+  const saved = q.data?.partner ? q.data.statementDetails : null;
+  const [draft, setDraft] = useState<{ address: string; vatNumber: string; selfBillingOptOut: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!saved) return null;
+  const f = draft ?? saved;
+  const changed = JSON.stringify(f) !== JSON.stringify(saved);
+  return (
+    <section className="card-soft space-y-3 p-5">
+      <h2 className="text-lg">{copy.statementTitle}</h2>
+      <p className="text-sm text-muted-foreground">{copy.statementBody}</p>
+      <label className="grid gap-1 text-sm">
+        {copy.statementAddress}
+        <Input className="h-11" value={f.address} onChange={(e) => setDraft({ ...f, address: e.target.value })} autoComplete="street-address" />
+      </label>
+      <label className="grid gap-1 text-sm">
+        {copy.vat}
+        <Input className="h-11" value={f.vatNumber} onChange={(e) => setDraft({ ...f, vatNumber: e.target.value })} />
+      </label>
+      <label className="flex items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1 size-4"
+          checked={f.selfBillingOptOut}
+          onChange={(e) => setDraft({ ...f, selfBillingOptOut: e.target.checked })}
+        />
+        <span>{copy.statementOptOut}</span>
+      </label>
+      <div className="flex items-center gap-3">
+        <Button
+          disabled={!changed || busy}
+          onClick={async () => {
+            setBusy(true);
+            setMsg(null);
+            try {
+              await save({ data: f });
+              await qc.invalidateQueries({ queryKey: ["partner-steps"] });
+              setDraft(null);
+              setMsg(copy.statementSaved);
+            } catch (e) {
+              setMsg(e instanceof Error ? e.message : String(e));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : null} {copy.statementSave}
+        </Button>
+        {msg ? <span className="text-sm text-muted-foreground">{msg}</span> : null}
+      </div>
+    </section>
+  );
+}
+
+/** "Stop being a Commission Partner" (20.1, 21.2), with a typed confirmation. */
+function Stop() {
+  const load = useServerFn(myPartnerSteps);
+  const q = useQuery({ queryKey: ["partner-steps"], queryFn: () => load() });
+  const stop = useServerFn(stopBeingPartner);
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!q.data?.partner || q.data.stopped) return done ? <p className="card-soft p-5">{copy.stopped}</p> : null;
+  return (
+    <section className="card-soft space-y-3 p-5">
+      <h2 className="text-lg">{copy.stopTitle}</h2>
+      <p className="text-sm text-muted-foreground">{copy.stopBody}</p>
+      {!open ? (
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          {copy.stopButton}
+        </Button>
+      ) : (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="grid gap-1 text-sm">
+            {copy.stopConfirmLabel}
+            <Input className="h-11 w-40" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+          </label>
+          <Button
+            variant="destructive"
+            disabled={typed !== "STOP" || busy}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                await stop({ data: { confirm: "STOP" } });
+                setDone(true);
+                await qc.invalidateQueries();
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null} {copy.stopButton}
+          </Button>
         </div>
       )}
       {error ? (

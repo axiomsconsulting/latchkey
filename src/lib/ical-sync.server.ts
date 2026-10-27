@@ -375,7 +375,36 @@ export async function runRetentionSweep(): Promise<number> {
   // Visitor analytics: 13 months, IP addresses cleared after 90 days.
   const { pruneAnalytics } = await import("./analytics.server");
   await pruneAnalytics();
+  await partnerRetention();
+  // Private files waiting for Google Drive: moved, checked, then removed from the queue.
+  try {
+    const { syncDriveQueue } = await import("./private-store.server");
+    await syncDriveQueue(100);
+  } catch (e) {
+    console.error("Drive queue sync failed", e instanceof Error ? e.message : e);
+  }
   return anonymised;
+}
+
+/**
+ * Commission Partner privacy (agreement 17.1), daily even while the month
+ * close is off: IP and device hashes after 180 days, ID photos 30 days after
+ * the check is decided. Nothing to do before migration 0061.
+ */
+async function partnerRetention() {
+  try {
+    const { adminDb, loadPartnerConfig } = await import("./partner-data.server");
+    const { purgePartnerHashes, purgePartnerIdImages } = await import("./partner-close.server");
+    const db = await adminDb();
+    const config = await loadPartnerConfig(db);
+    await purgePartnerHashes(db, config, Date.now());
+    await purgePartnerIdImages(db, Date.now());
+    // A published agreement version whose date has come becomes the one in force (19.4).
+    const { switchVersions } = await import("./partner-agreement.functions");
+    await switchVersions(db);
+  } catch (e) {
+    console.error("Commission Partner retention skipped", e instanceof Error ? e.message : e);
+  }
 }
 
 /**

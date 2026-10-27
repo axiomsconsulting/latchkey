@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { common, driveAdminCopy, starterAdminCopy } from "@/content/copy";
-import { driveConnectUrl, driveDisconnect, driveStatus } from "@/lib/attachments.functions";
+import { driveConnectUrl, driveDisconnect, driveStatus, syncPrivateQueue } from "@/lib/attachments.functions";
 import { SECTIONS } from "@/lib/guide";
 import { getStarterSettings, setStarterSection } from "@/lib/site.functions";
 
@@ -66,6 +66,8 @@ export function DriveAdmin() {
   const statusFn = useServerFn(driveStatus);
   const connectFn = useServerFn(driveConnectUrl);
   const disconnectFn = useServerFn(driveDisconnect);
+  const syncFn = useServerFn(syncPrivateQueue);
+  const [syncing, setSyncing] = useState(false);
   const q = useQuery({ queryKey: ["drive-status"], queryFn: () => statusFn() });
   const search = useSearch({ strict: false }) as { drive?: string };
   const navigate = useNavigate();
@@ -119,6 +121,33 @@ export function DriveAdmin() {
             ) : null}
           </div>
           {!s.configured ? <p className="text-sm text-destructive">{driveAdminCopy.missingSecrets}</p> : null}
+          {s.queue ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border p-3 text-sm">
+              <span className={s.queue.waiting ? "text-destructive" : "text-muted-foreground"}>
+                {s.queue.waiting ? driveAdminCopy.queueWaiting(s.queue.waiting) : driveAdminCopy.queueEmpty}
+              </span>
+              {s.queue.lastError ? <span className="text-xs text-muted-foreground">{s.queue.lastError}</span> : null}
+              {s.queue.waiting ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={syncing || !s.connected}
+                  onClick={() => {
+                    setSyncing(true);
+                    void syncFn()
+                      .then((r) => toast.success(driveAdminCopy.queueMoved(r.moved, r.waiting)))
+                      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+                      .finally(() => {
+                        setSyncing(false);
+                        void q.refetch();
+                      });
+                  }}
+                >
+                  {syncing ? <Loader2 className="size-4 animate-spin" /> : null} {driveAdminCopy.queueMove}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
           <p className="text-xs text-muted-foreground">{driveAdminCopy.scopeNote}</p>
           <details className="rounded-xl border border-border p-3 text-sm">
             <summary className="cursor-pointer font-medium">{driveAdminCopy.setupTitle}</summary>
