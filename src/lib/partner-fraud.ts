@@ -209,19 +209,21 @@ export function referralOutcome(
 export { STRONG_KINDS, WEAK_KINDS };
 
 /**
- * Whether a referral code can still be added to a business (D6). "never":
- * only during set-up (its first day), because the Sign-up Date is creating
- * the account through the code (clause 3, 8.1); the admin can still
- * reassign (8.6). The other options keep the Sign-up Date for terms.
+ * Whether a referral code can still be added to a business (D6; agreement
+ * v1.0 clause 6.2: "when the host creates their account"). "never": only
+ * while the account is being created, i.e. before set-up saves its first
+ * property, and never more than a day after the business was made. The
+ * admin can still reassign (6.7). The other options keep the Sign-up Date.
  */
 export function lateCodeAllowed(
   config: Pick<PartnerConfig, "lateCodeEntry" | "attributionWindowDays">,
   createdAt: string,
   now: number,
   paying: boolean,
+  setUpFinished: boolean,
 ): boolean {
   const age = now - Date.parse(createdAt);
-  if (config.lateCodeEntry === "never") return age <= DAY;
+  if (config.lateCodeEntry === "never") return !setUpFinished && age <= DAY;
   if (config.lateCodeEntry === "until_first_paid_invoice") return !paying;
   return age <= config.attributionWindowDays * DAY;
 }

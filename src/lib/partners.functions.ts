@@ -78,6 +78,11 @@ export const applyAsPartner = createServerFn({ method: "POST" })
     const db = await adminDb();
     const config = await loadPartnerConfig(db);
     const userId = (context as Ctx).userId;
+    if (!config.signupsOpen) {
+      const { isSuperAdmin } = await import("@/lib/roles");
+      if (!(await isSuperAdmin((context as { supabase: unknown }).supabase)))
+        throw new Error("The Commission Partner programme isn't taking applications yet.");
+    }
     const { checkPhone } = await import("./world");
     const phone = checkPhone(input.phone, input.country.toUpperCase());
     if (!phone.ok)
@@ -185,13 +190,14 @@ async function savePartnerKeys(
 export const myPartnerAccount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { adminDb, isMissingTable } = await data();
+    const { adminDb, isMissingTable, loadPartnerConfig } = await data();
     const db = await adminDb();
+    const config = await loadPartnerConfig(db);
     const userId = (context as Ctx).userId;
     const { data: partner, error } = await db
       .from("partners")
       .select(
-        "id, kind, legal_name, business_name, country, email, referral_code, status, payout_route, stripe_account_id, stripe_account_mode, payouts_enabled, terminated_at, created_at",
+        "id, kind, legal_name, business_name, country, email, referral_code, status, payout_route, stripe_account_id, stripe_account_mode, payouts_enabled, terminated_at, id_check_status, created_at",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -235,10 +241,17 @@ export const myPartnerAccount = createServerFn({ method: "GET" })
         paid: sum((l) => l.state === "paid"),
       },
       payouts: payouts ?? [],
+      canRefer: await (async () => {
+        const { activationFor } = await import("./partner-agreement.functions");
+        const { canRefer } = await import("./partner-activation");
+        return canRefer(await activationFor(db, partner), Date.now());
+      })(),
       link: partner.referral_code
         ? `${siteOrigin()}/?ref=${encodeURIComponent(partner.referral_code)}`
         : null,
-      minPayoutPence: PARTNER_DEFAULTS.minPayoutPence,
+      minPayoutPence: config.minPayoutPence,
+      holdDays: config.holdDays,
+      attributionWindowDays: config.attributionWindowDays,
     };
   });
 
@@ -432,6 +445,13 @@ export const adminPartnerOverview = createServerFn({ method: "GET" })
       db.from("platform_pricing").select("trial_days").eq("id", 1).maybeSingle(),
       db.from("clawbacks").select("*").in("status", ["open", "repayment_requested"]),
     ]);
+    const { data: accRows } = await db
+      .from("partner_agreement_acceptances")
+      .select("partner_id, version, signed_at, oms_confirmed_at")
+      .order("signed_at", { ascending: true });
+    const acceptances: Record<string, { version: string; signed_at: string; oms_confirmed_at: string | null }> = {};
+    for (const a of (accRows ?? []) as Array<{ partner_id: string; version: string; signed_at: string; oms_confirmed_at: string | null }>)
+      acceptances[a.partner_id] = a;
     const bal: Record<string, { held: number; payable: number; paid: number }> = {};
     for (const l of (lines ?? []) as Array<{
       partner_id: string;
@@ -460,6 +480,7 @@ export const adminPartnerOverview = createServerFn({ method: "GET" })
       clawbacks: clawbacks ?? [],
       config,
       payoutMode,
+      acceptances,
       trialWarning: trialDaysWarning(pricing?.trial_days ?? 30),
     };
   });
@@ -471,8 +492,28 @@ export const approvePartner = createServerFn({ method: "POST" })
   .handler(async ({ data: input, context }) => {
     const { db, actor, check, logPartnerEvent } = await admin(context);
     const p = check(
-      await db.from("partners").select("id, referral_code").eq("id", input.partnerId).single(),
-    ) as { id: string; referral_code: string | null };
+      await db.from("partners").select("*").eq("id", input.partnerId).single(),
+    ) as Record<string, any> & { id: string; referral_code: string | null };
+    // 3.6: signed the version in force and identity approved; OMS's approval confirms the signature.
+    const { activationFor } = await import("./partner-agreement.functions");
+    const { activationBlockers, MISSING_WORDS } = await import("./partner-activation");
+    const blockers = activationBlockers(await activationFor(db, p), Date.now());
+    if (blockers.length)
+      throw new Error(`Not yet: ${blockers.map((b) => MISSING_WORDS[b]).join(" ")}`);
+    const { data: acc } = await db
+      .from("partner_agreement_acceptances")
+      .select("id, oms_confirmed_at")
+      .eq("partner_id", p.id)
+      .order("signed_at", { ascending: false })
+      .limit(1);
+    const latest = ((acc ?? [])[0] ?? null) as { id: string; oms_confirmed_at: string | null } | null;
+    if (latest && !latest.oms_confirmed_at)
+      check(
+        await db
+          .from("partner_agreement_acceptances")
+          .update({ oms_confirmed_at: new Date().toISOString(), oms_confirmed_by: actor })
+          .eq("id", latest.id),
+      );
     let code = p.referral_code;
     for (let i = 0; !code && i < 10; i++) {
       const candidate = makeReferralCode(
@@ -511,26 +552,44 @@ export const setPartnerStatus = createServerFn({ method: "POST" })
         status: z.enum(["active", "suspended", "waitlisted", "terminated"]),
         reason: z.string().trim().min(3).max(1000),
         breach: z.boolean().optional(),
+        /** 20.1: the Stop Date, today or later (YYYY-MM-DD, UK). A later date takes effect on that day. */
+        stopDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
       })
       .parse(d),
   )
   .handler(async ({ data: input, context }) => {
     const { db, actor, check, logPartnerEvent } = await admin(context);
-    const now = new Date().toISOString();
-    const patch: Record<string, unknown> = { status: input.status, updated_at: now };
-    if (input.status === "terminated")
+    const now = new Date();
+    const patch: Record<string, unknown> = { status: input.status, updated_at: now.toISOString() };
+    if (input.status === "terminated") {
+      const { dayStart } = await import("./commission");
+      const today = now.toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+      if (input.stopDate && input.stopDate < today) throw new Error("The Stop Date can't be in the past.");
+      const stopAt = input.stopDate && input.stopDate > today ? new Date(dayStart(input.stopDate)) : now;
+      // A later Stop Date: the partner stays active until then (the code stops on that day).
+      if (stopAt > now) patch["status"] = "active";
       Object.assign(patch, {
-        terminated_at: now,
+        terminated_at: stopAt.toISOString(),
         terminated_by: actor,
         termination_reason: input.reason,
         termination_for_breach: !!input.breach,
+        stop_source: "oms",
       });
+      // The details read from their ID are kept for 6 years after the agreement ends (17.1).
+      await db
+        .from("partner_id_checks")
+        .update({ retain_until: new Date(stopAt.getTime() + 6 * 365.25 * 86_400_000).toISOString() })
+        .eq("partner_id", input.partnerId);
+    }
     check(await db.from("partners").update(patch).eq("id", input.partnerId));
     await logPartnerEvent(db, {
       partner_id: input.partnerId,
       actor,
       action: `partner_${input.status}`,
-      details: { reason: input.reason, breach: !!input.breach },
+      details: { reason: input.reason, breach: !!input.breach, stop_date: input.stopDate ?? null },
     });
     return { ok: true };
   });

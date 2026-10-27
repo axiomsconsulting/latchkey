@@ -16,7 +16,10 @@ export const Route = createFileRoute("/api/public/private-file/$ref")({
         const { verifyPrivateLink } = await import("@/lib/private-store");
         const { readPrivate, signingSecret } = await import("@/lib/private-store.server");
         const ref = await verifyPrivateLink(signingSecret(), params.ref, expires, name, sig);
-        if (!ref) return new Response("This link has expired. Open the page again to see it.", { status: 403 });
+        if (!ref)
+          return new Response("This link has expired. Open the page again to see it.", {
+            status: 403,
+          });
         const file = await readPrivate(ref);
         if (!file) return new Response("This file isn't available just now.", { status: 404 });
         return new Response(file.bytes as unknown as BodyInit, {

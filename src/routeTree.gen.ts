@@ -29,6 +29,7 @@ import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
+import { Route as PartnersAgreementRouteImport } from './routes/partners.agreement'
 import { Route as PartnersJoinRouteImport } from './routes/partners.join'
 import { Route as ReserveTokenRouteImport } from './routes/reserve.$token'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
@@ -52,7 +53,9 @@ import { Route as AuthenticatedAppSetupRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppTodayRouteImport } from './routes/_authenticated/app.today'
 import { Route as AuthenticatedAppWhatsNewRouteImport } from './routes/_authenticated/app.whats-new'
 import { Route as AuthenticatedPartnersIndexRouteImport } from './routes/_authenticated/partners.index'
+import { Route as AuthenticatedPartnersVerifyRouteImport } from './routes/_authenticated/partners.verify'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
+import { Route as ApiPublicPartnerAgreementRouteImport } from './routes/api/public/partner-agreement'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
 import { Route as DemoHostRegionRouteImport } from './routes/demo.host_.$region'
@@ -175,6 +178,11 @@ const KioskCodeRoute = KioskCodeRouteImport.update({
 const PCodeRoute = PCodeRouteImport.update({
   id: '/p/$code',
   path: '/p/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnersAgreementRoute = PartnersAgreementRouteImport.update({
+  id: '/partners/agreement',
+  path: '/partners/agreement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PartnersJoinRoute = PartnersJoinRouteImport.update({
@@ -302,11 +310,23 @@ const AuthenticatedPartnersIndexRoute =
     path: '/partners/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPartnersVerifyRoute =
+  AuthenticatedPartnersVerifyRouteImport.update({
+    id: '/partners/verify',
+    path: '/partners/verify',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicMcpRoute = ApiPublicMcpRouteImport.update({
   id: '/api/public/mcp',
   path: '/api/public/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPartnerAgreementRoute =
+  ApiPublicPartnerAgreementRouteImport.update({
+    id: '/api/public/partner-agreement',
+    path: '/api/public/partner-agreement',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
   id: '/api/public/stripe-webhook',
   path: '/api/public/stripe-webhook',
@@ -452,6 +472,7 @@ export interface FileRoutesByFullPath {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
@@ -474,7 +495,9 @@ export interface FileRoutesByFullPath {
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app/whats-new': typeof AuthenticatedAppWhatsNewRoute
+  '/partners/verify': typeof AuthenticatedPartnersVerifyRoute
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
+  '/api/public/partner-agreement': typeof ApiPublicPartnerAgreementRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
   '/demo/host/$region': typeof DemoHostRegionRoute
@@ -520,6 +543,7 @@ export interface FileRoutesByTo {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
@@ -542,7 +566,9 @@ export interface FileRoutesByTo {
   '/app/setup': typeof AuthenticatedAppSetupRoute
   '/app/today': typeof AuthenticatedAppTodayRoute
   '/app/whats-new': typeof AuthenticatedAppWhatsNewRoute
+  '/partners/verify': typeof AuthenticatedPartnersVerifyRoute
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
+  '/api/public/partner-agreement': typeof ApiPublicPartnerAgreementRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
   '/demo/host/$region': typeof DemoHostRegionRoute
@@ -591,6 +617,7 @@ export interface FileRoutesById {
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
   '/p/$code': typeof PCodeRoute
+  '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
@@ -613,7 +640,9 @@ export interface FileRoutesById {
   '/_authenticated/app/setup': typeof AuthenticatedAppSetupRoute
   '/_authenticated/app/today': typeof AuthenticatedAppTodayRoute
   '/_authenticated/app/whats-new': typeof AuthenticatedAppWhatsNewRoute
+  '/_authenticated/partners/verify': typeof AuthenticatedPartnersVerifyRoute
   '/api/public/mcp': typeof ApiPublicMcpRouteWithChildren
+  '/api/public/partner-agreement': typeof ApiPublicPartnerAgreementRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
   '/demo/host_/$region': typeof DemoHostRegionRoute
@@ -662,6 +691,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/partners/agreement'
     | '/partners/join'
     | '/reserve/$token'
     | '/room/$code'
@@ -684,7 +714,9 @@ export interface FileRouteTypes {
     | '/app/setup'
     | '/app/today'
     | '/app/whats-new'
+    | '/partners/verify'
     | '/api/public/mcp'
+    | '/api/public/partner-agreement'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
     | '/demo/host/$region'
@@ -730,6 +762,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/partners/agreement'
     | '/partners/join'
     | '/reserve/$token'
     | '/room/$code'
@@ -752,7 +785,9 @@ export interface FileRouteTypes {
     | '/app/setup'
     | '/app/today'
     | '/app/whats-new'
+    | '/partners/verify'
     | '/api/public/mcp'
+    | '/api/public/partner-agreement'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
     | '/demo/host/$region'
@@ -800,6 +835,7 @@ export interface FileRouteTypes {
     | '/invoice/$token'
     | '/kiosk/$code'
     | '/p/$code'
+    | '/partners/agreement'
     | '/partners/join'
     | '/reserve/$token'
     | '/room/$code'
@@ -822,7 +858,9 @@ export interface FileRouteTypes {
     | '/_authenticated/app/setup'
     | '/_authenticated/app/today'
     | '/_authenticated/app/whats-new'
+    | '/_authenticated/partners/verify'
     | '/api/public/mcp'
+    | '/api/public/partner-agreement'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
     | '/demo/host_/$region'
@@ -870,6 +908,7 @@ export interface RootRouteChildren {
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
   PCodeRoute: typeof PCodeRoute
+  PartnersAgreementRoute: typeof PartnersAgreementRoute
   PartnersJoinRoute: typeof PartnersJoinRoute
   ReserveTokenRoute: typeof ReserveTokenRoute
   RoomCodeRoute: typeof RoomCodeRoute
@@ -877,6 +916,7 @@ export interface RootRouteChildren {
   TourRegionRoute: typeof TourRegionRoute
   DemoIndexRoute: typeof DemoIndexRoute
   ApiPublicMcpRoute: typeof ApiPublicMcpRouteWithChildren
+  ApiPublicPartnerAgreementRoute: typeof ApiPublicPartnerAgreementRoute
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
   DemoHostRegionRoute: typeof DemoHostRegionRoute
@@ -1042,6 +1082,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/partners/agreement': {
+      id: '/partners/agreement'
+      path: '/partners/agreement'
+      fullPath: '/partners/agreement'
+      preLoaderRoute: typeof PartnersAgreementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/partners/join': {
       id: '/partners/join'
       path: '/partners/join'
@@ -1203,11 +1250,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartnersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/partners/verify': {
+      id: '/_authenticated/partners/verify'
+      path: '/partners/verify'
+      fullPath: '/partners/verify'
+      preLoaderRoute: typeof AuthenticatedPartnersVerifyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/mcp': {
       id: '/api/public/mcp'
       path: '/api/public/mcp'
       fullPath: '/api/public/mcp'
       preLoaderRoute: typeof ApiPublicMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/partner-agreement': {
+      id: '/api/public/partner-agreement'
+      path: '/api/public/partner-agreement'
+      fullPath: '/api/public/partner-agreement'
+      preLoaderRoute: typeof ApiPublicPartnerAgreementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/stripe-webhook': {
@@ -1430,11 +1491,13 @@ const AuthenticatedAppRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+  AuthenticatedPartnersVerifyRoute: typeof AuthenticatedPartnersVerifyRoute
   AuthenticatedPartnersIndexRoute: typeof AuthenticatedPartnersIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+  AuthenticatedPartnersVerifyRoute: AuthenticatedPartnersVerifyRoute,
   AuthenticatedPartnersIndexRoute: AuthenticatedPartnersIndexRoute,
 }
 
@@ -1472,6 +1535,7 @@ const rootRouteChildren: RootRouteChildren = {
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
   PCodeRoute: PCodeRoute,
+  PartnersAgreementRoute: PartnersAgreementRoute,
   PartnersJoinRoute: PartnersJoinRoute,
   ReserveTokenRoute: ReserveTokenRoute,
   RoomCodeRoute: RoomCodeRoute,
@@ -1479,6 +1543,7 @@ const rootRouteChildren: RootRouteChildren = {
   TourRegionRoute: TourRegionRoute,
   DemoIndexRoute: DemoIndexRoute,
   ApiPublicMcpRoute: ApiPublicMcpRouteWithChildren,
+  ApiPublicPartnerAgreementRoute: ApiPublicPartnerAgreementRoute,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackRoute: ApiPublicTrackRoute,
   DemoHostRegionRoute: DemoHostRegionRoute,

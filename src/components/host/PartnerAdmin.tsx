@@ -30,6 +30,7 @@ import {
 } from "@/lib/partner-close.functions";
 import { PARTNER_DEFAULTS, type PartnerConfig } from "@/lib/partner-config";
 import type { PayoutMode } from "@/lib/partner-eligibility";
+import { AgreementAdmin, IdReviewAdmin } from "@/components/host/PartnerAgreementAdmin";
 import {
   adminPartnerOverview,
   applyTermsToExisting,
@@ -77,6 +78,8 @@ export function PartnerAdmin() {
           Payouts are drafted by the month close and only sent when you approve them.
         </span>
       </div>
+      <AgreementAdmin />
+      <IdReviewAdmin partnerName={(id) => partnerName(d, id)} />
       <Payouts d={d} refresh={refresh} />
       <Partners d={d} refresh={refresh} />
       <Referrals d={d} refresh={refresh} />
@@ -344,6 +347,7 @@ function Partners({ d, refresh }: Props) {
   const { busy, run } = useAction();
   const [reason, setReason] = useState<Record<string, string>>({});
   const [breach, setBreach] = useState<Record<string, boolean>>({});
+  const [stopOn, setStopOn] = useState<Record<string, string>>({});
   return (
     <Section title={`Commission Partners (${d.partners.length})`}>
       {d.partners.length === 0 ? (
@@ -381,15 +385,28 @@ function Partners({ d, refresh }: Props) {
                 {p.termination_for_breach ? (
                   <Badge variant="destructive">ended for breach</Badge>
                 ) : null}
+                <Badge variant={d.acceptances?.[p.id] ? "secondary" : "outline"}>
+                  {d.acceptances?.[p.id]
+                    ? `signed v${d.acceptances[p.id].version}${d.acceptances[p.id].oms_confirmed_at ? ", confirmed" : ""}`
+                    : "not signed"}
+                </Badge>
+                <Badge variant={p.id_check_status === "approved" ? "secondary" : "outline"}>
+                  ID {String(p.id_check_status ?? "not started").replace(/_/g, " ")}
+                </Badge>
+                {p.terminated_at && Date.parse(p.terminated_at) > Date.now() ? (
+                  <Badge variant="outline">stops {p.terminated_at.slice(0, 10)}</Badge>
+                ) : null}
               </div>
               <p className="text-muted-foreground">
                 Held {formatPence(b.held)} · payable {formatPence(b.payable)} · paid{" "}
                 {formatPence(b.paid)}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                {p.status === "pending_review" ||
-                p.status === "applied" ||
-                p.status === "waitlisted" ? (
+                {(p.status === "pending_review" ||
+                  p.status === "applied" ||
+                  p.status === "waitlisted" ||
+                  (p.status === "active" && !d.acceptances?.[p.id]?.oms_confirmed_at)) &&
+                !p.terminated_at ? (
                   <Button
                     size="sm"
                     disabled={!!busy}
@@ -401,7 +418,7 @@ function Partners({ d, refresh }: Props) {
                       })
                     }
                   >
-                    <CheckCircle2 className="size-4" /> Approve and issue code
+                    <CheckCircle2 className="size-4" /> Approve, confirm signature and activate
                   </Button>
                 ) : null}
                 {p.status !== "terminated" ? (
@@ -450,7 +467,16 @@ function Partners({ d, refresh }: Props) {
                         checked={!!breach[p.id]}
                         onCheckedChange={(v) => setBreach((x) => ({ ...x, [p.id]: v }))}
                       />{" "}
-                      For breach (11.3)
+                      For breach (20.4)
+                    </label>
+                    <label className="flex items-center gap-2">
+                      Stop Date
+                      <Input
+                        type="date"
+                        className="h-9 w-40"
+                        value={stopOn[p.id] ?? ""}
+                        onChange={(e) => setStopOn((x) => ({ ...x, [p.id]: e.target.value }))}
+                      />
                     </label>
                     {p.stripe_account_id ? (
                       <Button
@@ -492,6 +518,7 @@ function Partners({ d, refresh }: Props) {
                                 status: "terminated",
                                 reason: why,
                                 breach: !!breach[p.id],
+                                ...(stopOn[p.id] ? { stopDate: stopOn[p.id] } : {}),
                               },
                             });
                             refresh();
@@ -901,8 +928,12 @@ function TField({
 }
 
 /** The open decisions (D-numbers in the build notes) the super admin may change. */
-const EDITABLE: Array<{ key: keyof PartnerConfig; label: string; options?: string[] }> = [
-  { key: "holdDays", label: "Hold Period, days (D10; agreement 9.2)" },
+const EDITABLE: Array<{ key: keyof PartnerConfig; label: string; options?: string[]; type?: "date" | "email" }> = [
+  { key: "signupsOpen", label: "Join page takes applications (closed: \"coming soon\")" },
+  { key: "noticeEmail", label: "Notice email for partners (Annex B; signing needs it)", type: "email" },
+  { key: "launchDate", label: "Programme launch date (Annex B)", type: "date" },
+  { key: "idImagesStored", label: "Keep partner ID photos for review (17.1)" },
+  { key: "holdDays", label: "Hold Period, days (D10; agreement v1.0 says 45)" },
   {
     key: "nonExpressRoute",
     label: "Partners outside UK/EEA/US/CA/CH (D2)",
@@ -1016,6 +1047,13 @@ function Settings({ config, refresh }: { config: PartnerConfig; refresh: () => v
                     </option>
                   ))}
                 </select>
+              ) : e.type ? (
+                <Input
+                  type={e.type}
+                  className="h-9 w-56"
+                  value={typeof v === "string" ? v : ""}
+                  onChange={(ev) => setDraft((dd) => ({ ...dd, [e.key]: ev.target.value || null }))}
+                />
               ) : (
                 <Input
                   type="number"

@@ -195,32 +195,20 @@ describe("outcomes and late codes", () => {
     ).toMatchObject({ status: "pending_review", bonusBlocked: true });
   });
 
-  it("lets a code be added only at set-up by default (D6)", () => {
+  it("lets a code be added only while the account is being created by default (D6, agreement 6.2)", () => {
     const created = "2026-11-01T10:00:00Z";
     const at = (h: number) => Date.parse(created) + h * 3_600_000;
-    expect(lateCodeAllowed(C, created, at(2), false)).toBe(true);
-    expect(lateCodeAllowed(C, created, at(30), false)).toBe(false);
+    expect(lateCodeAllowed(C, created, at(0.1), false, false)).toBe(true);
+    // Set-up has saved its first property: the account exists, so no more codes.
+    expect(lateCodeAllowed(C, created, at(0.2), false, true)).toBe(false);
+    expect(lateCodeAllowed(C, created, at(30), false, false)).toBe(false);
     expect(
-      lateCodeAllowed(
-        { ...C, lateCodeEntry: "until_first_paid_invoice" },
-        created,
-        at(24 * 40),
-        false,
-      ),
+      lateCodeAllowed({ ...C, lateCodeEntry: "until_first_paid_invoice" }, created, at(24 * 40), false, true),
     ).toBe(true);
     expect(
-      lateCodeAllowed(
-        { ...C, lateCodeEntry: "until_first_paid_invoice" },
-        created,
-        at(24 * 40),
-        true,
-      ),
+      lateCodeAllowed({ ...C, lateCodeEntry: "until_first_paid_invoice" }, created, at(24 * 40), true, true),
     ).toBe(false);
-    expect(
-      lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 59), true),
-    ).toBe(true);
-    expect(
-      lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 61), false),
-    ).toBe(false);
+    expect(lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 59), true, true)).toBe(true);
+    expect(lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 61), false, true)).toBe(false);
   });
 });

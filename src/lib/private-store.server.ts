@@ -24,6 +24,7 @@ import {
   type StoreKind,
 } from "./private-store";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the 0062 tables and storage aren't in the generated types
 type Loose = { from: (t: string) => any; storage: any };
 async function sb(): Promise<Loose> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -39,14 +40,22 @@ async function ensureQueueBucket() {
   const db = await sb();
   const { data } = await db.storage.getBucket(QUEUE_BUCKET);
   if (!data) {
-    const { error } = await db.storage.createBucket(QUEUE_BUCKET, { public: false, fileSizeLimit: 5 * 1024 * 1024 });
+    const { error } = await db.storage.createBucket(QUEUE_BUCKET, {
+      public: false,
+      fileSizeLimit: 5 * 1024 * 1024,
+    });
     if (error && !/exist/i.test(error.message)) throw new Error(error.message);
   }
   queueReady = true;
 }
 
 export function signingSecret(): string {
-  const s = (process.env["PRIVATE_FILE_SIGNING_SECRET"] ?? process.env["ATTACHMENT_SIGNING_SECRET"] ?? process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "").trim();
+  const s = (
+    process.env["PRIVATE_FILE_SIGNING_SECRET"] ??
+    process.env["ATTACHMENT_SIGNING_SECRET"] ??
+    process.env["SUPABASE_SERVICE_ROLE_KEY"] ??
+    ""
+  ).trim();
   if (!s) throw new Error("Private files aren't set up yet.");
   return s;
 }
@@ -72,7 +81,11 @@ async function folder(key: string, name: string, parent: string | null): Promise
   const { error } = await db.from("drive_folders").insert({ key, folder_id: id });
   if (error) {
     // Made at the same moment by another request: use theirs, drop ours.
-    const { data: again } = await db.from("drive_folders").select("folder_id").eq("key", key).maybeSingle();
+    const { data: again } = await db
+      .from("drive_folders")
+      .select("folder_id")
+      .eq("key", key)
+      .maybeSingle();
     if (again?.folder_id) {
       const { deleteFiles } = await import("./drive.server");
       await deleteFiles([id]);
@@ -93,7 +106,13 @@ async function folderFor(kind: StoreKind, ownerKey: string, ownerLabel: string):
 
 /* --------------------------------------------------------------- upload */
 
-async function uploadToDrive(folderId: string, name: string, mime: string, bytes: Uint8Array, sha: string): Promise<string> {
+async function uploadToDrive(
+  folderId: string,
+  name: string,
+  mime: string,
+  bytes: Uint8Array,
+  sha: string,
+): Promise<string> {
   const { drive, deleteFiles } = await import("./drive.server");
   const boundary = `lk${crypto.randomUUID().replace(/-/g, "")}`;
   const meta = { name, parents: [folderId], appProperties: { latchkey: "private" } };
@@ -105,15 +124,26 @@ async function uploadToDrive(folderId: string, name: string, mime: string, bytes
   body.set(head, 0);
   body.set(bytes, head.length);
   body.set(tail, head.length + bytes.length);
-  const res = await drive("/upload/drive/v3/files?uploadType=multipart&fields=id,size,sha256Checksum", {
-    method: "POST",
-    headers: { "content-type": `multipart/related; boundary=${boundary}` },
-    body,
-  });
-  const json = (await res.json().catch(() => ({}))) as { id?: string; size?: string; sha256Checksum?: string; error?: { message?: string } };
-  if (!res.ok || !json.id) throw new Error(json.error?.message ?? `Google Drive refused the upload (${res.status}).`);
+  const res = await drive(
+    "/upload/drive/v3/files?uploadType=multipart&fields=id,size,sha256Checksum",
+    {
+      method: "POST",
+      headers: { "content-type": `multipart/related; boundary=${boundary}` },
+      body,
+    },
+  );
+  const json = (await res.json().catch(() => ({}))) as {
+    id?: string;
+    size?: string;
+    sha256Checksum?: string;
+    error?: { message?: string };
+  };
+  if (!res.ok || !json.id)
+    throw new Error(json.error?.message ?? `Google Drive refused the upload (${res.status}).`);
   // Confirm Drive holds an exact copy before anything else is deleted.
-  const same = json.sha256Checksum ? json.sha256Checksum.toLowerCase() === sha : Number(json.size) === bytes.length;
+  const same = json.sha256Checksum
+    ? json.sha256Checksum.toLowerCase() === sha
+    : Number(json.size) === bytes.length;
   if (!same) {
     await deleteFiles([json.id]);
     throw new Error("Google Drive's copy didn't match: kept in the queue to try again.");
@@ -135,13 +165,20 @@ export type StoreInput = {
 
 /** Stores a private file in Drive, or queues it if Drive can't be reached. Returns the reference to save. */
 export async function storePrivate(o: StoreInput): Promise<string> {
-  if (!refAllowed(o.ref.table, o.ref.column)) throw new Error(`Not a private file column: ${o.ref.table}.${o.ref.column}`);
+  if (!refAllowed(o.ref.table, o.ref.column))
+    throw new Error(`Not a private file column: ${o.ref.table}.${o.ref.column}`);
   const name = safePart(o.name);
   const sha = await sha256OfBytes(o.bytes);
   let lastError: string | null = null;
   if (await driveReady()) {
     try {
-      const id = await uploadToDrive(await folderFor(o.kind, o.ownerKey, o.ownerLabel), name, o.mime, o.bytes, sha);
+      const id = await uploadToDrive(
+        await folderFor(o.kind, o.ownerKey, o.ownerLabel),
+        name,
+        o.mime,
+        o.bytes,
+        sha,
+      );
       return driveRef(id);
     } catch (e) {
       lastError = e instanceof Error ? e.message : String(e);
@@ -177,19 +214,27 @@ export async function storePrivate(o: StoreInput): Promise<string> {
 /* --------------------------------------------------------- read, delete */
 
 /** A stored file's bytes, wherever it is now. */
-export async function readPrivate(ref: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
+export async function readPrivate(
+  ref: string,
+): Promise<{ bytes: Uint8Array; mime: string } | null> {
   const r = readRef(ref);
   if (r.where === "drive") {
     const { drive } = await import("./drive.server");
     const res = await drive(`/drive/v3/files/${encodeURIComponent(r.fileId)}?alt=media`);
     if (!res.ok) return null;
-    return { bytes: new Uint8Array(await res.arrayBuffer()), mime: res.headers.get("content-type") ?? "application/octet-stream" };
+    return {
+      bytes: new Uint8Array(await res.arrayBuffer()),
+      mime: res.headers.get("content-type") ?? "application/octet-stream",
+    };
   }
   const db = await sb();
   const bucket = r.where === "queue" ? QUEUE_BUCKET : LEGACY_GUEST_BUCKET;
   const { data, error } = await db.storage.from(bucket).download(r.path);
   if (error || !data) return null;
-  return { bytes: new Uint8Array(await (data as Blob).arrayBuffer()), mime: (data as Blob).type || "image/jpeg" };
+  return {
+    bytes: new Uint8Array(await (data as Blob).arrayBuffer()),
+    mime: (data as Blob).type || "image/jpeg",
+  };
 }
 
 /** Deletes stored files for good (Drive: deleted, not binned; queue: copy and queue row). */
@@ -211,7 +256,11 @@ export async function removePrivate(refs: Array<string | null | undefined>): Pro
 }
 
 /** Links that show each file for `seconds` (10 minutes by default), keyed by reference. */
-export async function signPrivateLinks(refs: Array<string | null | undefined>, seconds = 600, name = "photo"): Promise<Record<string, string>> {
+export async function signPrivateLinks(
+  refs: Array<string | null | undefined>,
+  seconds = 600,
+  name = "photo",
+): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   const list = refs.filter((x): x is string => !!x);
   if (!list.length) return out;
@@ -236,7 +285,10 @@ type QueueRow = {
   ref_column: string;
   attempts: number | null;
 };
-type GuestPhotoRow = { id: string; booking_id: string; property_id: string } & Record<string, string | null>;
+type GuestPhotoRow = { id: string; booking_id: string; property_id: string } & Record<
+  string,
+  string | null
+>;
 
 export type SyncSummary = { moved: number; failed: number; waiting: number };
 
@@ -244,7 +296,11 @@ export type SyncSummary = { moved: number; failed: number; waiting: number };
 async function repoint(table: string, column: string, from: string, to: string): Promise<boolean> {
   if (!REF_COLUMNS[table]?.includes(column)) return false;
   const db = await sb();
-  const { data, error } = await db.from(table).update({ [column]: to }).eq(column, from).select("id");
+  const { data, error } = await db
+    .from(table)
+    .update({ [column]: to })
+    .eq(column, from)
+    .select("id");
   if (error) throw new Error(error.message);
   return (data ?? []).length > 0;
 }
@@ -264,7 +320,12 @@ export async function syncDriveQueue(limit = 25): Promise<SyncSummary> {
   }
   // Two minutes' grace: the record that will point at a new file is saved just after the file.
   const settled = new Date(Date.now() - 120_000).toISOString();
-  const { data: rows } = await db.from("drive_queue").select("*").lt("created_at", settled).order("created_at").limit(limit);
+  const { data: rows } = await db
+    .from("drive_queue")
+    .select("*")
+    .lt("created_at", settled)
+    .order("created_at")
+    .limit(limit);
   for (const q of (rows ?? []) as QueueRow[]) {
     try {
       const { data: blob, error } = await db.storage.from(QUEUE_BUCKET).download(q.path);
@@ -274,8 +335,15 @@ export async function syncDriveQueue(limit = 25): Promise<SyncSummary> {
         continue;
       }
       const bytes = new Uint8Array(await (blob as Blob).arrayBuffer());
-      if ((await sha256OfBytes(bytes)) !== q.sha256) throw new Error("The queued copy changed; kept for review.");
-      const id = await uploadToDrive(await folderFor(q.kind, q.owner_key, q.owner_label), q.file_name, q.mime, bytes, q.sha256);
+      if ((await sha256OfBytes(bytes)) !== q.sha256)
+        throw new Error("The queued copy changed; kept for review.");
+      const id = await uploadToDrive(
+        await folderFor(q.kind, q.owner_key, q.owner_label),
+        q.file_name,
+        q.mime,
+        bytes,
+        q.sha256,
+      );
       const kept = await repoint(q.ref_table, q.ref_column, queueRef(q.path), driveRef(id));
       if (!kept) {
         const { deleteFiles } = await import("./drive.server");
@@ -288,7 +356,11 @@ export async function syncDriveQueue(limit = 25): Promise<SyncSummary> {
       summary.failed++;
       await db
         .from("drive_queue")
-        .update({ attempts: (q.attempts ?? 0) + 1, last_error: (e instanceof Error ? e.message : String(e)).slice(0, 300), updated_at: new Date().toISOString() })
+        .update({
+          attempts: (q.attempts ?? 0) + 1,
+          last_error: (e instanceof Error ? e.message : String(e)).slice(0, 300),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", q.id);
     }
   }
@@ -316,13 +388,20 @@ async function moveLegacyGuestPhotos(limit: number): Promise<number> {
       try {
         const { data: blob } = await db.storage.from(LEGACY_GUEST_BUCKET).download(path);
         if (!blob) {
-          await db.from("guest_ids").update({ [column]: null }).eq("id", row.id);
+          await db
+            .from("guest_ids")
+            .update({ [column]: null })
+            .eq("id", row.id);
           continue;
         }
         const owner = await guestOwner(row.property_id);
         const bytes = new Uint8Array(await (blob as Blob).arrayBuffer());
         const id = await uploadToDrive(
-          await folderFor(column === "id_photo_path" ? "guest_id" : "guest_face", owner.key, owner.label),
+          await folderFor(
+            column === "id_photo_path" ? "guest_id" : "guest_face",
+            owner.key,
+            owner.label,
+          ),
           safePart(`${row.booking_id}-${column === "id_photo_path" ? "id" : "face"}.jpg`),
           "image/jpeg",
           bytes,
@@ -343,14 +422,25 @@ async function moveLegacyGuestPhotos(limit: number): Promise<number> {
 /** Which business a property belongs to, for the guest photo folder. */
 export async function guestOwner(propertyId: string): Promise<{ key: string; label: string }> {
   const db = await sb();
-  const { data } = await db.from("properties").select("host_id, hosts(business_name)").eq("id", propertyId).maybeSingle();
+  const { data } = await db
+    .from("properties")
+    .select("host_id, hosts(business_name)")
+    .eq("id", propertyId)
+    .maybeSingle();
   const hostId = (data?.host_id as string | undefined) ?? "unknown";
-  const label = ((data?.hosts as { business_name?: string } | null)?.business_name ?? "Business").slice(0, 80);
+  const label = (
+    (data?.hosts as { business_name?: string } | null)?.business_name ?? "Business"
+  ).slice(0, 80);
   return { key: hostId, label };
 }
 
 /** For Latchkey admin: how many files wait for Drive, and the latest problem. */
-export async function driveQueueStatus(): Promise<{ driveConnected: boolean; waiting: number; oldest: string | null; lastError: string | null }> {
+export async function driveQueueStatus(): Promise<{
+  driveConnected: boolean;
+  waiting: number;
+  oldest: string | null;
+  lastError: string | null;
+}> {
   const db = await sb();
   const { data, count } = await db
     .from("drive_queue")
@@ -358,5 +448,10 @@ export async function driveQueueStatus(): Promise<{ driveConnected: boolean; wai
     .order("created_at")
     .limit(1);
   const first = (data ?? [])[0] as { created_at?: string; last_error?: string | null } | undefined;
-  return { driveConnected: await driveReady(), waiting: count ?? 0, oldest: first?.created_at ?? null, lastError: first?.last_error ?? null };
+  return {
+    driveConnected: await driveReady(),
+    waiting: count ?? 0,
+    oldest: first?.created_at ?? null,
+    lastError: first?.last_error ?? null,
+  };
 }

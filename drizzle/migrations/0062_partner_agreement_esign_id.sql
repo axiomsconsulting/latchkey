@@ -219,6 +219,7 @@ alter table public.partner_pending_disputes enable row level security;
 drop policy if exists partner_agreement_versions_read on public.partner_agreement_versions;
 create policy partner_agreement_versions_read on public.partner_agreement_versions for select to anon, authenticated
   using (status in ('current', 'retired') or public.is_super_admin());
+grant select on public.partner_agreement_versions to anon, authenticated;
 drop policy if exists partner_agreement_versions_admin on public.partner_agreement_versions;
 create policy partner_agreement_versions_admin on public.partner_agreement_versions for all to authenticated
   using (public.is_super_admin()) with check (public.is_super_admin());

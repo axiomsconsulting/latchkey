@@ -24,8 +24,14 @@ export const STORE_GROUPS: Record<StoreKind, { key: string; name: string }> = {
   guest_face: { key: "guest_ids", name: "Guest ID photos (restricted)" },
   partner_id: { key: "partner_ids", name: "Commission Partner ID (restricted)" },
   partner_selfie: { key: "partner_ids", name: "Commission Partner ID (restricted)" },
-  partner_signature: { key: "partner_agreements", name: "Commission Partner agreements (restricted)" },
-  partner_agreement: { key: "partner_agreements", name: "Commission Partner agreements (restricted)" },
+  partner_signature: {
+    key: "partner_agreements",
+    name: "Commission Partner agreements (restricted)",
+  },
+  partner_agreement: {
+    key: "partner_agreements",
+    name: "Commission Partner agreements (restricted)",
+  },
 };
 
 export const ROOT_FOLDER_NAME = "Latchkey private records (restricted, do not share)";
@@ -58,7 +64,13 @@ export function readRef(ref: string): StoredRef {
 
 /** A safe Drive and storage file name part: letters, digits, dots, dashes. */
 export function safePart(s: string): string {
-  return s.replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "file";
+  return (
+    s
+      .replace(/[^\w.-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80) || "file"
+  );
 }
 
 /** The owner's folder name: their id first (stable), then a readable label. */
@@ -68,15 +80,31 @@ export function ownerFolderName(ownerKey: string, label: string): string {
 
 const enc = new TextEncoder();
 const b64url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 
 async function hmac(secret: string, message: string): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return b64url(new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(`private-file.${message}`))));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return b64url(
+    new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(`private-file.${message}`))),
+  );
 }
 
 /** A link that shows one private file until `expires` (unix seconds), and only that file. */
-export async function signPrivateLink(secret: string, ref: string, expires: number, name = "file"): Promise<string> {
+export async function signPrivateLink(
+  secret: string,
+  ref: string,
+  expires: number,
+  name = "file",
+): Promise<string> {
   const r = b64url(enc.encode(ref));
   const n = safePart(name);
   return `/api/public/private-file/${r}?e=${expires}&n=${encodeURIComponent(n)}&s=${await hmac(secret, `${r}.${expires}.${n}`)}`;
@@ -98,7 +126,9 @@ export async function verifyPrivateLink(
   for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ sig.charCodeAt(i);
   if (diff !== 0) return null;
   const pad = r.replace(/-/g, "+").replace(/_/g, "/");
-  return new TextDecoder().decode(Uint8Array.from(atob(pad + "=".repeat((4 - (pad.length % 4)) % 4)), (c) => c.charCodeAt(0)));
+  return new TextDecoder().decode(
+    Uint8Array.from(atob(pad + "=".repeat((4 - (pad.length % 4)) % 4)), (c) => c.charCodeAt(0)),
+  );
 }
 
 /** SHA-256 of bytes, as hex (Drive reports the same for an exact copy). */

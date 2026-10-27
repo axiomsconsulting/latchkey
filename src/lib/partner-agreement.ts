@@ -22,7 +22,12 @@ export function ukDate(value: string | number | Date): string {
     typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
       ? new Date(`${value}T12:00:00Z`)
       : new Date(value);
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: UK });
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: UK,
+  });
 }
 
 /** "1 November 2026, 14:05 UK time". */
@@ -33,7 +38,10 @@ export function ukDateTime(value: string | number | Date): string {
 }
 
 const ordinal = (n: number) => {
-  const s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  const s =
+    n % 100 >= 11 && n % 100 <= 13
+      ? "th"
+      : (({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th");
   return `${n}${s}`;
 };
 
@@ -71,7 +79,9 @@ const NO_BONUS =
 /** The Launch Bonus sentence (Annex B), used for both {{bonus_summary}} and {{bonus_clause_text}}. */
 export function bonusText(t: AgreementTerms): string {
   if (!bonusApplies(t)) return NO_BONUS;
-  const amount = t.bonus_tiers?.length ? tierList(t.bonus_tiers) : pounds(t.bonus_amount_pence ?? 0);
+  const amount = t.bonus_tiers?.length
+    ? tierList(t.bonus_tiers)
+    : pounds(t.bonus_amount_pence ?? 0);
   return `**${amount}** for each Referred Host who signs up on or before **${ukDate(t.bonus_end_date!)}**, pays within 60 days of signing up and completes their first paid month.`;
 }
 
@@ -95,7 +105,9 @@ export function agreementValues(a: {
     yearEnd = ukDate(new Date(Date.UTC(y + 1, m - 1, d - 1, 12)));
   }
   return {
-    "agreement.published_at": a.publishedAt ? ukDate(a.publishedAt) : "the date shown when it is published",
+    "agreement.published_at": a.publishedAt
+      ? ukDate(a.publishedAt)
+      : "the date shown when it is published",
     "agreement.version": a.version,
     "agreement.hash_short": a.bodySha256.slice(0, 12),
     bonus_summary: bonusText(t),
@@ -123,7 +135,8 @@ export function fillAgreement(template: string, values: Record<string, string>):
       part.startsWith("`")
         ? part
         : part.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key: string) => {
-            if (!(key in values)) throw new Error(`The agreement has an unknown placeholder: ${key}`);
+            if (!(key in values))
+              throw new Error(`The agreement has an unknown placeholder: ${key}`);
             return values[key]!;
           }),
     )
@@ -141,14 +154,28 @@ export async function sha256Hex(text: string): Promise<string> {
  * differ, the text would be wrong, so signing stays closed until a new
  * version is published (the problems are listed for the admin).
  */
-export function settingsMismatch(c: Pick<PartnerConfig, "holdDays" | "minPayoutPence" | "attributionWindowDays" | "bonusFirstPaymentDeadlineDays" | "payoutCadence">): string[] {
+export function settingsMismatch(
+  c: Pick<
+    PartnerConfig,
+    | "holdDays"
+    | "minPayoutPence"
+    | "attributionWindowDays"
+    | "bonusFirstPaymentDeadlineDays"
+    | "payoutCadence"
+  >,
+): string[] {
   const out: string[] = [];
   if (c.holdDays !== 45) out.push(`Hold Period is ${c.holdDays} days; the agreement says 45.`);
-  if (c.minPayoutPence !== 1000) out.push(`Minimum payout is ${pounds(c.minPayoutPence)}; the agreement says £10.`);
-  if (c.attributionWindowDays !== 60) out.push(`Attribution Window is ${c.attributionWindowDays} days; the agreement says 60.`);
+  if (c.minPayoutPence !== 1000)
+    out.push(`Minimum payout is ${pounds(c.minPayoutPence)}; the agreement says £10.`);
+  if (c.attributionWindowDays !== 60)
+    out.push(`Attribution Window is ${c.attributionWindowDays} days; the agreement says 60.`);
   if (c.bonusFirstPaymentDeadlineDays !== 60)
-    out.push(`Launch Bonus payment deadline is ${c.bonusFirstPaymentDeadlineDays} days; the agreement says 60.`);
-  if (c.payoutCadence !== "monthly") out.push("Payouts aren't monthly; the agreement says monthly.");
+    out.push(
+      `Launch Bonus payment deadline is ${c.bonusFirstPaymentDeadlineDays} days; the agreement says 60.`,
+    );
+  if (c.payoutCadence !== "monthly")
+    out.push("Payouts aren't monthly; the agreement says monthly.");
   return out;
 }
 
@@ -219,7 +246,8 @@ export function parseMarkdown(md: string): Block[] {
     }
     if (line.startsWith(">")) {
       const inner: string[] = [];
-      while (i < lines.length && lines[i]!.startsWith(">")) inner.push(lines[i++]!.replace(/^>\s?/, ""));
+      while (i < lines.length && lines[i]!.startsWith(">"))
+        inner.push(lines[i++]!.replace(/^>\s?/, ""));
       blocks.push({ type: "quote", blocks: parseMarkdown(inner.join("\n")) });
       continue;
     }
@@ -245,11 +273,7 @@ export function parseMarkdown(md: string): Block[] {
       continue;
     }
     const para: string[] = [];
-    while (
-      i < lines.length &&
-      lines[i]!.trim() &&
-      !/^(#{1,6}\s|>|\||- |-{3,}\s*$)/.test(lines[i]!)
-    )
+    while (i < lines.length && lines[i]!.trim() && !/^(#{1,6}\s|>|\||- |-{3,}\s*$)/.test(lines[i]!))
       para.push(lines[i++]!.trim());
     blocks.push({ type: "para", inlines: parseInline(para.join(" ")) });
   }
@@ -260,18 +284,28 @@ export function parseMarkdown(md: string): Block[] {
  * Splits the agreement into what is read and the signing section (the
  * website shows a real form there): the "Signing" heading up to the next rule.
  */
-export function splitSigning(blocks: Block[]): { before: Block[]; signing: Block[]; after: Block[] } {
+export function splitSigning(blocks: Block[]): {
+  before: Block[];
+  signing: Block[];
+  after: Block[];
+} {
   const start = blocks.findIndex((b) => b.type === "heading" && /^signing/i.test(b.text));
   if (start < 0) return { before: blocks, signing: [], after: [] };
   let end = blocks.findIndex((b, j) => j > start && b.type === "rule");
   if (end < 0) end = blocks.length;
-  return { before: blocks.slice(0, start), signing: blocks.slice(start, end), after: blocks.slice(end) };
+  return {
+    before: blocks.slice(0, start),
+    signing: blocks.slice(start, end),
+    after: blocks.slice(end),
+  };
 }
 
 /** The confirmation boxes, word for word from the signing section. */
 export function signingTicks(blocks: Block[]): string[] {
   const { signing } = splitSigning(blocks);
-  const list = signing.find((b): b is Extract<Block, { type: "list" }> => b.type === "list" && b.checkboxes);
+  const list = signing.find(
+    (b): b is Extract<Block, { type: "list" }> => b.type === "list" && b.checkboxes,
+  );
   return list ? list.items.map(plain) : [];
 }
 
@@ -284,7 +318,10 @@ export function contents(blocks: Block[]): Array<{ id: string; text: string }> {
 
 /** A typed full legal name: at least two words. */
 export function fullNameProblem(name: string): string | null {
-  const words = name.trim().split(/\s+/).filter((w) => w.length > 0);
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
   if (words.length < 2) return "Type your full legal name: your first name and surname at least.";
   if (name.trim().length > 200) return "That name is too long.";
   return null;

@@ -399,6 +399,9 @@ async function partnerRetention() {
     const config = await loadPartnerConfig(db);
     await purgePartnerHashes(db, config, Date.now());
     await purgePartnerIdImages(db, Date.now());
+    // A published agreement version whose date has come becomes the one in force (19.4).
+    const { switchVersions } = await import("./partner-agreement.functions");
+    await switchVersions(db);
   } catch (e) {
     console.error("Commission Partner retention skipped", e instanceof Error ? e.message : e);
   }
