@@ -109,6 +109,7 @@ export async function renderCurrent(partnerId: string | null) {
         noticeEmail: config.noticeEmail,
         operatorName: operatorName(legal),
         operatorDetails: operatorDetails(legal),
+        rateCampaigns: config.rateCampaigns,
       },
     }),
   );
@@ -154,9 +155,20 @@ export const getPartnerAgreement = createServerFn({ method: "GET" }).handler(asy
 export const partnerProgrammeOpen = createServerFn({ method: "GET" }).handler(async () => {
   try {
     const { adminDb, loadPartnerConfig } = await data();
-    return { open: (await loadPartnerConfig(await adminDb())).signupsOpen };
+    const config = await loadPartnerConfig(await adminDb());
+    const { campaignSummary, currentCampaigns } = await import("./rate-campaigns");
+    const { localDate } = await import("./commission");
+    const now = Date.now();
+    return {
+      open: config.signupsOpen,
+      // Running and scheduled Launch Bonus campaigns, for the join page (no earnings examples).
+      campaigns: currentCampaigns(config.rateCampaigns, now).map((c) => ({
+        ...campaignSummary(c),
+        running: c.startDate <= localDate(now),
+      })),
+    };
   } catch {
-    return { open: false };
+    return { open: false, campaigns: [] };
   }
 });
 

@@ -261,7 +261,7 @@ export function statementCsv(
   const pounds = (p: number) => (p / 100).toFixed(2);
   const esc = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
   const head =
-    "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Launch Bonus (£),Held (£),Held because,Clawback (£)";
+    "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Sign-up Bonus (£),Held (£),Held because,Clawback (£)";
   const body = rows.map((r) =>
     [
       esc(r.host),
@@ -325,7 +325,7 @@ export function statementCsv(
           ),
           kv(
             "Supply",
-            "Introductions of hosts to Latchkey (commission and any Launch Bonus) in the month shown",
+            "Introductions of hosts to Latchkey (commission, at any Launch Bonus rate, and any Sign-up Bonus) in the month shown",
           ),
         ]
       : [

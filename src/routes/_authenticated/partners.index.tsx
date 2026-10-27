@@ -167,7 +167,18 @@ function Account({ data: d }: { data: any }) {
                         </span>
                       ) : null}
                     </td>
-                    <td className="py-2">{(r.terms_snapshot?.rate_bps ?? 0) / 100}%</td>
+                    <td className="py-2">
+                      {pctOf(r.rate_bps ?? r.terms_snapshot?.rate_bps ?? 0)}
+                      {r.launch_bonus ? (
+                        <span className="ml-2 inline-block rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                          {copy.bonusBadge(r.rate_campaign ?? "Launch Bonus", pctOf(r.rate_bps))}
+                        </span>
+                      ) : r.rate_bps == null ? (
+                        <span className="block text-xs text-muted-foreground">
+                          {copy.rateNotFixed}
+                        </span>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -523,3 +534,5 @@ function Tile({ label, value, hint }: { label: string; value: string; hint?: str
     </div>
   );
 }
+
+const pctOf = (bps: number) => `${bps % 100 === 0 ? bps / 100 : (bps / 100).toFixed(2)}%`;

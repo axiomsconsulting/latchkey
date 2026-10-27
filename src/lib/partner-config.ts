@@ -4,13 +4,17 @@
  * Everything the code needs reads through partnerConfig(), which starts from
  * the defaults below and takes the super admin's overrides
  * (site_settings.commission_partner_programme, read on the server with the
- * service role). Rates and the Launch Bonus never come from here: they come
- * from the commission_terms row snapshotted onto each referral (6.5). The
+ * service role). The standard rate and the Sign-up Bonus never come from
+ * here: they come from the commission_terms row snapshotted onto each
+ * referral (6.5). Launch Bonus rate campaigns (7.11) do live here, and the
+ * rate they give is fixed on the referral at the host's first payment. The
  * DEFAULT_* values only seed that table and the tests.
  *
  * Values marked TODO(Dx) are open business decisions with the safe default
  * from the build prompt; values citing a clause are fixed by the agreement.
  */
+
+import { DEFAULT_CAMPAIGNS, normaliseCampaigns, type RateCampaign } from "./rate-campaigns";
 
 /** 10% (agreement 6.2). Seed and tests only. */
 export const DEFAULT_RATE_BPS = 1000;
@@ -120,6 +124,8 @@ export type PartnerConfig = {
   signupsOpen: boolean;
   /** Partner ID and selfie photos are kept for review (agreement 17.1). Off: only the details read are kept. */
   idImagesStored: boolean;
+  /** Higher-rate campaigns such as the Launch Bonus (agreement 7.11-7.13; src/lib/rate-campaigns.ts). Saved only through saveRateCampaigns. */
+  rateCampaigns: RateCampaign[];
 };
 
 export const PARTNER_DEFAULTS: PartnerConfig = {
@@ -197,6 +203,7 @@ export const PARTNER_DEFAULTS: PartnerConfig = {
   // Closed until the super admin opens it (Latchkey admin → Commission Partners → Programme decisions).
   signupsOpen: false,
   idImagesStored: true,
+  rateCampaigns: DEFAULT_CAMPAIGNS,
 };
 
 const ENUMS: Partial<Record<keyof PartnerConfig, readonly string[]>> = {
@@ -237,6 +244,8 @@ export function partnerConfig(overrides?: unknown): PartnerConfig {
     } else if (key === "launchDate") {
       if (v === null || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)))
         out.launchDate = v;
+    } else if (key === "rateCampaigns") {
+      if (Array.isArray(v)) out.rateCampaigns = normaliseCampaigns(v);
     } else if (key === "noticeEmail") {
       if (v === null || v === "") out.noticeEmail = null;
       else if (

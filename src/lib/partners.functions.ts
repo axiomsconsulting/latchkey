@@ -209,9 +209,8 @@ export const myPartnerAccount = createServerFn({ method: "GET" })
     const [{ data: referrals }, { data: lines }, { data: payouts }] = await Promise.all([
       db
         .from("referrals")
-        .select(
-          "id, host_label, status, status_detail, paid_months_used, bonus_status, bonus_ineligible_reason, sign_up_at, terms_snapshot",
-        )
+        // "*" so the rate columns (migration 0064) are read once they exist; only the fields below go to the partner.
+        .select("*")
         .eq("partner_id", partner.id)
         .order("sign_up_at", { ascending: false }),
       db
@@ -232,9 +231,21 @@ export const myPartnerAccount = createServerFn({ method: "GET" })
     return {
       setUp: true as const,
       partner,
-      referrals: ((referrals ?? []) as Array<Record<string, unknown> & { status: string }>).map(
-        (r) => ({ ...r, status: r.status === "rejected" ? "not_counted" : r.status }),
-      ),
+      referrals: ((referrals ?? []) as any[]).map((r) => ({
+        id: r.id,
+        host_label: r.host_label,
+        status: r.status === "rejected" ? "not_counted" : r.status,
+        status_detail: r.status_detail,
+        paid_months_used: r.paid_months_used,
+        bonus_status: r.bonus_status,
+        bonus_ineligible_reason: r.bonus_ineligible_reason,
+        sign_up_at: r.sign_up_at,
+        terms_snapshot: r.terms_snapshot,
+        // The rate fixed at the host's first payment (null until then) and whether a campaign set it.
+        rate_bps: (r.commission_rate_bps as number | null | undefined) ?? null,
+        launch_bonus: r.launch_bonus === true,
+        rate_campaign: (r.rate_campaign as string | null | undefined) ?? null,
+      })),
       balance: {
         held: sum((l) => (l.state === "held" || l.state === "on_hold") && l.amount_pence > 0),
         payable: sum((l) => l.state === "payable"),
@@ -951,10 +962,16 @@ export const saveProgrammeSettings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: input, context }) => {
     const { db, actor, check, logPartnerEvent } = await admin(context);
-    const clean = partnerConfig(input.settings);
+    // Rate campaigns are only changed through saveRateCampaigns (with its notice check): keep what's stored.
+    const { rateCampaigns: _ignored, ...rest } = input.settings;
+    const stored = await storedProgramme(db);
+    const clean = partnerConfig(
+      "rateCampaigns" in stored ? { ...rest, rateCampaigns: stored["rateCampaigns"] } : rest,
+    );
     const changed = Object.fromEntries(
       Object.entries(clean).filter(
         ([k, v]) =>
+          (k === "rateCampaigns" && "rateCampaigns" in stored) ||
           JSON.stringify(v) !== JSON.stringify((PARTNER_DEFAULTS as Record<string, unknown>)[k]),
       ),
     );
@@ -963,4 +980,65 @@ export const saveProgrammeSettings = createServerFn({ method: "POST" })
     );
     await logPartnerEvent(db, { actor, action: "programme_settings_saved", details: changed });
     return { settings: clean };
+  });
+
+async function storedProgramme(db: import("./partner-data.server").AnyDb) {
+  const { data } = await db
+    .from("site_settings")
+    .select("commission_partner_programme")
+    .eq("id", 1)
+    .maybeSingle();
+  const v = data?.commission_partner_programme;
+  return (v && typeof v === "object" && !Array.isArray(v) ? v : {}) as Record<string, unknown>;
+}
+
+/**
+ * The Launch Bonus and other rate campaigns (agreement 7.11-7.13). Adding,
+ * raising or extending is always allowed; withdrawing, lowering, starting
+ * later or ending sooner needs 30 days (campaignChangeProblem). Hosts whose
+ * rate is already fixed are never affected.
+ */
+export const saveRateCampaigns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        campaigns: z
+          .array(
+            z.object({
+              id: z.string().trim().min(1).max(40),
+              label: z.string().trim().min(1).max(60),
+              rateBps: z.number().int().min(1).max(10_000),
+              startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+              endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            }),
+          )
+          .max(20),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data: input, context }) => {
+    const { db, actor, check, logPartnerEvent } = await admin(context);
+    const { campaignChangeProblem, normaliseCampaigns } = await import("./rate-campaigns");
+    const next = normaliseCampaigns(input.campaigns);
+    if (next.length !== input.campaigns.length)
+      throw new Error(
+        "Each campaign needs its own id, a name, a rate above 0% and an end date on or after its start date.",
+      );
+    const stored = await storedProgramme(db);
+    const prev = partnerConfig(stored).rateCampaigns;
+    const problem = campaignChangeProblem(prev, next, Date.now());
+    if (problem) throw new Error(problem);
+    check(
+      await db
+        .from("site_settings")
+        .update({ commission_partner_programme: { ...stored, rateCampaigns: next } })
+        .eq("id", 1),
+    );
+    await logPartnerEvent(db, {
+      actor,
+      action: "rate_campaigns_saved",
+      details: { before: prev, after: next },
+    });
+    return { campaigns: next };
   });

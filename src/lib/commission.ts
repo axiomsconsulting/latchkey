@@ -439,6 +439,8 @@ export type ReferralState = {
   bonus_status?: "not_eligible" | "pending" | "earned" | "withheld" | "reversed" | "paid";
   /** The Qualifying Payment has since been fully refunded or charged back. */
   qp_reversed?: boolean;
+  /** The rate fixed at the host's first payment (agreement 7.11-7.13, src/lib/rate-campaigns.ts); null before it. */
+  commission_rate_bps?: number | null;
 };
 
 export type QualifyingPayment = {
@@ -525,6 +527,11 @@ export function postStopGap(
 
 /* ---------------------------------------------------------- commission */
 
+/** The rate for a commission line: the rate fixed at the first payment, or a higher standard rate if terms improved later. */
+export function effectiveRate(locked: number | null | undefined, standardBps: number): number {
+  return locked == null ? standardBps : Math.max(locked, standardBps);
+}
+
 export type LedgerState = "held" | "on_hold" | "payable" | "paid" | "void";
 
 export type CommissionLine = {
@@ -602,6 +609,7 @@ export function commissionFor(input: {
   } else {
     return { line: null, reason: "annual_after_monthly" };
   }
+  const rate = effectiveRate(referral.commission_rate_bps, snapshot.rate_bps);
   const holdReason = !input.settled
     ? "payment_processing"
     : referral.status === "pending_review"
@@ -616,8 +624,8 @@ export function commissionFor(input: {
       paid_month_to: used + months,
       months_covered: months,
       base_pence: base,
-      rate_bps: snapshot.rate_bps,
-      amount_pence: pct(base, snapshot.rate_bps),
+      rate_bps: rate,
+      amount_pence: pct(base, rate),
       state: holdReason ? "on_hold" : "held",
       payable_after: iso(input.paidAtMs + config.holdDays * DAY),
       period_start: iso(period.start),

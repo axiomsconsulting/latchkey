@@ -4909,13 +4909,21 @@ export const partnerCopy = branded({
   joinIntro:
     "Know hosts who run guest houses, B&Bs, serviced apartments or short lets? Introduce them to Latchkey and earn commission on what they pay.",
   joinPoints: [
-    "10% of what each host you refer pays for Latchkey, for their first 12 paid months.",
+    "10% as standard of what each host you refer pays for Latchkey (excluding VAT), for their first 12 paid months.",
     "Paid monthly through Stripe once your balance is £10 or more.",
     "No limit on how many hosts you refer.",
     "You're an independent business, not an employee or agent of Latchkey.",
   ],
   joinTermsNote:
-    "The Commission Partner agreement sets out the full terms, including when commission is held, refunds and any Launch Bonus.",
+    "The Commission Partner agreement sets out the full terms, including when commission is held, refunds and the Launch Bonus.",
+  bonusLine: (label: string, rate: string, until: string) =>
+    `${label}: ${rate} for the first 12 paid months on every host who starts paying by 23:59 UK time on ${until}. Standard rate 10% after that.`,
+  bonusUpcoming: (label: string, rate: string, from: string, until: string) =>
+    `${label}: ${rate} for the first 12 paid months on every host who starts paying between ${from} and 23:59 UK time on ${until}.`,
+  bonusNote:
+    "The rate is fixed for each host when they make their first payment after the free trial, and it doesn't change later. Every referral is reviewed, and all the usual rules apply.",
+  bonusBadge: (label: string, rate: string) => `${label} ${rate}`,
+  rateNotFixed: "Fixed at their first payment",
   joinSignUp: "Create an account to apply",
   joinSignIn: "I already have an account",
   formTitle: "Your details",
@@ -4962,7 +4970,7 @@ export const partnerCopy = branded({
   hostsEmpty:
     "No hosts yet. Share your link: a host who signs up through it within 60 days is yours.",
   monthsUsed: (n: number) => `${n} of 12 paid months`,
-  bonus: "Launch Bonus",
+  bonus: "Sign-up Bonus",
   payoutsList: "Payout history",
   testMode: "Test mode: no real money moves.",
   notSetUp: "The Commission Partner programme isn't open yet.",

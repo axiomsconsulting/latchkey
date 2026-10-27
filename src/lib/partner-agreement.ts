@@ -6,6 +6,7 @@
  * agreement page and the signed PDF. The text itself lives in
  * partner_agreement_versions; nothing here changes its wording.
  */
+import { campaignsText, currentCampaigns, type RateCampaign } from "./rate-campaigns";
 import type { BonusTier } from "./commission";
 import type { PartnerConfig } from "./partner-config";
 
@@ -73,12 +74,14 @@ function tierList(tiers: BonusTier[]): string {
     .join("; ");
 }
 
-const NO_BONUS =
-  "**No Launch Bonus currently applies.** If OMS introduces one, it will tell you and show it here.";
-
-/** The Launch Bonus sentence (Annex B), used for both {{bonus_summary}} and {{bonus_clause_text}}. */
-export function bonusText(t: AgreementTerms): string {
-  if (!bonusApplies(t)) return NO_BONUS;
+/**
+ * The one-off bonus sentence (Annex B), used for both {{bonus_summary}} and
+ * {{bonus_clause_text}}. Versions up to 1.1 called it the Launch Bonus; from
+ * 1.2 it is the Sign-up Bonus, and "Launch Bonus" is the higher rate (7.11).
+ */
+export function bonusText(t: AgreementTerms, name = "Launch Bonus"): string {
+  if (!bonusApplies(t))
+    return `**No ${name} currently applies.** If OMS introduces one, it will tell you and show it here.`;
   const amount = t.bonus_tiers?.length
     ? tierList(t.bonus_tiers)
     : pounds(t.bonus_amount_pence ?? 0);
@@ -88,6 +91,9 @@ export function bonusText(t: AgreementTerms): string {
 export type AgreementSettings = {
   launchDate: string | null;
   noticeEmail: string | null;
+  /** Rate campaigns (Launch Bonus, 7.11) and the moment the text is shown; none when left out. */
+  rateCampaigns?: RateCampaign[];
+  now?: number;
   /** Who runs Latchkey, from Site settings → Legal details (operatorName/operatorDetails in legal.ts); null until filled in. */
   operatorName?: string | null;
   operatorDetails?: string | null;
@@ -106,6 +112,10 @@ export function agreementValues(a: {
   settings: AgreementSettings;
 }): Record<string, string> {
   const t = a.terms;
+  const bonusName = Number(a.version) >= 1.2 ? "Sign-up Bonus" : "Launch Bonus";
+  const campaigns = a.settings.rateCampaigns ?? [];
+  const now = a.settings.now ?? Date.now();
+  const live = currentCampaigns(campaigns, now);
   const launch = a.settings.launchDate;
   let yearEnd = "to be confirmed";
   if (launch && /^\d{4}-\d{2}-\d{2}$/.test(launch)) {
@@ -118,8 +128,12 @@ export function agreementValues(a: {
       : "the date shown when it is published",
     "agreement.version": a.version,
     "agreement.hash_short": a.bodySha256.slice(0, 12),
-    bonus_summary: bonusText(t),
-    bonus_clause_text: bonusText(t),
+    bonus_summary: bonusText(t, bonusName),
+    bonus_clause_text: bonusText(t, bonusName),
+    "campaigns.list": campaignsText(campaigns, now),
+    "campaigns.summary": live.length
+      ? `${campaignsText(campaigns, now)}, for that host's first 12 paid months (clause 7.11). Standard rate 10% otherwise.`
+      : "no Launch Bonus campaign is running or scheduled at the moment; the standard 10% applies.",
     "terms.bonus_amount": t.bonus_amount_pence !== null ? pounds(t.bonus_amount_pence) : "None",
     "terms.bonus_tiers": t.bonus_tiers?.length ? tierList(t.bonus_tiers) : "None",
     "terms.bonus_end_date": t.bonus_end_date ? ukDate(t.bonus_end_date) : "None",
