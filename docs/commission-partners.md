@@ -1,5 +1,7 @@
 # Commission Partner payouts: status, set-up and test checklist
 
+> Agreement **v1.0** (docs/legal/partner-agreement-v1.0.md) is now the contract the code follows. The sections below from "What's built" were written for draft v0.5 and still describe the engine; "Agreement v1.0 on the website" further down covers signing, identity checks, activation, the fixes and the clause map.
+
 Built from Dev's prompt (`claude_code_prompt_stripe_global_payouts.md`, agreement draft v0.5), 26 Oct 2026. Stripe **test mode only**. Nothing here moves real money unless `PARTNER_PAYOUTS_ALLOW_LIVE="true"` is set, and even then live Express accounts stay blocked until `stripePlatformProfileConfirmed` (D1) is switched on.
 
 ## What's built
@@ -112,3 +114,77 @@ Latchkey admin → Commission Partners shows the Stripe mode at the top (Test / 
 2. Lovable Cloud → Secrets: a live key (`STRIPE_LIVE_API_KEY` or `STRIPE_SECRET_KEY`) and `PARTNER_PAYOUTS_ALLOW_LIVE` = `true`.
 3. Latchkey admin → Commission Partners → Programme decisions: tick "Stripe confirmed the platform profile (D1)".
 4. Partners who set up payouts in test have a red "Stripe account from test mode" badge: type a reason and press **Reset Stripe account**. They then set up payouts again on their partner page. The test account stays in Stripe's test data.
+
+## Agreement v1.0 on the website (migration 0062)
+
+### New tables
+| Table | What | Who can read |
+|---|---|---|
+| `partner_agreement_versions` | Each version's exact Markdown and its SHA-256; v1.0 seeded from the file. Published rows can't change (trigger); one `current`; a version that reduces terms needs `notice_sent_at` + 30 days. | Anyone (current and retired); super admins (drafts) |
+| `partner_agreement_acceptances` | Clause 4.3 evidence: version, both hashes, terms row, typed name, ticks with their labels, time, raw IP, user agent, capacity, company details; refs to the signature PNG and signed PDF (Drive), `pdf_sha256`, `emailed_at`, `oms_confirmed_at/by`. Add-only. | The partner who signed; super admins |
+| `partner_id_checks` | One row per attempt: status, details read (last 4 only), name match, flags, photo refs, `images_delete_after`, review, `retain_until`. | Super admins |
+| `partner_id_access_log` | Every view of ID photos, with the reason. | Super admins |
+| `drive_folders`, `drive_queue` | Drive folder ids; files waiting for Drive. | Server only |
+| `partner_pending_disputes` | Disputes that arrived before their payment (10.4). | Super admins |
+
+New columns: `partners.postal_address`, `self_billing_opt_out`, `stop_source`, `set_off_done_at`. Ledger kind `set_off`.
+
+### Settings (Latchkey admin → Commission Partners → Programme decisions)
+- **Join page takes applications** (`signupsOpen`, default off: "coming soon"; super admins preview at `/partners/join?preview=1`). This replaces the `PARTNER_SIGNUPS_OPEN` env flag Dev proposed, so it can be switched without a deploy.
+- **Notice email** (`noticeEmail`): required before signing opens. Not hard-coded.
+- **Launch date** (`launchDate`): "to be confirmed" until set.
+- **Keep partner ID photos** (`idImagesStored`, default on).
+- The "Agreement and signing" card says whether signing is open and why not (settings that differ from the published text, a missing notice email, no terms in force).
+- Google Drive is the only store for ID photos and signed agreements (no Supabase copy), so Dev's `PARTNER_ID_DRIVE_UPLOAD` / `partnerIdDriveOnly` flags aren't needed.
+
+### Partner journey
+1. `/partners/join`: apply (when open).
+2. `/partners/agreement`: read to the end, tick the 7 boxes, type full legal name, draw signature (company fields if for a company), sign. Email with a link to the signed copy.
+3. `/partners/verify`: consent (wording from the prompt), ID photo, selfie. 2 automatic attempts, then manual review.
+4. OMS: approve the ID check (Identity checks to review), then **Approve, confirm signature and activate** on the partner. The code works from then.
+5. `/partners`: steps, signed copy (10-minute link), statement details (address, VAT number, self-billing opt-out), payouts, Stop.
+
+### Jobs
+- Daily privacy clean-up (`retention`): partner IP/device hashes after 180 days; partner ID photos 30 days after the decision; ID checks after `retain_until` (6 years after the stop); Drive queue sync; switches in a newly in-force agreement version. **It has never run on the live site** (see "Scheduler" below).
+- `commission_close` is still off. It must be switched on (Latchkey admin → Routines) before the first payout: bonuses, hold release and payout drafting depend on it.
+
+### Scheduler
+`job_settings` shows `calendar_sync` never ran and there is no row for `retention`: nothing calls `/api/public/cron/latchkey`. Ask Lovable to schedule POSTs with the `LOVABLE_CRON_SECRET` bearer: `{"task":"sync"}` every 30 minutes, `{"task":"retention"}` daily, `{"task":"commission_close"}` daily once switched on. Until then, Latchkey admin → Routines → Run now.
+
+### Clause map
+| Clause | Where |
+|---|---|
+| 2.2, 8.2(b) calendar days, UK time | `withinDaysEnd`, `bonusEligibility` (commission.ts) |
+| 3.4 identity check | partner-id.ts, partner-id.functions.ts, /partners/verify |
+| 3.6 activation | partner-activation.ts; approvePartner; attachReferral, recordReferralClick |
+| 4.1–4.4 e-signature and copy | partner-agreement.functions.ts, partner-pdf.server.ts, /partners/agreement |
+| 6.2 codes at sign-up | `lateCodeAllowed` (before set-up saves its first property) |
+| 7.3(c), 7.6 prorations | `paidAfterTrial` (commission.ts) |
+| 8.2(f), 20.4(a) breach and bonus | `bonusEligibility`, `breachVoidedBonuses`, `voidBreachBonuses` |
+| 10.3 partial QP refund | `applyClawback` with `bonusPartialRefund: "full"` |
+| 10.4 disputes before payment | partner-webhook.ts `savePendingDispute` / `takePendingDispute` |
+| 10.5, 10.6 clawback and set-off | negative payable lines in `planPayouts`; `applySetOff` |
+| 12.1, 12.7, 13.1 statements | `statementCsv`, `partnerStatement` |
+| 12.4(b) Stripe readiness | `canReceiveTransfers` |
+| 17.1 retention | `purgePartnerHashes`, `purgePartnerIdImages` in the daily clean-up |
+| 19.1, 19.4 versions | `publishAgreementVersion`, `switchVersions`, `activationMissing` "new_version" |
+| 20.1, 21.2 stopping | `stopBeingPartner`; admin Stop Date in `setPartnerStatus` |
+| 20.4(b) payouts after breach | `breachSetOffPending` in `planPayouts` and `sendPayout` |
+
+### Changes to the agreement text (by the owner's instruction, before anyone signed)
+- 4.4: "emails you a link to a PDF copy" (Lovable's email can't attach files) and "keeps that copy available to download in your Account".
+- 17.1 table: signed PDF and drawn signature, and ID images, in restricted Google Drive folders (the queue described).
+- 17.2: "OMS asks the service not to keep your images after the check, and OMS does not use your images to train AI models" (we can't promise what the provider does).
+- 17.3: Google named for Drive storage of these files.
+- Annex B explanation: "[the amount]" and "[the Bonus End Date]" instead of live placeholders.
+
+### Open decisions
+1. US and Canadian partners on full-dashboard accounts (Stripe may refuse cross-border transfers): waitlist or not.
+2. Launch Bonus amount, tiers, Bonus End Date: still none (a new `commission_terms` row).
+3. Launch date and notice email: set before opening sign-ups.
+4. Host price wording ("£1 for your first month" in the launch offer copy, `copy.ts` offer section). Not in any partner copy, the agreement or partner emails.
+5. Switching on `commission_close`, and scheduling the routines.
+6. Self-billing and VAT wording on statements (placeholders for the accountant).
+7. Whether the visitor-profile statistics and the `lk_ref`/`lk_dev` cookies need consent under PECR or fit the UK statistics exemption: for the solicitor.
+8. Site settings → Legal is incomplete on the live site (company name "OMSEstates", no company number, address or ICO number): fill it in; the privacy policy and statements read it.
+

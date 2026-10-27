@@ -32,6 +32,20 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.83.0",
+    date: "2026-10-27",
+    title: "Private records in Google Drive, and the Commission Partner agreement online",
+    items: [
+      { kind: "improved", area: "Security", text: "Kept copies of guests' ID and face photos are now stored in a restricted Google Drive folder for your business, never shared, instead of Latchkey's own file storage. You still see them only through links that last 10 minutes, and they're deleted (not binned) on the day your chosen keep period ends. If Google Drive is briefly unreachable, a photo waits in Latchkey's private storage and moves across, checked, as soon as it's back. The text of each check-in record stays in Latchkey for your records." },
+      { kind: "improved", area: "Website", text: "The privacy policy now says exactly what's collected: visitor profiles for website statistics (with the switch to turn them off), the cookies we set, Google Drive for private files, and a new section for Commission Partners." },
+      { kind: "new", area: "Settings", admin: true, text: "Commission Partner agreement v1.0 on the website (/partners/agreement): the full text with Annex B filled in from the terms in force, contents, a PDF download, and signing that opens only after reading to the end. Signing records the version and both fingerprints, time, typed name, drawn signature, ticks, IP address and browser; makes a signed PDF with a signing certificate; keeps both in Google Drive; and emails the partner a link. New versions are published in Latchkey admin; partners re-accept before their code makes new referrals." },
+      { kind: "new", area: "Settings", admin: true, text: "Commission Partner identity check (/partners/verify): consent, a photo of a passport, photocard driving licence or ID card and a selfie, read by the same ID reader as check-in. Two automatic attempts, then a person. Latchkey admin reviews checks, sees photos only through 10-minute links with a logged reason, and approves or rejects; photos are deleted 30 days after the decision." },
+      { kind: "new", area: "Settings", admin: true, text: "A partner's code works only once they've signed, their identity is approved and OMS has confirmed (\"Approve, confirm signature and activate\"). Partners can stop themselves; OMS can set a later Stop Date or end for breach, which holds payouts until \"Apply set-off and release\". The join page shows \"coming soon\" until Programme decisions → \"Join page takes applications\" is on; signing needs the notice email set." },
+      { kind: "fixed", area: "Settings", admin: true, text: "Commission rules now match agreement v1.0: no Launch Bonus after a breach stop before the first paid month ends; the 60-day bonus deadline counts calendar days, UK time; payouts need Stripe to allow transfers and payouts with nothing outstanding; disputes that arrive before their payment are applied; statements show holds and why, set-offs, the payable balance and self-billing details; referral codes can be added only before set-up saves the first property." },
+      { kind: "fixed", area: "Security", admin: true, text: "The daily privacy clean-up now deletes Commission Partner IP and device fingerprints after 180 days and partner ID photos 30 days after the decision, even while the month close is off, and moves any private files waiting for Google Drive." },
+    ],
+  },
+  {
     version: "0.82.0",
     date: "2026-10-26",
     title: "Commission Partners: test or live at a glance, and Stripe account reset",

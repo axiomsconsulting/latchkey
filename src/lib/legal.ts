@@ -30,7 +30,7 @@ export const DEFAULT_LEGAL: LegalDetails = {
 };
 
 /** When the wording of the Terms and Privacy policy last changed (bump with any change to src/content/legal.ts). */
-export const LEGAL_UPDATED = "2026-10-24";
+export const LEGAL_UPDATED = "2026-10-27";
 
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u0009\u000b-\u001f<>]/g, "").trim().slice(0, max) : "");
 const email = (v: unknown) => {

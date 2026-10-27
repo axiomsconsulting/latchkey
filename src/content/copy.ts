@@ -4307,6 +4307,7 @@ export const partnerCopy = branded({
   readAgreement: "Read the Commission Partner agreement",
   joinSteps: "How joining works: apply, read and sign the agreement online, verify your identity with a photo ID and a selfie, then we check and activate your account.",
   agreementPdf: "Download PDF",
+  agreementUnavailable: "The agreement isn't available just now. Please try again in a few minutes.",
   agreementFingerprint: (version: string, hash: string) => `Version ${version} · text fingerprint ${hash}`,
   agreementContents: "Contents",
   agreementEnd: "End of the agreement. The signing section follows.",

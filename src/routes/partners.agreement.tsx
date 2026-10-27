@@ -38,7 +38,7 @@ export const Route = createFileRoute("/partners/agreement")({
 
 function AgreementPage() {
   const load = useServerFn(getPartnerAgreement);
-  const q = useQuery({ queryKey: ["partner-agreement"], queryFn: () => load() });
+  const q = useQuery({ queryKey: ["partner-agreement"], queryFn: () => load(), retry: 1 });
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => {
     void supabase.auth
@@ -79,6 +79,7 @@ function AgreementPage() {
       <main className="mx-auto max-w-3xl space-y-6 px-4 pb-32 pt-4 sm:px-5 md:pb-16">
         {q.isLoading ? <Loader2 className="size-5 animate-spin" /> : null}
         {d && !d.ready ? <p className="card-soft p-5">{copy.notSetUp}</p> : null}
+        {q.error ? <p className="card-soft p-5">{copy.agreementUnavailable}</p> : null}
         {d?.ready ? (
           <>
             <div className="flex flex-wrap items-center gap-3">
