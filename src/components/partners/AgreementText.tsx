@@ -12,7 +12,7 @@ export function Inlines({ items }: { items: Inline[] }) {
         ) : i.italic ? (
           <em key={n}>{i.text}</em>
         ) : i.code ? (
-          <code key={n} className="rounded bg-muted px-1 text-[0.9em]">
+          <code key={n} className="rounded bg-muted px-1 text-[0.9em] [overflow-wrap:anywhere]">
             {i.text}
           </code>
         ) : (
