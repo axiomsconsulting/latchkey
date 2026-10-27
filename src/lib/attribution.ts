@@ -6,6 +6,8 @@
  * guarded storage (private windows and blocked storage just skip it).
  */
 
+import { hasConsent as consented } from "./consent";
+
 export const UTM_KEYS = [
   "utm_source",
   "utm_medium",
@@ -99,6 +101,19 @@ function read(): Attribution | null {
   }
 }
 
+/** This visit's campaign and partner link, held in memory until the visitor accepts (src/lib/consent.ts). */
+let pending: { search: URLSearchParams; path: string } | null = null;
+
+function reportClick(path: string) {
+  return (code: string, device: string | null) => {
+    void import("@/lib/partner-referrals.functions")
+      .then(({ recordReferralClick }) =>
+        recordReferralClick({ data: { code, path: path.slice(0, 200), deviceId: device } }),
+      )
+      .catch(() => undefined);
+  };
+}
+
 /** Call once per page load (the root does), before anything redirects. */
 export function captureAttribution(
   search: Record<string, unknown> | URLSearchParams = typeof window !== "undefined"
@@ -106,23 +121,46 @@ export function captureAttribution(
     : {},
 ): Attribution | null {
   if (typeof window === "undefined") return null;
+  if (!consented()) {
+    // Nothing is stored on the device yet: remember it for this page only.
+    const params =
+      search instanceof URLSearchParams
+        ? new URLSearchParams(search)
+        : new URLSearchParams(
+            Object.entries(search).filter(([, v]) => typeof v === "string") as [string, string][],
+          );
+    if ([...params.keys()].some((k) => k === "ref" || k.startsWith("utm_")))
+      pending = { search: params, path: window.location.pathname };
+    return null;
+  }
   const next = mergeAttribution(read(), attributionFrom(search, window.location.pathname));
   // A Commission Partner's link: kept in a cookie for the window and reported once (server checks the code).
-  captureReferral(search, (code, device) => {
-    void import("@/lib/partner-referrals.functions")
-      .then(({ recordReferralClick }) =>
-        recordReferralClick({
-          data: { code, path: window.location.pathname.slice(0, 200), deviceId: device },
-        }),
-      )
-      .catch(() => undefined);
-  });
+  captureReferral(search, reportClick(window.location.pathname));
   try {
     if (next) window.sessionStorage.setItem(KEY, JSON.stringify(next));
   } catch {
     // Storage blocked: attribution just isn't kept.
   }
   return next;
+}
+
+/** On "Accept": keep what this visit arrived with, as if it had been accepted on landing. */
+export function captureAfterConsent() {
+  if (typeof window === "undefined" || !pending) return;
+  const { search, path } = pending;
+  pending = null;
+  const next = mergeAttribution(read(), attributionFrom(search, path));
+  try {
+    if (next) window.sessionStorage.setItem(KEY, JSON.stringify(next));
+  } catch {
+    // Storage blocked.
+  }
+  captureReferral(search, reportClick(path));
+}
+
+/** A partner's code from this visit's link that isn't stored (no consent): set-up shows it to confirm. */
+export function unconfirmedReferralCode(): string | null {
+  return pending ? cleanRefCode(pending.search.get("ref")) : null;
 }
 
 let capturedOnce = false;
@@ -139,7 +177,7 @@ export function captureOnce() {
  * of its own (a post's tags always win).
  */
 export function defaultCampaign(campaign: string) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !consented()) return;
   const now = read();
   if (now && UTM_KEYS.some((k) => now[k])) return;
   try {
@@ -165,6 +203,9 @@ export function getAttribution(): Attribution {
 
 /** The session's utm_* only, for links and search params. */
 export function sessionUtm(): Utm {
+  // Without consent nothing is stored, but this page's own tags still carry on in links.
+  if (typeof window !== "undefined" && !read() && pending)
+    return pickUtm(Object.fromEntries(pending.search) as Record<string, unknown>);
   return pickUtm(getAttribution() as Record<string, unknown>);
 }
 
@@ -180,9 +221,9 @@ export function withAttribution(url: string): string {
  * back in a new tab still signs up through it. The first valid code wins: a
  * later link doesn't take over an unexpired one (agreement 8.2). lk_dev is a
  * random device id (no fingerprinting) used only for fraud checks. Neither is
- * set when the visitor has asked not to be tracked (GPC, Do Not Track or
- * ?notrack=1); they can still type the code at set-up.
- * TODO(legal): PECR consent for the referral cookie.
+ * set until the visitor accepts on the cookie banner (PECR), and never with
+ * GPC, Do Not Track or ?notrack=1; without them the code from the link is
+ * shown at set-up for the host to confirm, or they can type it.
  */
 export const REF_COOKIE = "lk_ref";
 export const DEVICE_COOKIE = "lk_dev";
@@ -238,15 +279,7 @@ export function nextRefCookie(
 }
 
 function noTracking(): boolean {
-  const flag = new URLSearchParams(window.location.search).get("notrack");
-  let stored: string | null = null;
-  try {
-    stored = window.localStorage.getItem("lk_no_track");
-  } catch {
-    // Storage blocked.
-  }
-  const n = navigator as Navigator & { globalPrivacyControl?: boolean };
-  return flag === "1" || stored === "1" || n.globalPrivacyControl === true || n.doNotTrack === "1";
+  return !consented();
 }
 
 /** This browser's random device id for fraud checks (made once, kept for the window). */

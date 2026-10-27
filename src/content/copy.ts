@@ -4727,16 +4727,27 @@ export const funnelCopy = branded({
 /** /privacy: the statistics switch inside the Privacy policy (the policy's wording is in src/content/legal.ts). */
 export const privacyPageCopy = branded({
   intro:
-    "How Latchkey handles personal data for website visitors, hosts and their guests, and how to switch off website statistics.",
-  switchTitle: "Counting this browser",
-  switchLabel: "Count my visits",
+    "How Latchkey handles personal data for website visitors, hosts and their guests, and how to change your cookie choice.",
+  switchTitle: "Your cookie choice",
+  switchLabel: "Allow statistics and referral cookies",
   checking: "Checking…",
-  onNow: "Your visits are counted, without your IP address or exact location.",
-  offNow: "Your visits aren't counted in this browser.",
+  onNow:
+    "You've accepted: your visits are counted (without your IP address or exact location) and a partner's link is remembered.",
+  offNow: "Not accepted: nothing optional is stored and your visits aren't counted.",
   browserSignal:
     "Your browser asks sites not to track it (Global Privacy Control or Do Not Track), so we never count it.",
   switchHint:
-    "This browser remembers your choice. You can also add ?notrack=1 to any of our links.",
+    "This browser remembers your choice for up to 12 months. You can also add ?notrack=1 to any of our links.",
+});
+
+/** The cookie banner (CookieBanner, src/lib/consent.ts) on our own site and the dashboard. */
+export const cookieCopy = branded({
+  label: "Cookie choice",
+  title: "Cookies",
+  body: "We store only what's needed to sign you in and remember your settings. If you accept, we'll also count your visits to improve Latchkey and remember a Commission Partner's link for 60 days. No advertising or third-party trackers.",
+  accept: "Accept",
+  reject: "Reject",
+  more: "Privacy policy",
 });
 
 /** /terms and /privacy page frame, footer links and the super admin's legal details form. */
@@ -4746,22 +4757,23 @@ export const legalPageCopy = branded({
   legalNav: "Legal",
   terms: "Terms of service",
   privacy: "Privacy policy",
-  statistics: "Website statistics",
+  statistics: "Cookie choice",
   home: "Home",
   agree: "By continuing you agree to the",
   and: "and",
   adminTitle: "Legal details",
   adminBody:
-    "Who runs Latchkey, for the Terms of service and Privacy policy. The wording itself is in the code (src/content/legal.ts); have it checked by a solicitor before launch.",
+    "Who runs Latchkey. The Terms of service, the Privacy policy and the Commission Partner agreement all name the operator from here, and the agreement updates every partner's copy when these change (its clause 1.5). For a person trading on their own, leave the company number empty and give a business address. The Commission Partner agreement can't be signed until the legal name and address are filled in.",
   missing: (fields: string) => `Still missing on the published pages: ${fields}.`,
   notReady:
     "Legal details can be saved once the latest database update (0054) is applied. Until then the pages use the brand name.",
   saved: "Legal details saved.",
   view: "View",
   fields: {
-    companyName: "Company name",
-    companyNumber: "Company number",
-    registeredAddress: "Registered address",
+    companyName: "Legal name (your own name, or the company's)",
+    tradingName: "Trading name (optional)",
+    companyNumber: "Company number (companies only)",
+    registeredAddress: "Address (a company's registered office)",
     contactEmail: "Contact email",
     privacyEmail: "Privacy email (optional)",
     icoNumber: "ICO registration number",

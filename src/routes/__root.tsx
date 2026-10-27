@@ -14,6 +14,7 @@ import { captureAttribution, captureOnce } from "@/lib/attribution";
 import appCss from "../styles.css?url";
 import { Toaster } from "../components/ui/sonner";
 import { VisitTracker } from "../components/VisitTracker";
+import { CookieBanner } from "../components/CookieBanner";
 import { PwaSetup } from "../components/PwaSetup";
 import { AuthSession } from "../components/AuthSession";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -171,6 +172,7 @@ function RootComponent() {
       <Outlet />
       <Toaster position="top-center" richColors />
       <VisitTracker />
+      <CookieBanner />
       <PwaSetup />
       <AuthSession />
     </QueryClientProvider>

@@ -244,6 +244,7 @@ export const saveLegalSettings = createServerFn({ method: "POST" })
     z
       .object({
         companyName: z.string().max(120),
+        tradingName: z.string().max(120).default(""),
         companyNumber: z.string().max(40),
         registeredAddress: z.string().max(400),
         contactEmail: z.string().max(200),

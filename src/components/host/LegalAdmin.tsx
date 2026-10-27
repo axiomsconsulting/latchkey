@@ -15,6 +15,7 @@ import { getLegalSettings, saveLegalSettings } from "@/lib/site.functions";
 
 const FIELDS: Array<keyof LegalDetails> = [
   "companyName",
+  "tradingName",
   "companyNumber",
   "registeredAddress",
   "contactEmail",

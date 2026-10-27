@@ -59,7 +59,8 @@ Written for Dev (the AI agent that reviews this repo and writes build prompts fo
   - `stripe_events` is empty, so no partner webhook events have been received.
   - `stripePlatformProfileConfirmed` (D1) is already ticked.
 - **Pricing.** The pricing studio model isn't published, so the old `platform_pricing` price applies. The launch offer (£1 first month) runs until 31 December 2026.
-- **Legal settings are incomplete.** Company name "OMSEstates", with no company number, registered address or ICO number.
+- **Legal settings are deliberately incomplete.** Swapnil runs Latchkey in their own name for now; Omnispace Estates Ltd is **not** the operator and must not be written into any text. Swapnil fills in Latchkey admin → Site settings → Legal details when ready, and moves the business to a company later (agreement 1.5 and 23.3). Partner signing stays closed until the legal name and address are filled in.
+- **Cookie banner** is live in code (PECR): no statistics or partner cookies before "Accept".
 - **Google Drive** is connected. Its OAuth app must be "In production", or Google ends the connection after 7 days.
 - **Integrations in use.** Email and Telegram alerts have sent, push has 2 subscriptions, and inbound email (Postmark) is configured.
 

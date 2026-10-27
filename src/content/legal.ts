@@ -7,17 +7,15 @@
  * the matching section here and bump LEGAL_UPDATED.
  */
 import { brandName } from "@/lib/brand";
-import { privacyContact, type LegalDetails } from "@/lib/legal";
+import { operatorDetails, operatorName, privacyContact, type LegalDetails } from "@/lib/legal";
 
 export type LegalSection = { id: string; title: string; body?: string[]; points?: string[] };
 export type LegalDoc = { title: string; intro: string[]; sections: LegalSection[] };
 
 function who(d: LegalDetails) {
   const name = brandName();
-  const operator = d.companyName || name;
-  const company = d.companyName
-    ? `${d.companyName}${d.companyNumber ? `, a company registered in ${d.governingLaw} under number ${d.companyNumber}` : ""}${d.registeredAddress ? `, whose registered office is at ${d.registeredAddress}` : ""}`
-    : name;
+  const operator = operatorName(d) ?? name;
+  const company = operatorDetails(d) ?? operator;
   const reach = d.contactEmail
     ? `email ${d.contactEmail}`
     : "use Send feedback in the dashboard menu";
@@ -64,7 +62,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Page views and demo steps, counted as described under Website statistics below.",
           "If you start the guest tour or host demo, nothing you type in it is kept beyond the demo's daily reset, and sample ID checks never store photos.",
           "To stop misuse of the demo and our sign-up, we keep a scrambled version of your IP address that changes every day, never the address itself.",
-          "If you arrive through a Commission Partner's link, we keep their referral code in a cookie for 60 days (see Cookies below), so the right partner is credited if you sign up.",
+          "If you arrive through a Commission Partner's link and accept cookies, we keep their referral code in a cookie for 60 days (see Cookies below), so the right partner is credited if you sign up.",
         ],
       },
       {
@@ -98,7 +96,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "To provide the service to hosts and their guests (performing our contract with the host; for guest data, on the host's instructions).",
           "To bill for subscriptions and keep accounting records (contract and legal obligation).",
           "To keep the service secure, prevent fraud and misuse of trials and demos, and fix problems (our legitimate interests).",
-          "To understand which pages and features help, using the website statistics below (our legitimate interests; you can switch it off).",
+          "To understand which pages and features help, using the website statistics below, only if you agree to them (your consent, which you can withdraw at any time).",
           "To answer support requests and send messages about your account and important changes (contract and legitimate interests). We don't send hosts marketing without their agreement, and we never send marketing to guests.",
           "Keeping the UK guest register and tax invoices is the host's legal obligation; we keep them for the periods below to support it.",
         ],
@@ -141,13 +139,13 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
         id: "statistics",
         title: "Website statistics",
         body: [
-          `We record visits to this website to see what's useful, how people find and use ${name}, and to improve it. You can switch this off for your browser below.`,
+          `With your agreement, we record visits to this website to see what's useful, how people find and use ${name}, and to improve it. When you first visit, a banner asks whether you agree; nothing is recorded or stored for statistics until you choose Accept, and choosing Reject (or doing nothing) means it never is. You can change your choice at any time with the switch below.`,
         ],
         points: [
           "What we record: pages opened, how long they're looked at and the page you came from; campaign tags on the link you followed (like utm_source=linkedin); browser and device type, language, time zone, country and region; and steps in our demo and free trial. Your browser keeps a random visitor number so visits from the same browser can be put together.",
-          `Visitor profiles: when you sign in, start a trial or give us your email, we link that browser's visits to a profile with your account and email address, and join visits from other browsers or devices where you sign in with the same account or email. ${operator} uses these profiles to understand which pages, campaigns and steps lead people to try and keep using ${name}, to improve the website and service, and to help you when you ask for support (our legitimate interests). We don't sell them, share them with advertisers or use advertising networks.`,
+          `Visitor profiles: when you sign in, start a trial or give us your email, we link that browser's visits to a profile with your account and email address, and join visits from other browsers or devices where you sign in with the same account or email. ${operator} uses these profiles to understand which pages, campaigns and steps lead people to try and keep using ${name}, to improve the website and service, and to help you when you ask for support (based on your consent to statistics, and our legitimate interests in supporting you). We don't sell them, share them with advertisers or use advertising networks.`,
           "What we don't record: no IP addresses (only a scrambled code that changes every day, to spot automated traffic), and no town or exact location.",
-          "Browsers that send Global Privacy Control or Do Not Track are never recorded, and the switch below turns it off for your browser.",
+          "Browsers that send Global Privacy Control or Do Not Track are never recorded and aren't asked. If you withdraw consent, we stop recording and delete the visitor number and referral cookies from your browser; visits already recorded are kept for the period below unless you ask us to delete them.",
           "Kept for 13 months, then deleted.",
         ],
       },
@@ -155,9 +153,10 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
         id: "storage",
         title: "Cookies and storage on your device",
         points: [
-          "We don't use advertising cookies or third-party trackers.",
-          "Your browser's storage keeps you signed in, remembers settings (like your chosen property or layout), keeps the random visitor number for website statistics (see above), and keeps the campaign you arrived from for this visit.",
-          "Cookies we set: lk_ref, only if you open a Commission Partner's link, holds their referral code for 60 days so they're credited if you sign up; lk_dev, a random device code for 60 days, used with it for the fraud checks described under Hosts (not set when Global Privacy Control, Do Not Track or the switch below is on); and on a guest's phone, lk_stay_ remembers their own stay until check-out, so scanning the room's QR code opens it.",
+          "We don't use advertising cookies or third-party trackers. We only store what's needed for the service you asked for unless you agree to more on our cookie banner.",
+          "Always (needed for the service): your browser's storage keeps you signed in, remembers settings (like your chosen property or layout), and remembers your cookie choice (lk_consent) for up to 12 months, after which we ask again.",
+          "Only if you accept: the random visitor number for website statistics (lk_vid), the campaign you arrived from for this visit, lk_ref (if you open a Commission Partner's link, their referral code for 60 days so they're credited if you sign up; otherwise you can confirm or type their code when you sign up), and lk_dev, a random device code for 60 days used with it for the fraud checks described under Hosts.",
+          "On a guest's phone (needed for the service): lk_stay_ remembers their own stay until check-out, so scanning the room's QR code opens it. The cookie banner isn't shown on guests' pages or door tablets, and nothing optional is stored there.",
           "Installed apps and kiosks keep an offline copy of guest pages so they still open without a connection.",
           "Stripe's payment pages and Google's or Apple's sign-in pages set their own cookies under their own policies.",
         ],

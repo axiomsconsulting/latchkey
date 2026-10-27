@@ -179,6 +179,8 @@ New columns: `partners.postal_address`, `self_billing_opt_out`, `stop_source`, `
 - Annex B explanation: "[the amount]" and "[the Bonus End Date]" instead of live placeholders.
 
 ### Agreement v1.1 (migration 0063, in force; v1.0 retired before anyone signed)
+
+- **Who runs Latchkey is no longer written into the text.** The header, clause 1.1, the "For OMS" line, Annex B and the footer use `{{operator.name}}` / `{{operator.details}}` from Latchkey admin → Site settings → Legal details (a person trading as OMS Estates, or later a company). New 1.5: when those details change, every copy is read with the new ones (the signed PDF stays the record of the text signed). 23.3: OMS may move the agreement into a company it owns or controls, agreed in advance, with the new owner taking on everything owed. "Omnispace" was removed from 14.5, 15.1 and 15.3. Signing stays closed until the legal name and address are filled in.
 Drafted for OMS, with no solicitor or accountant engaged at this stage. Kept fair, so it stays enforceable against consumer partners (Consumer Rights Act 2015) and reasonable for business partners (UCTA 1977):
 - 3.8 unfinished applications close after 60 days without ID verification.
 - 12.1 statements are accepted unless queried within 60 days (except obvious error, fraud, or later recovery under clause 10).

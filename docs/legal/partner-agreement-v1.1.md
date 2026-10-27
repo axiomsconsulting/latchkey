@@ -1,6 +1,6 @@
 # Latchkey Commission Partner Agreement
 
-**Version 1.1** · Published on {{agreement.published_at}} · Omnispace Estates Ltd, trading as OMS Estates
+**Version 1.1** · Published on {{agreement.published_at}} · {{operator.name}}
 
 > **In short (this summary is not part of the agreement)**
 >
@@ -26,13 +26,15 @@ If you do not agree, do not tick the boxes or sign.
 
 ## 1. About us and this agreement
 
-1.1 **Who we are.** Latchkey (latchkey.omsestates.uk) is owned and run by **Omnispace Estates Ltd**, trading as OMS Estates, a company registered in England and Wales with company number 16889713, whose registered office is at 49 Trinity Circle, High Wycombe, HP11 1FB ("**OMS**", "**we**", "**us**", "**our**").
+1.1 **Who we are.** Latchkey (latchkey.omsestates.uk) is owned and run by {{operator.details}} ("**OMS**", "**we**", "**us**", "**our**").
 
 1.2 **What Latchkey is.** Latchkey is online software for hosts such as guest houses, B&Bs and serviced accommodation. It helps hosts check guests in online, learn what guests want, message them during their stay and stay connected with them after a booking made through an online travel agency.
 
 1.3 **What this agreement does.** It sets out how you can refer hosts to Latchkey and how we pay you for successful referrals. It applies from the moment you sign it (the "**Start Date**"), but you can only make referrals that earn money once your account is activated under clause 3.6.
 
 1.4 **Where you can be based.** There is no territory restriction. You and the hosts you refer may be based anywhere, subject to clause 3.2 (eligibility) and clause 12.6 (how you are paid).
+
+1.5 **Our details, and if they change.** OMS's name, address and other details in this agreement come from the Latchkey website's legal details and are always shown as they currently stand, including when you view this agreement on the website or in your Account. If they change (for example a new address or trading name, or the Latchkey business moving to a company under clause 23.3), OMS will update them and tell you. From then on this agreement, including the version you signed, is read with the new details. Updating them changes nothing else in this agreement, and your signed PDF copy remains the record of the text you signed on the day you signed it.
 
 ## 2. Definitions and interpretation
 
@@ -313,17 +315,17 @@ Where OMS's systems find a strong match (for example the same email, phone or ca
 
 14.4 **Disclosure.** Any post, review, video, message or other content you publish about Latchkey must make clear, prominently and at the start, that you earn commission, for example with "**#ad**" or "**I earn commission if you sign up**", in line with the UK Code of Non-broadcast Advertising and Direct & Promotional Marketing (CAP Code) and ASA and CMA guidance.
 
-14.5 **Paid advertising.** You must not bid on, or run paid ads using, the words "Latchkey", "OMS Estates" or "Omnispace", or close variations, without OMS's written agreement.
+14.5 **Paid advertising.** You must not bid on, or run paid ads using, the words "Latchkey" or "OMS Estates", or close variations, without OMS's written agreement.
 
 14.6 **Local laws.** Wherever you and the hosts are based, you will also comply with the local laws that apply there, including marketing, data protection, consumer protection, tax and advertising disclosure rules (for example the US Federal Trade Commission's rules and guides on endorsements).
 
 ## 15. Brand, materials and intellectual property
 
-15.1 **Ownership.** OMS (or its licensors) owns all intellectual property rights in Latchkey, the names and logos "Latchkey", "OMS Estates" and "Omnispace Estates", the Latchkey website, the demo and all materials OMS provides ("**OMS Materials**"). Nothing in this agreement transfers any of those rights to you.
+15.1 **Ownership.** OMS (or its licensors) owns all intellectual property rights in Latchkey, the names and logos "Latchkey" and "OMS Estates", the Latchkey website, the demo and all materials OMS provides ("**OMS Materials**"). Nothing in this agreement transfers any of those rights to you.
 
 15.2 **Licence to you.** While this agreement is in force, OMS grants you a non-exclusive, non-transferable, revocable, royalty-free licence to use the Latchkey name and logo and the OMS Materials, **only** to refer hosts in line with this agreement and only in the form OMS provides or approves.
 
-15.3 **Restrictions.** You must not change the OMS Materials or logos, combine them with other marks, register any domain name, social media account, business name or trade mark containing or similar to "Latchkey", "OMS Estates" or "Omnispace", or create a website or account that could be mistaken for one run by OMS.
+15.3 **Restrictions.** You must not change the OMS Materials or logos, combine them with other marks, register any domain name, social media account, business name or trade mark containing or similar to "Latchkey" or "OMS Estates", or create a website or account that could be mistaken for one run by OMS.
 
 15.4 **Your content.** You own content you create yourself. You grant OMS a non-exclusive, royalty-free licence to view and review it to check compliance with this agreement, and you will remove or correct any content promptly if OMS reasonably asks.
 
@@ -431,7 +433,7 @@ Where OMS's systems find a strong match (for example the same email, phone or ca
 
 23.2 **Notices.** Notices to you are sent to the email address in your Account or shown in your Account. Notices to OMS must be sent to the notice email shown in Annex B. An email notice is treated as received on the next Business Day after it is sent, unless the sender receives an error message.
 
-23.3 **Assignment.** You may not transfer, assign or subcontract any of your rights or obligations under this agreement without OMS's written agreement. OMS may transfer this agreement to any company in its group or to a buyer of the Latchkey business, and will tell you if it does. Your rights will not be reduced as a result.
+23.3 **Assignment.** You may not transfer, assign or subcontract any of your rights or obligations under this agreement without OMS's written agreement. OMS may transfer this agreement, with all of its rights and obligations under it, to a company that OMS owns or controls (for example if the Latchkey business is moved into a company), to any company in its group, or to a buyer of the Latchkey business. You agree now to any such transfer. OMS will tell you when it happens. From that date the new owner takes OMS's place: it takes on OMS's obligations to you, including amounts already due to you, references to OMS mean the new owner, and OMS's details are updated under clause 1.5. Your rights will not be reduced as a result.
 
 23.4 **Third parties.** No one other than OMS and you has any right to enforce any term of this agreement under the Contracts (Rights of Third Parties) Act 1999.
 
@@ -469,7 +471,7 @@ Signature (drawn): ______________________
 
 Date and time: recorded automatically.
 
-**For OMS:** accepted electronically by Omnispace Estates Ltd (trading as OMS Estates) on activation of your Account.
+**For OMS:** accepted electronically by {{operator.name}} on activation of your Account.
 
 ---
 
@@ -521,6 +523,7 @@ The website fills in these values when it shows you this agreement. The values t
 | Hold Period | 45 days after the payment (Launch Bonus: 45 days after the end of the first Paid Month) | programme settings `holdDays` |
 | Minimum payout | £10 (smaller balances carry forward) | programme settings `minPayoutPence` |
 | Payout frequency | Monthly, in GBP, through Stripe Connect | programme settings |
+| OMS (who runs Latchkey) | {{operator.name}} | Latchkey admin → Site settings → Legal details |
 | OMS notice email | {{config.notice_email}} | programme settings |
 | Agreement version | {{agreement.version}} (text fingerprint {{agreement.hash_short}}) | `partner_agreement_versions` |
 
@@ -530,4 +533,4 @@ The website fills in these values when it shows you this agreement. The values t
 
 ---
 
-*Omnispace Estates Ltd, trading as OMS Estates. Registered in England and Wales, company number 16889713. Registered office: 49 Trinity Circle, High Wycombe, HP11 1FB.*
+*Latchkey is run by {{operator.details}}.*

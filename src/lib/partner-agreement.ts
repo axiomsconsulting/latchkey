@@ -85,7 +85,15 @@ export function bonusText(t: AgreementTerms): string {
   return `**${amount}** for each Referred Host who signs up on or before **${ukDate(t.bonus_end_date!)}**, pays within 60 days of signing up and completes their first paid month.`;
 }
 
-export type AgreementSettings = { launchDate: string | null; noticeEmail: string | null };
+export type AgreementSettings = {
+  launchDate: string | null;
+  noticeEmail: string | null;
+  /** Who runs Latchkey, from Site settings → Legal details (operatorName/operatorDetails in legal.ts); null until filled in. */
+  operatorName?: string | null;
+  operatorDetails?: string | null;
+};
+
+const OPERATOR_PENDING = "the operator (details to be confirmed)";
 
 export const NOTICE_EMAIL_FALLBACK = "the email address shown in your Account";
 
@@ -120,6 +128,8 @@ export function agreementValues(a: {
     "programme.launch_date": launch ? ukDate(launch) : "to be confirmed",
     "programme.launch_year_end": yearEnd,
     "config.notice_email": a.settings.noticeEmail?.trim() || NOTICE_EMAIL_FALLBACK,
+    "operator.name": a.settings.operatorName || OPERATOR_PENDING,
+    "operator.details": a.settings.operatorDetails || OPERATOR_PENDING,
   };
 }
 

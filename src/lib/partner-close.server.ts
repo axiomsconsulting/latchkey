@@ -645,7 +645,8 @@ export async function partnerStatement(
     .select("legal")
     .eq("id", 1)
     .maybeSingle();
-  const legal = (settings?.legal ?? {}) as Record<string, string | undefined>;
+  const { normaliseLegal, operatorName } = await import("./legal");
+  const legal = normaliseLegal(settings?.legal);
   return statementCsv(
     (
       (refs ?? []) as Array<{
@@ -681,10 +682,10 @@ export async function partnerStatement(
       number: statementNumber(partner.referral_code, partner.id, month),
       issuedOn: new Date().toISOString().slice(0, 10),
       oms: {
-        name: legal["companyName"] || "Omnispace Estates Ltd",
-        companyNumber: legal["companyNumber"] || "",
-        address: legal["registeredAddress"] || "",
-        vatNumber: legal["vatNumber"] || "",
+        name: operatorName(legal) ?? "OMS",
+        companyNumber: legal.companyNumber,
+        address: legal.registeredAddress,
+        vatNumber: legal.vatNumber,
       },
       partner: {
         name: partner.business_name || partner.legal_name,

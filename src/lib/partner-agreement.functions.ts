@@ -77,6 +77,10 @@ export async function renderCurrent(partnerId: string | null) {
   const v = await currentVersion(db);
   if (!v) return null;
   const config = await loadPartnerConfig(db);
+  const { missingOperator, normaliseLegal, operatorDetails, operatorName } =
+    await import("./legal");
+  const { data: site } = await db.from("site_settings").select("legal").eq("id", 1).maybeSingle();
+  const legal = normaliseLegal(site?.legal);
   const { termsFor } = await import("./commission");
   const rows = await loadTerms(db);
   const snap = termsFor(
@@ -100,10 +104,19 @@ export async function renderCurrent(partnerId: string | null) {
       publishedAt: v.published_at,
       bodySha256: v.body_sha256,
       terms,
-      settings: { launchDate: config.launchDate, noticeEmail: config.noticeEmail },
+      settings: {
+        launchDate: config.launchDate,
+        noticeEmail: config.noticeEmail,
+        operatorName: operatorName(legal),
+        operatorDetails: operatorDetails(legal),
+      },
     }),
   );
   const problems = [...settingsMismatch(config)];
+  if (missingOperator(legal).length)
+    problems.push(
+      "Fill in the operator's legal name and address under Site settings → Legal details before signing opens.",
+    );
   if (!config.noticeEmail)
     problems.push("Set the notice email under Programme decisions before signing opens.");
   if (!snap) problems.push("There are no commission terms in force.");
@@ -116,6 +129,7 @@ export async function renderCurrent(partnerId: string | null) {
     signingOpen: problems.length === 0,
     problems,
     signupsOpen: config.signupsOpen,
+    operatorName: operatorName(legal) ?? "OMS",
   };
 }
 
@@ -364,6 +378,7 @@ export const signPartnerAgreement = createServerFn({ method: "POST" })
       companyNumber: input.companyNumber ?? null,
       position: input.position ?? null,
       ticks: r.ticks,
+      operatorName: r.operatorName,
       signedAt: row.signed_at,
       ip,
       userAgent,

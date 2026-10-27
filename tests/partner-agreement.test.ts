@@ -42,7 +42,12 @@ const values = (terms = NO_BONUS, noticeEmail: string | null = "partners@example
     publishedAt: "2026-11-01T10:00:00Z",
     bodySha256: "a".repeat(64),
     terms,
-    settings: { launchDate: "2026-11-01", noticeEmail },
+    settings: {
+      launchDate: "2026-11-01",
+      noticeEmail,
+      operatorName: "Jo Bloggs, trading as OMS Estates",
+      operatorDetails: "Jo Bloggs, trading as OMS Estates, of 1 High Street, Town",
+    },
   });
 
 describe("agreement text", () => {
@@ -52,6 +57,16 @@ describe("agreement text", () => {
     expect(out).toContain("`{{bonus_summary}}`");
     expect(out).toContain("Published on 1 November 2026");
     expect(out).toContain("1 November 2026 to 31 October 2027");
+  });
+
+  it("names whoever runs Latchkey from the legal details, never a hard-coded company", () => {
+    const out = fillAgreement(TEXT, values());
+    expect(TEXT).not.toMatch(/Omnispace|16889713/);
+    expect(out).toContain(
+      "owned and run by Jo Bloggs, trading as OMS Estates, of 1 High Street, Town",
+    );
+    expect(out).toContain("accepted electronically by Jo Bloggs, trading as OMS Estates");
+    expect(out).toMatch(/1\.5 \*\*Our details, and if they change\.\*\*/);
   });
 
   it("refuses an unknown placeholder rather than show a gap", () => {

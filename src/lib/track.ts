@@ -2,8 +2,8 @@
  * The launch funnel (analytics_events): tour_view, tour_complete,
  * demo_host_view, trial_signup_started, trial_signup_completed. Each is sent
  * at most once per visit (a session flag), with the session's utm_*, and
- * never when the browser asked not to be counted (GPC, DNT, ?notrack=1 or the
- * switch on /privacy).
+ * only once the visitor has accepted statistics (cookie banner or /privacy),
+ * never with GPC, DNT or ?notrack=1.
  */
 import type { EventName } from "./analytics";
 import { sessionUtm } from "./attribution";

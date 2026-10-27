@@ -2,17 +2,18 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { LegalPage } from "@/components/LegalPage";
-import { NO_TRACK, trackingOff } from "@/components/VisitTracker";
 import { Switch } from "@/components/ui/switch";
 import { privacyPageCopy as copy } from "@/content/copy";
 import { privacyPolicy } from "@/content/legal";
 import { rebrand } from "@/lib/brand";
+import { browserSaysNo, consentState, onConsent, setConsent } from "@/lib/consent";
+import { captureAfterConsent } from "@/lib/attribution";
 import { getLegalDetails } from "@/lib/site.functions";
 
 /**
  * The Privacy policy (wording in src/content/legal.ts), with the website
- * statistics switch in its "Website statistics" section (#statistics): this
- * browser remembers the choice (the same as ?notrack=1), and browsers
+ * cookie choice switch in its "Website statistics" section (#statistics):
+ * the same consent as the cookie banner (src/lib/consent.ts), and browsers
  * sending Global Privacy Control or Do Not Track are never counted.
  */
 export const Route = createFileRoute("/privacy")({
@@ -40,18 +41,14 @@ function StatisticsSwitch() {
   const [off, setOff] = useState<boolean | null>(null);
   const [browserSignal, setBrowserSignal] = useState(false);
   useEffect(() => {
-    const n = navigator as Navigator & { globalPrivacyControl?: boolean };
-    setBrowserSignal(n.globalPrivacyControl === true || n.doNotTrack === "1");
-    setOff(trackingOff());
+    setBrowserSignal(browserSaysNo());
+    setOff(consentState() !== "yes");
+    return onConsent((c) => setOff(c !== "yes"));
   }, []);
 
   function set(counted: boolean) {
-    try {
-      localStorage.setItem(NO_TRACK, counted ? "0" : "1");
-    } catch {
-      // Storage blocked: nothing is remembered, and nothing is counted either.
-    }
-    setOff(!counted);
+    setConsent(counted ? "yes" : "no");
+    if (counted) captureAfterConsent();
   }
 
   return (
