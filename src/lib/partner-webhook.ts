@@ -92,6 +92,13 @@ export interface PartnerStore {
   fetchInvoice(id: string): Promise<(StripeInvoice & StripeObj) | null>;
   chargeRecord(chargeId: string): Promise<ChargeRecord | null>;
   saveCharge(c: ChargeRecord): Promise<void>;
+  /**
+   * 10.4: a dispute on a charge not recorded yet (it may never be a
+   * referred host's). Kept by charge id; the latest status wins.
+   */
+  savePendingDispute(chargeId: string, status: "open" | "won" | "lost", amountPence: number | null, eventId: string): Promise<void>;
+  /** The pending dispute for a charge just recorded, if any (then marked applied). */
+  takePendingDispute(chargeId: string): Promise<{ status: "open" | "won" | "lost"; amount_pence: number | null } | null>;
   updateCharge(chargeId: string, patch: Partial<ChargeRecord>): Promise<void>;
   updateReferral(id: string, patch: Record<string, unknown>): Promise<void>;
   /** Inserts lines; one already there (same invoice, same bonus) is skipped. */
@@ -295,6 +302,17 @@ async function onInvoicePaid(
   // A refund that reached us before this payment did: take it off now.
   if (result.line && charge && chargeId && (charge.amount_refunded ?? 0) > 0)
     await refundCharge(s, config, charge, event.id);
+  // 10.4: a dispute opened before we recorded this payment applies now.
+  if (result.line && chargeId) {
+    const pending = await s.takePendingDispute(chargeId);
+    if (pending && pending.status !== "won") {
+      const fresh = (await s.referral(r.id)) ?? r;
+      await holdForDispute(s, fresh, chargeId, `${event.id}:pending_dispute`);
+      const rec = await s.chargeRecord(chargeId);
+      if (pending.status === "lost" && rec)
+        await closeDispute(s, config, fresh, rec, chargeId, "lost", pending.amount_pence ?? rec.amount_pence, `${event.id}:pending_dispute_lost`);
+    }
+  }
   return "handled";
 }
 
@@ -438,10 +456,20 @@ async function onRefunded(
 async function onDisputeCreated(event: StripeObj, s: PartnerStore): Promise<Outcome> {
   const dispute = event.data.object as StripeObj;
   const chargeId = chargeIdOf(dispute.charge);
-  const rec = chargeId ? await s.chargeRecord(chargeId) : null;
-  if (!rec || !chargeId) return "not_ours";
+  if (!chargeId) return "not_ours";
+  const rec = await s.chargeRecord(chargeId);
+  if (!rec) {
+    // 10.4: the dispute came before the payment was recorded. Kept, and applied if it turns out to be a referred host's.
+    await s.savePendingDispute(chargeId, "open", Number(dispute.amount ?? 0) || null, event.id);
+    return "not_ours";
+  }
   const r = await s.referral(rec.referral_id);
   if (!r) return "not_ours";
+  return holdForDispute(s, r, chargeId, event.id);
+}
+
+/** Withholds the commission and bonus tied to a disputed charge (10.4). */
+async function holdForDispute(s: PartnerStore, r: Referral, chargeId: string, eventId: string): Promise<Outcome> {
   await s.updateCharge(chargeId, { dispute_status: "open" });
   const lines = await s.linesForReferral(r.id);
   const hold = lines
@@ -463,7 +491,7 @@ async function onDisputeCreated(event: StripeObj, s: PartnerStore): Promise<Outc
       amount_pence: 0,
       payable_after: null,
       stripe_charge_id: chargeId,
-      source_event_id: event.id,
+      source_event_id: eventId,
     },
   ]);
   if (r.qualifying_charge_id === chargeId) {
@@ -485,10 +513,29 @@ async function onDisputeClosed(
 ): Promise<Outcome> {
   const dispute = event.data.object as StripeObj;
   const chargeId = chargeIdOf(dispute.charge);
-  const rec = chargeId ? await s.chargeRecord(chargeId) : null;
-  if (!rec || !chargeId) return "not_ours";
+  if (!chargeId) return "not_ours";
+  const rec = await s.chargeRecord(chargeId);
+  if (!rec) {
+    if (dispute.status === "won" || dispute.status === "lost")
+      await s.savePendingDispute(chargeId, dispute.status, Number(dispute.amount ?? 0) || null, event.id);
+    return "not_ours";
+  }
   const r = await s.referral(rec.referral_id);
   if (!r) return "not_ours";
+  return closeDispute(s, config, r, rec, chargeId, String(dispute.status), Number(dispute.amount ?? rec.amount_pence), event.id);
+}
+
+/** A dispute's outcome: won releases what was held; lost claws it back (10.4, 10.5). */
+async function closeDispute(
+  s: PartnerStore,
+  config: PartnerConfig,
+  r: Referral,
+  rec: ChargeRecord,
+  chargeId: string,
+  status: string,
+  disputedPence: number,
+  eventId: string,
+): Promise<Outcome> {
   const lines = await s.linesForReferral(r.id);
   const held = lines.filter(
     (l) =>
@@ -497,7 +544,7 @@ async function onDisputeClosed(
       l.state === "on_hold" &&
       l.kind !== "dispute_hold",
   );
-  if (dispute.status === "won") {
+  if (status === "won") {
     await s.updateCharge(chargeId, { dispute_status: "won" });
     const reviewHold = (await s.hasOpenFlag(r.id)) || r.status !== "approved";
     if (held.length && !reviewHold)
@@ -515,7 +562,7 @@ async function onDisputeClosed(
         amount_pence: 0,
         payable_after: null,
         stripe_charge_id: chargeId,
-        source_event_id: event.id,
+        source_event_id: eventId,
       },
     ]);
     if (r.qualifying_charge_id === chargeId) {
@@ -531,11 +578,11 @@ async function onDisputeClosed(
     }
     return "handled";
   }
-  if (dispute.status === "lost") {
+  if (status === "lost") {
     await s.updateCharge(chargeId, { dispute_status: "lost" });
     const amount = Math.min(
       rec.amount_pence,
-      Math.max(0, Number(dispute.amount ?? rec.amount_pence)),
+      Math.max(0, disputedPence || rec.amount_pence),
     );
     const plan = applyClawback(
       {
@@ -549,7 +596,7 @@ async function onDisputeClosed(
       r,
       { ...config, bonusPartialRefund: "full" },
     );
-    await applyPlan(s, r, plan, event.id);
+    await applyPlan(s, r, plan, eventId);
     if (r.qualifying_charge_id === chargeId)
       await s.updateReferral(r.id, { qp_dispute: "lost", updated_at: new Date().toISOString() });
     await s.checkDisputeRate(r.partner_id);
@@ -560,11 +607,11 @@ async function onDisputeClosed(
     partner_id: r.partner_id,
     referral_id: r.id,
     action: "dispute_unclear",
-    details: { charge: chargeId, status: dispute.status },
+    details: { charge: chargeId, status },
   });
   await s.flag(r.id, r.partner_id, "dispute_rate", {
     charge: chargeId,
-    dispute_status: dispute.status,
+    dispute_status: status,
     note: "Dispute closed with an unusual status: check it in Stripe.",
   });
   return "handled";

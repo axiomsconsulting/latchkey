@@ -103,6 +103,11 @@ export function onboardingLinkBody(account: string, origin: string) {
 type AnyAccount = {
   payouts_enabled?: boolean;
   capabilities?: { transfers?: unknown };
+  requirements?: {
+    currently_due?: unknown[] | null;
+    past_due?: unknown[] | null;
+    disabled_reason?: string | null;
+  } | null;
   configuration?: {
     recipient?: {
       capabilities?: { stripe_balance?: { stripe_transfers?: { status?: unknown } } };
@@ -111,18 +116,19 @@ type AnyAccount = {
 };
 
 /**
- * Can Latchkey send this partner a transfer? Accounts v2: the recipient's
- * stripe_transfers capability is active. The v1 view of the same account (as
- * in account.updated): transfers active, or payouts enabled.
+ * Can Latchkey pay this partner (agreement 12.4(b))? Stripe has turned
+ * transfers on, the account can pay out to the bank, and Stripe isn't
+ * waiting for anything from the partner. Otherwise amounts carry forward
+ * and the partner is asked to finish their Stripe set-up.
  */
 export function canReceiveTransfers(acct: AnyAccount | null | undefined): boolean {
   if (!acct) return false;
-  if (
-    acct.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status ===
-    "active"
-  )
-    return true;
-  return acct.capabilities?.transfers === "active" || acct.payouts_enabled === true;
+  const transfers =
+    acct.capabilities?.transfers === "active" ||
+    acct.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status === "active";
+  const due = acct.requirements;
+  const nothingDue = !due?.currently_due?.length && !due?.past_due?.length && !due?.disabled_reason;
+  return transfers && acct.payouts_enabled === true && nothingDue;
 }
 
 /** Stripe refusals that mean Latchkey's own Connect set-up isn't finished, in plain words. */

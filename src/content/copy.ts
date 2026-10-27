@@ -4359,4 +4359,10 @@ export const partnerCopy = branded({
   verifyAttemptsLeft: (n: number) => (n === 1 ? "You have 1 more automatic attempt; after that, we check by hand." : `You have ${n} more automatic attempts.`),
   verifyTryAgain: "Try again",
   verifySignFirst: "Sign the agreement first: we compare your ID with the name you sign with.",
+  statementTitle: "Your details for statements",
+  statementBody: "Each monthly statement is a self-billed invoice that we issue for you (clause 12.7), unless you opt out. It shows your name and address, and your VAT number if you're VAT-registered.",
+  statementAddress: "Postal address",
+  statementOptOut: "I'll send my own invoices instead of self-billing (they must match each statement).",
+  statementSave: "Save details",
+  statementSaved: "Saved.",
 });

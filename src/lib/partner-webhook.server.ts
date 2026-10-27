@@ -179,6 +179,33 @@ function store(db: AnyDb): PartnerStore {
           .upsert(c, { onConflict: "charge_id", ignoreDuplicates: true }),
       );
     },
+    async savePendingDispute(chargeId, status, amountPence, eventId) {
+      // Before migration 0062 there's nowhere to keep it: the old behaviour (ignored) stands.
+      await db.from("partner_pending_disputes").upsert(
+        {
+          charge_id: chargeId,
+          status,
+          amount_pence: amountPence,
+          event_id: eventId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "charge_id" },
+      );
+    },
+    async takePendingDispute(chargeId) {
+      const { data } = await db
+        .from("partner_pending_disputes")
+        .select("status, amount_pence")
+        .eq("charge_id", chargeId)
+        .is("applied_at", null)
+        .maybeSingle();
+      if (!data) return null;
+      await db
+        .from("partner_pending_disputes")
+        .update({ applied_at: new Date().toISOString() })
+        .eq("charge_id", chargeId);
+      return data as { status: "open" | "won" | "lost"; amount_pence: number | null };
+    },
     async updateCharge(chargeId, patch) {
       check(await db.from("partner_charges").update(patch).eq("charge_id", chargeId));
     },

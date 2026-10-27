@@ -172,6 +172,10 @@ describe("activation (3.6, 19.4, 20.1)", () => {
     ).toBe(true);
   });
 
+  it("never lets a waitlisted partner's code work (3.2(d))", () => {
+    expect(canRefer({ ...base, status: "waitlisted" }, now)).toBe(false);
+  });
+
   it("treats the partner who was active before v1.0 as needing the agreement and ID", () => {
     expect(canRefer({ ...base, acceptance: null, id_check_status: null }, now)).toBe(false);
   });

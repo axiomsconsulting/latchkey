@@ -227,6 +227,11 @@ export const myPartnerSteps = createServerFn({ method: "GET" })
           }
         : null,
       currentVersion: input.current?.version ?? null,
+      statementDetails: {
+        address: (p["postal_address"] as string | null) ?? "",
+        vatNumber: (p["vat_number"] as string | null) ?? "",
+        selfBillingOptOut: !!p["self_billing_opt_out"],
+      },
       stopped: !!p["terminated_at"] && Date.parse(p["terminated_at"]) <= Date.now(),
       stopDate: p["terminated_at"] as string | null,
       signedAtMs: acc ? Date.parse(acc.signed_at) : null,
@@ -453,6 +458,43 @@ export const stopBeingPartner = createServerFn({ method: "POST" })
       key: `partner-stop-${p["id"]}`,
     }).catch(() => false);
     return { ok: true, already: false };
+  });
+
+/** The partner's own details for statements (12.7): postal address, VAT number, self-billing opt-out. */
+export const savePartnerStatementDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        address: z.string().trim().max(400),
+        vatNumber: z.string().trim().max(30),
+        selfBillingOptOut: z.boolean(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data: input, context }) => {
+    const userId = (context as Ctx).userId;
+    const { db, p } = await ownPartner(userId);
+    if (!p) throw new Error("You don't have a Commission Partner account.");
+    const { check, logPartnerEvent } = await data();
+    check(
+      await db
+        .from("partners")
+        .update({
+          postal_address: input.address || null,
+          vat_number: input.vatNumber || null,
+          self_billing_opt_out: input.selfBillingOptOut,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", p["id"]),
+    );
+    if (!!p["self_billing_opt_out"] !== input.selfBillingOptOut)
+      await logPartnerEvent(db, {
+        partner_id: p["id"],
+        actor: userId,
+        action: input.selfBillingOptOut ? "self_billing_opted_out" : "self_billing_opted_in",
+      });
+    return { ok: true };
   });
 
 /* --------------------------------------------------------------- admin */

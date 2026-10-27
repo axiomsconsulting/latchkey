@@ -12,7 +12,11 @@ import { Input } from "@/components/ui/input";
 import { partnerCopy as copy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
 import { reasonText } from "@/lib/commission";
-import { myPartnerSteps, stopBeingPartner } from "@/lib/partner-agreement.functions";
+import {
+  myPartnerSteps,
+  savePartnerStatementDetails,
+  stopBeingPartner,
+} from "@/lib/partner-agreement.functions";
 import { ukDateTime } from "@/lib/partner-agreement";
 import {
   myPartnerAccount,
@@ -66,6 +70,7 @@ function PartnerAccount() {
           <>
             <Steps />
             <Account data={d as Extract<typeof d, { partner: object }>} />
+            <StatementDetails />
             <Stop />
           </>
         ) : null}
@@ -334,6 +339,66 @@ function Steps() {
         </section>
       ) : null}
     </>
+  );
+}
+
+/** Address, VAT number and the self-billing choice for statements (12.7). */
+function StatementDetails() {
+  const load = useServerFn(myPartnerSteps);
+  const q = useQuery({ queryKey: ["partner-steps"], queryFn: () => load() });
+  const save = useServerFn(savePartnerStatementDetails);
+  const qc = useQueryClient();
+  const saved = q.data?.partner ? q.data.statementDetails : null;
+  const [draft, setDraft] = useState<{ address: string; vatNumber: string; selfBillingOptOut: boolean } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!saved) return null;
+  const f = draft ?? saved;
+  const changed = JSON.stringify(f) !== JSON.stringify(saved);
+  return (
+    <section className="card-soft space-y-3 p-5">
+      <h2 className="text-lg">{copy.statementTitle}</h2>
+      <p className="text-sm text-muted-foreground">{copy.statementBody}</p>
+      <label className="grid gap-1 text-sm">
+        {copy.statementAddress}
+        <Input className="h-11" value={f.address} onChange={(e) => setDraft({ ...f, address: e.target.value })} autoComplete="street-address" />
+      </label>
+      <label className="grid gap-1 text-sm">
+        {copy.vat}
+        <Input className="h-11" value={f.vatNumber} onChange={(e) => setDraft({ ...f, vatNumber: e.target.value })} />
+      </label>
+      <label className="flex items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1 size-4"
+          checked={f.selfBillingOptOut}
+          onChange={(e) => setDraft({ ...f, selfBillingOptOut: e.target.checked })}
+        />
+        <span>{copy.statementOptOut}</span>
+      </label>
+      <div className="flex items-center gap-3">
+        <Button
+          disabled={!changed || busy}
+          onClick={async () => {
+            setBusy(true);
+            setMsg(null);
+            try {
+              await save({ data: f });
+              await qc.invalidateQueries({ queryKey: ["partner-steps"] });
+              setDraft(null);
+              setMsg(copy.statementSaved);
+            } catch (e) {
+              setMsg(e instanceof Error ? e.message : String(e));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : null} {copy.statementSave}
+        </Button>
+        {msg ? <span className="text-sm text-muted-foreground">{msg}</span> : null}
+      </div>
+    </section>
   );
 }
 

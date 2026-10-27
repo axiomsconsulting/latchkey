@@ -6,6 +6,7 @@
  * Nothing here sends money without an admin's approval: the close only
  * drafts payouts; sendPayout runs when Latchkey admin clicks Approve and send.
  */
+import { breachSetOffPending } from "./commission";
 import {
   bonusEligibility,
   type BonusDecision,
@@ -96,6 +97,8 @@ export type PartnerToPay = {
   stripe_account_id: string | null;
   payouts_enabled: boolean;
   termination_for_breach: boolean;
+  terminated_at?: string | null;
+  set_off_done_at?: string | null;
   flagged: boolean;
 };
 
@@ -135,6 +138,11 @@ export async function sendPayout(
     return { status: "refused", reason: `This payout is ${p.status.replace(/_/g, " ")}.` };
   if (partner.status === "suspended")
     return { status: "refused", reason: "The partner is suspended." };
+  if (breachSetOffPending(partner, Date.now()))
+    return {
+      status: "refused",
+      reason: "Stopped for breach: apply any set-off first (agreement 20.4(b)), then the balance can be paid.",
+    };
   if (partner.flagged)
     return { status: "refused", reason: "The partner has an open review: resolve it first." };
   if (p.currency !== "gbp")
@@ -196,7 +204,38 @@ export async function sendPayout(
   }
 }
 
-/** One statement row per referred host for a month (agreement 9.1). CSV, hosts anonymised. */
+export type StatementMeta = {
+  /** Unique per partner and month, e.g. SB-OMS-AB12C-202611. */
+  number: string;
+  issuedOn: string;
+  oms: { name: string; companyNumber: string; address: string; vatNumber: string };
+  partner: { name: string; address: string | null; vatNumber: string | null };
+  /** 12.7(a): a self-billed invoice unless the partner opted out. */
+  selfBilled: boolean;
+  /** 10.6: set-offs this month (positive pence owed by the partner). */
+  setOffPence: number;
+  /** Payable now: payable lines less clawbacks and set-offs (10.5, 10.6). */
+  payablePence: number;
+  /** Paid out this month. */
+  paidPence: number;
+};
+
+/** Why an amount is still held, in plain words (12.1, 12.2). */
+export const HOLD_WORDS: Record<string, string> = {
+  hold_period: "Hold Period (45 days)",
+  under_review: "Referral being checked",
+  fraud_check: "Fraud check open",
+  dispute: "Payment dispute open",
+  stripe: "Waiting for your Stripe account",
+};
+
+/**
+ * A partner's monthly statement (agreement v1.0 12.1, 12.7, 13.1) as CSV:
+ * one row per Referred Host (initials and town only), amounts held and why,
+ * clawbacks, set-offs and the payable balance. Never any Stripe fee (13.1).
+ * With `meta`, the header carries what a self-billed invoice needs; the
+ * exact self-billing and VAT wording is for OMS's accountant (placeholders).
+ */
 export function statementCsv(
   rows: Array<{
     host: string;
@@ -207,12 +246,14 @@ export function statementCsv(
     bonusPence: number;
     heldPence: number;
     clawbackPence: number;
+    heldReason?: string | null;
   }>,
+  meta?: StatementMeta,
 ): string {
   const pounds = (p: number) => (p / 100).toFixed(2);
   const esc = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
   const head =
-    "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Launch Bonus (£),Held (£),Clawback (£)";
+    "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Launch Bonus (£),Held (£),Held because,Clawback (£)";
   const body = rows.map((r) =>
     [
       esc(r.host),
@@ -222,6 +263,7 @@ export function statementCsv(
       pounds(r.commissionPence),
       pounds(r.bonusPence),
       pounds(r.heldPence),
+      esc(r.heldPence ? (r.heldReason ?? HOLD_WORDS["hold_period"]!) : ""),
       pounds(r.clawbackPence),
     ].join(","),
   );
@@ -235,20 +277,43 @@ export function statementCsv(
     }),
     { c: 0, b: 0, h: 0, k: 0, n: 0 },
   );
-  return [
+  const table = [
     head,
     ...body,
-    [
-      "Total",
-      "",
-      "",
-      pounds(total.n),
-      pounds(total.c),
-      pounds(total.b),
-      pounds(total.h),
-      pounds(total.k),
-    ].join(","),
-  ].join("\n");
+    ["Total", "", "", pounds(total.n), pounds(total.c), pounds(total.b), pounds(total.h), "", pounds(total.k)].join(","),
+  ];
+  if (!meta) return table.join("\n");
+  const kv = (k: string, v: string) => `${esc(k)},${esc(v)}`;
+  const top = [
+    kv(meta.selfBilled ? "Self-billed invoice" : "Statement", meta.number),
+    kv("Issued", meta.issuedOn),
+    kv("Issued by", `${meta.oms.name}${meta.oms.companyNumber ? `, company number ${meta.oms.companyNumber}` : ""}`),
+    kv("OMS address", meta.oms.address || "[OMS registered address: set in Latchkey admin → Site settings → Legal]"),
+    ...(meta.oms.vatNumber ? [kv("OMS VAT number", meta.oms.vatNumber)] : []),
+    kv("Commission Partner", meta.partner.name),
+    kv("Partner address", meta.partner.address || "[not given]"),
+    ...(meta.partner.vatNumber ? [kv("Partner VAT number", meta.partner.vatNumber)] : []),
+    ...(meta.selfBilled
+      ? [
+          kv("Self-billing", "[Self-billing statement wording: to be confirmed by OMS's accountant]"),
+          ...(meta.partner.vatNumber ? [kv("VAT", "[VAT wording for self-billed invoices: to be confirmed by OMS's accountant]")] : []),
+        ]
+      : [kv("Self-billing", "The Commission Partner opted out: OMS pays against the partner's own invoice, which must match this statement (12.7(c)).")]),
+    "",
+  ];
+  const bottom = [
+    "",
+    kv("Set-off this month (£)", pounds(meta.setOffPence)),
+    kv("Payable balance after clawbacks and set-off (£)", pounds(meta.payablePence)),
+    kv("Paid this month (£)", pounds(meta.paidPence)),
+    kv("Stripe fees", "None deducted by OMS (13.1)."),
+  ];
+  return [...top, ...table, ...bottom].join("\n");
+}
+
+/** The statement number: per partner and month, never reused. */
+export function statementNumber(referralCode: string | null, partnerId: string, month: string): string {
+  return `SB-${(referralCode ?? partnerId.slice(0, 8)).toUpperCase()}-${month.replace("-", "")}`;
 }
 
 /** The cut-off before which IP and device hashes are cleared (D21, 8.5). */

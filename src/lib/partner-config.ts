@@ -183,10 +183,10 @@ export const PARTNER_DEFAULTS: PartnerConfig = {
   reviewRequired: true,
   // Agreement 6.5: increases reach existing referrals only by a terms row with a written-notice reference.
   raisesApplyToExisting: false,
-  // TODO(D22): Swapnil to confirm 11.2(b). Off: a Qualifying Payment after the stop date earns nothing.
+  // Agreement v1.0 20.3(b): no Commission on a host whose Qualifying Payment is on or after the Stop Date. Keep off.
   postStopSignupCounts: false,
   postStopPaymentDeadlineDays: 60,
-  // TODO(D25): Swapnil to decide. Off: after the stop date, a missed month ends commission for that host.
+  // Agreement v1.0 20.3(a): after the Stop Date, a missed payment ends Commission on that host for good. Keep off.
   postStopResumeCounts: false,
   // TODO(D20): Swapnil to decide.
   strongMatchAction: "auto_reject_with_override",

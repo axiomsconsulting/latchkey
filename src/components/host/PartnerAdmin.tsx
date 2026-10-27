@@ -26,6 +26,7 @@ import {
   cancelPayout,
   partnerStatementCsv,
   recordManualPayout,
+  applyPartnerSetOff,
   runMonthCloseNow,
 } from "@/lib/partner-close.functions";
 import { PARTNER_DEFAULTS, type PartnerConfig } from "@/lib/partner-config";
@@ -117,6 +118,52 @@ function PayoutModeCard({ mode: m }: { mode: PayoutMode }) {
         </details>
       ) : null}
     </section>
+  );
+}
+
+/** Breach stop (20.4(b)): record what's owed, then release the rest for payout. */
+function SetOff({ partnerId, refresh }: { partnerId: string; refresh: () => void }) {
+  const apply = useServerFn(applyPartnerSetOff);
+  const { busy, run } = useAction();
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const pence = Math.round(Number(amount) * 100);
+  return (
+    <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-destructive/40 p-2">
+      <Badge variant="destructive">breach stop: set-off review</Badge>
+      <Input
+        className="h-9 w-28"
+        inputMode="decimal"
+        placeholder="£ owed"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+      />
+      <Input
+        className="h-9 w-56"
+        placeholder="What it's for (required if an amount)"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={!!busy || (!!amount && (!(pence > 0) || note.trim().length < 3))}
+        onClick={() =>
+          run(
+            `so${partnerId}`,
+            async () => {
+              await apply({
+                data: { partnerId, items: amount ? [{ amount_pence: pence, note }] : [] },
+              });
+              refresh();
+            },
+            "Set-off applied: the rest can be paid at the next month close",
+          )
+        }
+      >
+        Apply set-off and release
+      </Button>
+    </div>
   );
 }
 
@@ -535,6 +582,9 @@ function Partners({ d, refresh }: Props) {
                     Ended {p.terminated_at?.slice(0, 10)}: {p.termination_reason}
                   </span>
                 )}
+                {p.termination_for_breach && !p.set_off_done_at ? (
+                  <SetOff partnerId={p.id} refresh={refresh} />
+                ) : null}
               </div>
             </li>
           );

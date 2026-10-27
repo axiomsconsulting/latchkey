@@ -31,6 +31,30 @@ export const runMonthCloseNow = createServerFn({ method: "POST" })
     return summary;
   });
 
+/**
+ * "Apply set-off and release" (10.6, 20.4(b)): records what a partner owes,
+ * each with a note, then lets the remaining balance be paid. Empty items:
+ * nothing is owed, the hold simply ends.
+ */
+export const applyPartnerSetOff = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        partnerId: z.string().uuid(),
+        items: z
+          .array(z.object({ amount_pence: z.number().int().positive().max(10_000_000), note: z.string().trim().min(3).max(300) }))
+          .max(20),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { db, actor } = await admin(context);
+    const { applySetOff } = await import("./partner-close.server");
+    await applySetOff(db, data.partnerId, data.items, actor);
+    return { ok: true };
+  });
+
 export const approveAndSendPayout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ payoutId: z.string().uuid() }).parse(d))

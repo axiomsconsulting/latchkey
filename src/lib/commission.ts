@@ -71,6 +71,26 @@ export function dayEnd(date: string, tz = "Europe/London"): number {
   return dayStart(next, tz);
 }
 
+/** The calendar date (YYYY-MM-DD) of an instant in a time zone. */
+export function localDate(at: number, tz = "Europe/London"): string {
+  return new Date(at).toLocaleDateString("en-CA", { timeZone: tz });
+}
+
+/** A calendar date `n` days after another (YYYY-MM-DD). */
+export function addDaysToDate(date: string, n: number): string {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/**
+ * "Within X days after" a date (agreement v1.0 clause 2.2): calendar days,
+ * ending at the end of the Xth day after it, UK time. Returns the first
+ * instant after the period (so a time is in time when it is before this).
+ */
+export function withinDaysEnd(at: number, days: number): number {
+  return dayEnd(addDaysToDate(localDate(at, "Europe/London"), days), "Europe/London");
+}
+
 /** The same day of the month, `n` months on (clamped to the month's last day), keeping the time of day. */
 export function addMonths(at: number, n: number): number {
   const d = new Date(at);
@@ -365,7 +385,8 @@ const TRIAL_LEEWAY = 60_000;
 function paidAfterTrial(inv: StripeInvoice, host: HostBilling): boolean {
   if (inv.status !== "paid" || inv.amount_paid <= 0 || inv.paid_out_of_band) return false;
   if (!COUNTED_REASONS.has(inv.billing_reason ?? "")) return false;
-  // TODO(Swapnil): confirm whether Latchkey prorates plan changes; proration-only invoices never start a new Paid Month.
+  // Agreement v1.0 7.3(c), 7.6: an invoice made only of part-period adjustments (prorations) is not a
+  // Paid Month; prorations inside a regular monthly invoice are part of that month's Net Receipts.
   const lines = inv.lines?.data ?? [];
   if (lines.length && lines.every((l) => l.proration)) return false;
   const period = invoicePeriod(inv);
@@ -664,16 +685,26 @@ export function bonusEligibility(input: {
   if (s.bonus_amount_pence === null && !s.bonus_tiers?.length) return no("no_bonus_in_terms");
   if (!s.bonus_end_date) return no("no_bonus_end_date");
   const signUp = ms(r.sign_up_at)!;
-  if (signUp >= dayEnd(s.bonus_end_date)) return no("signed_up_after_end_date");
-  const deadline = signUp + s.bonus_first_payment_deadline_days * DAY;
+  // 8.2(a): on or before the Bonus End Date, judged at the end of that day, UK time.
+  if (signUp >= dayEnd(s.bonus_end_date, "Europe/London")) return no("signed_up_after_end_date");
+  // 8.2(b), 2.2: within 60 calendar days after the Sign-up Date, to the end of that day, UK time.
+  const deadline = withinDaysEnd(signUp, s.bonus_first_payment_deadline_days);
   const qp = ms(r.qualifying_payment_at ?? null);
   if (qp === null)
-    return now > deadline
+    return now >= deadline
       ? no("qualifying_payment_too_late")
       : wait("pending", "waiting_for_qualifying_payment");
-  if (qp > deadline) return no("qualifying_payment_too_late");
+  if (qp >= deadline) return no("qualifying_payment_too_late");
   if (r.status === "rejected") return no("referral_rejected");
-  if (!postStopAllowed(r, input.partner, input.config, "bonus", qp)) return no("post_stop");
+  const stop = ms(input.partner.terminated_at);
+  if (input.partner.termination_for_breach) {
+    // 8.2(f), 20.4(a): stopped for breach on or before today, the bonus stands only if its
+    // first Paid Month had ended before the Stop Date. A later Stop Date blocks once it comes.
+    if (stop !== null && stop <= now) {
+      const end = ms(r.first_paid_month_end ?? null);
+      if (end === null || end >= stop) return no("breach_stop");
+    }
+  } else if (!postStopAllowed(r, input.partner, input.config, "bonus", qp)) return no("post_stop");
   if (input.priorClaim) return no("prior_claim");
   const paid = Math.max(0, input.qpPaidPence);
   const refunded = Math.max(0, r.qp_refunded_pence ?? 0);
@@ -735,11 +766,37 @@ export function releaseHeld(
   now: number,
   openDisputeCharges: ReadonlySet<string>,
   flaggedReferrals: ReadonlySet<string>,
+  /** Launch Bonus lines a breach stop has cancelled (breachVoidedBonuses): never released. */
+  voidedBonuses: ReadonlySet<string> = new Set(),
 ): string[] {
   return lines
     .filter((l) => l.state === "held" && (ms(l.payable_after) ?? Infinity) <= now)
     .filter((l) => !(l.stripe_charge_id && openDisputeCharges.has(l.stripe_charge_id)))
     .filter((l) => !(l.referral_id && flaggedReferrals.has(l.referral_id)))
+    .filter((l) => !voidedBonuses.has(l.id))
+    .map((l) => l.id);
+}
+
+/**
+ * Launch Bonus lines written before a breach stop whose first Paid Month
+ * ended on or after the Stop Date (8.2(f), 20.4(a)): cancelled, not paid.
+ * Only lines not yet paid, and only once the Stop Date has come.
+ */
+export function breachVoidedBonuses(
+  lines: Array<Pick<LedgerLine, "id" | "kind" | "state" | "partner_id" | "referral_id">>,
+  partners: ReadonlyMap<string, PartnerState>,
+  firstMonthEnd: ReadonlyMap<string, string | null>,
+  now: number,
+): string[] {
+  return lines
+    .filter((l) => l.kind === "launch_bonus" && (l.state === "held" || l.state === "on_hold" || l.state === "payable"))
+    .filter((l) => {
+      const p = partners.get(l.partner_id);
+      const stop = ms(p?.terminated_at ?? null);
+      if (!p?.termination_for_breach || stop === null || stop > now) return false;
+      const end = ms(firstMonthEnd.get(l.referral_id ?? "") ?? null);
+      return end === null || end >= stop;
+    })
     .map((l) => l.id);
 }
 
@@ -849,7 +906,20 @@ export type PayoutPartner = {
   payouts_enabled: boolean;
   /** A partner-level flag (dispute rate) still open: payouts wait for review. */
   flagged: boolean;
+  /** 20.4(b): stopped for breach, payouts wait until OMS has applied any set-off. */
+  terminated_at?: string | null;
+  termination_for_breach?: boolean;
+  set_off_done_at?: string | null;
 };
+
+/** 20.4(b): a breach stop has come and OMS hasn't finished the set-off yet. */
+export function breachSetOffPending(
+  p: { terminated_at?: string | null; termination_for_breach?: boolean; set_off_done_at?: string | null },
+  now: number,
+): boolean {
+  const stop = ms(p.terminated_at ?? null);
+  return !!p.termination_for_breach && stop !== null && stop <= now && !p.set_off_done_at;
+}
 
 export type PlannedPayout = {
   partner_id: string;
@@ -916,6 +986,10 @@ export function planPayouts(
     }
     if (amount < config.minPayoutPence) {
       carry("below_minimum");
+      continue;
+    }
+    if (breachSetOffPending(p, asOf)) {
+      carry("breach_stop_set_off_review");
       continue;
     }
     if (p.status === "suspended") {

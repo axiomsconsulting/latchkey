@@ -3,6 +3,7 @@
  * and Stripe. Server only. Rules in partner-close.ts and commission.ts.
  */
 import {
+  breachVoidedBonuses,
   clawbackNext,
   planPayouts,
   releaseHeld,
@@ -191,11 +192,13 @@ export async function closeAndPlan(
       .select("referral_id")
       .eq("status", "open")
       .not("referral_id", "is", null);
+    const voided = await voidBreachBonuses(db, asOf, actor);
     const ids = releaseHeld(
       held,
       asOf,
       new Set(((disputes ?? []) as Array<{ charge_id: string }>).map((d) => d.charge_id)),
       new Set(((flags ?? []) as Array<{ referral_id: string }>).map((f) => f.referral_id)),
+      new Set(voided),
     );
     if (ids.length)
       check(await db.from("commission_ledger").update({ state: "payable" }).in("id", ids));
@@ -260,7 +263,7 @@ export async function closeAndPlan(
   if (ids.length) {
     const { data: ps } = await db
       .from("partners")
-      .select("id, status, country, payout_route, payouts_enabled")
+      .select("id, status, country, payout_route, payouts_enabled, terminated_at, termination_for_breach, set_off_done_at")
       .in("id", ids);
     const { data: pflags } = await db
       .from("fraud_flags")
@@ -327,7 +330,7 @@ export async function approveAndSend(
   const partner = check(
     await db
       .from("partners")
-      .select("id, status, stripe_account_id, payouts_enabled, termination_for_breach")
+      .select("id, status, stripe_account_id, payouts_enabled, termination_for_breach, terminated_at, set_off_done_at")
       .eq("id", p.partner_id)
       .single(),
   ) as {
@@ -555,7 +558,7 @@ export async function runReversals(db: AnyDb) {
   }
 }
 
-/** A month's statement for one partner (9.1), as CSV. */
+/** A month's statement for one partner (12.1, 12.7), as CSV. */
 export async function partnerStatement(
   db: AnyDb,
   partnerId: string,
@@ -564,6 +567,21 @@ export async function partnerStatement(
   const start = `${month}-01T00:00:00Z`;
   const d = new Date(start);
   const end = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString();
+  const partner = check(
+    await db
+      .from("partners")
+      .select("id, legal_name, business_name, referral_code, postal_address, vat_number, self_billing_opt_out")
+      .eq("id", partnerId)
+      .single(),
+  ) as {
+    id: string;
+    legal_name: string;
+    business_name: string | null;
+    referral_code: string | null;
+    postal_address: string | null;
+    vat_number: string | null;
+    self_billing_opt_out: boolean | null;
+  };
   const { data: refs } = await db
     .from("referrals")
     .select("id, host_label, status, status_detail, paid_months_used")
@@ -576,9 +594,21 @@ export async function partnerStatement(
     .lt("created_at", end);
   const { data: heldNow } = await db
     .from("commission_ledger")
-    .select("referral_id, amount_pence")
+    .select("referral_id, amount_pence, state, note, stripe_charge_id")
     .eq("partner_id", partnerId)
     .in("state", ["held", "on_hold"]);
+  const { data: payableNow } = await db
+    .from("commission_ledger")
+    .select("amount_pence")
+    .eq("partner_id", partnerId)
+    .eq("state", "payable");
+  const { data: paid } = await db
+    .from("payouts")
+    .select("amount_pence")
+    .eq("partner_id", partnerId)
+    .in("status", ["sent", "manual_done"])
+    .gte("sent_at", start)
+    .lt("sent_at", end);
   const L = (lines ?? []) as Array<{
     referral_id: string | null;
     kind: string;
@@ -586,7 +616,24 @@ export async function partnerStatement(
     base_pence: number;
     state: string;
   }>;
-  const H = (heldNow ?? []) as Array<{ referral_id: string | null; amount_pence: number }>;
+  const H = (heldNow ?? []) as Array<{
+    referral_id: string | null;
+    amount_pence: number;
+    state: string;
+    note: string | null;
+  }>;
+  const { HOLD_WORDS, statementNumber } = await import("./partner-close");
+  const reasonFor = (refId: string) => {
+    const mine = H.filter((h) => h.referral_id === refId && h.amount_pence > 0);
+    if (!mine.length) return null;
+    const onHold = mine.find((h) => h.state === "on_hold");
+    if (!onHold) return HOLD_WORDS["hold_period"]!;
+    if (onHold.note === "under_review") return HOLD_WORDS["under_review"]!;
+    if (onHold.note === "fraud_check") return HOLD_WORDS["fraud_check"]!;
+    return HOLD_WORDS["dispute"]!;
+  };
+  const { data: settings } = await db.from("site_settings").select("legal").eq("id", 1).maybeSingle();
+  const legal = (settings?.legal ?? {}) as Record<string, string | undefined>;
   return statementCsv(
     (
       (refs ?? []) as Array<{
@@ -612,11 +659,31 @@ export async function partnerStatement(
           .filter((l) => l.kind === "launch_bonus")
           .reduce((n, l) => n + l.amount_pence, 0),
         heldPence: H.filter((h) => h.referral_id === r.id).reduce((n, h) => n + h.amount_pence, 0),
+        heldReason: reasonFor(r.id),
         clawbackPence: -mine
           .filter((l) => l.kind === "clawback")
           .reduce((n, l) => n + l.amount_pence, 0),
       };
     }),
+    {
+      number: statementNumber(partner.referral_code, partner.id, month),
+      issuedOn: new Date().toISOString().slice(0, 10),
+      oms: {
+        name: legal["companyName"] || "Omnispace Estates Ltd",
+        companyNumber: legal["companyNumber"] || "",
+        address: legal["registeredAddress"] || "",
+        vatNumber: legal["vatNumber"] || "",
+      },
+      partner: {
+        name: partner.business_name || partner.legal_name,
+        address: partner.postal_address,
+        vatNumber: partner.vat_number,
+      },
+      selfBilled: !partner.self_billing_opt_out,
+      setOffPence: -L.filter((l) => l.kind === "set_off" && l.state !== "void").reduce((n, l) => n + l.amount_pence, 0),
+      payablePence: ((payableNow ?? []) as Array<{ amount_pence: number }>).reduce((n, l) => n + l.amount_pence, 0),
+      paidPence: ((paid ?? []) as Array<{ amount_pence: number }>).reduce((n, l) => n + l.amount_pence, 0),
+    },
   );
 }
 
@@ -682,4 +749,92 @@ export async function purgePartnerIdImages(db: AnyDb, asOf: number): Promise<num
     await db.from("partner_id_checks").delete().in("id", gone.map((r) => r.id));
   }
   return rows.length;
+}
+
+/**
+ * 8.2(f), 20.4(a): Launch Bonus lines not yet paid whose first Paid Month
+ * ended on or after a breach Stop Date are cancelled (state void, bonus
+ * reversed with reason breach_stop). Returns the cancelled line ids.
+ */
+export async function voidBreachBonuses(db: AnyDb, asOf: number, actor: string | null): Promise<string[]> {
+  const { data: ps } = await db
+    .from("partners")
+    .select("id, terminated_at, termination_for_breach")
+    .eq("termination_for_breach", true)
+    .not("terminated_at", "is", null);
+  const partners = new Map(
+    ((ps ?? []) as Array<{ id: string; terminated_at: string | null; termination_for_breach: boolean }>).map((p) => [p.id, p]),
+  );
+  if (!partners.size) return [];
+  const { data: lines } = await db
+    .from("commission_ledger")
+    .select("id, kind, state, partner_id, referral_id")
+    .eq("kind", "launch_bonus")
+    .in("state", ["held", "on_hold", "payable"])
+    .in("partner_id", [...partners.keys()]);
+  const list = (lines ?? []) as Array<Pick<LedgerLine, "id" | "kind" | "state" | "partner_id" | "referral_id">>;
+  if (!list.length) return [];
+  const refIds = [...new Set(list.map((l) => l.referral_id).filter((x): x is string => !!x))];
+  const { data: refs } = await db.from("referrals").select("id, first_paid_month_end").in("id", refIds);
+  const fpme = new Map(
+    ((refs ?? []) as Array<{ id: string; first_paid_month_end: string | null }>).map((r) => [r.id, r.first_paid_month_end]),
+  );
+  const ids = breachVoidedBonuses(list, partners, fpme, asOf);
+  if (!ids.length) return [];
+  // Only lines not already in a payout being sent.
+  check(await db.from("commission_ledger").update({ state: "void" }).in("id", ids));
+  const voidedRefs = list.filter((l) => ids.includes(l.id)).map((l) => l.referral_id).filter((x): x is string => !!x);
+  await db
+    .from("referrals")
+    .update({ bonus_status: "reversed", bonus_ineligible_reason: "breach_stop", updated_at: new Date(asOf).toISOString() })
+    .in("id", voidedRefs);
+  await db.from("launch_bonus_claims").update({ status: "reversed" }).in("referral_id", voidedRefs);
+  for (const l of list.filter((x) => ids.includes(x.id)))
+    await logPartnerEvent(db, {
+      partner_id: l.partner_id,
+      referral_id: l.referral_id ?? null,
+      actor,
+      action: "bonus_reversed_breach_stop",
+      details: { ledger: l.id },
+    });
+  return ids;
+}
+
+/**
+ * 10.6, 20.4(b): OMS records what the partner owes (overpayments, losses
+ * or costs under 22.4, each with a note) as negative set-off lines, and
+ * marks the set-off done so the remaining balance can be paid (still from
+ * £10 and approved by hand). Clawbacks already offset themselves.
+ */
+export async function applySetOff(
+  db: AnyDb,
+  partnerId: string,
+  items: Array<{ amount_pence: number; note: string }>,
+  actor: string,
+) {
+  for (const i of items) {
+    if (!(Number.isInteger(i.amount_pence) && i.amount_pence > 0)) throw new Error("Each set-off must be a positive amount in pence.");
+    if (i.note.trim().length < 3) throw new Error("Each set-off needs a note.");
+  }
+  if (items.length)
+    check(
+      await db.from("commission_ledger").insert(
+        items.map((i) => ({
+          partner_id: partnerId,
+          kind: "set_off",
+          amount_pence: -i.amount_pence,
+          base_pence: 0,
+          state: "payable",
+          note: i.note.trim().slice(0, 300),
+          created_by: actor,
+        })),
+      ),
+    );
+  check(await db.from("partners").update({ set_off_done_at: new Date().toISOString() }).eq("id", partnerId));
+  await logPartnerEvent(db, {
+    partner_id: partnerId,
+    actor,
+    action: "set_off_applied",
+    details: { items },
+  });
 }
