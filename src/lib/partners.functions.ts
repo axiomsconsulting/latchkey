@@ -26,6 +26,7 @@ import {
   onboardingLinkBody,
   platformSetupProblem,
   partnerAccountBody,
+  payoutModeStatus,
 } from "./partner-eligibility";
 
 type Ctx = { userId: string };
@@ -442,13 +443,12 @@ export const adminPartnerOverview = createServerFn({ method: "GET" })
       else if (l.state === "payable") b.payable += l.amount_pence;
       else if (l.state === "paid") b.paid += l.amount_pence;
     }
-    const { partnerStripeMode } = await import("./partner-stripe.server");
-    let mode: string;
-    try {
-      mode = partnerStripeMode();
-    } catch (e) {
-      mode = e instanceof Error ? e.message : "not set up";
-    }
+    const { liveAllowed, partnerKeysPresent } = await import("./partner-stripe.server");
+    const payoutMode = payoutModeStatus({
+      ...partnerKeysPresent(),
+      allowLive: liveAllowed(),
+      profileConfirmed: config.stripePlatformProfileConfirmed,
+    });
     return {
       setUp: true as const,
       partners: partners ?? [],
@@ -459,7 +459,7 @@ export const adminPartnerOverview = createServerFn({ method: "GET" })
       payouts: payouts ?? [],
       clawbacks: clawbacks ?? [],
       config,
-      stripeMode: mode,
+      payoutMode,
       trialWarning: trialDaysWarning(pricing?.trial_days ?? 30),
     };
   });
@@ -531,6 +531,57 @@ export const setPartnerStatus = createServerFn({ method: "POST" })
       actor,
       action: `partner_${input.status}`,
       details: { reason: input.reason, breach: !!input.breach },
+    });
+    return { ok: true };
+  });
+
+/**
+ * Forgets a partner's Stripe account so they set up payouts again, e.g. after
+ * moving from test to live. The Stripe account itself is left alone (close it
+ * in Stripe if needed). Refused while a payout to it is approved or sending.
+ */
+export const resetPartnerStripe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ partnerId: z.string().uuid(), reason: z.string().trim().min(3).max(1000) }).parse(d),
+  )
+  .handler(async ({ data: input, context }) => {
+    const { db, actor, check, logPartnerEvent } = await admin(context);
+    const { data: p, error } = await db
+      .from("partners")
+      .select("id, stripe_account_id, stripe_account_mode")
+      .eq("id", input.partnerId)
+      .single();
+    if (error || !p) throw new Error("Commission Partner not found.");
+    if (!p.stripe_account_id) throw new Error("This partner has no Stripe account to reset.");
+    const { count } = await db
+      .from("payouts")
+      .select("id", { count: "exact", head: true })
+      .eq("partner_id", input.partnerId)
+      .in("status", ["approved", "sending"]);
+    if ((count ?? 0) > 0)
+      throw new Error("A payout to this partner is approved or sending: wait for it to finish.");
+    check(
+      await db
+        .from("partners")
+        .update({
+          stripe_account_id: null,
+          stripe_account_mode: null,
+          payouts_enabled: false,
+          stripe_requirements: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.partnerId),
+    );
+    await logPartnerEvent(db, {
+      partner_id: input.partnerId,
+      actor,
+      action: "stripe_account_reset",
+      details: {
+        reason: input.reason,
+        old_account: p.stripe_account_id,
+        old_mode: p.stripe_account_mode,
+      },
     });
     return { ok: true };
   });

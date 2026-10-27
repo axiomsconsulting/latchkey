@@ -52,6 +52,16 @@ export function liveAllowed(): boolean {
   return process.env["PARTNER_PAYOUTS_ALLOW_LIVE"] === "true";
 }
 
+/** Which partner keys are set (yes/no only, never the keys), for the admin's mode line. */
+export function partnerKeysPresent(): { hasTestKey: boolean; hasLiveKey: boolean } {
+  return {
+    hasTestKey: isTestKey(process.env["STRIPE_TEST_API_KEY"]),
+    hasLiveKey: [process.env["STRIPE_LIVE_API_KEY"], process.env["STRIPE_SECRET_KEY"]].some(
+      isLiveKey,
+    ),
+  };
+}
+
 /**
  * The key for partner calls: the test key; a live key only when
  * PARTNER_PAYOUTS_ALLOW_LIVE === "true" (and then the live key wins, as the

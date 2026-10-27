@@ -13,6 +13,7 @@ import {
   onboardingLinkBody,
   platformSetupProblem,
   partnerAccountBody,
+  payoutModeStatus,
 } from "../src/lib/partner-eligibility";
 
 describe("partner eligibility", () => {
@@ -124,5 +125,29 @@ describe("partner eligibility", () => {
     expect(platformSetupProblem("accounts_v2_access_blocked")).toMatch(/set-up/);
     expect(platformSetupProblem("email_invalid")).toBeNull();
     expect(platformSetupProblem(null)).toBeNull();
+  });
+
+  it("says which Stripe mode partner payouts use and what's left to go live", () => {
+    const base = { hasTestKey: true, hasLiveKey: true, allowLive: false, profileConfirmed: false };
+    const t = payoutModeStatus(base);
+    expect(t.mode).toBe("test");
+    expect(t.canSetUp).toBe(true);
+    expect(t.toGoLive.join(" ")).toMatch(/PARTNER_PAYOUTS_ALLOW_LIVE/);
+    expect(t.toGoLive.join(" ")).toMatch(/D1/);
+    expect(t.toGoLive.join(" ")).not.toMatch(/live Stripe secret key/);
+
+    const noD1 = payoutModeStatus({ ...base, allowLive: true });
+    expect(noD1.mode).toBe("live");
+    expect(noD1.canSetUp).toBe(false);
+
+    const live = payoutModeStatus({ ...base, allowLive: true, profileConfirmed: true });
+    expect(live).toMatchObject({ mode: "live", canSetUp: true, toGoLive: [] });
+
+    // Allowed but no live key: the test key is still used.
+    expect(payoutModeStatus({ ...base, hasLiveKey: false, allowLive: true }).mode).toBe("test");
+    expect(payoutModeStatus({ ...base, hasTestKey: false }).mode).toBe("off");
+    expect(payoutModeStatus({ ...base, hasTestKey: false, hasLiveKey: false }).summary).toMatch(
+      /no Stripe key/,
+    );
   });
 });

@@ -32,6 +32,15 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.82.0",
+    date: "2026-10-26",
+    title: "Commission Partners: test or live at a glance, and Stripe account reset",
+    items: [
+      { kind: "new", area: "Settings", admin: true, text: "Latchkey admin → Commission Partners now says whether partner payouts use Stripe test or live, why, and what's left to go live (live is still only switched on in Lovable Cloud's secrets, plus the D1 tick). Each partner shows which mode their Stripe account was made in, flagged when it doesn't match." },
+      { kind: "new", area: "Settings", admin: true, text: "\"Reset Stripe account\" on a partner (with a reason, kept in their log) forgets their Stripe account so they set up payouts again, for example after moving from test to live. The old account stays in Stripe, and it's refused while a payout to it is approved or sending." },
+    ],
+  },
+  {
     version: "0.81.4",
     date: "2026-10-26",
     title: "Commission Partner Stripe accounts ask for card payments too",

@@ -141,3 +141,65 @@ export function platformSetupProblem(code: string | null | undefined): string | 
     return "Latchkey's Stripe Connect set-up isn't finished, so payouts can't be set up yet. Please let Latchkey know.";
   return null;
 }
+
+export type PayoutMode = {
+  mode: "test" | "live" | "off";
+  /** Can a partner set up payouts in this mode right now? */
+  canSetUp: boolean;
+  summary: string;
+  /** What's still needed for live payouts (empty once live works). */
+  toGoLive: string[];
+};
+
+/**
+ * Which Stripe mode Commission Partner payouts use, and why, for Latchkey
+ * admin. Follows partnerStripeKey(): live only with PARTNER_PAYOUTS_ALLOW_LIVE
+ * and a live key, otherwise the test key. Never reveals the keys.
+ */
+export function payoutModeStatus(s: {
+  hasTestKey: boolean;
+  hasLiveKey: boolean;
+  allowLive: boolean;
+  profileConfirmed: boolean;
+}): PayoutMode {
+  const toGoLive: string[] = [];
+  if (!s.hasLiveKey) toGoLive.push("Add a live Stripe secret key in Lovable Cloud → Secrets.");
+  if (!s.allowLive)
+    toGoLive.push('Add the secret PARTNER_PAYOUTS_ALLOW_LIVE with the value "true".');
+  if (!s.profileConfirmed)
+    toGoLive.push(
+      'Finish the live Connect platform profile in Stripe, then tick "Stripe confirmed the platform profile (D1)" under Programme decisions.',
+    );
+  if (s.allowLive && s.hasLiveKey) {
+    if (!s.profileConfirmed)
+      return {
+        mode: "live",
+        canSetUp: false,
+        summary: "Live Stripe key in use, but partners can't set up payouts until D1 is ticked.",
+        toGoLive,
+      };
+    return {
+      mode: "live",
+      canSetUp: true,
+      summary: "Live: partners set up real Stripe accounts and transfers move real money.",
+      toGoLive: [],
+    };
+  }
+  if (s.hasTestKey)
+    return {
+      mode: "test",
+      canSetUp: true,
+      summary: s.allowLive
+        ? "Test: live payouts are allowed, but there's no live key, so the test key is used."
+        : "Test: partners get Stripe test accounts and no real money moves.",
+      toGoLive,
+    };
+  return {
+    mode: "off",
+    canSetUp: false,
+    summary: s.hasLiveKey
+      ? "Off: only a live key is set and live payouts aren't allowed. Add STRIPE_TEST_API_KEY to test."
+      : "Off: no Stripe key is set for partner payouts.",
+    toGoLive,
+  };
+}

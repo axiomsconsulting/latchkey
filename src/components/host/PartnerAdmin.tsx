@@ -8,6 +8,7 @@ import {
   Download,
   Loader2,
   Play,
+  RotateCcw,
   Send,
   ShieldAlert,
 } from "lucide-react";
@@ -28,10 +29,12 @@ import {
   runMonthCloseNow,
 } from "@/lib/partner-close.functions";
 import { PARTNER_DEFAULTS, type PartnerConfig } from "@/lib/partner-config";
+import type { PayoutMode } from "@/lib/partner-eligibility";
 import {
   adminPartnerOverview,
   applyTermsToExisting,
   approvePartner,
+  resetPartnerStripe,
   resolveFraudFlag,
   reviewReferral,
   saveCommissionTerms,
@@ -63,10 +66,8 @@ export function PartnerAdmin() {
     );
   return (
     <div className="space-y-6">
+      <PayoutModeCard mode={d.payoutMode} />
       <div className="card-soft flex flex-wrap items-center gap-3 p-4 text-sm">
-        <Badge variant={d.stripeMode === "test" ? "secondary" : "destructive"}>
-          Stripe: {d.stripeMode}
-        </Badge>
         {d.trialWarning ? (
           <span className="flex items-center gap-1 text-destructive">
             <AlertTriangle className="size-4" /> {d.trialWarning}
@@ -87,6 +88,34 @@ export function PartnerAdmin() {
 }
 
 type Props = { d: any; refresh: () => void };
+
+/** Test or live, why, and what's left to go live. Live is only switched on in Lovable Cloud's secrets. */
+function PayoutModeCard({ mode: m }: { mode: PayoutMode }) {
+  return (
+    <section className="card-soft space-y-2 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={m.mode === "live" ? "destructive" : "secondary"}>
+          Stripe: {m.mode === "live" ? "Live" : m.mode === "test" ? "Test" : "Off"}
+        </Badge>
+        <span>{m.summary}</span>
+      </div>
+      {m.toGoLive.length ? (
+        <details>
+          <summary className="cursor-pointer text-muted-foreground">How to go live</summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
+            {m.toGoLive.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+            <li>
+              Partners who set up payouts in test mode need their Stripe account reset (below), then
+              set up payouts again.
+            </li>
+          </ol>
+        </details>
+      ) : null}
+    </section>
+  );
+}
 
 function Section({
   title,
@@ -311,6 +340,7 @@ function Payouts({ d, refresh }: Props) {
 function Partners({ d, refresh }: Props) {
   const approve = useServerFn(approvePartner);
   const setStatus = useServerFn(setPartnerStatus);
+  const resetStripe = useServerFn(resetPartnerStripe);
   const { busy, run } = useAction();
   const [reason, setReason] = useState<Record<string, string>>({});
   const [breach, setBreach] = useState<Record<string, boolean>>({});
@@ -340,6 +370,12 @@ function Partners({ d, refresh }: Props) {
                 {p.payout_route === "express" ? (
                   <Badge variant={p.payouts_enabled ? "secondary" : "outline"}>
                     {p.payouts_enabled ? "Stripe can pay" : "Stripe not ready"}
+                    {p.stripe_account_mode ? ` · ${p.stripe_account_mode}` : ""}
+                  </Badge>
+                ) : null}
+                {p.stripe_account_mode && p.stripe_account_mode !== d.payoutMode.mode ? (
+                  <Badge variant="destructive">
+                    Stripe account from {p.stripe_account_mode} mode
                   </Badge>
                 ) : null}
                 {p.termination_for_breach ? (
@@ -372,7 +408,7 @@ function Partners({ d, refresh }: Props) {
                   <>
                     <Input
                       className="h-9 w-56"
-                      placeholder="Reason (for suspend / end)"
+                      placeholder="Reason (suspend / end / reset)"
                       value={why}
                       onChange={(e) => setReason((r) => ({ ...r, [p.id]: e.target.value }))}
                     />
@@ -416,6 +452,32 @@ function Partners({ d, refresh }: Props) {
                       />{" "}
                       For breach (11.3)
                     </label>
+                    {p.stripe_account_id ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!!busy || why.length < 3}
+                        title="Forgets this Stripe account so the partner sets up payouts again. The account stays in Stripe."
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              "Reset this partner's Stripe account? They'll need to set up payouts again. The old account stays in Stripe.",
+                            )
+                          )
+                            return;
+                          void run(
+                            `r${p.id}`,
+                            async () => {
+                              await resetStripe({ data: { partnerId: p.id, reason: why } });
+                              refresh();
+                            },
+                            "Stripe account reset",
+                          );
+                        }}
+                      >
+                        <RotateCcw className="size-4" /> Reset Stripe account
+                      </Button>
+                    ) : null}
                     <Button
                       size="sm"
                       variant="destructive"

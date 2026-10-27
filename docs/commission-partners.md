@@ -103,3 +103,12 @@ Tests: `tests/partner-guards`, `partner-db` (PGlite + RLS), `commission`, `partn
 - **Prorations.** Invoices that are only prorations never start a Paid Month (`TODO`: confirm whether Latchkey prorates).
 - **11.3 "shown on a statement".** The code keeps ledger lines created before the stop date, whether or not a statement went out. If only issued statements count, the close needs to record when statements are issued.
 - **Disputes before payment.** A dispute that arrives before its `invoice.paid` isn't matched (very unlikely).
+
+## Going live (partner payouts)
+
+Latchkey admin → Commission Partners shows the Stripe mode at the top (Test / Live / Off), why, and the steps left. Live can't be switched on from the app:
+
+1. Stripe, live mode: finish the Connect platform profile the same way as in test, and add a live webhook endpoint with the events in step 3 above.
+2. Lovable Cloud → Secrets: a live key (`STRIPE_LIVE_API_KEY` or `STRIPE_SECRET_KEY`) and `PARTNER_PAYOUTS_ALLOW_LIVE` = `true`.
+3. Latchkey admin → Commission Partners → Programme decisions: tick "Stripe confirmed the platform profile (D1)".
+4. Partners who set up payouts in test have a red "Stripe account from test mode" badge: type a reason and press **Reset Stripe account**. They then set up payouts again on their partner page. The test account stays in Stripe's test data.
