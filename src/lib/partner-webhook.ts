@@ -17,6 +17,8 @@ import {
   billingInterval,
   commissionFor,
   invoicePeriod,
+  isAnnualPayment,
+  isPaidMonth,
   isSettled,
   ms,
   netReceipts,
@@ -33,6 +35,7 @@ import {
   type TermsSnapshot,
 } from "./commission";
 import type { PartnerConfig } from "./partner-config";
+import { lockRate } from "./rate-campaigns";
 
 // Stripe's event payloads, read defensively field by field.
 type StripeObj = any;
@@ -239,6 +242,18 @@ async function onInvoicePaid(
 
   const paidAtMs =
     ms(inv.status_transitions?.paid_at ?? null) ?? ms(charge?.created ?? null) ?? Date.now();
+  // The host's first payment fixes their rate for good, a campaign's if one is running then (7.11-7.13).
+  if (r.commission_rate_bps == null && (isPaidMonth(inv, host) || isAnnualPayment(inv, host))) {
+    const firstAt = ms(qp?.paid_at ?? null) ?? paidAtMs;
+    const lock = lockRate(firstAt, r.terms_snapshot.rate_bps, config.rateCampaigns);
+    Object.assign(patch, {
+      commission_rate_bps: lock.rate_bps,
+      launch_bonus: lock.launch_bonus,
+      rate_campaign: lock.campaign_label,
+      rate_locked_at: isoOf(firstAt),
+    });
+    r = { ...r, commission_rate_bps: lock.rate_bps };
+  }
   const result = commissionFor({
     invoice: inv,
     host,

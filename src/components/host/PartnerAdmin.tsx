@@ -30,6 +30,7 @@ import {
   runMonthCloseNow,
 } from "@/lib/partner-close.functions";
 import { PARTNER_DEFAULTS, type PartnerConfig } from "@/lib/partner-config";
+import { CAMPAIGN_NOTICE_DAYS, type RateCampaign } from "@/lib/rate-campaigns";
 import type { PayoutMode } from "@/lib/partner-eligibility";
 import { AgreementAdmin, IdReviewAdmin } from "@/components/host/PartnerAgreementAdmin";
 import {
@@ -41,6 +42,7 @@ import {
   reviewReferral,
   saveCommissionTerms,
   saveProgrammeSettings,
+  saveRateCampaigns,
   setPartnerStatus,
 } from "@/lib/partners.functions";
 import { formatPence } from "@/lib/services";
@@ -86,6 +88,7 @@ export function PartnerAdmin() {
       <Referrals d={d} refresh={refresh} />
       <Flags d={d} refresh={refresh} />
       <Terms d={d} refresh={refresh} />
+      <RateCampaigns saved={(d.config as PartnerConfig).rateCampaigns} refresh={refresh} />
       <Settings config={d.config as PartnerConfig} refresh={refresh} />
     </div>
   );
@@ -885,7 +888,7 @@ function Terms({ d, refresh }: Props) {
         <p className="text-sm text-muted-foreground sm:col-span-3">
           New terms apply to hosts by their Sign-up Date. Anything lower than now needs the notice
           emailed first and starts 30+ days after it (6.5). A blank bonus amount or end date means
-          no Launch Bonus.
+          no Sign-up Bonus.
         </p>
         <TField
           id="t-label"
@@ -905,7 +908,7 @@ function Terms({ d, refresh }: Props) {
         <TField id="t-cap" label="Paid Months" type="number" value={f.cap} onChange={set("cap")} />
         <TField
           id="t-bonus"
-          label="Launch Bonus (£, blank = none)"
+          label="Sign-up Bonus (£, blank = none)"
           type="number"
           value={f.bonus}
           onChange={set("bonus")}
@@ -1125,6 +1128,115 @@ function Settings({ config, refresh }: { config: PartnerConfig; refresh: () => v
           );
         })}
       </div>
+    </Section>
+  );
+}
+
+/** Launch Bonus and other rate campaigns (agreement 7.11-7.13): shown on the join page and in the agreement's Annex B. */
+function RateCampaigns({ saved, refresh }: { saved: RateCampaign[]; refresh: () => void }) {
+  const save = useServerFn(saveRateCampaigns);
+  const { busy, run } = useAction();
+  const [rows, setRows] = useState<RateCampaign[]>(saved);
+  const dirty = JSON.stringify(rows) !== JSON.stringify(saved);
+  const set = (i: number, patch: Partial<RateCampaign>) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  return (
+    <Section
+      title="Rate campaigns (Launch Bonus)"
+      action={
+        <Button
+          size="sm"
+          disabled={!dirty || !!busy}
+          onClick={() =>
+            run(
+              "campaigns",
+              async () => {
+                await save({ data: { campaigns: rows } });
+                refresh();
+              },
+              "Saved",
+            )
+          }
+        >
+          Save
+        </Button>
+      }
+    >
+      <p className="text-sm text-muted-foreground">
+        A host whose first payment after the trial falls inside a campaign (UK time, from 00:00 on
+        the first day to 23:59 on the last) earns the partner that rate for their first 12 paid
+        months, fixed at that payment. Adding, raising or extending is allowed at any time.
+        Withdrawing, lowering, starting later or ending sooner needs {CAMPAIGN_NOTICE_DAYS} days'
+        notice: email partners first. Hosts whose rate is already fixed never change.
+      </p>
+      <div className="space-y-3">
+        {rows.map((c, i) => (
+          <div
+            key={i}
+            className="grid gap-2 rounded-xl border border-border p-3 text-sm sm:grid-cols-6"
+          >
+            <label className="space-y-1 sm:col-span-2">
+              <span className="text-xs text-muted-foreground">Name shown to partners</span>
+              <Input value={c.label} onChange={(e) => set(i, { label: e.target.value })} />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-muted-foreground">Rate %</span>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                step={0.5}
+                value={c.rateBps / 100}
+                onChange={(e) => set(i, { rateBps: Math.round(Number(e.target.value) * 100) })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-muted-foreground">First day</span>
+              <Input
+                type="date"
+                value={c.startDate}
+                onChange={(e) => set(i, { startDate: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-muted-foreground">Last day</span>
+              <Input
+                type="date"
+                value={c.endDate}
+                onChange={(e) => set(i, { endDate: e.target.value })}
+              />
+            </label>
+            <div className="flex items-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
+              >
+                Remove
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+          setRows((rs) => [
+            ...rs,
+            {
+              id: `campaign-${Date.now().toString(36)}`,
+              label: "Launch Bonus",
+              rateBps: 2000,
+              startDate: today,
+              endDate: today,
+            },
+          ]);
+        }}
+      >
+        Add a campaign
+      </Button>
     </Section>
   );
 }

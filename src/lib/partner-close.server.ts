@@ -152,7 +152,7 @@ export async function closeAndPlan(
             base_pence: 0,
             payable_after: payableAfter,
             stripe_charge_id: r.qualifying_charge_id,
-            note: "Launch Bonus",
+            note: "Sign-up Bonus",
             created_by: actor,
           })
           .select("id")

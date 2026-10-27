@@ -178,6 +178,12 @@ New columns: `partners.postal_address`, `self_billing_opt_out`, `stop_source`, `
 - 17.3: Google named for Drive storage of these files.
 - Annex B explanation: "[the amount]" and "[the Bonus End Date]" instead of live placeholders.
 
+### Agreement v1.2 and Launch Bonus rate campaigns (migration 0064)
+
+- **Launch Bonus:** 20% instead of 10% for a referred host's first 12 Paid Months when the host's first payment after the trial (monthly or annual) is made from 27 October 2026 to 23:59 UK time on 31 December 2026. The rate is fixed on the referral at that payment and never changes (except upwards if the standard rate rises). Every other rule is unchanged.
+- **Editable:** Latchkey admin → Commission Partners → Rate campaigns. Adding, raising and extending are allowed any time; withdrawing, lowering, starting later or ending sooner must take effect 30+ days from the save (clause 7.13), so email partners first. The agreement's Annex B and the join page update themselves.
+- **Agreement v1.2:** new clauses 7.11 to 7.13, 7.1 / 7.7 / 7.10 / 19.2 updated, the one-off bonus renamed the Sign-up Bonus throughout. The contracting party still comes from Legal details (Omnistar Ltd). 0064 makes v1.2 current at once while nobody has signed; otherwise it's a draft effective 30 days later.
+
 ### Agreement v1.1 (migration 0063, in force; v1.0 retired before anyone signed)
 
 - **Who runs Latchkey is no longer written into the text.** The header, clause 1.1, the "For OMS" line, Annex B and the footer use `{{operator.name}}` / `{{operator.details}}` from Latchkey admin → Site settings → Legal details (a person trading as OMS Estates, or later a company). New 1.5: when those details change, every copy is read with the new ones (the signed PDF stays the record of the text signed). 23.3: OMS may move the agreement into a company it owns or controls, agreed in advance, with the new owner taking on everything owed. "Omnispace" was removed from 14.5, 15.1 and 15.3. Signing stays closed until the legal name and address are filled in.

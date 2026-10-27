@@ -46,6 +46,25 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.85.0",
+    date: "2026-10-27",
+    title: "Commission Partner Launch Bonus",
+    items: [
+      {
+        kind: "new",
+        area: "Settings",
+        admin: true,
+        text: "Launch Bonus for Commission Partners: 20% instead of 10% for each referred host's first 12 paid months when the host's first payment is made by 23:59 UK time on 31 December 2026. The rate is fixed per host at that first payment. Campaigns are edited in Latchkey admin → Commission Partners → Rate campaigns (add, raise or extend any time; lowering, shortening or withdrawing needs 30 days' notice).",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        admin: true,
+        text: "Commission Partner agreement v1.2 adds the Launch Bonus rate (clauses 7.11 to 7.13) and lists campaigns in Annex B; the old one-off bonus is now called the Sign-up Bonus. The join page shows the running campaign, and partners see each host's rate with a Launch Bonus badge.",
+      },
+    ],
+  },
+  {
     version: "0.84.1",
     date: "2026-10-27",
     title: "Agreement PDFs",

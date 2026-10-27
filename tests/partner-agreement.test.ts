@@ -25,9 +25,11 @@ import {
 } from "../src/lib/partner-agreement";
 import { activationBlockers, activationMissing, canRefer } from "../src/lib/partner-activation";
 import { judgePartnerId, partnerIdStatus } from "../src/lib/partner-id";
+import { DEFAULT_CAMPAIGNS } from "../src/lib/rate-campaigns";
 import type { IdRead } from "../src/lib/guest-records";
 
-const TEXT = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.1.md"), "utf8");
+const TEXT = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.2.md"), "utf8");
+const TEXT_1_1 = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.1.md"), "utf8");
 const TEXT_1_0 = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.0.md"), "utf8");
 const NO_BONUS = {
   label: "v0.5-launch",
@@ -38,7 +40,7 @@ const NO_BONUS = {
 };
 const values = (terms = NO_BONUS, noticeEmail: string | null = "partners@example.com") =>
   agreementValues({
-    version: "1.0",
+    version: "1.2",
     publishedAt: "2026-11-01T10:00:00Z",
     bodySha256: "a".repeat(64),
     terms,
@@ -47,10 +49,52 @@ const values = (terms = NO_BONUS, noticeEmail: string | null = "partners@example
       noticeEmail,
       operatorName: "Jo Bloggs, trading as OMS Estates",
       operatorDetails: "Jo Bloggs, trading as OMS Estates, of 1 High Street, Town",
+      rateCampaigns: DEFAULT_CAMPAIGNS,
+      now: Date.parse("2026-11-01T10:00:00Z"),
     },
   });
 
 describe("agreement text", () => {
+  it("v1.2 shows the Launch Bonus campaign and calls the one-off bonus the Sign-up Bonus", () => {
+    const out = fillAgreement(TEXT, values());
+    expect(out).toContain(
+      "**Launch Bonus:** **20%** for each Referred Host whose first payment is made from 27 October 2026 to 23:59 UK time on 31 December 2026 (Launch Bonus), for that host's first 12 paid months (clause 7.11). Standard rate 10% otherwise.",
+    );
+    expect(out).toMatch(/7\.11 \*\*Launch Bonus rate\.\*\*/);
+    expect(out).toMatch(/7\.12 \*\*Fixed at the first payment\.\*\*/);
+    expect(out).toMatch(/7\.13 \*\*Changing campaigns\.\*\*/);
+    expect(out).toContain("**No Sign-up Bonus currently applies.**");
+    expect(out).not.toMatch(/one-off \*\*Launch Bonus/);
+    // After the campaign has ended, Annex B says so.
+    const later = agreementValues({
+      version: "1.2",
+      publishedAt: null,
+      bodySha256: "a".repeat(64),
+      terms: NO_BONUS,
+      settings: {
+        launchDate: null,
+        noticeEmail: null,
+        rateCampaigns: DEFAULT_CAMPAIGNS,
+        now: Date.parse("2027-01-01T00:00:00Z"),
+      },
+    });
+    expect(later["campaigns.list"]).toBe("No Launch Bonus campaign is running or scheduled.");
+  });
+
+  it("v1.1 still renders as published, with its own bonus name", () => {
+    const out = fillAgreement(
+      TEXT_1_1,
+      agreementValues({
+        version: "1.1",
+        publishedAt: null,
+        bodySha256: "a".repeat(64),
+        terms: NO_BONUS,
+        settings: { launchDate: null, noticeEmail: null },
+      }),
+    );
+    expect(out).toContain("**No Launch Bonus currently applies.**");
+  });
+
   it("fills every placeholder, leaving the ones written as `code`", () => {
     const out = fillAgreement(TEXT, values());
     expect(out).not.toMatch(/\{\{(?!.*`)/);
@@ -137,7 +181,7 @@ describe("agreement text", () => {
     const ticks = signingTicks(parseMarkdown(TEXT));
     expect(ticks).toHaveLength(7);
     expect(ticks[0]).toBe(
-      "I have read the whole of the Latchkey Commission Partner Agreement version 1.1 and agree to it.",
+      "I have read the whole of the Latchkey Commission Partner Agreement version 1.2 and agree to it.",
     );
     expect(signingTicks(parseMarkdown(TEXT_1_0))).toHaveLength(7);
     expect(() => fillAgreement(TEXT_1_0, values())).not.toThrow();

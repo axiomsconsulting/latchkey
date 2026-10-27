@@ -49,7 +49,8 @@ class Mem implements PartnerStore {
   claims: Record<string, string> = {};
   cards: string[] = [];
   modeValue: "test" | "live" = "test";
-  cfg: PartnerConfig = PARTNER_DEFAULTS;
+  // No rate campaign unless a test adds one, so the standard 10% applies.
+  cfg: PartnerConfig = { ...PARTNER_DEFAULTS, rateCampaigns: [] };
   n = 0;
   async claimEvent(id: string) {
     const e = this.events.get(id);
@@ -232,7 +233,14 @@ function setup() {
 let evN = 0;
 function invoicePaid(
   month: string,
-  over: { id?: string; interval?: string; amount?: number; charge?: string; host?: string } = {},
+  over: {
+    id?: string;
+    interval?: string;
+    amount?: number;
+    charge?: string;
+    host?: string;
+    paidAt?: string;
+  } = {},
 ) {
   const start = `${month}-01T00:00:00Z`;
   const d = new Date(start);
@@ -254,7 +262,7 @@ function invoicePaid(
         billing_reason: "subscription_cycle",
         charge: over.charge ?? `ch_${month}`,
         subscription_details: { metadata: { host_id: over.host ?? "h" } },
-        status_transitions: { paid_at: sec(start) },
+        status_transitions: { paid_at: sec(over.paidAt ?? start) },
         lines: {
           data: [
             {
@@ -658,5 +666,155 @@ describe("partner webhook", () => {
     s.insertClawbacks = ok;
     await processPartnerEvent(e, s);
     expect(s.lines.filter((l) => l.kind === "clawback").map((l) => l.amount_pence)).toEqual([-145]);
+  });
+});
+
+describe("Launch Bonus rate (agreement 7.11-7.13)", () => {
+  const LAUNCH = [
+    {
+      id: "launch-2026",
+      label: "Launch Bonus",
+      rateBps: 2000,
+      startDate: "2026-10-27",
+      endDate: "2026-12-31",
+    },
+  ];
+  const withCampaign = () => {
+    const s = setup();
+    s.cfg = { ...PARTNER_DEFAULTS, rateCampaigns: LAUNCH };
+    return s;
+  };
+  const commission = (s: Mem) => s.lines.filter((l) => l.kind === "commission");
+
+  it("pays 20% when the first payment is in the window, and keeps 20% after it ends", async () => {
+    const s = withCampaign();
+    charge(s, "ch_2026-12");
+    await processPartnerEvent(invoicePaid("2026-12"), s);
+    expect(s.referrals[0]).toMatchObject({
+      commission_rate_bps: 2000,
+      launch_bonus: true,
+      rate_campaign: "Launch Bonus",
+      rate_locked_at: "2026-12-01T00:00:00.000Z",
+    });
+    // Months after the campaign ended stay at the fixed 20%.
+    for (const m of ["2027-01", "2027-02"]) {
+      charge(s, `ch_${m}`);
+      await processPartnerEvent(invoicePaid(m), s);
+    }
+    expect(commission(s).map((l) => [l.rate_bps, l.amount_pence])).toEqual([
+      [2000, 580],
+      [2000, 580],
+      [2000, 580],
+    ]);
+  });
+
+  it("counts 23:59:59 UK time on 31 December, but not midnight", async () => {
+    const inTime = withCampaign();
+    charge(inTime, "ch_a");
+    await processPartnerEvent(
+      invoicePaid("2026-12", { id: "in_a", charge: "ch_a", paidAt: "2026-12-31T23:59:59Z" }),
+      inTime,
+    );
+    expect(inTime.referrals[0]!.commission_rate_bps).toBe(2000);
+
+    const late = withCampaign();
+    charge(late, "ch_b");
+    await processPartnerEvent(
+      invoicePaid("2027-01", { id: "in_b", charge: "ch_b", paidAt: "2027-01-01T00:00:00Z" }),
+      late,
+    );
+    expect(late.referrals[0]).toMatchObject({ commission_rate_bps: 1000, launch_bonus: false });
+    expect(commission(late)[0]).toMatchObject({ rate_bps: 1000, amount_pence: 290 });
+  });
+
+  it("locks an annual first payment at 20% for all 12 Paid Months in one line", async () => {
+    const s = withCampaign();
+    charge(s, "ch_y", { amount: 6600 });
+    await processPartnerEvent(
+      invoicePaid("2026-11", { id: "in_y", interval: "year", amount: 6600, charge: "ch_y" }),
+      s,
+    );
+    expect(commission(s)[0]).toMatchObject({
+      months_covered: 12,
+      rate_bps: 2000,
+      amount_pence: 1320,
+    });
+    expect(s.referrals[0]).toMatchObject({ paid_months_used: 12, launch_bonus: true });
+  });
+
+  it("takes refunds and chargebacks back at the fixed rate", async () => {
+    const s = withCampaign();
+    charge(s, "ch_2026-11");
+    charge(s, "ch_2026-12");
+    await processPartnerEvent(invoicePaid("2026-11"), s);
+    await processPartnerEvent(invoicePaid("2026-12"), s);
+    await processPartnerEvent(
+      ev("charge.refunded", {
+        id: "ch_2026-12",
+        amount: 2900,
+        amount_refunded: 1450,
+        refunded: false,
+      }),
+      s,
+    );
+    // Half of 580p at 20%.
+    expect(s.lines.find((l) => l.kind === "clawback")).toMatchObject({ amount_pence: -290 });
+    await processPartnerEvent(
+      ev("charge.refunded", {
+        id: "ch_2026-11",
+        amount: 2900,
+        amount_refunded: 2900,
+        refunded: true,
+      }),
+      s,
+    );
+    expect(s.lines.find((l) => l.stripe_invoice_id === "in_2026-11")!.state).toBe("void");
+    // The rate stays fixed even though the first payment was refunded.
+    expect(s.referrals[0]!.commission_rate_bps).toBe(2000);
+  });
+
+  it("claws back a lost chargeback on an already paid month at the fixed rate", async () => {
+    const s = withCampaign();
+    charge(s, "ch_2026-11");
+    charge(s, "ch_2026-12");
+    await processPartnerEvent(invoicePaid("2026-11"), s);
+    await processPartnerEvent(invoicePaid("2026-12"), s);
+    s.lines.find((l) => l.stripe_invoice_id === "in_2026-12")!.state = "paid";
+    for (const status of ["needs_response", "lost"])
+      await processPartnerEvent(
+        ev(status === "lost" ? "charge.dispute.closed" : "charge.dispute.created", {
+          id: "dp_c",
+          charge: "ch_2026-12",
+          amount: 2900,
+          status,
+        }),
+        s,
+      );
+    expect(s.lines.filter((l) => l.kind === "clawback").map((l) => l.amount_pence)).toEqual([-580]);
+  });
+
+  it("stops at 12 Paid Months at the fixed rate", async () => {
+    const s = withCampaign();
+    const months = Array.from({ length: 13 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 10 + i, 1));
+      return d.toISOString().slice(0, 7);
+    });
+    for (const m of months) {
+      charge(s, `ch_${m}`);
+      await processPartnerEvent(invoicePaid(m), s);
+    }
+    expect(commission(s)).toHaveLength(12);
+    expect(commission(s).every((l) => l.rate_bps === 2000)).toBe(true);
+    expect(s.referrals[0]).toMatchObject({ paid_months_used: 12, status_detail: "cap_reached" });
+  });
+
+  it("isn't changed by editing or removing the campaign afterwards", async () => {
+    const s = withCampaign();
+    charge(s, "ch_2026-11");
+    await processPartnerEvent(invoicePaid("2026-11"), s);
+    s.cfg = { ...PARTNER_DEFAULTS, rateCampaigns: [] };
+    charge(s, "ch_2026-12");
+    await processPartnerEvent(invoicePaid("2026-12"), s);
+    expect(commission(s).map((l) => l.rate_bps)).toEqual([2000, 2000]);
   });
 });

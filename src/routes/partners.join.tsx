@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
 import { SiteHeader } from "@/components/SiteHeader";
 import { PhoneInput } from "@/components/WorldPickers";
@@ -55,9 +55,13 @@ function JoinPage() {
   const search = Route.useSearch();
   const openFn = useServerFn(partnerProgrammeOpen);
   const [open, setOpen] = useState<boolean | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [preview, setPreview] = useState(false);
   useEffect(() => {
-    void openFn().then((r) => setOpen(r.open));
+    void openFn().then((r) => {
+      setOpen(r.open);
+      setCampaigns(r.campaigns);
+    });
   }, [openFn]);
   useEffect(() => {
     if (!search.preview || !signedIn) return;
@@ -72,6 +76,7 @@ function JoinPage() {
           <h1 className="text-4xl">{copy.joinTitle}</h1>
           <p className="text-lg text-muted-foreground">{copy.joinIntro}</p>
         </header>
+        <LaunchBonus campaigns={campaigns} />
         <ul className="card-soft grid gap-3 p-5">
           {copy.joinPoints.map((p: string) => (
             <li key={p} className="flex gap-3">
@@ -329,5 +334,30 @@ function ComingSoon() {
         </Button>
       </main>
     </div>
+  );
+}
+
+type Campaign = { label: string; rate: string; from: string; until: string; running: boolean };
+
+/** The running (and any scheduled) Launch Bonus campaigns from Latchkey admin, without earnings examples. */
+function LaunchBonus({ campaigns }: { campaigns: Campaign[] }) {
+  if (!campaigns.length) return null;
+  return (
+    <section
+      aria-label={campaigns[0]!.label}
+      className="card-soft space-y-2 border-2 border-primary/40 p-5"
+    >
+      {campaigns.map((c) => (
+        <p key={`${c.label}-${c.from}`} className="flex gap-3 text-lg font-medium">
+          <Sparkles className="mt-1 size-5 shrink-0 text-primary" />
+          <span>
+            {c.running
+              ? copy.bonusLine(c.label, c.rate, c.until)
+              : copy.bonusUpcoming(c.label, c.rate, c.from, c.until)}
+          </span>
+        </p>
+      ))}
+      <p className="text-sm text-muted-foreground">{copy.bonusNote}</p>
+    </section>
   );
 }

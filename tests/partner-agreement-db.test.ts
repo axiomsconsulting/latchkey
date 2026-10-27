@@ -37,10 +37,11 @@ const sign = () =>
   );
 
 describe("agreement versions", () => {
-  it("have v1.1 in force and v1.0 retired, each word for word from its file", async () => {
+  it("have v1.2 in force and v1.0 and v1.1 retired, each word for word from its file", async () => {
     for (const [version, status] of [
       ["1.0", "retired"],
-      ["1.1", "current"],
+      ["1.1", "retired"],
+      ["1.2", "current"],
     ] as const) {
       const file = readFileSync(
         join(__dirname, `../docs/legal/partner-agreement-v${version}.md`),
@@ -94,7 +95,7 @@ describe("agreement versions", () => {
     );
     expect(
       await db.as("anon", "select version from partner_agreement_versions order by version"),
-    ).toEqual([{ version: "1.0" }, { version: "1.1" }]);
+    ).toEqual([{ version: "1.0" }, { version: "1.1" }, { version: "1.2" }]);
     expect(
       (await db.as("admin", "select version from partner_agreement_versions")).length,
     ).toBeGreaterThan(1);

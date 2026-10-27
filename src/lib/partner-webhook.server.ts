@@ -210,7 +210,24 @@ function store(db: AnyDb): PartnerStore {
       check(await db.from("partner_charges").update(patch).eq("charge_id", chargeId));
     },
     async updateReferral(id, patch) {
-      check(await db.from("referrals").update(patch).eq("id", id));
+      const res = await db.from("referrals").update(patch).eq("id", id);
+      // Before migration 0064 the rate columns aren't there: save the rest (the line itself carries the rate).
+      if (
+        res.error &&
+        /commission_rate_bps|launch_bonus|rate_campaign|rate_locked_at/.test(res.error.message)
+      ) {
+        const rest = Object.fromEntries(
+          Object.entries(patch).filter(
+            ([k]) =>
+              !["commission_rate_bps", "launch_bonus", "rate_campaign", "rate_locked_at"].includes(
+                k,
+              ),
+          ),
+        );
+        check(await db.from("referrals").update(rest).eq("id", id));
+        return;
+      }
+      check(res);
     },
     async insertLines(lines) {
       let added = 0;

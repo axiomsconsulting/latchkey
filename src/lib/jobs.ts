@@ -50,7 +50,7 @@ export const JOBS: Job[] = branded([
     key: "commission_close",
     name: "Commission Partner month close",
     kind: "scheduled",
-    what: "Checks Launch Bonuses, releases commission after its hold, re-runs fraud checks, clears old IP hashes and drafts Commission Partner payouts for approval. Nothing is ever sent without Latchkey admin's approval.",
+    what: "Checks Sign-up Bonuses, releases commission after its hold, re-runs fraud checks, clears old IP hashes and drafts Commission Partner payouts for approval. Nothing is ever sent without Latchkey admin's approval.",
     wakes: "Daily",
     defaultEvery: 1440,
     metric: "job:commission_close",

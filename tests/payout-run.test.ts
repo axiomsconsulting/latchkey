@@ -272,7 +272,7 @@ describe("statements and retention", () => {
     ]);
     const lines = csv.split("\n");
     expect(lines[0]).toBe(
-      "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Launch Bonus (£),Held (£),Held because,Clawback (£)",
+      "Referred Host,Status,Paid Months used,Net Receipts (£),Commission (£),Sign-up Bonus (£),Held (£),Held because,Clawback (£)",
     );
     expect(lines[1]).toBe(
       "H.S. · Amersham,paying,2,29.00,2.90,50.00,52.90,Hold Period (45 days),0.00",
