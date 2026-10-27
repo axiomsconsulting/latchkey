@@ -46,13 +46,26 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.84.1",
+    date: "2026-10-27",
+    title: "Agreement PDFs",
+    items: [
+      {
+        kind: "fixed",
+        area: "Settings",
+        admin: true,
+        text: "The Commission Partner agreement's Download PDF, and the signed copy partners are sent, failed on the live site; both now work.",
+      },
+    ],
+  },
+  {
     version: "0.84.0",
     date: "2026-10-27",
     title: "Cookie choice",
     items: [
       {
         kind: "new",
-        area: "Privacy",
+        area: "Website",
         text: "A cookie banner on the Latchkey website and dashboard asks before any visit is counted or a Commission Partner's link is remembered, with Accept and Reject side by side. Your choice can be changed any time under Privacy policy → Cookie choice. Guests' pages and door tablets never show it.",
       },
       {
