@@ -14,6 +14,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    plugins: [pdfLibTslib()],
     resolve: {
       alias: {
         "entities/lib/decode.js": path.resolve(__dirname, "node_modules/entities/lib/decode.js"),
@@ -23,3 +24,26 @@ export default defineConfig({
     },
   },
 });
+
+/**
+ * pdf-lib (and its @pdf-lib helpers) use tslib 1.x, whose CommonJS/UMD file the
+ * Workers server bundle loads as undefined: every PDF failed with "Cannot
+ * destructure property '__extends'". For those packages only, use tslib's own
+ * ES module file; everything else keeps tslib 2 as installed.
+ */
+function pdfLibTslib() {
+  const esm = path.resolve(__dirname, "node_modules/tslib/tslib.es6.js");
+  return {
+    name: "pdf-lib-tslib",
+    enforce: "pre" as const,
+    resolveId(source: string, importer?: string) {
+      if (
+        source === "tslib" &&
+        importer &&
+        /[\\/]node_modules[\\/](pdf-lib|@pdf-lib)[\\/]/.test(importer)
+      )
+        return esm;
+      return null;
+    },
+  };
+}
