@@ -206,7 +206,7 @@ export function CheckInFlow({
    * welcome's stay opens straight away (startFromWelcome); without, the
    * usual questions find it.
    */
-  welcomeStart?: { version: number | null; n: number } | null;
+  welcomeStart?: { version: number | null; n: number; source?: "device" | "all" } | null;
   /** Door tablet welcome: the full phone panel on the right (Latchkey admin setting), else only the icon at the top. */
   qrPanel?: boolean;
   /** Tells the kiosk whether the welcome (first) screen is showing. */
@@ -501,6 +501,7 @@ export function CheckInFlow({
           code: property.code,
           deviceId: deviceId(),
           version: welcomeStart.version!,
+          source: welcomeStart.source ?? "all",
           ...(deviceToken(property.code) ? { device: deviceToken(property.code)! } : {}),
         },
       }),

@@ -45,6 +45,7 @@ import { EmptyState } from "@/components/host/EmptyState";
 import { GuestReviews } from "@/components/host/GuestReviews";
 import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
+import { TabletStrip } from "@/components/host/DoorTablets";
 import { KioskRestQuick } from "@/components/host/KioskRestSettings";
 import { GuestMessages } from "@/components/host/GuestMessages";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
@@ -1512,6 +1513,7 @@ function KioskCard({
           </Peek>
         ) : null}
       </div>
+      <TabletStrip property={property} />
       {canWrite ? <KioskRestQuick property={property} /> : null}
     </Card>
   );

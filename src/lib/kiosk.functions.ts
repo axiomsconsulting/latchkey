@@ -52,8 +52,15 @@ export const getKioskWelcome = createServerFn({ method: "GET" })
       .select("*")
       .eq("property_id", data.propertyId)
       .maybeSingle();
-    if (error) return { available: false as const, message: null };
-    return { available: true as const, message: live(r) ? toWelcome(r) : null };
+    if (error) return { available: false as const, message: null, devices: {} };
+    // Welcomes for one tablet each (migration 0067).
+    const { data: own } = await (context.supabase as unknown as Loose)
+      .from("kiosk_device_messages")
+      .select("*")
+      .eq("property_id", data.propertyId);
+    const devices: Record<string, KioskWelcome> = {};
+    for (const d of (own ?? []) as any[]) if (live(d)) devices[d.device_id] = toWelcome(d);
+    return { available: true as const, message: live(r) ? toWelcome(r) : null, devices };
   });
 
 /** Shows (or updates) the welcome on the kiosk now. */
@@ -66,6 +73,8 @@ export const setKioskWelcome = createServerFn({ method: "POST" })
         headline: z.string().trim().min(1).max(80),
         body: z.string().trim().max(300).nullable(),
         bookingId: uuid.nullable(),
+        /** One tablet only; absent or null for every tablet at the property. */
+        deviceId: uuid.nullish(),
         minutes: z
           .number()
           .int()
@@ -78,6 +87,45 @@ export const setKioskWelcome = createServerFn({ method: "POST" })
     assertNotSharedDemo(context.claims);
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const sb = context.supabase as unknown as Loose;
+    if (data.deviceId) {
+      const db = (await (await import("./checkin.server")).admin()) as unknown as Loose;
+      const { data: dev } = await db
+        .from("kiosk_devices")
+        .select("id")
+        .eq("id", data.deviceId)
+        .eq("property_id", data.propertyId)
+        .maybeSingle();
+      if (!dev) throw new Error("That tablet isn't paired with this property.");
+      const { data: was } = await db
+        .from("kiosk_device_messages")
+        .select("version")
+        .eq("device_id", data.deviceId)
+        .maybeSingle();
+      const { error } = await db.from("kiosk_device_messages").upsert(
+        {
+          device_id: data.deviceId,
+          property_id: data.propertyId,
+          headline: data.headline,
+          body: data.body || null,
+          booking_id: data.bookingId,
+          version: (was?.version ?? 0) + 1,
+          created_by: context.userId,
+          updated_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + data.minutes * 60_000).toISOString(),
+          cleared_at: null,
+          dismissed_at: null,
+          dismissed_version: null,
+        },
+        { onConflict: "device_id" },
+      );
+      if (error)
+        throw new Error(
+          error.message.includes("kiosk_device_messages")
+            ? "Welcomes for one tablet need the latest update (migration 0067)."
+            : error.message,
+        );
+      return { ok: true };
+    }
     const { data: prev } = await sb
       .from("kiosk_messages")
       .select("version")
@@ -111,9 +159,18 @@ export const setKioskWelcome = createServerFn({ method: "POST" })
 /** Takes the welcome off the kiosk. */
 export const clearKioskWelcome = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, deviceId: uuid.nullish() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    if (data.deviceId) {
+      const db = (await (await import("./checkin.server")).admin()) as unknown as Loose;
+      await db
+        .from("kiosk_device_messages")
+        .update({ cleared_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("device_id", data.deviceId)
+        .eq("property_id", data.propertyId);
+      return { ok: true };
+    }
     const { error } = await (context.supabase as unknown as Loose)
       .from("kiosk_messages")
       .update({ cleared_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -146,15 +203,36 @@ const code = z
  * the host's journey lets its button open that stay (startFromWelcome).
  */
 export const kioskWelcome = createServerFn({ method: "GET" })
-  .inputValidator((d: unknown) => z.object({ code }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ code, device: z.string().min(24).max(80).optional() }).parse(d),
+  )
   .handler(async ({ data }) => {
     const { db, id } = await propertyByCode(data.code);
     if (!id) return null;
-    const { data: r, error } = await db
-      .from("kiosk_messages")
-      .select("headline, body, version, cleared_at, expires_at, booking_id, updated_at")
-      .eq("property_id", id)
-      .maybeSingle();
+    const cols = "headline, body, version, cleared_at, expires_at, booking_id, updated_at";
+    // This tablet's own welcome first (a confirmed tablet only), then the one for every tablet.
+    let mine: any = null;
+    if (data.device) {
+      const { sha256 } = await import("./checkin.server");
+      const { data: dev } = await db
+        .from("kiosk_devices")
+        .select("id, status")
+        .eq("token_hash", sha256(data.device))
+        .eq("property_id", id)
+        .maybeSingle();
+      if (dev && dev.status !== "pending") {
+        const { data: own } = await db
+          .from("kiosk_device_messages")
+          .select(cols)
+          .eq("device_id", dev.id)
+          .maybeSingle();
+        if (live(own)) mine = own;
+      }
+    }
+    const { data: all, error } = mine
+      ? { data: null, error: null }
+      : await db.from("kiosk_messages").select(cols).eq("property_id", id).maybeSingle();
+    const r = mine ?? all;
     if (error || !live(r)) return null;
     let checkIn = false;
     if (r.booking_id) {
@@ -180,20 +258,44 @@ export const kioskWelcome = createServerFn({ method: "GET" })
       version: r.version as number,
       expiresAt: r.expires_at as string,
       checkIn,
+      /** "device": this tablet's own welcome; "all": the one for every tablet. */
+      source: (mine ? "device" : "all") as "device" | "all",
     };
   });
 
 /** The guest tapped the welcome away: the host sees it. */
 export const dismissKioskWelcome = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ code, version: z.number().int().min(1) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        code,
+        version: z.number().int().min(1),
+        device: z.string().min(24).max(80).optional(),
+        source: z.enum(["device", "all"]).optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data }) => {
     const { db, id } = await propertyByCode(data.code);
     if (!id) return { ok: false };
-    await db
-      .from("kiosk_messages")
-      .update({ dismissed_at: new Date().toISOString(), dismissed_version: data.version })
-      .eq("property_id", id)
-      .eq("version", data.version);
+    const stamp = { dismissed_at: new Date().toISOString(), dismissed_version: data.version };
+    if (data.source === "device" && data.device) {
+      const { sha256 } = await import("./checkin.server");
+      const { data: dev } = await db
+        .from("kiosk_devices")
+        .select("id")
+        .eq("token_hash", sha256(data.device))
+        .eq("property_id", id)
+        .maybeSingle();
+      if (dev)
+        await db
+          .from("kiosk_device_messages")
+          .update(stamp)
+          .eq("device_id", dev.id)
+          .eq("version", data.version);
+      return { ok: true };
+    }
+    await db.from("kiosk_messages").update(stamp).eq("property_id", id).eq("version", data.version);
     return { ok: true };
   });
 

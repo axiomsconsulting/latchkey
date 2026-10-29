@@ -39,6 +39,7 @@ import {
   type KioskDevice,
 } from "@/lib/kiosk-devices.functions";
 import { kioskPinger } from "@/lib/kiosk-ping";
+import { tabletName } from "@/lib/kiosk-devices";
 import { cn } from "@/lib/utils";
 
 const copy = checkinSettings.calibration;
@@ -73,7 +74,10 @@ export function KioskCalibration({ property }: { property: { id: string; short_c
     // The tablet reports its screen a moment after it opens or turns.
     refetchInterval: 10_000,
   });
-  const devices: KioskDevice[] = q.data?.devices ?? [];
+  // Only tablets that are paired (a waiting one has nothing to line up yet).
+  const devices: KioskDevice[] = (q.data?.devices ?? []).filter(
+    (d: KioskDevice) => d.status !== "pending",
+  );
   const [picked, setPicked] = useState<string | null>(null);
   const device = devices.find((d) => d.id === picked) ?? devices[0] ?? null;
 
@@ -110,7 +114,10 @@ export function KioskCalibration({ property }: { property: { id: string; short_c
                     device?.id === d.id ? "border-primary bg-primary/10" : "border-border",
                   )}
                 >
-                  <span className="block font-medium">{d.label || copy.unnamed(i + 1)}</span>
+                  <span className="block font-medium">
+                    {d.number ? `${d.number}. ` : ""}
+                    {tabletName(d) || copy.unnamed(i + 1)}
+                  </span>
                   <span className="block text-xs text-muted-foreground">{ago(d.lastSeenAt)}</span>
                 </button>
               ))}
@@ -233,7 +240,7 @@ function DeviceCalibration({
           />
         </label>
         <p className="text-sm text-muted-foreground">
-          {device.label || copy.unnamed(index + 1)} · {copy.wayUp[orientation]} ·{" "}
+          {tabletName(device) || copy.unnamed(index + 1)} · {copy.wayUp[orientation]} ·{" "}
           {calibrated ? copy.calibrated : copy.learned} · {ago(device.lastSeenAt)}
         </p>
       </div>

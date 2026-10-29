@@ -8,6 +8,7 @@ import { guest as copy } from "@/content/copy";
 import { burnDrift, kioskNow, quietNow } from "@/lib/kiosk-clock";
 import { dismissKioskWelcome, kioskWelcome } from "@/lib/kiosk.functions";
 import { onKioskPing } from "@/lib/kiosk-ping";
+import { deviceToken } from "@/lib/kiosk-presence";
 
 type Welcome = {
   headline: string;
@@ -16,6 +17,8 @@ type Welcome = {
   expiresAt?: string;
   /** For a stay the guest can check in to straight from it (startFromWelcome). */
   checkIn?: boolean;
+  /** "device": this tablet's own welcome; "all": the one for every tablet. */
+  source?: "device" | "all";
 };
 
 /**
@@ -31,7 +34,8 @@ export function useKioskWelcome(code: string, enabled = true) {
   const [ended, setEnded] = useState<number | null>(null);
 
   const load = useCallback(() => {
-    void fetchFn({ data: { code } })
+    const device = deviceToken(code);
+    void fetchFn({ data: { code, ...(device ? { device } : {}) } })
       .then((m) => setMessage(m))
       .catch(() => undefined);
   }, [code, fetchFn]);
@@ -60,7 +64,15 @@ export function useKioskWelcome(code: string, enabled = true) {
   /** The guest tapped it: the host sees they've seen it. */
   const dismiss = () => {
     if (!message) return;
-    void dismissFn({ data: { code, version: message.version } }).catch(() => undefined);
+    const device = deviceToken(code);
+    void dismissFn({
+      data: {
+        code,
+        version: message.version,
+        source: message.source ?? "all",
+        ...(device ? { device } : {}),
+      },
+    }).catch(() => undefined);
   };
   return {
     welcome: message && ended !== message.version ? message : null,
