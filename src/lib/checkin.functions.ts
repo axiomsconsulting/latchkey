@@ -9,12 +9,16 @@ import { withGroup } from "./group-brand.server";
 import { z } from "zod";
 
 import { isPlatformKey, platformKey } from "./booking-sites";
-import { formatUkDate, todayInZone, zonedParts } from "./dates";
+import { addDays, formatUkDate, todayInZone, zonedParts } from "./dates";
 import {
+  MAX_FAILED_CHOICES,
   MAX_LAST4_ATTEMPTS,
   MAX_PHOTO_ATTEMPTS,
   arrivalCandidates,
   checkoutChoices,
+  firstCheckout,
+  nightsBetween,
+  threeCheckouts,
   cleanGuestName,
   emailMatches,
   firstName,
@@ -30,6 +34,7 @@ import {
   surnameInitial,
   usesListFlow,
 } from "./checkin-logic";
+import { guestFlow } from "./checkin-flow";
 import { DEMO_CODES, isTour } from "./demo-account";
 import {
   ADULT_AGE,
@@ -179,7 +184,11 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       quietEnd: (p.quiet_hours_end ?? "07:00").slice(0, 5),
       today,
       checkoutChoices: checkoutChoices(today, hourIn(tz)),
+      /** Arrival day the check-out choices count nights from. */
+      firstCheckout: firstCheckout(today, hourIn(tz)),
       listFlow: usesListFlow(methods),
+      /** The host's check-in journey: what the guest's screen asks and which cameras it opens. */
+      flow: guestFlow(p.flow),
       hostPhone: p.host_contact_phone,
       checkInFrom: (p.default_check_in_time ?? "15:00").slice(0, 5),
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
@@ -210,7 +219,7 @@ export const resolvePin = createServerFn({ method: "POST" })
 
 /* ------------------------------ matching -------------------------------- */
 
-async function deviceLock(propertyId: string, hash: string, tour = false) {
+async function deviceLock(propertyId: string, hash: string, tour = false, max?: number) {
   // The public guest tour: visitors guess freely, never locked or alerted.
   if (tour) return null;
   const { admin } = await srv();
@@ -222,7 +231,7 @@ async function deviceLock(propertyId: string, hash: string, tour = false) {
     .eq("device_hash", hash)
     .order("created_at", { ascending: false })
     .limit(10);
-  return lockedUntil(data ?? [], new Date());
+  return lockedUntil(data ?? [], new Date(), max);
 }
 
 async function startSession(propertyId: string, bookingId: string) {
@@ -275,6 +284,8 @@ export const matchBooking = createServerFn({ method: "POST" })
         checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         // Only sent when the first answers fit stays on more than one platform.
         channel: channel.optional(),
+        // Picked from three close days: a guess is easier, so two wrong picks pause the device.
+        picked: z.boolean().optional(),
       })
       .parse(d),
   )
@@ -283,8 +294,9 @@ export const matchBooking = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p) throw new Error("We could not find this property.");
     const hash = deviceHash(p.id, data.deviceId);
+    const max = data.picked ? MAX_FAILED_CHOICES : undefined;
 
-    const locked = await deviceLock(p.id, hash, isTour(p));
+    const locked = await deviceLock(p.id, hash, isTour(p), max);
     if (locked) return { status: "locked" as const, until: locked.toISOString() };
 
     const db = await admin();
@@ -307,13 +319,13 @@ export const matchBooking = createServerFn({ method: "POST" })
     });
 
     if (!hit) {
-      const nowLocked = await deviceLock(p.id, hash, isTour(p));
+      const nowLocked = await deviceLock(p.id, hash, isTour(p), max);
       if (nowLocked) {
         await raiseAlert({
           hostId: p.host_id,
           propertyId: p.id,
           kind: "lockout",
-          message: `Check-in at ${p.name} was locked for 10 minutes after 3 unsuccessful tries on one device.`,
+          message: `Check-in at ${p.name} was locked for 10 minutes after ${max ?? 3} unsuccessful tries on one device.`,
         });
         return { status: "locked" as const, until: nowLocked.toISOString() };
       }
@@ -327,6 +339,124 @@ export const matchBooking = createServerFn({ method: "POST" })
       returning: found.kind === "match" && found.returning,
       needsName: found.kind === "match" && found.needsName,
       platform: platformKey(hit),
+    };
+  });
+
+/**
+ * The three check-out days to pick from after the surname initial
+ * (threeCheckouts): the real day of each arriving stay with that initial and
+ * close days that aren't, the same three every time for that letter today,
+ * each with its number of nights. Nothing about the stays is sent but days.
+ */
+export const checkoutOptions = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z.object({ code, deviceId, letter: z.string().regex(/^[A-Za-z]$/) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { deviceHash, loadPropertyByCode } = await srv();
+    const p = await loadPropertyByCode(data.code);
+    if (!p) throw new Error("We could not find this property.");
+    const hash = deviceHash(p.id, data.deviceId);
+    const locked = await deviceLock(p.id, hash, isTour(p), MAX_FAILED_CHOICES);
+    if (locked) return { status: "locked" as const, until: locked.toISOString() };
+    const tz = p.timezone ?? "Europe/London";
+    const today = todayInZone(tz);
+    const { data: rows } = await arrivalsAround(p.id, today, 200);
+    const letter = data.letter.toUpperCase();
+    const all = rows ?? [];
+    // Stays this letter could find: named with that initial, or with no name yet (matched on the day alone).
+    const real = [
+      ...arrivalCandidates(all, today),
+      ...all.filter((b) => b.status === "needs_details" && !b.mirror_of),
+      ...stayingCandidates(all, today),
+    ]
+      .filter((b) => !b.guest_full_name?.trim() || surnameInitial(b.guest_full_name) === letter)
+      .map((b) => b.check_out_date);
+    const { createHmac } = await import("crypto");
+    const seed = createHmac("sha256", `checkout:${process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? ""}`)
+      .update(`${p.id}:${today}:${letter}`)
+      .digest()
+      .readUInt32BE(0);
+    const from = firstCheckout(today, hourIn(tz));
+    // Nights count from the day the stay began: today, or yesterday for an arrival after midnight.
+    const arrival = from === today ? addDays(today, -1) : today;
+    return {
+      status: "ok" as const,
+      days: threeCheckouts(real, from, seed).map((date) => ({
+        date,
+        nights: nightsBetween(arrival, date),
+      })),
+    };
+  });
+
+/**
+ * The host's welcome on the door tablet is for one stay, so its Check in
+ * button opens that stay without asking anything to find it (the host has
+ * already said who's arriving). Only on this property's paired door tablet
+ * (or the public tour), only for the welcome showing now, and only for a
+ * stay arriving or staying today; the usual identity steps still follow.
+ */
+export const startFromWelcome = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        code,
+        deviceId,
+        version: z.number().int().min(1),
+        device: z.string().min(20).max(120).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { admin, deviceHash, loadPropertyByCode, sha256 } = await srv();
+    const p = await loadPropertyByCode(data.code);
+    if (!p || !p.flow.steps.welcome_go) return { status: "find" as const };
+    const db = (await admin()) as any;
+    if (!isTour(p)) {
+      if (!data.device) return { status: "find" as const };
+      const { data: dev } = await db
+        .from("kiosk_devices")
+        .select("id")
+        .eq("token_hash", sha256(data.device))
+        .eq("property_id", p.id)
+        .maybeSingle();
+      if (!dev) return { status: "find" as const };
+    }
+    const { data: w } = await db
+      .from("kiosk_messages")
+      .select("booking_id, version, cleared_at, expires_at")
+      .eq("property_id", p.id)
+      .maybeSingle();
+    if (
+      !w?.booking_id ||
+      w.version !== data.version ||
+      w.cleared_at ||
+      Date.parse(w.expires_at) <= Date.now()
+    )
+      return { status: "find" as const };
+    const today = todayInZone(p.timezone ?? "Europe/London");
+    const { data: rows } = await arrivalsAround(p.id, today, 200);
+    const b = (rows ?? []).find((r) => r.id === w.booking_id);
+    const arriving =
+      !!b &&
+      !b.mirror_of &&
+      ["upcoming", "flagged", "needs_details", "checked_in"].includes(b.status) &&
+      b.check_in_date >= addDays(today, -1);
+    if (!b || !arriving) return { status: "find" as const };
+    await db.from("check_in_attempts").insert({
+      property_id: p.id,
+      booking_id: b.id,
+      surname_attempt: surnameInitial(b.guest_full_name) ?? "-",
+      succeeded: true,
+      device_hash: deviceHash(p.id, data.deviceId),
+    });
+    return {
+      status: "matched" as const,
+      token: await startSession(p.id, b.id),
+      firstName: firstName(b.guest_full_name),
+      needsName: !b.guest_full_name?.trim(),
+      returning: b.status === "checked_in",
+      platform: platformKey(b),
     };
   });
 
@@ -539,16 +669,32 @@ async function sessionContext(t: string, opts: { join?: boolean; share?: boolean
   );
   const propertyCols =
     "id, host_id, name, checkin_methods, is_demo, short_code, timezone, country_code";
-  const { data: p } = await withLegacy(
+  const prop = (cols: string) =>
+    db.from("properties").select(cols).eq("id", session.property_id).single();
+  // checkin_flow is from migration 0065, guest_records from 0020.
+  const { data: raw } = await withLegacy<any>(
+    () => prop(`${propertyCols}, guest_records, checkin_flow`),
     () =>
-      db
-        .from("properties")
-        .select(`${propertyCols}, guest_records`)
-        .eq("id", session.property_id)
-        .single(),
-    () => db.from("properties").select(propertyCols).eq("id", session.property_id).single(),
+      withLegacy<any>(
+        () => prop(`${propertyCols}, guest_records`),
+        () => prop(propertyCols),
+      ),
   );
-  if (!b || !p) throw new Error("This check-in has timed out. Please start again.");
+  if (!b || !raw) throw new Error("This check-in has timed out. Please start again.");
+  // The check-in journey (Latchkey's rules applied) decides the switches read below.
+  const { withFlow } = await import("./checkin-flow.server");
+  const p = (await withFlow(raw)) as {
+    id: string;
+    host_id: string;
+    name: string;
+    checkin_methods: unknown;
+    is_demo: boolean;
+    short_code: string;
+    timezone: string | null;
+    country_code: string | null;
+    guest_records?: unknown;
+    flow: import("./checkin-flow").FlowChoices;
+  };
   const { data: room } = b.room_id
     ? await withLegacy(
         () =>
@@ -625,7 +771,8 @@ function partyPlan(ctx: Ctx) {
     booked: bookedPartySize(ctx.booking),
     capacity: ctx.room?.max_guests ?? null,
     childrenAllowed: ctx.room?.children_allowed ?? true,
-    everyAdult: rec.checkEveryAdult && !returning && !ctx.aiOff,
+    // With ID reading off, every adult's photo is still asked for when the host keeps them (checked by hand).
+    everyAdult: rec.checkEveryAdult && !returning && (!ctx.aiOff || keepsIdPhoto(rec)),
     facePhoto: takesFacePhoto(rec) && !returning,
     keepIdPhoto: keepsIdPhoto(rec),
     keepDays: rec.keepDays,
@@ -634,10 +781,13 @@ function partyPlan(ctx: Ctx) {
 
 /**
  * When the super admin has switched AI ID reading off, the photo step is
- * left out (demo mode and the public tour never call the AI, so they keep it).
+ * left out (demo mode and the public tour never call the AI, so they keep
+ * it), unless the host keeps ID photos: then it's taken and kept unread.
  */
 async function withoutPhotoIfOff(ctx: Ctx, seq: CheckinMethod[]): Promise<CheckinMethod[]> {
   if (!seq.includes("photo_id")) return seq;
+  // The host keeps ID photos: the photo is still taken and kept, for them to check by hand.
+  if (keepsIdPhoto(normaliseRecords(ctx.property.guest_records))) return seq;
   const { hostModes } = await srv();
   if ((await hostModes(ctx.property.host_id)).id_check === "demo" || isTour(ctx.property))
     return seq;
@@ -735,7 +885,7 @@ export const resumeSession = createServerFn({ method: "POST" })
 async function recordResult(
   ctx: Ctx,
   method: string,
-  result: "matched" | "partial" | "not_matched" | "last4" | "self_declared",
+  result: "matched" | "partial" | "not_matched" | "photo_only" | "last4" | "self_declared",
 ) {
   const { raiseAlert } = await srv();
   const { db, session, booking, property } = ctx;
@@ -753,13 +903,20 @@ async function recordResult(
   await db.from("checkin_sessions").update({ verified_method: method }).eq("id", session.id);
 
   const who = firstName(booking.guest_full_name) || "A guest";
-  if (result === "not_matched" || result === "partial" || result === "self_declared") {
+  if (
+    result === "not_matched" ||
+    result === "partial" ||
+    result === "self_declared" ||
+    result === "photo_only"
+  ) {
     const message =
       result === "self_declared"
         ? `${who} checked in at ${property.name} without an ID check. Please check their ID when you see them.`
-        : result === "partial"
-          ? `${who}'s ID only partly matched the booking name at ${property.name}. Worth a quick look.`
-          : `${who}'s ID did not match the booking name at ${property.name}. Please check in person.`;
+        : result === "photo_only"
+          ? `${who}'s ID photo at ${property.name} couldn't be read automatically. It's kept with their stay: please check it.`
+          : result === "partial"
+            ? `${who}'s ID only partly matched the booking name at ${property.name}. Worth a quick look.`
+            : `${who}'s ID did not match the booking name at ${property.name}. Please check in person.`;
     await raiseAlert({
       hostId: property.host_id,
       propertyId: property.id,
@@ -767,7 +924,7 @@ async function recordResult(
       kind:
         result === "self_declared"
           ? "self_declared"
-          : result === "partial"
+          : result === "partial" || result === "photo_only"
             ? "id_partial"
             : "id_mismatch",
       message,
@@ -925,23 +1082,68 @@ async function savePerson(
   await removeGuestPhotos(stale);
 }
 
+const NO_PREFILL = {
+  fullName: null,
+  nationality: null,
+  documentNumber: null,
+  placeOfIssue: null,
+} as const;
+
+/**
+ * The ID couldn't be read (reading is off, the hour's reads are used up, or
+ * the last try failed): the small photo is kept anyway, when the host keeps
+ * them, so the host can check it by hand. Returns false when nothing could be kept.
+ */
+async function keepUnread(ctx: Ctx, position: number, small: string | undefined): Promise<boolean> {
+  if (!small || !keepsIdPhoto(normaliseRecords(ctx.property.guest_records)) || isTour(ctx.property))
+    return false;
+  try {
+    await savePerson(ctx, position, {
+      kind: "adult",
+      nameMatch: null,
+      idChecked: false,
+      skipped: false,
+      idPhoto: small,
+    });
+  } catch (err) {
+    console.error("Keeping an unread ID photo failed", err);
+    return false;
+  }
+  if (position === 0) await recordResult(ctx, "photo_id", "photo_only");
+  else {
+    const { raiseAlert } = await srv();
+    await raiseAlert({
+      hostId: ctx.property.host_id,
+      propertyId: ctx.property.id,
+      bookingId: ctx.booking.id,
+      kind: "id_partial",
+      message: `Guest ${position + 1}'s ID photo at ${ctx.property.name} couldn't be read automatically. It's kept with the stay: please check it.`,
+    });
+  }
+  return true;
+}
+
 export const verifyPhotoId = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token, image: jpeg, small: smallJpeg.optional() }).parse(d))
   .handler(async ({ data }) => {
     const ctx = await sessionContext(data.token);
     const methods = normaliseMethods(ctx.property.checkin_methods);
     if (!ctx.session.confirmed || !methods.enabled.photo_id) throw new Error("Not available.");
-    if (ctx.aiOff || ctx.session.photo_attempts >= MAX_PHOTO_ATTEMPTS)
-      return { status: "fallback" as const };
-    if (!(await readsLeftThisHour(ctx))) return { status: "fallback" as const };
+    const unread = async () =>
+      (await keepUnread(ctx, 0, data.small))
+        ? { status: "done" as const, result: "photo_only" as const, prefill: NO_PREFILL }
+        : { status: "fallback" as const };
+    if (ctx.aiOff || !(await readsLeftThisHour(ctx))) return unread();
+    if (ctx.session.photo_attempts >= MAX_PHOTO_ATTEMPTS) return unread();
 
     await ctx.db
       .from("checkin_sessions")
       .update({ photo_attempts: ctx.session.photo_attempts + 1 })
       .eq("id", ctx.session.id);
     const left = MAX_PHOTO_ATTEMPTS - ctx.session.photo_attempts - 1;
-    const again = (reason: "unreadable" | "not_photo_id") =>
-      left > 0 ? { status: "retry" as const, left, reason } : { status: "fallback" as const };
+    // The last try failed too: keep the photo for the host rather than lose it.
+    const again = async (reason: "unreadable" | "not_photo_id") =>
+      left > 0 ? { status: "retry" as const, left, reason } : unread();
 
     let read: IdRead;
     try {
@@ -1085,6 +1287,8 @@ export const checkCompanionId = createServerFn({ method: "POST" })
         position: z.number().int().min(1).max(29),
         image: jpeg,
         small: smallJpeg.optional(),
+        /** A second try for this guest: if it fails too, the photo is kept for the host. */
+        again: z.boolean().optional(),
       })
       .parse(d),
   )
@@ -1096,9 +1300,18 @@ export const checkCompanionId = createServerFn({ method: "POST" })
     if (!ctx.session.confirmed || !plan.everyAdult || data.position >= adults)
       throw new Error("Not available.");
     const used = ctx.session.companion_attempts ?? 0;
-    // Three tries per extra adult, then they're asked to see the host.
-    if (used >= Math.min(3 * (adults - 1), 12) || !(await readsLeftThisHour(ctx)))
-      return { status: "skip" as const };
+    const unread = async () =>
+      (await keepUnread(ctx, data.position, data.small))
+        ? {
+            status: "done" as const,
+            firstName: "",
+            under18: false,
+            prefill: NO_PREFILL as ReturnType<typeof prefillFrom>,
+          }
+        : null;
+    // Three tries per extra adult, then they're asked to see the host (their photo kept if it can be).
+    if (ctx.aiOff || used >= Math.min(3 * (adults - 1), 12) || !(await readsLeftThisHour(ctx)))
+      return (await unread()) ?? { status: "skip" as const };
     await ctx.db
       .from("checkin_sessions")
       .update({ companion_attempts: used + 1 })
@@ -1108,11 +1321,19 @@ export const checkCompanionId = createServerFn({ method: "POST" })
     try {
       read = await readId(ctx, data.image, data.position);
     } catch {
-      return { status: "retry" as const, reason: "unreadable" as const };
+      return (
+        (data.again ? await unread() : null) ?? {
+          status: "retry" as const,
+          reason: "unreadable" as const,
+        }
+      );
     }
     const today = todayInZone(ctx.property.timezone ?? "Europe/London");
     const verdict = judgeId(read, today);
-    if (!verdict.ok) return { status: "retry" as const, reason: verdict.reason };
+    if (!verdict.ok)
+      return (
+        (data.again ? await unread() : null) ?? { status: "retry" as const, reason: verdict.reason }
+      );
 
     const age = ageOn(read.dateOfBirth, today);
     await savePerson(ctx, data.position, {

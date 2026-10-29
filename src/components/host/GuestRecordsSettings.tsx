@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { checkinSettings, common } from "@/content/copy";
 import {
   KEEP_DAY_CHOICES,
@@ -27,18 +26,11 @@ import { saveGuestRecords } from "@/lib/host.functions";
 
 const copy = checkinSettings.records;
 
-type Toggle = "askWhoIsStaying" | "checkEveryAdult" | "idPhoto" | "facePhoto";
-const TOGGLES: Array<{ key: Toggle; photo: boolean }> = [
-  { key: "askWhoIsStaying", photo: false },
-  { key: "checkEveryAdult", photo: false },
-  { key: "idPhoto", photo: true },
-  { key: "facePhoto", photo: true },
-];
-
 /**
- * Per-property switches for who's staying and the ID records kept about
- * them. Photo options only take effect once the host confirms they are
- * registered with their data regulator.
+ * Per-property ID records: the data-regulator confirmation photos need, and
+ * how long details and photos are kept. Which steps ask for them (who's
+ * staying, every adult's ID, keeping the ID photo, the face photo) is set in
+ * the check-in journey (CheckinJourney), which writes the same switches.
  */
 export function GuestRecordsSettings({
   property,
@@ -105,35 +97,7 @@ export function GuestRecordsSettings({
         </div>
       </div>
 
-      <div className="mt-4 space-y-4">
-        {TOGGLES.map(({ key, photo }) => {
-          const required = uk && key === "askWhoIsStaying";
-          const locked = (photo && !form.regulatorConfirmed) || required;
-          return (
-            <div
-              key={key}
-              className="flex items-start justify-between gap-4 rounded-xl border border-border p-4"
-            >
-              <div>
-                <Label htmlFor={`gr-${key}`} className="text-base">
-                  {copy[key]}
-                </Label>
-                <p className="text-sm text-muted-foreground">{copy[`${key}Help`]}</p>
-                {required ? <p className="mt-1 text-sm">{copy.askRequiredUk}</p> : null}
-                {locked && !required && form[key] ? (
-                  <p className="mt-1 text-sm text-destructive">{copy.regulatorNeeded}</p>
-                ) : null}
-              </div>
-              <Switch
-                id={`gr-${key}`}
-                checked={required || (form[key] && !locked)}
-                disabled={locked}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, [key]: v }))}
-              />
-            </div>
-          );
-        })}
-      </div>
+      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{copy.stepsInJourney}</p>
 
       <div className="mt-4 space-y-2">
         <Label htmlFor="gr-keep">{copy.keepDays}</Label>

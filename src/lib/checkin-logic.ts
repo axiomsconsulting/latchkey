@@ -19,6 +19,8 @@ export const DEFAULT_METHODS: CheckinMethods = {
 };
 
 export const MAX_FAILED_MATCHES = 3;
+/** With three check-out days to pick from: two wrong picks pause the device. */
+export const MAX_FAILED_CHOICES = 2;
 export const LOCKOUT_MINUTES = 10;
 export const MAX_PHOTO_ATTEMPTS = 2;
 export const MAX_LAST4_ATTEMPTS = 3;
@@ -221,6 +223,8 @@ export function checkoutChoices(today: string, hourNow: number): string[] {
 export function lockedUntil(
   attempts: Array<{ succeeded: boolean; created_at: string }>,
   now: Date,
+  /** Fewer when the guest picks from three check-out days (a wrong guess is easier there). */
+  max: number = MAX_FAILED_MATCHES,
 ): Date | null {
   const windowStart = now.getTime() - LOCKOUT_MINUTES * 60_000;
   const recentFails: number[] = [];
@@ -230,7 +234,7 @@ export function lockedUntil(
     if (t < windowStart) break;
     recentFails.push(t);
   }
-  if (recentFails.length < MAX_FAILED_MATCHES) return null;
+  if (recentFails.length < max) return null;
   const until = new Date(Math.max(...recentFails) + LOCKOUT_MINUTES * 60_000);
   return until > now ? until : null;
 }
@@ -258,4 +262,47 @@ export function last4Matches(secret: string | null | undefined, typed: string): 
 export function emailMatches(stored: string | null | undefined, typed: string): boolean {
   if (!stored) return false;
   return stored.trim().toLowerCase() === typed.trim().toLowerCase();
+}
+
+/** Nights between two days (YYYY-MM-DD). */
+export function nightsBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
+}
+
+/** The first day a guest arriving now can be leaving: tomorrow, or today before 06:00 (a late arrival from yesterday). */
+export function firstCheckout(today: string, hourNow: number): string {
+  return addDays(today, hourNow < 6 ? 0 : 1);
+}
+
+/**
+ * Three check-out days to pick from once the guest has tapped their surname
+ * initial: the real day of each arriving stay with that initial, and close
+ * days that aren't (a day or two either side), so the right one never looks
+ * like the odd one out. Picked by `seed` (the server makes it from the
+ * property, the day and the letter), so asking again shows the same three
+ * and can't reveal which is real by what changes. Sorted by date. More than
+ * three real days (rare) are all shown.
+ */
+export function threeCheckouts(real: string[], earliest: string, seed: number): string[] {
+  const days = [...new Set(real)].filter((d) => d >= earliest).sort();
+  if (days.length >= 3) return days.slice(0, 7);
+  // With no stay to hide, three close days around a made-up one.
+  const anchors = days.length ? days : [addDays(earliest, seed % 4)];
+  const near: string[] = [];
+  for (const offset of [1, -1, 2, -2, 3, 4]) {
+    for (const a of anchors) {
+      const d = addDays(a, offset);
+      if (d >= earliest && !days.includes(d) && !near.includes(d)) near.push(d);
+    }
+  }
+  const out = [...days];
+  if (!days.length) out.push(anchors[0]!);
+  // Each pick is one of the next two nearest, so the real day isn't always in the middle.
+  let s = seed;
+  while (out.length < 3 && near.length) {
+    const i = near.length > 1 ? s % 2 : 0;
+    out.push(near.splice(i, 1)[0]!);
+    s = Math.floor(s / 2) + 7;
+  }
+  return out.sort();
 }

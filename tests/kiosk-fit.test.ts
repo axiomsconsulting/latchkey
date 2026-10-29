@@ -79,7 +79,7 @@ describe("the kiosk's display", () => {
     screen: { w: 800, h: 1280 },
     typing: false,
     fullscreen: false,
-    calibrated: null,
+    learned: null,
   };
   const upright = (h: number) => ({ w: 800, h, orientation: "portrait" as const });
 
@@ -101,7 +101,7 @@ describe("the kiosk's display", () => {
   });
 
   it("uses what this tablet remembered, and the whole screen in full screen", () => {
-    expect(settleDisplay(null, upright(640), { ...tablet, calibrated: 1188 })).toEqual({
+    expect(settleDisplay(null, upright(640), { ...tablet, learned: { w: 800, h: 1188 } })).toEqual({
       w: 800,
       h: 1188,
       orientation: "portrait",
@@ -118,6 +118,25 @@ describe("the kiosk's display", () => {
     expect(settleDisplay(d, upright(1280), { ...tablet, fullscreen: true })).toEqual(upright(1280));
     // Typing in a box: nothing changes even if the page grows back.
     expect(settleDisplay(d, upright(1280), { ...tablet, typing: true })).toBe(d);
+  });
+
+  it("keeps the largest display it has seen: a navigation bar at the side or a toolbar never shrinks it", () => {
+    const side = { w: 1280, h: 752, orientation: "landscape" as const };
+    const wide = { ...tablet, screen: { w: 1280, h: 800 } };
+    // The bar appears on the right: narrower, kept as it was.
+    expect(settleDisplay(side, { ...side, w: 1232 }, wide)).toBe(side);
+    // It goes again, a little wider than before: grows.
+    expect(settleDisplay(side, { ...side, w: 1290 }, wide)).toEqual({ ...side, w: 1290 });
+    // A foldable closing is a real change.
+    expect(settleDisplay(side, { ...side, w: 700 }, wide)).toEqual({ ...side, w: 700 });
+    // Opened again later with the address bar showing: the learned size, not the smaller page.
+    expect(
+      settleDisplay(null, { ...side, h: 690 }, { ...wide, learned: { w: 1280, h: 752 } }),
+    ).toEqual(side);
+    // Learned on another width (another way of holding it): not used.
+    expect(settleDisplay(null, upright(1100), { ...tablet, learned: { w: 1280, h: 752 } })).toEqual(
+      upright(1100),
+    );
   });
 
   it("measures again when the device turns", () => {

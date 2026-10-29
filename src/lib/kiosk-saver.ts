@@ -15,7 +15,7 @@ export const SIZE = { min: 0.6, max: 2.5, step: 0.05 } as const;
 export const TIMING = {
   reset: { min: 1, max: 60 },
   saver: { min: 1, max: 240 },
-  /** 0 = the welcome stays until the end time the host chose. */
+  /** 0 = the welcome stays as it is until its end time. */
   welcome: { min: 0, max: 240 },
 } as const;
 
@@ -28,7 +28,12 @@ export type SaverDefaults = {
   resetMinutes: number;
   /** No touch for this long (counted from the last touch, never before the reset): the screensaver starts. */
   saverMinutes: number;
-  /** A host's welcome closes by itself after this long on screen; 0 = only at its end time. */
+  /**
+   * A host's welcome left untouched this long rests: the screen splits into
+   * the welcome with its Check in button and a dim clock, notices and the
+   * phone QR, kind to the screen. It stays until the guest checks in, the
+   * host takes it off or its end time; 0 = never rests.
+   */
   welcomeMinutes: number;
   /** On a door tablet's welcome: the full "check in on your phone" panel on the right, or just the small icon at the top. */
   qrStyle: "panel" | "icon";
@@ -42,7 +47,7 @@ export const DEFAULT_SAVER: SaverDefaults = {
   size: 1,
   resetMinutes: 5,
   saverMinutes: 10,
-  welcomeMinutes: 15,
+  welcomeMinutes: 30,
   qrStyle: "panel",
 };
 
@@ -130,14 +135,23 @@ export const glow = (base: number, brightness: number) => Math.min(1, base * bri
  * throttled its timers catches up as soon as it checks.
  * - After resetMinutes: an unfinished check-in goes back to the welcome, once per idle spell.
  * - After saverMinutes (from the same last touch): the screensaver.
+ * - While the host's welcome is up, neither: the welcome stays until its end
+ *   time, and after welcomeMinutes it rests (the split, screen-friendly look).
  */
 export function idleActions(
   idleMs: number,
-  t: { resetMinutes: number; saverMinutes: number },
-  state: { atWelcome: boolean; resetDone: boolean; saver: boolean },
-): { reset: boolean; saver: boolean } {
+  t: { resetMinutes: number; saverMinutes: number; welcomeMinutes?: number },
+  state: { atWelcome: boolean; resetDone: boolean; saver: boolean; welcome?: boolean },
+): { reset: boolean; saver: boolean; welcomeRest: boolean } {
+  if (state.welcome)
+    return {
+      reset: false,
+      saver: false,
+      welcomeRest: (t.welcomeMinutes ?? 0) > 0 && idleMs >= (t.welcomeMinutes ?? 0) * 60_000,
+    };
   return {
     reset: !state.atWelcome && !state.resetDone && idleMs >= t.resetMinutes * 60_000,
     saver: !state.saver && idleMs >= Math.max(t.saverMinutes, t.resetMinutes) * 60_000,
+    welcomeRest: false,
   };
 }

@@ -46,6 +46,59 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.86.0",
+    date: "2026-10-29",
+    title: "A quicker check-in you design yourself",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Check-in journey: see every step a guest goes through as connected boxes in Settings → Guests, tick the ones you want, or pick Quick (find the stay, photo ID, face photo) or Thorough.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Welcome straight to check-in: when you put a welcome on the door tablet for a guest, its Check in button opens their stay. No surname letter, dates or name to type, just who's checking in, the photo ID and the face photo.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: 'Without a welcome, guests pick their check-out day from three close choices, each showing its number of nights; "Is this you?" is now a step you can leave out.',
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "ID photos are never lost: when automatic reading is off or can't read the ID, the photo is still kept (if you keep ID photos) and you're asked to check it yourself.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Door tablets use the front camera for both the ID and the face photo (you can choose the back one), and guests can switch camera on screen with the flip button.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Your welcome stays on the door tablet until its end time: the screensaver and the idle reset no longer clear it. Left untouched, it rests after 30 minutes in a dim split screen: the welcome with its Check in button on top, a clock, quiet hours and the phone QR below.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The door tablet keeps the largest screen size it has seen, so the on-screen keyboard, address bar or navigation bar no longer shrinks the check-in screen.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Door tablet screen calibration (Settings → Look): move the kiosk, pull its edges or zoom from your dashboard while watching the tablet. It changes as you go and stays until you reset it.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        admin: true,
+        text: "Latchkey admin → Site settings → Check-in journey: the journey new properties start with, and steps required or removed for every property.",
+      },
+    ],
+  },
+  {
     version: "0.85.1",
     date: "2026-10-27",
     title: "Agreement on phones",

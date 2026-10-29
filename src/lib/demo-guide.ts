@@ -24,6 +24,7 @@ export type DemoStep =
         | "welcome"
         | "letter"
         | "checkout"
+        | "checkout3"
         | "platform"
         | "no_match"
         | "guestName"
@@ -44,6 +45,7 @@ export function demoLine(step: DemoStep, hint: DemoHint, platform: string): stri
     case "letter":
       return d.letter(hint.letter);
     case "checkout":
+    case "checkout3":
       return d.checkout(date);
     case "platform":
       return d.platform(platform);

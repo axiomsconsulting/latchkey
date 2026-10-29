@@ -59,7 +59,8 @@ import { removeDemoData, saveHost } from "@/lib/host.functions";
 import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
 import { StayAccessSettings } from "@/components/host/StayAccessSettings";
 import { ReviewSettings } from "@/components/host/ReviewSettings";
-import { CheckinSettings } from "@/components/host/CheckinSettings";
+import { CheckinJourney } from "@/components/host/CheckinJourney";
+import { KioskCalibration } from "@/components/host/KioskCalibration";
 import { KioskRestSettings } from "@/components/host/KioskRestSettings";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { SaveButton, changed } from "@/components/host/SaveButton";
@@ -82,6 +83,7 @@ const FOCUS = [
   "stayAccess",
   "reviews",
   "kioskRest",
+  "kioskScreen",
   "extras",
   "money",
   "theme",
@@ -118,6 +120,7 @@ const OWN_CARD = new Set([
   "stayAccess",
   "reviews",
   "kioskRest",
+  "kioskScreen",
   "money",
 ]);
 
@@ -615,14 +618,8 @@ function SettingsPage() {
         <Section id="checkin">
           {themedProperty ? (
             <div id="settings-checkin" className="scroll-mt-24 rounded-2xl">
-              <CheckinSettings
-                property={
-                  themedProperty as unknown as {
-                    id: string;
-                    short_code: string;
-                    checkin_methods: unknown;
-                  }
-                }
+              <CheckinJourney
+                property={themedProperty as unknown as { id: string; short_code: string }}
               />
             </div>
           ) : null}
@@ -653,6 +650,15 @@ function SettingsPage() {
           {themedProperty ? (
             <div id="settings-reviews" className="scroll-mt-24 rounded-2xl">
               <ReviewSettings propertyId={(themedProperty as { id: string }).id} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="kioskScreen">
+          {themedProperty ? (
+            <div id="settings-kioskScreen" className="scroll-mt-24 rounded-2xl">
+              <KioskCalibration
+                property={themedProperty as unknown as { id: string; short_code: string }}
+              />
             </div>
           ) : null}
         </Section>

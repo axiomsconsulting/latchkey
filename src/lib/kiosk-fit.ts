@@ -81,33 +81,46 @@ export type DisplayContext = {
   typing: boolean;
   /** Full screen or installed: the page has the whole screen. */
   fullscreen: boolean;
-  /** This device's page height held this way, remembered from an earlier visit with no keyboard up. */
-  calibrated: number | null;
+  /** The largest page this device has had held this way (no keyboard up), remembered across visits. */
+  learned: ScreenSize | null;
 };
+
+/** A touch screen only measures again when the width falls by more than this share (a foldable closing), never for a side navigation bar. */
+export const NARROWER_SHARE = 0.75;
 
 /**
  * The display to fit to, given the last one and what the browser says now.
- * Touch screens: the same way up and the same width keeps the display,
- * whatever a keyboard or toolbar does; it only grows (by a real amount, with
- * no keyboard up) or swaps an estimate for a real measurement. Turning the
- * device or changing width measures again; if a keyboard is up at that
- * moment (the address was just typed), the height comes from what this
- * device remembered, or from its screen. Computers: as displayChanged.
+ * Touch screens: the size of the screen doesn't change, so the display is
+ * the largest page seen held this way, today or on an earlier visit
+ * (`learned`), and a keyboard, an address bar, a toolbar or a navigation
+ * bar (at the bottom, or the side when on its side) never shrinks it; it
+ * only grows by a real amount, or swaps an estimate for a measurement.
+ * Turning the device measures again (with what this device learned held
+ * that way); a width that falls a long way (a foldable closing) too. A
+ * keyboard up at that moment (the address was just typed) means the height
+ * comes from what it learned, or its screen. Computers: as displayChanged.
  */
 export function settleDisplay(prev: Display | null, now: Display, ctx: DisplayContext): Display {
   if (!ctx.touch) return !prev || displayChanged(prev, now, ctx.typing) ? now : prev;
   const screen = orientedScreen(ctx.screen, now.orientation);
   const keyboard = ctx.typing || keyboardLikely(now.h, screen.h);
-  const same = !!prev && prev.orientation === now.orientation && Math.abs(prev.w - now.w) <= 1;
-  if (same) {
-    if (keyboard) return prev!;
-    if (prev!.estimated)
-      return Math.abs(now.h - prev!.h) > 1 ? now : { ...prev!, estimated: false };
-    return now.h > prev!.h + GROW_STEP ? now : prev!;
+  const turned = !prev || prev.orientation !== now.orientation;
+  const folded = !!prev && !turned && now.w < prev.w * NARROWER_SHARE;
+  if (!turned && !folded) {
+    const p = prev!;
+    const w = Math.max(p.w, now.w);
+    if (keyboard) return w === p.w ? p : { ...p, w };
+    if (p.estimated) return { ...now, w, h: Math.abs(now.h - p.h) > 1 ? now.h : p.h };
+    const h = now.h > p.h + GROW_STEP ? now.h : p.h;
+    return w === p.w && h === p.h ? p : { ...p, w, h };
   }
-  if (!keyboard) return now;
-  const guess = ctx.calibrated ?? Math.round(screen.h * (ctx.fullscreen ? 1 : BROWSER_SHARE));
-  return { ...now, h: Math.max(now.h, guess), estimated: ctx.calibrated === null };
+  // A display learned at about this width: never smaller than it.
+  const fits = !!ctx.learned && Math.abs(ctx.learned.w - now.w) <= now.w * (1 - NARROWER_SHARE);
+  const learned = fits ? ctx.learned : null;
+  const w = learned ? Math.max(now.w, learned.w) : now.w;
+  if (!keyboard) return learned ? { ...now, w, h: Math.max(now.h, learned.h) } : now;
+  const guess = learned?.h ?? Math.round(screen.h * (ctx.fullscreen ? 1 : BROWSER_SHARE));
+  return { ...now, w, h: Math.max(now.h, guess), estimated: learned === null };
 }
 
 /** Where this device's page height is remembered: by its screen and the way it's held. */
