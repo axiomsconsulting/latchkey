@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Loader2,
   Mail,
+  Maximize2,
   X,
   Filter,
   Inbox,
@@ -59,6 +60,7 @@ import {
   alerts as alertCopy,
   common,
   extrasCopy,
+  checkinSettings,
   linkTools,
   today as oldCopy,
   todayDash as copy,
@@ -1502,6 +1504,13 @@ function KioskCard({
             <Printer className="size-4 text-primary" /> {copy.printQr}
           </Link>
         </Peek>
+        {canWrite ? (
+          <Peek content={<p>{checkinSettings.calibration.body}</p>}>
+            <Link to="/app/settings" search={{ focus: "kioskScreen" }} className={tile}>
+              <Maximize2 className="size-4 text-primary" /> {checkinSettings.calibration.open}
+            </Link>
+          </Peek>
+        ) : null}
       </div>
       {canWrite ? <KioskRestQuick property={property} /> : null}
     </Card>

@@ -61,3 +61,26 @@ export function onKioskPing(shortCode: string, fn: () => void): () => void {
     }
   };
 }
+
+/**
+ * For a run of pings in a row (calibrating the screen from the dashboard):
+ * joins the channel once and keeps it, so each ping goes at once. Call
+ * close() when done.
+ */
+export function kioskPinger(shortCode: string): { send: () => void; close: () => void } {
+  // Broadcasts go to the kiosk's own channel name, so it's joined under that name.
+  const target = supabase.channel(kioskChannel(shortCode));
+  let ready = false;
+  const queued: Array<() => void> = [];
+  target.subscribe((status) => {
+    if (status !== "SUBSCRIBED") return;
+    ready = true;
+    queued.splice(0).forEach((f) => f());
+  });
+  const fire = () =>
+    void target.send({ type: "broadcast", event: "refresh", payload: {} }).catch(() => {});
+  return {
+    send: () => (ready ? fire() : queued.push(fire)),
+    close: () => void supabase.removeChannel(target),
+  };
+}

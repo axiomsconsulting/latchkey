@@ -33,6 +33,7 @@ import { PlatformStripeAdmin } from "@/components/host/PlatformStripeAdmin";
 import { LegalAdmin } from "@/components/host/LegalAdmin";
 import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
+import { CheckinJourneyAdmin } from "@/components/host/CheckinJourney";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
 import { DriveAdmin, StarterSectionsAdmin } from "@/components/host/GuideAdmin";
@@ -248,6 +249,7 @@ function AdminPage() {
           <LegalAdmin />
           <SiteSettings />
           <DomainsAdmin />
+          <CheckinJourneyAdmin />
           <KioskSaverAdmin />
           <PricingAdmin />
           <SuperAdmins />

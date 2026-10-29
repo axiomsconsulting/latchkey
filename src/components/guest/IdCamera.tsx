@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, SwitchCamera } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { guest as copy } from "@/content/copy";
@@ -23,10 +23,11 @@ function still(video: HTMLVideoElement, max: number, quality: number, mirror: bo
 }
 
 /**
- * The right camera for the job: the back camera to photograph an ID, the
- * front one for a face. Asked for strictly first, because some phones treat
- * a preference loosely; then as a preference; then any camera, so a laptop
- * with a single webcam still works.
+ * The camera asked for: on a phone the back one for an ID and the front one
+ * for a face; on a door tablet the host's choice (the front by default,
+ * since the back faces the wall). Asked for strictly first, because some
+ * phones treat a preference loosely; then as a preference; then any camera,
+ * so a laptop with a single webcam still works.
  */
 async function openCamera(facing: "environment" | "user"): Promise<MediaStream> {
   const width = { ideal: facing === "user" ? 1280 : 1920 };
@@ -131,8 +132,8 @@ function IdHint() {
 
 /** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
 const SMALL = {
-  environment: { max: 1024, quality: 0.62 },
-  user: { max: 480, quality: 0.6 },
+  id: { max: 1024, quality: 0.62 },
+  face: { max: 480, quality: 0.6 },
 } as const;
 
 /**
@@ -145,6 +146,7 @@ export function IdCamera({
   onCapture,
   onFail,
   facing = "environment",
+  kind = "id",
   help,
   cta,
   busyLabel,
@@ -158,8 +160,10 @@ export function IdCamera({
   busy: boolean;
   onCapture: (full: string, small: string) => void;
   onFail: () => void;
-  /** "user" for a face photo with the front camera. */
+  /** The camera to start with: "user" is the front one. The guest can switch (the button on the picture). */
   facing?: "environment" | "user";
+  /** What's photographed: an ID (outline hints, sharper copy, never mirrored) or a face. */
+  kind?: "id" | "face";
   help?: string;
   cta?: string;
   busyLabel?: string;
@@ -167,13 +171,17 @@ export function IdCamera({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
+  const [current, setCurrent] = useState(facing);
+  // Only offered when there's another camera to switch to.
+  const [cameras, setCameras] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
     async function start() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("no camera");
-        const stream = await openCamera(facing);
+        const stream = await openCamera(current);
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -184,6 +192,9 @@ export function IdCamera({
           await videoRef.current.play();
           setReady(true);
         }
+        // Device names and counts are only shown once a camera is allowed.
+        const devices = await navigator.mediaDevices.enumerateDevices?.().catch(() => []);
+        if (!cancelled) setCameras((devices ?? []).filter((d) => d.kind === "videoinput").length);
       } catch {
         if (!cancelled) onFail();
       }
@@ -192,16 +203,23 @@ export function IdCamera({
     return () => {
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     };
+    // Opens again only when the guest switches camera.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [current]);
 
+  // The front camera shows like a mirror, so moving feels natural; an ID is always kept the right way round.
+  const mirrored = current === "user";
   function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    const mirror = facing === "user";
-    const small = SMALL[facing];
-    onCapture(still(video, 1600, 0.85, mirror), still(video, small.max, small.quality, mirror));
+    const keepMirror = mirrored && kind === "face";
+    const small = SMALL[kind];
+    onCapture(
+      still(video, 1600, 0.85, keepMirror),
+      still(video, small.max, small.quality, keepMirror),
+    );
   }
 
   return (
@@ -223,10 +241,22 @@ export function IdCamera({
             side
               ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]"
               : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]",
-            facing === "user" && "-scale-x-100",
+            mirrored && "-scale-x-100",
           )}
         />
-        {ready && facing === "environment" ? <IdHint /> : null}
+        {ready && kind === "id" ? <IdHint /> : null}
+        {cameras > 1 ? (
+          <button
+            type="button"
+            onClick={() => setCurrent((c) => (c === "user" ? "environment" : "user"))}
+            disabled={busy}
+            aria-label={copy.cameraFlip}
+            title={copy.cameraFlip}
+            className="absolute right-3 top-3 grid size-14 place-items-center rounded-full bg-black text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          >
+            <SwitchCamera className="size-7" aria-hidden />
+          </button>
+        ) : null}
         {!ready ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />

@@ -28,7 +28,11 @@ import {
   headerIconClass,
   useSaverLook,
 } from "@/components/guest/KioskClocks";
-import { KioskWelcomeOverlay, useKioskWelcome } from "@/components/guest/KioskWelcome";
+import {
+  KioskWelcomeOverlay,
+  KioskWelcomeRest,
+  useKioskWelcome,
+} from "@/components/guest/KioskWelcome";
 import { KioskBlank, KioskNightLight, useRestShowing } from "@/components/guest/KioskNightLight";
 import { idleActions } from "@/lib/kiosk-saver";
 import { guest as copy } from "@/content/copy";
@@ -45,6 +49,9 @@ import {
   type Display,
 } from "@/lib/kiosk-fit";
 import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
+import { areaFor, type Area, type Calibrations } from "@/lib/kiosk-calibration";
+import { kioskDisplay } from "@/lib/kiosk-devices.functions";
+import { onKioskPing } from "@/lib/kiosk-ping";
 import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { deviceToken, keepDeviceToken, readFix } from "@/lib/kiosk-presence";
@@ -137,28 +144,43 @@ function usePortraitPhone() {
   return phone;
 }
 
-/** This device's page height, the way it's held, from a time no keyboard was up (settleDisplay). */
+/** The largest page this device has had, the way it's held, with no keyboard up (settleDisplay). */
 const DISPLAY_KEY = "latchkey.display";
-function remembered(key: string): number | null {
+function remembered(key: string): { w: number; h: number } | null {
   try {
     const v = (
       JSON.parse(window.localStorage.getItem(DISPLAY_KEY) ?? "{}") as Record<string, unknown>
     )[key];
-    return typeof v === "number" && v > 0 ? v : null;
+    // Older visits kept the height alone.
+    if (typeof v === "number" && v > 0) return { w: 0, h: v };
+    const o = v as { w?: unknown; h?: unknown } | undefined;
+    return o && typeof o.w === "number" && typeof o.h === "number" && o.h > 0
+      ? { w: o.w, h: o.h }
+      : null;
   } catch {
     return null;
   }
 }
-function remember(key: string, h: number) {
+function remember(key: string, w: number, h: number) {
   try {
     const all = JSON.parse(window.localStorage.getItem(DISPLAY_KEY) ?? "{}") as Record<
       string,
-      number
+      unknown
     >;
-    if ((all[key] ?? 0) >= h) return;
-    window.localStorage.setItem(DISPLAY_KEY, JSON.stringify({ ...all, [key]: h }));
+    const was = remembered(key);
+    if (was && was.w >= w && was.h >= h) return;
+    all[key] = { w: Math.max(was?.w ?? 0, w), h: Math.max(was?.h ?? 0, h) };
+    window.localStorage.setItem(DISPLAY_KEY, JSON.stringify(all));
   } catch {
     // Not remembered on this device: it's worked out from the screen instead.
+  }
+}
+/** The host reset the calibration: learn the display from scratch. */
+function forgetDisplay() {
+  try {
+    window.localStorage.removeItem(DISPLAY_KEY);
+  } catch {
+    // Nothing kept.
   }
 }
 
@@ -175,19 +197,33 @@ function typing(): boolean {
   );
 }
 
+/** What the kiosk lays out for, reported to the dashboard (calibration draws it). */
+export type FitReport = {
+  /** What the browser says now. */
+  now: Display;
+  /** The display as learned (largest seen held this way). */
+  learned: Display;
+  /** The calibrated area, if the host set one for this way up. */
+  area: Area | null;
+};
+
 /**
  * Every check-in screen fits the display, so nothing runs past the bottom,
  * and nothing shakes. Everything below the header is in rem, so the page's
  * base font size scales it all together.
  *
- * - The display is settled once and kept (settleDisplay, tested). On a
- *   phone or tablet it's measured again only when the device turns (its own
- *   orientation, not the page's shape) or the width changes (a foldable);
- *   an on-screen keyboard or a toolbar never shrinks it. Opened with the
- *   keyboard still up (the address was just typed), the height comes from
- *   what this device remembered, or from its screen, and the real height
- *   replaces it once, when the keyboard goes. On a computer, a much shorter
- *   window counts too. --kiosk-h carries the height for sizes in CSS.
+ * - The display is the largest page this device has had held this way
+ *   (settleDisplay, tested; remembered across visits): the screen doesn't
+ *   change size, so an on-screen keyboard, the address bar, a toolbar or a
+ *   navigation bar (at the bottom, or at the side on its side) never
+ *   shrinks it. It's measured again only when the device turns (its own
+ *   orientation, not the page's shape) or the width falls a long way (a
+ *   foldable). Opened with the keyboard up (the address was just typed),
+ *   the height comes from what it learned, or its screen. On a computer, a
+ *   much shorter window counts too. --kiosk-h carries the height for CSS.
+ * - The host's calibration for this tablet and way up (kiosk-calibration.ts)
+ *   wins: the page is laid out for that area, moved and zoomed as set
+ *   (returned as `frame` for the page to apply), until the host resets it.
  * - Wider than tall, the welcome sets the scale: it grows or shrinks to just
  *   fill the height. Upright, the scale is the page as designed (16px).
  * - Each new screen starts at that scale and then only ever shrinks, until
@@ -206,10 +242,20 @@ function useScreenFit(
   atWelcome: boolean,
   stepKey: string,
   expanded: boolean,
+  calibrations: Calibrations,
+  onReport?: (r: FitReport) => void,
 ) {
   const welcome = useRef(atWelcome);
   welcome.current = atWelcome;
-  const refit = useRef<{ reset: () => void }>({ reset: () => {} });
+  const cals = useRef(calibrations);
+  cals.current = calibrations;
+  const report = useRef(onReport);
+  report.current = onReport;
+  const refit = useRef<{ reset: () => void; recalibrate: () => void }>({
+    reset: () => {},
+    recalibrate: () => {},
+  });
+  const [frame, setFrame] = useState<Area | null>(null);
   useEffect(() => {
     const html = document.documentElement;
     const before = html.style.fontSize;
@@ -226,7 +272,7 @@ function useScreenFit(
     // The keyboard takes a moment to slide away after typing ends: that counts as typing too.
     let typedAt = 0;
     const keyboardMaybeUp = () => typing() || Date.now() - typedAt < 1500;
-    // What the browser says now, made into the display (and remembered when no keyboard is up).
+    // What the browser says now, made into the display (and the largest remembered when no keyboard is up).
     const settle = (prev: Display | null): Display => {
       const now = measure();
       const key = calibrationKey(screenSize(), now.orientation);
@@ -235,14 +281,14 @@ function useScreenFit(
         screen: screenSize(),
         typing: keyboardMaybeUp(),
         fullscreen: fullscreen(),
-        calibrated: remembered(key),
+        learned: remembered(key),
       };
       if (
         touch &&
         !ctx.typing &&
         !keyboardLikely(now.h, orientedScreen(ctx.screen, now.orientation).h)
       )
-        remember(key, now.h);
+        remember(key, now.w, now.h);
       return settleDisplay(prev, now, ctx);
     };
     const same = (a: Display, b: Display) =>
@@ -250,13 +296,28 @@ function useScreenFit(
       a.h === b.h &&
       a.orientation === b.orientation &&
       !!a.estimated === !!b.estimated;
-    // The display as settled: what every screen is fitted to.
-    let display = settle(null);
+    // As learned from the browser, and what every screen is fitted to (the calibrated area, unzoomed, if set).
+    let learned = settle(null);
+    let area: Area | null = null;
+    let display = learned;
+    const calibrate = () => {
+      area = areaFor(cals.current, learned.orientation, learned);
+      display = area
+        ? {
+            w: Math.round(area.w / area.zoom),
+            h: Math.round(area.h / area.zoom),
+            orientation: learned.orientation,
+          }
+        : learned;
+      setFrame(area);
+      report.current?.({ now: measure(), learned, area });
+    };
+    calibrate();
     // Font size per pixel of display height, from the last landscape welcome.
     let ratio: number | null = null;
     // Since the last reset: may this screen still grow (only the landscape welcome, until it first shrinks)?
     let mayGrow = false;
-    let frame = 0;
+    let frameId = 0;
     const px = () => Number.parseFloat(window.getComputedStyle(html).fontSize) || FIT.base;
     const set = (v: number) => {
       html.style.fontSize = v === FIT.base ? before : `${v}px`;
@@ -309,8 +370,8 @@ function useScreenFit(
       }
     };
     const schedule = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(check);
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(check);
     };
     const reset = () => {
       height();
@@ -322,9 +383,11 @@ function useScreenFit(
       schedule();
     };
     const resized = () => {
-      const next = settle(display);
-      if (same(next, display)) return;
-      display = next;
+      const next = settle(learned);
+      if (same(next, learned)) return;
+      learned = next;
+      ratio = null;
+      calibrate();
       reset();
     };
     // Turning the device: its new size can arrive a moment after the event.
@@ -363,7 +426,14 @@ function useScreenFit(
         (document.activeElement as HTMLElement | null)?.scrollIntoView({ block: "center" });
     };
 
-    refit.current = { reset };
+    refit.current = {
+      reset,
+      recalibrate: () => {
+        ratio = null;
+        calibrate();
+        reset();
+      },
+    };
     reset();
     // A screen that changes size (a message, images loading) is checked again; it can only shrink.
     const observer = new ResizeObserver(schedule);
@@ -375,7 +445,7 @@ function useScreenFit(
     document.addEventListener("focusout", focusOut);
     window.visualViewport?.addEventListener("resize", keyboardMoved);
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(frameId);
       window.clearTimeout(turnTimer);
       window.clearTimeout(focusTimer);
       observer.disconnect();
@@ -394,6 +464,76 @@ function useScreenFit(
   useEffect(() => {
     refit.current.reset();
   }, [atWelcome, stepKey, expanded]);
+  // The host changed the calibration: lay out for the new area at once.
+  useEffect(() => {
+    refit.current.recalibrate();
+  }, [calibrations]);
+  return frame;
+}
+
+/**
+ * This tablet's calibration, if it's paired: read on start, whenever the
+ * host pings (they're calibrating it from the dashboard) and every few
+ * minutes; the display it lays out for is sent along each time so the
+ * dashboard can draw it. A reset (no calibration left) also forgets the
+ * learned display, so it learns again from now. `changedAt`: the last time
+ * the host changed it, for the outline shown while they're calibrating.
+ */
+function useKioskCalibration(code: string, enabled: boolean) {
+  const fn = useServerFn(kioskDisplay);
+  const [cals, setCals] = useState<Calibrations>({});
+  const [changedAt, setChangedAt] = useState(0);
+  const last = useRef<string>("{}");
+  const reportRef = useRef<FitReport | null>(null);
+  const load = useCallback(() => {
+    const device = deviceToken(code);
+    if (!device) return;
+    const r = reportRef.current;
+    const display = r
+      ? {
+          w: r.now.w,
+          h: r.now.h,
+          screenW: window.screen.width,
+          screenH: window.screen.height,
+          orientation: r.learned.orientation,
+          usedW: r.learned.w,
+          usedH: r.learned.h,
+        }
+      : undefined;
+    void fn({ data: { code, device, ...(display ? { display } : {}) } })
+      .then((res) => {
+        const next = JSON.stringify(res.calibration);
+        if (next === last.current) return;
+        const wasSet = last.current !== "{}";
+        last.current = next;
+        if (wasSet && next === "{}") forgetDisplay();
+        setCals(res.calibration);
+        setChangedAt(Date.now());
+      })
+      .catch(() => {});
+  }, [code, fn]);
+  useEffect(() => {
+    if (!enabled) return;
+    load();
+    const id = window.setInterval(load, 5 * 60_000);
+    const stop = onKioskPing(code, load);
+    return () => {
+      window.clearInterval(id);
+      stop();
+    };
+  }, [code, enabled, load]);
+  // The display changed (turned, learned larger): tell the dashboard soon after, once it settles.
+  const timer = useRef(0);
+  const onReport = useCallback(
+    (r: FitReport) => {
+      reportRef.current = r;
+      if (!enabled) return;
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(load, 1500);
+    },
+    [enabled, load],
+  );
+  return { calibrations: cals, changedAt, onReport };
 }
 
 /**
@@ -410,8 +550,12 @@ function useKioskIdle(o: {
   saver: boolean;
   resetMinutes: number;
   saverMinutes: number;
+  /** The host's welcome is up: no reset or screensaver; after welcomeMinutes it rests. */
+  welcome: boolean;
+  welcomeMinutes: number;
   onReset: () => void;
   onSaver: () => void;
+  onWelcomeRest: () => void;
 }) {
   const lastTouch = useRef(Date.now());
   const resetDone = useRef(false);
@@ -433,12 +577,14 @@ function useKioskIdle(o: {
         atWelcome: now.atWelcome,
         resetDone: resetDone.current,
         saver: now.saver,
+        welcome: now.welcome,
       });
       if (todo.reset) {
         resetDone.current = true;
         now.onReset();
       }
       if (todo.saver) now.onSaver();
+      if (todo.welcomeRest) now.onWelcomeRest();
     };
     const id = window.setInterval(check, 5_000);
     document.addEventListener("visibilitychange", check);
@@ -492,7 +638,18 @@ function Kiosk() {
   // Brightness, clock size and timings: the host's own where set, else Latchkey's (super admin).
   const saverLook = useSaverLook(p.code, shared);
   const { resetMinutes, saverMinutes, welcomeMinutes } = saverLook.defaults;
-  const { welcome, dismiss } = useKioskWelcome(p.code, shared, welcomeMinutes);
+  const { welcome, dismiss, reload: reloadWelcome } = useKioskWelcome(p.code, shared);
+  // The welcome is put aside for this guest's go (they tapped Check in, or "Not you?"); it comes
+  // back when the kiosk resets, until the guest has checked in, the host takes it off or it ends.
+  const [asideVersion, setAsideVersion] = useState<number | null>(null);
+  const welcomeUp = shared && !!welcome && asideVersion !== welcome.version;
+  // Untouched for a while: the welcome rests (split, screen-friendly) until touched.
+  const [welcomeRest, setWelcomeRest] = useState(false);
+  // Tapping Check in on the welcome: CheckInFlow opens that guest's stay.
+  const [welcomeStart, setWelcomeStart] = useState<{ version: number | null; n: number } | null>(
+    null,
+  );
+  const calibration = useKioskCalibration(p.code, shared && !tour);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
   // Door tablets only: keys, pads and buttons grow to use the whole screen (the host's Look and feel → Door tablet).
@@ -504,10 +661,30 @@ function Kiosk() {
     html.setAttribute("data-kiosk-touch", "expanded");
     return () => html.removeAttribute("data-kiosk-touch");
   }, [expanded]);
-  useScreenFit(content, atWelcome, stepKey, expanded);
+  const frame = useScreenFit(
+    content,
+    atWelcome,
+    stepKey,
+    expanded,
+    calibration.calibrations,
+    calibration.onReport,
+  );
+  // The host is calibrating from the dashboard: the area's outline shows for a while after each change.
+  const [outline, setOutline] = useState(false);
+  useEffect(() => {
+    if (!calibration.changedAt || !shared) return;
+    setOutline(true);
+    const id = window.setTimeout(() => setOutline(false), 20_000);
+    return () => window.clearTimeout(id);
+  }, [calibration.changedAt, shared]);
+  // The welcome goes over everything, the screensaver too.
+  useEffect(() => {
+    if (welcomeUp) setSaver(false);
+    else setWelcomeRest(false);
+  }, [welcomeUp, welcome?.version]);
   // The host just switched the night light on from their dashboard: an idle kiosk (on the welcome) lights up now.
   useEffect(() => {
-    if (saverLook.nightOnAt && shared && atWelcome) setSaver(true);
+    if (saverLook.nightOnAt && shared && atWelcome && !welcomeUp) setSaver(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saverLook.nightOnAt]);
 
@@ -517,12 +694,39 @@ function Kiosk() {
     saver,
     resetMinutes,
     saverMinutes,
+    welcome: welcomeUp,
+    welcomeMinutes,
     onReset: () => {
       setExitOpen(false);
       setSession((n) => n + 1);
+      setWelcomeStart(null);
+      // Whoever was checking in walked away: the host's welcome shows again.
+      setAsideVersion(null);
     },
     onSaver: () => setSaver(true),
+    onWelcomeRest: () => setWelcomeRest(true),
   });
+
+  /** From the welcome: check in as that guest (or find the stay as usual when it isn't for one). */
+  function startWelcome() {
+    if (!welcome) return;
+    dismiss();
+    setAsideVersion(welcome.version);
+    setWelcomeRest(false);
+    setSaver(false);
+    setWelcomeStart({ version: welcome.checkIn ? welcome.version : null, n: Date.now() });
+    setSession((s) => s + 1);
+    bump();
+  }
+  /** "Not you?": the usual start, for someone else. */
+  function notThisGuest() {
+    if (!welcome) return;
+    setAsideVersion(welcome.version);
+    setWelcomeRest(false);
+    setWelcomeStart(null);
+    setSession((s) => s + 1);
+    bump();
+  }
 
   function goFullscreen() {
     if (!shared || tour) return;
@@ -611,8 +815,20 @@ function Kiosk() {
       {/* Inputs stay at 16px or more however small the page is fitted, so phones don't zoom in on them. */}
       {/* Expanded: only a thin margin at the screen's edges. */}
       <div
+        // The host's calibration: laid out for its area (unzoomed), then moved and zoomed into place.
+        style={
+          frame
+            ? {
+                width: `${frame.w / frame.zoom}px`,
+                minHeight: `${frame.h / frame.zoom}px`,
+                transform: `translate(${frame.x}px, ${frame.y}px) scale(${frame.zoom})`,
+                transformOrigin: "0 0",
+              }
+            : undefined
+        }
         className={cn(
           "relative min-h-screen select-none bg-background [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]",
+          frame && "min-h-0 overflow-hidden",
           expanded
             ? "px-[0.5rem]"
             : "px-[var(--kiosk-header,16px)] sm:px-[calc(var(--kiosk-header,16px)*2)]",
@@ -694,7 +910,10 @@ function Kiosk() {
                 setStepKey(k);
                 // …and got all the way to "you're checked in".
                 if (tour && k.startsWith("done:")) trackEvent("tour_complete");
+                // Checked in: the welcome for them comes off.
+                if (k.startsWith("done:")) reloadWelcome();
               }}
+              welcomeStart={shared ? welcomeStart : null}
               qrPanel={saverLook.defaults.qrStyle === "panel"}
             />
           )}
@@ -710,20 +929,46 @@ function Kiosk() {
         {/* The public tour: the floating demo panel (says it's a demo, switch property, start a trial, leave). */}
         {tour ? <GuestDemoDock code={p.code} /> : null}
 
-        {/* The host's welcome for an arriving guest: over everything, wakes the screen. */}
-        {shared && welcome ? (
-          <KioskWelcomeOverlay
-            welcome={welcome}
-            onDismiss={() => {
-              dismiss();
-              setSaver(false);
-              setSession((s) => s + 1);
-              bump();
-            }}
-          />
+        {/* The host's welcome for an arriving guest: over everything, the screensaver too. */}
+        {welcomeUp && welcome ? (
+          welcomeRest ? (
+            <KioskWelcomeRest
+              welcome={welcome}
+              tz={p.timezone ?? "Europe/London"}
+              quiet={{ start: p.quietStart, end: p.quietEnd }}
+              phoneUrl={
+                typeof window === "undefined"
+                  ? null
+                  : `${window.location.origin}/kiosk/${p.code}?guest=1`
+              }
+              onCheckIn={startWelcome}
+              onWake={() => {
+                setWelcomeRest(false);
+                bump();
+              }}
+            />
+          ) : (
+            <KioskWelcomeOverlay
+              welcome={welcome}
+              onCheckIn={startWelcome}
+              onNotMe={notThisGuest}
+            />
+          )
         ) : null}
 
-        {shared && saver ? (
+        {/* While the host calibrates from the dashboard: the area's edges, so they can line it up. */}
+        {outline ? (
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 z-[99] border-4 border-dashed border-accent"
+          >
+            <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
+              {copy.calibrating}
+            </span>
+          </div>
+        ) : null}
+
+        {shared && saver && !welcomeUp ? (
           <KioskAtRest
             name={p.name}
             code={p.code}

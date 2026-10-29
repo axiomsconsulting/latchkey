@@ -36,6 +36,7 @@ import {
   askHostToCheckIn,
   checkCompanionId,
   checkInProgress,
+  checkoutOptions,
   joinCheckIn,
   joinDone,
   joinInfo,
@@ -52,9 +53,14 @@ import {
   saveRegister,
   setParty,
   skipCompanionId,
+  startFromWelcome,
   verifyLast4,
   verifyPhotoId,
 } from "@/lib/checkin.functions";
+import { cameraFor, type GuestFlow } from "@/lib/checkin-flow";
+import { nightsBetween } from "@/lib/checkin-logic";
+import { addDays } from "@/lib/dates";
+import { deviceToken } from "@/lib/kiosk-presence";
 
 import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { demoLine, type DemoHint } from "@/lib/demo-guide";
@@ -105,6 +111,8 @@ type Step =
   | { name: "welcome" }
   | { name: "letter" }
   | { name: "checkout" }
+  /** Three close check-out days to pick from (the host's journey), each with its nights. */
+  | { name: "checkout3"; days: Array<{ date: string; nights: number }> }
   /** Only when the first answers fit stays on more than one platform. */
   | { name: "platform"; only: string[] }
   | {
@@ -154,6 +162,18 @@ export type CheckinProperty = {
   sites?: GuestSite[];
   /** The property's look and words (src/lib/theme.ts). */
   theme?: ThemeConfig;
+  /** The host's check-in journey (src/lib/checkin-flow.ts). */
+  flow?: GuestFlow;
+  /** The first check-out day a guest arriving now can have: nights count from the day before. */
+  firstCheckout?: string;
+};
+
+const DEFAULT_GUEST_FLOW: GuestFlow = {
+  welcomeGo: true,
+  confirm: true,
+  checkout: "week",
+  idCamera: "front",
+  selfieCamera: "front",
 };
 
 export function CheckInFlow({
@@ -165,7 +185,14 @@ export function CheckInFlow({
   onStep,
   qrPanel = true,
   resumeToken,
+  welcomeStart = null,
 }: {
+  /**
+   * The guest tapped Check in on the host's welcome: with a version, that
+   * welcome's stay opens straight away (startFromWelcome); without, the
+   * usual questions find it.
+   */
+  welcomeStart?: { version: number | null; n: number } | null;
   /** Door tablet welcome: the full phone panel on the right (Latchkey admin setting), else only the icon at the top. */
   qrPanel?: boolean;
   /** Tells the kiosk whether the welcome (first) screen is showing. */
@@ -182,12 +209,23 @@ export function CheckInFlow({
   const [step, setStep] = useState<Step>({ name: "welcome" });
   const [letter, setLetter] = useState("");
   const [checkOut, setCheckOut] = useState("");
-  const [token, setToken] = useState("");
+  // Read by steps that follow each other within one tap (found → confirm → finish), so kept in a ref too.
+  const [token, setTokenState] = useState("");
+  const tokenRef = useRef("");
+  const setToken = (t: string) => {
+    tokenRef.current = t;
+    setTokenState(t);
+  };
   const [sequence, setSequence] = useState<CheckinMethod[]>(["self_declare"]);
   const [kinds, setKinds] = useState<Last4Kind[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [platform, setPlatform] = useState<string | null>(null);
+  // The check-out day was picked from three close days (a wrong pick counts for more).
+  const [picked, setPicked] = useState(false);
+  const flow = property.flow ?? DEFAULT_GUEST_FLOW;
+  // Tries per extra guest's ID: a second failed read keeps the photo for the host instead.
+  const companionTries = useRef<Record<number, number>>({});
   const [plan, setPlan] = useState<PartyPlan | null>(null);
   const [listFlow, setListFlow] = useState(false);
   const [adults, setAdults] = useState(1);
@@ -199,6 +237,8 @@ export function CheckInFlow({
   const onPhone = useIsMobile();
 
   const match = useServerFn(matchBooking);
+  const options = useServerFn(checkoutOptions);
+  const fromWelcome = useServerFn(startFromWelcome);
   const list = useServerFn(listArrivals);
   const pick = useServerFn(pickArrival);
   const confirm = useServerFn(confirmBooking);
@@ -305,6 +345,7 @@ export function CheckInFlow({
   function restart() {
     setLetter("");
     setCheckOut("");
+    setPicked(false);
     setToken("");
     setPlatform(null);
     setPlan(null);
@@ -337,7 +378,7 @@ export function CheckInFlow({
   }
 
   /** Asks for the platform only if the server says the answers so far fit more than one. */
-  async function findStay(day: string, channel?: string) {
+  async function findStay(day: string, channel?: string, fromThree = picked) {
     const res = await run(() =>
       match({
         data: {
@@ -346,6 +387,7 @@ export function CheckInFlow({
           letter,
           checkOut: day,
           ...(channel ? { channel } : {}),
+          ...(fromThree ? { picked: true } : {}),
         },
       }),
     );
@@ -353,16 +395,72 @@ export function CheckInFlow({
     if (res.status === "locked") return setStep({ name: "locked", until: res.until });
     if (res.status === "no_match") return setStep({ name: "no_match" });
     if (res.status === "choose_platform") return setStep({ name: "platform", only: res.channels });
-    setToken(res.token);
-    setPlatform(res.platform);
-    if (res.needsName) return setStep({ name: "guestName" });
-    setStep({ name: "confirm", firstName: res.firstName, returning: res.returning === true });
+    await found(res.token, res.platform, res.firstName, res.needsName, res.returning === true);
   }
+
+  /** The stay is found: a name if it has none, then "Is this you?" unless the host left it out. */
+  async function found(
+    t: string,
+    site: string | null,
+    first: string,
+    needsName: boolean,
+    returning: boolean,
+    ask = flow.confirm,
+  ) {
+    setToken(t);
+    setPlatform(site);
+    if (needsName) return setStep({ name: "guestName" });
+    if (!ask && !returning) return void onConfirm(t);
+    setStep({ name: "confirm", firstName: first, returning });
+  }
+
+  /** The surname initial: the stays with it, or the check-out day as the host's journey asks. */
+  async function onLetter(l: string) {
+    setLetter(l);
+    if (property.listFlow) return void listStays(l);
+    if (flow.checkout === "week") return setStep({ name: "checkout" });
+    const res = await run(() =>
+      options({ data: { code: property.code, deviceId: deviceId(), letter: l } }),
+    );
+    if (!res) return;
+    if (res.status === "locked") return setStep({ name: "locked", until: res.until });
+    setStep({ name: "checkout3", days: res.days });
+  }
+
+  // Tapped Check in on the host's welcome: that guest's stay opens without any questions.
+  useEffect(() => {
+    if (!welcomeStart) return;
+    if (welcomeStart.version === null) return setStep({ name: "letter" });
+    let live = true;
+    void run(() =>
+      fromWelcome({
+        data: {
+          code: property.code,
+          deviceId: deviceId(),
+          version: welcomeStart.version!,
+          ...(deviceToken(property.code) ? { device: deviceToken(property.code)! } : {}),
+        },
+      }),
+    ).then((res) => {
+      if (!live) return;
+      if (!res || res.status !== "matched") return setStep({ name: "letter" });
+      // The host already said who's arriving: no "Is this you?".
+      void found(res.token, res.platform, res.firstName, res.needsName, res.returning, false);
+    });
+    return () => {
+      live = false;
+    };
+    // Runs once per tap on the welcome.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [welcomeStart?.n]);
 
   async function onGuestName(e: React.FormEvent) {
     e.preventDefault();
-    const res = await run(() => saveName({ data: { token, fullName } }));
-    if (res) setStep({ name: "confirm", firstName: res.firstName });
+    const res = await run(() => saveName({ data: { token: tokenRef.current, fullName } }));
+    if (!res) return;
+    // Arrived from the host's welcome (or "Is this you?" is left out): straight on.
+    if (welcomeStart?.version || !flow.confirm) return void onConfirm();
+    setStep({ name: "confirm", firstName: res.firstName });
   }
 
   async function onPick(bookingId: string) {
@@ -378,7 +476,7 @@ export function CheckInFlow({
   // The square for others appears with the first other-guest screen.
   useEffect(() => {
     if (!otherGuestStep || share || !token) return;
-    void shareFn({ data: { token } })
+    void shareFn({ data: { token: tokenRef.current } })
       .then((r) => setShare(r.share))
       .catch(() => {});
   }, [otherGuestStep, share, token, shareFn]);
@@ -388,7 +486,7 @@ export function CheckInFlow({
     if (!share || !token || step.name === "done") return;
     let live = true;
     const load = () =>
-      void progressFn({ data: { token } })
+      void progressFn({ data: { token: tokenRef.current } })
         .then((r) => live && setSlots(r.slots))
         .catch(() => {});
     load();
@@ -421,12 +519,12 @@ export function CheckInFlow({
   }, [slots]);
 
   async function finish() {
-    const res = await run(() => complete({ data: { token } }));
+    const res = await run(() => complete({ data: { token: tokenRef.current } }));
     if (res) setStep({ name: "done", ...res });
   }
 
-  async function onConfirm() {
-    const res = await run(() => confirm({ data: { token } }));
+  async function onConfirm(t = tokenRef.current) {
+    const res = await run(() => confirm({ data: { token: t } }));
     if (!res) return;
     const seq = [...res.sequence] as CheckinMethod[];
     setSequence(seq);
@@ -442,7 +540,7 @@ export function CheckInFlow({
 
   async function startIdentity(list = listFlow, seq = sequence, people = adults, p = plan) {
     if (list) {
-      const ok = await run(() => declare({ data: { token } }));
+      const ok = await run(() => declare({ data: { token: tokenRef.current } }));
       if (ok) afterLead(people, p);
       return;
     }
@@ -450,7 +548,9 @@ export function CheckInFlow({
   }
 
   async function onParty(nextAdults: number, ages: number[]) {
-    const res = await run(() => party({ data: { token, adults: nextAdults, childAges: ages } }));
+    const res = await run(() =>
+      party({ data: { token: tokenRef.current, adults: nextAdults, childAges: ages } }),
+    );
     if (!res) return;
     setAdults(nextAdults);
     childAges.current = ages;
@@ -499,9 +599,17 @@ export function CheckInFlow({
   }
 
   async function onCompanion(position: number, full: string, small: string) {
+    const tries = (companionTries.current[position] ?? 0) + 1;
+    companionTries.current[position] = tries;
     const res = await run(() =>
       companionId({
-        data: { token, position, image: full, ...(plan?.keepIdPhoto ? { small } : {}) },
+        data: {
+          token: tokenRef.current,
+          position,
+          image: full,
+          ...(plan?.keepIdPhoto ? { small } : {}),
+          ...(tries > 1 ? { again: true } : {}),
+        },
       }),
     );
     if (!res) return;
@@ -509,28 +617,37 @@ export function CheckInFlow({
       return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
     }
     if (res.status === "skip") {
-      const ok = await run(() => skipCompanion({ data: { token, position } }));
+      const ok = await run(() => skipCompanion({ data: { token: tokenRef.current, position } }));
       if (ok) await advance(queue, copy.companionSkipped);
       return;
     }
     setPrefill((p) => ({ ...p, [position]: res.prefill }));
-    await advance(queue, res.under18 ? copy.companionUnder18 : copy.companionThanks(res.firstName));
+    await advance(
+      queue,
+      res.under18
+        ? copy.companionUnder18
+        : res.firstName
+          ? copy.companionThanks(res.firstName)
+          : copy.companionKept,
+    );
   }
 
   async function onRegister(position: number, entry: RegisterForm) {
-    const res = await run(() => register({ data: { token, position, ...entry } }));
+    const res = await run(() =>
+      register({ data: { token: tokenRef.current, position, ...entry } }),
+    );
     if (!res) return;
     if (!res.ok) return setMessage(res.missing.map((m) => copy.registerMissing[m]).join(" "));
     await advance(queue);
   }
 
   async function onSkipCompanion(position: number) {
-    const ok = await run(() => skipCompanion({ data: { token, position } }));
+    const ok = await run(() => skipCompanion({ data: { token: tokenRef.current, position } }));
     if (ok) await advance(queue, copy.companionSkipped);
   }
 
   async function onFace(position: number, small: string) {
-    const ok = await run(() => face({ data: { token, position, image: small } }));
+    const ok = await run(() => face({ data: { token: tokenRef.current, position, image: small } }));
     if (ok) await advance(queue);
   }
 
@@ -543,7 +660,9 @@ export function CheckInFlow({
 
   async function onPhoto(full: string, small: string) {
     const res = await run(() =>
-      photo({ data: { token, image: full, ...(plan?.keepIdPhoto ? { small } : {}) } }),
+      photo({
+        data: { token: tokenRef.current, image: full, ...(plan?.keepIdPhoto ? { small } : {}) },
+      }),
     );
     if (!res) return fallback("photo_id");
     if (res.status === "retry") {
@@ -575,14 +694,22 @@ export function CheckInFlow({
   const hint = property.demoHint;
   const demoHint = hint ? demoLine(step, hint, siteOf(hint.channel).label) : null;
 
-  const canGoBack = ["letter", "checkout", "platform", "pick", "guestName"].includes(step.name);
+  const canGoBack = ["letter", "checkout", "checkout3", "platform", "pick", "guestName"].includes(
+    step.name,
+  );
+  // Nights on the week's check-out days count from the day before the first one (today, or yesterday after midnight).
+  const arrivalDay = property.firstCheckout ? addDays(property.firstCheckout, -1) : null;
   // Every step between the welcome and the end offers a way out to the host.
   const canHandOver = !["welcome", "done", "handover", "locked"].includes(step.name);
 
   async function handOver() {
     const back = step;
     // The host is told even if this call fails, so never leave the guest stuck.
-    await run(() => handover({ data: { code: property.code, ...(token ? { token } : {}) } }));
+    await run(() =>
+      handover({
+        data: { code: property.code, ...(tokenRef.current ? { token: tokenRef.current } : {}) },
+      }),
+    );
     setStep({ name: "handover", back });
   }
 
@@ -630,9 +757,11 @@ export function CheckInFlow({
             setStep(
               step.name === "letter"
                 ? { name: "welcome" }
-                : step.name === "checkout" || step.name === "pick"
+                : step.name === "checkout" || step.name === "checkout3" || step.name === "pick"
                   ? { name: "letter" }
-                  : { name: "checkout" },
+                  : flow.checkout === "three"
+                    ? { name: "letter" }
+                    : { name: "checkout" },
             )
           }
         >
@@ -719,11 +848,7 @@ export function CheckInFlow({
                     size="touch"
                     className="text-2xl font-semibold"
                     disabled={busy}
-                    onClick={() => {
-                      setLetter(l);
-                      if (property.listFlow) void listStays(l);
-                      else setStep({ name: "checkout" });
-                    }}
+                    onClick={() => void onLetter(l)}
                   >
                     {l}
                   </Button>
@@ -745,17 +870,54 @@ export function CheckInFlow({
                     key={d}
                     variant="outline"
                     size="touch-xl"
-                    className="text-xl"
+                    className="h-auto flex-col gap-0 py-3 text-xl"
                     disabled={busy}
                     onClick={() => {
                       setCheckOut(d);
-                      void findStay(d);
+                      setPicked(false);
+                      void findStay(d, undefined, false);
                     }}
                   >
                     {formatUkDate(d)}
+                    {arrivalDay ? (
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {copy.nights(nightsBetween(arrivalDay, d))}
+                      </span>
+                    ) : null}
                   </Button>
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {step.name === "checkout3" ? (
+            <section data-kx="col">
+              <h1 className="text-2xl sm:text-4xl">{copy.stepCheckoutPick}</h1>
+              <p className="mt-2 text-muted-foreground">{copy.stepCheckoutPickHint}</p>
+              <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-3">
+                {step.days.map((d) => (
+                  <Button
+                    key={d.date}
+                    variant="outline"
+                    size="touch-xl"
+                    className="h-auto flex-col gap-1 py-5 text-2xl"
+                    disabled={busy}
+                    onClick={() => {
+                      setCheckOut(d.date);
+                      setPicked(true);
+                      void findStay(d.date, undefined, true);
+                    }}
+                  >
+                    {formatUkDate(d.date)}
+                    <span className="text-base font-normal text-muted-foreground">
+                      {copy.nights(d.nights)}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+              {busy ? (
+                <Loader2 className="mx-auto mt-6 size-8 animate-spin text-muted-foreground" />
+              ) : null}
             </section>
           ) : null}
 
@@ -934,6 +1096,7 @@ export function CheckInFlow({
                   <IdCamera
                     busy={busy}
                     side={cameraSide}
+                    facing={cameraFor("id", kiosk, flow)}
                     onCapture={(full, small) => void onPhoto(full, small)}
                     onFail={() => fallback("photo_id", copy.idCameraFailed)}
                     extra={
@@ -957,7 +1120,9 @@ export function CheckInFlow({
               kinds={kinds}
               busy={busy}
               onSubmit={async (kind, value) => {
-                const res = await run(() => last4({ data: { token, kind, value } }));
+                const res = await run(() =>
+                  last4({ data: { token: tokenRef.current, kind, value } }),
+                );
                 if (!res) return;
                 if (res.status === "retry") return setMessage(copy.last4Retry(res.left));
                 if (res.status === "fallback") return fallback("last4");
@@ -979,7 +1144,7 @@ export function CheckInFlow({
                 className="mt-8 w-full"
                 disabled={busy}
                 onClick={async () => {
-                  const ok = await run(() => declare({ data: { token } }));
+                  const ok = await run(() => declare({ data: { token: tokenRef.current } }));
                   if (ok) afterLead();
                 }}
               >
@@ -1032,6 +1197,7 @@ export function CheckInFlow({
                     key={`companion-${step.position}`}
                     busy={busy}
                     side={cameraSide}
+                    facing={cameraFor("id", kiosk, flow)}
                     onCapture={(full, small) => void onCompanion(step.position, full, small)}
                     onFail={() => void onSkipCompanion(step.position)}
                     extra={
@@ -1078,7 +1244,8 @@ export function CheckInFlow({
               <div className="mt-6">
                 <IdCamera
                   key={`face-${step.position}`}
-                  facing="user"
+                  facing={cameraFor("face", kiosk, flow)}
+                  kind="face"
                   busy={busy}
                   side={cameraSide}
                   help={copy.faceBody}
@@ -2028,6 +2195,7 @@ export function JoinCheckIn({ share }: { share: string }) {
             <div className="mt-6">
               <IdCamera
                 facing="user"
+                kind="face"
                 busy={busy}
                 help={copy.faceBody}
                 cta={copy.faceTake}

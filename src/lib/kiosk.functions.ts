@@ -140,7 +140,11 @@ const code = z
   .max(40)
   .regex(/^[a-z0-9-]+$/i);
 
-/** The kiosk's view: the welcome to show now, if any (first name and words only). */
+/**
+ * The kiosk's view: the welcome to show now, if any (first name and words
+ * only). It goes once its stay is checked in. `checkIn`: it's for a stay and
+ * the host's journey lets its button open that stay (startFromWelcome).
+ */
 export const kioskWelcome = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
@@ -148,14 +152,34 @@ export const kioskWelcome = createServerFn({ method: "GET" })
     if (!id) return null;
     const { data: r, error } = await db
       .from("kiosk_messages")
-      .select("headline, body, version, cleared_at, expires_at")
+      .select("headline, body, version, cleared_at, expires_at, booking_id, updated_at")
       .eq("property_id", id)
       .maybeSingle();
     if (error || !live(r)) return null;
+    let checkIn = false;
+    if (r.booking_id) {
+      const { data: b } = await db
+        .from("bookings")
+        .select("status, checked_in_at")
+        .eq("id", r.booking_id)
+        .maybeSingle();
+      // Checked in since the welcome went up: its job is done.
+      if (
+        b?.status === "checked_in" &&
+        b.checked_in_at &&
+        Date.parse(b.checked_in_at) > Date.parse(r.updated_at)
+      )
+        return null;
+      const { loadPropertyByCode } = await import("./checkin.server");
+      const p = await loadPropertyByCode(data.code);
+      checkIn = !!b && !!p?.flow?.steps?.welcome_go && b.status !== "cancelled";
+    }
     return {
       headline: r.headline as string,
       body: (r.body as string | null) ?? null,
       version: r.version as number,
+      expiresAt: r.expires_at as string,
+      checkIn,
     };
   });
 

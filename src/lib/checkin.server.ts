@@ -27,7 +27,7 @@ export function deviceHash(propertyId: string, deviceId: string): string {
 }
 
 const PROPERTY_COLUMNS =
-  "id, host_id, name, short_code, timezone, check_in_pin, checkin_methods, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active, theme_config, is_demo";
+  "id, host_id, name, short_code, timezone, country_code, check_in_pin, checkin_methods, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, wifi_name, wifi_password, parking_notes, host_contact_name, host_contact_phone, active, theme_config, is_demo";
 
 export async function loadPropertyByCode(code: string) {
   const db = await admin();
@@ -38,17 +38,19 @@ export async function loadPropertyByCode(code: string) {
       .eq("short_code", code.toLowerCase())
       .eq("active", true)
       .maybeSingle();
-  const { data } = await withLegacy(
+  // checkin_flow is from migration 0065, guest_records from 0020.
+  const { data } = await withLegacy<any>(
+    () => find(`${PROPERTY_COLUMNS}, guest_records, checkin_flow`),
     () =>
-      db
-        .from("properties")
-        .select(`${PROPERTY_COLUMNS}, guest_records`)
-        .eq("short_code", code.toLowerCase())
-        .eq("active", true)
-        .maybeSingle(),
-    () => find(PROPERTY_COLUMNS),
+      withLegacy<any>(
+        () => find(`${PROPERTY_COLUMNS}, guest_records`),
+        () => find(PROPERTY_COLUMNS),
+      ),
   );
-  return data;
+  if (!data) return null;
+  // The check-in journey (Latchkey's rules applied) decides the switches every check-in rule reads.
+  const { withFlow } = await import("./checkin-flow.server");
+  return withFlow(data as Record<string, any>) as Promise<any>;
 }
 
 /** The host's demo/live switches. */

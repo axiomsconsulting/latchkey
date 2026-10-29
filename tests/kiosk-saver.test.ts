@@ -78,6 +78,7 @@ describe("idle kiosk", () => {
     expect(idleActions(2 * min, t, { atWelcome: false, resetDone: false, saver: false })).toEqual({
       reset: false,
       saver: false,
+      welcomeRest: false,
     });
   });
   it("goes back to the welcome after the reset time, once", () => {
@@ -105,6 +106,17 @@ describe("idle kiosk", () => {
   it("catches up at once after the tablet slept", () => {
     expect(
       idleActions(3 * 60 * min, t, { atWelcome: false, resetDone: false, saver: false }),
-    ).toEqual({ reset: true, saver: true });
+    ).toEqual({ reset: true, saver: true, welcomeRest: false });
+  });
+  it("keeps the host's welcome up: no reset, no screensaver, and it rests after its time", () => {
+    const w = { ...t, welcomeMinutes: 30 };
+    const up = { atWelcome: true, resetDone: false, saver: false, welcome: true };
+    expect(idleActions(3 * 60 * min, w, up)).toEqual({
+      reset: false,
+      saver: false,
+      welcomeRest: true,
+    });
+    expect(idleActions(29 * min, w, up).welcomeRest).toBe(false);
+    expect(idleActions(3 * 60 * min, { ...w, welcomeMinutes: 0 }, up).welcomeRest).toBe(false);
   });
 });
