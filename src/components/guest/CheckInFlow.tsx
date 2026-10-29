@@ -37,6 +37,7 @@ import {
   checkCompanionId,
   checkInProgress,
   checkoutOptions,
+  findByPhotoId,
   joinCheckIn,
   joinDone,
   joinInfo,
@@ -139,7 +140,11 @@ type Step =
       roomName: string | null;
       roomTitle: string | null;
       stayToken: string;
-    };
+      /** Three words for /g/<words>, the easy-to-remember link to the guide. */
+      shortCode?: string | null;
+    }
+  /** ID first: the photo of the ID finds the stay (and is the lead guest's ID check). */
+  | { name: "idFirst"; consented: boolean };
 
 function deviceId(): string {
   const key = "latchkey.device";
@@ -175,6 +180,7 @@ type RegisterOutcome =
 
 const DEFAULT_GUEST_FLOW: GuestFlow = {
   welcomeGo: true,
+  idFirst: false,
   confirm: true,
   checkout: "week",
   idCamera: "front",
@@ -191,7 +197,10 @@ export function CheckInFlow({
   qrPanel = true,
   resumeToken,
   welcomeStart = null,
+  onDone,
 }: {
+  /** Door tablet: "I'm done" at the end goes back to the start for the next guest. */
+  onDone?: (() => void) | undefined;
   /**
    * The guest tapped Check in on the host's welcome: with a version, that
    * welcome's stay opens straight away (startFromWelcome); without, the
@@ -229,6 +238,10 @@ export function CheckInFlow({
   // The check-out day was picked from three close days (a wrong pick counts for more).
   const [picked, setPicked] = useState(false);
   const flow = property.flow ?? DEFAULT_GUEST_FLOW;
+  // ID first: the lead guest's ID is already checked (found their stay), or the photo to reuse once it's found another way.
+  const leadVerified = useRef(false);
+  const pendingPhoto = useRef<{ full: string; small: string } | null>(null);
+  const idFirstTries = useRef(0);
   // The register from each guest's ID: saved, left for the host, or only a few things to ask.
   const registerFrom = useRef<Record<number, string>>({});
   const registerAsk = useRef<Record<number, RegisterAsk[]>>({});
@@ -252,6 +265,7 @@ export function CheckInFlow({
   const match = useServerFn(matchBooking);
   const options = useServerFn(checkoutOptions);
   const fromWelcome = useServerFn(startFromWelcome);
+  const byPhoto = useServerFn(findByPhotoId);
   const list = useServerFn(listArrivals);
   const pick = useServerFn(pickArrival);
   const confirm = useServerFn(confirmBooking);
@@ -427,6 +441,42 @@ export function CheckInFlow({
     setStep({ name: "confirm", firstName: first, returning });
   }
 
+  /** Finding the stay: the photo ID first when the journey has it, otherwise the surname initial. */
+  function startFind() {
+    setStep(
+      flow.idFirst && !pendingPhoto.current
+        ? { name: "idFirst", consented: false }
+        : { name: "letter" },
+    );
+  }
+
+  /** ID first: the name on it finds the stay; otherwise the photo waits to be used once it's found. */
+  async function onIdFirst(full: string, small: string) {
+    const res = await run(() =>
+      byPhoto({ data: { code: property.code, deviceId: deviceId(), image: full, small } }),
+    );
+    if (!res) return;
+    if (res.status === "locked") return setStep({ name: "locked", until: res.until });
+    if (res.status === "retry") {
+      idFirstTries.current += 1;
+      if (idFirstTries.current < 2)
+        return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
+    }
+    if (res.status !== "matched") {
+      // Found the usual way instead; the same photo is then their ID check.
+      pendingPhoto.current = { full, small };
+      setStep({ name: "letter" });
+      setTimeout(() => setMessage(copy.idFirstNoMatch), 0);
+      return;
+    }
+    leadVerified.current = true;
+    setPrefill((p) => ({ ...p, 0: res.prefill }));
+    noteRegister(0, res.register);
+    setToken(res.token);
+    setPlatform(res.platform);
+    await onConfirm(res.token);
+  }
+
   /** The surname initial: the stays with it, or the check-out day as the host's journey asks. */
   async function onLetter(l: string) {
     setLetter(l);
@@ -443,7 +493,7 @@ export function CheckInFlow({
   // Tapped Check in on the host's welcome: that guest's stay opens without any questions.
   useEffect(() => {
     if (!welcomeStart) return;
-    if (welcomeStart.version === null) return setStep({ name: "letter" });
+    if (welcomeStart.version === null) return startFind();
     let live = true;
     void run(() =>
       fromWelcome({
@@ -456,7 +506,7 @@ export function CheckInFlow({
       }),
     ).then((res) => {
       if (!live) return;
-      if (!res || res.status !== "matched") return setStep({ name: "letter" });
+      if (!res || res.status !== "matched") return startFind();
       // The host already said who's arriving: no "Is this you?".
       void found(res.token, res.platform, res.firstName, res.needsName, res.returning, false);
     });
@@ -531,6 +581,22 @@ export function CheckInFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slots]);
 
+  /** From the end screen: someone else with them adds their ID (and register entry, face photo), then back to the end. */
+  async function onAddGuest() {
+    const position = adults;
+    const res = await run(() =>
+      party({
+        data: { token: tokenRef.current, adults: adults + 1, childAges: childAges.current },
+      }),
+    );
+    if (!res) return;
+    setAdults(adults + 1);
+    const steps: After[] = [{ kind: "companion", position }];
+    if (plan?.register) steps.push({ kind: "register", position, child: false });
+    if (plan?.facePhoto) steps.push({ kind: "face", position });
+    await advance(steps);
+  }
+
   async function finish() {
     const res = await run(() => complete({ data: { token: tokenRef.current } }));
     if (res) setStep({ name: "done", ...res });
@@ -545,6 +611,9 @@ export function CheckInFlow({
     setPlan(res.party);
     setListFlow(res.listFlow);
     if (res.party.ask) {
+      // The booking (or the host) already says how many: nothing to ask; anyone else can be added at the end.
+      if (res.party.booked !== null)
+        return void onParty(res.party.booked, [], res.listFlow, seq, res.party);
       setAdults(Math.max(1, res.party.booked ?? 1));
       return setStep({ name: "party" });
     }
@@ -552,6 +621,15 @@ export function CheckInFlow({
   }
 
   async function startIdentity(list = listFlow, seq = sequence, people = adults, p = plan) {
+    // Their ID found the stay: it's already checked.
+    if (leadVerified.current) return afterLead(people, p);
+    // A photo taken first that didn't find the stay: used now rather than asked for again.
+    const photo = pendingPhoto.current;
+    if (photo && !list && seq[0] === "photo_id") {
+      pendingPhoto.current = null;
+      setStep({ name: "identity", method: "photo_id", consented: true });
+      return void onPhoto(photo.full, photo.small, p, people);
+    }
     if (list) {
       const ok = await run(() => declare({ data: { token: tokenRef.current } }));
       if (ok) afterLead(people, p);
@@ -560,14 +638,20 @@ export function CheckInFlow({
     setStep({ name: "identity", method: seq[0] ?? "self_declare", consented: false });
   }
 
-  async function onParty(nextAdults: number, ages: number[]) {
+  async function onParty(
+    nextAdults: number,
+    ages: number[],
+    list = listFlow,
+    seq = sequence,
+    p = plan,
+  ) {
     const res = await run(() =>
       party({ data: { token: tokenRef.current, adults: nextAdults, childAges: ages } }),
     );
     if (!res) return;
     setAdults(nextAdults);
     childAges.current = ages;
-    await startIdentity(listFlow, sequence, nextAdults);
+    await startIdentity(list, seq, nextAdults, p);
   }
 
   /**
@@ -685,10 +769,10 @@ export function CheckInFlow({
     if (note) setTimeout(() => setMessage(note), 0);
   }
 
-  async function onPhoto(full: string, small: string) {
+  async function onPhoto(full: string, small: string, p = plan, people = adults) {
     const res = await run(() =>
       photo({
-        data: { token: tokenRef.current, image: full, ...(plan?.keepIdPhoto ? { small } : {}) },
+        data: { token: tokenRef.current, image: full, ...(p?.keepIdPhoto ? { small } : {}) },
       }),
     );
     if (!res) return fallback("photo_id");
@@ -700,9 +784,9 @@ export function CheckInFlow({
       );
     }
     if (res.status === "fallback") return fallback("photo_id");
-    setPrefill((p) => ({ ...p, 0: res.prefill }));
+    setPrefill((x) => ({ ...x, 0: res.prefill }));
     noteRegister(0, res.register);
-    afterLead();
+    afterLead(people, p);
   }
 
   const lockedTime =
@@ -722,9 +806,15 @@ export function CheckInFlow({
   const hint = property.demoHint;
   const demoHint = hint ? demoLine(step, hint, siteOf(hint.channel).label) : null;
 
-  const canGoBack = ["letter", "checkout", "checkout3", "platform", "pick", "guestName"].includes(
-    step.name,
-  );
+  const canGoBack = [
+    "idFirst",
+    "letter",
+    "checkout",
+    "checkout3",
+    "platform",
+    "pick",
+    "guestName",
+  ].includes(step.name);
   // Nights on the week's check-out days count from the day before the first one (today, or yesterday after midnight).
   const arrivalDay = property.firstCheckout ? addDays(property.firstCheckout, -1) : null;
   // Every step between the welcome and the end offers a way out to the host.
@@ -783,7 +873,7 @@ export function CheckInFlow({
           className="mb-4"
           onClick={() =>
             setStep(
-              step.name === "letter"
+              step.name === "letter" || step.name === "idFirst"
                 ? { name: "welcome" }
                 : step.name === "checkout" || step.name === "checkout3" || step.name === "pick"
                   ? { name: "letter" }
@@ -846,11 +936,7 @@ export function CheckInFlow({
               {property.theme?.features.length ? (
                 <ThemeFeatures theme={property.theme} className="mt-6 justify-center text-left" />
               ) : null}
-              <Button
-                size="touch-xl"
-                className="mt-10 w-full max-w-md text-xl"
-                onClick={() => setStep({ name: "letter" })}
-              >
+              <Button size="touch-xl" className="mt-10 w-full max-w-md text-xl" onClick={startFind}>
                 {copy.startCta}
               </Button>
               {property.checkInFrom && property.checkOutBy ? (
@@ -1094,6 +1180,52 @@ export function CheckInFlow({
                   {copy.confirmNo}
                 </Button>
               </div>
+            </section>
+          ) : null}
+
+          {step.name === "idFirst" ? (
+            <section
+              className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}
+            >
+              <h1 className="text-2xl sm:text-4xl">{copy.idFirstTitle}</h1>
+              {!step.consented ? (
+                <>
+                  <p className="mt-4 text-lg">{copy.idFirstLead}</p>
+                  <WhyAsk>{copy.idConsentDetails(30)}</WhyAsk>
+                  <div className="mt-8 grid gap-3">
+                    <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
+                      {copy.idConsentAgree}
+                    </Button>
+                    <Button
+                      size="touch"
+                      variant="outline"
+                      onClick={() => setStep({ name: "letter" })}
+                    >
+                      {copy.idFirstOther}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-6">
+                  <IdCamera
+                    busy={busy}
+                    side={cameraSide}
+                    facing={cameraFor("id", kiosk, flow)}
+                    onCapture={(full, small) => void onIdFirst(full, small)}
+                    onFail={() => setStep({ name: "letter" })}
+                    extra={
+                      <Button
+                        variant="ghost"
+                        size="lg"
+                        className="w-full"
+                        onClick={() => setStep({ name: "letter" })}
+                      >
+                        {copy.idFirstOther}
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
             </section>
           ) : null}
 
@@ -1385,15 +1517,41 @@ export function CheckInFlow({
                 <p className="mt-4 text-2xl">
                   {step.roomName ? copy.roomLine(step.roomName, step.roomTitle) : copy.noRoom}
                 </p>
-                <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
-                  <Link to="/stay/$token" params={{ token: step.stayToken }}>
-                    <BookOpen className="size-6" /> {copy.stayGuideCta}
-                  </Link>
-                </Button>
+                {/* A shared tablet never opens the guide: the guest takes the link away instead. */}
+                {!kiosk ? (
+                  <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
+                    <Link to="/stay/$token" params={{ token: step.stayToken }}>
+                      <BookOpen className="size-6" /> {copy.stayGuideCta}
+                    </Link>
+                  </Button>
+                ) : null}
+                <div className={cn("flex flex-col items-center gap-3", kiosk ? "mt-10" : "mt-4")}>
+                  {plan && !listFlow ? (
+                    <Button
+                      size="touch"
+                      variant="outline"
+                      className="w-full max-w-md"
+                      disabled={busy}
+                      onClick={() => void onAddGuest()}
+                    >
+                      {copy.doneAddGuest}
+                    </Button>
+                  ) : null}
+                  {kiosk && onDone ? (
+                    <Button size="touch-xl" className="w-full max-w-md text-xl" onClick={onDone}>
+                      {copy.doneFinished}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               {typeof window !== "undefined" ? (
                 <GuideLink
-                  url={`${window.location.origin}/stay/${step.stayToken}`}
+                  url={
+                    step.shortCode
+                      ? `${window.location.origin}/g/${step.shortCode}`
+                      : `${window.location.origin}/stay/${step.stayToken}`
+                  }
+                  shortText={step.shortCode ? `${window.location.host}/g/${step.shortCode}` : null}
                   kiosk={kiosk}
                   beside={cameraSide}
                 />

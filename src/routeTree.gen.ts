@@ -25,6 +25,7 @@ import { Route as BookCodeRouteImport } from './routes/book.$code'
 import { Route as DemoIndexRouteImport } from './routes/demo.index'
 import { Route as DemoHostRouteImport } from './routes/demo.host'
 import { Route as EnquireCodeRouteImport } from './routes/enquire.$code'
+import { Route as GCodeRouteImport } from './routes/g.$code'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
@@ -158,6 +159,11 @@ const DemoHostRoute = DemoHostRouteImport.update({
 const EnquireCodeRoute = EnquireCodeRouteImport.update({
   id: '/enquire/$code',
   path: '/enquire/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GCodeRoute = GCodeRouteImport.update({
+  id: '/g/$code',
+  path: '/g/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -468,6 +474,7 @@ export interface FileRoutesByFullPath {
   '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
+  '/g/$code': typeof GCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -539,6 +546,7 @@ export interface FileRoutesByTo {
   '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
+  '/g/$code': typeof GCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -613,6 +621,7 @@ export interface FileRoutesById {
   '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
+  '/g/$code': typeof GCodeRoute
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
@@ -687,6 +696,7 @@ export interface FileRouteTypes {
     | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
+    | '/g/$code'
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
@@ -758,6 +768,7 @@ export interface FileRouteTypes {
     | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
+    | '/g/$code'
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
@@ -831,6 +842,7 @@ export interface FileRouteTypes {
     | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
+    | '/g/$code'
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
@@ -904,6 +916,7 @@ export interface RootRouteChildren {
   BookCodeRoute: typeof BookCodeRoute
   DemoHostRoute: typeof DemoHostRoute
   EnquireCodeRoute: typeof EnquireCodeRoute
+  GCodeRoute: typeof GCodeRoute
   InviteTokenRoute: typeof InviteTokenRoute
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
@@ -1052,6 +1065,13 @@ declare module '@tanstack/react-router' {
       path: '/enquire/$code'
       fullPath: '/enquire/$code'
       preLoaderRoute: typeof EnquireCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/g/$code': {
+      id: '/g/$code'
+      path: '/g/$code'
+      fullPath: '/g/$code'
+      preLoaderRoute: typeof GCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
@@ -1531,6 +1551,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookCodeRoute: BookCodeRoute,
   DemoHostRoute: DemoHostRoute,
   EnquireCodeRoute: EnquireCodeRoute,
+  GCodeRoute: GCodeRoute,
   InviteTokenRoute: InviteTokenRoute,
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,

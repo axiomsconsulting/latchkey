@@ -118,10 +118,13 @@ export function CheckInQr({
  */
 export function GuideLink({
   url,
+  shortText = null,
   kiosk = false,
   beside = false,
 }: {
   url: string;
+  /** The easy-to-remember link ("example.com/g/hill-otter-amber"), shown big on a door tablet. */
+  shortText?: string | null;
   kiosk?: boolean;
   /** Beside the guide button on a door tablet on its side, filling its half. */ beside?: boolean;
 }) {
@@ -224,6 +227,11 @@ export function GuideLink({
               )}
             />
           )}
+          {kiosk && shortText ? (
+            <p className="mt-3 break-all font-mono text-xl font-semibold tracking-wide sm:text-2xl">
+              {shortText}
+            </p>
+          ) : null}
           <p className={cn("mt-2 text-muted-foreground", kiosk ? "text-lg" : "text-sm")}>
             {copy.guideLinkQrBody}
           </p>

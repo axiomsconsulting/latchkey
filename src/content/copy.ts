@@ -1245,7 +1245,7 @@ export const checkinSettings = branded({
     title: "Check-in journey",
     body: "What a guest goes through at the door tablet or on their phone. Tick the steps you want; the boxes show the order.",
     quick: "Quick",
-    quickHelp: "Find the stay, photo ID, face photo. About a minute.",
+    quickHelp: "Photo ID finds the stay, then a face photo. About a minute.",
     thorough: "Thorough",
     thoroughHelp: 'Adds "Is this you?", every adult\'s ID and the booking-reference fallback.',
     followLatchkey: "Use Latchkey's journey",
@@ -1260,6 +1260,7 @@ export const checkinSettings = branded({
     done: "Checked in: guide opens",
     steps: {
       welcome_go: "Check in from the welcome",
+      find_id: "Photo ID finds the booking",
       find_letter: "Surname initial",
       find_checkout: "Check-out day",
       find_confirm: '"Is this you?"',
@@ -1275,10 +1276,13 @@ export const checkinSettings = branded({
     help: {
       welcome_go:
         "Their name is already on the screen, so the Check in button opens their stay: nothing to type or pick.",
-      find_letter: "Tap the first letter of their surname.",
+      find_id:
+        "They photograph their ID first; the name on it finds their booking and counts as their ID check. If it can't, the next two steps ask.",
+      find_letter: "Only if the ID didn't find them: the first letter of their surname.",
       find_checkout: "Pick their check-out day, shown with its number of nights.",
       find_confirm: '"Hi Priya, is this your Airbnb booking?" before going on.',
-      party: "How many adults and children arrived.",
+      party:
+        "How many adults and children arrived. Skipped when the booking already says how many; guests can still add someone at the end.",
       lead_id: "The lead guest photographs their passport or licence.",
       keep_id:
         "A small copy is kept for you, even when it can't be read automatically, so you can check it yourself.",
@@ -1384,6 +1388,17 @@ export const guest = branded({
   stepCheckoutPickHint: "One of these is yours.",
   nights: (n: number) => (n === 1 ? "1 night" : `${n} nights`),
   cameraFlip: "Switch camera",
+  idFirstTitle: "Let's find your booking",
+  idFirstLead:
+    "Take a photo of your passport or driving licence. The name on it finds your booking and checks you in.",
+  idFirstOther: "No ID with me: find my booking another way",
+  idFirstNoMatch:
+    "We couldn't find your booking from your ID, so a couple of quick questions instead. You won't need to photograph it again.",
+  doneAddGuest: "Someone else with you? Add their ID",
+  doneFinished: "I'm done",
+  doneTakeLink: "Scan this, or type the link, to open your guide on your phone:",
+  shortLinkGone:
+    "That link isn't working: it may be mistyped, or the stay has ended. Check the words, or ask your host for a new link.",
   saverStart: "Rest the screen",
   quietTitle: (until: string) => `Quiet hours until ${until}`,
   quietBody:
