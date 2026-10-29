@@ -126,7 +126,8 @@ type Step =
   | { name: "party" }
   | { name: "companion"; position: number; ready: boolean }
   | { name: "face"; position: number }
-  | { name: "register"; position: number; child: boolean }
+  /** `only`: the ID filled in the rest, so just these are asked. */
+  | { name: "register"; position: number; child: boolean; only?: RegisterAsk[] | undefined }
   /** The guest asked the host to check them in; `back` resumes where they were. */
   | { name: "handover"; back: Step }
   /** Everyone left is filling in on their own phone. */
@@ -167,6 +168,10 @@ export type CheckinProperty = {
   /** The first check-out day a guest arriving now can have: nights count from the day before. */
   firstCheckout?: string;
 };
+
+type RegisterAsk = "nationality" | "document" | "place" | "destination";
+type RegisterOutcome =
+  { kind: "none" | "saved" | "later" } | { kind: "ask"; missing: RegisterAsk[] };
 
 const DEFAULT_GUEST_FLOW: GuestFlow = {
   welcomeGo: true,
@@ -224,6 +229,14 @@ export function CheckInFlow({
   // The check-out day was picked from three close days (a wrong pick counts for more).
   const [picked, setPicked] = useState(false);
   const flow = property.flow ?? DEFAULT_GUEST_FLOW;
+  // The register from each guest's ID: saved, left for the host, or only a few things to ask.
+  const registerFrom = useRef<Record<number, string>>({});
+  const registerAsk = useRef<Record<number, RegisterAsk[]>>({});
+  const noteRegister = (position: number, r: RegisterOutcome | undefined) => {
+    if (!r) return;
+    registerFrom.current[position] = r.kind;
+    if (r.kind === "ask") registerAsk.current[position] = r.missing;
+  };
   // Tries per extra guest's ID: a second failed read keeps the photo for the host instead.
   const companionTries = useRef<Record<number, number>>({});
   const [plan, setPlan] = useState<PartyPlan | null>(null);
@@ -300,7 +313,7 @@ export function CheckInFlow({
           for (let i = 0; i < people; i++) {
             if (i > 0 && res.party.everyAdult && !res.idsDone.includes(i))
               steps.push({ kind: "companion", position: i });
-            if (res.party.register && !res.registered.includes(i))
+            if (res.party.register && !res.registered.includes(i) && !res.photoKept.includes(i))
               steps.push({ kind: "register", position: i, child: false });
           }
           res.childAges.forEach((age, i) => {
@@ -582,7 +595,15 @@ export function CheckInFlow({
 
   async function advance(all: After[], note?: string) {
     // Guests filling in (or done) on their own phones are left to them.
-    const steps = all.filter((x) => !takenElsewhere(x.position));
+    // The register entry came from their ID, or the host adds it from the kept photo: nothing to ask.
+    const steps = all.filter(
+      (x) =>
+        !takenElsewhere(x.position) &&
+        !(
+          x.kind === "register" &&
+          ["saved", "later"].includes(registerFrom.current[x.position] ?? "")
+        ),
+    );
     const [next, ...rest] = steps;
     setQueue(rest);
     if (!next) {
@@ -591,7 +612,12 @@ export function CheckInFlow({
     } else if (next.kind === "face") {
       setStep({ name: "face", position: next.position });
     } else if (next.kind === "register") {
-      setStep({ name: "register", position: next.position, child: next.child });
+      setStep({
+        name: "register",
+        position: next.position,
+        child: next.child,
+        only: registerAsk.current[next.position],
+      });
     } else {
       setStep({ name: "companion", position: next.position, ready: false });
     }
@@ -622,6 +648,7 @@ export function CheckInFlow({
       return;
     }
     setPrefill((p) => ({ ...p, [position]: res.prefill }));
+    noteRegister(position, res.register);
     await advance(
       queue,
       res.under18
@@ -674,6 +701,7 @@ export function CheckInFlow({
     }
     if (res.status === "fallback") return fallback("photo_id");
     setPrefill((p) => ({ ...p, 0: res.prefill }));
+    noteRegister(0, res.register);
     afterLead();
   }
 
@@ -1221,15 +1249,24 @@ export function CheckInFlow({
             <RegisterStep
               key={`register-${step.position}`}
               title={
-                step.child
-                  ? copy.registerTitleChild
-                  : step.position === 0
-                    ? prefill[0]?.fullName
-                      ? copy.registerTitleYou
-                      : copy.registerTitleBlank
-                    : copy.registerTitleAdult(step.position + 1)
+                step.only
+                  ? copy.registerAskTitle
+                  : step.child
+                    ? copy.registerTitleChild
+                    : step.position === 0
+                      ? prefill[0]?.fullName
+                        ? copy.registerTitleYou
+                        : copy.registerTitleBlank
+                      : copy.registerTitleAdult(step.position + 1)
               }
-              lead={step.position === 0 ? copy.registerLead : copy.registerLeadOther}
+              lead={
+                step.only
+                  ? copy.registerAskLead(prefill[step.position]?.fullName ?? "")
+                  : step.position === 0
+                    ? copy.registerLead
+                    : copy.registerLeadOther
+              }
+              only={step.only}
               prefill={prefill[step.position] ?? null}
               busy={busy}
               onSubmit={(entry) => void onRegister(step.position, entry)}
@@ -1720,10 +1757,13 @@ function RegisterStep({
   prefill,
   busy,
   onSubmit,
+  only,
 }: {
   title: string;
   lead: string;
   prefill: Prefill | null;
+  /** Read from their ID already: only these are shown. */
+  only?: RegisterAsk[] | undefined;
   busy: boolean;
   onSubmit: (entry: RegisterForm) => void;
 }) {
@@ -1744,13 +1784,16 @@ function RegisterStep({
     nextAddress: alien ? nextAddress : null,
   };
   const ready = cleanRegisterEntry(entry).ok;
+  // Read from their ID already: only what's missing shows (all of an alien's details if nationality was missing).
+  const show = (k: RegisterAsk | "name") => !only || (k !== "name" && only.includes(k));
+  const showAlien = (k: RegisterAsk) => alien && (show(k) || show("nationality"));
 
   return (
     <section className="mx-auto max-w-xl">
       <h1 className="text-2xl sm:text-4xl">{title}</h1>
       <p className="mt-2 text-lg text-muted-foreground">{lead}</p>
       <WhyAsk>{copy.registerWhy}</WhyAsk>
-      {prefill?.fullName ? (
+      {prefill?.fullName && !only ? (
         <p className="mt-3 text-sm text-muted-foreground">{copy.registerFromId}</p>
       ) : null}
       <form
@@ -1760,7 +1803,7 @@ function RegisterStep({
           onSubmit(entry);
         }}
       >
-        <div className="space-y-1">
+        <div className={cn("space-y-1", !show("name") && "hidden")}>
           <label htmlFor="reg-name" className="text-lg">
             {copy.registerName}
           </label>
@@ -1773,7 +1816,7 @@ function RegisterStep({
           />
           <p className="text-sm text-muted-foreground">{copy.registerNameHint}</p>
         </div>
-        <div className="space-y-1">
+        <div className={cn("space-y-1", !show("nationality") && "hidden")}>
           <label htmlFor="reg-nationality" className="text-lg">
             {copy.registerNationality}
           </label>
@@ -1797,7 +1840,7 @@ function RegisterStep({
               <p className="text-lg">{copy.registerAlienLead}</p>
               <WhyAsk>{copy.registerAlienWhy}</WhyAsk>
             </div>
-            <div className="space-y-1">
+            <div className={cn("space-y-1", !showAlien("document") && "hidden")}>
               <label htmlFor="reg-doc" className="text-lg">
                 {copy.registerDocNumber}
               </label>
@@ -1809,7 +1852,7 @@ function RegisterStep({
                 onChange={(e) => setDocumentNumber(e.target.value)}
               />
             </div>
-            <div className="space-y-1">
+            <div className={cn("space-y-1", !showAlien("place") && "hidden")}>
               <label htmlFor="reg-place" className="text-lg">
                 {copy.registerPlace}
               </label>
@@ -1821,7 +1864,7 @@ function RegisterStep({
               />
               <p className="text-sm text-muted-foreground">{copy.registerPlaceHint}</p>
             </div>
-            <div className="space-y-1">
+            <div className={cn("space-y-1", !showAlien("destination") && "hidden")}>
               <label htmlFor="reg-next" className="text-lg">
                 {copy.registerNext}
               </label>
@@ -1833,7 +1876,7 @@ function RegisterStep({
               />
               <p className="text-sm text-muted-foreground">{copy.registerNextHint}</p>
             </div>
-            <div className="space-y-1">
+            <div className={cn("space-y-1", !showAlien("destination") && "hidden")}>
               <label htmlFor="reg-address" className="text-lg">
                 {copy.registerAddress}
               </label>
@@ -1924,6 +1967,7 @@ export function JoinCheckIn({ share }: { share: string }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [prefill, setPrefill] = useState<Prefill | null>(null);
+  const [only, setOnly] = useState<RegisterAsk[] | undefined>(undefined);
   const [name, setName] = useState("");
   const [age, setAge] = useState(8);
 
@@ -1960,6 +2004,7 @@ export function JoinCheckIn({ share }: { share: string }) {
     if (res.status === "full") return setStage({ name: "full" });
     setMe(res);
     setPrefill(null);
+    setOnly(undefined);
     setName("");
     if (res.age !== null) setAge(res.age);
     const plan = res.plan;
@@ -2090,7 +2135,15 @@ export function JoinCheckIn({ share }: { share: string }) {
                         );
                       }
                       setPrefill(res.prefill);
-                      await next(queue, t);
+                      // The register from their ID: nothing left to ask, or only what's missing.
+                      const r = res.register as RegisterOutcome | undefined;
+                      if (r?.kind === "ask") setOnly(r.missing);
+                      await next(
+                        r?.kind === "saved" || r?.kind === "later"
+                          ? queue.filter((x) => x.name !== "register")
+                          : queue,
+                        t,
+                      );
                     })
                   }
                   onFail={() => setStage({ name: "id", ready: false })}
@@ -2171,9 +2224,14 @@ export function JoinCheckIn({ share }: { share: string }) {
         {stage.name === "register" && me ? (
           <RegisterStep
             title={
-              me.kind === "child" ? copy.registerTitleChild : copy.registerTitleAdult(me.number)
+              only
+                ? copy.registerAskTitle
+                : me.kind === "child"
+                  ? copy.registerTitleChild
+                  : copy.registerTitleAdult(me.number)
             }
-            lead={copy.registerLeadOther}
+            lead={only ? copy.registerAskLead(prefill?.fullName ?? "") : copy.registerLeadOther}
+            only={only}
             prefill={prefill}
             busy={busy}
             onSubmit={(entry) =>

@@ -343,3 +343,44 @@ export function registerCsv(
   );
   return [head.join(","), ...lines].join("\r\n") + "\r\n";
 }
+
+/** What an ID reader saw that the register can use. */
+export type RegisterRead = {
+  fullName: string | null;
+  nationality: string | null;
+  documentNumber: string | null;
+  placeOfIssue: string | null;
+  issuingCountry?: string | null;
+};
+
+export type RegisterPlan =
+  /** Everything the register needs was on the ID: kept without asking. */
+  | { kind: "saved"; entry: RegisterEntry }
+  /** Only these few things weren't on the ID (UK driving licences don't print nationality; nobody's ID says where they go next). */
+  | { kind: "ask"; missing: Exclude<RegisterProblem, "name">[]; input: RegisterInput }
+  /** The ID couldn't be read: nothing is asked; the host adds them from the kept photo. */
+  | { kind: "later" };
+
+/**
+ * The register entry from a person's own ID: name, nationality as printed
+ * and, for guests who need them, document number and place of issue (the
+ * issuing country when no place is printed). Only what's missing is asked;
+ * without a readable name nothing is, and the host completes it later.
+ */
+export function registerFromRead(read: RegisterRead | null): RegisterPlan {
+  if (!read?.fullName) return { kind: "later" };
+  const input: RegisterInput = {
+    fullName: read.fullName,
+    nationality: nationalityFromId(read.nationality) ?? "",
+    documentNumber: read.documentNumber,
+    placeOfIssue: read.placeOfIssue ?? read.issuingCountry ?? null,
+  };
+  const clean = cleanRegisterEntry(input);
+  if (clean.ok) return { kind: "saved", entry: clean.entry };
+  if (clean.missing.includes("name")) return { kind: "later" };
+  return {
+    kind: "ask",
+    missing: clean.missing.filter((m): m is Exclude<RegisterProblem, "name"> => m !== "name"),
+    input,
+  };
+}

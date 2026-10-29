@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.87.0",
+    date: "2026-10-29",
+    title: "Guest register from the ID",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest register",
+        text: "The UK guest register is filled in from each guest's photo ID without asking: name, nationality and, where needed, document number and place of issue. Guests are only asked what their ID doesn't show (nationality on a UK driving licence, next destination for guests who aren't British, Irish or Commonwealth).",
+      },
+      {
+        kind: "new",
+        area: "Guest register",
+        text: 'When an ID can\'t be read, the guest isn\'t asked to type it: the photo is kept and they appear under "To add from check-in" on the Guest register, where you check the photo and save, or tap "Read the ID photo" to fill the details in.',
+      },
+    ],
+  },
+  {
     version: "0.86.0",
     date: "2026-10-29",
     title: "A quicker check-in you design yourself",
