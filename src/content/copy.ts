@@ -1284,7 +1284,8 @@ export const checkinSettings = branded({
         "A small copy is kept for you, even when it can't be read automatically, so you can check it yourself.",
       every_adult_id: "Each other adult photographs their own ID (or on their own phone).",
       selfie: "A quick face photo, so you can see it matches the ID.",
-      register: "Full name and nationality of everyone 16 or over (UK law).",
+      register:
+        "Everyone 16 or over (UK law), filled in from their ID without asking. Only what an ID doesn't show is asked (nationality on a UK driving licence; next destination for guests who aren't British, Irish or Commonwealth). An ID that can't be read is skipped and listed for you to add from the photo.",
       last4: "The last 4 of their booking reference or phone, or their email.",
       self_declare: "They confirm it's them and you're told to check ID in person.",
     } as Record<string, string>,
@@ -1634,6 +1635,11 @@ export const guest = branded({
   companionSkip: "They don't have ID with them",
   companionSkipped: "No problem. Your host will check it when they say hello.",
   companionKept: "Thanks. We kept the photo for your host to check.",
+  registerAskTitle: "One more thing",
+  registerAskLead: (name: string) =>
+    name
+      ? `We read the rest from ${name}'s ID. The law also asks for this:`
+      : "We read the rest from the ID. The law also asks for this:",
   // UK guest register
   registerTitleYou: "Is this you?",
   registerTitleBlank: "Just a couple of details",
@@ -3147,6 +3153,15 @@ export const linkTools = branded({
 
 /** The UK guest register (Immigration (Hotel Records) Order 1972). */
 export const registerPage = branded({
+  gapsTitle: "To add from check-in",
+  gapsBody:
+    "These guests checked in, but their ID couldn't be read automatically (or they had none), so they aren't in the register yet. Open each, check the photo and save. \"Read the ID photo\" fills the details in for you to check.",
+  gapAdd: "Add to register",
+  gapGuest: (n: number) => `Guest ${n}`,
+  gapNoPhoto: "No ID photo kept",
+  gapPhotoAlt: "The guest's ID photo",
+  readPhoto: "Read the ID photo",
+  readPhotoDone: "Read from the photo. Please check before saving.",
   stayDetails: "ID photos and check-in details",
   hideDetails: "Hide ID photos and details",
   photosTitle: "ID photographs",

@@ -10,6 +10,7 @@ import {
   nationalityOptions,
   registerApplies,
   registerCsv,
+  registerFromRead,
   registerKeepUntil,
   registerPositions,
 } from "../src/lib/hotel-register";
@@ -150,5 +151,66 @@ describe("registerCsv", () => {
     expect(csv.split("\r\n")[1]).toBe(
       `2026-10-12,"'=Jean, Dupont",France,18AB12345,Paris,Edinburgh,,Hill,Garden`,
     );
+  });
+});
+
+describe("the register from a guest's ID", () => {
+  it("keeps a British or Irish guest's entry without asking anything", () => {
+    const plan = registerFromRead({
+      fullName: "Priya Shah",
+      nationality: "GBR",
+      documentNumber: "123456789",
+      placeOfIssue: null,
+    });
+    expect(plan).toEqual({
+      kind: "saved",
+      entry: {
+        fullName: "Priya Shah",
+        nationality: "GB",
+        alien: false,
+        documentNumber: null,
+        placeOfIssue: null,
+        nextDestination: null,
+        nextAddress: null,
+      },
+    });
+  });
+
+  it("asks only for nationality when the ID doesn't print it (a UK driving licence)", () => {
+    expect(
+      registerFromRead({
+        fullName: "Sam Jones",
+        nationality: null,
+        documentNumber: "JONES801234SJ9AB",
+        placeOfIssue: "DVLA",
+      }),
+    ).toMatchObject({ kind: "ask", missing: ["nationality"] });
+  });
+
+  it("asks a guest from outside the Commonwealth only where they go next", () => {
+    const plan = registerFromRead({
+      fullName: "Jean Dupont",
+      nationality: "FRA",
+      documentNumber: "18AB12345",
+      placeOfIssue: null,
+      issuingCountry: "France",
+    });
+    expect(plan).toMatchObject({
+      kind: "ask",
+      missing: ["destination"],
+      input: { nationality: "FR", placeOfIssue: "France" },
+    });
+  });
+
+  it("asks nothing when the ID couldn't be read: the host adds them from the photo", () => {
+    expect(registerFromRead(null)).toEqual({ kind: "later" });
+    expect(
+      registerFromRead({
+        fullName: "X",
+        nationality: "GBR",
+        documentNumber: null,
+        placeOfIssue: null,
+      }),
+    ).toEqual({ kind: "later" });
   });
 });

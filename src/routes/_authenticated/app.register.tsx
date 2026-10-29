@@ -2,7 +2,16 @@ import { Fragment, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Download, IdCard, Loader2, NotebookPen, Plus, Printer } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  IdCard,
+  Loader2,
+  NotebookPen,
+  Plus,
+  Printer,
+  ScanText,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/host/EmptyState";
@@ -39,7 +48,10 @@ import {
 import {
   exportRegister,
   listRegister,
+  listRegisterGaps,
+  readRegisterPhoto,
   saveRegisterEntry,
+  type RegisterGap,
   type RegisterRow,
 } from "@/lib/register.functions";
 import { rebrand } from "@/lib/brand";
@@ -67,7 +79,7 @@ function RegisterPage() {
   const [propertyId, setPropertyId] = useState<string>("all");
   const [from, setFrom] = useState(() => addDays(today(), -30));
   const [to, setTo] = useState(today);
-  const [editing, setEditing] = useState<RegisterRow | "new" | null>(null);
+  const [editing, setEditing] = useState<RegisterRow | RegisterGap | "new" | null>(null);
   const [downloading, setDownloading] = useState(false);
   // Stays whose ID photos and check-in details are open under their entries.
   const [openStays, setOpenStays] = useState<Set<string>>(() => new Set());
@@ -84,6 +96,12 @@ function RegisterPage() {
     queryKey: ["register", range],
     enabled: !!hostId && canWrite && from <= to,
     queryFn: () => list({ data: range }),
+  });
+  const gapsFn = useServerFn(listRegisterGaps);
+  const gaps = useQuery({
+    queryKey: ["register", "gaps", hostId, range.propertyId],
+    enabled: !!hostId && canWrite,
+    queryFn: () => gapsFn({ data: { hostId, propertyId: range.propertyId } }),
   });
 
   async function download() {
@@ -137,6 +155,49 @@ function RegisterPage() {
         }
       />
       <p className="rounded-xl bg-muted p-3 text-sm print:hidden">{copy.law}</p>
+
+      {gaps.data?.gaps.length ? (
+        <section className="card-soft space-y-3 border-2 border-accent/40 p-4 print:hidden">
+          <div>
+            <h2 className="text-lg">
+              {copy.gapsTitle} ({gaps.data.gaps.length})
+            </h2>
+            <p className="text-sm text-muted-foreground">{copy.gapsBody}</p>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {gaps.data.gaps.map((g) => (
+              <li
+                key={`${g.bookingId}:${g.position}`}
+                className="flex items-center gap-3 rounded-xl border border-border p-3"
+              >
+                {g.photoUrl ? (
+                  <img
+                    src={g.photoUrl}
+                    alt={copy.gapPhotoAlt}
+                    className="h-16 w-24 shrink-0 rounded-lg bg-muted object-cover"
+                  />
+                ) : (
+                  <span className="grid h-16 w-24 shrink-0 place-items-center rounded-lg bg-muted text-center text-xs text-muted-foreground">
+                    {copy.gapNoPhoto}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1 text-sm">
+                  <p className="truncate font-medium">
+                    {g.name || g.bookingName || copy.gapGuest(g.position + 1)}
+                  </p>
+                  <p className="truncate text-muted-foreground">
+                    {formatUkDate(g.arrivalDate, { withYear: true })} · {g.propertyName}
+                    {g.roomName ? ` · ${g.roomName}` : ""}
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => setEditing(g)}>
+                  {copy.gapAdd}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="card-soft grid gap-3 p-4 sm:grid-cols-3 print:hidden">
         <div className="space-y-1">
@@ -287,7 +348,8 @@ function RegisterPage() {
 
       {editing ? (
         <EntryDialog
-          row={editing === "new" ? null : editing}
+          row={editing === "new" || !("id" in editing) ? null : editing}
+          gap={editing !== "new" && !("id" in editing) ? editing : null}
           properties={properties}
           defaultPropertyId={propertyId === "all" ? (properties[0]?.id ?? "") : propertyId}
           onClose={() => setEditing(null)}
@@ -299,11 +361,14 @@ function RegisterPage() {
 
 function EntryDialog({
   row,
+  gap,
   properties,
   defaultPropertyId,
   onClose,
 }: {
   row: RegisterRow | null;
+  /** A guest from check-in still to add: their stay, name and kept ID photo. */
+  gap: RegisterGap | null;
   properties: Property[];
   defaultPropertyId: string;
   onClose: () => void;
@@ -311,11 +376,13 @@ function EntryDialog({
   const qc = useQueryClient();
   const save = useServerFn(saveRegisterEntry);
   const [busy, setBusy] = useState(false);
+  const read = useServerFn(readRegisterPhoto);
+  const [reading, setReading] = useState(false);
   const [form, setForm] = useState({
-    propertyId: row?.property_id ?? defaultPropertyId,
-    arrivalDate: row?.arrival_date ?? today(),
-    roomName: row?.room_name ?? "",
-    fullName: row?.full_name ?? "",
+    propertyId: row?.property_id ?? gap?.propertyId ?? defaultPropertyId,
+    arrivalDate: row?.arrival_date ?? gap?.arrivalDate ?? today(),
+    roomName: row?.room_name ?? gap?.roomName ?? "",
+    fullName: row?.full_name ?? gap?.name ?? gap?.bookingName ?? "",
     nationality: row?.nationality ?? "",
     documentNumber: row?.document_number ?? "",
     placeOfIssue: row?.place_of_issue ?? "",
@@ -334,7 +401,13 @@ function EntryDialog({
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await save({ data: { ...(row ? { id: row.id } : {}), ...form } });
+      const res = await save({
+        data: {
+          ...(row ? { id: row.id } : {}),
+          ...(gap ? { bookingId: gap.bookingId, position: gap.position } : {}),
+          ...form,
+        },
+      });
       if (!res.ok) {
         toast.error(res.missing.map((m) => guestCopy.registerMissing[m]).join(" "));
         return;
@@ -362,6 +435,50 @@ function EntryDialog({
               : copy.dialogHelp}
           </DialogDescription>
         </DialogHeader>
+        {gap?.photoUrl ? (
+          <div className="space-y-2">
+            <a href={gap.photoUrl} target="_blank" rel="noopener noreferrer">
+              <img
+                src={gap.photoUrl}
+                alt={copy.gapPhotoAlt}
+                className="max-h-64 w-full rounded-xl bg-muted object-contain"
+              />
+            </a>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={reading}
+              onClick={async () => {
+                setReading(true);
+                try {
+                  const r = await read({
+                    data: { bookingId: gap.bookingId, position: gap.position },
+                  });
+                  setForm((f) => ({
+                    ...f,
+                    fullName: r.fullName ?? f.fullName,
+                    nationality: r.nationality ?? f.nationality,
+                    documentNumber: r.documentNumber ?? f.documentNumber,
+                    placeOfIssue: r.placeOfIssue ?? f.placeOfIssue,
+                  }));
+                  toast.success(copy.readPhotoDone);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : common.errorBody);
+                } finally {
+                  setReading(false);
+                }
+              }}
+            >
+              {reading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ScanText className="size-4" />
+              )}
+              {copy.readPhoto}
+            </Button>
+          </div>
+        ) : null}
         <form onSubmit={submit} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
