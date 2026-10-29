@@ -42,6 +42,7 @@ import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
 import { GuidedTour, openTour } from "@/components/host/GuidedTour";
 import { whatsNewCopy } from "@/content/copy";
+import { APP_VERSION } from "@/lib/app-version";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
@@ -334,6 +335,7 @@ export function HostShell() {
             <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
               <Link to="/app/whats-new">
                 <Sparkles className="size-5" /> {whatsNewCopy.navLabel}
+                <span className="ml-auto text-xs text-muted-foreground">v{APP_VERSION}</span>
               </Link>
             </DropdownMenuItem>
             {canWrite ? (
@@ -710,7 +712,7 @@ function DesktopNav({
       <>
         {canWrite ? one("/app/register", hostNav.register, NotebookPen) : null}
         {isOwner ? one("/app/activity", hostNav.activity, History) : null}
-        {one("/app/whats-new", whatsNewCopy.navLabel, Sparkles)}
+        {one("/app/whats-new", `${whatsNewCopy.navLabel} · v${APP_VERSION}`, Sparkles)}
         <button type="button" onClick={() => openTour()} title={tourCopy.navLabel} className={cls}>
           <Compass className="size-5 shrink-0" />
           <span className={text}>{tourCopy.navLabel}</span>
@@ -839,6 +841,12 @@ function DesktopNav({
             <LogOut className="size-5" />
           </button>
         </div>
+        {/* The app version, for support. */}
+        {!top && !narrow ? (
+          <p className="px-3 pt-1 text-[11px] text-muted-foreground" title={APP_VERSION}>
+            {hostNav.version(APP_VERSION)}
+          </p>
+        ) : null}
         {top ? (
           <button
             type="button"

@@ -377,6 +377,7 @@ export const trial = branded({
 });
 
 export const hostNav = branded({
+  version: (v: string) => `Latchkey v${v}`,
   menuDrawer: "Menu",
   moreDrawer: "More",
   today: "Today",
@@ -1371,6 +1372,51 @@ export const checkinSettings = branded({
   qrAlt: "QR code for guest check-in",
 });
 
+export const doorTabletsCopy = branded({
+  title: "Door tablets",
+  body: "Every tablet at this property, by number. A tablet joins when it opens the kiosk: by itself on this property's Wi-Fi (if allowed below), or with the six-digit code it shows. Give each a name, line its screen up, and send a welcome to one tablet or all of them.",
+  pairTitle: "Code shown on the tablet",
+  pair: "Pair tablet",
+  pairHelp:
+    'Open the kiosk on the tablet: a new one shows "Set up this tablet: code 123 456" in its bottom corner. Type the code here. The host PIN on the tablet works too.',
+  paired: (n: number) => `Tablet ${n} is paired.`,
+  autoPair: "Tablets on this property's Wi-Fi join by themselves",
+  autoPairHelp:
+    "A tablet that opens the kiosk on the same Wi-Fi as a tablet already in use (or right beside it) joins straight away and you're told. Turn this off to pair every tablet with its code. Anyone on that Wi-Fi with a laptop could join this way, so remove any tablet you don't recognise.",
+  none: "No tablets yet. Open the kiosk on a tablet at the property and it appears here.",
+  unavailable: "Door tablets need the latest database update (migration 0067).",
+  waiting: "Waiting for its code",
+  waitingShort: "needs its code",
+  waitingHelp: "Type the code shown in this tablet's bottom corner above to pair it.",
+  online: "On now",
+  justNow: "Seen just now",
+  minutesAgo: (m: number) => `Seen ${m} min ago`,
+  hoursAgo: (h: number) => `Seen ${h} h ago`,
+  never: "Not seen yet",
+  name: "Name",
+  namePlaceholder: "Front door",
+  screen: (w: number, h: number, o: string) =>
+    `${w} × ${h} px, ${o === "portrait" ? "upright" : "on its side"}`,
+  camera: "Camera view for you",
+  cameraTitle: "Let me view this tablet's camera",
+  cameraBody:
+    "You'll see a picture from the tablet's front camera every few seconds while you have the camera view open: nothing is recorded, and the tablet says \"Camera on: your host is viewing\" the whole time. It pauses while a guest is checking in. Cameras that see guests are CCTV: in the UK, put up a clear notice by the tablet saying it has a camera and who to contact, mention it in your privacy notice, and only use it for security.",
+  cameraTold: "Guests are told: there's a notice by the tablet and it's in my privacy notice.",
+  cameraOn: "Turn the camera view on",
+  calibrate: "Screen",
+  remove: "Remove",
+  removeConfirm: (name: string) =>
+    `Remove ${name}? If it opens the kiosk again it joins as a new tablet.`,
+  viewCameras: (n: number) => (n === 1 ? "View camera" : `View ${n} cameras`),
+  wallTitle: "Door tablet cameras",
+  wallBody:
+    "A new picture every few seconds. The tablets show they're being viewed; when you close this they stop and the pictures are deleted.",
+  wallAlt: (name: string) => `Camera picture from ${name}`,
+  connecting: "Connecting…",
+  welcomeTarget: "Show on",
+  allTablets: "All tablets",
+});
+
 export const alerts = branded({
   title: "Needs your attention",
   dismiss: "Mark as seen",
@@ -1388,6 +1434,8 @@ export const guest = branded({
   stepCheckoutPickHint: "One of these is yours.",
   nights: (n: number) => (n === 1 ? "1 night" : `${n} nights`),
   cameraFlip: "Switch camera",
+  cameraOn: "Camera on: your host is viewing",
+  tabletSetup: (code: string) => `Set up this tablet: code ${code}`,
   idFirstTitle: "Let's find your booking",
   idFirstLead:
     "Take a photo of your passport or driving licence. The name on it finds your booking and checks you in.",
@@ -4168,6 +4216,7 @@ export const settingsMenuCopy = branded({
     invoices: ["Invoices", "money"],
     theme: ["Look and feel", "look"],
     kioskRest: ["Screen saver", "look"],
+    kioskTablets: ["Door tablets", "look"],
     kioskScreen: ["Door tablet screen", "look"],
     alerts: ["Alerts", "apps"],
     api: ["API & MCP", "apps"],
@@ -4255,6 +4304,7 @@ export const omniCopy = branded({
     reviews: "reviews review stars score ask last day booking page feedback",
     kioskRest: "night light screensaver clock qr screen off tablet",
     kioskScreen: "door tablet screen calibration size zoom shift edges keyboard address bar",
+    kioskTablets: "door tablets kiosk pair code number name camera cctv security wall version",
   } as Record<string, string>,
 });
 

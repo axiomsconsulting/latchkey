@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.89.0",
+    date: "2026-10-29",
+    title: "Door tablets, numbered and named",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Door tablets (Settings → Look): every tablet at a property gets a number and a name, shown in a grid with whether it's on, its screen and its app version. A tablet joins by itself on the property's Wi-Fi (or right beside a tablet in use; you're told), or shows a six-digit code you type into the dashboard. Signing in on the tablet is no longer needed.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Send a welcome to one tablet or all of them: pick the tablet when you put a welcome up, from Today or a guest's card.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Camera view: switch it on for a tablet and see a picture from its front camera every few seconds, all your tablets side by side. Nothing is recorded, the tablet says it's being viewed, and it pauses while a guest checks in.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "The app version now shows in the menu and in the corner of every door tablet, to help when you contact support.",
+      },
+    ],
+  },
+  {
     version: "0.88.0",
     date: "2026-10-29",
     title: "Fewer steps: the ID finds the booking",

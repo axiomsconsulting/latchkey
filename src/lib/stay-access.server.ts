@@ -36,3 +36,14 @@ export async function guestWifi(
   const locked = settings.wifiAfterCheckIn && !checkedIn;
   return { name: wifi.name, password: locked ? null : wifi.password, locked };
 }
+
+/** This request's connection as a one-day pseudonym, or null. */
+export async function requestNet(): Promise<{ hash: string; day: string } | null> {
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const { requestIp, hashIp } = await import("./ip-hash.server");
+  const { networkKey } = await import("./stay-access");
+  const key = networkKey(requestIp(getRequest().headers));
+  const day = new Date().toISOString().slice(0, 10);
+  const hash = key ? hashIp(key, day) : null;
+  return hash ? { hash, day } : null;
+}

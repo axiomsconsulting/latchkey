@@ -50,12 +50,14 @@ import {
 } from "@/lib/kiosk-fit";
 import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
 import { areaFor, type Area, type Calibrations } from "@/lib/kiosk-calibration";
-import { kioskDisplay } from "@/lib/kiosk-devices.functions";
+import { kioskSnapshotUpload, kioskTablet, type TabletState } from "@/lib/kiosk-devices.functions";
+import { APP_VERSION } from "@/lib/app-version";
+import { showPairCode, tabletName } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
 import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { deviceToken, keepDeviceToken, readFix } from "@/lib/kiosk-presence";
-import { kioskHere, pairKioskAsHost } from "@/lib/stay-access.functions";
+import { kioskHere } from "@/lib/stay-access.functions";
 import { rebrand } from "@/lib/brand";
 
 // Press and hold the top-right corner this long for the host's exit.
@@ -472,22 +474,23 @@ function useScreenFit(
 }
 
 /**
- * This tablet's calibration, if it's paired: read on start, whenever the
- * host pings (they're calibrating it from the dashboard) and every few
- * minutes; the display it lays out for is sent along each time so the
- * dashboard can draw it. A reset (no calibration left) also forgets the
- * learned display, so it learns again from now. `changedAt`: the last time
- * the host changed it, for the outline shown while they're calibrating.
+ * This door tablet, as Latchkey knows it (kioskTablet): on start, every few
+ * minutes and whenever the host pings, it says what it is (display, app
+ * version, connection, location when already allowed) and learns its
+ * number, name, setup code (while it waits to be paired), calibration and
+ * whether its host is watching its camera. A tablet without a token joins
+ * there and then. A reset calibration also forgets the learned display, so
+ * it learns again. `changedAt`: when the host last changed the calibration,
+ * for the outline shown while they're calibrating.
  */
-function useKioskCalibration(code: string, enabled: boolean) {
-  const fn = useServerFn(kioskDisplay);
+function useKioskTablet(code: string, enabled: boolean) {
+  const fn = useServerFn(kioskTablet);
   const [cals, setCals] = useState<Calibrations>({});
   const [changedAt, setChangedAt] = useState(0);
+  const [tablet, setTablet] = useState<Omit<TabletState, "calibration" | "device"> | null>(null);
   const last = useRef<string>("{}");
   const reportRef = useRef<FitReport | null>(null);
   const load = useCallback(() => {
-    const device = deviceToken(code);
-    if (!device) return;
     const r = reportRef.current;
     const display = r
       ? {
@@ -500,14 +503,30 @@ function useKioskCalibration(code: string, enabled: boolean) {
           usedH: r.learned.h,
         }
       : undefined;
-    void fn({ data: { code, device, ...(display ? { display } : {}) } })
+    void readFix(false)
+      .catch(() => null)
+      .then((fix) => {
+        const device = deviceToken(code);
+        return fn({
+          data: {
+            code,
+            ...(device ? { device } : {}),
+            ...(display ? { display } : {}),
+            version: APP_VERSION,
+            fix,
+          },
+        });
+      })
       .then((res) => {
-        const next = JSON.stringify(res.calibration);
+        if (res.device) keepDeviceToken(code, res.device);
+        const { calibration, device: _d, ...rest } = res;
+        setTablet(rest);
+        const next = JSON.stringify(calibration);
         if (next === last.current) return;
         const wasSet = last.current !== "{}";
         last.current = next;
         if (wasSet && next === "{}") forgetDisplay();
-        setCals(res.calibration);
+        setCals(calibration);
         setChangedAt(Date.now());
       })
       .catch(() => {});
@@ -533,7 +552,78 @@ function useKioskCalibration(code: string, enabled: boolean) {
     },
     [enabled, load],
   );
-  return { calibrations: cals, changedAt, onReport };
+  // Watching ends when the host stops (no more pings extend it): check again then.
+  useEffect(() => {
+    if (!tablet?.watchUntil) return;
+    const left = Date.parse(tablet.watchUntil) - Date.now();
+    const id = window.setTimeout(load, Math.max(1000, left + 500));
+    return () => window.clearTimeout(id);
+  }, [tablet?.watchUntil, load]);
+  return { calibrations: cals, changedAt, onReport, tablet, reload: load };
+}
+
+/**
+ * The host is watching this tablet's camera (they switched it on for this
+ * tablet and are looking now): a small picture every few seconds, only
+ * while the kiosk isn't in the middle of a check-in (its own camera steps
+ * need the camera), and a notice on screen the whole time.
+ */
+function useCameraWatch(
+  code: string,
+  watchUntil: string | null,
+  paused: boolean,
+  onEnd: () => void,
+): boolean {
+  const upload = useServerFn(kioskSnapshotUpload);
+  const [on, setOn] = useState(false);
+  const end = useRef(onEnd);
+  end.current = onEnd;
+  useEffect(() => {
+    if (!watchUntil || paused || Date.parse(watchUntil) <= Date.now()) return;
+    let stopped = false;
+    let stream: MediaStream | null = null;
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    let timer = 0;
+    const shot = async () => {
+      if (stopped || !video.videoWidth) return;
+      const scale = Math.min(1, 480 / Math.max(video.videoWidth, video.videoHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const image = canvas.toDataURL("image/jpeg", 0.6);
+      const device = deviceToken(code);
+      if (!device) return;
+      const res = await upload({ data: { code, device, image } }).catch(() => null);
+      if (stopped) return;
+      if (!res?.watchUntil) {
+        stopped = true;
+        end.current();
+        return;
+      }
+      timer = window.setTimeout(() => void shot(), 3000);
+    };
+    void navigator.mediaDevices
+      ?.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 } }, audio: false })
+      .then(async (s) => {
+        if (stopped) return s.getTracks().forEach((t) => t.stop());
+        stream = s;
+        video.srcObject = s;
+        await video.play();
+        setOn(true);
+        timer = window.setTimeout(() => void shot(), 500);
+      })
+      .catch(() => {});
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      stream?.getTracks().forEach((t) => t.stop());
+      setOn(false);
+    };
+  }, [code, watchUntil, paused, upload]);
+  return on;
 }
 
 /**
@@ -628,7 +718,6 @@ function Kiosk() {
   const navigate = useNavigate();
   const unlock = useServerFn(kioskUnlock);
   const sayHere = useServerFn(kioskHere);
-  useKioskPresence(p.code, shared && !tour);
   const [session, setSession] = useState(0);
   const [exitOpen, setExitOpen] = useState(false);
   const [pin, setPin] = useState("");
@@ -646,10 +735,20 @@ function Kiosk() {
   // Untouched for a while: the welcome rests (split, screen-friendly) until touched.
   const [welcomeRest, setWelcomeRest] = useState(false);
   // Tapping Check in on the welcome: CheckInFlow opens that guest's stay.
-  const [welcomeStart, setWelcomeStart] = useState<{ version: number | null; n: number } | null>(
-    null,
+  const [welcomeStart, setWelcomeStart] = useState<{
+    version: number | null;
+    n: number;
+    source?: "device" | "all";
+  } | null>(null);
+  const calibration = useKioskTablet(p.code, shared && !tour);
+  const tablet = calibration.tablet;
+  // The host watching this tablet's camera: never during someone's check-in.
+  const watching = useCameraWatch(
+    p.code,
+    shared && !tour ? (tablet?.watchUntil ?? null) : null,
+    !atWelcome,
+    calibration.reload,
   );
-  const calibration = useKioskCalibration(p.code, shared && !tour);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
   // Door tablets only: keys, pads and buttons grow to use the whole screen (the host's Look and feel → Door tablet).
@@ -714,7 +813,11 @@ function Kiosk() {
     setAsideVersion(welcome.version);
     setWelcomeRest(false);
     setSaver(false);
-    setWelcomeStart({ version: welcome.checkIn ? welcome.version : null, n: Date.now() });
+    setWelcomeStart({
+      version: welcome.checkIn ? welcome.version : null,
+      n: Date.now(),
+      source: welcome.source ?? "all",
+    });
     setSession((s) => s + 1);
     bump();
   }
@@ -795,8 +898,10 @@ function Kiosk() {
 
   async function tryUnlock(e: React.FormEvent) {
     e.preventDefault();
+    const mine = deviceToken(p.code);
     const res = await unlock({
-      data: { code: p.code, pin, pair: !tour && !deviceToken(p.code) },
+      // A tablet waiting for its code is paired by the PIN too.
+      data: { code: p.code, pin, pair: !tour && !mine, ...(mine ? { device: mine } : {}) },
     }).catch(() => ({ ok: false, device: null }));
     if (!res.ok) return setPinError(true);
     // Paired as this property's door tablet: its location is asked for now, while the host is here, never in front of a guest.
@@ -965,6 +1070,26 @@ function Kiosk() {
           )
         ) : null}
 
+        {/* The host is looking through this tablet's camera: always said on screen while they are. */}
+        {watching ? (
+          <div className="pointer-events-none fixed left-3 top-3 z-[100] flex items-center gap-2 rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white shadow-lg">
+            <span className="size-2.5 animate-pulse rounded-full bg-red-500" aria-hidden />
+            {copy.cameraOn}
+          </div>
+        ) : null}
+
+        {/* Which tablet this is and the app version, for the host and support; a waiting tablet's setup code. */}
+        <p className="pointer-events-none fixed bottom-1 left-2 z-[96] text-[11px] leading-tight text-muted-foreground/80">
+          {shared && tablet?.status === "pending" && tablet.pairCode ? (
+            <span className="font-medium text-foreground">
+              {copy.tabletSetup(showPairCode(tablet.pairCode))} ·{" "}
+            </span>
+          ) : shared && tablet?.number ? (
+            `${tabletName(tablet)} · `
+          ) : null}
+          v{APP_VERSION}
+        </p>
+
         {/* While the host calibrates from the dashboard: the area's edges, so they can line it up. */}
         {outline ? (
           <div
@@ -1056,36 +1181,4 @@ function KioskAtRest({
       onWake={onWake}
     />
   );
-}
-
-/**
- * A door tablet tells the server where it is every few minutes (its
- * connection, and its location when the browser allows it), so a guest
- * scanning their room's QR on the same Wi-Fi can be recognised as here. An
- * unpaired tablet pairs itself if the host is signed in on it; otherwise the
- * host's PIN pairs it (see the exit dialog).
- */
-function useKioskPresence(code: string, enabled: boolean) {
-  const here = useServerFn(kioskHere);
-  const pair = useServerFn(pairKioskAsHost);
-  useEffect(() => {
-    if (!enabled) return;
-    let stopped = false;
-    const beat = async () => {
-      let device = deviceToken(code);
-      if (!device) {
-        device = (await pair({ data: { code } }).catch(() => null))?.device ?? null;
-        if (device) keepDeviceToken(code, device);
-      }
-      if (!device || stopped) return;
-      const fix = await readFix(false);
-      await here({ data: { code, device, fix } }).catch(() => {});
-    };
-    void beat();
-    const id = window.setInterval(() => void beat(), 5 * 60_000);
-    return () => {
-      stopped = true;
-      window.clearInterval(id);
-    };
-  }, [code, enabled, here, pair]);
 }

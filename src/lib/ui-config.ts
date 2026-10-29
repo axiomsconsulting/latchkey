@@ -243,6 +243,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "invoices", label: "Invoices" },
       { id: "theme", label: "Look and feel" },
       { id: "kioskRest", label: "Screen saver" },
+      { id: "kioskTablets", label: "Door tablets" },
       { id: "kioskScreen", label: "Door tablet screen" },
       { id: "alerts", label: "Alerts" },
       { id: "api", label: "API & MCP" },

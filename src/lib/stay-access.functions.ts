@@ -43,17 +43,6 @@ async function admin(): Promise<Loose> {
 const todayIn = (tz: string | null) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: tz ?? "Europe/London" }).format(new Date());
 
-/** This request's connection as a one-day pseudonym, or null. */
-async function requestNet(): Promise<{ hash: string; day: string } | null> {
-  const { getRequest } = await import("@tanstack/react-start/server");
-  const { requestIp, hashIp } = await import("./ip-hash.server");
-  const { networkKey } = await import("./stay-access");
-  const key = networkKey(requestIp(getRequest().headers));
-  const day = new Date().toISOString().slice(0, 10);
-  const hash = key ? hashIp(key, day) : null;
-  return hash ? { hash, day } : null;
-}
-
 /** Makes a paired-tablet token for a property; only its hash is kept. */
 export async function pairDevice(
   db: Loose,
@@ -61,10 +50,17 @@ export async function pairDevice(
   by: "pin" | "host",
 ): Promise<string | null> {
   const { newToken } = await import("./checkin.server");
+  const { nextNumber } = await import("./kiosk-devices");
   const t = newToken();
-  const { error } = await db
+  const row = { property_id: propertyId, token_hash: t.hash, paired_by: by };
+  // Numbered like every other tablet (migration 0067); before it, without a number.
+  const { data: taken, error: listErr } = await db
     .from("kiosk_devices")
-    .insert({ property_id: propertyId, token_hash: t.hash, paired_by: by });
+    .select("number")
+    .eq("property_id", propertyId);
+  const number = listErr ? null : nextNumber((taken ?? []).map((r: any) => r.number));
+  let { error } = await db.from("kiosk_devices").insert(number ? { ...row, number } : row);
+  if (error && number) ({ error } = await db.from("kiosk_devices").insert(row));
   return error ? null : t.token;
 }
 
@@ -98,7 +94,7 @@ export const kioskHere = createServerFn({ method: "POST" })
       .eq("token_hash", sha256(data.device))
       .maybeSingle();
     if (!dev || dev.properties?.short_code !== data.code.toLowerCase()) return { paired: false };
-    const net = await requestNet();
+    const net = await (await import("./stay-access.server")).requestNet();
     const now = new Date().toISOString();
     const located =
       data.fix && data.fix.accuracy <= 500
@@ -259,7 +255,7 @@ async function openFromRoom(
   if (!b) return { status: "none" as const };
 
   // Here? The same connection as a door tablet seen in the last 20 minutes, or near one.
-  const net = await requestNet();
+  const net = await (await import("./stay-access.server")).requestNet();
   const since = new Date(Date.now() - 20 * 60_000).toISOString();
   const { data: devices } = await db
     .from("kiosk_devices")

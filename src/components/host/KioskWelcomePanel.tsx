@@ -15,8 +15,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { common, kioskWelcomeCopy as copy } from "@/content/copy";
-import { clearKioskWelcome, getKioskWelcome, setKioskWelcome } from "@/lib/kiosk.functions";
+import { common, doorTabletsCopy, kioskWelcomeCopy as copy } from "@/content/copy";
+import { useDoorTablets } from "@/components/host/DoorTablets";
+import { tabletName } from "@/lib/kiosk-devices";
+import type { KioskDevice } from "@/lib/kiosk-devices.functions";
+import {
+  clearKioskWelcome,
+  getKioskWelcome,
+  setKioskWelcome,
+  type KioskWelcome,
+} from "@/lib/kiosk.functions";
 import { pingKiosk } from "@/lib/kiosk-ping";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +66,15 @@ export function KioskWelcomePanel({
     queryFn: () => fetchFn({ data: { propertyId } }),
     refetchInterval: 20_000,
   });
-  const current = q.data?.message ?? null;
+  // One tablet, or all of them (the welcome for one tablet takes the place of the one for all there).
+  const tablets = useDoorTablets(propertyId, 60_000);
+  const confirmed = ((tablets.data?.devices ?? []) as KioskDevice[]).filter(
+    (d) => d.status === "confirmed",
+  );
+  const [target, setTarget] = useState<string>("all");
+  const devices = (q.data as { devices?: Record<string, KioskWelcome> } | undefined)?.devices ?? {};
+  const current = target === "all" ? (q.data?.message ?? null) : (devices[target] ?? null);
+  const deviceId = target === "all" ? null : target;
   const named = forBooking ? [forBooking] : arriving.filter((b) => b.guest_full_name?.trim());
   const [bookingId, setBookingId] = useState<string>(named[0]?.id ?? "none");
   const [headline, setHeadline] = useState("");
@@ -106,6 +122,7 @@ export function KioskWelcomePanel({
             headline: headline.trim() || copy.defaultHeadline(""),
             body: body.trim() || null,
             bookingId: bookingId === "none" ? null : bookingId,
+            deviceId,
             minutes: Number(minutes),
           },
         }),
@@ -122,6 +139,35 @@ export function KioskWelcomePanel({
           <Hand className="size-4 text-primary" /> {copy.title}
         </p>
       )}
+
+      {confirmed.length > 1 ? (
+        <div className="space-y-1">
+          <Label className="text-xs">{doorTabletsCopy.welcomeTarget}</Label>
+          <Select
+            value={target}
+            onValueChange={(v) => {
+              setTarget(v);
+              setEditing(false);
+            }}
+          >
+            <SelectTrigger className="h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {doorTabletsCopy.allTablets}
+                {q.data?.message ? " ●" : ""}
+              </SelectItem>
+              {confirmed.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.number}. {tabletName(d)}
+                  {devices[d.id] ? " ●" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
 
       {current && !editing ? (
         <div className="space-y-2">
@@ -151,7 +197,7 @@ export function KioskWelcomePanel({
               className="text-destructive"
               disabled={busy !== null}
               onClick={() =>
-                void run("clear", () => clearFn({ data: { propertyId } }), copy.removed)
+                void run("clear", () => clearFn({ data: { propertyId, deviceId } }), copy.removed)
               }
             >
               {busy === "clear" ? (

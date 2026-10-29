@@ -521,6 +521,8 @@ export const startFromWelcome = createServerFn({ method: "POST" })
         deviceId,
         version: z.number().int().min(1),
         device: z.string().min(20).max(120).optional(),
+        /** "device": the welcome for this tablet only (kiosk_device_messages). */
+        source: z.enum(["device", "all"]).optional(),
       })
       .parse(d),
   )
@@ -529,21 +531,31 @@ export const startFromWelcome = createServerFn({ method: "POST" })
     const p = await loadPropertyByCode(data.code);
     if (!p || !p.flow.steps.welcome_go) return { status: "find" as const };
     const db = (await admin()) as any;
+    let deviceRow: { id: string } | null = null;
     if (!isTour(p)) {
       if (!data.device) return { status: "find" as const };
       const { data: dev } = await db
         .from("kiosk_devices")
-        .select("id")
+        .select("id, status")
         .eq("token_hash", sha256(data.device))
         .eq("property_id", p.id)
         .maybeSingle();
-      if (!dev) return { status: "find" as const };
+      // Only a tablet the host has (a pending one waiting for its code isn't).
+      if (!dev || dev.status === "pending") return { status: "find" as const };
+      deviceRow = dev;
     }
-    const { data: w } = await db
-      .from("kiosk_messages")
-      .select("booking_id, version, cleared_at, expires_at")
-      .eq("property_id", p.id)
-      .maybeSingle();
+    const { data: w } =
+      data.source === "device" && deviceRow
+        ? await db
+            .from("kiosk_device_messages")
+            .select("booking_id, version, cleared_at, expires_at")
+            .eq("device_id", deviceRow.id)
+            .maybeSingle()
+        : await db
+            .from("kiosk_messages")
+            .select("booking_id, version, cleared_at, expires_at")
+            .eq("property_id", p.id)
+            .maybeSingle();
     if (
       !w?.booking_id ||
       w.version !== data.version ||
@@ -1960,7 +1972,7 @@ export const completeCheckIn = createServerFn({ method: "POST" })
       expires_at: win.expiresAt.toISOString(),
     });
     // Three words the guest can photograph or remember (/g/<words>), shown on the door tablet.
-    const { shortLinkFor } = await import("./stay-links.functions");
+    const { shortLinkFor } = await import("./stay-links.server");
     const shortCode = await shortLinkFor(booking.id, win.expiresAt).catch(() => null);
 
     return {
@@ -2306,7 +2318,15 @@ export const askHostToCheckIn = createServerFn({ method: "POST" })
 
 export const kioskUnlock = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z.object({ code, pin: z.string().regex(/^\d{4,8}$/), pair: z.boolean().optional() }).parse(d),
+    z
+      .object({
+        code,
+        pin: z.string().regex(/^\d{4,8}$/),
+        pair: z.boolean().optional(),
+        /** A tablet waiting for its code: the host's PIN on it pairs it too. */
+        device: z.string().min(24).max(80).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { loadPropertyByCode, admin } = await srv();
@@ -2315,6 +2335,20 @@ export const kioskUnlock = createServerFn({ method: "POST" })
     const ok = Boolean(p && p.check_in_pin && p.check_in_pin === data.pin);
     // The host's PIN on a door tablet also pairs it, so room QR codes can tell a guest is here (src/lib/stay-access.functions.ts).
     let device: string | null = null;
+    if (ok && data.device && p && !isTour(p)) {
+      const { sha256 } = await srv();
+      await ((await admin()) as any)
+        .from("kiosk_devices")
+        .update({
+          status: "confirmed",
+          paired_by: "pin",
+          pair_code: null,
+          pair_code_expires_at: null,
+        })
+        .eq("token_hash", sha256(data.device))
+        .eq("property_id", p.id)
+        .eq("status", "pending");
+    }
     if (ok && data.pair && p && !isTour(p)) {
       const { pairDevice } = await import("./stay-access.functions");
       device = await pairDevice((await admin()) as never, p.id, "pin").catch(() => null);
