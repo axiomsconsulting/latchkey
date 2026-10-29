@@ -914,6 +914,15 @@ function Kiosk() {
                 if (k.startsWith("done:")) reloadWelcome();
               }}
               welcomeStart={shared ? welcomeStart : null}
+              onDone={
+                shared
+                  ? () => {
+                      setWelcomeStart(null);
+                      setSession((n) => n + 1);
+                      bump();
+                    }
+                  : undefined
+              }
               qrPanel={saverLook.defaults.qrStyle === "panel"}
             />
           )}

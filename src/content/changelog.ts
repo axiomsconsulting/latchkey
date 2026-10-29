@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.88.0",
+    date: "2026-10-29",
+    title: "Fewer steps: the ID finds the booking",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: 'Guests start by photographing their ID: the name on it finds their booking and counts as their ID check, so the surname letter, check-out day and "Is this you?" are skipped. If it can\'t find them, the quick questions follow and the same photo is used, not asked for again.',
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "\"Who's checking in\" is skipped when the booking already says how many are staying; the check-in goes straight on to the other guests' IDs.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: 'At the end of check-in, "Someone else with you? Add their ID" adds another guest\'s ID, register entry and face photo.',
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: 'The door tablet no longer opens the guest guide: it ends with a QR code and a short three-word link (yoursite/g/hill-otter-amber) to photograph or remember, and an "I\'m done" button that gets the tablet ready for the next guest.',
+      },
+    ],
+  },
+  {
     version: "0.87.0",
     date: "2026-10-29",
     title: "Guest register from the ID",

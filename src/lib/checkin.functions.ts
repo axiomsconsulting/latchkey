@@ -346,6 +346,120 @@ export const matchBooking = createServerFn({ method: "POST" })
   });
 
 /**
+ * ID first: the guest photographs their ID and the name on it finds their
+ * stay among today's arrivals (compareNames: one full match, or one partial
+ * when there's no full one). The same photo is then their ID check, so it
+ * isn't asked again, and the register is filled from it. No match, or two
+ * stays that fit: the usual questions (surname initial, check-out day).
+ */
+export const findByPhotoId = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z.object({ code, deviceId, image: jpeg, small: smallJpeg.optional() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { admin, deviceHash, loadPropertyByCode, readIdDetails, hostModes } = await srv();
+    const p = await loadPropertyByCode(data.code);
+    if (!p) throw new Error("We could not find this property.");
+    if (!p.flow.steps.find_id || !p.flow.steps.lead_id) return { status: "find" as const };
+    const hash = deviceHash(p.id, data.deviceId);
+    const locked = await deviceLock(p.id, hash, isTour(p));
+    if (locked) return { status: "locked" as const, until: locked.toISOString() };
+    const db = await admin();
+    const tz = p.timezone ?? "Europe/London";
+    const today = todayInZone(tz);
+    const { data: rows } = await arrivalsAround(p.id, today, 200);
+    const all = rows ?? [];
+    const candidates = [...arrivalCandidates(all, today), ...stayingCandidates(all, today)].filter(
+      (b) => !!b.guest_full_name?.trim(),
+    );
+
+    // Read the ID: the tour's "ID" is its sample guest; demo mode reads nothing, so it finds by the usual questions.
+    let read: IdRead;
+    if (isTour(p)) {
+      const hint = await demoHint(p.id, today);
+      if (!hint) return { status: "find" as const };
+      read = {
+        isIdDocument: true,
+        hasHolderPhoto: true,
+        looksHomemade: false,
+        documentType: "passport",
+        fullName: hint.name,
+        dateOfBirth: "1990-01-01",
+        expiryDate: "2031-01-01",
+        issuingCountry: "United Kingdom",
+        numberLast4: "0000",
+        nationality: "GBR",
+        documentNumber: null,
+        placeOfIssue: null,
+      };
+    } else {
+      if ((await hostModes(p.host_id)).id_check === "demo") return { status: "find" as const };
+      const { jobAllowed, bumpUsage } = await import("./usage.server");
+      if (!(await jobAllowed("ai_id_reading"))) return { status: "find" as const };
+      const { count } = await db
+        .from("checkin_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("property_id", p.id)
+        .gt("created_at", new Date(Date.now() - 3_600_000).toISOString());
+      if ((count ?? 0) > 30) return { status: "find" as const };
+      await bumpUsage(p.host_id, "ai:id_read");
+      try {
+        read = await readIdDetails(data.image);
+      } catch {
+        return { status: "retry" as const, reason: "unreadable" as const };
+      }
+    }
+    const verdict = judgeId(read, today);
+    if (!verdict.ok) return { status: "retry" as const, reason: verdict.reason };
+
+    const scored = candidates.map((b) => ({
+      b,
+      m: compareNames(b.guest_full_name, read.fullName),
+    }));
+    const full = scored.filter((x) => x.m === "matched");
+    const part = scored.filter((x) => x.m === "partial");
+    const hit =
+      full.length === 1 ? full[0]! : full.length === 0 && part.length === 1 ? part[0]! : null;
+    await db.from("check_in_attempts").insert({
+      property_id: p.id,
+      booking_id: hit?.b.id ?? null,
+      surname_attempt: surnameInitial(read.fullName) ?? "-",
+      succeeded: !!hit,
+      device_hash: hash,
+    });
+    if (!hit) return { status: "find" as const };
+
+    const token = await startSession(p.id, hit.b.id);
+    await db
+      .from("checkin_sessions")
+      .update({ confirmed: true, photo_attempts: 1 })
+      .eq("token_hash", (await srv()).sha256(token));
+    const ctx = await sessionContext(token);
+    try {
+      await savePerson(ctx, 0, {
+        kind: "adult",
+        read,
+        nameMatch: hit.m,
+        idChecked: true,
+        skipped: false,
+        idPhoto: data.small ?? null,
+      });
+    } catch (err) {
+      console.error("Saving lead guest ID failed", err);
+    }
+    await recordResult(ctx, "photo_id", hit.m);
+    return {
+      status: "matched" as const,
+      token,
+      firstName: firstName(hit.b.guest_full_name),
+      platform: platformKey(hit.b),
+      returning: hit.b.status === "checked_in",
+      prefill: prefillFrom(read),
+      register: await autoRegister(ctx, 0, read),
+    };
+  });
+
+/**
  * The three check-out days to pick from after the surname initial
  * (threeCheckouts): the real day of each arriving stay with that initial and
  * close days that aren't, the same three every time for that letter today,
@@ -1314,7 +1428,9 @@ export const checkCompanionId = createServerFn({ method: "POST" })
     ownSlot(ctx, data.position);
     const plan = partyPlan(ctx);
     const adults = ctx.session.adults ?? 1;
-    if (!ctx.session.confirmed || !plan.everyAdult || data.position >= adults)
+    // Every adult's ID when the host asks for it; or anyone the guest adds at the end of check-in.
+    const askedFor = plan.everyAdult || !!ctx.session.completed_at;
+    if (!ctx.session.confirmed || !askedFor || data.position >= adults)
       throw new Error("Not available.");
     const used = ctx.session.companion_attempts ?? 0;
     const unread = async () =>
@@ -1843,8 +1959,12 @@ export const completeCheckIn = createServerFn({ method: "POST" })
       valid_from: win.validFrom.toISOString(),
       expires_at: win.expiresAt.toISOString(),
     });
+    // Three words the guest can photograph or remember (/g/<words>), shown on the door tablet.
+    const { shortLinkFor } = await import("./stay-links.functions");
+    const shortCode = await shortLinkFor(booking.id, win.expiresAt).catch(() => null);
 
     return {
+      shortCode,
       firstName: firstName(booking.guest_full_name),
       roomName: room?.display_name ?? null,
       roomTitle: room?.public_title ?? null,

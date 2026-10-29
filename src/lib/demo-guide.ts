@@ -34,7 +34,8 @@ export type DemoStep =
   | { name: "register" | "face" | "handover" | "done" | "locked" | "waiting" }
   | { name: "pick"; items: Array<{ label: string }> }
   | { name: "identity"; method: "photo_id" | "last4" | "self_declare"; consented: boolean }
-  | { name: "companion"; ready: boolean };
+  | { name: "companion"; ready: boolean }
+  | { name: "idFirst"; consented: boolean };
 
 export function demoLine(step: DemoStep, hint: DemoHint, platform: string): string | null {
   const d = copy.demo;
@@ -62,6 +63,8 @@ export function demoLine(step: DemoStep, hint: DemoHint, platform: string): stri
       return d.confirm;
     case "party":
       return d.party;
+    case "idFirst":
+      return step.consented ? d.idCamera : d.idConsent;
     case "identity":
       return step.method === "photo_id"
         ? step.consented

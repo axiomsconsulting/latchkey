@@ -4,8 +4,10 @@
  * Two ways in, then the same steps for everyone:
  *  - The host put a welcome on the door tablet for this guest: its Check in
  *    button opens that guest's stay, so nothing is asked to find it.
- *  - No welcome (a busy door): surname initial, then the check-out day picked
- *    from three close choices (or the week), then "Is this you?".
+ *  - No welcome (a busy door): the photo ID first, its name finding the stay
+ *    (and counting as the ID check); failing that, surname initial, then the
+ *    check-out day picked from three close choices (or the week), then
+ *    "Is this you?".
  * Then who's checking in, the lead guest's photo ID (read automatically when
  * ID reading is on; the small copy is kept either way when the host keeps
  * them, so a failed read can be checked by hand), every adult's ID, a face
@@ -28,6 +30,7 @@ import type { GuestRecords } from "./guest-records";
 
 export const STEP_IDS = [
   "welcome_go",
+  "find_id",
   "find_letter",
   "find_checkout",
   "find_confirm",
@@ -58,6 +61,7 @@ export type StepDef = {
 
 export const STEPS: StepDef[] = [
   { id: "welcome_go", lane: "welcome" },
+  { id: "find_id", lane: "find", needs: "lead_id" },
   { id: "find_letter", lane: "find", locked: "always" },
   { id: "find_checkout", lane: "find", locked: "always" },
   { id: "find_confirm", lane: "find" },
@@ -264,6 +268,8 @@ export function cameraFor(
 /** What the guest's screen needs to know (sent with the property). */
 export type GuestFlow = {
   welcomeGo: boolean;
+  /** The photo ID first, finding the stay by its name. */
+  idFirst: boolean;
   confirm: boolean;
   checkout: CheckoutStyle;
   idCamera: CameraSide;
@@ -272,6 +278,7 @@ export type GuestFlow = {
 
 export const guestFlow = (f: FlowChoices): GuestFlow => ({
   welcomeGo: f.steps.welcome_go,
+  idFirst: f.steps.find_id && f.steps.lead_id,
   confirm: f.steps.find_confirm,
   checkout: f.checkout,
   idCamera: f.idCamera,

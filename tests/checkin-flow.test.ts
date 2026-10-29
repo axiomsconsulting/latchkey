@@ -59,6 +59,17 @@ describe("the check-in journey", () => {
     expect(there.steps.party).toBe(false);
   });
 
+  it("finds the stay by the photo ID first, unless the photo ID is off", () => {
+    expect(guestFlow(effectiveFlow(null, DEFAULT_POLICY, abroad)).idFirst).toBe(true);
+    const noId = effectiveFlow(
+      normaliseFlow({ steps: { lead_id: false } }),
+      DEFAULT_POLICY,
+      abroad,
+    );
+    expect(noId.steps.find_id).toBe(false);
+    expect(guestFlow(noId).idFirst).toBe(false);
+  });
+
   it("drops a step whose parent is off (no ID photo kept without the photo ID)", () => {
     const f = effectiveFlow(
       normaliseFlow({ steps: { lead_id: false, keep_id: true, every_adult_id: true } }),
@@ -141,6 +152,7 @@ describe("the check-in journey", () => {
   it("sends the guest's screen only what it needs", () => {
     expect(guestFlow(THOROUGH)).toEqual({
       welcomeGo: true,
+      idFirst: true,
       confirm: true,
       checkout: "three",
       idCamera: "front",
