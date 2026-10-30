@@ -1372,6 +1372,37 @@ export const checkinSettings = branded({
   qrAlt: "QR code for guest check-in",
 });
 
+export const goodbyeCopy = branded({
+  title: "Check-out goodbye",
+  body: "On check-out day the door tablet says goodbye to each guest leaving: a personal goodbye, safe travels and where the keys go. Their guest guide puts the check-out things first too.",
+  unavailable: "The check-out goodbye needs the latest database update (migration 0068).",
+  on: "Say goodbye on the door tablet on check-out day",
+  message: "Goodbye message",
+  messageHelp: "{name} becomes the guest's first name.",
+  keyDrop: "Where the keys go",
+  lockDoor: "Remind them to lock the front door",
+  lockLine: "Please make sure the front door is locked behind you.",
+  startBefore: "Start showing it",
+  minutesBefore: (m: number) =>
+    m < 60 ? `${m} min before check-out` : `${m / 60} hour${m === 60 ? "" : "s"} before check-out`,
+  lateLead: "With a late check-out, start",
+  lateLeadOption: (m: number) =>
+    m === 0 ? "At the standard check-out time" : `${m} min before the standard check-out`,
+  howItEnds:
+    "It shows until their check-out time (their late one, if they booked it). It goes earlier when they tap Express check-out, when you dismiss it on Today, or when you mark them checked out.",
+  preview: "On the door tablet",
+  sampleName: "Priya",
+  express: "Express check-out",
+  saved: "Check-out goodbye saved",
+  todayTitle: "Leaving today",
+  todayEmpty: "Nobody checks out today.",
+  todayShowing: "Goodbye on the tablet",
+  todayDismissed: "Goodbye taken off",
+  todayLeft: "Checked out",
+  dismiss: "Take goodbye off",
+  dismissed: "Taken off the tablet.",
+});
+
 export const doorTabletsCopy = branded({
   title: "Door tablets",
   body: "Every tablet at this property, by number. A tablet joins when it opens the kiosk: by itself on this property's Wi-Fi (if allowed below), or with the six-digit code it shows. Give each a name, line its screen up, and send a welcome to one tablet or all of them.",
@@ -1434,6 +1465,25 @@ export const guest = branded({
   stepCheckoutPickHint: "One of these is yours.",
   nights: (n: number) => (n === 1 ? "1 night" : `${n} nights`),
   cameraFlip: "Switch camera",
+  goodbyeTitle: (n: number) => (n === 1 ? "Leaving today" : `${n} guests leaving today`),
+  goodbyeSafe: "Safe travels.",
+  goodbyeBy: (t: string) => `Check-out by ${t}`,
+  goodbyeExpress: "Express check-out",
+  goodbyeCheckIn: "Checking in? Start here",
+  goodbyePage: (p: number, n: number) => `${p} of ${n}`,
+  expressTitle: (name: string) =>
+    name ? `Thank you, ${name}. Safe travels!` : "Thank you. Safe travels!",
+  expressKeys: "Keys",
+  expressDoor: "Please make sure the front door is locked behind you.",
+  expressReview: "Enjoyed your stay? A quick review means a lot. Scan to leave one:",
+  expressDone: "Done",
+  expressCloses: "This screen closes by itself in a few minutes.",
+  guideLeavingTitle: "Checking out today",
+  guideLeavingBy: (t: string) => `Check-out is by ${t}.`,
+  guideKeys: "Where the keys go",
+  guideDoor: "Please make sure the front door is locked behind you.",
+  guideCheckout: "I've checked out",
+  guideCheckedOut: "You're checked out. Thank you for staying, and safe travels!",
   cameraOn: "Camera on: your host is viewing",
   tabletSetup: (code: string) => `Set up this tablet: code ${code}`,
   idFirstTitle: "Let's find your booking",
@@ -2047,6 +2097,7 @@ export const roomGuideCopy = branded({
 });
 
 export const guideCopy = branded({
+  checkoutSteps: "Check-out steps",
   quickTitle: "Jump to",
   quickExtras: "Extras",
   listHelp:
@@ -4191,10 +4242,11 @@ export const settingsMenuCopy = branded({
   groups: {
     business: "Business",
     checkin: "Check-in and records",
-    rooms: "Room QR and Wi-Fi",
+    rooms: "QR",
     reviews: "Reviews",
     money: "Payments",
-    look: "Look",
+    kiosk: "Kiosk",
+    look: "Branding",
     apps: "Alerts and apps",
   } as Record<string, string>,
   sections: {
@@ -4205,7 +4257,6 @@ export const settingsMenuCopy = branded({
     domain: ["Own web address", "business"],
     demo: ["Sample data", "business"],
     messages: ["Airbnb and Booking.com messages", "apps"],
-    labels: ["Booking sites", "apps"],
     checkin: ["Check-in journey", "checkin"],
     records: ["Who's staying and ID records", "checkin"],
     stayAccess: ["Room QR codes and Wi-Fi", "rooms"],
@@ -4215,9 +4266,10 @@ export const settingsMenuCopy = branded({
     payments: ["Card payments", "money"],
     invoices: ["Invoices", "money"],
     theme: ["Look and feel", "look"],
-    kioskRest: ["Screen saver", "look"],
-    kioskTablets: ["Door tablets", "look"],
-    kioskScreen: ["Door tablet screen", "look"],
+    kioskTablets: ["Door tablets", "kiosk"],
+    goodbye: ["Check-out goodbye", "kiosk"],
+    kioskScreen: ["Door tablet screen", "kiosk"],
+    kioskRest: ["Screen saver", "kiosk"],
     alerts: ["Alerts", "apps"],
     api: ["API & MCP", "apps"],
     shortcuts: ["Phone shortcuts", "apps"],

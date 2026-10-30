@@ -13,10 +13,12 @@ import {
   CloudRain,
   CloudSnow,
   CloudSun,
+  DoorClosed,
   KeyRound,
   Loader2,
   MessageCircle,
   Moon,
+  Plane,
   Sun,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -47,6 +49,7 @@ import { WifiCard } from "@/components/guest/WifiCard";
 import { ReviewNudge } from "@/components/guest/ReviewNudge";
 import { reviewDay } from "@/lib/stay-access";
 import { Button } from "@/components/ui/button";
+import { guideCheckout } from "@/lib/goodbye.functions";
 import { stayProgressCopy as pcopy } from "@/content/copy";
 import { formatUkDate } from "@/lib/dates";
 import { useScrollOpen } from "@/hooks/use-scroll-open";
@@ -118,7 +121,12 @@ function jumpTo(id: string) {
 
 function StayPage({ s, token, theme }: { s: StayData; token: string; theme: StayData["theme"] }) {
   const p = s.property;
-  const [open, setOpen] = useState<string[]>([s.guide[0]?.key ?? ""]);
+  // Check-out day: the check-out section starts open.
+  const leaving = !!s.goodbye;
+  const hasCheckout = s.guide.some((g) => g.key === "checkout");
+  const [open, setOpen] = useState<string[]>(
+    leaving && hasCheckout ? ["checkout"] : [s.guide[0]?.key ?? ""],
+  );
   // The section in the middle of the screen is open and highlighted, either way the guest scrolls.
   const { onOpenChange, active } = useScrollOpen(open, setOpen);
   // Quick ways in, in the theme's icon style: the host's chosen tiles, or Wi-Fi, the first guide sections, extras and messages.
@@ -174,10 +182,29 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           />
         </div>
 
+        {/* Check-out day: what to do, where the keys go, the door, and "I've checked out", first. */}
+        {s.goodbye ? (
+          <CheckoutToday
+            token={token}
+            time={s.checkOutTime}
+            goodbye={s.goodbye}
+            onSteps={
+              hasCheckout
+                ? () => {
+                    setOpen((o) => (o.includes("checkout") ? o : [...o, "checkout"]));
+                    jumpTo("guide-checkout");
+                  }
+                : null
+            }
+          />
+        ) : null}
+
         {/* The last day: a gentle ask for a review, where they booked (or here, for a direct stay). */}
         {s.review && reviewDay(s.progress.phase) ? (
           <ReviewNudge token={token} ask={s.review} place={p?.name ?? ""} />
         ) : null}
+        {/* Check-out day: booking again comes straight after, not at the very end. */}
+        {leaving && !s.readOnly ? <StayAgain token={token} /> : null}
 
         <GuideTiles
           theme={theme}
@@ -287,7 +314,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         {s.readOnly ? null : <NeedSomethingElse text={s.stayMessage} />}
         {/* A direct guest asked on the last day reviews there; otherwise the private note to the host stays here. */}
         {s.review?.direct && reviewDay(s.progress.phase) ? null : <StayReview token={token} />}
-        {s.readOnly ? null : <StayAgain token={token} />}
+        {s.readOnly || leaving ? null : <StayAgain token={token} />}
       </main>
       {s.needsCheckIn && !s.readOnly ? (
         <CheckInNudge token={token} firstName={s.firstName} />
@@ -428,3 +455,80 @@ const WEATHER_ICONS: Record<WeatherIcon, typeof Sun> = {
   snow: CloudSnow,
   storm: CloudLightning,
 };
+
+/**
+ * Check-out day, at the top of the guide: when to leave, the host's check-out
+ * steps, where the keys go, the front door, and "I've checked out" (which
+ * also takes their goodbye off the door tablet).
+ */
+function CheckoutToday({
+  token,
+  time,
+  goodbye,
+  onSteps,
+}: {
+  token: string;
+  time: string;
+  goodbye: { keyDrop: string; lockDoor: boolean; checkedOut: boolean };
+  onSteps: (() => void) | null;
+}) {
+  const checkoutFn = useServerFn(guideCheckout);
+  const [left, setLeft] = useState(goodbye.checkedOut);
+  const [busy, setBusy] = useState(false);
+  return (
+    <section
+      aria-labelledby="leaving-today"
+      className="rounded-3xl border-2 border-primary/50 bg-primary/5 p-5"
+    >
+      <h2 id="leaving-today" className="flex items-center gap-2 text-2xl">
+        <Plane className="size-6 text-primary" aria-hidden /> {copy.guideLeavingTitle}
+      </h2>
+      <p className="mt-1 text-lg">{copy.guideLeavingBy(time)}</p>
+      <ul className="mt-4 space-y-3 text-lg">
+        {goodbye.keyDrop ? (
+          <li className="flex items-start gap-3">
+            <KeyRound className="mt-1 size-5 shrink-0 text-primary" aria-hidden />
+            <span>
+              <span className="block text-sm font-medium text-muted-foreground">
+                {copy.guideKeys}
+              </span>
+              {goodbye.keyDrop}
+            </span>
+          </li>
+        ) : null}
+        {goodbye.lockDoor ? (
+          <li className="flex items-start gap-3">
+            <DoorClosed className="mt-1 size-5 shrink-0 text-primary" aria-hidden />
+            {copy.guideDoor}
+          </li>
+        ) : null}
+      </ul>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {onSteps ? (
+          <Button variant="outline" size="lg" onClick={onSteps}>
+            {gcopy.checkoutSteps}
+          </Button>
+        ) : null}
+        {left ? (
+          <p className="flex items-center gap-2 text-lg font-medium text-success">
+            <Check className="size-5" aria-hidden /> {copy.guideCheckedOut}
+          </p>
+        ) : (
+          <Button
+            size="lg"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              void checkoutFn({ data: { token } })
+                .then(() => setLeft(true))
+                .catch((e: unknown) => toast.error(e instanceof Error ? e.message : copy.error))
+                .finally(() => setBusy(false));
+            }}
+          >
+            {copy.guideCheckout}
+          </Button>
+        )}
+      </div>
+    </section>
+  );
+}

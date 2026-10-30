@@ -1,0 +1,125 @@
+/**
+ * The check-out goodbye (properties.checkout_goodbye, migration 0068): on a
+ * guest's check-out day the door tablet shows them a personal goodbye, a
+ * safe-journey wish and where the keys go, and their guest guide puts the
+ * check-out things first. Pure; tested in tests/checkout-goodbye.test.ts.
+ *
+ * When it shows: from `startBeforeMinutes` before their check-out time until
+ * it. With a late check-out booked (their check-out time is after the
+ * standard one), from `lateLeadMinutes` before the standard check-out until
+ * their late time. It goes early when they tap Express check-out, the host
+ * dismisses it or marks them checked out.
+ */
+import { zonedToUtc } from "./guide";
+
+export type Goodbye = {
+  on: boolean;
+  /** The goodbye in the host's words; {name} is the guest's first name. */
+  message: string;
+  /** Where the keys go. */
+  keyDrop: string;
+  /** Remind them to lock the front door behind them. */
+  lockDoor: boolean;
+  startBeforeMinutes: number;
+  lateLeadMinutes: number;
+};
+
+export const DEFAULT_GOODBYE: Goodbye = {
+  on: true,
+  message: "Thank you for staying with us, {name}. Safe travels, and we hope to see you again.",
+  keyDrop: "Please leave your keys on the table in your room, and close the door behind you.",
+  lockDoor: true,
+  startBeforeMinutes: 120,
+  lateLeadMinutes: 30,
+};
+
+export const START_CHOICES = [30, 60, 120, 180, 240] as const;
+export const LATE_LEAD_CHOICES = [0, 15, 30, 60] as const;
+/** Express check-out's reminder closes by itself after this long. */
+export const EXPRESS_CLOSE_MINUTES = 10;
+/** More guests than this on one screen: pages, turning every few seconds. */
+export const PER_PAGE = 10;
+export const PAGE_SECONDS = 5;
+
+const text = (v: unknown, d: string, max: number) =>
+  typeof v === "string" ? v.trim().slice(0, max) : d;
+const pick = (v: unknown, list: readonly number[], d: number) =>
+  typeof v === "number" && list.includes(v) ? v : d;
+
+export function normaliseGoodbye(raw: unknown): Goodbye {
+  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  return {
+    on: typeof r["on"] === "boolean" ? r["on"] : DEFAULT_GOODBYE.on,
+    message: text(r["message"], DEFAULT_GOODBYE.message, 300) || DEFAULT_GOODBYE.message,
+    keyDrop: text(r["keyDrop"], DEFAULT_GOODBYE.keyDrop, 300),
+    lockDoor: typeof r["lockDoor"] === "boolean" ? r["lockDoor"] : DEFAULT_GOODBYE.lockDoor,
+    startBeforeMinutes: pick(
+      r["startBeforeMinutes"],
+      START_CHOICES,
+      DEFAULT_GOODBYE.startBeforeMinutes,
+    ),
+    lateLeadMinutes: pick(r["lateLeadMinutes"], LATE_LEAD_CHOICES, DEFAULT_GOODBYE.lateLeadMinutes),
+  };
+}
+
+/** The goodbye in the host's words, with the guest's first name. */
+export const goodbyeText = (g: Goodbye, firstName: string) =>
+  g.message
+    .replace(/\{name\}/g, firstName || "")
+    .replace(/\s+([,.!])/g, "$1")
+    .trim();
+
+export type LeavingStay = {
+  status: string;
+  check_out_date: string;
+  /** Their own check-out time (a late check-out moves it), else null for the standard one. */
+  check_out_time: string | null;
+  goodbye_dismissed_at?: string | null;
+  mirror_of?: string | null;
+};
+
+/** When this stay's goodbye shows on the tablet (ms). */
+export function goodbyeWindow(
+  b: Pick<LeavingStay, "check_out_date" | "check_out_time">,
+  standardTime: string,
+  tz: string,
+  g: Goodbye,
+): { from: number; until: number; late: boolean } {
+  const standard = zonedToUtc(b.check_out_date, standardTime.slice(0, 5), tz).getTime();
+  const own = b.check_out_time
+    ? zonedToUtc(b.check_out_date, b.check_out_time.slice(0, 5), tz).getTime()
+    : standard;
+  const late = own > standard;
+  return {
+    from: late ? standard - g.lateLeadMinutes * 60_000 : own - g.startBeforeMinutes * 60_000,
+    until: own,
+    late,
+  };
+}
+
+const STAYING = new Set(["checked_in", "upcoming", "flagged", "needs_details"]);
+
+/** Whether the goodbye shows for this stay now. */
+export function showsGoodbye(
+  b: LeavingStay,
+  today: string,
+  nowMs: number,
+  standardTime: string,
+  tz: string,
+  g: Goodbye,
+): boolean {
+  if (!g.on || b.mirror_of || b.goodbye_dismissed_at || !STAYING.has(b.status)) return false;
+  if (b.check_out_date !== today) return false;
+  const w = goodbyeWindow(b, standardTime, tz, g);
+  return nowMs >= w.from && nowMs < w.until;
+}
+
+/** The page of goodbyes on screen now: up to PER_PAGE, turning every PAGE_SECONDS. */
+export function pageNow<T>(items: T[], nowMs: number): { items: T[]; page: number; pages: number } {
+  const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  const page = Math.floor(nowMs / (PAGE_SECONDS * 1000)) % pages;
+  return { items: items.slice(page * PER_PAGE, (page + 1) * PER_PAGE), page, pages };
+}

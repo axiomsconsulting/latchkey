@@ -2170,6 +2170,26 @@ export const getStay = createServerFn({ method: "GET" })
         ? !tourDone && !checkedIn
         : b.status !== "checked_out" && (!checkedIn || registerMissing),
       progress: stayProgress(b.check_in_date, b.check_out_date, today),
+      // Check-out day: where the keys go, the door, and whether they've already checked out (src/lib/checkout-goodbye.ts).
+      goodbye:
+        b.check_out_date === today
+          ? await (async () => {
+              const { data: g, error } = await db
+                .from("properties")
+                .select("checkout_goodbye")
+                .eq("id", b.property_id)
+                .maybeSingle();
+              const { normaliseGoodbye } = await import("./checkout-goodbye");
+              const n = normaliseGoodbye(
+                error ? null : (g as { checkout_goodbye?: unknown } | null)?.checkout_goodbye,
+              );
+              return {
+                keyDrop: n.keyDrop,
+                lockDoor: n.lockDoor,
+                checkedOut: b.status === "checked_out",
+              };
+            })()
+          : null,
       stayMessage: access.stayMessage,
       // The last day's review nudge: the site they booked with (its logo and name), or here for direct stays.
       review: access.askReview

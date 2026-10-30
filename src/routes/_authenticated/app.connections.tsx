@@ -81,11 +81,15 @@ import {
 } from "@/lib/host.functions";
 import { explainSyncError, linkState } from "@/lib/sync-status";
 import { rebrand } from "@/lib/brand";
+import { ChannelLabels } from "@/components/host/ChannelLabels";
 
 export const Route = createFileRoute("/_authenticated/app/connections")({
   // ?link=<connection id> lands on that calendar link.
-  validateSearch: (s: Record<string, unknown>): { link?: string } =>
-    typeof s["link"] === "string" ? { link: s["link"] } : {},
+  // ?focus=sites lands on the booking sites' names and icons.
+  validateSearch: (s: Record<string, unknown>): { link?: string; focus?: "sites" } => ({
+    ...(typeof s["link"] === "string" ? { link: s["link"] } : {}),
+    ...(s["focus"] === "sites" ? { focus: "sites" as const } : {}),
+  }),
   head: () => ({
     meta: [
       { title: rebrand("Connections · Latchkey host dashboard") },
@@ -388,8 +392,15 @@ function ConnectionDialog({
 function ConnectionsPage() {
   const workspace = useWorkspace();
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
-  const { link } = Route.useSearch();
-  useLandOn(link ? `link-${link}` : null, !workspace.isLoading);
+  const { link, focus } = Route.useSearch();
+  useLandOn(
+    link ? `link-${link}` : focus === "sites" ? "booking-sites" : null,
+    !workspace.isLoading,
+  );
+  const host = (workspace.data?.host ?? null) as {
+    channel_labels?: Record<string, string>;
+    booking_sites?: unknown;
+  } | null;
 
   if (workspace.isLoading) {
     return (
@@ -422,6 +433,17 @@ function ConnectionsPage() {
       {properties.map((p) => (
         <PropertyLinks key={p.id} property={p} />
       ))}
+
+      {/* What each booking site is called and its icon (was in Settings). */}
+      {workspace.data ? (
+        <div id="booking-sites" className="scroll-mt-24 rounded-2xl" data-tour="booking-sites">
+          <ChannelLabels
+            hostId={workspace.data.hostId}
+            labels={(host?.channel_labels ?? {}) as Record<string, string>}
+            sites={host?.booking_sites}
+          />
+        </div>
+      ) : null}
 
       <section className="card-soft flex flex-wrap items-center gap-3 p-5">
         <div className="min-w-0 flex-1">

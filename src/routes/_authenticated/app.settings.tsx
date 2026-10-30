@@ -19,6 +19,7 @@ import {
   IdCard,
   Loader2,
   NotebookPen,
+  MonitorSmartphone,
   Palette,
   Plus,
   QrCode,
@@ -48,7 +49,7 @@ import { ApiAccessPanel } from "@/components/host/ApiAccessPanel";
 import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { TeamPanel } from "@/components/host/TeamPanel";
 import { DEMO_EMAIL } from "@/lib/demo-account";
-import { ChannelLabels } from "@/components/host/ChannelLabels";
+import { GoodbyeSettings } from "@/components/host/GoodbyeSettings";
 import { PrivacySettings } from "@/components/host/PrivacySettings";
 import { GroupBrandSettings } from "@/components/host/GroupBrandSettings";
 import { InvoiceSettings } from "@/components/host/InvoiceSettings";
@@ -86,6 +87,7 @@ const FOCUS = [
   "kioskRest",
   "kioskTablets",
   "kioskScreen",
+  "goodbye",
   "extras",
   "money",
   "theme",
@@ -103,6 +105,7 @@ const SETTINGS_GROUPS = [
   { id: "rooms", icon: QrCode },
   { id: "reviews", icon: Star },
   { id: "money", icon: CreditCard },
+  { id: "kiosk", icon: MonitorSmartphone },
   { id: "look", icon: Palette },
   { id: "apps", icon: Bell },
 ] as const;
@@ -124,6 +127,7 @@ const OWN_CARD = new Set([
   "kioskRest",
   "kioskTablets",
   "kioskScreen",
+  "goodbye",
   "money",
 ]);
 
@@ -175,6 +179,9 @@ function SettingsPage() {
   useEffect(() => {
     if (focus === "extras")
       void navigate({ to: "/app/properties", search: { tab: "extras" }, replace: true });
+    // Booking sites' names and icons live with the calendar links now.
+    if (focus === "labels")
+      void navigate({ to: "/app/connections", search: { focus: "sites" }, replace: true });
   }, [focus, navigate]);
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
@@ -571,18 +578,6 @@ function SettingsPage() {
         <Section id="theme">
           {themedProperty ? <ThemeStudio property={themedProperty} /> : null}
         </Section>
-        <Section id="labels">
-          {workspace.data ? (
-            <ChannelLabels
-              hostId={workspace.data.hostId}
-              labels={
-                ((host as { channel_labels?: Record<string, string> } | null)?.channel_labels ??
-                  {}) as Record<string, string>
-              }
-              sites={(host as { booking_sites?: unknown } | null)?.booking_sites}
-            />
-          ) : null}
-        </Section>
 
         <Section id="demo">
           {/* Owners can remove sample data; Latchkey admins load it from Latchkey admin → Businesses. */}
@@ -653,6 +648,15 @@ function SettingsPage() {
           {themedProperty ? (
             <div id="settings-reviews" className="scroll-mt-24 rounded-2xl">
               <ReviewSettings propertyId={(themedProperty as { id: string }).id} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="goodbye">
+          {themedProperty ? (
+            <div id="settings-goodbye" className="scroll-mt-24 rounded-2xl">
+              <GoodbyeSettings
+                property={themedProperty as unknown as { id: string; short_code: string }}
+              />
             </div>
           ) : null}
         </Section>
