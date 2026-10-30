@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.93.0",
+    date: "2026-10-30",
+    title: "Check-in cards: start time and per-guest control",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Check-in cards can start at a set time of day (say 12:00) as well as a set time before check-in, and still start just before an early check-in a guest booked.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Settings → Kiosk lists today's arriving and leaving guests under Check-in cards and Check-out cards, to take a card off or show it now, as on Today.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The screensaver never starts while a check-in or check-out card is on the door tablet, including when you switch the night light on from your dashboard.",
+      },
+    ],
+  },
+  {
     version: "0.92.0",
     date: "2026-10-30",
     title: "Check-in cards, and welcome and goodbye in one place",

@@ -139,6 +139,8 @@ export type ArrivalCards = {
   /** {name} is the guest's first name. */
   message: string;
   startBeforeMinutes: number;
+  /** A set time of day to start ("12:00") instead of a time before check-in; null = before check-in. */
+  startAt: string | null;
   earlyLeadMinutes: number;
 };
 
@@ -146,6 +148,7 @@ export const DEFAULT_ARRIVALS: ArrivalCards = {
   on: true,
   message: "Welcome, {name}! We're so glad you're here. Tap Check in to get your room.",
   startBeforeMinutes: 120,
+  startAt: null,
   earlyLeadMinutes: 30,
 };
 
@@ -162,6 +165,10 @@ export function normaliseArrivals(raw: unknown): ArrivalCards {
       START_CHOICES,
       DEFAULT_ARRIVALS.startBeforeMinutes,
     ),
+    startAt:
+      typeof r["startAt"] === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(r["startAt"])
+        ? r["startAt"]
+        : null,
     earlyLeadMinutes: pick(
       r["earlyLeadMinutes"],
       LATE_LEAD_CHOICES,
@@ -199,10 +206,13 @@ export function arrivalStart(
     ? zonedToUtc(b.check_in_date, b.check_in_time.slice(0, 5), tz).getTime()
     : standard;
   const early = own < standard;
-  return {
-    from: own - (early ? a.earlyLeadMinutes : a.startBeforeMinutes) * 60_000,
-    early,
-  };
+  const before = own - (early ? a.earlyLeadMinutes : a.startBeforeMinutes) * 60_000;
+  // A set time of day, but never later than just before an early check-in they booked.
+  if (a.startAt) {
+    const fixed = zonedToUtc(b.check_in_date, a.startAt, tz).getTime();
+    return { from: early ? Math.min(fixed, before) : fixed, early };
+  }
+  return { from: before, early };
 }
 
 const ARRIVING = new Set(["upcoming", "flagged", "needs_details"]);

@@ -119,6 +119,15 @@ describe("check-in cards", () => {
     ).toBe(true);
   });
 
+  it("can start at a set time of day, but before an early check-in", () => {
+    const a = { ...DEFAULT_ARRIVALS, startAt: "12:00" };
+    expect(arrivalStart(arriving, "15:00", tz, a).from).toBe(at("12:00"));
+    expect(arrivalStart({ ...arriving, check_in_time: "11:00" }, "15:00", tz, a).from).toBe(
+      at("10:30"),
+    );
+    expect(normaliseArrivals({ startAt: "25:00" }).startAt).toBeNull();
+  });
+
   it("fill in the name", () => {
     expect(arrivalText(normaliseArrivals({ message: "Hi {name} !" }), "Tom")).toBe("Hi Tom!");
   });

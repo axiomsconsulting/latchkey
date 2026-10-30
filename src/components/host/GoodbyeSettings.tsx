@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { common, goodbyeCopy as copy } from "@/content/copy";
+import { common, goodbyeCopy as copy, kioskCardsCopy } from "@/content/copy";
+import { TodayCardList } from "@/components/host/KioskCardsPanel";
 import {
   LATE_LEAD_CHOICES,
   START_CHOICES,
@@ -149,6 +150,10 @@ export function GoodbyeSettings({ property }: { property: { id: string; short_co
             </div>
           </div>
           <p className="rounded-xl bg-muted p-3 text-sm">{copy.howItEnds}</p>
+          <div className="space-y-2 rounded-xl border border-border p-3">
+            <p className="text-sm font-medium">{kioskCardsCopy.todayListOut}</p>
+            <TodayCardList property={property} kind="out" />
+          </div>
         </div>
 
         {/* What the tablet shows, for one guest. */}

@@ -15,6 +15,81 @@ import { cn } from "@/lib/utils";
 type Guest = { id: string; guest_full_name: string | null; status?: string };
 
 /**
+ * Today's guests for one kind of card (arriving or leaving), each with
+ * whether their card is on the door tablet, and Show now / Take off. Used
+ * on Today and in Settings → Kiosk.
+ */
+export function TodayCardList({
+  property,
+  kind,
+}: {
+  property: { id: string; short_code: string };
+  kind: "in" | "out";
+}) {
+  const statesFn = useServerFn(todayKioskCards);
+  const setFn = useServerFn(setKioskCard);
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["kiosk-cards", property.id],
+    queryFn: () => statesFn({ data: { propertyId: property.id } }),
+    refetchInterval: 60_000,
+  });
+  const list = (q.data?.guests ?? []).filter((g: { kind: string }) => g.kind === kind);
+
+  async function change(id: string, show: boolean) {
+    try {
+      const res = await setFn({ data: { bookingId: id, kind, show } });
+      await pingKiosk(res.code);
+      await qc.invalidateQueries({ queryKey: ["kiosk-cards", property.id] });
+      toast.success(show ? copy.shownNow : copy.takenOff);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    }
+  }
+
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">…</p>;
+  if (!list.length)
+    return (
+      <p className="text-sm text-muted-foreground">{kind === "in" ? copy.noneIn : copy.noneOut}</p>
+    );
+  return (
+    <ul className="space-y-1.5">
+      {list.map((b: { id: string; name: string | null; state: string }) => (
+        <li key={b.id} className="flex items-center gap-2">
+          <Link
+            to="/app/bookings"
+            search={{ guest: b.id }}
+            className="min-w-0 flex-1 truncate text-sm hover:underline"
+          >
+            {b.name ?? copy.noName}
+            <span className="block text-xs text-muted-foreground">{copy.state[b.state]}</span>
+          </Link>
+          {b.state === "done" ? null : b.state === "showing" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-3 text-xs"
+              onClick={() => void change(b.id, false)}
+            >
+              <EyeOff className="size-3.5" /> {copy.takeOff}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-3 text-xs"
+              onClick={() => void change(b.id, true)}
+            >
+              <Eye className="size-3.5" /> {copy.showNow}
+            </Button>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
  * Today: what the door tablet says to guests arriving and leaving today, in
  * one panel with a tab for each. Every guest has a card (on its own timing,
  * from Settings → Kiosk): show it now, or take it off. The check-in tab
@@ -31,28 +106,6 @@ export function KioskCardsPanel({
 }) {
   const [tab, setTab] = useState<"in" | "out">(arriving.length || !leaving.length ? "in" : "out");
   const [custom, setCustom] = useState(false);
-  const statesFn = useServerFn(todayKioskCards);
-  const setFn = useServerFn(setKioskCard);
-  const qc = useQueryClient();
-  const q = useQuery({
-    queryKey: ["kiosk-cards", property.id],
-    queryFn: () => statesFn({ data: { propertyId: property.id } }),
-    refetchInterval: 60_000,
-  });
-  const states = q.data?.states ?? {};
-  const list = tab === "in" ? arriving : leaving;
-
-  async function change(id: string, show: boolean) {
-    try {
-      const res = await setFn({ data: { bookingId: id, kind: tab, show } });
-      await pingKiosk(res.code);
-      await qc.invalidateQueries({ queryKey: ["kiosk-cards", property.id] });
-      toast.success(show ? copy.shownNow : copy.takenOff);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : common.errorBody);
-    }
-  }
-
   return (
     <div className="space-y-3">
       <div
@@ -77,46 +130,7 @@ export function KioskCardsPanel({
         ))}
       </div>
 
-      {list.length ? (
-        <ul className="space-y-1.5">
-          {list.map((b) => {
-            const state = states[`${tab}:${b.id}`] ?? "later";
-            return (
-              <li key={b.id} className="flex items-center gap-2">
-                <Link
-                  to="/app/bookings"
-                  search={{ guest: b.id }}
-                  className="min-w-0 flex-1 truncate text-sm hover:underline"
-                >
-                  {b.guest_full_name ?? copy.noName}
-                  <span className="block text-xs text-muted-foreground">{copy.state[state]}</span>
-                </Link>
-                {state === "done" ? null : state === "showing" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 px-3 text-xs"
-                    onClick={() => void change(b.id, false)}
-                  >
-                    <EyeOff className="size-3.5" /> {copy.takeOff}
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 px-3 text-xs"
-                    onClick={() => void change(b.id, true)}
-                  >
-                    <Eye className="size-3.5" /> {copy.showNow}
-                  </Button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">{tab === "in" ? copy.noneIn : copy.noneOut}</p>
-      )}
+      <TodayCardList property={property} kind={tab} />
 
       {tab === "in" ? (
         <div className="border-t border-border pt-2">
