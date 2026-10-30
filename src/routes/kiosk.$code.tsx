@@ -791,13 +791,14 @@ function Kiosk() {
   });
   const goodbyeUp = shared && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
   // The welcome goes over everything, the screensaver too.
+  // …and so do today's check-in and check-out cards: the screensaver only starts when none are up.
   useEffect(() => {
-    if (welcomeUp) setSaver(false);
-    else setWelcomeRest(false);
-  }, [welcomeUp, welcome?.version]);
+    if (welcomeUp || goodbyeUp) setSaver(false);
+    if (!welcomeUp) setWelcomeRest(false);
+  }, [welcomeUp, goodbyeUp, welcome?.version]);
   // The host just switched the night light on from their dashboard: an idle kiosk (on the welcome) lights up now.
   useEffect(() => {
-    if (saverLook.nightOnAt && shared && atWelcome && !welcomeUp) setSaver(true);
+    if (saverLook.nightOnAt && shared && atWelcome && !welcomeUp && !goodbyeUp) setSaver(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saverLook.nightOnAt]);
 

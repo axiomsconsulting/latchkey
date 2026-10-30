@@ -1462,9 +1462,12 @@ export const kioskCardsCopy = branded({
   earlyLeadOption: (m: number) =>
     m === 0 ? "At their early check-in time" : `${m} min before their early check-in`,
   howItEnds:
-    "It shows until they check in or the day ends. It goes earlier when you take it off on Today. A custom welcome you write for one guest shows over the cards.",
+    "It shows until they check in or the day ends, and goes earlier when you take it off here or on Today. While any check-in or check-out card is up, the screensaver doesn't start. A custom welcome you write for one guest shows over the cards.",
   saved: "Check-in cards saved",
   checkIn: "Check in",
+  atSetTime: "At a set time of day",
+  todayList: "Arriving today: take a card off, or show it now",
+  todayListOut: "Leaving today: take a card off, or show it now",
 });
 
 export const doorTabletsCopy = branded({
@@ -1531,10 +1534,7 @@ export const guest = branded({
   cameraFlip: "Switch camera",
   goodbyeTitle: (n: number) => (n === 1 ? "Leaving today" : `${n} guests leaving today`),
   cardsTitle: (arriving: number, leaving: number) =>
-    [
-      arriving ? `${arriving} arriving` : null,
-      leaving ? `${leaving} leaving` : null,
-    ]
+    [arriving ? `${arriving} arriving` : null, leaving ? `${leaving} leaving` : null]
       .filter(Boolean)
       .join(" · ")
       .replace(/^/, "Today: "),

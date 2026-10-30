@@ -75,6 +75,10 @@ const arrivalsInput = z.object({
   on: z.boolean(),
   message: z.string().max(300),
   startBeforeMinutes: z.number().refine((n) => (START_CHOICES as readonly number[]).includes(n)),
+  startAt: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .nullable(),
   earlyLeadMinutes: z.number().refine((n) => (LATE_LEAD_CHOICES as readonly number[]).includes(n)),
 });
 
@@ -331,18 +335,31 @@ export const todayKioskCards = createServerFn({ method: "GET" })
       )
       .eq("id", data.propertyId)
       .maybeSingle();
-    if (pe || !p) return { available: false as const, states: {} as Record<string, string> };
+    type CardGuest = { id: string; name: string | null; kind: "in" | "out"; state: string };
+    if (pe || !p)
+      return {
+        available: false as const,
+        states: {} as Record<string, string>,
+        guests: [] as CardGuest[],
+      };
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const { data: rows, error } = await sb
       .from("bookings")
       .select(
-        "id, status, check_in_date, check_out_date, check_in_time, check_out_time, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of",
+        "id, guest_full_name, status, check_in_date, check_out_date, check_in_time, check_out_time, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of",
       )
       .eq("property_id", data.propertyId)
+      .is("mirror_of", null)
+      .neq("status", "cancelled")
       .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
       .limit(400);
-    if (error) return { available: false as const, states: {} as Record<string, string> };
+    if (error)
+      return {
+        available: false as const,
+        states: {} as Record<string, string>,
+        guests: [] as CardGuest[],
+      };
     const now = Date.now();
     const g = normaliseGoodbye(p.checkout_goodbye);
     const a = normaliseArrivals(p.checkin_welcome);
@@ -374,5 +391,15 @@ export const todayKioskCards = createServerFn({ method: "GET" })
                 ? "showing"
                 : "later";
     }
-    return { available: true as const, states };
+    const guests: CardGuest[] = [];
+    for (const b of (rows ?? []) as any[])
+      for (const kind of ["in", "out"] as const)
+        if (states[`${kind}:${b.id}`])
+          guests.push({
+            id: b.id,
+            name: b.guest_full_name ?? null,
+            kind,
+            state: states[`${kind}:${b.id}`]!,
+          });
+    return { available: true as const, states, guests };
   });

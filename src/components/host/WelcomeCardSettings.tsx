@@ -5,6 +5,8 @@ import { Hand } from "lucide-react";
 import { toast } from "sonner";
 
 import { SaveButton, changed } from "@/components/host/SaveButton";
+import { TodayCardList } from "@/components/host/KioskCardsPanel";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -105,8 +107,12 @@ export function WelcomeCardSettings({
             <div className="space-y-1">
               <Label>{copy.startBefore}</Label>
               <Select
-                value={String(form.startBeforeMinutes)}
-                onValueChange={(v) => set("startBeforeMinutes", Number(v))}
+                value={form.startAt ? "fixed" : String(form.startBeforeMinutes)}
+                onValueChange={(v) =>
+                  v === "fixed"
+                    ? set("startAt", form.startAt ?? "12:00")
+                    : setForm((f) => ({ ...f, startAt: null, startBeforeMinutes: Number(v) }))
+                }
               >
                 <SelectTrigger className="h-10">
                   <SelectValue />
@@ -117,8 +123,18 @@ export function WelcomeCardSettings({
                       {copy.minutesBefore(m)}
                     </SelectItem>
                   ))}
+                  <SelectItem value="fixed">{copy.atSetTime}</SelectItem>
                 </SelectContent>
               </Select>
+              {form.startAt ? (
+                <Input
+                  type="time"
+                  className="mt-2 h-10 w-36"
+                  aria-label={copy.atSetTime}
+                  value={form.startAt}
+                  onChange={(e) => e.target.value && set("startAt", e.target.value)}
+                />
+              ) : null}
             </div>
             <div className="space-y-1">
               <Label>{copy.earlyLead}</Label>
@@ -140,6 +156,10 @@ export function WelcomeCardSettings({
             </div>
           </div>
           <p className="rounded-xl bg-muted p-3 text-sm">{copy.howItEnds}</p>
+          <div className="space-y-2 rounded-xl border border-border p-3">
+            <p className="text-sm font-medium">{copy.todayList}</p>
+            <TodayCardList property={property} kind="in" />
+          </div>
         </div>
 
         {/* What the tablet shows, for one guest. */}
