@@ -1,23 +1,156 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, DoorClosed, KeyRound, LogIn, Plane } from "lucide-react";
 
 import { useQrImage } from "@/components/guest/CheckInQr";
 import { useNow } from "@/components/guest/KioskClocks";
 import { guest as copy } from "@/content/copy";
-import { EXPRESS_CLOSE_MINUTES, pageNow } from "@/lib/checkout-goodbye";
+import {
+  EXPRESS_CLOSE_MINUTES,
+  PER_PAGE,
+  cardEdge,
+  cardInk,
+  pageNow,
+} from "@/lib/checkout-goodbye";
+import { deviceToken } from "@/lib/kiosk-presence";
+import { cn } from "@/lib/utils";
 import { kioskExpressCheckout, kioskGoodbyes, type GoodbyeCard } from "@/lib/goodbye.functions";
 import { gridFor } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
 
-type Goodbyes = { cards: GoodbyeCard[]; keyDrop: string; lockDoor: boolean };
+type Goodbyes = {
+  cards: GoodbyeCard[];
+  keyDrop: string;
+  lockDoor: boolean;
+  /** The host's card colours (Settings → Kiosk). */
+  colours?: { in: string; out: string };
+  mergedWelcome?: number | null;
+};
+
+/**
+ * Text as large as fits its box: tries sizes down from `max` until it no
+ * longer spills (height or width), and again whenever the box changes size.
+ */
+function FitText({
+  text,
+  max,
+  min = 14,
+  className,
+}: {
+  text: string;
+  max: number;
+  min?: number;
+  className?: string;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLParagraphElement>(null);
+  useLayoutEffect(() => {
+    const b = box.current;
+    const t = inner.current;
+    if (!b || !t) return;
+    const fit = () => {
+      let lo = min;
+      let hi = max;
+      // Binary search on the font size; a dozen steps is to the pixel.
+      for (let i = 0; i < 12; i++) {
+        const mid = (lo + hi) / 2;
+        t.style.fontSize = `${mid}px`;
+        if (t.scrollHeight <= b.clientHeight && t.scrollWidth <= b.clientWidth) lo = mid;
+        else hi = mid;
+      }
+      t.style.fontSize = `${Math.floor(lo)}px`;
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(b);
+    return () => ro.disconnect();
+  }, [text, max, min]);
+  return (
+    <div ref={box} className="min-h-0 flex-1 overflow-hidden">
+      <p ref={inner} className={className}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * One guest's card: the host's colour with readable ink and a strong
+ * outline, the message as big as the card allows, the room and time, and a
+ * large full-width button. Sizes follow the card (container units), so a
+ * card filling half the screen reads from across the hall.
+ */
+function GuestCard({
+  card,
+  colour,
+  busy,
+  onPress,
+}: {
+  card: GoodbyeCard;
+  colour: string;
+  busy: boolean;
+  onPress: () => void;
+}) {
+  const ink = cardInk(colour);
+  const edge = cardEdge(colour);
+  const big = (n: number) => `clamp(1rem, ${n}cqmin, ${n * 0.9}rem)`;
+  return (
+    <section
+      className="flex min-h-0 flex-col overflow-hidden rounded-[3cqmin]"
+      style={{
+        containerType: "size",
+        background: colour,
+        color: ink,
+        border: `max(4px, 1.4cqmin) solid ${edge}`,
+        padding: "max(12px, 4cqmin)",
+        gap: "max(8px, 2.5cqmin)",
+      }}
+    >
+      <FitText
+        text={card.message}
+        max={140}
+        min={16}
+        className="font-display font-bold leading-[1.08]"
+      />
+      <p className="shrink-0 font-semibold leading-tight" style={{ fontSize: big(6) }}>
+        {[card.room, card.kind === "in" ? copy.arrivalFrom(card.until) : copy.goodbyeBy(card.until)]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onPress}
+        className="flex w-full shrink-0 items-center justify-center gap-[0.4em] rounded-full font-bold shadow-lg disabled:opacity-60"
+        style={{
+          background: ink,
+          color: colour,
+          fontSize: big(8),
+          minHeight: "max(56px, 16cqmin)",
+          padding: "0.35em 0.8em",
+        }}
+      >
+        {card.kind === "in" ? (
+          <>
+            <LogIn className="size-[1em]" aria-hidden /> {copy.arrivalCheckIn}
+          </>
+        ) : (
+          <>
+            {copy.goodbyeExpress} <ArrowRight className="size-[1em]" aria-hidden />
+          </>
+        )}
+      </button>
+    </section>
+  );
+}
 
 /** Today's goodbyes for the door tablet: read on start, every minute and when the host pings. */
 export function useKioskGoodbyes(code: string, enabled: boolean) {
   const fn = useServerFn(kioskGoodbyes);
   const [data, setData] = useState<Goodbyes | null>(null);
   const load = useCallback(() => {
-    void fn({ data: { code } })
+    const device = deviceToken(code);
+    void fn({ data: { code, ...(device ? { device } : {}) } })
       .then(setData)
       .catch(() => undefined);
   }, [code, fn]);
@@ -47,19 +180,30 @@ export function KioskGoodbyeScreen({
   onCheckIn,
   onArrive,
   onLeft,
+  contained = false,
+  page: fixedPage,
 }: {
   code: string;
   goodbyes: Goodbyes;
   onCheckIn: () => void;
-  /** A guest's check-in card: start checking in (the photo ID finds their stay). */
-  onArrive: () => void;
+  /** A guest's check-in card: start checking in (the photo ID finds their stay, or the host's welcome opens it). */
+  onArrive: (card: GoodbyeCard) => void;
   onLeft: () => void;
+  /** The host's preview: inside its frame instead of over the whole screen, on a set page. */
+  contained?: boolean;
+  page?: number;
 }) {
   const now = useNow(1000);
   const express = useServerFn(kioskExpressCheckout);
   const [done, setDone] = useState<Awaited<ReturnType<typeof kioskExpressCheckout>> | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const { items, page, pages } = pageNow(goodbyes.cards, now.getTime());
+  const paged = pageNow(goodbyes.cards, now.getTime());
+  const pages = paged.pages;
+  const page = fixedPage === undefined ? paged.page : Math.min(fixedPage, pages - 1);
+  const items =
+    fixedPage === undefined
+      ? paged.items
+      : goodbyes.cards.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
   const grid = gridFor(items.length);
 
   if (done)
@@ -74,9 +218,16 @@ export function KioskGoodbyeScreen({
     );
 
   return (
-    <div className="fixed inset-0 z-[94] flex select-none flex-col bg-primary p-[2vmin] text-primary-foreground">
-      <header className="flex items-center justify-between gap-4 px-[1vmin] pb-[1.5vmin]">
-        <h1 className="flex items-center gap-3 font-display text-[clamp(1.5rem,4vmin,3rem)]">
+    <div
+      className={cn(
+        "inset-0 flex select-none flex-col bg-primary p-[2cqmin] text-primary-foreground",
+        contained ? "absolute" : "fixed z-[94]",
+      )}
+      // Sizes follow this screen (the tablet's, or the host's preview frame).
+      style={{ containerType: "size" }}
+    >
+      <header className="flex items-center justify-between gap-4 px-[1cqmin] pb-[1.5cqmin]">
+        <h1 className="flex items-center gap-3 font-display text-[clamp(1.75rem,5.5cqmin,4rem)] font-bold">
           <Plane className="size-[1em]" aria-hidden />{" "}
           {copy.cardsTitle(
             goodbyes.cards.filter((c) => c.kind === "in").length,
@@ -84,64 +235,40 @@ export function KioskGoodbyeScreen({
           )}
         </h1>
         {pages > 1 ? (
-          <span className="text-[clamp(0.9rem,2vmin,1.25rem)] opacity-80">
+          <span className="text-[clamp(0.9rem,2cqmin,1.25rem)] opacity-80">
             {copy.goodbyePage(page + 1, pages)}
           </span>
         ) : null}
       </header>
       <div
-        className="grid min-h-0 flex-1 gap-[1.5vmin]"
+        className="grid min-h-0 flex-1 gap-[1.5cqmin]"
         style={{
           gridTemplateColumns: `repeat(${grid.cols}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${grid.rows}, minmax(0, 1fr))`,
         }}
       >
         {items.map((c, i) => (
-          <section
+          <GuestCard
             key={c.handle || `in-${i}-${c.firstName}`}
-            className="flex min-h-0 flex-col justify-between gap-[1vmin] overflow-hidden rounded-[2vmin] bg-primary-foreground p-[2.5vmin] text-primary"
-          >
-            <div className="min-h-0">
-              <p
-                className="font-display leading-tight"
-                style={{ fontSize: `clamp(1.1rem, ${grid.cols > 2 ? 2.6 : 4}vmin, 3rem)` }}
-              >
-                {c.message}
-              </p>
-              <p className="mt-[1vmin] text-[clamp(0.85rem,1.8vmin,1.25rem)] opacity-80">
-                {[c.room, c.kind === "in" ? copy.arrivalFrom(c.until) : copy.goodbyeBy(c.until)]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </div>
-            {c.kind === "in" ? (
-              <button
-                type="button"
-                onClick={onArrive}
-                className="inline-flex min-h-12 w-fit items-center gap-2 rounded-full bg-primary px-[2.5vmin] py-[1vmin] text-[clamp(1rem,2.2vmin,1.5rem)] font-semibold text-primary-foreground"
-              >
-                <LogIn className="size-[1em]" aria-hidden /> {copy.arrivalCheckIn}
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => {
-                  setBusy(c.handle);
-                  void express({ data: { code, handle: c.handle } })
-                    .then(setDone)
-                    .catch(() => undefined)
-                    .finally(() => setBusy(null));
-                }}
-                className="inline-flex min-h-12 w-fit items-center gap-2 rounded-full bg-primary px-[2.5vmin] py-[1vmin] text-[clamp(1rem,2.2vmin,1.5rem)] font-semibold text-primary-foreground"
-              >
-                {copy.goodbyeExpress} <ArrowRight className="size-[1em]" aria-hidden />
-              </button>
-            )}
-          </section>
+            card={c}
+            colour={
+              c.kind === "in"
+                ? (goodbyes.colours?.in ?? "#F6E2A8")
+                : (goodbyes.colours?.out ?? "#CFE3EC")
+            }
+            busy={c.kind === "out" && busy !== null}
+            onPress={() => {
+              if (c.kind === "in") return onArrive(c);
+              setBusy(c.handle);
+              void express({ data: { code, handle: c.handle } })
+                .then(setDone)
+                .catch(() => undefined)
+                .finally(() => setBusy(null));
+            }}
+          />
         ))}
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-[1vmin] pt-[1.5vmin] text-[clamp(0.95rem,2.2vmin,1.5rem)]">
+      <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-[1cqmin] pt-[1.5cqmin] text-[clamp(1.1rem,3cqmin,2.2rem)] font-semibold">
         <div className="space-y-1">
           {goodbyes.keyDrop && goodbyes.cards.some((c) => c.kind !== "in") ? (
             <p className="flex items-start gap-2">
@@ -158,7 +285,7 @@ export function KioskGoodbyeScreen({
         <button
           type="button"
           onClick={onCheckIn}
-          className="inline-flex min-h-12 items-center gap-2 rounded-full border-2 border-primary-foreground px-5 py-2 font-semibold"
+          className="inline-flex min-h-14 items-center gap-2 rounded-full border-[3px] border-primary-foreground px-6 py-2 font-bold"
         >
           <LogIn className="size-[1em]" aria-hidden /> {copy.goodbyeCheckIn}
         </button>

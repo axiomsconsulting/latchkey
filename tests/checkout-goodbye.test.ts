@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cardEdge,
+  cardInk,
   DEFAULT_ARRIVALS,
   DEFAULT_GOODBYE,
   arrivalStart,
@@ -130,5 +132,16 @@ describe("check-in cards", () => {
 
   it("fill in the name", () => {
     expect(arrivalText(normaliseArrivals({ message: "Hi {name} !" }), "Tom")).toBe("Hi Tom!");
+  });
+});
+
+describe("card colours", () => {
+  it("keep a chosen colour, with readable ink and a stronger outline", () => {
+    expect(normaliseGoodbye({ colour: "#183b2b" }).colour).toBe("#183B2B");
+    expect(normaliseArrivals({ colour: "red" }).colour).toBe(DEFAULT_ARRIVALS.colour);
+    expect(cardInk("#F6E2A8")).toBe("#1B1B1B");
+    expect(cardInk("#183B2B")).toBe("#FFFFFF");
+    expect(cardEdge("#FFFFFF")).toBe("#8C8C8C");
+    expect(cardEdge("#000000")).toBe("#595959");
   });
 });

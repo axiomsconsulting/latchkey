@@ -28,7 +28,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { common, doorTabletsCopy as copy, updateCopy } from "@/content/copy";
 import { useLatestVersion } from "@/hooks/use-app-update";
-import { newerVersion } from "@/lib/app-update";
+import { newerVersion, type UpdateMode } from "@/lib/app-update";
+import { UpdateChooser } from "@/components/host/UpdateChooser";
+import { KioskPreview } from "@/components/host/KioskPreview";
 import { requestTabletUpdate } from "@/lib/app-updates.functions";
 import { gridFor, isOnline, tabletName } from "@/lib/kiosk-devices";
 import {
@@ -111,6 +113,7 @@ export function DoorTablets({ property }: { property: Property }) {
           <h2 className="text-xl">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
+        <KioskPreview property={property} />
         {cameras.length ? (
           <Button variant="outline" onClick={() => setWall(true)}>
             <Video className="size-4" /> {copy.viewCameras(cameras.length)}
@@ -475,22 +478,24 @@ export function TabletStrip({ property }: { property: Property }) {
   );
 }
 
-/** Update this property's tablets: now (each reloads once idle) or at a set time. */
+/** Update this property's tablets: now, when not in use, or at a set time. */
 function TabletUpdates({ property }: { property: Property }) {
   const fn = useServerFn(requestTabletUpdate);
-  const [at, setAt] = useState("");
   const [busy, setBusy] = useState(false);
-  async function ask(when: string | null) {
+  async function ask(mode: UpdateMode, at: string | null) {
     setBusy(true);
     try {
       const res = await fn({
-        data: {
-          propertyId: property.id,
-          ...(when ? { at: new Date(when).toISOString() } : {}),
-        },
+        data: { propertyId: property.id, mode, ...(at ? { at } : {}) },
       });
       if (res.code) await pingKiosk(res.code);
-      toast.success(when ? updateCopy.tabletsScheduled : updateCopy.tabletsAsked);
+      toast.success(
+        at
+          ? updateCopy.tabletsScheduled
+          : mode === "now"
+            ? updateCopy.tabletsNowDone
+            : updateCopy.tabletsAsked,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
     } finally {
@@ -498,24 +503,9 @@ function TabletUpdates({ property }: { property: Property }) {
     }
   }
   return (
-    <div className="mt-4 rounded-xl border border-border p-3 text-sm">
+    <div className="mt-4 space-y-2 rounded-xl border border-border p-3 text-sm">
       <p className="font-medium">{updateCopy.tabletsTitle}</p>
-      <p className="text-muted-foreground">{updateCopy.tabletsHelp}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => void ask(null)}>
-          <RefreshCw className="size-4" /> {updateCopy.tabletsNow}
-        </Button>
-        <Input
-          type="datetime-local"
-          className="h-9 w-auto"
-          aria-label={updateCopy.at}
-          value={at}
-          onChange={(e) => setAt(e.target.value)}
-        />
-        <Button size="sm" variant="outline" disabled={busy || !at} onClick={() => void ask(at)}>
-          {updateCopy.schedule}
-        </Button>
-      </div>
+      <UpdateChooser busy={busy} onChoose={(mode, at) => void ask(mode, at)} />
     </div>
   );
 }

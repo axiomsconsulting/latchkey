@@ -71,8 +71,8 @@ export type TabletState = {
   calibration: ReturnType<typeof normaliseCalibrations>;
   /** The host is watching its camera until then (the tablet sends snapshots and says so on screen). */
   watchUntil: string | null;
-  /** The host asked it to update (now, or at that time): it reloads once nobody has used it for 15 minutes. */
-  updateAt: string | null;
+  /** The host asked it to update: at once, or once nobody has used it for 15 minutes, from that time. */
+  update: { at: string; mode: "now" | "idle" } | null;
 };
 
 const notPaired: TabletState = {
@@ -84,7 +84,7 @@ const notPaired: TabletState = {
   pairCode: null,
   calibration: {},
   watchUntil: null,
-  updateAt: null,
+  update: null,
 };
 
 /**
@@ -158,7 +158,9 @@ export const kioskTablet = createServerFn({ method: "POST" })
         r.camera_allowed && r.watch_until && Date.parse(r.watch_until) > Date.now()
           ? r.watch_until
           : null,
-      updateAt: r.update_requested_at ?? null,
+      update: r.update_requested_at
+        ? { at: r.update_requested_at, mode: r.update_mode === "now" ? "now" : "idle" }
+        : null,
     });
 
     if (data.device) {

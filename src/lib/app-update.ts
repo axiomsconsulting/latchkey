@@ -9,23 +9,45 @@
  * tests/app-update.test.ts.
  */
 
-export const CHECK_MINUTES = 5;
+export const CHECK_MINUTES = 2;
 export const IDLE_MINUTES = 15;
 /** A scheduled update is announced on the dashboard from this long before. */
 export const NOTICE_HOURS = 24;
 
 export type Audience = "hosts" | "kiosks";
-export type UpdateRequests = Record<Audience, string | null>;
+/**
+ * How a device updates once its time comes: "now" reloads straight away
+ * (within a minute or two of being asked); "idle" waits until nobody has
+ * used it for 15 minutes and nothing on it is busy. A scheduled update is a
+ * request with a future time.
+ */
+export type UpdateMode = "now" | "idle";
+export type UpdateRequest = { at: string; mode: UpdateMode };
+export type UpdateRequests = Record<Audience, UpdateRequest | null>;
 
 const iso = (v: unknown) =>
   typeof v === "string" && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
+
+/** A stored request: { at, mode }, or an older plain time (which waited for idle). */
+export function readRequest(v: unknown): UpdateRequest | null {
+  if (typeof v === "string") {
+    const at = iso(v);
+    return at ? { at, mode: "idle" } : null;
+  }
+  if (v && typeof v === "object") {
+    const r = v as Record<string, unknown>;
+    const at = iso(r["at"]);
+    return at ? { at, mode: r["mode"] === "now" ? "now" : "idle" } : null;
+  }
+  return null;
+}
 
 export function normaliseUpdates(raw: unknown): UpdateRequests {
   const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<
     string,
     unknown
   >;
-  return { hosts: iso(r["hosts"]), kiosks: iso(r["kiosks"]) };
+  return { hosts: readRequest(r["hosts"]), kiosks: readRequest(r["kiosks"]) };
 }
 
 /** a > b for versions like "0.90.1". */
@@ -40,30 +62,40 @@ export function newerVersion(a: string | null | undefined, b: string): boolean {
   return false;
 }
 
-/** An update was asked for after this page loaded, and its time has come. */
+/**
+ * An update asked for after this page loaded whose time has come: "now" if
+ * any such request says now, else "idle", else null.
+ */
 export function updateDue(
-  requests: Array<string | null | undefined>,
+  requests: Array<UpdateRequest | null | undefined>,
   loadedAtMs: number,
   nowMs: number,
-): boolean {
-  return requests.some((r) => {
-    const t = r ? Date.parse(r) : Number.NaN;
+): UpdateMode | null {
+  const due = requests.filter((r): r is UpdateRequest => {
+    const t = r ? Date.parse(r.at) : Number.NaN;
     return Number.isFinite(t) && t > loadedAtMs && t <= nowMs;
   });
+  if (!due.length) return null;
+  return due.some((r) => r.mode === "now") ? "now" : "idle";
 }
 
-/** Reload now? Only when due, nobody has touched it for 15 minutes, and nothing on screen needs it. */
-export function shouldReload(o: { due: boolean; idleMs: number; busy: boolean }): boolean {
-  return o.due && !o.busy && o.idleMs >= IDLE_MINUTES * 60_000;
+/** Reload now? "now" at once; "idle" only once nobody has touched it for 15 minutes and nothing on it is busy. */
+export function shouldReload(o: {
+  due: UpdateMode | null;
+  idleMs: number;
+  busy: boolean;
+}): boolean {
+  if (o.due === "now") return true;
+  return o.due === "idle" && !o.busy && o.idleMs >= IDLE_MINUTES * 60_000;
 }
 
 /** The next scheduled update to tell people about (within NOTICE_HOURS), or null. */
 export function upcomingUpdate(
-  requests: Array<string | null | undefined>,
+  requests: Array<UpdateRequest | null | undefined>,
   nowMs: number,
 ): string | null {
   const next = requests
-    .map((r) => (r ? Date.parse(r) : Number.NaN))
+    .map((r) => (r ? Date.parse(r.at) : Number.NaN))
     .filter((t) => Number.isFinite(t) && t > nowMs && t - nowMs <= NOTICE_HOURS * 3_600_000)
     .sort((a, b) => a - b)[0];
   return next === undefined ? null : new Date(next).toISOString();

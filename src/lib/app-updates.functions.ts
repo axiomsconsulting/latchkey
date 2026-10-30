@@ -55,7 +55,14 @@ export const getAppUpdates = createServerFn({ method: "GET" })
 export const setAppUpdate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ audience: z.enum(["hosts", "kiosks"]), at: when }).parse(d),
+    z
+      .object({
+        audience: z.enum(["hosts", "kiosks"]),
+        at: when,
+        /** "now": reload at once (at `at`); "idle": once nobody has used it for 15 minutes. */
+        mode: z.enum(["now", "idle"]).default("idle"),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
@@ -65,7 +72,10 @@ export const setAppUpdate = createServerFn({ method: "POST" })
       .select("app_updates")
       .eq("id", 1)
       .maybeSingle();
-    const next = { ...normaliseUpdates(row?.app_updates), [data.audience]: data.at };
+    const next = {
+      ...normaliseUpdates(row?.app_updates),
+      [data.audience]: data.at ? { at: data.at, mode: data.mode } : null,
+    };
     const { error } = await db
       .from("site_settings")
       .update({ app_updates: next, updated_at: new Date().toISOString() })
@@ -100,6 +110,7 @@ export const requestTabletUpdate = createServerFn({ method: "POST" })
         propertyId: uuid,
         deviceIds: z.array(uuid).max(99).optional(),
         at: z.string().datetime({ offset: true }).optional(),
+        mode: z.enum(["now", "idle"]).default("idle"),
       })
       .parse(d),
   )
@@ -108,7 +119,7 @@ export const requestTabletUpdate = createServerFn({ method: "POST" })
     const db = await admin();
     let q = db
       .from("kiosk_devices")
-      .update({ update_requested_at: data.at ?? new Date().toISOString() })
+      .update({ update_requested_at: data.at ?? new Date().toISOString(), update_mode: data.mode })
       .eq("property_id", data.propertyId)
       .eq("status", "confirmed");
     if (data.deviceIds?.length) q = q.in("id", data.deviceIds);

@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.94.0",
+    date: "2026-10-30",
+    title: "Bigger cards, previews and dependable updates",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Check-in and check-out cards on the door tablet are bold and big, readable from across the hall: the words grow to fill each card without spilling over, buttons are large and full width, and each card has a strong outline in a colour you choose (Settings → Kiosk).",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Preview tablets (Today and Door tablets): see what each door tablet shows right now, screen by screen as its cards turn.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "A welcome you write for a guest no longer covers today's cards: it replaces that guest's card (no repeat) or joins the others. Cards that someone put aside with \"Checking in? Start here\" come back after a while instead of the screensaver taking over.",
+      },
+      {
+        kind: "fixed",
+        area: "Settings",
+        text: "Updating door tablets and dashboards now works the way you choose: Update now (within a minute or two), When not in use (once nobody has used it for 15 minutes), or at a set time.",
+      },
+    ],
+  },
+  {
     version: "0.93.0",
     date: "2026-10-30",
     title: "Check-in cards: start time and per-guest control",
