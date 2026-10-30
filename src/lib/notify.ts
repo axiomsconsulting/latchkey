@@ -18,6 +18,7 @@ export type AlertKind =
   | "handover"
   | "direct_enquiry"
   | "tablet_joined"
+  | "system_update"
   | "test";
 
 /** Kinds that need the host now: the only ones sent by SMS unless the host asks for everything. */
@@ -79,6 +80,7 @@ const TITLES: Record<AlertKind, string> = {
   handover: "Guest wants you to check them in",
   direct_enquiry: "New direct enquiry",
   tablet_joined: "A door tablet joined",
+  system_update: "Latchkey update",
   test: "Test alert",
 };
 
