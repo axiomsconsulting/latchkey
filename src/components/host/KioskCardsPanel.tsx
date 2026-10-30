@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
+import { KioskPreview } from "@/components/host/KioskPreview";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
 import { Button } from "@/components/ui/button";
 import { common, kioskCardsCopy as copy } from "@/content/copy";
@@ -154,6 +155,7 @@ export function KioskCardsPanel({
         </div>
       ) : null}
 
+      <KioskPreview property={property} />
       <Link
         to="/app/settings"
         search={{ focus: tab === "in" ? "welcomeCards" : "goodbye" }}

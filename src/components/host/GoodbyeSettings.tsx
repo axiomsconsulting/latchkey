@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { common, goodbyeCopy as copy, kioskCardsCopy } from "@/content/copy";
 import { TodayCardList } from "@/components/host/KioskCardsPanel";
+import { CardColourField, CardPreview } from "@/components/host/CardColourField";
 import {
   LATE_LEAD_CHOICES,
   START_CHOICES,
@@ -157,27 +158,25 @@ export function GoodbyeSettings({ property }: { property: { id: string; short_co
         </div>
 
         {/* What the tablet shows, for one guest. */}
-        <div
-          className="rounded-2xl bg-primary p-5 text-primary-foreground"
-          aria-label={copy.preview}
-        >
-          <p className="text-xs uppercase tracking-[0.2em] opacity-80">{copy.preview}</p>
-          <p className="mt-3 font-display text-2xl leading-tight">
-            {goodbyeText(form, copy.sampleName)}
-          </p>
-          {form.keyDrop ? (
-            <p className="mt-3 flex gap-2 text-sm">
-              <KeyRound className="mt-0.5 size-4 shrink-0" aria-hidden /> {form.keyDrop}
-            </p>
-          ) : null}
-          {form.lockDoor ? (
-            <p className="mt-2 flex gap-2 text-sm">
-              <DoorClosed className="mt-0.5 size-4 shrink-0" aria-hidden /> {copy.lockLine}
-            </p>
-          ) : null}
-          <p className="mt-4 inline-block rounded-full bg-primary-foreground px-4 py-2 text-sm font-semibold text-primary">
-            {copy.express}
-          </p>
+        <div className="space-y-3">
+          <CardPreview
+            colour={form.colour}
+            label={copy.preview}
+            text={goodbyeText(form, copy.sampleName)}
+            button={copy.express}
+          >
+            {form.keyDrop ? (
+              <p className="mt-3 flex gap-2 text-sm font-semibold">
+                <KeyRound className="mt-0.5 size-4 shrink-0" aria-hidden /> {form.keyDrop}
+              </p>
+            ) : null}
+            {form.lockDoor ? (
+              <p className="mt-2 flex gap-2 text-sm font-semibold">
+                <DoorClosed className="mt-0.5 size-4 shrink-0" aria-hidden /> {copy.lockLine}
+              </p>
+            ) : null}
+          </CardPreview>
+          <CardColourField value={form.colour} onChange={(v) => set("colour", v)} />
         </div>
       </div>
     </section>

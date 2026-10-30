@@ -734,10 +734,19 @@ function Kiosk() {
   // The welcome is put aside for this guest's go (they tapped Check in, or "Not you?"); it comes
   // back when the kiosk resets, until the guest has checked in, the host takes it off or it ends.
   const [asideVersion, setAsideVersion] = useState<number | null>(null);
-  const welcomeUp = shared && !!welcome && asideVersion !== welcome.version;
+  const asideRef = useRef(asideVersion);
+  asideRef.current = asideVersion;
   // Check-out day: goodbyes for guests leaving now, unless someone arriving tapped "Checking in?".
   const { goodbyes, reload: reloadGoodbyes } = useKioskGoodbyes(p.code, shared);
+  // With guests' cards up, the host's welcome is one of them (it replaces that guest's card or joins them), never over them.
+  const welcomeUp =
+    shared &&
+    !!welcome &&
+    asideVersion !== welcome.version &&
+    goodbyes?.mergedWelcome !== welcome.version;
   const [goodbyeAside, setGoodbyeAside] = useState(false);
+  const goodbyeAsideRef = useRef(goodbyeAside);
+  goodbyeAsideRef.current = goodbyeAside;
   // Untouched for a while: the welcome rests (split, screen-friendly) until touched.
   const [welcomeRest, setWelcomeRest] = useState(false);
   // Tapping Check in on the welcome: CheckInFlow opens that guest's stay.
@@ -785,8 +794,9 @@ function Kiosk() {
   // The newest version: the small Update button, and reloading by itself when asked and nobody's using it.
   const appUpdate = useAppUpdate({
     audience: "kiosks",
-    extra: [tablet?.updateAt],
-    busy: !!welcome || !atWelcome || !!goodbyes?.cards.length,
+    extra: [tablet?.update],
+    // "When not in use" waits for a check-in or a host's welcome to finish (cards come back after a reload).
+    busy: welcomeUp || !atWelcome,
     enabled: shared && !tour,
   });
   const goodbyeUp = shared && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
@@ -818,7 +828,18 @@ function Kiosk() {
       setAsideVersion(null);
       setGoodbyeAside(false);
     },
-    onSaver: () => setSaver(true),
+    // Cards or a welcome put aside by someone who then walked away come back instead of the screensaver.
+    onSaver: () => {
+      if (goodbyeAsideRef.current || asideRef.current !== null) {
+        setGoodbyeAside(false);
+        setAsideVersion(null);
+        setWelcomeStart(null);
+        setSession((n) => n + 1);
+        bump();
+        return;
+      }
+      setSaver(true);
+    },
     onWelcomeRest: () => setWelcomeRest(true),
   });
 
@@ -1095,10 +1116,15 @@ function Kiosk() {
               setGoodbyeAside(true);
               bump();
             }}
-            onArrive={() => {
-              // Their card: check in starting with the photo ID, which finds their stay.
+            onArrive={(card) => {
+              // The host's welcome opens their stay as it does on its own; any other card starts with the photo ID.
               setGoodbyeAside(true);
-              setWelcomeStart({ version: null, n: Date.now() });
+              setWelcomeStart(
+                card.welcome?.checkIn
+                  ? { version: card.welcome.version, n: Date.now(), source: card.welcome.source }
+                  : { version: null, n: Date.now() },
+              );
+              if (card.welcome) dismiss();
               setSession((n) => n + 1);
               bump();
             }}

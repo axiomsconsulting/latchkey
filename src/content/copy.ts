@@ -1415,17 +1415,22 @@ export const updateCopy = branded({
   hosts: "Host dashboards",
   kiosks: "Door tablets",
   now: "Update now",
+  whenIdle: "When not in use",
+  modesHelp:
+    "Update now: reloads within a minute or two, even mid-use. When not in use: once nobody has used it for 15 minutes (a tablet also waits for a check-in or your welcome to finish). Scheduled: reloads at that time.",
+  modeName: { now: "straight away", idle: "when not in use" } as Record<string, string>,
   at: "At",
   schedule: "Schedule",
   cancel: "Cancel",
   none: "Nothing asked for",
-  asked: (when: string) => `Asked for ${when}`,
+  asked: (when: string, how: string) => `Asked for ${when}, ${how}`,
   saved: (n: number) => (n ? `Scheduled. ${n} businesses told in their alerts.` : "Done."),
   tabletsTitle: "Update tablets",
   tabletsNow: "Update all tablets",
   tabletsHelp:
     "Each tablet reloads with the newest version once nobody has used it for 15 minutes and no welcome or goodbye is showing.",
-  tabletsAsked: "Tablets will update when they're idle.",
+  tabletsAsked: "Tablets will update once nobody is using them.",
+  tabletsNowDone: "Tablets are updating now.",
   tabletsScheduled: "Scheduled.",
   outOfDate: (v: string) => `Older version (newest v${v})`,
 });
@@ -1462,12 +1467,29 @@ export const kioskCardsCopy = branded({
   earlyLeadOption: (m: number) =>
     m === 0 ? "At their early check-in time" : `${m} min before their early check-in`,
   howItEnds:
-    "It shows until they check in or the day ends, and goes earlier when you take it off here or on Today. While any check-in or check-out card is up, the screensaver doesn't start. A custom welcome you write for one guest shows over the cards.",
+    "It shows until they check in or the day ends, and goes earlier when you take it off here or on Today. While any check-in or check-out card is up, the screensaver doesn't start. A custom welcome you write joins the cards: it replaces that guest's card (never a second one) or adds a card.",
   saved: "Check-in cards saved",
   checkIn: "Check in",
   atSetTime: "At a set time of day",
+  colour: "Card colour",
+  anyColour: "Any colour",
   todayList: "Arriving today: take a card off, or show it now",
   todayListOut: "Leaving today: take a card off, or show it now",
+});
+
+export const kioskPreviewCopy = branded({
+  open: "Preview tablets",
+  title: "What the door tablets show now",
+  body: "Each tablet's screen as it is now, page by page when cards turn. Updates every 15 seconds while open.",
+  allTablets: "Every tablet",
+  cardsLine: (n: number, pages: number) =>
+    `${n} card${n === 1 ? "" : "s"}${pages > 1 ? `, ${pages} screens turning every 5 seconds` : ""}`,
+  welcomeLine: "Your welcome, full screen",
+  startLine: "The usual start screen",
+  screenOf: (n: number, of: number) => `Screen ${n} of ${of}`,
+  checkIn: "Check in",
+  startTitle: "Welcome",
+  startBody: "The usual check-in start screen (or the screensaver when nobody's about).",
 });
 
 export const doorTabletsCopy = branded({

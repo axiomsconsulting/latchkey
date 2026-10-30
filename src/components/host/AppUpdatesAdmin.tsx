@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { common, updateCopy as copy } from "@/content/copy";
-import type { Audience } from "@/lib/app-update";
+import type { Audience, UpdateMode, UpdateRequest } from "@/lib/app-update";
+import { UpdateChooser } from "@/components/host/UpdateChooser";
 import { getAppUpdates, setAppUpdate } from "@/lib/app-updates.functions";
 
 const show = (iso: string) =>
@@ -52,16 +51,15 @@ function AudienceRow({
   onDone,
 }: {
   audience: Audience;
-  asked: string | null;
+  asked: UpdateRequest | null;
   onDone: () => void;
 }) {
   const setFn = useServerFn(setAppUpdate);
-  const [at, setAt] = useState("");
   const [busy, setBusy] = useState(false);
-  async function save(when: string | null) {
+  async function save(at: string | null, mode: UpdateMode) {
     setBusy(true);
     try {
-      const res = await setFn({ data: { audience, at: when } });
+      const res = await setFn({ data: { audience, at, mode } });
       toast.success(copy.saved(res.told));
       onDone();
     } catch (err) {
@@ -73,32 +71,18 @@ function AudienceRow({
   return (
     <div className="space-y-2 rounded-xl border border-border p-3 text-sm">
       <p className="font-medium">{copy[audience]}</p>
-      <p className="text-muted-foreground">{asked ? copy.asked(show(asked)) : copy.none}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" disabled={busy} onClick={() => void save(new Date().toISOString())}>
-          <RefreshCw className="size-4" /> {copy.now}
+      <p className="text-muted-foreground">
+        {asked ? copy.asked(show(asked.at), copy.modeName[asked.mode]!) : copy.none}
+      </p>
+      <UpdateChooser
+        busy={busy}
+        onChoose={(mode, at) => void save(at ?? new Date().toISOString(), mode)}
+      />
+      {asked && Date.parse(asked.at) > Date.now() ? (
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => void save(null, "idle")}>
+          {copy.cancel}
         </Button>
-        <Input
-          type="datetime-local"
-          className="h-9 w-auto"
-          aria-label={copy.at}
-          value={at}
-          onChange={(e) => setAt(e.target.value)}
-        />
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy || !at}
-          onClick={() => void save(new Date(at).toISOString())}
-        >
-          {copy.schedule}
-        </Button>
-        {asked && Date.parse(asked) > Date.now() ? (
-          <Button size="sm" variant="ghost" disabled={busy} onClick={() => void save(null)}>
-            {copy.cancel}
-          </Button>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

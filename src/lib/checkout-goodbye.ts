@@ -22,6 +22,8 @@ export type Goodbye = {
   lockDoor: boolean;
   startBeforeMinutes: number;
   lateLeadMinutes: number;
+  /** The card's background colour on the door tablet. */
+  colour: string;
 };
 
 export const DEFAULT_GOODBYE: Goodbye = {
@@ -31,7 +33,43 @@ export const DEFAULT_GOODBYE: Goodbye = {
   lockDoor: true,
   startBeforeMinutes: 120,
   lateLeadMinutes: 30,
+  colour: "#CFE3EC",
 };
+
+/** Card colours offered first (any colour can be picked too). */
+export const CARD_COLOURS = [
+  "#F6E2A8",
+  "#F4C9B7",
+  "#CFE3EC",
+  "#D6E9C6",
+  "#E3D4F0",
+  "#FFFFFF",
+  "#183B2B",
+  "#7A2E2E",
+] as const;
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+export const cardColour = (v: unknown, d: string) =>
+  typeof v === "string" && HEX.test(v) ? v.toUpperCase() : d;
+
+/** Dark text on a light card, white on a dark one. */
+export function cardInk(bg: string): string {
+  const n = Number.parseInt(bg.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum > 0.55 ? "#1B1B1B" : "#FFFFFF";
+}
+
+/** A stronger shade of the card's colour for its outline (solid, never see-through). */
+export function cardEdge(bg: string): string {
+  const n = Number.parseInt(bg.slice(1), 16);
+  const dark = cardInk(bg) === "#FFFFFF";
+  const f = (c: number) =>
+    Math.round(dark ? c + (255 - c) * 0.35 : c * 0.55)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${f((n >> 16) & 255)}${f((n >> 8) & 255)}${f(n & 255)}`.toUpperCase();
+}
 
 export const START_CHOICES = [30, 60, 120, 180, 240] as const;
 export const LATE_LEAD_CHOICES = [0, 15, 30, 60] as const;
@@ -62,6 +100,7 @@ export function normaliseGoodbye(raw: unknown): Goodbye {
       DEFAULT_GOODBYE.startBeforeMinutes,
     ),
     lateLeadMinutes: pick(r["lateLeadMinutes"], LATE_LEAD_CHOICES, DEFAULT_GOODBYE.lateLeadMinutes),
+    colour: cardColour(r["colour"], DEFAULT_GOODBYE.colour),
   };
 }
 
@@ -142,6 +181,8 @@ export type ArrivalCards = {
   /** A set time of day to start ("12:00") instead of a time before check-in; null = before check-in. */
   startAt: string | null;
   earlyLeadMinutes: number;
+  /** The card's background colour on the door tablet. */
+  colour: string;
 };
 
 export const DEFAULT_ARRIVALS: ArrivalCards = {
@@ -150,6 +191,7 @@ export const DEFAULT_ARRIVALS: ArrivalCards = {
   startBeforeMinutes: 120,
   startAt: null,
   earlyLeadMinutes: 30,
+  colour: "#F6E2A8",
 };
 
 export function normaliseArrivals(raw: unknown): ArrivalCards {
@@ -174,6 +216,7 @@ export function normaliseArrivals(raw: unknown): ArrivalCards {
       LATE_LEAD_CHOICES,
       DEFAULT_ARRIVALS.earlyLeadMinutes,
     ),
+    colour: cardColour(r["colour"], DEFAULT_ARRIVALS.colour),
   };
 }
 

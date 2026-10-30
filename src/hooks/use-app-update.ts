@@ -15,6 +15,7 @@ import {
   upcomingUpdate,
   updateDue,
   type Audience,
+  type UpdateRequest,
   type UpdateRequests,
 } from "@/lib/app-update";
 import { APP_VERSION } from "@/lib/app-version";
@@ -46,7 +47,7 @@ export async function reloadToUpdate() {
 export function useAppUpdate(o: {
   audience: Audience;
   /** Other update requests for this device (a host asking for their tablet). */
-  extra?: Array<string | null | undefined>;
+  extra?: Array<UpdateRequest | null | undefined>;
   /** Someone is in the middle of something here: never reload. */
   busy?: boolean;
   enabled?: boolean;

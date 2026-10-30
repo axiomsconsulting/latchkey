@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { TodayCardList } from "@/components/host/KioskCardsPanel";
+import { CardColourField, CardPreview } from "@/components/host/CardColourField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -163,14 +164,14 @@ export function WelcomeCardSettings({
         </div>
 
         {/* What the tablet shows, for one guest. */}
-        <div className="rounded-2xl bg-primary-foreground p-5 text-primary ring-1 ring-border">
-          <p className="text-xs uppercase tracking-[0.2em] opacity-80">{goodbyeCopy.preview}</p>
-          <p className="mt-3 font-display text-2xl leading-tight">
-            {arrivalText(form, goodbyeCopy.sampleName)}
-          </p>
-          <p className="mt-4 inline-block rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-            {copy.checkIn}
-          </p>
+        <div className="space-y-3">
+          <CardPreview
+            colour={form.colour}
+            label={goodbyeCopy.preview}
+            text={arrivalText(form, goodbyeCopy.sampleName)}
+            button={copy.checkIn}
+          />
+          <CardColourField value={form.colour} onChange={(v) => set("colour", v)} />
         </div>
       </div>
     </section>
