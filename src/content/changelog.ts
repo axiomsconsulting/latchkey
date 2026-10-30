@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.92.0",
+    date: "2026-10-30",
+    title: "Check-in cards, and welcome and goodbye in one place",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Check-in cards (Settings → Kiosk): guests arriving today get a personal welcome card on the door tablet from a time you choose before check-in (just before their early check-in if they booked one) until they check in. Its Check in button starts with their photo ID, which finds their booking. Check-in and check-out cards share the screen, laid out the same way.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: 'Today\'s welcome card is now "Door tablet: welcome and goodbye": a Check-in and a Check-out tab listing today\'s guests, where you can show a guest\'s card now or take it off, plus your custom welcome. This also removes the second "Leaving today" card.',
+      },
+    ],
+  },
+  {
     version: "0.91.0",
     date: "2026-10-30",
     title: "Updates without interrupting anyone",

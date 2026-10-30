@@ -50,6 +50,7 @@ import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-dat
 import { TeamPanel } from "@/components/host/TeamPanel";
 import { DEMO_EMAIL } from "@/lib/demo-account";
 import { GoodbyeSettings } from "@/components/host/GoodbyeSettings";
+import { WelcomeCardSettings } from "@/components/host/WelcomeCardSettings";
 import { PrivacySettings } from "@/components/host/PrivacySettings";
 import { GroupBrandSettings } from "@/components/host/GroupBrandSettings";
 import { InvoiceSettings } from "@/components/host/InvoiceSettings";
@@ -88,6 +89,7 @@ const FOCUS = [
   "kioskTablets",
   "kioskScreen",
   "goodbye",
+  "welcomeCards",
   "extras",
   "money",
   "theme",
@@ -128,6 +130,7 @@ const OWN_CARD = new Set([
   "kioskTablets",
   "kioskScreen",
   "goodbye",
+  "welcomeCards",
   "money",
 ]);
 
@@ -648,6 +651,15 @@ function SettingsPage() {
           {themedProperty ? (
             <div id="settings-reviews" className="scroll-mt-24 rounded-2xl">
               <ReviewSettings propertyId={(themedProperty as { id: string }).id} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="welcomeCards">
+          {themedProperty ? (
+            <div id="settings-welcomeCards" className="scroll-mt-24 rounded-2xl">
+              <WelcomeCardSettings
+                property={themedProperty as unknown as { id: string; short_code: string }}
+              />
             </div>
           ) : null}
         </Section>

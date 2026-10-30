@@ -45,11 +45,14 @@ export function KioskGoodbyeScreen({
   code,
   goodbyes,
   onCheckIn,
+  onArrive,
   onLeft,
 }: {
   code: string;
   goodbyes: Goodbyes;
   onCheckIn: () => void;
+  /** A guest's check-in card: start checking in (the photo ID finds their stay). */
+  onArrive: () => void;
   onLeft: () => void;
 }) {
   const now = useNow(1000);
@@ -74,7 +77,11 @@ export function KioskGoodbyeScreen({
     <div className="fixed inset-0 z-[94] flex select-none flex-col bg-primary p-[2vmin] text-primary-foreground">
       <header className="flex items-center justify-between gap-4 px-[1vmin] pb-[1.5vmin]">
         <h1 className="flex items-center gap-3 font-display text-[clamp(1.5rem,4vmin,3rem)]">
-          <Plane className="size-[1em]" aria-hidden /> {copy.goodbyeTitle(goodbyes.cards.length)}
+          <Plane className="size-[1em]" aria-hidden />{" "}
+          {copy.cardsTitle(
+            goodbyes.cards.filter((c) => c.kind === "in").length,
+            goodbyes.cards.filter((c) => c.kind !== "in").length,
+          )}
         </h1>
         {pages > 1 ? (
           <span className="text-[clamp(0.9rem,2vmin,1.25rem)] opacity-80">
@@ -89,9 +96,9 @@ export function KioskGoodbyeScreen({
           gridTemplateRows: `repeat(${grid.rows}, minmax(0, 1fr))`,
         }}
       >
-        {items.map((c) => (
+        {items.map((c, i) => (
           <section
-            key={c.handle}
+            key={c.handle || `in-${i}-${c.firstName}`}
             className="flex min-h-0 flex-col justify-between gap-[1vmin] overflow-hidden rounded-[2vmin] bg-primary-foreground p-[2.5vmin] text-primary"
           >
             <div className="min-h-0">
@@ -102,34 +109,46 @@ export function KioskGoodbyeScreen({
                 {c.message}
               </p>
               <p className="mt-[1vmin] text-[clamp(0.85rem,1.8vmin,1.25rem)] opacity-80">
-                {[c.room, copy.goodbyeBy(c.until)].filter(Boolean).join(" · ")}
+                {[c.room, c.kind === "in" ? copy.arrivalFrom(c.until) : copy.goodbyeBy(c.until)]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => {
-                setBusy(c.handle);
-                void express({ data: { code, handle: c.handle } })
-                  .then(setDone)
-                  .catch(() => undefined)
-                  .finally(() => setBusy(null));
-              }}
-              className="inline-flex min-h-12 w-fit items-center gap-2 rounded-full bg-primary px-[2.5vmin] py-[1vmin] text-[clamp(1rem,2.2vmin,1.5rem)] font-semibold text-primary-foreground"
-            >
-              {copy.goodbyeExpress} <ArrowRight className="size-[1em]" aria-hidden />
-            </button>
+            {c.kind === "in" ? (
+              <button
+                type="button"
+                onClick={onArrive}
+                className="inline-flex min-h-12 w-fit items-center gap-2 rounded-full bg-primary px-[2.5vmin] py-[1vmin] text-[clamp(1rem,2.2vmin,1.5rem)] font-semibold text-primary-foreground"
+              >
+                <LogIn className="size-[1em]" aria-hidden /> {copy.arrivalCheckIn}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => {
+                  setBusy(c.handle);
+                  void express({ data: { code, handle: c.handle } })
+                    .then(setDone)
+                    .catch(() => undefined)
+                    .finally(() => setBusy(null));
+                }}
+                className="inline-flex min-h-12 w-fit items-center gap-2 rounded-full bg-primary px-[2.5vmin] py-[1vmin] text-[clamp(1rem,2.2vmin,1.5rem)] font-semibold text-primary-foreground"
+              >
+                {copy.goodbyeExpress} <ArrowRight className="size-[1em]" aria-hidden />
+              </button>
+            )}
           </section>
         ))}
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-[1vmin] pt-[1.5vmin] text-[clamp(0.95rem,2.2vmin,1.5rem)]">
         <div className="space-y-1">
-          {goodbyes.keyDrop ? (
+          {goodbyes.keyDrop && goodbyes.cards.some((c) => c.kind !== "in") ? (
             <p className="flex items-start gap-2">
               <KeyRound className="mt-[0.2em] size-[1em] shrink-0" aria-hidden /> {goodbyes.keyDrop}
             </p>
           ) : null}
-          {goodbyes.lockDoor ? (
+          {goodbyes.lockDoor && goodbyes.cards.some((c) => c.kind !== "in") ? (
             <p className="flex items-start gap-2">
               <DoorClosed className="mt-[0.2em] size-[1em] shrink-0" aria-hidden />{" "}
               {copy.expressDoor}

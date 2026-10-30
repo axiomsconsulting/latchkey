@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_ARRIVALS,
   DEFAULT_GOODBYE,
+  arrivalStart,
+  arrivalText,
+  normaliseArrivals,
+  showsArrival,
+  showsGoodbyeNow,
   goodbyeText,
   goodbyeWindow,
   normaliseGoodbye,
@@ -77,5 +83,43 @@ describe("check-out goodbye", () => {
     expect(g.startBeforeMinutes).toBe(120);
     expect(g.lateLeadMinutes).toBe(15);
     expect(goodbyeText(g, "Priya")).toBe("Bye Priya!");
+  });
+});
+
+describe("check-in cards", () => {
+  const arriving = { status: "upcoming", check_in_date: "2026-10-30", check_in_time: null };
+  it("show from two hours before check-in until they check in", () => {
+    const show = (t: string, b = arriving) =>
+      showsArrival(b, "2026-10-30", at(t), "15:00", tz, DEFAULT_ARRIVALS);
+    expect(show("12:59")).toBe(false);
+    expect(show("13:00")).toBe(true);
+    expect(show("23:00")).toBe(true);
+    expect(show("16:00", { ...arriving, status: "checked_in" })).toBe(false);
+    expect(show("16:00", { ...arriving, welcome_card_dismissed_at: "x" } as never)).toBe(false);
+  });
+
+  it("with an early check-in, start just before their own earlier time", () => {
+    const early = { ...arriving, check_in_time: "12:00" };
+    expect(arrivalStart(early, "15:00", tz, DEFAULT_ARRIVALS)).toEqual({
+      from: at("11:30"),
+      early: true,
+    });
+  });
+
+  it("show at once when the host asks, even when switched off", () => {
+    const b = { ...arriving, welcome_now_at: "x" };
+    expect(
+      showsArrival(b, "2026-10-30", at("08:00"), "15:00", tz, { ...DEFAULT_ARRIVALS, on: false }),
+    ).toBe(true);
+    expect(
+      showsGoodbyeNow({ ...stay, goodbye_now_at: "x" }, "2026-10-30", at("06:00"), "11:00", tz, {
+        ...DEFAULT_GOODBYE,
+        on: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("fill in the name", () => {
+    expect(arrivalText(normaliseArrivals({ message: "Hi {name} !" }), "Tom")).toBe("Hi Tom!");
   });
 });
