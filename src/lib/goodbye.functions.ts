@@ -11,10 +11,14 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   LATE_LEAD_CHOICES,
   START_CHOICES,
+  arrivalStart,
+  arrivalText,
   goodbyeText,
   goodbyeWindow,
+  normaliseArrivals,
   normaliseGoodbye,
-  showsGoodbye,
+  showsArrival,
+  showsGoodbyeNow,
 } from "@/lib/checkout-goodbye";
 import { firstName } from "@/lib/checkin-logic";
 import { todayInZone } from "@/lib/dates";
@@ -67,27 +71,56 @@ const goodbyeInput = z.object({
   lateLeadMinutes: z.number().refine((n) => (LATE_LEAD_CHOICES as readonly number[]).includes(n)),
 });
 
+const arrivalsInput = z.object({
+  on: z.boolean(),
+  message: z.string().max(300),
+  startBeforeMinutes: z.number().refine((n) => (START_CHOICES as readonly number[]).includes(n)),
+  earlyLeadMinutes: z.number().refine((n) => (LATE_LEAD_CHOICES as readonly number[]).includes(n)),
+});
+
+/** Both kinds of card for a property: check-in (arrivals) and check-out (goodbye). */
 export const getGoodbyeSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: p, error } = await (context.supabase as any)
+    const sb = context.supabase as any;
+    const { data: p, error } = await sb
       .from("properties")
-      .select("checkout_goodbye")
+      .select("checkout_goodbye, checkin_welcome")
       .eq("id", data.propertyId)
       .maybeSingle();
-    if (error) return { available: false as const, goodbye: normaliseGoodbye(null) };
-    return { available: true as const, goodbye: normaliseGoodbye(p?.checkout_goodbye) };
+    if (error)
+      return {
+        available: false as const,
+        goodbye: normaliseGoodbye(null),
+        arrivals: normaliseArrivals(null),
+      };
+    return {
+      available: true as const,
+      goodbye: normaliseGoodbye(p?.checkout_goodbye),
+      arrivals: normaliseArrivals(p?.checkin_welcome),
+    };
   });
 
 export const saveGoodbyeSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid, goodbye: goodbyeInput }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        propertyId: uuid,
+        goodbye: goodbyeInput.optional(),
+        arrivals: arrivalsInput.optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const { error } = await (context.supabase as any)
       .from("properties")
-      .update({ checkout_goodbye: normaliseGoodbye(data.goodbye) })
+      .update({
+        ...(data.goodbye ? { checkout_goodbye: normaliseGoodbye(data.goodbye) } : {}),
+        ...(data.arrivals ? { checkin_welcome: normaliseArrivals(data.arrivals) } : {}),
+      })
       .eq("id", data.propertyId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -97,23 +130,33 @@ async function propertyFor(shortCode: string) {
   const db = await admin();
   const { data: p, error } = await db
     .from("properties")
-    .select("id, timezone, default_check_out_time, checkout_goodbye")
+    .select(
+      "id, timezone, default_check_in_time, default_check_out_time, checkout_goodbye, checkin_welcome",
+    )
     .eq("short_code", shortCode.toLowerCase())
     .maybeSingle();
   return { db, p: error ? null : p };
 }
 
 export type GoodbyeCard = {
+  /** "in": a guest arriving today; "out": a guest leaving today. */
+  kind: "in" | "out";
+  /** Leaving guests only: for Express check-out. */
   handle: string;
   firstName: string;
   room: string | null;
   message: string;
-  /** Their check-out time ("11:00", or their late one). */
+  /** Their check-in or check-out time ("15:00", or an early/late one). */
   until: string;
+  /** Early check-in or late check-out booked. */
   late: boolean;
 };
 
-/** The door tablet: the goodbyes showing now, the key drop and the door reminder. */
+/**
+ * The door tablet: the check-in and check-out cards showing now (guests
+ * arriving and leaving today, by the host's timings, or straight away when
+ * the host asked), with the key drop and door reminder for leaving guests.
+ */
 export const kioskGoodbyes = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ code }).parse(d))
   .handler(async ({ data }) => {
@@ -121,40 +164,54 @@ export const kioskGoodbyes = createServerFn({ method: "GET" })
     const { db, p } = await propertyFor(data.code);
     if (!p) return none;
     const g = normaliseGoodbye(p.checkout_goodbye);
-    if (!g.on) return none;
+    const a = normaliseArrivals(p.checkin_welcome);
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
-    const standard = (p.default_check_out_time ?? "11:00").slice(0, 5);
+    const standardOut = (p.default_check_out_time ?? "11:00").slice(0, 5);
+    const standardIn = (p.default_check_in_time ?? "15:00").slice(0, 5);
     const { data: rows, error } = await db
       .from("bookings")
       .select(
-        "id, status, check_out_date, check_out_time, guest_full_name, goodbye_dismissed_at, mirror_of, rooms(display_name, sort_order)",
+        "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
       )
       .eq("property_id", p.id)
-      .eq("check_out_date", today)
-      .limit(200);
+      .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
+      .limit(400);
     if (error) return none;
     const now = Date.now();
-    const showing = ((rows ?? []) as any[]).filter((b) =>
-      showsGoodbye(b, today, now, standard, tz, g),
-    );
-    const cards = await Promise.all(
-      showing
-        .sort(
-          (a, b) =>
-            (a.rooms?.sort_order ?? 0) - (b.rooms?.sort_order ?? 0) ||
-            String(a.rooms?.display_name ?? "").localeCompare(String(b.rooms?.display_name ?? "")),
+    const all = (rows ?? []) as any[];
+    const byRoom = (x: any, y: any) =>
+      (x.rooms?.sort_order ?? 0) - (y.rooms?.sort_order ?? 0) ||
+      String(x.rooms?.display_name ?? "").localeCompare(String(y.rooms?.display_name ?? ""));
+    const arriving = all
+      .filter((b) => b.check_in_date === today && showsArrival(b, today, now, standardIn, tz, a))
+      .sort(byRoom)
+      .map((b): GoodbyeCard => ({
+        kind: "in",
+        handle: "",
+        firstName: firstName(b.guest_full_name),
+        room: b.rooms?.display_name ?? null,
+        message: arrivalText(a, firstName(b.guest_full_name)),
+        until: (b.check_in_time ?? standardIn).slice(0, 5),
+        late: arrivalStart(b, standardIn, tz, a).early,
+      }));
+    const leaving = await Promise.all(
+      all
+        .filter(
+          (b) => b.check_out_date === today && showsGoodbyeNow(b, today, now, standardOut, tz, g),
         )
+        .sort(byRoom)
         .map(async (b): Promise<GoodbyeCard> => ({
+          kind: "out",
           handle: await handleFor(b.id, p.id),
           firstName: firstName(b.guest_full_name),
           room: b.rooms?.display_name ?? null,
           message: goodbyeText(g, firstName(b.guest_full_name)),
-          until: (b.check_out_time ?? standard).slice(0, 5),
-          late: goodbyeWindow(b, standard, tz, g).late,
+          until: (b.check_out_time ?? standardOut).slice(0, 5),
+          late: goodbyeWindow(b, standardOut, tz, g).late,
         })),
     );
-    return { cards, keyDrop: g.keyDrop, lockDoor: g.lockDoor };
+    return { cards: [...arriving, ...leaving], keyDrop: g.keyDrop, lockDoor: g.lockDoor };
   });
 
 /** Marks the stay checked out and takes its goodbye off the tablet. */
@@ -224,10 +281,15 @@ export const guideCheckout = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** The host takes a guest's goodbye off the tablet (they've said goodbye in person). Returns the code to ping. */
-export const dismissGoodbye = createServerFn({ method: "POST" })
+/**
+ * Today: the host shows a guest's check-in or check-out card on the tablet
+ * now (whatever the time), or takes it off. Returns the code to ping.
+ */
+export const setKioskCard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ bookingId: uuid }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ bookingId: uuid, kind: z.enum(["in", "out"]), show: z.boolean() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const db = await admin();
     const { data: b } = await db
@@ -237,9 +299,80 @@ export const dismissGoodbye = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!b?.properties) throw new Error("We couldn't find that stay.");
     await requireWrite(context.supabase, b.properties.host_id);
-    await db
-      .from("bookings")
-      .update({ goodbye_dismissed_at: new Date().toISOString() })
-      .eq("id", b.id);
+    const now = new Date().toISOString();
+    const patch =
+      data.kind === "in"
+        ? data.show
+          ? { welcome_now_at: now, welcome_card_dismissed_at: null }
+          : { welcome_card_dismissed_at: now, welcome_now_at: null }
+        : data.show
+          ? { goodbye_now_at: now, goodbye_dismissed_at: null }
+          : { goodbye_dismissed_at: now, goodbye_now_at: null };
+    const { error } = await db.from("bookings").update(patch).eq("id", b.id);
+    if (error)
+      throw new Error(
+        /now_at|card_dismissed/.test(error.message)
+          ? "Showing cards from Today needs the latest update (migration 0070)."
+          : error.message,
+      );
     return { code: b.properties.short_code as string };
+  });
+
+/** Today: each arriving and leaving guest's card, and whether it's on the tablet now. */
+export const todayKioskCards = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as any;
+    const { data: p, error: pe } = await sb
+      .from("properties")
+      .select(
+        "timezone, default_check_in_time, default_check_out_time, checkout_goodbye, checkin_welcome",
+      )
+      .eq("id", data.propertyId)
+      .maybeSingle();
+    if (pe || !p) return { available: false as const, states: {} as Record<string, string> };
+    const tz = p.timezone ?? "Europe/London";
+    const today = todayInZone(tz);
+    const { data: rows, error } = await sb
+      .from("bookings")
+      .select(
+        "id, status, check_in_date, check_out_date, check_in_time, check_out_time, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of",
+      )
+      .eq("property_id", data.propertyId)
+      .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
+      .limit(400);
+    if (error) return { available: false as const, states: {} as Record<string, string> };
+    const now = Date.now();
+    const g = normaliseGoodbye(p.checkout_goodbye);
+    const a = normaliseArrivals(p.checkin_welcome);
+    const states: Record<string, string> = {};
+    for (const b of (rows ?? []) as any[]) {
+      if (b.check_in_date === today)
+        states[`in:${b.id}`] =
+          b.status === "checked_in"
+            ? "done"
+            : b.welcome_card_dismissed_at
+              ? "off"
+              : showsArrival(b, today, now, (p.default_check_in_time ?? "15:00").slice(0, 5), tz, a)
+                ? "showing"
+                : "later";
+      if (b.check_out_date === today)
+        states[`out:${b.id}`] =
+          b.status === "checked_out"
+            ? "done"
+            : b.goodbye_dismissed_at
+              ? "off"
+              : showsGoodbyeNow(
+                    b,
+                    today,
+                    now,
+                    (p.default_check_out_time ?? "11:00").slice(0, 5),
+                    tz,
+                    g,
+                  )
+                ? "showing"
+                : "later";
+    }
+    return { available: true as const, states };
   });

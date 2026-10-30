@@ -1373,7 +1373,7 @@ export const checkinSettings = branded({
 });
 
 export const goodbyeCopy = branded({
-  title: "Check-out goodbye",
+  title: "Check-out cards",
   body: "On check-out day the door tablet says goodbye to each guest leaving: a personal goodbye, safe travels and where the keys go. Their guest guide puts the check-out things first too.",
   unavailable: "The check-out goodbye needs the latest database update (migration 0068).",
   on: "Say goodbye on the door tablet on check-out day",
@@ -1428,6 +1428,43 @@ export const updateCopy = branded({
   tabletsAsked: "Tablets will update when they're idle.",
   tabletsScheduled: "Scheduled.",
   outOfDate: (v: string) => `Older version (newest v${v})`,
+});
+
+export const kioskCardsCopy = branded({
+  title: "Door tablet: welcome and goodbye",
+  body: "Each guest arriving or leaving today gets a card on the door tablet, on the timings in Settings → Kiosk. Show one now, or take it off.",
+  tabIn: (n: number) => `Check-in (${n})`,
+  tabOut: (n: number) => `Check-out (${n})`,
+  noName: "Guest (no name yet)",
+  state: {
+    showing: "On the tablet now",
+    later: "Shows later today",
+    off: "Taken off",
+    done: "Done",
+  } as Record<string, string>,
+  showNow: "Show now",
+  takeOff: "Take off",
+  shownNow: "On the tablet now.",
+  takenOff: "Taken off the tablet.",
+  noneIn: "Nobody arrives today.",
+  noneOut: "Nobody checks out today.",
+  custom: "Write a custom welcome",
+  settingsIn: "Check-in card settings",
+  settingsOut: "Check-out card settings",
+  settingsTitle: "Check-in cards",
+  settingsBody:
+    "On arrival day the door tablet welcomes each guest by name. Its Check in button starts with their photo ID, which finds their booking, so a card never skips the ID check.",
+  on: "Welcome arriving guests on the door tablet",
+  startBefore: "Start showing it",
+  minutesBefore: (m: number) =>
+    m < 60 ? `${m} min before check-in` : `${m / 60} hour${m === 60 ? "" : "s"} before check-in`,
+  earlyLead: "With an early check-in, start",
+  earlyLeadOption: (m: number) =>
+    m === 0 ? "At their early check-in time" : `${m} min before their early check-in`,
+  howItEnds:
+    "It shows until they check in or the day ends. It goes earlier when you take it off on Today. A custom welcome you write for one guest shows over the cards.",
+  saved: "Check-in cards saved",
+  checkIn: "Check in",
 });
 
 export const doorTabletsCopy = branded({
@@ -1493,6 +1530,16 @@ export const guest = branded({
   nights: (n: number) => (n === 1 ? "1 night" : `${n} nights`),
   cameraFlip: "Switch camera",
   goodbyeTitle: (n: number) => (n === 1 ? "Leaving today" : `${n} guests leaving today`),
+  cardsTitle: (arriving: number, leaving: number) =>
+    [
+      arriving ? `${arriving} arriving` : null,
+      leaving ? `${leaving} leaving` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ")
+      .replace(/^/, "Today: "),
+  arrivalFrom: (t: string) => `Check-in from ${t}`,
+  arrivalCheckIn: "Check in",
   goodbyeSafe: "Safe travels.",
   goodbyeBy: (t: string) => `Check-out by ${t}`,
   goodbyeExpress: "Express check-out",
@@ -4294,7 +4341,8 @@ export const settingsMenuCopy = branded({
     invoices: ["Invoices", "money"],
     theme: ["Look and feel", "look"],
     kioskTablets: ["Door tablets", "kiosk"],
-    goodbye: ["Check-out goodbye", "kiosk"],
+    welcomeCards: ["Check-in cards", "kiosk"],
+    goodbye: ["Check-out cards", "kiosk"],
     kioskScreen: ["Door tablet screen", "kiosk"],
     kioskRest: ["Screen saver", "kiosk"],
     alerts: ["Alerts", "apps"],

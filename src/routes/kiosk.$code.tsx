@@ -1094,6 +1094,13 @@ function Kiosk() {
               setGoodbyeAside(true);
               bump();
             }}
+            onArrive={() => {
+              // Their card: check in starting with the photo ID, which finds their stay.
+              setGoodbyeAside(true);
+              setWelcomeStart({ version: null, n: Date.now() });
+              setSession((n) => n + 1);
+              bump();
+            }}
             onLeft={() => {
               reloadGoodbyes();
               setSession((n) => n + 1);

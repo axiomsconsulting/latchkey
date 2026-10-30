@@ -123,3 +123,115 @@ export function pageNow<T>(items: T[], nowMs: number): { items: T[]; page: numbe
   const page = Math.floor(nowMs / (PAGE_SECONDS * 1000)) % pages;
   return { items: items.slice(page * PER_PAGE, (page + 1) * PER_PAGE), page, pages };
 }
+
+/* ------------------------------ check-in cards ------------------------------ */
+
+/**
+ * Check-in cards (properties.checkin_welcome, migration 0070): the same idea
+ * for guests arriving today. A personal welcome on the door tablet from
+ * `startBeforeMinutes` before their check-in time (an early check-in booked:
+ * `earlyLeadMinutes` before their own earlier time) until the end of the
+ * day, or until they check in. Its Check in button starts with their photo
+ * ID, which finds the stay, so a card never skips the ID check.
+ */
+export type ArrivalCards = {
+  on: boolean;
+  /** {name} is the guest's first name. */
+  message: string;
+  startBeforeMinutes: number;
+  earlyLeadMinutes: number;
+};
+
+export const DEFAULT_ARRIVALS: ArrivalCards = {
+  on: true,
+  message: "Welcome, {name}! We're so glad you're here. Tap Check in to get your room.",
+  startBeforeMinutes: 120,
+  earlyLeadMinutes: 30,
+};
+
+export function normaliseArrivals(raw: unknown): ArrivalCards {
+  const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<
+    string,
+    unknown
+  >;
+  return {
+    on: typeof r["on"] === "boolean" ? r["on"] : DEFAULT_ARRIVALS.on,
+    message: text(r["message"], DEFAULT_ARRIVALS.message, 300) || DEFAULT_ARRIVALS.message,
+    startBeforeMinutes: pick(
+      r["startBeforeMinutes"],
+      START_CHOICES,
+      DEFAULT_ARRIVALS.startBeforeMinutes,
+    ),
+    earlyLeadMinutes: pick(
+      r["earlyLeadMinutes"],
+      LATE_LEAD_CHOICES,
+      DEFAULT_ARRIVALS.earlyLeadMinutes,
+    ),
+  };
+}
+
+export const arrivalText = (a: ArrivalCards, firstName: string) =>
+  a.message
+    .replace(/\{name\}/g, firstName || "")
+    .replace(/\s+([,.!])/g, "$1")
+    .trim();
+
+export type ArrivingStay = {
+  status: string;
+  check_in_date: string;
+  /** Their own check-in time (an early check-in moves it), else null for the standard one. */
+  check_in_time: string | null;
+  welcome_card_dismissed_at?: string | null;
+  /** The host asked for it to show now, whatever the time. */
+  welcome_now_at?: string | null;
+  mirror_of?: string | null;
+};
+
+/** From when the arrival card shows (ms), and whether they booked an early check-in. */
+export function arrivalStart(
+  b: Pick<ArrivingStay, "check_in_date" | "check_in_time">,
+  standardTime: string,
+  tz: string,
+  a: ArrivalCards,
+): { from: number; early: boolean } {
+  const standard = zonedToUtc(b.check_in_date, standardTime.slice(0, 5), tz).getTime();
+  const own = b.check_in_time
+    ? zonedToUtc(b.check_in_date, b.check_in_time.slice(0, 5), tz).getTime()
+    : standard;
+  const early = own < standard;
+  return {
+    from: own - (early ? a.earlyLeadMinutes : a.startBeforeMinutes) * 60_000,
+    early,
+  };
+}
+
+const ARRIVING = new Set(["upcoming", "flagged", "needs_details"]);
+
+/** Whether a guest arriving today has a card on the tablet now. */
+export function showsArrival(
+  b: ArrivingStay,
+  today: string,
+  nowMs: number,
+  standardTime: string,
+  tz: string,
+  a: ArrivalCards,
+): boolean {
+  if (b.mirror_of || b.welcome_card_dismissed_at || !ARRIVING.has(b.status)) return false;
+  if (b.check_in_date !== today) return false;
+  if (b.welcome_now_at) return true;
+  return a.on && nowMs >= arrivalStart(b, standardTime, tz, a).from;
+}
+
+/** A goodbye the host asked to show now shows whatever the time, until they leave or it's taken off. */
+export function showsGoodbyeNow(
+  b: LeavingStay & { goodbye_now_at?: string | null },
+  today: string,
+  nowMs: number,
+  standardTime: string,
+  tz: string,
+  g: Goodbye,
+): boolean {
+  if (b.goodbye_now_at && !b.goodbye_dismissed_at && !b.mirror_of && STAYING.has(b.status))
+    return b.check_out_date === today;
+  return showsGoodbye(b, today, nowMs, standardTime, tz, g);
+}
