@@ -59,6 +59,7 @@ import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicPartnerAgreementRouteImport } from './routes/api/public/partner-agreement'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
+import { Route as ApiPublicVersionRouteImport } from './routes/api/public/version'
 import { Route as DemoHostRegionRouteImport } from './routes/demo.host_.$region'
 import { Route as StayAgainWithdrawTokenRouteImport } from './routes/stay-again.withdraw.$token'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
@@ -343,6 +344,11 @@ const ApiPublicTrackRoute = ApiPublicTrackRouteImport.update({
   path: '/api/public/track',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicVersionRoute = ApiPublicVersionRouteImport.update({
+  id: '/api/public/version',
+  path: '/api/public/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoHostRegionRoute = DemoHostRegionRouteImport.update({
   id: '/demo/host_/$region',
   path: '/demo/host/$region',
@@ -507,6 +513,7 @@ export interface FileRoutesByFullPath {
   '/api/public/partner-agreement': typeof ApiPublicPartnerAgreementRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/api/public/version': typeof ApiPublicVersionRoute
   '/demo/host/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -579,6 +586,7 @@ export interface FileRoutesByTo {
   '/api/public/partner-agreement': typeof ApiPublicPartnerAgreementRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/api/public/version': typeof ApiPublicVersionRoute
   '/demo/host/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -654,6 +662,7 @@ export interface FileRoutesById {
   '/api/public/partner-agreement': typeof ApiPublicPartnerAgreementRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track': typeof ApiPublicTrackRoute
+  '/api/public/version': typeof ApiPublicVersionRoute
   '/demo/host_/$region': typeof DemoHostRegionRoute
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -729,6 +738,7 @@ export interface FileRouteTypes {
     | '/api/public/partner-agreement'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/api/public/version'
     | '/demo/host/$region'
     | '/stay-again/withdraw/$token'
     | '/app/'
@@ -801,6 +811,7 @@ export interface FileRouteTypes {
     | '/api/public/partner-agreement'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/api/public/version'
     | '/demo/host/$region'
     | '/stay-again/withdraw/$token'
     | '/app'
@@ -875,6 +886,7 @@ export interface FileRouteTypes {
     | '/api/public/partner-agreement'
     | '/api/public/stripe-webhook'
     | '/api/public/track'
+    | '/api/public/version'
     | '/demo/host_/$region'
     | '/stay-again/withdraw/$token'
     | '/_authenticated/app/'
@@ -932,6 +944,7 @@ export interface RootRouteChildren {
   ApiPublicPartnerAgreementRoute: typeof ApiPublicPartnerAgreementRoute
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackRoute: typeof ApiPublicTrackRoute
+  ApiPublicVersionRoute: typeof ApiPublicVersionRoute
   DemoHostRegionRoute: typeof DemoHostRegionRoute
   StayAgainWithdrawTokenRoute: typeof StayAgainWithdrawTokenRoute
   ApiPublicAttachmentIdRoute: typeof ApiPublicAttachmentIdRoute
@@ -1305,6 +1318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTrackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/version': {
+      id: '/api/public/version'
+      path: '/api/public/version'
+      fullPath: '/api/public/version'
+      preLoaderRoute: typeof ApiPublicVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/host_/$region': {
       id: '/demo/host_/$region'
       path: '/demo/host/$region'
@@ -1567,6 +1587,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPartnerAgreementRoute: ApiPublicPartnerAgreementRoute,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackRoute: ApiPublicTrackRoute,
+  ApiPublicVersionRoute: ApiPublicVersionRoute,
   DemoHostRegionRoute: DemoHostRegionRoute,
   StayAgainWithdrawTokenRoute: StayAgainWithdrawTokenRoute,
   ApiPublicAttachmentIdRoute: ApiPublicAttachmentIdRoute,

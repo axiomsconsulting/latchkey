@@ -53,6 +53,8 @@ import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
 import { areaFor, type Area, type Calibrations } from "@/lib/kiosk-calibration";
 import { kioskSnapshotUpload, kioskTablet, type TabletState } from "@/lib/kiosk-devices.functions";
 import { APP_VERSION } from "@/lib/app-version";
+import { AppVersion } from "@/components/AppVersion";
+import { useAppUpdate } from "@/hooks/use-app-update";
 import { showPairCode, tabletName } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
 import { dayProgress } from "@/lib/kiosk-clock";
@@ -780,6 +782,13 @@ function Kiosk() {
     const id = window.setTimeout(() => setOutline(false), 20_000);
     return () => window.clearTimeout(id);
   }, [calibration.changedAt, shared]);
+  // The newest version: the small Update button, and reloading by itself when asked and nobody's using it.
+  const appUpdate = useAppUpdate({
+    audience: "kiosks",
+    extra: [tablet?.updateAt],
+    busy: !!welcome || !atWelcome || !!goodbyes?.cards.length,
+    enabled: shared && !tour,
+  });
   const goodbyeUp = shared && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
   // The welcome goes over everything, the screensaver too.
   useEffect(() => {
@@ -1110,7 +1119,11 @@ function Kiosk() {
           ) : shared && tablet?.number ? (
             `${tabletName(tablet)} · `
           ) : null}
-          v{APP_VERSION}
+          <AppVersion
+            current={appUpdate.current}
+            latest={appUpdate.latest}
+            available={appUpdate.available}
+          />
         </p>
 
         {/* While the host calibrates from the dashboard: the area's edges, so they can line it up. */}

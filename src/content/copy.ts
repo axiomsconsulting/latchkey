@@ -1403,6 +1403,33 @@ export const goodbyeCopy = branded({
   dismissed: "Taken off the tablet.",
 });
 
+export const updateCopy = branded({
+  update: "Update",
+  updateTo: (v: string) => (v ? `Update to v${v}` : "Update"),
+  scheduled: (when: string) =>
+    `Latchkey updates at ${when}. This page reloads by itself once you've left it alone for 15 minutes.`,
+  adminTitle: "App updates",
+  adminBody:
+    "Ask every host dashboard or every door tablet to load the newest version. Each one reloads by itself once nobody has used it for 15 minutes (a tablet also waits while a welcome or goodbye shows or someone is checking in). Schedule it to tell every business ahead in their alerts.",
+  running: (v: string) => `This server runs v${v}.`,
+  hosts: "Host dashboards",
+  kiosks: "Door tablets",
+  now: "Update now",
+  at: "At",
+  schedule: "Schedule",
+  cancel: "Cancel",
+  none: "Nothing asked for",
+  asked: (when: string) => `Asked for ${when}`,
+  saved: (n: number) => (n ? `Scheduled. ${n} businesses told in their alerts.` : "Done."),
+  tabletsTitle: "Update tablets",
+  tabletsNow: "Update all tablets",
+  tabletsHelp:
+    "Each tablet reloads with the newest version once nobody has used it for 15 minutes and no welcome or goodbye is showing.",
+  tabletsAsked: "Tablets will update when they're idle.",
+  tabletsScheduled: "Scheduled.",
+  outOfDate: (v: string) => `Older version (newest v${v})`,
+});
+
 export const doorTabletsCopy = branded({
   title: "Door tablets",
   body: "Every tablet at this property, by number. A tablet joins when it opens the kiosk: by itself on this property's Wi-Fi (if allowed below), or with the six-digit code it shows. Give each a name, line its screen up, and send a welcome to one tablet or all of them.",

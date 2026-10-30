@@ -34,6 +34,7 @@ import { LegalAdmin } from "@/components/host/LegalAdmin";
 import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
 import { CheckinJourneyAdmin } from "@/components/host/CheckinJourney";
+import { AppUpdatesAdmin } from "@/components/host/AppUpdatesAdmin";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
 import { DriveAdmin, StarterSectionsAdmin } from "@/components/host/GuideAdmin";
@@ -249,6 +250,7 @@ function AdminPage() {
           <LegalAdmin />
           <SiteSettings />
           <DomainsAdmin />
+          <AppUpdatesAdmin />
           <CheckinJourneyAdmin />
           <KioskSaverAdmin />
           <PricingAdmin />

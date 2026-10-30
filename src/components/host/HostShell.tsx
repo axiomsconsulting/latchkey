@@ -41,8 +41,10 @@ import {
 import { SetPasswordPrompt } from "@/components/host/SetPasswordPrompt";
 import { WhatsNewPopup } from "@/components/host/WhatsNewPopup";
 import { GuidedTour, openTour } from "@/components/host/GuidedTour";
-import { whatsNewCopy } from "@/content/copy";
+import { updateCopy, whatsNewCopy } from "@/content/copy";
 import { APP_VERSION } from "@/lib/app-version";
+import { AppVersion } from "@/components/AppVersion";
+import { useAppUpdate } from "@/hooks/use-app-update";
 import { TrialBanner } from "@/components/host/TrialBanner";
 import { UserChip } from "@/components/host/UserChip";
 import { LogoMark } from "@/components/theme/LogoMark";
@@ -165,6 +167,8 @@ function haptic() {
 }
 
 export function HostShell() {
+  // The newest version, and reloading by itself when Latchkey asks and nobody's using it.
+  const update = useAppUpdate({ audience: "hosts" });
   const navigate = useNavigate();
   const alertCount = useAlerts().data?.alerts.length ?? 0;
   const { data } = useWorkspace();
@@ -271,6 +275,7 @@ export function HostShell() {
   return (
     <ThemeScope theme={theme} global className="min-h-screen">
       <DesktopNav
+        update={update}
         mode={navMode}
         onMode={chooseNavMode}
         theme={theme}
@@ -335,7 +340,13 @@ export function HostShell() {
             <DropdownMenuItem asChild className="min-h-11 gap-3 rounded-xl">
               <Link to="/app/whats-new">
                 <Sparkles className="size-5" /> {whatsNewCopy.navLabel}
-                <span className="ml-auto text-xs text-muted-foreground">v{APP_VERSION}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  <AppVersion
+                    current={update.current}
+                    latest={update.latest}
+                    available={update.available}
+                  />
+                </span>
               </Link>
             </DropdownMenuItem>
             {canWrite ? (
@@ -382,6 +393,19 @@ export function HostShell() {
           {switcher("h-10 min-w-0 flex-1 rounded-2xl")}
           {readOnly}
         </div>
+      ) : null}
+
+      {/* A scheduled Latchkey update today: said once, quietly, above the page. */}
+      {update.upcoming ? (
+        <p className="mx-3 mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-secondary-foreground print:hidden">
+          {updateCopy.scheduled(
+            new Intl.DateTimeFormat("en-GB", {
+              weekday: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            }).format(new Date(update.upcoming)),
+          )}
+        </p>
       ) : null}
 
       {/* The shared demo: a tab on the side of the screen opening the property switcher (previews of each look) and the ways out. */}
@@ -550,6 +574,7 @@ function MenuDrawer({
 }
 
 function DesktopNav({
+  update,
   mode,
   onMode,
   theme,
@@ -571,6 +596,7 @@ function DesktopNav({
   title: string;
   alertCount: number;
   readOnly: ReactNode;
+  update: ReturnType<typeof useAppUpdate>;
   /** The property picker, sized for where it sits; empty with one property. */
   switcher: (className: string) => ReactNode;
   canWrite: boolean;
@@ -844,7 +870,12 @@ function DesktopNav({
         {/* The app version, for support. */}
         {!top && !narrow ? (
           <p className="px-3 pt-1 text-[11px] text-muted-foreground" title={APP_VERSION}>
-            {hostNav.version(APP_VERSION)}
+            <AppVersion
+              current={update.current}
+              latest={update.latest}
+              available={update.available}
+              label={hostNav.version}
+            />
           </p>
         ) : null}
         {top ? (

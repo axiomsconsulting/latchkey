@@ -9,6 +9,7 @@ import {
   Loader2,
   Maximize2,
   MonitorSmartphone,
+  RefreshCw,
   Trash2,
   Video,
 } from "lucide-react";
@@ -25,7 +26,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { common, doorTabletsCopy as copy } from "@/content/copy";
+import { common, doorTabletsCopy as copy, updateCopy } from "@/content/copy";
+import { useLatestVersion } from "@/hooks/use-app-update";
+import { newerVersion } from "@/lib/app-update";
+import { requestTabletUpdate } from "@/lib/app-updates.functions";
 import { gridFor, isOnline, tabletName } from "@/lib/kiosk-devices";
 import {
   listKioskDevices,
@@ -96,6 +100,7 @@ export function DoorTablets({ property }: { property: Property }) {
 
   const grid = gridFor(devices.length);
   const cameras = devices.filter((d) => d.status === "confirmed" && d.cameraAllowed);
+  const latest = useLatestVersion();
   return (
     <section className="card-soft p-5" data-tour="door-tablets">
       <div className="flex flex-wrap items-start gap-3">
@@ -156,6 +161,10 @@ export function DoorTablets({ property }: { property: Property }) {
             </span>
           </label>
 
+          {devices.some((d) => d.status === "confirmed") ? (
+            <TabletUpdates property={property} />
+          ) : null}
+
           {devices.length ? (
             <div
               className="mt-4 grid gap-3"
@@ -166,6 +175,7 @@ export function DoorTablets({ property }: { property: Property }) {
               {devices.map((d) => (
                 <TabletCard
                   key={d.id}
+                  latest={latest}
                   device={d}
                   property={property}
                   onChanged={() => void refresh()}
@@ -188,7 +198,9 @@ function TabletCard({
   device: d,
   property,
   onChanged,
+  latest,
 }: {
+  latest: string | null;
   device: KioskDevice;
   property: Property;
   onChanged: () => void;
@@ -237,6 +249,9 @@ function TabletCard({
             {pending ? copy.waiting : online ? copy.online : ago(d.lastSeenAt)}
             {d.appVersion ? ` · v${d.appVersion}` : ""}
           </p>
+          {d.appVersion && latest && newerVersion(latest, d.appVersion) ? (
+            <p className="text-xs text-accent">{updateCopy.outOfDate(latest)}</p>
+          ) : null}
         </div>
       </div>
       {pending ? (
@@ -456,6 +471,51 @@ export function TabletStrip({ property }: { property: Property }) {
       {wall ? (
         <CameraWall property={property} devices={cameras} onClose={() => setWall(false)} />
       ) : null}
+    </div>
+  );
+}
+
+/** Update this property's tablets: now (each reloads once idle) or at a set time. */
+function TabletUpdates({ property }: { property: Property }) {
+  const fn = useServerFn(requestTabletUpdate);
+  const [at, setAt] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function ask(when: string | null) {
+    setBusy(true);
+    try {
+      const res = await fn({
+        data: {
+          propertyId: property.id,
+          ...(when ? { at: new Date(when).toISOString() } : {}),
+        },
+      });
+      if (res.code) await pingKiosk(res.code);
+      toast.success(when ? updateCopy.tabletsScheduled : updateCopy.tabletsAsked);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="mt-4 rounded-xl border border-border p-3 text-sm">
+      <p className="font-medium">{updateCopy.tabletsTitle}</p>
+      <p className="text-muted-foreground">{updateCopy.tabletsHelp}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => void ask(null)}>
+          <RefreshCw className="size-4" /> {updateCopy.tabletsNow}
+        </Button>
+        <Input
+          type="datetime-local"
+          className="h-9 w-auto"
+          aria-label={updateCopy.at}
+          value={at}
+          onChange={(e) => setAt(e.target.value)}
+        />
+        <Button size="sm" variant="outline" disabled={busy || !at} onClick={() => void ask(at)}>
+          {updateCopy.schedule}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -46,6 +46,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.91.0",
+    date: "2026-10-30",
+    title: "Updates without interrupting anyone",
+    items: [
+      {
+        kind: "new",
+        area: "Settings",
+        text: "When a newer version of Latchkey is published, a small Update button appears next to the version number on your dashboard and on each door tablet.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Update your door tablets from Door tablets, now or at a set time: each one reloads by itself once nobody has used it for 15 minutes, never during a check-in or while a welcome or goodbye is showing. Tablets on an older version are marked.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        admin: true,
+        text: "Latchkey admin → Site settings → App updates: ask every host dashboard or every door tablet to update, now or scheduled; a scheduled update tells every business ahead in their alerts and shows a notice on their dashboard on the day.",
+      },
+    ],
+  },
+  {
     version: "0.90.0",
     date: "2026-10-30",
     title: "Check-out day",
