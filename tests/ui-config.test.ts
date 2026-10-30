@@ -110,7 +110,7 @@ describe("page sections", () => {
   });
 
   it("puts sections added in a later release next to their default neighbours, not at the end", () => {
-    // Saved before "messages" and "labels" existed: they join after "domain", where they sit by default.
+    // Saved before "messages" existed: it joins after "domain", where it sits by default.
     const l = normaliseLayouts({
       settings: {
         order: ["business", "team", "support", "domain", "privacy", "extras"],
@@ -125,9 +125,9 @@ describe("page sections", () => {
       "support",
       "domain",
       "messages",
-      "labels",
       "checkin",
       "records",
+      "stayAccess",
     ]);
     expect(order).toHaveLength(new Set(order).size);
   });

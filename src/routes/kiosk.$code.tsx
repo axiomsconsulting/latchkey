@@ -28,6 +28,7 @@ import {
   headerIconClass,
   useSaverLook,
 } from "@/components/guest/KioskClocks";
+import { KioskGoodbyeScreen, useKioskGoodbyes } from "@/components/guest/KioskGoodbye";
 import {
   KioskWelcomeOverlay,
   KioskWelcomeRest,
@@ -732,6 +733,9 @@ function Kiosk() {
   // back when the kiosk resets, until the guest has checked in, the host takes it off or it ends.
   const [asideVersion, setAsideVersion] = useState<number | null>(null);
   const welcomeUp = shared && !!welcome && asideVersion !== welcome.version;
+  // Check-out day: goodbyes for guests leaving now, unless someone arriving tapped "Checking in?".
+  const { goodbyes, reload: reloadGoodbyes } = useKioskGoodbyes(p.code, shared);
+  const [goodbyeAside, setGoodbyeAside] = useState(false);
   // Untouched for a while: the welcome rests (split, screen-friendly) until touched.
   const [welcomeRest, setWelcomeRest] = useState(false);
   // Tapping Check in on the welcome: CheckInFlow opens that guest's stay.
@@ -776,6 +780,7 @@ function Kiosk() {
     const id = window.setTimeout(() => setOutline(false), 20_000);
     return () => window.clearTimeout(id);
   }, [calibration.changedAt, shared]);
+  const goodbyeUp = shared && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
   // The welcome goes over everything, the screensaver too.
   useEffect(() => {
     if (welcomeUp) setSaver(false);
@@ -793,14 +798,15 @@ function Kiosk() {
     saver,
     resetMinutes,
     saverMinutes,
-    welcome: welcomeUp,
+    welcome: welcomeUp || goodbyeUp,
     welcomeMinutes,
     onReset: () => {
       setExitOpen(false);
       setSession((n) => n + 1);
       setWelcomeStart(null);
-      // Whoever was checking in walked away: the host's welcome shows again.
+      // Whoever was checking in walked away: the host's welcome (and today's goodbyes) show again.
       setAsideVersion(null);
+      setGoodbyeAside(false);
     },
     onSaver: () => setSaver(true),
     onWelcomeRest: () => setWelcomeRest(true),
@@ -1070,6 +1076,23 @@ function Kiosk() {
           )
         ) : null}
 
+        {/* Check-out day: goodbyes to the guests leaving now, over the usual screen and the screensaver. */}
+        {goodbyeUp && goodbyes ? (
+          <KioskGoodbyeScreen
+            code={p.code}
+            goodbyes={goodbyes}
+            onCheckIn={() => {
+              setGoodbyeAside(true);
+              bump();
+            }}
+            onLeft={() => {
+              reloadGoodbyes();
+              setSession((n) => n + 1);
+              bump();
+            }}
+          />
+        ) : null}
+
         {/* The host is looking through this tablet's camera: always said on screen while they are. */}
         {watching ? (
           <div className="pointer-events-none fixed left-3 top-3 z-[100] flex items-center gap-2 rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white shadow-lg">
@@ -1102,7 +1125,7 @@ function Kiosk() {
           </div>
         ) : null}
 
-        {shared && saver && !welcomeUp ? (
+        {shared && saver && !welcomeUp && !goodbyeUp ? (
           <KioskAtRest
             name={p.name}
             code={p.code}

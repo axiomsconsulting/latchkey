@@ -21,6 +21,7 @@ import {
   Loader2,
   Mail,
   Maximize2,
+  Plane,
   X,
   Filter,
   Inbox,
@@ -46,6 +47,8 @@ import { GuestReviews } from "@/components/host/GuestReviews";
 import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
 import { TabletStrip } from "@/components/host/DoorTablets";
+import { dismissGoodbye } from "@/lib/goodbye.functions";
+import { pingKiosk } from "@/lib/kiosk-ping";
 import { KioskRestQuick } from "@/components/host/KioskRestSettings";
 import { GuestMessages } from "@/components/host/GuestMessages";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
@@ -62,6 +65,7 @@ import {
   common,
   extrasCopy,
   checkinSettings,
+  goodbyeCopy,
   linkTools,
   today as oldCopy,
   todayDash as copy,
@@ -289,6 +293,12 @@ function TodayPage() {
             node: <GuideCard propertyId={selectedId} arriving={lists.arriving} rooms={rooms} />,
           },
           { id: "arrivalGuides", node: <ArrivalGuides arriving={lists.arriving} /> },
+          {
+            id: "goodbyes",
+            node: property ? (
+              <LeavingGoodbyes leaving={lists.leaving} shortCode={property.short_code} />
+            ) : null,
+          },
           {
             id: "kiosk",
             node: property ? <KioskCard property={property} arriving={lists.arriving} /> : null,
@@ -1563,6 +1573,63 @@ function ArrivalGuides({ arriving }: { arriving: Stay[] }) {
           </li>
         ))}
       </ul>
+    </Card>
+  );
+}
+
+/** Today's check-outs: their goodbye on the door tablet, which the host can take off (they've said goodbye in person). */
+function LeavingGoodbyes({ leaving, shortCode }: { leaving: Stay[]; shortCode: string }) {
+  const { canWrite } = useRole();
+  const dismissFn = useServerFn(dismissGoodbye);
+  const [off, setOff] = useState<Set<string>>(() => new Set());
+  if (!canWrite || !leaving.length) return null;
+  return (
+    <Card id="goodbyes" icon={Plane} title={goodbyeCopy.todayTitle}>
+      <ul className="space-y-1.5">
+        {leaving.map((b) => {
+          const left = b.status === "checked_out";
+          return (
+            <li key={b.id} className="flex items-center gap-2">
+              <Link
+                to="/app/bookings"
+                search={{ guest: b.id }}
+                className="min-w-0 flex-1 truncate text-sm hover:underline"
+              >
+                {b.guest_full_name ?? copy.guestNoName}
+              </Link>
+              {left || off.has(b.id) ? (
+                <span className="text-xs text-muted-foreground">
+                  {left ? goodbyeCopy.todayLeft : goodbyeCopy.todayDismissed}
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-3 text-xs"
+                  onClick={() =>
+                    void dismissFn({ data: { bookingId: b.id } })
+                      .then(async (r) => {
+                        await pingKiosk(r.code);
+                        setOff((s) => new Set(s).add(b.id));
+                        toast.success(goodbyeCopy.dismissed);
+                      })
+                      .catch(() => toast.error(common.errorBody))
+                  }
+                >
+                  {goodbyeCopy.dismiss}
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <Link
+        to="/app/settings"
+        search={{ focus: "goodbye" }}
+        className="mt-2 inline-block text-xs text-primary hover:underline"
+      >
+        {goodbyeCopy.title}
+      </Link>
     </Card>
   );
 }

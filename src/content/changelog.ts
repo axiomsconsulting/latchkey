@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.90.0",
+    date: "2026-10-30",
+    title: "Check-out day",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Check-out goodbye on the door tablet (Settings → Kiosk): on check-out day each guest leaving gets a personal goodbye, safe travels and where to leave the keys, the screen split between them (pages turn every 5 seconds when there are more than ten). It starts when you choose before their check-out, and just before the standard check-out when they've booked a late one, and ends at their check-out time.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: 'Express check-out on the door tablet: the guest taps it, is checked out, and sees a short reminder (keys, front door, a QR to leave a review) that closes by itself after 10 minutes. Their card also goes when you take it off from Today\'s "Leaving today" card or mark them checked out.',
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: 'On check-out day the guest guide starts with "Checking out today": the time, check-out steps, where the keys go, the front door and an "I\'ve checked out" button, then the review and booking again.',
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Settings tidied: the door tablet settings have their own Kiosk tab, Look is now Branding, Room QR and Wi-Fi is now QR, and your booking sites' names and icons are on Connections.",
+      },
+    ],
+  },
+  {
     version: "0.89.0",
     date: "2026-10-29",
     title: "Door tablets, numbered and named",
