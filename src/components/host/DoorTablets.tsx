@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
   common,
@@ -54,6 +55,7 @@ import {
 } from "@/hooks/use-tablet-live";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { requestTabletUpdate } from "@/lib/app-updates.functions";
+import { KIOSK_MODES, aboveDetected, type KioskMode } from "@/lib/kiosk-compat";
 import { gridFor, isOnline, tabletName } from "@/lib/kiosk-devices";
 import {
   listKioskDevices,
@@ -63,7 +65,7 @@ import {
   setKioskAutoPair,
   setKioskCamera,
   setKioskCardPicker,
-  setKioskCompat,
+  setKioskMode,
   type KioskDevice,
 } from "@/lib/kiosk-devices.functions";
 import { pingKiosk } from "@/lib/kiosk-ping";
@@ -309,7 +311,7 @@ function TabletCard({
   const renameFn = useServerFn(renameKioskDevice);
   const removeFn = useServerFn(removeKioskDevice);
   const cameraFn = useServerFn(setKioskCamera);
-  const compatFn = useServerFn(setKioskCompat);
+  const modeFn = useServerFn(setKioskMode);
   const [label, setLabel] = useState(d.label ?? "");
   const [askCamera, setAskCamera] = useState(false);
   const [told, setTold] = useState(false);
@@ -331,9 +333,9 @@ function TabletCard({
     }
   }
 
-  async function compat(on: boolean | null) {
+  async function level(mode: KioskMode | null) {
     try {
-      const res = await compatFn({ data: { deviceId: d.id, on } });
+      const res = await modeFn({ data: { deviceId: d.id, mode } });
       await pingKiosk(res.code);
       onChanged();
     } catch (err) {
@@ -492,22 +494,8 @@ function TabletCard({
               ) : null}
             </>
           )}
-          {/* Older tablets: ticked by itself when the tablet needs it. What it means is in the info button, not repeated on every tablet. */}
-          <div className="flex items-center gap-2 text-sm">
-            <label className="flex items-center gap-2">
-              <Checkbox checked={d.compat} onCheckedChange={(v) => void compat(v === true)} />
-              <span className="font-medium">{copy.compatShort}</span>
-            </label>
-            {d.compatDetected ? (
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
-                {copy.compatDetectedTag}
-              </span>
-            ) : null}
-            <CompatInfo
-              device={d}
-              onReset={d.compatChosen !== null ? () => void compat(null) : null}
-            />
-          </div>
+          {/* Lite, enhanced or full: what the tablet detected is marked; what each level means is in the info button, once. */}
+          <LevelSlider device={d} onPick={(m) => void level(m)} />
           <div className="flex flex-wrap gap-2">
             {!pending ? (
               <Button asChild variant="outline" size="sm">
@@ -584,28 +572,104 @@ function TabletCard({
   );
 }
 
-/** What compatibility mode is, and what this tablet detected: tap the info icon (said once, not on every card). */
-function CompatInfo({ device: d, onReset }: { device: KioskDevice; onReset: (() => void) | null }) {
+/**
+ * The tablet's kiosk level as a slider: lite, enhanced, full, with the level
+ * the tablet detected marked. Moving it chooses; "Let the tablet decide"
+ * (in the info button) goes back to automatic.
+ */
+function LevelSlider({
+  device: d,
+  onPick,
+}: {
+  device: KioskDevice;
+  onPick: (mode: KioskMode | null) => void;
+}) {
+  const [at, setAt] = useState(KIOSK_MODES.indexOf(d.mode));
+  useEffect(() => setAt(KIOSK_MODES.indexOf(d.mode)), [d.mode]);
+  const pick = (i: number) => {
+    setAt(i);
+    const m = KIOSK_MODES[i]!;
+    if (m !== d.modeChosen) onPick(m);
+  };
+  const failed = d.modeChosen === "full" && d.fullFailedAt && d.mode !== "full";
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="flex items-center gap-2">
+        <span className="font-medium">{copy.level}</span>
+        {d.modeChosen === null ? (
+          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+            {copy.levelAuto}
+          </span>
+        ) : null}
+        <LevelInfo device={d} onReset={d.modeChosen !== null ? () => onPick(null) : null} />
+      </div>
+      <Slider
+        min={0}
+        max={KIOSK_MODES.length - 1}
+        step={1}
+        value={[at]}
+        onValueChange={([v]) => setAt(v ?? at)}
+        onValueCommit={([v]) => pick(v ?? at)}
+        aria-label={copy.levelSlider}
+        className="px-1 py-2"
+      />
+      <div className="grid grid-cols-3 text-xs">
+        {KIOSK_MODES.map((m, i) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => pick(i)}
+            className={cn(
+              "flex flex-col gap-0.5 rounded-md py-1",
+              i === 0 ? "items-start" : i === 2 ? "items-end" : "items-center",
+            )}
+          >
+            <span
+              className={cn("font-medium", at === i ? "text-primary" : "text-muted-foreground")}
+            >
+              {copy.levels[m]}
+            </span>
+            {d.modeDetected === m ? (
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-accent">
+                {copy.levelDetected}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+      {failed ? (
+        <p className="text-xs text-destructive">{copy.fullFailed}</p>
+      ) : d.modeChosen && aboveDetected(d.modeChosen, d.modeDetected) ? (
+        <p className="text-xs text-muted-foreground">{copy.levelAbove}</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** What the levels are, and what this tablet's browser can run: tap the info icon (said once, not on every card). */
+function LevelInfo({ device: d, onReset }: { device: KioskDevice; onReset: (() => void) | null }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={copy.compatInfo}
-          title={copy.compatInfo}
+          aria-label={copy.levelInfo}
+          title={copy.levelInfo}
           className="grid size-7 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <Info className="size-4" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80 space-y-2 text-sm">
-        <p className="font-medium">{copy.compat}</p>
-        <p className="text-muted-foreground">{copy.compatHelp}</p>
-        {d.compatDetected ? (
+        <p className="font-medium">{copy.levelInfo}</p>
+        {copy.levelHelp.map((line) => (
+          <p key={line} className="text-muted-foreground">
+            {line}
+          </p>
+        ))}
+        {d.compatReason ? (
           <p className="font-medium text-accent">
-            {d.compat
-              ? copy.compatDetected(d.compatReason ?? "")
-              : copy.compatDetectedOff(d.compatReason ?? "")}
+            {copy.levelBrowser(d.compatReason, copy.levels[d.modeDetected] ?? d.modeDetected)}
           </p>
         ) : null}
         {onReset ? (

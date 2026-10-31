@@ -6,6 +6,11 @@
  * shows the guest cards, the host's welcome, Express check-out and the bell,
  * with check-in on the guest's own phone by QR code. Tested to parse as ES5
  * in tests/kiosk-lite.test.ts: keep it to var, function and XMLHttpRequest.
+ *
+ * Two levels (kiosk-compat.ts): "enhanced" (html.lv-enhanced) looks like the
+ * full kiosk, with the theme's pictures, fonts, icons and world clocks;
+ * "lite" (html.lv-lite) is the plain, fast version. The host picks the level
+ * (or "full") per tablet; this follows it.
  */
 (function () {
   "use strict";
@@ -15,6 +20,11 @@
   var API = "/api/public/kiosk-lite/" + L.code;
   var DEVICE_KEY = "latchkey.kioskDevice." + L.code;
   var COMPAT_KEY = "latchkey.compat." + L.code;
+  var MODE_KEY = "latchkey.kioskMode." + L.code;
+  var I = L.icons || {};
+  var LEVEL = window.__LV === "lite" ? "lite" : "enhanced";
+  // Sent here because the full kiosk didn't start on this browser: told once, and it stays here.
+  var fullFailed = /[?&]nofull=1/.test(window.location.search);
   var skew = L.serverNow - new Date().getTime();
   var state = null;
   var lastTouch = new Date().getTime();
@@ -66,15 +76,25 @@
     return two(d.getUTCHours()) + ":" + two(d.getUTCMinutes());
   }
 
-  /** Does this browser need compatibility mode? The same test as the full kiosk's (kiosk-compat.ts). */
-  function detected() {
+  /** The richest level this browser can run: the same test as kiosk-compat.ts detectMode. */
+  function detectedMode() {
     var mod = "noModule" in document.createElement("script");
     var mix = !!(
       window.CSS &&
       window.CSS.supports &&
       window.CSS.supports("color", "color-mix(in srgb, red, blue)")
     );
-    return !mod || !mix;
+    if (mod && mix) return "full";
+    var st = document.createElement("div").style;
+    var flex = "flexBasis" in st || "webkitFlexBasis" in st || "WebkitFlexBasis" in st;
+    var svg = !!(
+      document.createElementNS &&
+      document.createElementNS("http://www.w3.org/2000/svg", "svg").createSVGRect
+    );
+    return flex && svg ? "enhanced" : "lite";
+  }
+  function detected() {
+    return detectedMode() !== "full";
   }
 
   function call(body, done) {
@@ -100,7 +120,13 @@
 
   function refresh() {
     var device = get(DEVICE_KEY);
-    var body = { action: "state", detected: detected(), screen: currentScreen() };
+    var body = {
+      action: "state",
+      detected: detected(),
+      mode: detectedMode(),
+      screen: currentScreen()
+    };
+    if (fullFailed) body.fullFailed = true;
     if (device) body.device = device;
     call(body, function (err, res) {
       $("net").style.display = err ? "block" : "none";
@@ -108,26 +134,38 @@
       if (err) return;
       skew = res.serverNow - new Date().getTime();
       if (res.tablet.device) put(DEVICE_KEY, res.tablet.device);
-      // The host chose the full kiosk for this tablet (or it no longer needs this one).
-      if (res.tablet.compatChosen === false) {
-        put(COMPAT_KEY, "off");
-        window.location.replace("/kiosk/" + L.code);
-        return;
-      }
-      if (res.tablet.compatChosen !== true && !detected()) {
-        put(COMPAT_KEY, null);
-        window.location.replace("/kiosk/" + L.code);
-        return;
-      }
-      if (res.tablet.compatChosen === true) put(COMPAT_KEY, "on");
+      fullFailed = false;
+      if (followLevel(res.tablet)) return;
       var before = state;
       state = res;
       if (!before || cardsKey(before) !== cardsKey(res)) cardsAside = false;
       render();
+      header();
       corner();
       maybeUpdate();
       watchCamera(res.tablet.watchUntil);
     });
+  }
+
+  /**
+   * The level the host chose (or what this browser can do): full goes to the
+   * full kiosk, unless it just failed to start here; the other level reloads
+   * this page at that level. True when the page is leaving.
+   */
+  function followLevel(t) {
+    var mode = t.mode || (t.compat === false ? "full" : "enhanced");
+    put(COMPAT_KEY, null);
+    put(MODE_KEY, t.modeChosen || null);
+    if (mode === "full") {
+      if (t.fullFailedAt) return false;
+      window.location.replace("/kiosk/" + L.code);
+      return true;
+    }
+    if (mode !== LEVEL) {
+      window.location.replace("/lite/" + L.code);
+      return true;
+    }
+    return false;
   }
 
   /** What's on screen, for the host's live view (kiosk-screen.ts): which screen only. */
@@ -224,13 +262,31 @@
     return state && state.cards && state.cards.cards ? state.cards.cards : [];
   }
 
+  var drawn = "";
   function render() {
     var main = $("main");
     var list = cards();
+    var home = !(list.length && !cardsAside) && !(state && state.welcome && !cardsAside);
     $("bell").style.display = state && state.tablet.cardPicker ? "block" : "none";
-    if (list.length && !cardsAside) return renderCards(main, list);
-    if (state && state.welcome && !cardsAside) return renderWelcome(main, state.welcome);
-    renderHome(main);
+    $("day").style.display = home ? "block" : "none";
+    document.body.className = (L.centred ? "centred " : "") + (home ? "atwel" : "");
+    if (!home && list.length && !cardsAside) return renderCards(main, list);
+    if (!home) return renderWelcome(main, state.welcome);
+    // The start screen is drawn once (redrawing would replay its fade).
+    if (drawn !== "home") renderHome(main);
+  }
+
+  /** The header: time and date, and the day's icon (sunrise, sun, sunset, moon) as on the kiosk. */
+  var phase = "";
+  function header() {
+    $("clk").getElementsByTagName("b")[0].innerHTML = esc(clockText());
+    var c = state && state.clock;
+    if (!c) return;
+    $("clk").getElementsByTagName("small")[0].innerHTML = esc(c.date);
+    if (c.phase !== phase && I[c.phase]) {
+      phase = c.phase;
+      $("day").innerHTML = I[c.phase];
+    }
   }
 
   function qrBlock() {
@@ -240,20 +296,25 @@
   /** The start screen, built by the page in the property's look (kiosk-lite.server.ts). */
   function renderHome(main) {
     main.innerHTML = L.homeHtml;
+    drawn = "home";
   }
 
   /** The host's own welcome: full screen in the property's colour, with Check in. */
   function renderWelcome(main, w) {
+    if (drawn === "welcome:" + w.version) return;
+    drawn = "welcome:" + w.version;
     main.innerHTML =
-      '<div class="hostwel"><h1>' +
+      '<div class="hostwel"><div class="ring"></div><h1>' +
       esc(w.headline) +
       "</h1>" +
       (w.body ? "<p>" + esc(w.body) + "</p>" : "") +
       '<button class="big" data-act="checkin">' +
       esc(W.checkIn) +
-      '</button><p class="small">' +
+      '</button><div class="small">' +
+      qrBlock() +
+      "<span>" +
       esc(W.orPhoneShort) +
-      "</p></div>";
+      "</span></div></div>";
   }
 
   function gridFor(n) {
@@ -264,6 +325,10 @@
   function renderCards(main, list) {
     var pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
     var page = Math.floor(now() / PAGE_MS) % pages;
+    // Unchanged cards on the same page stay as they are.
+    var sig = "cards:" + cardsKey(state) + ":" + page + ":" + window.innerWidth;
+    if (drawn === sig) return;
+    drawn = sig;
     var items = list.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
     var g = gridFor(items.length);
     var nIn = 0;
@@ -281,7 +346,7 @@
       (pages > 1
         ? '<span class="pg">' + esc(fill(fill(W.page, "n", page + 1), "of", pages)) + "</span>"
         : "") +
-      '</div><div class="grid" id="grid">';
+      '</div><div class="cgrid" id="grid">';
     for (var j = 0; j < items.length; j++) {
       var c = items[j];
       var look = state.cards.look[c.kind === "in" ? "in" : "out"];
@@ -315,7 +380,9 @@
         look.ink +
         ";color:" +
         look.ink +
-        '">' +
+        '"><span class="bi">' +
+        (c.kind === "in" ? I.check || "" : I.leave || "") +
+        "</span>" +
         esc(c.kind === "in" ? W.checkIn : W.express) +
         "</button></div></div>";
     }
@@ -355,7 +422,14 @@
   function show(kind, html) {
     overlay = kind;
     var ov = $("ov");
-    ov.innerHTML = '<div class="panel">' + html + "</div>";
+    ov.innerHTML =
+      '<div class="panel"><button class="x" data-act="close" aria-label="' +
+      esc(W.close) +
+      '">' +
+      (I.close || "") +
+      "</button>" +
+      html +
+      "</div>";
     ov.style.display = "block";
   }
   function hide() {
@@ -389,9 +463,11 @@
         esc(canPhoto ? W.checkIn : W.checkInHere) +
         "</h2>" +
         (canPhoto
-          ? "<p>" +
+          ? '<p class="hint">' +
             esc(W.idHint) +
-            '</p><label class="big" style="display:block;text-align:center;margin:0 0 18px">' +
+            '</p><label class="big" style="display:block;text-align:center"><span class="bi">' +
+            (I.camera || "") +
+            "</span>" +
             esc(W.takeId) +
             '<input id="idphoto" type="file" accept="image/*" capture="environment" style="position:absolute;left:-9999px;opacity:0"></label><p class="grp">' +
             esc(W.orPhone) +
@@ -425,7 +501,7 @@
   }
 
   function readId(file) {
-    show("checkin", "<h2>" + esc(W.reading) + "</h2><p>&hellip;</p>");
+    show("checkin", "<h2>" + esc(W.reading) + '</h2><span class="spin"></span>');
     var fr = new FileReader();
     fr.onload = function () {
       var img = new Image();
@@ -535,7 +611,7 @@
   function openBell() {
     var device = get(DEVICE_KEY);
     if (!device) return;
-    show("bell", "<h2>" + esc(W.bellTitle) + "</h2><p>&hellip;</p>");
+    show("bell", "<h2>" + esc(W.bellTitle) + '</h2><span class="spin"></span>');
     call({ action: "picker", device: device }, function (err, r) {
       if (overlay !== "bell") return;
       if (err || !r.on) {
@@ -579,7 +655,7 @@
           '" data-pick="' +
           i +
           '"><span class="box">' +
-          (on ? "\u2713" : "") +
+          (on ? I.check || "\u2713" : "") +
           '</span><span class="who">' +
           esc(it.name) +
           (it.room ? " \u00b7 " + esc(it.room) : "") +
@@ -730,6 +806,7 @@
     var r = rest();
     var box = $("saver");
     var clock = box.getElementsByTagName("span")[0];
+    var clocks = $("clocks");
     var qr = $("saverqr");
     var w = window.innerWidth;
     var h = window.innerHeight;
@@ -743,9 +820,18 @@
       box.style.backgroundColor = cs[nightStep];
       $("saverdim").style.opacity = String(1 - (r.nightBrightness || 1));
       clock.style.display = "none";
+      clocks.style.display = "none";
+    } else if (view !== "blank" && LEVEL === "enhanced" && state && state.clock) {
+      // The world clocks, as the full kiosk's screensaver: home larger in the middle.
+      box.style.backgroundColor = "#000";
+      $("saverdim").style.opacity = "0";
+      clock.style.display = "none";
+      clocks.style.display = "";
+      drawClocks(clocks, r, w, h);
     } else {
       box.style.backgroundColor = "#000";
       $("saverdim").style.opacity = "0";
+      clocks.style.display = "none";
       clock.style.display = view === "blank" ? "none" : "block";
       var level = Math.round(60 + 140 * (r ? r.clockBrightness || 0.5 : 0.5));
       clock.style.color = "rgb(" + level + "," + level + "," + level + ")";
@@ -766,8 +852,74 @@
     } else qr.style.display = "none";
   }
 
+  /** One analogue clock, drawn as the kiosk's Dial: ring, hour marks, two hands, city and time. */
+  function dial(c, size) {
+    var d = new Date(now() + c.offset * 60000);
+    var hh = d.getUTCHours();
+    var mm = d.getUTCMinutes();
+    var marks = "";
+    for (var i = 0; i < 12; i++)
+      marks +=
+        '<line x1="50" y1="' +
+        (i % 3 === 0 ? 7 : 9) +
+        '" x2="50" y2="12" stroke="currentColor" stroke-opacity="' +
+        (i % 3 === 0 ? 0.4 : 0.22) +
+        '" stroke-width="' +
+        (i % 3 === 0 ? 1.2 : 0.7) +
+        '" transform="rotate(' +
+        i * 30 +
+        ' 50 50)"/>';
+    return (
+      '<figure style="opacity:' +
+      (c.home ? 1 : 0.8) +
+      '"><svg viewBox="0 0 100 100" width="' +
+      size +
+      '" height="' +
+      size +
+      '"><circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="0.8"/>' +
+      marks +
+      '<line x1="50" y1="50" x2="50" y2="27" stroke="currentColor" stroke-opacity="0.55" stroke-width="2.2" stroke-linecap="round" transform="rotate(' +
+      ((hh % 12) + mm / 60) * 30 +
+      ' 50 50)"/><line x1="50" y1="50" x2="50" y2="15" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.2" stroke-linecap="round" transform="rotate(' +
+      mm * 6 +
+      ' 50 50)"/><circle cx="50" cy="50" r="1.6" fill="currentColor" fill-opacity="0.5"/></svg><span class="ct">' +
+      esc(c.city) +
+      '</span><span class="tm">' +
+      two(hh) +
+      ":" +
+      two(mm) +
+      "</span></figure>"
+    );
+  }
+
+  /** Home in the middle with cities behind and ahead (three when upright), drifting slowly against burn-in. */
+  var driftAt = 0;
+  function drawClocks(box, r, w, h) {
+    var all = state.clock.clocks || [];
+    var home = 0;
+    for (var i = 0; i < all.length; i++) if (all[i].home) home = i;
+    var keep = w < h ? 1 : 2;
+    var list = all.slice(Math.max(0, home - keep), home + keep + 1);
+    var big = Math.round(Math.min(w, h) * 0.27);
+    var small = Math.round(big * 0.62);
+    var html = "";
+    for (var j = 0; j < list.length; j++) html += dial(list[j], list[j].home ? big : small);
+    box.innerHTML = html;
+    box.style.height = big + 70 + "px";
+    box.style.marginTop = -Math.round((big + 70) / 2) + "px";
+    var glow = 0.4 + 0.6 * (r ? r.clockBrightness || 0.5 : 0.5);
+    box.style.color = "rgba(255,255,255," + glow.toFixed(2) + ")";
+    if (now() - driftAt > 60000) {
+      driftAt = now();
+      var x = Math.round((Math.random() - 0.5) * w * 0.12);
+      var y = Math.round((Math.random() - 0.5) * h * 0.2);
+      box.style.webkitTransform = "translate(" + x + "px," + y + "px)";
+      box.style.transform = "translate(" + x + "px," + y + "px)";
+    }
+  }
+
   function tick() {
-    $("clk").innerHTML = esc(clockText());
+    header();
     var idle = new Date().getTime() - lastTouch;
     var busy = cards().length || (state && state.welcome) || overlay;
     if (!saverOn && !busy && idle >= saverMs()) saver(true);
@@ -835,6 +987,11 @@
   );
 
   $("bell").onclick = openBell;
+  $("day").onclick = function () {
+    window.setTimeout(function () {
+      saver(true);
+    }, 50);
+  };
   $("ver").onclick = tapVersion;
   $("upd").onclick = reloadNow;
   if (canFull) {

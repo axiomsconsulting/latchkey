@@ -20,7 +20,14 @@ export const Route = createFileRoute("/lite/$code")({
         if (!p || !p.found) return notFound();
         const { liteHtml } = await import("@/lib/kiosk-lite.server");
         const html = await liteHtml(
-          { name: p.name, code: p.code, timezone: p.timezone, theme: p.theme },
+          {
+            name: p.name,
+            code: p.code,
+            timezone: p.timezone,
+            theme: p.theme,
+            checkInFrom: p.checkInFrom,
+            checkOutBy: p.checkOutBy,
+          },
           new URL(request.url).origin,
         );
         return new Response(html, {

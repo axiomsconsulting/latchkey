@@ -1527,19 +1527,26 @@ export const cameraLiveCopy = branded({
 
 export const doorTabletsCopy = branded({
   title: "Door tablets",
-  compat: "Compatibility mode for older tablets",
-  compatHelp:
-    "A simpler kiosk that works on older tablets (an iPad 2, older Android tablets): today's guest cards, your welcome, Express check-out and the bell. Guests check in on their own phone with the QR code on the screen.",
-  compatDetected: (browser: string) =>
-    `Ticked by itself: this tablet's browser (${browser}) can't run the full kiosk.`,
-  compatDetectedOff: (browser: string) =>
-    `This tablet's browser (${browser}) can't run the full kiosk. Tick this unless you've updated it.`,
+  level: "Kiosk level",
+  levels: { lite: "Lite", enhanced: "Enhanced", full: "Full" } as Record<string, string>,
+  levelHelp: [
+    "Full: the standard kiosk, with check-in on the tablet. Needs a recent browser.",
+    "Enhanced: for older tablets (an iPad 2, older Android tablets). Your look, pictures, icons, fonts and world clocks, guest cards, your welcome, Express check-out, the bell, the photo ID and the screensaver. Guests finish checking in on their own phone.",
+    "Lite: the same, plain and quick, without pictures, fonts or movement, for the slowest tablets.",
+  ],
+  levelDetected: "Detected",
+  levelAuto: "Automatic",
+  levelInfo: "About kiosk levels",
+  levelSlider: "Kiosk level for this tablet",
+  levelBrowser: (browser: string, level: string) =>
+    `This tablet's browser (${browser}) can run up to ${level}.`,
+  levelAbove:
+    "Above what this tablet detected. If it doesn't start there, the tablet goes back to Enhanced by itself.",
+  fullFailed:
+    "Full didn't start on this tablet, so it's on Enhanced. Choose Full again to try once more.",
   compatReset: "Let the tablet decide",
-  compatShort: "Compatibility mode",
   cameraUnsupported:
     "This tablet's browser can't share its camera, so there's no camera view. Guests can still take their ID photo with it.",
-  compatDetectedTag: "Detected",
-  compatInfo: "What's compatibility mode?",
   cardPicker: "Bell on the tablet",
   cardPickerHelp:
     "A bell beside the screensaver button lists today's arriving and leaving guests (first name and initial), so whoever is at the tablet can put their cards up now, with the time each comes on by itself. Switch off if guests shouldn't see who else is arriving or leaving today.",

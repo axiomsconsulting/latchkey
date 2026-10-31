@@ -18,7 +18,14 @@ import {
   nextNumber,
   readPairCode,
 } from "@/lib/kiosk-devices";
-import { effectiveCompat } from "@/lib/kiosk-compat";
+import {
+  KIOSK_MODES,
+  chosenMode,
+  compatFor,
+  detectedModeOf,
+  effectiveMode,
+  type KioskMode,
+} from "@/lib/kiosk-compat";
 import { SCREEN_VIEWS, normaliseScreen, type KioskScreen } from "@/lib/kiosk-screen";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
 
@@ -104,6 +111,12 @@ export type TabletState = {
   compat: boolean;
   /** The host chose compatibility mode on or off (null: it follows the detection). */
   compatChosen: boolean | null;
+  /** The level it runs (kiosk-compat.ts): the host's choice, else what it detected. */
+  mode: KioskMode;
+  /** The level the host chose (null: it follows the detection). */
+  modeChosen: KioskMode | null;
+  /** The full kiosk was tried on this tablet and didn't start (it went back to enhanced). */
+  fullFailedAt: string | null;
   /** The bell that puts today's guest cards up from the tablet itself (properties.kiosk_card_picker). */
   cardPicker: boolean;
 };
@@ -121,6 +134,9 @@ const notPaired: TabletState = {
   update: null,
   compat: false,
   compatChosen: null,
+  mode: "full",
+  modeChosen: null,
+  fullFailedAt: null,
   cardPicker: false,
 };
 
@@ -143,7 +159,13 @@ export const kioskTablet = createServerFn({ method: "POST" })
         fix: fix.nullable().optional(),
         /** What this browser says about itself: whether it needs compatibility mode (kiosk-compat.ts). */
         compat: z
-          .object({ detected: z.boolean(), reason: z.string().max(120).nullable() })
+          .object({
+            detected: z.boolean(),
+            reason: z.string().max(120).nullable(),
+            /** The richest level it can run, and whether the full kiosk just failed to start there. */
+            mode: z.enum(KIOSK_MODES).optional(),
+            fullFailed: z.boolean().optional(),
+          })
           .optional(),
         screen: screen.optional(),
       })
@@ -206,6 +228,19 @@ export const kioskTablet = createServerFn({ method: "POST" })
           () => {},
           () => {},
         );
+      // Migration 0075: the level it detected, and when the full kiosk didn't start there.
+      if (data.compat.mode || data.compat.fullFailed)
+        await db
+          .from("kiosk_devices")
+          .update({
+            ...(data.compat.mode ? { mode_detected: data.compat.mode } : {}),
+            ...(data.compat.fullFailed ? { full_failed_at: new Date().toISOString() } : {}),
+          })
+          .eq("id", id)
+          .then(
+            () => {},
+            () => {},
+          );
     };
     const state = (r: any, token: string | null): TabletState => ({
       paired: r.status !== "pending",
@@ -226,11 +261,8 @@ export const kioskTablet = createServerFn({ method: "POST" })
       update: r.update_requested_at
         ? { at: r.update_requested_at, mode: r.update_mode === "now" ? "now" : "idle" }
         : null,
-      compat: effectiveCompat(
-        r.compat,
-        data.compat ? data.compat.detected : r.compat_detected === true,
-      ),
-      compatChosen: typeof r.compat === "boolean" ? r.compat : null,
+      ...modeState(r, data.compat),
+      fullFailedAt: data.compat?.fullFailed ? now.toISOString() : (r.full_failed_at ?? null),
       cardPicker: cardPicker && r.status !== "pending",
     });
 
@@ -420,6 +452,11 @@ export type KioskDevice = {
   compatChosen: boolean | null;
   compatDetected: boolean;
   compatReason: string | null;
+  /** The level it runs, the host's choice, what it detected, and when full last failed to start there. */
+  mode: KioskMode;
+  modeChosen: KioskMode | null;
+  modeDetected: KioskMode;
+  fullFailedAt: string | null;
   display: (ReportedDisplay & { at?: string }) | null;
   calibration: ReturnType<typeof normaliseCalibrations>;
 };
@@ -472,8 +509,9 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         appVersion: r.app_version ?? null,
         cameraAllowed: r.camera_allowed === true,
         screen: normaliseScreen(r.screen),
-        compat: effectiveCompat(r.compat, r.compat_detected === true),
-        compatChosen: typeof r.compat === "boolean" ? r.compat : null,
+        ...modeState(r),
+        modeDetected: detectedModeOf(r),
+        fullFailedAt: r.full_failed_at ?? null,
         compatDetected: r.compat_detected === true,
         compatReason: r.compat_reason ?? null,
         display: r.display ?? null,
@@ -558,28 +596,59 @@ export const setKioskCardPicker = createServerFn({ method: "POST" })
   });
 
 /**
- * Compatibility mode for one tablet: on, off, or null to follow what the
- * tablet detected. Returns the code to ping, so it switches at once.
+ * The level one tablet runs: lite, enhanced or full, or null to follow
+ * what the tablet detected. Keeps the older on/off tick in step. Returns
+ * the code to ping, so it switches at once.
  */
-export const setKioskCompat = createServerFn({ method: "POST" })
+export const setKioskMode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ deviceId: uuid, on: z.boolean().nullable() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ deviceId: uuid, mode: z.enum(KIOSK_MODES).nullable() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const db = await admin();
     const dev = await deviceProperty(db, data.deviceId);
     await requireWrite(context.supabase, dev.properties.host_id);
     const { error } = await db
       .from("kiosk_devices")
-      .update({ compat: data.on })
+      // Choosing full again gives it another try.
+      .update({
+        kiosk_mode: data.mode,
+        compat: compatFor(data.mode),
+        ...(data.mode === "full" ? { full_failed_at: null } : {}),
+      })
       .eq("id", data.deviceId);
     if (error)
       throw new Error(
-        /compat/.test(error.message)
-          ? "Compatibility mode needs the latest update (migration 0072)."
+        /kiosk_mode|compat|full_failed/.test(error.message)
+          ? "Choosing the level needs the latest update (migration 0075)."
           : error.message,
       );
     return { code: dev.properties.short_code as string };
   });
+
+/** The level as the tablet and the host see it (before migration 0075, from the on/off tick). */
+function modeState(
+  r: any,
+  report?: { detected: boolean; mode?: KioskMode | undefined } | undefined,
+): {
+  mode: KioskMode;
+  modeChosen: KioskMode | null;
+  compat: boolean;
+  compatChosen: boolean | null;
+} {
+  const chosen = chosenMode(r);
+  const detected = report
+    ? (report.mode ?? (report.detected ? "enhanced" : "full"))
+    : detectedModeOf(r);
+  const mode = effectiveMode(chosen, detected);
+  return {
+    mode,
+    modeChosen: chosen,
+    compat: mode !== "full",
+    compatChosen: compatFor(chosen),
+  };
+}
 
 async function deviceProperty(db: Loose, id: string) {
   const { data } = await db
