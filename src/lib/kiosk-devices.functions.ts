@@ -94,8 +94,10 @@ export type TabletState = {
   /** Shown on a pending tablet for the host to type into the dashboard. */
   pairCode: string | null;
   calibration: ReturnType<typeof normaliseCalibrations>;
-  /** The host is watching its camera until then (the tablet sends snapshots and says so on screen). */
+  /** The host is watching its camera until then (the tablet says so on screen). */
   watchUntil: string | null;
+  /** The private channel to set up the direct video with the host (cam-p2p.ts), while watched. */
+  camChannel: string | null;
   /** The host asked it to update: at once, or once nobody has used it for 15 minutes, from that time. */
   update: { at: string; mode: "now" | "idle" } | null;
   /** Runs the compatible kiosk for older tablets (/lite/<code>): the host's choice, else what it detected. */
@@ -115,6 +117,7 @@ const notPaired: TabletState = {
   pairCode: null,
   calibration: {},
   watchUntil: null,
+  camChannel: null,
   update: null,
   compat: false,
   compatChosen: null,
@@ -215,6 +218,10 @@ export const kioskTablet = createServerFn({ method: "POST" })
       watchUntil:
         r.camera_allowed && r.watch_until && Date.parse(r.watch_until) > Date.now()
           ? r.watch_until
+          : null,
+      camChannel:
+        r.camera_allowed && r.cam_channel && r.watch_until && Date.parse(r.watch_until) > Date.now()
+          ? r.cam_channel
           : null,
       update: r.update_requested_at
         ? { at: r.update_requested_at, mode: r.update_mode === "now" ? "now" : "idle" }
@@ -717,14 +724,95 @@ export const watchKiosks = createServerFn({ method: "POST" })
     };
   });
 
-/** The host stopped watching: the tablets stop sending, and the last pictures are deleted. */
-export const stopWatchingKiosks = createServerFn({ method: "POST" })
+/**
+ * The host starts (and every 45 seconds keeps) the live camera view of
+ * these tablets: each gets a private random channel for setting up a direct,
+ * encrypted video connection (cam-p2p.ts), told to the tablet by its next
+ * check-in or a ping. The video goes straight between the two devices.
+ */
+export const startCameraLive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ propertyId: uuid, deviceIds: z.array(uuid).max(99) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const db = await admin();
+    if (!data.deviceIds.length)
+      return { channels: [] as Array<{ deviceId: string; channel: string }> };
+    const { data: rows, error } = await db
+      .from("kiosk_devices")
+      .select("id, cam_channel")
+      .eq("property_id", data.propertyId)
+      .eq("camera_allowed", true)
+      .eq("status", "confirmed")
+      .in("id", data.deviceIds);
+    if (error)
+      throw new Error(
+        /cam_channel/.test(error.message)
+          ? "The live camera needs the latest update (migration 0074)."
+          : error.message,
+      );
+    const until = new Date(Date.now() + 120_000).toISOString();
+    const out: Array<{ deviceId: string; channel: string }> = [];
+    for (const r of (rows ?? []) as any[]) {
+      let channel = r.cam_channel as string | null;
+      if (!channel) {
+        const b = new Uint8Array(16);
+        crypto.getRandomValues(b);
+        channel = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+      }
+      await db
+        .from("kiosk_devices")
+        .update({ watch_until: until, cam_channel: channel })
+        .eq("id", r.id);
+      out.push({ deviceId: r.id, channel });
+    }
+    return { channels: out };
+  });
+
+/** The host stopped watching: the tablets stop sending, and the last pictures are deleted. */
+export const stopWatchingKiosks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ propertyId: uuid, deviceIds: z.array(uuid).max(99).optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const db = await admin();
+    // Just these tablets (one card turned back), or all of the property's.
+    if (data.deviceIds) {
+      await db
+        .from("kiosk_devices")
+        .update({ watch_until: null })
+        .eq("property_id", data.propertyId)
+        .in("id", data.deviceIds);
+      await db
+        .from("kiosk_devices")
+        .update({ cam_channel: null })
+        .eq("property_id", data.propertyId)
+        .in("id", data.deviceIds)
+        .then(
+          () => {},
+          () => {},
+        );
+      await db
+        .from("kiosk_snapshots")
+        .delete()
+        .eq("property_id", data.propertyId)
+        .in("device_id", data.deviceIds);
+      return { ok: true };
+    }
     await db.from("kiosk_devices").update({ watch_until: null }).eq("property_id", data.propertyId);
+    // A new private channel next time (before migration 0074 there's none to clear).
+    await db
+      .from("kiosk_devices")
+      .update({ cam_channel: null })
+      .eq("property_id", data.propertyId)
+      .then(
+        () => {},
+        () => {},
+      );
     await db.from("kiosk_snapshots").delete().eq("property_id", data.propertyId);
     return { ok: true };
   });

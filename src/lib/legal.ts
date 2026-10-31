@@ -36,7 +36,7 @@ export const DEFAULT_LEGAL: LegalDetails = {
 };
 
 /** When the wording of the Terms and Privacy policy last changed (bump with any change to src/content/legal.ts). */
-export const LEGAL_UPDATED = "2026-10-29";
+export const LEGAL_UPDATED = "2026-10-31";
 
 const text = (v: unknown, max: number) =>
   typeof v === "string"

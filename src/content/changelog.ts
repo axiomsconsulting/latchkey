@@ -46,6 +46,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.99.0",
+    date: "2026-10-31",
+    title: "Live camera video, straight from the tablet",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The door tablet camera view is now live video on every screen of the kiosk (not just the start screen), sent straight from the tablet to your screen over an encrypted connection: it doesn't pass through Latchkey. It stops as soon as you stop viewing. Tablets with more than one camera get a Switch camera button on the video to go between front and back.",
+      },
+    ],
+  },
+  {
     version: "0.98.0",
     date: "2026-10-31",
     title: "More from older tablets",

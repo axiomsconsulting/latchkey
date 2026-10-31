@@ -52,12 +52,7 @@ import {
 } from "@/lib/kiosk-fit";
 import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
 import { areaFor, type Area, type Calibrations } from "@/lib/kiosk-calibration";
-import {
-  kioskScreenReport,
-  kioskSnapshotUpload,
-  kioskTablet,
-  type TabletState,
-} from "@/lib/kiosk-devices.functions";
+import { kioskScreenReport, kioskTablet, type TabletState } from "@/lib/kiosk-devices.functions";
 import { screenFrom } from "@/lib/kiosk-screen";
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
@@ -642,65 +637,26 @@ function useKioskTablet(code: string, enabled: boolean) {
 
 /**
  * The host is watching this tablet's camera (they switched it on for this
- * tablet and are looking now): a small picture every few seconds, only
- * while the kiosk isn't in the middle of a check-in (its own camera steps
- * need the camera), and a notice on screen the whole time.
+ * tablet and are looking now): live video straight to their screen
+ * (cam-p2p.ts, direct and encrypted, never through Latchkey), on every
+ * screen, with a notice on screen the whole time. Stops when they stop.
  */
-function useCameraWatch(
-  code: string,
-  watchUntil: string | null,
-  paused: boolean,
-  onEnd: () => void,
-): boolean {
-  const upload = useServerFn(kioskSnapshotUpload);
+function useCameraWatch(channel: string | null): boolean {
   const [on, setOn] = useState(false);
-  const end = useRef(onEnd);
-  end.current = onEnd;
   useEffect(() => {
-    if (!watchUntil || paused || Date.parse(watchUntil) <= Date.now()) return;
-    let stopped = false;
-    let stream: MediaStream | null = null;
-    const video = document.createElement("video");
-    video.muted = true;
-    video.playsInline = true;
-    let timer = 0;
-    const shot = async () => {
-      if (stopped || !video.videoWidth) return;
-      const scale = Math.min(1, 480 / Math.max(video.videoWidth, video.videoHeight));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(video.videoWidth * scale);
-      canvas.height = Math.round(video.videoHeight * scale);
-      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const image = canvas.toDataURL("image/jpeg", 0.6);
-      const device = deviceToken(code);
-      if (!device) return;
-      const res = await upload({ data: { code, device, image } }).catch(() => null);
-      if (stopped) return;
-      if (!res?.watchUntil) {
-        stopped = true;
-        end.current();
-        return;
-      }
-      timer = window.setTimeout(() => void shot(), 3000);
-    };
-    void navigator.mediaDevices
-      ?.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 } }, audio: false })
-      .then(async (s) => {
-        if (stopped) return s.getTracks().forEach((t) => t.stop());
-        stream = s;
-        video.srcObject = s;
-        await video.play();
-        setOn(true);
-        timer = window.setTimeout(() => void shot(), 500);
-      })
-      .catch(() => {});
+    if (!channel) return;
+    setOn(true);
+    let stop: (() => void) | null = null;
+    let gone = false;
+    void import("@/lib/cam-p2p").then(({ serveTabletCamera }) => {
+      if (!gone) stop = serveTabletCamera(channel, () => {});
+    });
     return () => {
-      stopped = true;
-      window.clearTimeout(timer);
-      stream?.getTracks().forEach((t) => t.stop());
+      gone = true;
+      stop?.();
       setOn(false);
     };
-  }, [code, watchUntil, paused, upload]);
+  }, [channel]);
   return on;
 }
 
@@ -832,13 +788,8 @@ function Kiosk() {
   } | null>(null);
   const calibration = useKioskTablet(p.code, shared && !tour);
   const tablet = calibration.tablet;
-  // The host watching this tablet's camera: never during someone's check-in.
-  const watching = useCameraWatch(
-    p.code,
-    shared && !tour ? (tablet?.watchUntil ?? null) : null,
-    !atWelcome,
-    calibration.reload,
-  );
+  // The host watching this tablet's camera, live, whatever is on screen.
+  const watching = useCameraWatch(shared && !tour ? (tablet?.camChannel ?? null) : null);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
   // Door tablets only: keys, pads and buttons grow to use the whole screen (the host's Look and feel → Door tablet).

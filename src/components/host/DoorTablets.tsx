@@ -39,8 +39,19 @@ import {
 import { useLatestVersion } from "@/hooks/use-app-update";
 import { newerVersion, type UpdateMode } from "@/lib/app-update";
 import { UpdateChooser } from "@/components/host/UpdateChooser";
-import { CameraShot, ScreenCaption, TabletScreen } from "@/components/host/TabletLive";
-import { useCameraShots, useLiveScreens, type LiveScreens } from "@/hooks/use-tablet-live";
+import {
+  CameraShot,
+  CameraTile,
+  CameraVideo,
+  ScreenCaption,
+  TabletScreen,
+} from "@/components/host/TabletLive";
+import {
+  useCameraLive,
+  useCameraShots,
+  useLiveScreens,
+  type LiveScreens,
+} from "@/hooks/use-tablet-live";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { requestTabletUpdate } from "@/lib/app-updates.functions";
 import { gridFor, isOnline, tabletName } from "@/lib/kiosk-devices";
@@ -126,7 +137,8 @@ export function DoorTablets({ property }: { property: Property }) {
   const live = useLiveScreens(property, anyLive);
   const shots = useCameraShots(
     property,
-    cameras.filter((d) => faceOf(d.id) === "camera").map((d) => d.id),
+    // Older tablets send pictures; every other tablet streams video straight to this screen.
+    cameras.filter((d) => faceOf(d.id) === "camera" && d.screen?.lite).map((d) => d.id),
   );
   // "All" flips every tablet that can show it (and back again when they all already do).
   const allLive = confirmed.length > 0 && confirmed.every((d) => faceOf(d.id) === "screen");
@@ -305,6 +317,8 @@ function TabletCard({
   const online = isOnline(d.lastSeenAt, Date.now());
   const pending = d.status === "pending";
   const flipped = face !== "details" && !pending;
+  // Live video while the camera side is showing (older tablets send pictures instead).
+  const cam = useCameraLive(property, d.id, face === "camera" && !pending && !d.screen?.lite);
 
   async function camera(allowed: boolean) {
     try {
@@ -397,7 +411,11 @@ function TabletCard({
 
   const back =
     face === "camera" ? (
-      <CameraShot device={d} shot={shot} />
+      d.screen?.lite ? (
+        <CameraShot device={d} shot={shot} />
+      ) : (
+        <CameraVideo cam={cam} />
+      )
     ) : (
       <div className="space-y-1">
         <TabletScreen device={d} live={live} code={property.short_code} />
@@ -620,7 +638,7 @@ export function CameraWall({
 }) {
   const shots = useCameraShots(
     property,
-    devices.map((d) => d.id),
+    devices.filter((d) => d.screen?.lite).map((d) => d.id),
   );
   const grid = gridFor(devices.length);
   return (
@@ -639,7 +657,7 @@ export function CameraWall({
               <p className="text-sm font-medium">
                 {d.number}. {tabletName(d)}
               </p>
-              <CameraShot device={d} shot={shots[d.id]} />
+              <CameraTile property={property} device={d} shot={shots[d.id]} />
             </div>
           ))}
         </div>

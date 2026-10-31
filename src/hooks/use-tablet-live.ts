@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { previewKioskScreens } from "@/lib/goodbye.functions";
-import { stopWatchingKiosks, watchKiosks } from "@/lib/kiosk-devices.functions";
+import { startCameraLive, stopWatchingKiosks, watchKiosks } from "@/lib/kiosk-devices.functions";
+import type { CameraState } from "@/lib/cam-p2p";
 import { kioskPinger } from "@/lib/kiosk-ping";
 
 type Property = { id: string; short_code: string };
@@ -53,8 +54,67 @@ export function useCameraShots(property: Property, deviceIds: string[]) {
       live = false;
       window.clearInterval(id);
       pinger.close();
-      void stopFn({ data: { propertyId: property.id } }).catch(() => {});
+      void stopFn({ data: { propertyId: property.id, deviceIds: ids.split(",") } }).catch(() => {});
     };
   }, [ids, property.id, property.short_code, watchFn, stopFn]);
   return shots;
+}
+
+/**
+ * A tablet's live camera, straight from the tablet (cam-p2p.ts): asks
+ * Latchkey for the private channel (and keeps the viewing going every 45
+ * seconds), then receives the video directly. Stops, and tells the tablet,
+ * when `on` turns false or the card goes. `switchCamera` flips to the
+ * tablet's next camera (front, back, others).
+ */
+export function useCameraLive(property: Property, deviceId: string, on: boolean) {
+  const startFn = useServerFn(startCameraLive);
+  const stopFn = useServerFn(stopWatchingKiosks);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [state, setState] = useState<CameraState | "error">("connecting");
+  const [cams, setCams] = useState({ count: 1, index: 0 });
+  const [error, setError] = useState<string | null>(null);
+  const [control, setControl] = useState<{ switchCamera: () => void } | null>(null);
+  useEffect(() => {
+    if (!on) return;
+    let gone = false;
+    let session: { switchCamera: () => void; stop: () => void } | null = null;
+    const pinger = kioskPinger(property.short_code);
+    const keep = async () => {
+      const res = await startFn({ data: { propertyId: property.id, deviceIds: [deviceId] } }).catch(
+        (e: unknown) => {
+          setError(e instanceof Error ? e.message : null);
+          setState("error");
+          return null;
+        },
+      );
+      return res?.channels[0]?.channel ?? null;
+    };
+    void (async () => {
+      const channel = await keep();
+      if (gone || !channel) return;
+      // The tablet learns it's being watched (and its channel) from this ping.
+      pinger.send();
+      const { watchTabletCamera } = await import("@/lib/cam-p2p");
+      if (gone) return;
+      session = watchTabletCamera(channel, {
+        stream: setStream,
+        state: setState,
+        cams: (count, index) => setCams({ count, index }),
+      });
+      setControl({ switchCamera: session.switchCamera });
+    })();
+    const id = window.setInterval(() => void keep(), 45_000);
+    return () => {
+      gone = true;
+      window.clearInterval(id);
+      session?.stop();
+      pinger.close();
+      setStream(null);
+      setControl(null);
+      setState("connecting");
+      void stopFn({ data: { propertyId: property.id, deviceIds: [deviceId] } }).catch(() => {});
+    };
+  }, [on, deviceId, property.id, property.short_code, startFn, stopFn]);
+  return { stream, state, cams, error, switchCamera: () => control?.switchCamera() };
 }
