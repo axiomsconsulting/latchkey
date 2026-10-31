@@ -51,7 +51,7 @@ describe("the bell's list of today's cards", () => {
         name: "Priya S.",
         room: "Room 1",
         showing: false,
-        autoAt: "14:00",
+        autoAt: "15:00",
       },
       {
         bookingId: "b2",
@@ -65,7 +65,7 @@ describe("the bell's list of today's cards", () => {
   });
 
   it("shows what's on screen, and no time once it's on or taken off", () => {
-    const [on] = pickerItems([row({})], ctx(at("14:30")));
+    const [on] = pickerItems([row({})], ctx(at("15:30")));
     expect(on).toMatchObject({ showing: true, autoAt: null });
     const [off] = pickerItems([row({ welcome_card_dismissed_at: "x" })], ctx(at("09:00")));
     expect(off).toMatchObject({ showing: false, autoAt: null });

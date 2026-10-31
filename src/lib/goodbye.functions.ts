@@ -132,6 +132,32 @@ export const saveGoodbyeSettings = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Adds each stay's booked early check-in (`early_from`): the early check-in
+ * extra, once the host accepted it or it was paid. The time on the booking
+ * itself is often just the guest's expected arrival, so it never counts.
+ */
+async function withEarly<T extends { id: string }>(
+  db: any,
+  rows: T[],
+): Promise<Array<T & { early_from: string | null }>> {
+  const ids = rows.map((r) => r.id);
+  if (!ids.length) return [];
+  const { data, error } = await db
+    .from("requests")
+    .select("booking_id, early_from, status")
+    .in("booking_id", ids)
+    .not("early_from", "is", null)
+    .in("status", ["approved", "confirmed", "delivered"]);
+  const early = new Map<string, string>();
+  for (const r of error ? [] : ((data ?? []) as any[])) {
+    const t = String(r.early_from).slice(0, 5);
+    const had = early.get(r.booking_id);
+    if (!had || t < had) early.set(r.booking_id, t);
+  }
+  return rows.map((r) => ({ ...r, early_from: early.get(r.id) ?? null }));
+}
+
 async function propertyFor(shortCode: string) {
   const db = await admin();
   const { data: p, error } = await db
@@ -210,7 +236,7 @@ async function cardsFor(
     .limit(400);
   if (error) return none;
   const now = Date.now();
-  const all = (rows ?? []) as any[];
+  const all = (await withEarly(db, (rows ?? []) as any[])) as any[];
   const byRoom = (x: any, y: any) =>
     (x.rooms?.sort_order ?? 0) - (y.rooms?.sort_order ?? 0) ||
     String(x.rooms?.display_name ?? "").localeCompare(String(y.rooms?.display_name ?? ""));
@@ -224,7 +250,7 @@ async function cardsFor(
     firstName: firstName(b.guest_full_name),
     room: b.rooms?.display_name ?? null,
     message: arrivalText(a, firstName(b.guest_full_name)),
-    until: (b.check_in_time ?? standardIn).slice(0, 5),
+    until: arrivalStart(b, standardIn, tz, a).time,
     late: arrivalStart(b, standardIn, tz, a).early,
   }));
   const leaving = await Promise.all(
@@ -293,7 +319,7 @@ async function cardsFor(
           firstName: b ? firstName(b.guest_full_name) : "",
           room: b?.rooms?.display_name ?? null,
           message: text,
-          until: (b?.check_in_time ?? standardIn).slice(0, 5),
+          until: b ? arrivalStart(b, standardIn, tz, a).time : standardIn,
           late: false,
           welcome: meta,
         });
@@ -545,7 +571,8 @@ export const todayKioskCards = createServerFn({ method: "GET" })
     const g = normaliseGoodbye(p.checkout_goodbye);
     const a = normaliseArrivals(p.checkin_welcome);
     const states: Record<string, string> = {};
-    for (const b of (rows ?? []) as any[]) {
+    const withTimes = (await withEarly(sb, (rows ?? []) as any[])) as any[];
+    for (const b of withTimes) {
       if (b.check_in_date === today)
         states[`in:${b.id}`] =
           b.status === "checked_in"
@@ -634,7 +661,7 @@ export const kioskCardPicker = createServerFn({ method: "POST" })
       .limit(400);
     if (error) return { on: true, items: [] };
     const { pickerItems } = await import("./kiosk-picker");
-    const items = pickerItems(rows ?? [], {
+    const items = pickerItems(await withEarly(db, (rows ?? []) as any[]), {
       today,
       now: Date.now(),
       tz,

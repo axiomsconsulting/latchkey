@@ -46,6 +46,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.96.1",
+    date: "2026-10-31",
+    title: "Check-in cards wait for check-in time",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Check-in cards on the door tablet now come on at your check-in time, never earlier. Only a guest who has booked an early check-in (the early check-in extra, accepted or paid) gets theirs at that earlier time; a time typed on the booking, such as an expected arrival, no longer brings the card forward. Editing a stay without a time, or filling in a calendar stay's details, now starts from your property's check-in time instead of 15:00.",
+      },
+    ],
+  },
+  {
     version: "0.96.0",
     date: "2026-10-31",
     title: "Older tablets, and cards from the tablet itself",
