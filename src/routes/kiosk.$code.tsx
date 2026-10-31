@@ -39,6 +39,7 @@ import { idleActions } from "@/lib/kiosk-saver";
 import { guest as copy } from "@/content/copy";
 import {
   FIT,
+  KIOSK_FIT_SCRIPT,
   calibrationKey,
   fitFontSize,
   fitted,
@@ -54,6 +55,8 @@ import { areaFor, type Area, type Calibrations } from "@/lib/kiosk-calibration";
 import { kioskSnapshotUpload, kioskTablet, type TabletState } from "@/lib/kiosk-devices.functions";
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
+import { KioskCorner } from "@/components/guest/KioskCorner";
+import { enterFullscreen, fullscreenWanted } from "@/lib/kiosk-fullscreen";
 import { useAppUpdate } from "@/hooks/use-app-update";
 import { showPairCode, tabletName } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
@@ -107,7 +110,14 @@ export const Route = createFileRoute("/kiosk/$code")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
+      // The on-screen keyboard floats over the page instead of shrinking it.
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, interactive-widget=overlays-content",
+      },
     ],
+    // Before anything is drawn: this tablet's remembered size and text scale, so nothing jumps.
+    scripts: [{ children: KIOSK_FIT_SCRIPT }],
   }),
   notFoundComponent: ({ data }) => (
     <GuestFrame>
@@ -180,9 +190,37 @@ function remember(key: string, w: number, h: number) {
     // Not remembered on this device: it's worked out from the screen instead.
   }
 }
+/** The landscape welcome's text size (px) for this screen held this way, and the height it was fitted to. */
+const SCALE_KEY = "latchkey.kioskScale";
+function rememberedScale(key: string): number | null {
+  try {
+    const v = (
+      JSON.parse(window.localStorage.getItem(SCALE_KEY) ?? "{}") as Record<string, unknown>
+    )[key];
+    return typeof v === "object" && v && typeof (v as { px?: unknown }).px === "number"
+      ? (v as { px: number }).px
+      : null;
+  } catch {
+    return null;
+  }
+}
+function rememberScale(key: string, px: number, h: number) {
+  try {
+    const all = JSON.parse(window.localStorage.getItem(SCALE_KEY) ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    all[key] = { px: Math.round(px * 100) / 100, h };
+    window.localStorage.setItem(SCALE_KEY, JSON.stringify(all));
+  } catch {
+    // Not remembered: worked out again next time.
+  }
+}
+
 /** The host reset the calibration: learn the display from scratch. */
 function forgetDisplay() {
   try {
+    window.localStorage.removeItem(SCALE_KEY);
     window.localStorage.removeItem(DISPLAY_KEY);
   } catch {
     // Nothing kept.
@@ -249,6 +287,8 @@ function useScreenFit(
   expanded: boolean,
   calibrations: Calibrations,
   onReport?: (r: FitReport) => void,
+  /** A door tablet: a fixed screen, so the browser's bars and keyboard never change its size. */
+  fixedScreen = false,
 ) {
   const welcome = useRef(atWelcome);
   welcome.current = atWelcome;
@@ -263,13 +303,15 @@ function useScreenFit(
   const [frame, setFrame] = useState<Area | null>(null);
   useEffect(() => {
     const html = document.documentElement;
-    const before = html.style.fontSize;
+    // The page's own size when the kiosk is left (KIOSK_FIT_SCRIPT may have set one before paint).
+    const before = "";
     const measure = (): Display => ({
       w: window.innerWidth,
       h: window.innerHeight,
       orientation: deviceOrientation(),
     });
-    const touch = isTouchDevice();
+    // A door tablet is a fixed screen even if it reports a mouse: only turning it measures again.
+    const touch = fixedScreen || isTouchDevice();
     const screenSize = () => ({ w: window.screen.width, h: window.screen.height });
     const fullscreen = () =>
       !!document.fullscreenElement ||
@@ -319,7 +361,11 @@ function useScreenFit(
     };
     calibrate();
     // Font size per pixel of display height, from the last landscape welcome.
-    let ratio: number | null = null;
+    // Remembered from an earlier visit, so the first screen already has its size (KIOSK_FIT_SCRIPT set it before paint).
+    let ratio: number | null = (() => {
+      const px0 = rememberedScale(calibrationKey(screenSize(), learned.orientation));
+      return px0 && learned.w > learned.h ? px0 / display.h : null;
+    })();
     // Since the last reset: may this screen still grow (only the landscape welcome, until it first shrinks)?
     let mayGrow = false;
     let frameId = 0;
@@ -371,6 +417,8 @@ function useScreenFit(
       }
       if (landscape && welcome.current) {
         ratio = px() / h;
+        if (touch)
+          rememberScale(calibrationKey(screenSize(), display.orientation), px(), display.h);
         header(px());
       }
     };
@@ -464,7 +512,7 @@ function useScreenFit(
       html.style.removeProperty("--kiosk-header");
       html.style.removeProperty("--kiosk-h");
     };
-  }, [content]);
+  }, [content, fixedScreen]);
   // A new screen (or a change of button size) starts from the scale again.
   useEffect(() => {
     refit.current.reset();
@@ -782,6 +830,7 @@ function Kiosk() {
     expanded,
     calibration.calibrations,
     calibration.onReport,
+    shared && !tour,
   );
   // The host is calibrating from the dashboard: the area's outline shows for a while after each change.
   const [outline, setOutline] = useState(false);
@@ -868,13 +917,17 @@ function Kiosk() {
     bump();
   }
 
+  // Full screen from the start, and back into it on the next touch if anything takes it out,
+  // unless the host switched it off with the corner button (held for 3 seconds).
+  // Browsers only allow it from a touch, so in a browser tab it begins at the first one; installed
+  // as an app (manifest "fullscreen") it opens full screen. navigationUI "hide" also hides Android's bottom bar.
   function goFullscreen() {
-    if (!shared || tour) return;
-    // navigationUI "hide": Android browsers that honour it also hide the bottom navigation bar.
-    // Browsers that ignore full screen (some bundled ones) need the kiosk installed as an app instead.
-    if (!document.fullscreenElement)
-      void document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+    if (!shared || tour || !fullscreenWanted()) return;
+    enterFullscreen();
   }
+  useEffect(() => {
+    if (shared && !tour && fullscreenWanted()) enterFullscreen();
+  }, [shared, tour]);
 
   // The host's way out: press and hold the top-right corner. Watched on the whole page rather
   // than with a hidden button, so whatever sits in the corner (the phone QR, the day icon)
@@ -969,7 +1022,7 @@ function Kiosk() {
             : undefined
         }
         className={cn(
-          "relative min-h-screen select-none bg-background [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]",
+          "relative min-h-[var(--kiosk-h,100vh)] select-none bg-background [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]",
           frame && "min-h-0 overflow-hidden",
           expanded
             ? "px-[0.5rem]"
@@ -1144,21 +1197,39 @@ function Kiosk() {
           </div>
         ) : null}
 
-        {/* Which tablet this is and the app version, for the host and support; a waiting tablet's setup code. */}
-        <p className="pointer-events-none fixed bottom-1 left-2 z-[96] text-[11px] leading-tight text-muted-foreground/80">
-          {shared && tablet?.status === "pending" && tablet.pairCode ? (
-            <span className="font-medium text-foreground">
-              {copy.tabletSetup(showPairCode(tablet.pairCode))} ·{" "}
-            </span>
-          ) : shared && tablet?.number ? (
-            `${tabletName(tablet)} · `
-          ) : null}
-          <AppVersion
-            current={appUpdate.current}
+        {/* Which tablet this is and the app version, for the host and support; a waiting tablet's setup code.
+            On a door tablet: the full screen switch and, when there's a newer version, Update (both held for 3 seconds). */}
+        {shared && !tour ? (
+          <KioskCorner
+            label={
+              tablet?.status === "pending" && tablet.pairCode ? (
+                <span className="font-medium text-foreground">
+                  {copy.tabletSetup(showPairCode(tablet.pairCode))} ·{" "}
+                </span>
+              ) : tablet?.number ? (
+                `${tabletName(tablet)} · `
+              ) : null
+            }
+            version={appUpdate.current}
             latest={appUpdate.latest}
             available={appUpdate.available}
           />
-        </p>
+        ) : (
+          <p className="pointer-events-none fixed bottom-1 left-2 z-[96] text-[11px] leading-tight text-muted-foreground/80">
+            {shared && tablet?.status === "pending" && tablet.pairCode ? (
+              <span className="font-medium text-foreground">
+                {copy.tabletSetup(showPairCode(tablet.pairCode))} ·{" "}
+              </span>
+            ) : shared && tablet?.number ? (
+              `${tabletName(tablet)} · `
+            ) : null}
+            <AppVersion
+              current={appUpdate.current}
+              latest={appUpdate.latest}
+              available={appUpdate.available}
+            />
+          </p>
+        )}
 
         {/* While the host calibrates from the dashboard: the area's edges, so they can line it up. */}
         {outline ? (

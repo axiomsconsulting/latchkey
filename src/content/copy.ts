@@ -1554,6 +1554,12 @@ export const guest = branded({
   stepCheckoutPickHint: "One of these is yours.",
   nights: (n: number) => (n === 1 ? "1 night" : `${n} nights`),
   cameraFlip: "Switch camera",
+  fullscreenOn: "Full screen (hold for 3 seconds)",
+  fullscreenOff: "Leave full screen (hold for 3 seconds)",
+  holdHint: "Hold for 3 seconds",
+  holdToUpdate: "Hold for 3 seconds to update",
+  newVersion: (v: string) => `new v${v}`,
+  updateNow: (v: string) => (v ? `Update to v${v}` : "Update now"),
   goodbyeTitle: (n: number) => (n === 1 ? "Leaving today" : `${n} guests leaving today`),
   cardsTitle: (arriving: number, leaving: number) =>
     [arriving ? `${arriving} arriving` : null, leaving ? `${leaving} leaving` : null]

@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.95.0",
+    date: "2026-10-31",
+    title: "Door tablets stay put",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "A door tablet now keeps its size: once Latchkey knows the tablet, its size and text scale are set before anything shows, and the keyboard, address bar or navigation bar no longer shrink or resize the screen.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Full screen stays on: the door tablet goes full screen at the first touch (straight away when installed as an app) and back into it if anything takes it out. A full screen button in the bottom-left corner, held for 3 seconds, switches it off or on.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The version in the tablet's corner is bigger, and says when a newer one is out; hold it for 3 seconds for a big Update button.",
+      },
+    ],
+  },
+  {
     version: "0.94.0",
     date: "2026-10-30",
     title: "Bigger cards, previews and dependable updates",
