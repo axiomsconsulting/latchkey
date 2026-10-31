@@ -548,7 +548,7 @@ export function readableOn(hex: string): string {
   return luminance(hex) > 0.4 ? "#1c1c1c" : "#fdfbf7";
 }
 
-function mix(a: string, b: string, t: number): string {
+export function mix(a: string, b: string, t: number): string {
   const pa = parseInt(a.slice(1), 16);
   const pb = parseInt(b.slice(1), 16);
   const c = [16, 8, 0].map((sh) => {

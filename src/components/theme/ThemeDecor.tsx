@@ -141,6 +141,12 @@ const ART: Record<Exclude<Artwork, "none">, () => ReactNode> = {
   hills: Hills,
 };
 
+/** The bare drawing (also drawn as plain SVG on older door tablets, kiosk-lite-art.server.tsx). */
+export function ThemeArtSvg({ artwork }: { artwork: Exclude<Artwork, "none"> }) {
+  const Art = ART[artwork];
+  return <Art />;
+}
+
 /** One of the theme's line drawings on its own (for a panel), in the current text colour. */
 export function ThemeArt({ artwork, className }: { artwork: Artwork; className?: string }) {
   if (artwork === "none") return null;
@@ -153,7 +159,7 @@ export function ThemeArt({ artwork, className }: { artwork: Artwork; className?:
 }
 
 /** A flourish for each corner of an ornate frame. */
-function Flourish({ className }: { className?: string }) {
+export function Flourish({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 40 40" className={cn("absolute size-10", className)} aria-hidden>
       <g fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">

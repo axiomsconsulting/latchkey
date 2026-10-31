@@ -6,6 +6,9 @@ const body = z.discriminatedUnion("action", [
     action: z.literal("state"),
     device: z.string().max(80).optional(),
     detected: z.boolean().optional(),
+    /** The richest level this browser can run, and whether the full kiosk just failed to start here. */
+    mode: z.enum(["lite", "enhanced", "full"]).optional(),
+    fullFailed: z.boolean().optional(),
     screen: z
       .object({
         view: z.enum(["start", "cards", "welcome", "saver", "night", "blank", "checkin"]),

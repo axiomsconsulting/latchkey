@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   KIOSK_COMPAT_SCRIPT,
+  aboveDetected,
   browserLabel,
+  chosenMode,
+  compatFor,
+  detectMode,
+  detectedModeOf,
   effectiveCompat,
+  effectiveMode,
   needsCompat,
 } from "@/lib/kiosk-compat";
 
@@ -24,6 +30,33 @@ describe("compatibility mode", () => {
     expect(effectiveCompat(undefined, false)).toBe(false);
     expect(effectiveCompat(false, true)).toBe(false);
     expect(effectiveCompat(true, false)).toBe(true);
+  });
+
+  it("detects the richest level the browser can run", () => {
+    expect(detectMode({ moduleScripts: true, colorMix: true })).toBe("full");
+    expect(detectMode({ moduleScripts: false, colorMix: true, flexbox: true, svg: true })).toBe(
+      "enhanced",
+    );
+    expect(detectMode({ moduleScripts: false, colorMix: false })).toBe("enhanced");
+    expect(detectMode({ moduleScripts: false, colorMix: false, flexbox: false })).toBe("lite");
+    expect(detectMode({ moduleScripts: false, colorMix: false, svg: false })).toBe("lite");
+  });
+
+  it("reads the host's level, and the older on/off tick", () => {
+    expect(chosenMode({ kiosk_mode: "lite", compat: true })).toBe("lite");
+    expect(chosenMode({ kiosk_mode: null, compat: true })).toBe("enhanced");
+    expect(chosenMode({ compat: false })).toBe("full");
+    expect(chosenMode({ kiosk_mode: "nonsense", compat: null })).toBeNull();
+    expect(detectedModeOf({ mode_detected: "lite" })).toBe("lite");
+    expect(detectedModeOf({ compat_detected: true })).toBe("enhanced");
+    expect(detectedModeOf({})).toBe("full");
+    expect(effectiveMode(null, "enhanced")).toBe("enhanced");
+    expect(effectiveMode("lite", "full")).toBe("lite");
+    expect(compatFor("full")).toBe(false);
+    expect(compatFor("lite")).toBe(true);
+    expect(compatFor(null)).toBeNull();
+    expect(aboveDetected("full", "enhanced")).toBe(true);
+    expect(aboveDetected("lite", "enhanced")).toBe(false);
   });
 
   it("names the browser for the host", () => {
@@ -50,8 +83,10 @@ describe("the check before the kiosk is drawn", () => {
     module?: boolean;
     mix?: boolean;
     store?: Record<string, string>;
+    booted?: boolean;
   }) => {
     let went: string | null = null;
+    let waiting: (() => void) | null = null;
     const env = {
       location: {
         pathname: o.path ?? "/kiosk/hill",
@@ -69,8 +104,15 @@ describe("the check before the kiosk is drawn", () => {
         CSS: { supports: () => o.mix !== false },
       },
       CSS: { supports: () => o.mix !== false },
+      setTimeout: (f: () => void) => {
+        waiting = f;
+      },
     };
     new Function(...Object.keys(env), KIOSK_COMPAT_SCRIPT)(...Object.values(env));
+    if (o.booted !== undefined && waiting) {
+      (env.window as { __lkBooted?: boolean }).__lkBooted = o.booted;
+      (waiting as () => void)();
+    }
     return went;
   };
 
@@ -89,6 +131,15 @@ describe("the check before the kiosk is drawn", () => {
   it("follows the host's choice for this tablet", () => {
     expect(run({ store: { "latchkey.compat.hill": "on" } })).toBe("/lite/hill");
     expect(run({ mix: false, store: { "latchkey.compat.hill": "off" } })).toBeNull();
+    expect(run({ store: { "latchkey.kioskMode.hill": "lite" } })).toBe("/lite/hill");
+    expect(run({ store: { "latchkey.kioskMode.hill": "enhanced" } })).toBe("/lite/hill");
+    expect(run({ mix: false, store: { "latchkey.kioskMode.hill": "full" } })).toBeNull();
+  });
+
+  it("goes back to the older-tablet page when the full kiosk doesn't start", () => {
+    const full = { "latchkey.kioskMode.hill": "full" };
+    expect(run({ mix: false, store: full, booted: false })).toBe("/lite/hill?nofull=1");
+    expect(run({ mix: false, store: full, booted: true })).toBeNull();
   });
 });
 

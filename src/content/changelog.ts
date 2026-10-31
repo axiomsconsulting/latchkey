@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.100.0",
+    date: "2026-10-31",
+    title: "Older tablets look like the full kiosk, and a level for each tablet",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Older door tablets (an iPad 2, older Android tablets) now look like the full kiosk: your theme's background, line art and frame, fonts and icons, the header with your logo, clock, date, bell and the sun or moon icon, the welcome card with your mark, words and features, the phone QR panel and the footer. Panels fade in, the check-in panel has a close button, and the screensaver shows the world clocks.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Kiosk level for each door tablet: a slider from Lite to Enhanced to Full in Settings, Kiosk, Door tablets, with the level the tablet detected marked. Move it down for a slow tablet or up to try the full kiosk. If Full doesn't start on that tablet, it goes back to Enhanced by itself and tells you.",
+      },
+    ],
+  },
+  {
     version: "0.99.1",
     date: "2026-10-31",
     title: "Older tablets in your own look",

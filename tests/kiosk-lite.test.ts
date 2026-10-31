@@ -34,5 +34,21 @@ describe("the compatible kiosk for older tablets", () => {
     expect(html).toContain("https://example.test/kiosk/toms?guest=1");
     expect(html).not.toMatch(/var\(--|color-mix|oklch|@layer/);
     expect(html).toContain("<svg");
+    // The level is picked before anything draws; the welcome is the kiosk's.
+    expect(html).toContain('"latchkey.kioskMode.toms"');
+    expect(html).toContain('data-act="checkin"');
+  });
+
+  it("draws the theme's art, frame, features and icons as plain SVG", async () => {
+    const theme = normaliseTheme({ presetId: "palace-heritage" });
+    const html = await liteHtml(
+      { name: "Palace", code: "pal", timezone: "Europe/London", theme },
+      "https://example.test",
+    );
+    expect(html).not.toMatch(/var\(--|color-mix|oklch|@layer/);
+    if (theme.artwork !== "none") expect(html).toContain('class="art');
+    if (theme.frame !== "none") expect(html).toContain('class="frame"');
+    if (theme.features.length) expect(html).toContain('class="feat"');
+    expect(html).toContain('"icons":{');
   });
 });

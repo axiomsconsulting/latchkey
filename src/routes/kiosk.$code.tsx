@@ -58,7 +58,13 @@ import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
 import { KioskCardBell } from "@/components/guest/KioskCardBell";
-import { KIOSK_COMPAT_SCRIPT, browserLabel, compatKey } from "@/lib/kiosk-compat";
+import {
+  KIOSK_COMPAT_SCRIPT,
+  browserLabel,
+  compatKey,
+  detectMode,
+  modeKey,
+} from "@/lib/kiosk-compat";
 import { enterFullscreen, fullscreenWanted } from "@/lib/kiosk-fullscreen";
 import { useAppUpdate } from "@/hooks/use-app-update";
 import { showPairCode, tabletName } from "@/lib/kiosk-devices";
@@ -569,26 +575,28 @@ function useKioskTablet(code: string, enabled: boolean) {
             ...(display ? { display } : {}),
             version: APP_VERSION,
             fix,
-            // It runs this page, so it doesn't need compatibility mode.
-            compat: { detected: false, reason: browserLabel(navigator.userAgent) },
+            // What this browser can run (the host may have chosen full on one that can't quite).
+            compat: (() => {
+              const mode = detectMode({
+                moduleScripts: "noModule" in document.createElement("script"),
+                colorMix: !!window.CSS?.supports?.("color", "color-mix(in srgb, red, blue)"),
+              });
+              return { detected: mode !== "full", mode, reason: browserLabel(navigator.userAgent) };
+            })(),
           },
         });
       })
       .then((res) => {
         if (res.device) keepDeviceToken(code, res.device);
-        // The host put this tablet in compatibility mode (or took it out): remembered for the next start.
+        // The host's level for this tablet: remembered for the next start (KIOSK_COMPAT_SCRIPT).
         try {
-          if (res.compatChosen === false) localStorage.setItem(compatKey(code), "off");
-          else localStorage.removeItem(compatKey(code));
+          localStorage.removeItem(compatKey(code));
+          if (res.modeChosen) localStorage.setItem(modeKey(code), res.modeChosen);
+          else localStorage.removeItem(modeKey(code));
         } catch {
           // Not kept: the dashboard's choice still applies at each check-in.
         }
-        if (res.compat) {
-          try {
-            localStorage.setItem(compatKey(code), "on");
-          } catch {
-            // Goes there anyway, now.
-          }
+        if (res.mode !== "full") {
           window.location.replace(`/lite/${code}`);
           return;
         }
@@ -734,6 +742,10 @@ function Kiosk() {
   // (and isTour() on the server): it never takes over the visitor's browser,
   // and the hidden host corner just leaves the tour.
   const tour = p.tour === true;
+  // The app started: KIOSK_COMPAT_SCRIPT stops waiting to send a browser that can't run it to /lite.
+  useEffect(() => {
+    (window as { __lkBooted?: boolean }).__lkBooted = true;
+  }, []);
   // The launch funnel: someone opened the guest tour.
   useEffect(() => {
     if (tour) trackEvent("tour_view");
