@@ -97,3 +97,23 @@ describe("early check-in and late check-out", () => {
     expect(normaliseBuffer(50)).toBe(60);
   });
 });
+
+describe("the host's own times, in words", () => {
+  it("says early, late, morning or night", async () => {
+    const { stayTimeNote, partOfDay } = await import("@/lib/stay-times");
+    expect(partOfDay("11:30")).toBe("11:30 in the morning");
+    expect(partOfDay("23:30")).toBe("23:30 at night");
+    expect(stayTimeNote("in", "11:30", "16:00:00")).toBe(
+      "11:30 in the morning · 4 h 30 min before your 16:00 check-in (early check-in)",
+    );
+    expect(stayTimeNote("in", "23:30", "16:00")).toBe(
+      "23:30 at night · 7 h 30 min after your 16:00 check-in (late arrival)",
+    );
+    expect(stayTimeNote("out", "13:00", "11:00")).toBe(
+      "13:00 in the afternoon · 2 h after your 11:00 check-out (late check-out)",
+    );
+    expect(stayTimeNote("in", "16:00", "16:00")).toBe(
+      "16:00 in the afternoon · your usual check-in time",
+    );
+  });
+});

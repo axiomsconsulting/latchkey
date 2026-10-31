@@ -32,6 +32,10 @@ import { taxTerms } from "@/lib/invoice";
 import { platformKey, toChannel } from "@/lib/booking-sites";
 import { saveBooking, undoCheckIn } from "@/lib/host.functions";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
+import { stayTimeNote } from "@/lib/stay-times";
+
+const bookingTimesNote =
+  "An early check-in or late check-out you set here applies as it is: free, agreed with the guest or paid another way. The door tablet's check-in card follows this time. Guests can also book and pay for one themselves as an extra.";
 
 export type BookingRow = {
   id: string;
@@ -408,8 +412,9 @@ export function BookingDialog({ open, onOpenChange, propertyId, rooms, booking, 
             />
           </div>
 
+          {/* The guest's own times: the host can set any, free, agreed or paid offline. Said in words so 11:30 and 23:30 aren't mixed up. */}
           <div className="space-y-2">
-            <Label htmlFor="intime">Expected arrival</Label>
+            <Label htmlFor="intime">Check-in time</Label>
             <Input
               id="intime"
               type="time"
@@ -417,6 +422,11 @@ export function BookingDialog({ open, onOpenChange, propertyId, rooms, booking, 
               value={form.check_in_time}
               onChange={(e) => set("check_in_time", e.target.value)}
             />
+            {form.check_in_time ? (
+              <p className="text-xs text-muted-foreground">
+                {stayTimeNote("in", form.check_in_time, defaults?.check_in_time ?? "15:00")}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="outtime">Check-out time</Label>
@@ -427,7 +437,13 @@ export function BookingDialog({ open, onOpenChange, propertyId, rooms, booking, 
               value={form.check_out_time}
               onChange={(e) => set("check_out_time", e.target.value)}
             />
+            {form.check_out_time ? (
+              <p className="text-xs text-muted-foreground">
+                {stayTimeNote("out", form.check_out_time, defaults?.check_out_time ?? "11:00")}
+              </p>
+            ) : null}
           </div>
+          <p className="text-xs text-muted-foreground sm:col-span-2">{bookingTimesNote}</p>
 
           <div className="space-y-2">
             <Label htmlFor="guests">Guests</Label>

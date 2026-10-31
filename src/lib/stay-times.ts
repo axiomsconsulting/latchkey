@@ -122,3 +122,44 @@ export function bufferClash(opts: {
   }
   return null;
 }
+
+/** "11:30" → "11:30 in the morning": a typed time in words, so 11:30 and 23:30 aren't mixed up. */
+export function partOfDay(time: string): string {
+  const h = Number(time.slice(0, 2));
+  const when =
+    h < 5
+      ? "at night"
+      : h < 12
+        ? "in the morning"
+        : h < 17
+          ? "in the afternoon"
+          : h < 21
+            ? "in the evening"
+            : "at night";
+  return `${time.slice(0, 5)} ${when}`;
+}
+
+/**
+ * The host's own check-in or check-out time on a booking, in words, against
+ * the property's: "11:30 in the morning · 4 h 30 min before your 16:00
+ * check-in (early check-in)". The host decides: free, agreed or paid offline.
+ */
+export function stayTimeNote(kind: "in" | "out", time: string, standard: string): string | null {
+  if (!/^\d{2}:\d{2}/.test(time) || !/^\d{2}:\d{2}/.test(standard)) return null;
+  const diff = toMin(time.slice(0, 5)) - toMin(standard.slice(0, 5));
+  const span = (m: number) => {
+    const h = Math.floor(m / 60);
+    const r = m % 60;
+    return [h ? `${h} h` : "", r ? `${r} min` : ""].filter(Boolean).join(" ");
+  };
+  const std = standard.slice(0, 5);
+  const said = partOfDay(time);
+  if (diff === 0) return `${said} · your usual ${kind === "in" ? "check-in" : "check-out"} time`;
+  if (kind === "in")
+    return diff < 0
+      ? `${said} · ${span(-diff)} before your ${std} check-in (early check-in)`
+      : `${said} · ${span(diff)} after your ${std} check-in (late arrival)`;
+  return diff > 0
+    ? `${said} · ${span(diff)} after your ${std} check-out (late check-out)`
+    : `${said} · ${span(-diff)} before your ${std} check-out`;
+}

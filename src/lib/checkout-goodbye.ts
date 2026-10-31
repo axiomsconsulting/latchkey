@@ -168,15 +168,15 @@ export function pageNow<T>(items: T[], nowMs: number): { items: T[]; page: numbe
 /**
  * Check-in cards (properties.checkin_welcome, migration 0070): the same idea
  * for guests arriving today. A personal welcome on the door tablet from
- * their check-in time, never earlier: the property's check-in time, or an
- * early check-in they booked and the host accepted (the early check-in
- * extra, requests.early_from). A time typed on the booking ("expected
- * arrival") doesn't move it. It stays until the end of the day or until
- * they check in; the host can still put it up sooner (Show now, the bell).
- * Its Check in button starts with their photo ID, which finds the stay, so
- * a card never skips the ID check. startBeforeMinutes / earlyLeadMinutes
- * are kept in saved settings but no longer bring it forward; startAt only
- * ever starts it later than check-in.
+ * their check-in time, never earlier: the time on their booking when there
+ * is one (the host's own early or late check-in, free, agreed or paid
+ * offline, or an accepted early check-in extra, which writes it there),
+ * else the property's check-in time. It stays until the end of the day or
+ * until they check in; the host can still put it up sooner (Show now, the
+ * bell). Its Check in button starts with their photo ID, which finds the
+ * stay, so a card never skips the ID check. startBeforeMinutes /
+ * earlyLeadMinutes are kept in saved settings but no longer bring it
+ * forward; startAt only ever starts it later.
  */
 export type ArrivalCards = {
   on: boolean;
@@ -234,10 +234,8 @@ export const arrivalText = (a: ArrivalCards, firstName: string) =>
 export type ArrivingStay = {
   status: string;
   check_in_date: string;
-  /** The time on the booking (often just the guest's expected arrival): not used for the card. */
-  check_in_time?: string | null;
-  /** An early check-in the guest booked and the host accepted (the extra's time), else null. */
-  early_from?: string | null;
+  /** Their own check-in time (set by the host, or by an accepted early check-in), else null for the property's. */
+  check_in_time: string | null;
   welcome_card_dismissed_at?: string | null;
   /** The host asked for it to show now, whatever the time. */
   welcome_now_at?: string | null;
@@ -245,19 +243,18 @@ export type ArrivingStay = {
 };
 
 /**
- * From when the arrival card shows (ms): the check-in time, or their booked
- * early check-in when that's earlier, and later only if the host set a later
- * start. `time` is that check-in time ("16:00"), shown on the card.
+ * From when the arrival card shows (ms): their check-in time, never earlier,
+ * and later only if the host set a later start. `time` is that check-in time
+ * ("11:30"), shown on the card; `early` when it's before the property's.
  */
 export function arrivalStart(
-  b: Pick<ArrivingStay, "check_in_date" | "early_from">,
+  b: Pick<ArrivingStay, "check_in_date" | "check_in_time">,
   standardTime: string,
   tz: string,
   a: ArrivalCards,
 ): { from: number; early: boolean; time: string } {
-  const standard = standardTime.slice(0, 5);
-  const early = !!b.early_from && b.early_from.slice(0, 5) < standard;
-  const time = early ? b.early_from!.slice(0, 5) : standard;
+  const time = (b.check_in_time ?? standardTime).slice(0, 5);
+  const early = time < standardTime.slice(0, 5);
   const from = zonedToUtc(b.check_in_date, time, tz).getTime();
   const later =
     a.startAt && a.startAt > time ? zonedToUtc(b.check_in_date, a.startAt, tz).getTime() : 0;

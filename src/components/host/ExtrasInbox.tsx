@@ -11,7 +11,7 @@ import { extrasCopy as copy, responseNotes } from "@/content/copy";
 import { decideExtrasRequest, listExtrasRequests } from "@/lib/extras.functions";
 import { formatPence } from "@/lib/services";
 
-type Action = "approve" | "decline" | "suggest" | "delivered" | "mark_paid";
+type Action = "approve" | "approve_free" | "decline" | "suggest" | "delivered" | "mark_paid";
 type Pending = {
   id: string;
   action: Action;
@@ -42,7 +42,7 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
   }
 
   function start(id: string, action: Action, window: Pending["window"] = null) {
-    if (action === "delivered" || action === "mark_paid") {
+    if (action === "delivered" || action === "mark_paid" || action === "approve_free") {
       void send({ id, action, window }, null);
       return;
     }
@@ -135,6 +135,25 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
                       <Button size="sm" onClick={() => start(r.id, "approve")}>
                         {copy.approve}
                       </Button>
+                      {/* Priced: the host can also give it free, or say it's already been paid another way. */}
+                      {r.totalPence > 0 ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => start(r.id, "approve_free")}
+                          >
+                            {copy.approveFree}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => start(r.id, "mark_paid")}
+                          >
+                            {copy.paidOffline}
+                          </Button>
+                        </>
+                      ) : null}
                       <Button
                         size="sm"
                         variant="outline"
@@ -163,6 +182,9 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
                       ) : null}
                       <Button size="sm" variant="outline" onClick={() => start(r.id, "mark_paid")}>
                         {copy.markPaid}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => start(r.id, "approve_free")}>
+                        {copy.approveFree}
                       </Button>
                     </>
                   ) : null}

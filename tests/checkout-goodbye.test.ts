@@ -98,21 +98,19 @@ describe("check-in cards", () => {
     expect(show("23:00")).toBe(true);
     expect(show("16:00", { ...arriving, status: "checked_in" })).toBe(false);
     expect(show("16:00", { ...arriving, welcome_card_dismissed_at: "x" })).toBe(false);
-    // A time typed on the booking (the guest's expected arrival) doesn't bring it forward.
-    expect(show("11:30", { ...arriving, check_in_time: "11:30" })).toBe(false);
   });
 
-  it("with an early check-in booked, start at their own earlier time", () => {
-    const early = { ...arriving, early_from: "12:00:00" };
-    expect(arrivalStart(early, "15:00", tz, DEFAULT_ARRIVALS)).toEqual({
-      from: at("12:00"),
-      early: true,
-      time: "12:00",
-    });
-    // Not earlier than check-in: no change.
+  it("follow the stay's own check-in time: early or late, as the host set it", () => {
     expect(
-      arrivalStart({ ...arriving, early_from: "16:00" }, "15:00", tz, DEFAULT_ARRIVALS),
-    ).toEqual({ from: at("15:00"), early: false, time: "15:00" });
+      arrivalStart({ ...arriving, check_in_time: "11:30:00" }, "16:00", tz, DEFAULT_ARRIVALS),
+    ).toEqual({ from: at("11:30"), early: true, time: "11:30" });
+    expect(
+      arrivalStart({ ...arriving, check_in_time: "23:30" }, "16:00", tz, DEFAULT_ARRIVALS),
+    ).toEqual({
+      from: at("23:30"),
+      early: false,
+      time: "23:30",
+    });
   });
 
   it("show at once when the host asks, even when switched off", () => {

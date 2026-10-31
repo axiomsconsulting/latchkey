@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.96.2",
+    date: "2026-10-31",
+    title: "Your own check-in times, free or paid your way",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The check-in time you set on a booking is the guest's check-in time again: an early check-in or late arrival you agreed (free, by phone or paid another way) starts their check-in card at that time, never earlier. In the booking form the field is now called Check-in time, and both times are said in words (\"23:30 at night · 7 h 30 min after your 16:00 check-in\") so a morning and evening time can't be mixed up.",
+      },
+      {
+        kind: "new",
+        area: "Services",
+        text: "Early check-in and late check-out requests (and any priced extra) can be approved free, or approved as paid another way (cash, bank transfer, agreed offline), as well as charged as usual. The new times apply straight away.",
+      },
+    ],
+  },
+  {
     version: "0.96.1",
     date: "2026-10-31",
     title: "Check-in cards wait for check-in time",
