@@ -4,81 +4,65 @@ import { Maximize, Minimize, RefreshCw } from "lucide-react";
 import { guest as copy } from "@/content/copy";
 import { reloadToUpdate } from "@/hooks/use-app-update";
 import { enterFullscreen, setFullscreenWanted } from "@/lib/kiosk-fullscreen";
+import { TAPS, TAP_WINDOW_MS, countTap } from "@/lib/kiosk-taps";
 import { cn } from "@/lib/utils";
 
-/** Hold for this long to act: guests brushing the corner never trigger anything. */
-export const HOLD_MS = 3_000;
-
 /**
- * Press and hold: `done` runs on letting go after HOLD_MS (inside the
- * gesture, so the browser allows full screen), and `progress` (0-1) fills
- * while held. Letting go early, or sliding off, cancels.
+ * Three taps in quick succession: guests brushing the corner never trigger
+ * anything, and there's no press-and-hold (that brings up the browser's own
+ * menu on tablets). `done` runs inside the third tap, so the browser allows
+ * full screen. `count` (0-2) shows how many taps so far.
  */
-function useHold(done: () => void) {
-  const [progress, setProgress] = useState(0);
-  const start = useRef<number | null>(null);
-  const frame = useRef(0);
-  const tick = () => {
-    if (start.current === null) return;
-    setProgress(Math.min(1, (Date.now() - start.current) / HOLD_MS));
-    frame.current = requestAnimationFrame(tick);
-  };
-  const stop = () => {
-    cancelAnimationFrame(frame.current);
-    start.current = null;
-    setProgress(0);
-  };
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+function useTaps(done: () => void) {
+  const [count, setCount] = useState(0);
+  const taps = useRef<number[]>([]);
+  const timer = useRef(0);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   return {
-    progress,
-    handlers: {
-      onPointerDown: (e: React.PointerEvent) => {
-        e.stopPropagation();
-        start.current = Date.now();
-        frame.current = requestAnimationFrame(tick);
-      },
-      onPointerUp: (e: React.PointerEvent) => {
-        e.stopPropagation();
-        const held = start.current !== null && Date.now() - start.current >= HOLD_MS;
-        stop();
-        if (held) done();
-      },
-      onPointerLeave: stop,
-      onPointerCancel: stop,
-      onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+    count,
+    onClick: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const next = countTap(taps.current, Date.now());
+      window.clearTimeout(timer.current);
+      if (next.fired) {
+        taps.current = [];
+        setCount(0);
+        done();
+        return;
+      }
+      taps.current = next.taps;
+      setCount(next.taps.length);
+      timer.current = window.setTimeout(() => {
+        taps.current = [];
+        setCount(0);
+      }, TAP_WINDOW_MS);
     },
   };
 }
 
-/** A ring that fills while held. */
-function Ring({ progress }: { progress: number }) {
-  if (!progress) return null;
-  const c = 2 * Math.PI * 18;
+/** Small dots under a corner button: how many of the three taps so far. */
+function TapDots({ count }: { count: number }) {
+  if (!count) return null;
   return (
-    <svg
-      viewBox="0 0 40 40"
-      className="pointer-events-none absolute inset-0 size-full -rotate-90"
+    <span
       aria-hidden
+      className="pointer-events-none absolute -bottom-0.5 left-1/2 flex -translate-x-1/2 gap-0.5"
     >
-      <circle
-        cx="20"
-        cy="20"
-        r="18"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - progress)}
-      />
-    </svg>
+      {Array.from({ length: TAPS }, (_, i) => (
+        <span
+          key={i}
+          className={cn("size-1 rounded-full", i < count ? "bg-foreground" : "bg-foreground/30")}
+        />
+      ))}
+    </span>
   );
 }
 
 /**
- * The door tablet's bottom-left corner: the full screen switch (hold for 3
- * seconds), which tablet this is (or its setup code), and the app version.
- * When a newer version is published it says so, and holding the version for
- * 3 seconds shows a big Update button.
+ * The door tablet's bottom-left corner: the full screen switch (tap 3
+ * times), which tablet this is (or its setup code), and the app version.
+ * A red dot beside the version means a newer version is waiting; tapping
+ * the version 3 times shows a big Update button.
  */
 export function KioskCorner({
   label,
@@ -100,7 +84,7 @@ export function KioskCorner({
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
-  const fs = useHold(() => {
+  const fs = useTaps(() => {
     if (document.fullscreenElement) {
       setFullscreenWanted(false);
       void document.exitFullscreen?.().catch(() => {});
@@ -109,7 +93,7 @@ export function KioskCorner({
       enterFullscreen();
     }
   });
-  const upd = useHold(() => setOffer(true));
+  const upd = useTaps(() => setOffer(true));
   // The big button goes away again by itself if nobody taps it.
   useEffect(() => {
     if (!offer) return;
@@ -118,39 +102,32 @@ export function KioskCorner({
   }, [offer]);
 
   return (
-    <div className="fixed bottom-1.5 left-2 z-[96] flex select-none items-center gap-2 text-[13px] leading-tight text-muted-foreground">
+    <div className="fixed bottom-1.5 left-2 z-[96] flex select-none items-center gap-2 text-[13px] leading-tight text-muted-foreground [-webkit-touch-callout:none]">
       <button
         type="button"
         aria-label={full ? copy.fullscreenOff : copy.fullscreenOn}
-        title={copy.holdHint}
+        title={copy.tapHint}
         className="relative grid size-9 place-items-center rounded-full text-muted-foreground"
-        {...fs.handlers}
+        onClick={fs.onClick}
       >
         {full ? (
           <Minimize className="size-4" aria-hidden />
         ) : (
           <Maximize className="size-4" aria-hidden />
         )}
-        <Ring progress={fs.progress} />
+        <TapDots count={fs.count} />
       </button>
       <button
         type="button"
-        className={cn(
-          "relative rounded-full px-2 py-1 text-left",
-          available && "bg-primary font-semibold text-primary-foreground",
-        )}
-        title={available ? copy.holdToUpdate : undefined}
-        {...(available ? upd.handlers : {})}
+        className="relative inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-left"
+        title={available ? copy.tapToUpdate : undefined}
+        aria-label={available && latest ? `v${version} · ${copy.tapToUpdate}` : undefined}
+        onClick={available ? upd.onClick : undefined}
       >
         {label}v{version}
-        {available && latest ? ` · ${copy.newVersion(latest)}` : null}
-        {available && upd.progress ? (
-          <span
-            aria-hidden
-            className="absolute inset-x-1 bottom-0 h-0.5 origin-left bg-primary-foreground"
-            style={{ transform: `scaleX(${upd.progress})` }}
-          />
-        ) : null}
+        {/* An update is waiting. */}
+        {available ? <span aria-hidden className="size-2.5 rounded-full bg-red-600" /> : null}
+        <TapDots count={upd.count} />
       </button>
       {offer ? (
         <button

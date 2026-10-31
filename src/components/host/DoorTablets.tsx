@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  Bell,
   Camera,
   CameraOff,
   KeyRound,
@@ -40,6 +41,8 @@ import {
   renameKioskDevice,
   setKioskAutoPair,
   setKioskCamera,
+  setKioskCardPicker,
+  setKioskCompat,
   stopWatchingKiosks,
   watchKiosks,
   type KioskDevice,
@@ -78,6 +81,7 @@ export function DoorTablets({ property }: { property: Property }) {
   const q = useDoorTablets(property.id);
   const pairFn = useServerFn(pairKioskByCode);
   const autoFn = useServerFn(setKioskAutoPair);
+  const pickerFn = useServerFn(setKioskCardPicker);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [wall, setWall] = useState(false);
@@ -164,6 +168,29 @@ export function DoorTablets({ property }: { property: Property }) {
             </span>
           </label>
 
+          <label className="mt-3 flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
+            <Switch
+              checked={q.data?.cardPicker ?? true}
+              disabled={!q.data?.compatAvailable}
+              onCheckedChange={(on) =>
+                void pickerFn({ data: { propertyId: property.id, on } })
+                  .then(async (res) => {
+                    await pingKiosk(res.code);
+                    await refresh();
+                  })
+                  .catch((err) =>
+                    toast.error(err instanceof Error ? err.message : common.errorBody),
+                  )
+              }
+            />
+            <span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <Bell className="size-4" aria-hidden /> {copy.cardPicker}
+              </span>
+              <span className="text-muted-foreground">{copy.cardPickerHelp}</span>
+            </span>
+          </label>
+
           {devices.some((d) => d.status === "confirmed") ? (
             <TabletUpdates property={property} />
           ) : null}
@@ -211,6 +238,7 @@ function TabletCard({
   const renameFn = useServerFn(renameKioskDevice);
   const removeFn = useServerFn(removeKioskDevice);
   const cameraFn = useServerFn(setKioskCamera);
+  const compatFn = useServerFn(setKioskCompat);
   const [label, setLabel] = useState(d.label ?? "");
   const [askCamera, setAskCamera] = useState(false);
   const [told, setTold] = useState(false);
@@ -222,6 +250,16 @@ function TabletCard({
       const res = await cameraFn({ data: { deviceId: d.id, allowed, guestsTold: told } });
       await pingKiosk(res.code);
       setAskCamera(false);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    }
+  }
+
+  async function compat(on: boolean | null) {
+    try {
+      const res = await compatFn({ data: { deviceId: d.id, on } });
+      await pingKiosk(res.code);
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -299,6 +337,36 @@ function TabletCard({
           </label>
         </>
       )}
+      {/* Older tablets: ticked by itself when the tablet detects it needs it; the host can tick or untick any tablet. */}
+      <div className="rounded-xl bg-muted/60 p-3 text-sm">
+        <label className="flex items-start gap-3">
+          <Checkbox
+            className="mt-0.5"
+            checked={d.compat}
+            onCheckedChange={(v) => void compat(v === true)}
+          />
+          <span>
+            <span className="block font-medium">{copy.compat}</span>
+            <span className="text-xs text-muted-foreground">{copy.compatHelp}</span>
+          </span>
+        </label>
+        {d.compatDetected ? (
+          <p className="mt-2 text-xs font-medium text-accent">
+            {d.compat
+              ? copy.compatDetected(d.compatReason ?? "")
+              : copy.compatDetectedOff(d.compatReason ?? "")}
+          </p>
+        ) : null}
+        {d.compatChosen !== null ? (
+          <button
+            type="button"
+            className="mt-1 text-xs text-primary underline-offset-2 hover:underline"
+            onClick={() => void compat(null)}
+          >
+            {copy.compatReset}
+          </button>
+        ) : null}
+      </div>
       <div className="flex flex-wrap gap-2">
         {!pending ? (
           <Button asChild variant="outline" size="sm">

@@ -182,6 +182,7 @@ export function KioskGoodbyeScreen({
   onLeft,
   contained = false,
   page: fixedPage,
+  bell,
 }: {
   code: string;
   goodbyes: Goodbyes;
@@ -192,6 +193,8 @@ export function KioskGoodbyeScreen({
   /** The host's preview: inside its frame instead of over the whole screen, on a set page. */
   contained?: boolean;
   page?: number;
+  /** The tablet's bell (KioskCardBell), top right: more cards up, or some off. */
+  bell?: React.ReactNode;
 }) {
   const now = useNow(1000);
   const express = useServerFn(kioskExpressCheckout);
@@ -234,11 +237,14 @@ export function KioskGoodbyeScreen({
             goodbyes.cards.filter((c) => c.kind !== "in").length,
           )}
         </h1>
-        {pages > 1 ? (
-          <span className="text-[clamp(0.9rem,2cqmin,1.25rem)] opacity-80">
-            {copy.goodbyePage(page + 1, pages)}
-          </span>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {pages > 1 ? (
+            <span className="text-[clamp(0.9rem,2cqmin,1.25rem)] opacity-80">
+              {copy.goodbyePage(page + 1, pages)}
+            </span>
+          ) : null}
+          {bell}
+        </div>
       </header>
       <div
         className="grid min-h-0 flex-1 gap-[1.5cqmin]"

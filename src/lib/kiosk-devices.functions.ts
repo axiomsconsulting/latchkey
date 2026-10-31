@@ -18,6 +18,7 @@ import {
   nextNumber,
   readPairCode,
 } from "@/lib/kiosk-devices";
+import { effectiveCompat } from "@/lib/kiosk-compat";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
 
 const secureRandom = () => {
@@ -73,6 +74,12 @@ export type TabletState = {
   watchUntil: string | null;
   /** The host asked it to update: at once, or once nobody has used it for 15 minutes, from that time. */
   update: { at: string; mode: "now" | "idle" } | null;
+  /** Runs the compatible kiosk for older tablets (/lite/<code>): the host's choice, else what it detected. */
+  compat: boolean;
+  /** The host chose compatibility mode on or off (null: it follows the detection). */
+  compatChosen: boolean | null;
+  /** The bell that puts today's guest cards up from the tablet itself (properties.kiosk_card_picker). */
+  cardPicker: boolean;
 };
 
 const notPaired: TabletState = {
@@ -85,6 +92,9 @@ const notPaired: TabletState = {
   calibration: {},
   watchUntil: null,
   update: null,
+  compat: false,
+  compatChosen: null,
+  cardPicker: false,
 };
 
 /**
@@ -104,6 +114,10 @@ export const kioskTablet = createServerFn({ method: "POST" })
         display: display.optional(),
         version: z.string().max(20).optional(),
         fix: fix.nullable().optional(),
+        /** What this browser says about itself: whether it needs compatibility mode (kiosk-compat.ts). */
+        compat: z
+          .object({ detected: z.boolean(), reason: z.string().max(120).nullable() })
+          .optional(),
       })
       .parse(d),
   )
@@ -126,6 +140,13 @@ export const kioskTablet = createServerFn({ method: "POST" })
     );
     // The demo properties' tour never pairs anything.
     if (!p || p.is_demo) return notPaired;
+    // Before migration 0072 there's no bell setting: it's off until then.
+    const { data: pick, error: pickErr } = await db
+      .from("properties")
+      .select("kiosk_card_picker")
+      .eq("id", p.id)
+      .maybeSingle();
+    const cardPicker = !pickErr && pick?.kiosk_card_picker !== false;
     const { requestNet } = await import("./stay-access.server");
     const net = await requestNet();
     const now = new Date();
@@ -146,6 +167,18 @@ export const kioskTablet = createServerFn({ method: "POST" })
       ...(data.version ? { app_version: data.version } : {}),
       ...located,
     };
+    // Also before migration 0072: written on its own so the rest of the report never fails with it.
+    const reportCompat = async (id: string) => {
+      if (!data.compat) return;
+      await db
+        .from("kiosk_devices")
+        .update({ compat_detected: data.compat.detected, compat_reason: data.compat.reason })
+        .eq("id", id)
+        .then(
+          () => {},
+          () => {},
+        );
+    };
     const state = (r: any, token: string | null): TabletState => ({
       paired: r.status !== "pending",
       device: token,
@@ -161,6 +194,12 @@ export const kioskTablet = createServerFn({ method: "POST" })
       update: r.update_requested_at
         ? { at: r.update_requested_at, mode: r.update_mode === "now" ? "now" : "idle" }
         : null,
+      compat: effectiveCompat(
+        r.compat,
+        data.compat ? data.compat.detected : r.compat_detected === true,
+      ),
+      compatChosen: typeof r.compat === "boolean" ? r.compat : null,
+      cardPicker: cardPicker && r.status !== "pending",
     });
 
     if (data.device) {
@@ -186,6 +225,7 @@ export const kioskTablet = createServerFn({ method: "POST" })
           .from("kiosk_devices")
           .update({ ...report, ...renew })
           .eq("id", dev.id);
+        await reportCompat(dev.id);
         return state({ ...dev, ...renew }, null);
       }
       if (error) return notPaired;
@@ -255,6 +295,7 @@ export const kioskTablet = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (insErr || !made) return notPaired;
+    await reportCompat(made.id);
     if (auto) {
       const { raiseAlert } = await import("./checkin.server");
       await raiseAlert({
@@ -319,6 +360,11 @@ export type KioskDevice = {
   createdAt: string;
   appVersion: string | null;
   cameraAllowed: boolean;
+  /** Compatibility mode: on (chosen or detected), the host's choice, and what the tablet detected. */
+  compat: boolean;
+  compatChosen: boolean | null;
+  compatDetected: boolean;
+  compatReason: string | null;
   display: (ReportedDisplay & { at?: string }) | null;
   calibration: ReturnType<typeof normaliseCalibrations>;
 };
@@ -336,15 +382,30 @@ export const listKioskDevices = createServerFn({ method: "GET" })
       .order("number", { ascending: true, nullsFirst: false })
       .limit(99);
     // Before migration 0065 there's nothing to calibrate yet.
-    if (error) return { available: false as const, devices: [] as KioskDevice[], autoPair: true };
+    if (error)
+      return {
+        available: false as const,
+        devices: [] as KioskDevice[],
+        autoPair: true,
+        cardPicker: true,
+        compatAvailable: false,
+      };
     const { data: prop } = await sb
       .from("properties")
       .select("kiosk_auto_pair")
       .eq("id", data.propertyId)
       .maybeSingle();
+    // Migration 0072: the bell and compatibility mode.
+    const { data: pick, error: pickErr } = await sb
+      .from("properties")
+      .select("kiosk_card_picker")
+      .eq("id", data.propertyId)
+      .maybeSingle();
     return {
       available: true as const,
       autoPair: prop?.kiosk_auto_pair !== false,
+      cardPicker: !pickErr && pick?.kiosk_card_picker !== false,
+      compatAvailable: !pickErr,
       devices: (rows ?? []).map((r: any): KioskDevice => ({
         id: r.id,
         label: r.label ?? null,
@@ -355,6 +416,10 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         createdAt: r.created_at,
         appVersion: r.app_version ?? null,
         cameraAllowed: r.camera_allowed === true,
+        compat: effectiveCompat(r.compat, r.compat_detected === true),
+        compatChosen: typeof r.compat === "boolean" ? r.compat : null,
+        compatDetected: r.compat_detected === true,
+        compatReason: r.compat_reason ?? null,
         display: r.display ?? null,
         calibration: normaliseCalibrations(r.calibration),
       })),
@@ -411,6 +476,53 @@ export const setKioskAutoPair = createServerFn({ method: "POST" })
       .eq("id", data.propertyId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** Whether the door tablet's bell can put today's guest cards up (on by default). */
+export const setKioskCardPicker = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, on: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const { data: p, error } = await (
+      await admin()
+    )
+      .from("properties")
+      .update({ kiosk_card_picker: data.on })
+      .eq("id", data.propertyId)
+      .select("short_code")
+      .single();
+    if (error)
+      throw new Error(
+        /kiosk_card_picker/.test(error.message)
+          ? "The bell needs the latest update (migration 0072)."
+          : error.message,
+      );
+    return { code: p.short_code as string };
+  });
+
+/**
+ * Compatibility mode for one tablet: on, off, or null to follow what the
+ * tablet detected. Returns the code to ping, so it switches at once.
+ */
+export const setKioskCompat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ deviceId: uuid, on: z.boolean().nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    const dev = await deviceProperty(db, data.deviceId);
+    await requireWrite(context.supabase, dev.properties.host_id);
+    const { error } = await db
+      .from("kiosk_devices")
+      .update({ compat: data.on })
+      .eq("id", data.deviceId);
+    if (error)
+      throw new Error(
+        /compat/.test(error.message)
+          ? "Compatibility mode needs the latest update (migration 0072)."
+          : error.message,
+      );
+    return { code: dev.properties.short_code as string };
   });
 
 async function deviceProperty(db: Loose, id: string) {

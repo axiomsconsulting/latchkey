@@ -29,6 +29,7 @@ import { Route as GCodeRouteImport } from './routes/g.$code'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as InvoiceTokenRouteImport } from './routes/invoice.$token'
 import { Route as KioskCodeRouteImport } from './routes/kiosk.$code'
+import { Route as LiteCodeRouteImport } from './routes/lite.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as PartnersAgreementRouteImport } from './routes/partners.agreement'
 import { Route as PartnersJoinRouteImport } from './routes/partners.join'
@@ -71,6 +72,7 @@ import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/
 import { Route as ApiPublicCronLatchkeyRouteImport } from './routes/api/public/cron/latchkey'
 import { Route as ApiPublicGoogleCallbackRouteImport } from './routes/api/public/google/callback'
 import { Route as ApiPublicInboundEmailSecretRouteImport } from './routes/api/public/inbound-email.$secret'
+import { Route as ApiPublicKioskLiteCodeRouteImport } from './routes/api/public/kiosk-lite.$code'
 import { Route as ApiPublicManifestAppRouteImport } from './routes/api/public/manifest/app'
 import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
 import { Route as ApiPublicPrivateFileRefRouteImport } from './routes/api/public/private-file.$ref'
@@ -180,6 +182,11 @@ const InvoiceTokenRoute = InvoiceTokenRouteImport.update({
 const KioskCodeRoute = KioskCodeRouteImport.update({
   id: '/kiosk/$code',
   path: '/kiosk/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiteCodeRoute = LiteCodeRouteImport.update({
+  id: '/lite/$code',
+  path: '/lite/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PCodeRoute = PCodeRouteImport.update({
@@ -407,6 +414,11 @@ const ApiPublicInboundEmailSecretRoute =
     path: '/api/public/inbound-email/$secret',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicKioskLiteCodeRoute = ApiPublicKioskLiteCodeRouteImport.update({
+  id: '/api/public/kiosk-lite/$code',
+  path: '/api/public/kiosk-lite/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicManifestAppRoute = ApiPublicManifestAppRouteImport.update({
   id: '/api/public/manifest/app',
   path: '/api/public/manifest/app',
@@ -484,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
+  '/lite/$code': typeof LiteCodeRoute
   '/p/$code': typeof PCodeRoute
   '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
@@ -527,6 +540,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
+  '/api/public/kiosk-lite/$code': typeof ApiPublicKioskLiteCodeRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
@@ -557,6 +571,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
+  '/lite/$code': typeof LiteCodeRoute
   '/p/$code': typeof PCodeRoute
   '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
@@ -600,6 +615,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
+  '/api/public/kiosk-lite/$code': typeof ApiPublicKioskLiteCodeRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
@@ -633,6 +649,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/invoice/$token': typeof InvoiceTokenRoute
   '/kiosk/$code': typeof KioskCodeRoute
+  '/lite/$code': typeof LiteCodeRoute
   '/p/$code': typeof PCodeRoute
   '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
@@ -676,6 +693,7 @@ export interface FileRoutesById {
   '/api/public/cron/latchkey': typeof ApiPublicCronLatchkeyRoute
   '/api/public/google/callback': typeof ApiPublicGoogleCallbackRoute
   '/api/public/inbound-email/$secret': typeof ApiPublicInboundEmailSecretRoute
+  '/api/public/kiosk-lite/$code': typeof ApiPublicKioskLiteCodeRoute
   '/api/public/manifest/app': typeof ApiPublicManifestAppRoute
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
@@ -709,6 +727,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
+    | '/lite/$code'
     | '/p/$code'
     | '/partners/agreement'
     | '/partners/join'
@@ -752,6 +771,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/latchkey'
     | '/api/public/google/callback'
     | '/api/public/inbound-email/$secret'
+    | '/api/public/kiosk-lite/$code'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
     | '/api/public/private-file/$ref'
@@ -782,6 +802,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
+    | '/lite/$code'
     | '/p/$code'
     | '/partners/agreement'
     | '/partners/join'
@@ -825,6 +846,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/latchkey'
     | '/api/public/google/callback'
     | '/api/public/inbound-email/$secret'
+    | '/api/public/kiosk-lite/$code'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
     | '/api/public/private-file/$ref'
@@ -857,6 +879,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/invoice/$token'
     | '/kiosk/$code'
+    | '/lite/$code'
     | '/p/$code'
     | '/partners/agreement'
     | '/partners/join'
@@ -900,6 +923,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/latchkey'
     | '/api/public/google/callback'
     | '/api/public/inbound-email/$secret'
+    | '/api/public/kiosk-lite/$code'
     | '/api/public/manifest/app'
     | '/api/public/mcp/$key'
     | '/api/public/private-file/$ref'
@@ -932,6 +956,7 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   InvoiceTokenRoute: typeof InvoiceTokenRoute
   KioskCodeRoute: typeof KioskCodeRoute
+  LiteCodeRoute: typeof LiteCodeRoute
   PCodeRoute: typeof PCodeRoute
   PartnersAgreementRoute: typeof PartnersAgreementRoute
   PartnersJoinRoute: typeof PartnersJoinRoute
@@ -954,6 +979,7 @@ export interface RootRouteChildren {
   ApiPublicCronLatchkeyRoute: typeof ApiPublicCronLatchkeyRoute
   ApiPublicGoogleCallbackRoute: typeof ApiPublicGoogleCallbackRoute
   ApiPublicInboundEmailSecretRoute: typeof ApiPublicInboundEmailSecretRoute
+  ApiPublicKioskLiteCodeRoute: typeof ApiPublicKioskLiteCodeRoute
   ApiPublicManifestAppRoute: typeof ApiPublicManifestAppRoute
   ApiPublicPrivateFileRefRoute: typeof ApiPublicPrivateFileRefRoute
   ApiPublicPushLatestRoute: typeof ApiPublicPushLatestRoute
@@ -1106,6 +1132,13 @@ declare module '@tanstack/react-router' {
       path: '/kiosk/$code'
       fullPath: '/kiosk/$code'
       preLoaderRoute: typeof KioskCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lite/$code': {
+      id: '/lite/$code'
+      path: '/lite/$code'
+      fullPath: '/lite/$code'
+      preLoaderRoute: typeof LiteCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$code': {
@@ -1402,6 +1435,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInboundEmailSecretRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/kiosk-lite/$code': {
+      id: '/api/public/kiosk-lite/$code'
+      path: '/api/public/kiosk-lite/$code'
+      fullPath: '/api/public/kiosk-lite/$code'
+      preLoaderRoute: typeof ApiPublicKioskLiteCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/manifest/app': {
       id: '/api/public/manifest/app'
       path: '/api/public/manifest/app'
@@ -1575,6 +1615,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   InvoiceTokenRoute: InvoiceTokenRoute,
   KioskCodeRoute: KioskCodeRoute,
+  LiteCodeRoute: LiteCodeRoute,
   PCodeRoute: PCodeRoute,
   PartnersAgreementRoute: PartnersAgreementRoute,
   PartnersJoinRoute: PartnersJoinRoute,
@@ -1597,6 +1638,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronLatchkeyRoute: ApiPublicCronLatchkeyRoute,
   ApiPublicGoogleCallbackRoute: ApiPublicGoogleCallbackRoute,
   ApiPublicInboundEmailSecretRoute: ApiPublicInboundEmailSecretRoute,
+  ApiPublicKioskLiteCodeRoute: ApiPublicKioskLiteCodeRoute,
   ApiPublicManifestAppRoute: ApiPublicManifestAppRoute,
   ApiPublicPrivateFileRefRoute: ApiPublicPrivateFileRefRoute,
   ApiPublicPushLatestRoute: ApiPublicPushLatestRoute,

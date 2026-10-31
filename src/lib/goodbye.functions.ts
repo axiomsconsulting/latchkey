@@ -491,15 +491,8 @@ export const setKioskCard = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!b?.properties) throw new Error("We couldn't find that stay.");
     await requireWrite(context.supabase, b.properties.host_id);
-    const now = new Date().toISOString();
-    const patch =
-      data.kind === "in"
-        ? data.show
-          ? { welcome_now_at: now, welcome_card_dismissed_at: null }
-          : { welcome_card_dismissed_at: now, welcome_now_at: null }
-        : data.show
-          ? { goodbye_now_at: now, goodbye_dismissed_at: null }
-          : { goodbye_dismissed_at: now, goodbye_now_at: null };
+    const { cardPatch } = await import("./kiosk-picker");
+    const patch = cardPatch(data.kind, data.show, new Date().toISOString());
     const { error } = await db.from("bookings").update(patch).eq("id", b.id);
     if (error)
       throw new Error(
@@ -590,4 +583,112 @@ export const todayKioskCards = createServerFn({ method: "GET" })
             state: states[`${kind}:${b.id}`]!,
           });
     return { available: true as const, states, guests };
+  });
+
+/** A confirmed door tablet of this property whose bell is on, by its device token; else null. */
+async function pickerTablet(db: any, propertyId: string, device: string): Promise<string | null> {
+  const { sha256 } = await import("./checkin.server");
+  const { data: dev } = await db
+    .from("kiosk_devices")
+    .select("id, status")
+    .eq("token_hash", sha256(device))
+    .eq("property_id", propertyId)
+    .maybeSingle();
+  if (!dev || dev.status === "pending") return null;
+  const { data: p, error } = await db
+    .from("properties")
+    .select("kiosk_card_picker")
+    .eq("id", propertyId)
+    .maybeSingle();
+  return !error && p?.kiosk_card_picker !== false ? dev.id : null;
+}
+
+export type PickerEntry = {
+  handle: string;
+  kind: "in" | "out";
+  name: string;
+  room: string | null;
+  showing: boolean;
+  autoAt: string | null;
+};
+
+/**
+ * The bell on a paired door tablet: today's arriving and leaving guests
+ * (shortened names, anyone at the door can open it), whether their card is
+ * up, and when it comes on by itself. Stays are signed handles, never ids.
+ */
+export const kioskCardPicker = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code, device: z.string().min(24).max(80) }).parse(d))
+  .handler(async ({ data }): Promise<{ on: boolean; items: PickerEntry[] }> => {
+    const { db, p } = await propertyFor(data.code);
+    if (!p || !(await pickerTablet(db, p.id, data.device))) return { on: false, items: [] };
+    const tz = p.timezone ?? "Europe/London";
+    const today = todayInZone(tz);
+    const { data: rows, error } = await db
+      .from("bookings")
+      .select(
+        "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
+      )
+      .eq("property_id", p.id)
+      .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
+      .limit(400);
+    if (error) return { on: true, items: [] };
+    const { pickerItems } = await import("./kiosk-picker");
+    const items = pickerItems(rows ?? [], {
+      today,
+      now: Date.now(),
+      tz,
+      standardIn: (p.default_check_in_time ?? "15:00").slice(0, 5),
+      standardOut: (p.default_check_out_time ?? "11:00").slice(0, 5),
+      arrivals: normaliseArrivals(p.checkin_welcome),
+      goodbye: normaliseGoodbye(p.checkout_goodbye),
+    });
+    return {
+      on: true,
+      items: await Promise.all(
+        items.map(async ({ bookingId, ...i }) => ({
+          ...i,
+          handle: await handleFor(bookingId, p.id),
+        })),
+      ),
+    };
+  });
+
+/** The bell's ticks: put these cards up now and take those off, from the tablet itself. */
+export const kioskSetCards = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        code,
+        device: z.string().min(24).max(80),
+        changes: z
+          .array(
+            z.object({
+              handle: z.string().max(300),
+              kind: z.enum(["in", "out"]),
+              show: z.boolean(),
+            }),
+          )
+          .max(100),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { db, p } = await propertyFor(data.code);
+    if (!p || !(await pickerTablet(db, p.id, data.device)))
+      throw new Error("This tablet can't change the cards. Ask your host.");
+    const { cardPatch } = await import("./kiosk-picker");
+    const now = new Date().toISOString();
+    let changed = 0;
+    for (const c of data.changes) {
+      const id = await readHandle(c.handle, p.id);
+      if (!id) continue;
+      const { error } = await db
+        .from("bookings")
+        .update(cardPatch(c.kind, c.show, now))
+        .eq("id", id)
+        .eq("property_id", p.id);
+      if (!error) changed += 1;
+    }
+    return { changed };
   });

@@ -642,6 +642,7 @@ export function googleFontsHref(t: ThemeConfig): string {
 /** Short codes that clash with app pages can't be used as vanity links. */
 export const RESERVED_SLUGS = new Set([
   "g",
+  "lite",
   "app",
   "auth",
   "api",
