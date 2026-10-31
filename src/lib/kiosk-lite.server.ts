@@ -217,7 +217,17 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webki
 /** What the old tablet learns each time it checks in. */
 export async function liteState(
   code: string,
-  body: { device?: string | undefined; detected?: boolean | undefined },
+  body: {
+    device?: string | undefined;
+    detected?: boolean | undefined;
+    screen?:
+      | {
+          view: "start" | "cards" | "welcome" | "saver";
+          lite?: boolean | undefined;
+          fullscreen?: boolean | undefined;
+        }
+      | undefined;
+  },
   userAgent: string,
 ) {
   const { kioskTablet } = await import("./kiosk-devices.functions");
@@ -230,6 +240,15 @@ export async function liteState(
       ...(device ? { device } : {}),
       version: APP_VERSION,
       compat: { detected: body.detected !== false, reason: browserLabel(userAgent) },
+      ...(body.screen
+        ? {
+            screen: {
+              view: body.screen.view,
+              lite: true,
+              fullscreen: body.screen.fullscreen === true,
+            },
+          }
+        : {}),
     },
   });
   const token = tablet.device ?? device;

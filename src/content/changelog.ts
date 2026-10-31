@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.97.0",
+    date: "2026-10-31",
+    title: "Live view of every door tablet",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Live view of your door tablets in Settings → Kiosk → Door tablets: each tablet's card flips over to show what its screen shows now (the start screen, guest cards on the page they're on, your welcome, the screensaver or night light, or the check-in step a guest is on) with its clock, version and whether it's full screen, or its camera. Flip one with the eye or camera icon, or all at once with Live View All Tablets and Live Camera View All Tablets; the back arrow turns a card back, and Expand shows it large. Today's kiosk card opens the same live view.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Lining up a tablet's screen no longer changes when you scroll past it: tap or click the screen picture to adjust, and Done to lock it again. On a computer the controls sit on the left with a smaller screen picture beside them.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "What compatibility mode means, and what a tablet detected, is now behind an info button instead of repeated on every tablet.",
+      },
+    ],
+  },
+  {
     version: "0.96.2",
     date: "2026-10-31",
     title: "Your own check-in times, free or paid your way",

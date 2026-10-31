@@ -19,6 +19,7 @@ import {
   readPairCode,
 } from "@/lib/kiosk-devices";
 import { effectiveCompat } from "@/lib/kiosk-compat";
+import { SCREEN_VIEWS, normaliseScreen, type KioskScreen } from "@/lib/kiosk-screen";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
 
 const secureRandom = () => {
@@ -51,6 +52,28 @@ export type ReportedDisplay = z.infer<typeof display>;
 async function admin(): Promise<Loose> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin as unknown as Loose;
+}
+
+/** What the tablet shows now (kiosk-screen.ts): which screen only, no guest details. */
+const screen = z.object({
+  view: z.enum(SCREEN_VIEWS),
+  step: z.string().max(24).nullable().optional(),
+  fullscreen: z.boolean().optional(),
+  lite: z.boolean().optional(),
+});
+
+/** Before migration 0073 there's no column: the report is simply dropped. */
+async function saveScreen(db: Loose, id: string, s: z.infer<typeof screen>) {
+  const value = normaliseScreen({ ...s, at: new Date().toISOString() });
+  if (!value) return;
+  await db
+    .from("kiosk_devices")
+    .update({ screen: value })
+    .eq("id", id)
+    .then(
+      () => {},
+      () => {},
+    );
 }
 
 const fix = z.object({
@@ -118,6 +141,7 @@ export const kioskTablet = createServerFn({ method: "POST" })
         compat: z
           .object({ detected: z.boolean(), reason: z.string().max(120).nullable() })
           .optional(),
+        screen: screen.optional(),
       })
       .parse(d),
   )
@@ -226,6 +250,7 @@ export const kioskTablet = createServerFn({ method: "POST" })
           .update({ ...report, ...renew })
           .eq("id", dev.id);
         await reportCompat(dev.id);
+        if (data.screen) await saveScreen(db, dev.id, data.screen);
         return state({ ...dev, ...renew }, null);
       }
       if (error) return notPaired;
@@ -308,6 +333,26 @@ export const kioskTablet = createServerFn({ method: "POST" })
     return state(made, t.token);
   });
 
+/** The tablet's screen changed (a check-in step, the screensaver, cards): for the host's live view. */
+export const kioskScreenReport = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code, device, screen }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { sha256 } = await import("./checkin.server");
+    const { data: dev } = await db
+      .from("kiosk_devices")
+      .select("id, properties(short_code)")
+      .eq("token_hash", sha256(data.device))
+      .maybeSingle();
+    if (!dev || dev.properties?.short_code !== data.code.toLowerCase()) return { ok: false };
+    await db
+      .from("kiosk_devices")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("id", dev.id);
+    await saveScreen(db, dev.id, data.screen);
+    return { ok: true };
+  });
+
 /** The tablet's camera picture while its host watches (latest only); says how long they'll keep watching. */
 export const kioskSnapshotUpload = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -360,6 +405,8 @@ export type KioskDevice = {
   createdAt: string;
   appVersion: string | null;
   cameraAllowed: boolean;
+  /** What it shows now, as it last said (the host's live view). */
+  screen: KioskScreen | null;
   /** Compatibility mode: on (chosen or detected), the host's choice, and what the tablet detected. */
   compat: boolean;
   compatChosen: boolean | null;
@@ -416,6 +463,7 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         createdAt: r.created_at,
         appVersion: r.app_version ?? null,
         cameraAllowed: r.camera_allowed === true,
+        screen: normaliseScreen(r.screen),
         compat: effectiveCompat(r.compat, r.compat_detected === true),
         compatChosen: typeof r.compat === "boolean" ? r.compat : null,
         compatDetected: r.compat_detected === true,

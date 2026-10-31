@@ -355,6 +355,14 @@ export const previewKioskScreens = createServerFn({ method: "GET" })
     if (!own) throw new Error("Property not found.");
     const { db, p } = await propertyFor(own.short_code);
     if (!p) throw new Error("Property not found.");
+    // The property's own look, name and clock, so the live view looks like the tablet.
+    const { data: look } = await db
+      .from("properties")
+      .select("name, theme_config, host_id")
+      .eq("id", p.id)
+      .maybeSingle();
+    const { normaliseTheme } = await import("./theme");
+    const theme = normaliseTheme(look?.theme_config);
     const { data: devs } = await db
       .from("kiosk_devices")
       .select("id, number, label, status, display")
@@ -393,6 +401,10 @@ export const previewKioskScreens = createServerFn({ method: "GET" })
         : null;
     };
     return {
+      name: (look?.name as string | undefined) ?? "",
+      code: own.short_code as string,
+      timezone: (p.timezone as string | null) ?? "Europe/London",
+      theme,
       tablets: await Promise.all(
         list.map(async (t) => {
           const cards = await cardsFor(db, p, t.id, true);
