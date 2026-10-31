@@ -115,13 +115,52 @@ export function pickerChanges(
   return out;
 }
 
-/** The booking columns a card change writes (the same as Show now / Take off on Today). */
-export function cardPatch(kind: "in" | "out", show: boolean, nowIso: string) {
+/**
+ * The booking columns a card change writes (the same as Show now / Take off
+ * on Today). Showing with `devices` also says which tablets it goes to
+ * (null = every tablet; left out = as before).
+ */
+export function cardPatch(
+  kind: "in" | "out",
+  show: boolean,
+  nowIso: string,
+  devices?: string[] | null,
+): Record<string, unknown> {
+  const where = show && devices !== undefined ? { [devicesColumn(kind)]: devices } : {};
   return kind === "in"
     ? show
-      ? { welcome_now_at: nowIso, welcome_card_dismissed_at: null }
+      ? { welcome_now_at: nowIso, welcome_card_dismissed_at: null, ...where }
       : { welcome_card_dismissed_at: nowIso, welcome_now_at: null }
     : show
-      ? { goodbye_now_at: nowIso, goodbye_dismissed_at: null }
+      ? { goodbye_now_at: nowIso, goodbye_dismissed_at: null, ...where }
       : { goodbye_dismissed_at: nowIso, goodbye_now_at: null };
+}
+
+/** The booking column that lists the tablets a card goes to (migration 0076). */
+export const devicesColumn = (kind: "in" | "out") =>
+  kind === "in" ? "welcome_card_devices" : "goodbye_card_devices";
+
+/** Whether a card goes to this tablet: every tablet unless the host chose some (then paired ones on the list only). */
+export function onTablet(devices: string[] | null | undefined, deviceId: string | null): boolean {
+  if (!devices || !devices.length) return true;
+  return !!deviceId && devices.includes(deviceId);
+}
+
+/** The list after a tablet's own bell puts a card up: that tablet joins a chosen list (every tablet stays every tablet). */
+export function withTablet(
+  devices: string[] | null | undefined,
+  deviceId: string,
+): string[] | null {
+  if (!devices || !devices.length) return null;
+  return devices.includes(deviceId) ? devices : [...devices, deviceId];
+}
+
+/**
+ * Cards that appeared since the last look (by kind and booking or handle):
+ * the tablet brings its cards back for them even if someone had put the
+ * cards aside, so Show now always shows.
+ */
+export function newCards(before: string[], after: string[]): string[] {
+  const seen = new Set(before);
+  return after.filter((k) => !seen.has(k));
 }

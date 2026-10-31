@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.102.0",
+    date: "2026-10-31",
+    title: "Guest cards on the tablets you choose, straight away",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "With two or more door tablets, Show now asks which tablets the guest's card goes to (every tablet to start with), and the list shows where each card is. A tablet's own bell adds that tablet.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: 'Show now and Take off reach every tablet within seconds, older tablets too and tablets whose live connection dropped. A card you put up now always shows, even if someone had tapped "Checking in?" and put the cards aside, and a check-in left half done gives way to it after 45 seconds untouched.',
+      },
+    ],
+  },
+  {
     version: "0.101.0",
     date: "2026-10-31",
     title: "XL door tablets",

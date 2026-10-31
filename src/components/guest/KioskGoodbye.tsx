@@ -14,7 +14,12 @@ import {
 } from "@/lib/checkout-goodbye";
 import { deviceToken } from "@/lib/kiosk-presence";
 import { cn } from "@/lib/utils";
-import { kioskExpressCheckout, kioskGoodbyes, type GoodbyeCard } from "@/lib/goodbye.functions";
+import {
+  kioskCardsStamp,
+  kioskExpressCheckout,
+  kioskGoodbyes,
+  type GoodbyeCard,
+} from "@/lib/goodbye.functions";
 import { gridFor } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
 
@@ -144,10 +149,16 @@ function GuestCard({
   );
 }
 
-/** Today's goodbyes for the door tablet: read on start, every minute and when the host pings. */
+/**
+ * Today's cards for the door tablet: read on start, every minute, when the
+ * host pings, and whenever the property's cards stamp moves (checked every
+ * few seconds, so Show now and Take off land even if the live ping was missed).
+ */
 export function useKioskGoodbyes(code: string, enabled: boolean) {
   const fn = useServerFn(kioskGoodbyes);
+  const stampFn = useServerFn(kioskCardsStamp);
   const [data, setData] = useState<Goodbyes | null>(null);
+  const stamp = useRef<string | null | undefined>(undefined);
   const load = useCallback(() => {
     const device = deviceToken(code);
     void fn({ data: { code, ...(device ? { device } : {}) } })
@@ -158,14 +169,27 @@ export function useKioskGoodbyes(code: string, enabled: boolean) {
     if (!enabled) return;
     load();
     const id = window.setInterval(load, 60_000);
+    const quick = window.setInterval(() => {
+      if (document.hidden) return;
+      void stampFn({ data: { code } })
+        .then(({ at }) => {
+          if (stamp.current !== undefined && at !== stamp.current) load();
+          stamp.current = at;
+        })
+        .catch(() => undefined);
+    }, STAMP_MS);
     const stop = onKioskPing(code, load);
     return () => {
       window.clearInterval(id);
+      window.clearInterval(quick);
       stop();
     };
-  }, [code, enabled, load]);
+  }, [code, enabled, load, stampFn]);
   return { goodbyes: data, reload: load };
 }
+
+/** How often the tablet checks whether the host changed the cards. */
+const STAMP_MS = 5_000;
 
 /**
  * The door tablet on check-out day: a card for each guest leaving now (a

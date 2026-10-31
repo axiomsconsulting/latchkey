@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { normaliseArrivals, normaliseGoodbye } from "@/lib/checkout-goodbye";
 import { zonedToUtc } from "@/lib/guide";
-import { cardPatch, pickKey, pickerChanges, pickerItems, type PickerRow } from "@/lib/kiosk-picker";
+import {
+  cardPatch,
+  newCards,
+  onTablet,
+  pickKey,
+  pickerChanges,
+  pickerItems,
+  withTablet,
+  type PickerRow,
+} from "@/lib/kiosk-picker";
 
 const today = "2026-10-31";
 const tz = "Europe/London";
@@ -101,5 +110,33 @@ describe("the bell's list of today's cards", () => {
       goodbye_now_at: "t",
       goodbye_dismissed_at: null,
     });
+  });
+});
+
+describe("cards on chosen tablets", () => {
+  it("goes to every tablet unless the host picked some", () => {
+    expect(onTablet(null, "t1")).toBe(true);
+    expect(onTablet([], null)).toBe(true);
+    expect(onTablet(["t1"], "t1")).toBe(true);
+    expect(onTablet(["t1"], "t2")).toBe(false);
+    expect(onTablet(["t1"], null)).toBe(false);
+  });
+
+  it("writes the tablets only when showing, and only when given", () => {
+    expect(cardPatch("in", true, "now", ["t1"])).toMatchObject({ welcome_card_devices: ["t1"] });
+    expect(cardPatch("out", true, "now", null)).toMatchObject({ goodbye_card_devices: null });
+    expect(cardPatch("in", true, "now")).not.toHaveProperty("welcome_card_devices");
+    expect(cardPatch("in", false, "now", ["t1"])).not.toHaveProperty("welcome_card_devices");
+  });
+
+  it("adds a tablet whose own bell puts the card up", () => {
+    expect(withTablet(null, "t2")).toBeNull();
+    expect(withTablet(["t1"], "t2")).toEqual(["t1", "t2"]);
+    expect(withTablet(["t1", "t2"], "t2")).toEqual(["t1", "t2"]);
+  });
+
+  it("notices cards that just appeared", () => {
+    expect(newCards(["in:a"], ["in:a", "out:b"])).toEqual(["out:b"]);
+    expect(newCards(["in:a", "out:b"], ["in:a"])).toEqual([]);
   });
 });
