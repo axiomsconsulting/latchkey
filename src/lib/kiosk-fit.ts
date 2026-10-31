@@ -141,3 +141,26 @@ export function personalPhone(screen: ScreenSize, orientation: Orientation): boo
   const short = Math.min(screen.w, screen.h);
   return short > 0 && short < PHONE_SHORT_SIDE && orientation === "portrait";
 }
+
+/**
+ * Runs in the kiosk page's <head>, before anything is drawn: a door tablet
+ * this browser has seen before gets its remembered display height
+ * (--kiosk-h) and text scale (html font size, --kiosk-header) at once, so
+ * the first screen already has its final size. A guest's own phone (an
+ * upright phone, or ?guest / ?resume / ?join) is left alone. Mirrors
+ * calibrationKey and the kiosk's latchkey.display / latchkey.kioskScale.
+ */
+export const KIOSK_FIT_SCRIPT = `(function(){try{
+var q=location.search;if(/[?&](guest|resume|join)=/.test(q))return;
+var s=screen,sw=Math.min(s.width,s.height),sh=Math.max(s.width,s.height);
+var t=(s.orientation&&s.orientation.type)||"";
+var land=t?t.indexOf("landscape")===0:innerWidth>innerHeight;
+if(sw<600&&!land)return;
+var key=sw+"x"+sh+":"+(land?"landscape":"portrait");
+var d=JSON.parse(localStorage.getItem("latchkey.display")||"{}")[key];
+var h=typeof d==="number"?d:d&&d.h;
+var r=document.documentElement.style;
+if(h)r.setProperty("--kiosk-h",h+"px");
+var sc=JSON.parse(localStorage.getItem("latchkey.kioskScale")||"{}")[key];
+if(land&&sc&&sc.px&&sc.h){var px=sc.px*((h||sc.h)/sc.h);r.fontSize=px+"px";r.setProperty("--kiosk-header",px+"px");}
+}catch(e){}})();`;

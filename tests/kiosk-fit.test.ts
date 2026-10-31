@@ -10,6 +10,7 @@ import {
   orientedScreen,
   personalPhone,
   settleDisplay,
+  KIOSK_FIT_SCRIPT,
   widthCap,
 } from "../src/lib/kiosk-fit";
 
@@ -158,6 +159,54 @@ describe("the kiosk's display", () => {
   });
 
   it("remembers per screen and way up", () => {
+    expect(calibrationKey({ w: 1280, h: 800 }, "landscape")).toBe("800x1280:landscape");
+  });
+});
+
+describe("the size set before the kiosk is drawn", () => {
+  const run = (
+    o: { search?: string; type?: string; w?: number; h?: number },
+    store: Record<string, string>,
+  ) => {
+    const style: Record<string, string> & { setProperty: (k: string, v: string) => void } = {
+      setProperty(k, v) {
+        style[k] = v;
+      },
+    } as never;
+    const env = {
+      location: { search: o.search ?? "" },
+      screen: {
+        width: o.w ?? 1280,
+        height: o.h ?? 800,
+        orientation: { type: o.type ?? "landscape-primary" },
+      },
+      innerWidth: 1280,
+      innerHeight: 700,
+      localStorage: { getItem: (k: string) => store[k] ?? null },
+      document: { documentElement: { style } },
+    };
+    new Function(...Object.keys(env), KIOSK_FIT_SCRIPT)(...Object.values(env));
+    return style;
+  };
+  const store = {
+    "latchkey.display": JSON.stringify({ "800x1280:landscape": { w: 1280, h: 752 } }),
+    "latchkey.kioskScale": JSON.stringify({ "800x1280:landscape": { px: 20, h: 752 } }),
+  };
+
+  it("gives a known tablet its remembered height and text size at once", () => {
+    const s = run({}, store);
+    expect(s["--kiosk-h"]).toBe("752px");
+    expect(s["fontSize"]).toBe("20px");
+    expect(s["--kiosk-header"]).toBe("20px");
+  });
+
+  it("leaves guests' own phones and unknown tablets alone", () => {
+    expect(run({ search: "?guest=1" }, store)["--kiosk-h"]).toBeUndefined();
+    expect(run({ w: 390, h: 844, type: "portrait-primary" }, store)["--kiosk-h"]).toBeUndefined();
+    expect(run({}, {})["--kiosk-h"]).toBeUndefined();
+  });
+
+  it("uses the same key as the kiosk remembers by", () => {
     expect(calibrationKey({ w: 1280, h: 800 }, "landscape")).toBe("800x1280:landscape");
   });
 });
