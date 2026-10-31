@@ -6,6 +6,13 @@ const body = z.discriminatedUnion("action", [
     action: z.literal("state"),
     device: z.string().max(80).optional(),
     detected: z.boolean().optional(),
+    screen: z
+      .object({
+        view: z.enum(["start", "cards", "welcome", "saver"]),
+        lite: z.boolean().optional(),
+        fullscreen: z.boolean().optional(),
+      })
+      .optional(),
   }),
   z.object({ action: z.literal("express"), handle: z.string().max(300) }),
   z.object({ action: z.literal("picker"), device: z.string().min(24).max(80) }),

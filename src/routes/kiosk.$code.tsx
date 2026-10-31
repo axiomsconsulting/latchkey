@@ -52,7 +52,13 @@ import {
 } from "@/lib/kiosk-fit";
 import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
 import { areaFor, type Area, type Calibrations } from "@/lib/kiosk-calibration";
-import { kioskSnapshotUpload, kioskTablet, type TabletState } from "@/lib/kiosk-devices.functions";
+import {
+  kioskScreenReport,
+  kioskSnapshotUpload,
+  kioskTablet,
+  type TabletState,
+} from "@/lib/kiosk-devices.functions";
+import { screenFrom } from "@/lib/kiosk-screen";
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
@@ -870,6 +876,46 @@ function Kiosk() {
     enabled: shared && !tour,
   });
   const goodbyeUp = shared && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
+  // What's on screen now, for the host's live view (Settings → Door tablets): which screen only.
+  const restShowing = useRestShowing(saverLook.rest, p.timezone ?? "Europe/London", {
+    start: p.quietStart,
+    end: p.quietEnd,
+  });
+  const [isFull, setIsFull] = useState(false);
+  useEffect(() => {
+    const sync = () => setIsFull(!!document.fullscreenElement);
+    sync();
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+  const screenNow = screenFrom({
+    welcomeUp,
+    welcomeRest,
+    cardsUp: goodbyeUp,
+    saver,
+    rest: restShowing,
+    atWelcome,
+    step: stepKey,
+    join: !!join,
+  });
+  const screenKey = `${screenNow.view}:${screenNow.step ?? ""}:${isFull}`;
+  const reportScreen = useServerFn(kioskScreenReport);
+  useEffect(() => {
+    if (!shared || tour) return;
+    const id = window.setTimeout(() => {
+      const device = deviceToken(p.code);
+      if (!device) return;
+      void reportScreen({
+        data: {
+          code: p.code,
+          device,
+          screen: { view: screenNow.view, step: screenNow.step, fullscreen: isFull },
+        },
+      }).catch(() => {});
+    }, 800);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenKey, shared, tour, p.code]);
   // The welcome goes over everything, the screensaver too.
   // …and so do today's check-in and check-out cards: the screensaver only starts when none are up.
   useEffect(() => {

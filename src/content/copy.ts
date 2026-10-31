@@ -1344,6 +1344,9 @@ export const checkinSettings = branded({
     wayUp: { landscape: "On its side", portrait: "Upright" } as Record<string, string>,
     noDisplay: "Waiting for the tablet to report its screen. Make sure the kiosk is open on it.",
     drag: "Drag the area to move it, its edges to resize, pinch or scroll to zoom.",
+    tapToAdjust: "Tap to adjust",
+    lockedHint: "Locked so scrolling the page never moves it. Tap or click the screen to adjust.",
+    doneAdjusting: "Done",
     move: "Move",
     up: "Up",
     down: "Down",
@@ -1480,18 +1483,37 @@ export const kioskCardsCopy = branded({
 });
 
 export const kioskPreviewCopy = branded({
-  open: "Preview tablets",
-  title: "What the door tablets show now",
-  body: "Each tablet's screen as it is now, page by page when cards turn. Updates every 15 seconds while open.",
-  allTablets: "Every tablet",
-  cardsLine: (n: number, pages: number) =>
-    `${n} card${n === 1 ? "" : "s"}${pages > 1 ? `, ${pages} screens turning every 5 seconds` : ""}`,
-  welcomeLine: "Your welcome, full screen",
-  startLine: "The usual start screen",
-  screenOf: (n: number, of: number) => `Screen ${n} of ${of}`,
+  open: "Live View All Tablets",
+  cameras: "Live Camera View All Tablets",
+  title: "Live view: what the door tablets show now",
+  body: "Each tablet's screen as it is now: the same screen, page, clock and version. Updates every few seconds while open.",
+  liveView: "Live view",
+  cameraView: "Live camera view",
+  back: "Back to tablet details",
+  expand: "Expand",
+  backAll: "Back to tablet details (all)",
   checkIn: "Check in",
-  startTitle: "Welcome",
-  startBody: "The usual check-in start screen (or the screensaver when nobody's about).",
+  startTitle: (name: string) => `Welcome to ${name}`,
+  startBody: "Check in here, or scan with your phone.",
+  checkingIn: "A guest is checking in",
+  joining: "Another guest is joining on their own phone",
+  offline: (when: string) => `Offline · last seen ${when}`,
+  noScreen: "This tablet hasn't said what it shows yet: it will after its next update.",
+  lite: "Compatibility mode",
+  fullscreen: "Full screen",
+  notFullscreen: "Not full screen",
+  updateWaiting: "Update waiting",
+  screens: {
+    start: "Start screen",
+    cards: "Guest cards",
+    welcome: "Your welcome",
+    welcomeRest: "Your welcome, resting",
+    saver: "Screensaver",
+    night: "Night light",
+    blank: "Screen off",
+    checkin: "Checking in",
+    join: "Guest joining",
+  } as Record<string, string>,
 });
 
 export const doorTabletsCopy = branded({
@@ -1504,6 +1526,9 @@ export const doorTabletsCopy = branded({
   compatDetectedOff: (browser: string) =>
     `This tablet's browser (${browser}) can't run the full kiosk. Tick this unless you've updated it.`,
   compatReset: "Let the tablet decide",
+  compatShort: "Compatibility mode",
+  compatDetectedTag: "Detected",
+  compatInfo: "What's compatibility mode?",
   cardPicker: "Bell on the tablet",
   cardPickerHelp:
     "A bell beside the screensaver button lists today's arriving and leaving guests (first name and initial), so whoever is at the tablet can put their cards up now, with the time each comes on by itself. Switch off if guests shouldn't see who else is arriving or leaving today.",
@@ -1540,7 +1565,7 @@ export const doorTabletsCopy = branded({
   remove: "Remove",
   removeConfirm: (name: string) =>
     `Remove ${name}? If it opens the kiosk again it joins as a new tablet.`,
-  viewCameras: (n: number) => (n === 1 ? "View camera" : `View ${n} cameras`),
+  viewCameras: (_n: number) => "Live Camera View All Tablets",
   wallTitle: "Door tablet cameras",
   wallBody:
     "A new picture every few seconds. The tablets show they're being viewed; when you close this they stop and the pictures are deleted.",

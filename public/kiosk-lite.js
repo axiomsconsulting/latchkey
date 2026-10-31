@@ -101,7 +101,7 @@
 
   function refresh() {
     var device = get(DEVICE_KEY);
-    var body = { action: "state", detected: detected() };
+    var body = { action: "state", detected: detected(), screen: currentScreen() };
     if (device) body.device = device;
     call(body, function (err, res) {
       $("net").style.display = err ? "block" : "none";
@@ -128,6 +128,15 @@
       corner();
       maybeUpdate();
     });
+  }
+
+  /** What's on screen, for the host's live view (kiosk-screen.ts): which screen only. */
+  function currentScreen() {
+    var view = "start";
+    if (saverOn) view = "saver";
+    else if (cards().length && !cardsAside) view = "cards";
+    else if (state && state.welcome && !cardsAside) view = "welcome";
+    return { view: view, lite: true, fullscreen: isFull() };
   }
 
   function cardsKey(s) {
@@ -522,7 +531,9 @@
   // ---- Screensaver: only when no cards or welcome are up -------------------------------
 
   function saver(on) {
+    var was = saverOn;
     saverOn = on;
+    if (was !== on) window.setTimeout(refresh, 0);
     $("saver").style.display = on ? "block" : "none";
     if (on) moveSaver();
   }

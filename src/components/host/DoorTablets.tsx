@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  ArrowLeft,
   Bell,
   Camera,
   CameraOff,
+  Eye,
+  Info,
   KeyRound,
   Loader2,
   Maximize2,
@@ -27,11 +30,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { common, doorTabletsCopy as copy, updateCopy } from "@/content/copy";
+import {
+  common,
+  doorTabletsCopy as copy,
+  kioskPreviewCopy as liveCopy,
+  updateCopy,
+} from "@/content/copy";
 import { useLatestVersion } from "@/hooks/use-app-update";
 import { newerVersion, type UpdateMode } from "@/lib/app-update";
 import { UpdateChooser } from "@/components/host/UpdateChooser";
-import { KioskPreview } from "@/components/host/KioskPreview";
+import { CameraShot, ScreenCaption, TabletScreen } from "@/components/host/TabletLive";
+import { useCameraShots, useLiveScreens, type LiveScreens } from "@/hooks/use-tablet-live";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { requestTabletUpdate } from "@/lib/app-updates.functions";
 import { gridFor, isOnline, tabletName } from "@/lib/kiosk-devices";
 import {
@@ -43,11 +53,9 @@ import {
   setKioskCamera,
   setKioskCardPicker,
   setKioskCompat,
-  stopWatchingKiosks,
-  watchKiosks,
   type KioskDevice,
 } from "@/lib/kiosk-devices.functions";
-import { kioskPinger, pingKiosk } from "@/lib/kiosk-ping";
+import { pingKiosk } from "@/lib/kiosk-ping";
 import { cn } from "@/lib/utils";
 
 type Property = { id: string; short_code: string };
@@ -78,14 +86,19 @@ function ago(iso: string | null): string {
  */
 export function DoorTablets({ property }: { property: Property }) {
   const qc = useQueryClient();
-  const q = useDoorTablets(property.id);
+  const [anyScreen, setAnyScreen] = useState(false);
+  // Faster while a live view is showing, so it follows the tablet.
+  const q = useDoorTablets(property.id, anyScreen ? 3_000 : 15_000);
   const pairFn = useServerFn(pairKioskByCode);
   const autoFn = useServerFn(setKioskAutoPair);
   const pickerFn = useServerFn(setKioskCardPicker);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [wall, setWall] = useState(false);
+  // Each tablet's card shows its details, or flips to its live view or camera until flipped back.
+  const [faces, setFaces] = useState<Record<string, Face>>({});
   const devices: KioskDevice[] = q.data?.devices ?? [];
+  const faceOf = (id: string): Face => faces[id] ?? "details";
+  const setFace = (id: string, f: Face) => setFaces((m) => ({ ...m, [id]: f }));
   const refresh = () => qc.invalidateQueries({ queryKey: ["kiosk-devices", property.id] });
 
   async function pair(e: React.FormEvent) {
@@ -105,8 +118,24 @@ export function DoorTablets({ property }: { property: Property }) {
   }
 
   const grid = gridFor(devices.length);
-  const cameras = devices.filter((d) => d.status === "confirmed" && d.cameraAllowed);
+  const confirmed = devices.filter((d) => d.status === "confirmed");
+  const cameras = confirmed.filter((d) => d.cameraAllowed);
   const latest = useLatestVersion();
+  const anyLive = confirmed.some((d) => faceOf(d.id) === "screen");
+  useEffect(() => setAnyScreen(anyLive), [anyLive]);
+  const live = useLiveScreens(property, anyLive);
+  const shots = useCameraShots(
+    property,
+    cameras.filter((d) => faceOf(d.id) === "camera").map((d) => d.id),
+  );
+  // "All" flips every tablet that can show it (and back again when they all already do).
+  const allLive = confirmed.length > 0 && confirmed.every((d) => faceOf(d.id) === "screen");
+  const allCameras = cameras.length > 0 && cameras.every((d) => faceOf(d.id) === "camera");
+  const flipAll = (f: Face, list: KioskDevice[], already: boolean) =>
+    setFaces((m) => ({
+      ...m,
+      ...Object.fromEntries(list.map((d) => [d.id, already ? "details" : f])),
+    }));
   return (
     <section className="card-soft p-5" data-tour="door-tablets">
       <div className="flex flex-wrap items-start gap-3">
@@ -117,11 +146,25 @@ export function DoorTablets({ property }: { property: Property }) {
           <h2 className="text-xl">{copy.title}</h2>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
-        <KioskPreview property={property} />
-        {cameras.length ? (
-          <Button variant="outline" onClick={() => setWall(true)}>
-            <Video className="size-4" /> {copy.viewCameras(cameras.length)}
-          </Button>
+        {confirmed.length ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={allLive ? "default" : "outline"}
+              onClick={() => flipAll("screen", confirmed, allLive)}
+            >
+              <Eye className="size-4" /> {allLive ? liveCopy.backAll : liveCopy.open}
+            </Button>
+            {cameras.length ? (
+              <Button
+                size="sm"
+                variant={allCameras ? "default" : "outline"}
+                onClick={() => flipAll("camera", cameras, allCameras)}
+              >
+                <Video className="size-4" /> {allCameras ? liveCopy.backAll : liveCopy.cameras}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -209,6 +252,10 @@ export function DoorTablets({ property }: { property: Property }) {
                   device={d}
                   property={property}
                   onChanged={() => void refresh()}
+                  face={faceOf(d.id)}
+                  onFace={(f) => setFace(d.id, f)}
+                  live={live.data}
+                  shot={shots[d.id]}
                 />
               ))}
             </div>
@@ -217,23 +264,35 @@ export function DoorTablets({ property }: { property: Property }) {
           )}
         </>
       )}
-      {wall ? (
-        <CameraWall property={property} devices={cameras} onClose={() => setWall(false)} />
-      ) : null}
     </section>
   );
 }
 
+type Face = "details" | "screen" | "camera";
+
+/**
+ * One tablet: its details on the front; its live view or camera on the back
+ * (the eye or camera icon flips it, the back arrow flips it back), with
+ * Expand for a bigger look.
+ */
 function TabletCard({
   device: d,
   property,
   onChanged,
   latest,
+  face,
+  onFace,
+  live,
+  shot,
 }: {
   latest: string | null;
   device: KioskDevice;
   property: Property;
   onChanged: () => void;
+  face: Face;
+  onFace: (f: Face) => void;
+  live: LiveScreens | undefined;
+  shot: { image: string; takenAt: string } | undefined;
 }) {
   const renameFn = useServerFn(renameKioskDevice);
   const removeFn = useServerFn(removeKioskDevice);
@@ -242,8 +301,10 @@ function TabletCard({
   const [label, setLabel] = useState(d.label ?? "");
   const [askCamera, setAskCamera] = useState(false);
   const [told, setTold] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const online = isOnline(d.lastSeenAt, Date.now());
   const pending = d.status === "pending";
+  const flipped = face !== "details" && !pending;
 
   async function camera(allowed: boolean) {
     try {
@@ -266,132 +327,216 @@ function TabletCard({
     }
   }
 
-  return (
-    <div
-      className={cn(
-        "space-y-3 rounded-2xl border-2 p-4",
-        pending ? "border-dashed border-accent" : "border-border",
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary font-display text-lg text-primary-foreground">
-          {d.number ?? "?"}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{tabletName(d)}</p>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span
-              className={cn(
-                "size-2 rounded-full",
-                online ? "bg-success" : "bg-muted-foreground/40",
-              )}
-              aria-hidden
-            />
-            {pending ? copy.waiting : online ? copy.online : ago(d.lastSeenAt)}
-            {d.appVersion ? ` · v${d.appVersion}` : ""}
-          </p>
-          {d.appVersion && latest && newerVersion(latest, d.appVersion) ? (
-            <p className="text-xs text-accent">{updateCopy.outOfDate(latest)}</p>
+  // Number, name, on or not, version: the same at the top of both sides.
+  const title = (
+    <div className="flex items-start gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary font-display text-lg text-primary-foreground">
+        {d.number ?? "?"}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{tabletName(d)}</p>
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span
+            className={cn("size-2 rounded-full", online ? "bg-success" : "bg-muted-foreground/40")}
+            aria-hidden
+          />
+          {pending ? copy.waiting : online ? copy.online : ago(d.lastSeenAt)}
+          {d.appVersion ? ` · v${d.appVersion}` : ""}
+        </p>
+        {d.appVersion && latest && newerVersion(latest, d.appVersion) ? (
+          <p className="text-xs text-accent">{updateCopy.outOfDate(latest)}</p>
+        ) : null}
+      </div>
+      {flipped ? (
+        <div className="flex shrink-0 gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={liveCopy.expand}
+            title={liveCopy.expand}
+            onClick={() => setExpanded(true)}
+          >
+            <Maximize2 className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            aria-label={liveCopy.back}
+            title={liveCopy.back}
+            onClick={() => onFace("details")}
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+        </div>
+      ) : !pending ? (
+        <div className="flex shrink-0 gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={liveCopy.liveView}
+            title={liveCopy.liveView}
+            onClick={() => onFace("screen")}
+          >
+            <Eye className="size-4" />
+          </Button>
+          {d.cameraAllowed ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label={liveCopy.cameraView}
+              title={liveCopy.cameraView}
+              onClick={() => onFace("camera")}
+            >
+              <Video className="size-4" />
+            </Button>
           ) : null}
         </div>
+      ) : null}
+    </div>
+  );
+
+  const back =
+    face === "camera" ? (
+      <CameraShot device={d} shot={shot} />
+    ) : (
+      <div className="space-y-1">
+        <TabletScreen device={d} live={live} code={property.short_code} />
+        <ScreenCaption device={d} />
       </div>
-      {pending ? (
-        <p className="text-sm">{copy.waitingHelp}</p>
-      ) : (
-        <>
-          <Input
-            className="h-10"
-            value={label}
-            maxLength={40}
-            placeholder={copy.namePlaceholder}
-            aria-label={copy.name}
-            onChange={(e) => setLabel(e.target.value)}
-            onBlur={() => {
-              if (label === (d.label ?? "")) return;
-              void renameFn({ data: { deviceId: d.id, label } })
-                .then(async () => {
-                  await pingKiosk(property.short_code);
-                  onChanged();
-                })
-                .catch(() => toast.error(common.errorBody));
-            }}
-          />
-          {d.display ? (
-            <p className="text-xs text-muted-foreground">
-              {copy.screen(
-                d.display.usedW || d.display.w,
-                d.display.usedH || d.display.h,
-                d.display.orientation,
-              )}
-            </p>
-          ) : null}
-          <label className="flex items-center justify-between gap-3 text-sm">
-            <span className="flex items-center gap-2">
-              {d.cameraAllowed ? <Camera className="size-4" /> : <CameraOff className="size-4" />}
-              {copy.camera}
-            </span>
-            <Switch
-              checked={d.cameraAllowed}
-              onCheckedChange={(on) => (on ? setAskCamera(true) : void camera(false))}
-            />
-          </label>
-        </>
-      )}
-      {/* Older tablets: ticked by itself when the tablet detects it needs it; the host can tick or untick any tablet. */}
-      <div className="rounded-xl bg-muted/60 p-3 text-sm">
-        <label className="flex items-start gap-3">
-          <Checkbox
-            className="mt-0.5"
-            checked={d.compat}
-            onCheckedChange={(v) => void compat(v === true)}
-          />
-          <span>
-            <span className="block font-medium">{copy.compat}</span>
-            <span className="text-xs text-muted-foreground">{copy.compatHelp}</span>
-          </span>
-        </label>
-        {d.compatDetected ? (
-          <p className="mt-2 text-xs font-medium text-accent">
-            {d.compat
-              ? copy.compatDetected(d.compatReason ?? "")
-              : copy.compatDetectedOff(d.compatReason ?? "")}
-          </p>
-        ) : null}
-        {d.compatChosen !== null ? (
-          <button
-            type="button"
-            className="mt-1 text-xs text-primary underline-offset-2 hover:underline"
-            onClick={() => void compat(null)}
-          >
-            {copy.compatReset}
-          </button>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {!pending ? (
-          <Button asChild variant="outline" size="sm">
-            <Link to="/app/settings" search={{ focus: "kioskScreen" }}>
-              <Maximize2 className="size-4" /> {copy.calibrate}
-            </Link>
-          </Button>
-        ) : null}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive"
-          onClick={() => {
-            if (!window.confirm(copy.removeConfirm(tabletName(d)))) return;
-            void removeFn({ data: { deviceId: d.id } })
-              .then(async (res) => {
-                await pingKiosk(res.code);
-                onChanged();
-              })
-              .catch(() => toast.error(common.errorBody));
-          }}
+    );
+
+  return (
+    // Both sides share one grid cell, so the card is as tall as the taller side while it turns.
+    <div className="[perspective:1600px]">
+      <div
+        className={cn(
+          "grid transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none",
+          flipped && "[transform:rotateY(180deg)]",
+        )}
+      >
+        <div
+          aria-hidden={flipped}
+          className={cn(
+            "space-y-3 rounded-2xl border-2 bg-card p-4 [backface-visibility:hidden] [grid-area:1/1]",
+            pending ? "border-dashed border-accent" : "border-border",
+            flipped && "pointer-events-none",
+          )}
         >
-          <Trash2 className="size-4" /> {copy.remove}
-        </Button>
+          {title}
+          {pending ? (
+            <p className="text-sm">{copy.waitingHelp}</p>
+          ) : (
+            <>
+              <Input
+                className="h-10"
+                value={label}
+                maxLength={40}
+                placeholder={copy.namePlaceholder}
+                aria-label={copy.name}
+                onChange={(e) => setLabel(e.target.value)}
+                onBlur={() => {
+                  if (label === (d.label ?? "")) return;
+                  void renameFn({ data: { deviceId: d.id, label } })
+                    .then(async () => {
+                      await pingKiosk(property.short_code);
+                      onChanged();
+                    })
+                    .catch(() => toast.error(common.errorBody));
+                }}
+              />
+              {d.display ? (
+                <p className="text-xs text-muted-foreground">
+                  {copy.screen(
+                    d.display.usedW || d.display.w,
+                    d.display.usedH || d.display.h,
+                    d.display.orientation,
+                  )}
+                </p>
+              ) : null}
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <span className="flex items-center gap-2">
+                  {d.cameraAllowed ? (
+                    <Camera className="size-4" />
+                  ) : (
+                    <CameraOff className="size-4" />
+                  )}
+                  {copy.camera}
+                </span>
+                <Switch
+                  checked={d.cameraAllowed}
+                  onCheckedChange={(on) => (on ? setAskCamera(true) : void camera(false))}
+                />
+              </label>
+            </>
+          )}
+          {/* Older tablets: ticked by itself when the tablet needs it. What it means is in the info button, not repeated on every tablet. */}
+          <div className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2">
+              <Checkbox checked={d.compat} onCheckedChange={(v) => void compat(v === true)} />
+              <span className="font-medium">{copy.compatShort}</span>
+            </label>
+            {d.compatDetected ? (
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
+                {copy.compatDetectedTag}
+              </span>
+            ) : null}
+            <CompatInfo
+              device={d}
+              onReset={d.compatChosen !== null ? () => void compat(null) : null}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {!pending ? (
+              <Button asChild variant="outline" size="sm">
+                <Link to="/app/settings" search={{ focus: "kioskScreen" }}>
+                  <Maximize2 className="size-4" /> {copy.calibrate}
+                </Link>
+              </Button>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={() => {
+                if (!window.confirm(copy.removeConfirm(tabletName(d)))) return;
+                void removeFn({ data: { deviceId: d.id } })
+                  .then(async (res) => {
+                    await pingKiosk(res.code);
+                    onChanged();
+                  })
+                  .catch(() => toast.error(common.errorBody));
+              }}
+            >
+              <Trash2 className="size-4" /> {copy.remove}
+            </Button>
+          </div>
+        </div>
+
+        {/* The back: live view or camera, until the back arrow. */}
+        <div
+          aria-hidden={!flipped}
+          className={cn(
+            "space-y-3 rounded-2xl border-2 border-primary bg-card p-4 [backface-visibility:hidden] [grid-area:1/1] [transform:rotateY(180deg)]",
+            !flipped && "pointer-events-none",
+          )}
+        >
+          {title}
+          {flipped ? back : null}
+        </div>
       </div>
+
+      <Dialog open={expanded && flipped} onOpenChange={setExpanded}>
+        <DialogContent className="max-h-[94dvh] w-[min(96vw,72rem)] max-w-none overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {d.number}. {tabletName(d)} ·{" "}
+              {face === "camera" ? liveCopy.cameraView : liveCopy.liveView}
+            </DialogTitle>
+            <DialogDescription>{liveCopy.body}</DialogDescription>
+          </DialogHeader>
+          {back}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={askCamera} onOpenChange={setAskCamera}>
         <DialogContent>
@@ -416,6 +561,44 @@ function TabletCard({
   );
 }
 
+/** What compatibility mode is, and what this tablet detected: tap the info icon (said once, not on every card). */
+function CompatInfo({ device: d, onReset }: { device: KioskDevice; onReset: (() => void) | null }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={copy.compatInfo}
+          title={copy.compatInfo}
+          className="grid size-7 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <Info className="size-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-2 text-sm">
+        <p className="font-medium">{copy.compat}</p>
+        <p className="text-muted-foreground">{copy.compatHelp}</p>
+        {d.compatDetected ? (
+          <p className="font-medium text-accent">
+            {d.compat
+              ? copy.compatDetected(d.compatReason ?? "")
+              : copy.compatDetectedOff(d.compatReason ?? "")}
+          </p>
+        ) : null}
+        {onReset ? (
+          <button
+            type="button"
+            className="text-xs text-primary underline-offset-2 hover:underline"
+            onClick={onReset}
+          >
+            {copy.compatReset}
+          </button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /**
  * The cameras of the tablets the host switched it on for, as a grid, a new
  * picture every few seconds. Each tablet says on screen that it's being
@@ -430,36 +613,10 @@ export function CameraWall({
   devices: KioskDevice[];
   onClose: () => void;
 }) {
-  const watchFn = useServerFn(watchKiosks);
-  const stopFn = useServerFn(stopWatchingKiosks);
-  const [shots, setShots] = useState<Record<string, { image: string; takenAt: string }>>({});
-  const ids = devices.map((d) => d.id).join(",");
-  const pinger = useRef<ReturnType<typeof kioskPinger> | null>(null);
-  useEffect(() => {
-    pinger.current = kioskPinger(property.short_code);
-    let live = true;
-    let first = true;
-    const tick = async () => {
-      const res = await watchFn({
-        data: { propertyId: property.id, deviceIds: ids ? ids.split(",") : [] },
-      }).catch(() => null);
-      if (!live) return;
-      // The tablets learn they're being watched from a ping, then send pictures.
-      if (first) {
-        pinger.current?.send();
-        first = false;
-      }
-      if (res) setShots(Object.fromEntries(res.shots.map((x) => [x.deviceId, x])));
-    };
-    void tick();
-    const id = window.setInterval(() => void tick(), 3000);
-    return () => {
-      live = false;
-      window.clearInterval(id);
-      pinger.current?.close();
-      void stopFn({ data: { propertyId: property.id } }).catch(() => {});
-    };
-  }, [ids, property.id, property.short_code, watchFn, stopFn]);
+  const shots = useCameraShots(
+    property,
+    devices.map((d) => d.id),
+  );
   const grid = gridFor(devices.length);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -472,30 +629,14 @@ export function CameraWall({
           className="grid gap-3"
           style={{ gridTemplateColumns: `repeat(${Math.min(grid.cols, 4)}, minmax(0, 1fr))` }}
         >
-          {devices.map((d) => {
-            const shot = shots[d.id];
-            return (
-              <figure key={d.id} className="overflow-hidden rounded-xl bg-black">
-                {shot ? (
-                  <img
-                    src={shot.image}
-                    alt={copy.wallAlt(tabletName(d))}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                ) : (
-                  <div className="grid aspect-[4/3] w-full place-items-center text-sm text-white/70">
-                    <Loader2 className="size-5 animate-spin" />
-                  </div>
-                )}
-                <figcaption className="flex items-center justify-between px-3 py-2 text-xs text-white/80">
-                  <span>
-                    {d.number}. {tabletName(d)}
-                  </span>
-                  <span>{shot ? ago(shot.takenAt) : copy.connecting}</span>
-                </figcaption>
-              </figure>
-            );
-          })}
+          {devices.map((d) => (
+            <div key={d.id} className="space-y-1">
+              <p className="text-sm font-medium">
+                {d.number}. {tabletName(d)}
+              </p>
+              <CameraShot device={d} shot={shots[d.id]} />
+            </div>
+          ))}
         </div>
       </DialogContent>
     </Dialog>

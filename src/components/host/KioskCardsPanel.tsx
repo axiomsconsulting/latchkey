@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
-import { KioskPreview } from "@/components/host/KioskPreview";
+import { useDoorTablets } from "@/components/host/DoorTablets";
+import { LiveViewAll } from "@/components/host/TabletLive";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
 import { Button } from "@/components/ui/button";
 import { common, kioskCardsCopy as copy } from "@/content/copy";
@@ -107,6 +108,7 @@ export function KioskCardsPanel({
 }) {
   const [tab, setTab] = useState<"in" | "out">(arriving.length || !leaving.length ? "in" : "out");
   const [custom, setCustom] = useState(false);
+  const tablets = useDoorTablets(property.id, 15_000);
   return (
     <div className="space-y-3">
       <div
@@ -155,7 +157,7 @@ export function KioskCardsPanel({
         </div>
       ) : null}
 
-      <KioskPreview property={property} />
+      <LiveViewAll property={property} devices={tablets.data?.devices ?? []} />
       <Link
         to="/app/settings"
         search={{ focus: tab === "in" ? "welcomeCards" : "goodbye" }}

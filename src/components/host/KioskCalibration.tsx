@@ -245,110 +245,115 @@ function DeviceCalibration({
         </p>
       </div>
 
-      <ScreenPad base={base} area={area} step={step} onChange={change} />
+      {/* Wide screens: the controls on the left, a smaller screen pad on the right. */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
+        <div className="space-y-4 lg:order-2">
+          <ScreenPad base={base} area={area} step={step} onChange={change} />
+          <p className="text-sm tabular-nums">
+            {copy.readout(area.w, area.h, area.x, area.y, area.zoom)}
+            {state !== "idle" ? (
+              <span className="text-muted-foreground">
+                {" · "}
+                {state === "saving" ? copy.saving : copy.savedAuto}
+              </span>
+            ) : null}
+          </p>
+        </div>
 
-      <p className="text-xs text-muted-foreground">{copy.drag}</p>
-      <p className="text-sm tabular-nums">
-        {copy.readout(area.w, area.h, area.x, area.y, area.zoom)}
-        {state !== "idle" ? (
-          <span className="text-muted-foreground">
-            {" · "}
-            {state === "saving" ? copy.saving : copy.savedAuto}
-          </span>
-        ) : null}
-      </p>
+        <div className="space-y-4 lg:order-1">
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{copy.move}</p>
+              <div className="grid w-fit grid-cols-3 gap-1">
+                <span />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={copy.up}
+                  onClick={() => change((a, b) => shift(a, b, 0, -step))}
+                >
+                  <ArrowUp className="size-4" />
+                </Button>
+                <span />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={copy.left}
+                  onClick={() => change((a, b) => shift(a, b, -step, 0))}
+                >
+                  <ArrowLeft className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={copy.down}
+                  onClick={() => change((a, b) => shift(a, b, 0, step))}
+                >
+                  <ArrowDown className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={copy.right}
+                  onClick={() => change((a, b) => shift(a, b, step, 0))}
+                >
+                  <ArrowRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{copy.size}</p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => change((a, b) => scaleArea(a, b, fine ? 0.995 : 0.98))}
+                >
+                  <Minimize2 className="size-4" /> {copy.smaller}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => change((a, b) => scaleArea(a, b, fine ? 1.005 : 1.02))}
+                >
+                  <Maximize2 className="size-4" /> {copy.larger}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{copy.zoom}</p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => change((a, b) => zoomBy(a, b, fine ? 0.99 : 0.95))}
+                >
+                  <ZoomOut className="size-4" /> {copy.zoomOut}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => change((a, b) => zoomBy(a, b, fine ? 1.01 : 1.05))}
+                >
+                  <ZoomIn className="size-4" /> {copy.zoomIn}
+                </Button>
+              </div>
+            </div>
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">{copy.move}</p>
-          <div className="grid w-fit grid-cols-3 gap-1">
-            <span />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={fine} onCheckedChange={setFine} /> {copy.fine}
+            </label>
             <Button
               variant="outline"
-              size="icon"
-              aria-label={copy.up}
-              onClick={() => change((a, b) => shift(a, b, 0, -step))}
+              onClick={() => {
+                const fresh = startArea(base);
+                setArea(fresh);
+                save(null);
+                toast.success(copy.resetDone);
+              }}
             >
-              <ArrowUp className="size-4" />
-            </Button>
-            <span />
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label={copy.left}
-              onClick={() => change((a, b) => shift(a, b, -step, 0))}
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label={copy.down}
-              onClick={() => change((a, b) => shift(a, b, 0, step))}
-            >
-              <ArrowDown className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label={copy.right}
-              onClick={() => change((a, b) => shift(a, b, step, 0))}
-            >
-              <ArrowRight className="size-4" />
+              <RotateCcw className="size-4" /> {copy.reset}
             </Button>
           </div>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">{copy.size}</p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => change((a, b) => scaleArea(a, b, fine ? 0.995 : 0.98))}
-            >
-              <Minimize2 className="size-4" /> {copy.smaller}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => change((a, b) => scaleArea(a, b, fine ? 1.005 : 1.02))}
-            >
-              <Maximize2 className="size-4" /> {copy.larger}
-            </Button>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">{copy.zoom}</p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => change((a, b) => zoomBy(a, b, fine ? 0.99 : 0.95))}
-            >
-              <ZoomOut className="size-4" /> {copy.zoomOut}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => change((a, b) => zoomBy(a, b, fine ? 1.01 : 1.05))}
-            >
-              <ZoomIn className="size-4" /> {copy.zoomIn}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={fine} onCheckedChange={setFine} /> {copy.fine}
-        </label>
-        <Button
-          variant="outline"
-          onClick={() => {
-            const fresh = startArea(base);
-            setArea(fresh);
-            save(null);
-            toast.success(copy.resetDone);
-          }}
-        >
-          <RotateCcw className="size-4" /> {copy.reset}
-        </Button>
       </div>
     </div>
   );
@@ -390,12 +395,23 @@ function ScreenPad({
   const k = width ? width / (base.w * (1 + margin * 2)) : 0;
   const ox = base.w * margin * k;
   const oy = base.h * margin * k;
+  // Locked until tapped or clicked, so scrolling the page past it never changes anything.
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const outside = (e: PointerEvent) => {
+      if (!pad.current?.parentElement?.contains(e.target as Node)) setActive(false);
+    };
+    window.addEventListener("pointerdown", outside, true);
+    return () => window.removeEventListener("pointerdown", outside, true);
+  }, [active]);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const drag = useRef<Drag | null>(null);
   const live = useRef(area);
   live.current = area;
 
   const down = (e: React.PointerEvent, kind: "move" | Edge) => {
+    if (!active) return;
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -413,7 +429,7 @@ function ScreenPad({
         : { kind: "edge", edge: kind, x: e.clientX, y: e.clientY, start: live.current };
   };
   const move = (e: React.PointerEvent) => {
-    if (!pointers.current.has(e.pointerId) || !k) return;
+    if (!active || !pointers.current.has(e.pointerId) || !k) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const g = drag.current;
     if (!g) return;
@@ -443,12 +459,14 @@ function ScreenPad({
     const el = pad.current;
     if (!el) return;
     const wheel = (e: WheelEvent) => {
+      // Only once adjusting: otherwise the wheel scrolls the page as usual.
+      if (!active) return;
       e.preventDefault();
       onChange((a, b) => zoomBy(a, b, e.deltaY < 0 ? 1.02 : 1 / 1.02));
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
-  }, [onChange]);
+  }, [onChange, active]);
 
   const r = clampArea(area, base);
   const edgeHandle = (edge: Edge, cls: string) => (
@@ -459,55 +477,96 @@ function ScreenPad({
     />
   );
   return (
-    <div
-      ref={pad}
-      tabIndex={0}
-      aria-label={copy.drag}
-      onKeyDown={(e) => {
-        const map: Record<string, [number, number]> = {
-          ArrowUp: [0, -step],
-          ArrowDown: [0, step],
-          ArrowLeft: [-step, 0],
-          ArrowRight: [step, 0],
-        };
-        const m = map[e.key];
-        if (!m) return;
-        e.preventDefault();
-        onChange((a, b) => shift(a, b, m[0], m[1]));
-      }}
-      onPointerMove={move}
-      onPointerUp={up}
-      onPointerCancel={up}
-      className="relative w-full touch-none select-none overflow-hidden rounded-2xl bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      style={{ height: k ? base.h * (1 + margin * 2) * k : 200 }}
-    >
-      {k ? (
-        <>
-          {/* The tablet's screen. */}
-          <div
-            className="absolute rounded-lg border-2 border-foreground/40 bg-background"
-            style={{ left: ox, top: oy, width: base.w * k, height: base.h * k }}
-          />
-          {/* The area the kiosk uses, with its zoom shown as the size of the sample text. */}
-          <div
-            role="presentation"
-            onPointerDown={(e) => down(e, "move")}
-            className="absolute cursor-move touch-none rounded-md border-2 border-primary bg-primary/15"
-            style={{ left: ox + r.x * k, top: oy + r.y * k, width: r.w * k, height: r.h * k }}
-          >
-            <span
-              className="pointer-events-none absolute inset-0 grid place-items-center font-display text-primary"
-              style={{ fontSize: `${Math.max(10, 16 * k * 4 * r.zoom)}px` }}
+    <div className="space-y-2">
+      <div
+        ref={pad}
+        tabIndex={0}
+        aria-label={copy.drag}
+        onClick={() => setActive(true)}
+        onKeyDown={(e) => {
+          if (!active) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setActive(true);
+            }
+            return;
+          }
+          if (e.key === "Escape") return setActive(false);
+          const map: Record<string, [number, number]> = {
+            ArrowUp: [0, -step],
+            ArrowDown: [0, step],
+            ArrowLeft: [-step, 0],
+            ArrowRight: [step, 0],
+          };
+          const m = map[e.key];
+          if (!m) return;
+          e.preventDefault();
+          onChange((a, b) => shift(a, b, m[0], m[1]));
+        }}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        className={cn(
+          "relative w-full select-none overflow-hidden rounded-2xl bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          // Locked: touches scroll the page. Adjusting: they move the area.
+          active ? "touch-none ring-2 ring-primary" : "cursor-pointer touch-pan-y",
+        )}
+        style={{ height: k ? base.h * (1 + margin * 2) * k : 200 }}
+      >
+        {k ? (
+          <>
+            {/* The tablet's screen. */}
+            <div
+              className="absolute rounded-lg border-2 border-foreground/40 bg-background"
+              style={{ left: ox, top: oy, width: base.w * k, height: base.h * k }}
+            />
+            {/* The area the kiosk uses, with its zoom shown as the size of the sample text. */}
+            <div
+              role="presentation"
+              onPointerDown={(e) => down(e, "move")}
+              className={cn(
+                "absolute rounded-md border-2 border-primary bg-primary/15",
+                active && "cursor-move touch-none",
+              )}
+              style={{ left: ox + r.x * k, top: oy + r.y * k, width: r.w * k, height: r.h * k }}
             >
-              Aa
-            </span>
-            {edgeHandle("left", "-left-1.5 top-1/4 h-1/2 w-3 cursor-ew-resize rounded-full")}
-            {edgeHandle("right", "-right-1.5 top-1/4 h-1/2 w-3 cursor-ew-resize rounded-full")}
-            {edgeHandle("top", "-top-1.5 left-1/4 h-3 w-1/2 cursor-ns-resize rounded-full")}
-            {edgeHandle("bottom", "-bottom-1.5 left-1/4 h-3 w-1/2 cursor-ns-resize rounded-full")}
-          </div>
-        </>
-      ) : null}
+              <span
+                className="pointer-events-none absolute inset-0 grid place-items-center font-display text-primary"
+                style={{ fontSize: `${Math.max(10, 16 * k * 4 * r.zoom)}px` }}
+              >
+                Aa
+              </span>
+              {active ? (
+                <>
+                  {edgeHandle("left", "-left-1.5 top-1/4 h-1/2 w-3 cursor-ew-resize rounded-full")}
+                  {edgeHandle(
+                    "right",
+                    "-right-1.5 top-1/4 h-1/2 w-3 cursor-ew-resize rounded-full",
+                  )}
+                  {edgeHandle("top", "-top-1.5 left-1/4 h-3 w-1/2 cursor-ns-resize rounded-full")}
+                  {edgeHandle(
+                    "bottom",
+                    "-bottom-1.5 left-1/4 h-3 w-1/2 cursor-ns-resize rounded-full",
+                  )}
+                </>
+              ) : null}
+            </div>
+            {!active ? (
+              <span className="pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit rounded-full bg-background/90 px-3 py-1 text-xs font-medium shadow">
+                {copy.tapToAdjust}
+              </span>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">{active ? copy.drag : copy.lockedHint}</p>
+        {active ? (
+          <Button size="sm" variant="outline" onClick={() => setActive(false)}>
+            {copy.doneAdjusting}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
