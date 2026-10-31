@@ -60,6 +60,7 @@ const screen = z.object({
   step: z.string().max(24).nullable().optional(),
   fullscreen: z.boolean().optional(),
   lite: z.boolean().optional(),
+  camera: z.boolean().optional(),
 });
 
 /** Before migration 0073 there's no column: the report is simply dropped. */
