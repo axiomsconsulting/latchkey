@@ -24,6 +24,8 @@ export type PickerRow = {
   check_out_date: string;
   check_in_time: string | null;
   check_out_time: string | null;
+  /** A booked early check-in (the accepted extra), else null. */
+  early_from?: string | null;
   goodbye_dismissed_at?: string | null;
   goodbye_now_at?: string | null;
   welcome_card_dismissed_at?: string | null;

@@ -90,22 +90,29 @@ describe("check-out goodbye", () => {
 
 describe("check-in cards", () => {
   const arriving = { status: "upcoming", check_in_date: "2026-10-30", check_in_time: null };
-  it("show from two hours before check-in until they check in", () => {
-    const show = (t: string, b = arriving) =>
-      showsArrival(b, "2026-10-30", at(t), "15:00", tz, DEFAULT_ARRIVALS);
-    expect(show("12:59")).toBe(false);
-    expect(show("13:00")).toBe(true);
+  it("show from the check-in time, never earlier, until they check in", () => {
+    const show = (t: string, b: object = arriving) =>
+      showsArrival(b as never, "2026-10-30", at(t), "15:00", tz, DEFAULT_ARRIVALS);
+    expect(show("14:59")).toBe(false);
+    expect(show("15:00")).toBe(true);
     expect(show("23:00")).toBe(true);
     expect(show("16:00", { ...arriving, status: "checked_in" })).toBe(false);
-    expect(show("16:00", { ...arriving, welcome_card_dismissed_at: "x" } as never)).toBe(false);
+    expect(show("16:00", { ...arriving, welcome_card_dismissed_at: "x" })).toBe(false);
+    // A time typed on the booking (the guest's expected arrival) doesn't bring it forward.
+    expect(show("11:30", { ...arriving, check_in_time: "11:30" })).toBe(false);
   });
 
-  it("with an early check-in, start just before their own earlier time", () => {
-    const early = { ...arriving, check_in_time: "12:00" };
+  it("with an early check-in booked, start at their own earlier time", () => {
+    const early = { ...arriving, early_from: "12:00:00" };
     expect(arrivalStart(early, "15:00", tz, DEFAULT_ARRIVALS)).toEqual({
-      from: at("11:30"),
+      from: at("12:00"),
       early: true,
+      time: "12:00",
     });
+    // Not earlier than check-in: no change.
+    expect(
+      arrivalStart({ ...arriving, early_from: "16:00" }, "15:00", tz, DEFAULT_ARRIVALS),
+    ).toEqual({ from: at("15:00"), early: false, time: "15:00" });
   });
 
   it("show at once when the host asks, even when switched off", () => {
@@ -121,12 +128,13 @@ describe("check-in cards", () => {
     ).toBe(true);
   });
 
-  it("can start at a set time of day, but before an early check-in", () => {
-    const a = { ...DEFAULT_ARRIVALS, startAt: "12:00" };
-    expect(arrivalStart(arriving, "15:00", tz, a).from).toBe(at("12:00"));
-    expect(arrivalStart({ ...arriving, check_in_time: "11:00" }, "15:00", tz, a).from).toBe(
-      at("10:30"),
-    );
+  it("a set time of day only ever starts it later than check-in", () => {
+    expect(
+      arrivalStart(arriving, "15:00", tz, { ...DEFAULT_ARRIVALS, startAt: "12:00" }).from,
+    ).toBe(at("15:00"));
+    expect(
+      arrivalStart(arriving, "15:00", tz, { ...DEFAULT_ARRIVALS, startAt: "17:00" }).from,
+    ).toBe(at("17:00"));
     expect(normaliseArrivals({ startAt: "25:00" }).startAt).toBeNull();
   });
 

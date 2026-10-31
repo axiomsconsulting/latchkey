@@ -553,6 +553,10 @@ function BookingsPage() {
               id={`needs-${b.id}`}
               booking={b as unknown as NeedsDetailsBooking}
               roomName={rooms.find((r) => r.id === b.room_id)?.display_name ?? "No room allocated"}
+              defaultCheckIn={
+                (data?.property as { default_check_in_time?: string } | null)
+                  ?.default_check_in_time ?? "15:00"
+              }
             />
           ))}
         </section>

@@ -7,31 +7,17 @@ import { toast } from "sonner";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { TodayCardList } from "@/components/host/KioskCardsPanel";
 import { CardColourField, CardPreview } from "@/components/host/CardColourField";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { common, goodbyeCopy, kioskCardsCopy as copy } from "@/content/copy";
-import {
-  LATE_LEAD_CHOICES,
-  START_CHOICES,
-  arrivalText,
-  normaliseArrivals,
-  type ArrivalCards,
-} from "@/lib/checkout-goodbye";
+import { arrivalText, normaliseArrivals, type ArrivalCards } from "@/lib/checkout-goodbye";
 import { getGoodbyeSettings, saveGoodbyeSettings } from "@/lib/goodbye.functions";
 import { pingKiosk } from "@/lib/kiosk-ping";
 
 /**
  * Settings → Kiosk → Check-in cards: the welcome on the door tablet for each
- * guest arriving today, and when it starts (an early check-in in mind). The
+ * guest arriving today, from their check-in time (or a booked early check-in). The
  * same shape as Check-out cards (GoodbyeSettings).
  */
 export function WelcomeCardSettings({
@@ -104,58 +90,8 @@ export function WelcomeCardSettings({
             />
             <p className="text-xs text-muted-foreground">{goodbyeCopy.messageHelp}</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>{copy.startBefore}</Label>
-              <Select
-                value={form.startAt ? "fixed" : String(form.startBeforeMinutes)}
-                onValueChange={(v) =>
-                  v === "fixed"
-                    ? set("startAt", form.startAt ?? "12:00")
-                    : setForm((f) => ({ ...f, startAt: null, startBeforeMinutes: Number(v) }))
-                }
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {START_CHOICES.map((m) => (
-                    <SelectItem key={m} value={String(m)}>
-                      {copy.minutesBefore(m)}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="fixed">{copy.atSetTime}</SelectItem>
-                </SelectContent>
-              </Select>
-              {form.startAt ? (
-                <Input
-                  type="time"
-                  className="mt-2 h-10 w-36"
-                  aria-label={copy.atSetTime}
-                  value={form.startAt}
-                  onChange={(e) => e.target.value && set("startAt", e.target.value)}
-                />
-              ) : null}
-            </div>
-            <div className="space-y-1">
-              <Label>{copy.earlyLead}</Label>
-              <Select
-                value={String(form.earlyLeadMinutes)}
-                onValueChange={(v) => set("earlyLeadMinutes", Number(v))}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LATE_LEAD_CHOICES.map((m) => (
-                    <SelectItem key={m} value={String(m)}>
-                      {copy.earlyLeadOption(m)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {/* From the check-in time, never earlier; a booked early check-in starts it at that time. */}
+          <p className="rounded-xl border border-border p-3 text-sm">{copy.whenItStarts}</p>
           <p className="rounded-xl bg-muted p-3 text-sm">{copy.howItEnds}</p>
           <div className="space-y-2 rounded-xl border border-border p-3">
             <p className="text-sm font-medium">{copy.todayList}</p>

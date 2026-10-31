@@ -1466,6 +1466,8 @@ export const kioskCardsCopy = branded({
   earlyLead: "With an early check-in, start",
   earlyLeadOption: (m: number) =>
     m === 0 ? "At their early check-in time" : `${m} min before their early check-in`,
+  whenItStarts:
+    "Each card comes on at your check-in time, never earlier. A guest who has booked an early check-in (the early check-in extra, accepted or paid) gets theirs at that earlier time. The time on a booking, such as an expected arrival, doesn't bring it forward. To show one sooner, use Show now below, on Today or with the bell on the tablet.",
   howItEnds:
     "It shows until they check in or the day ends, and goes earlier when you take it off here or on Today. While any check-in or check-out card is up, the screensaver doesn't start. A custom welcome you write joins the cards: it replaces that guest's card (never a second one) or adds a card.",
   saved: "Check-in cards saved",

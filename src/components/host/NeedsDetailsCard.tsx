@@ -34,15 +34,18 @@ export function NeedsDetailsCard({
   booking,
   roomName,
   id,
+  defaultCheckIn = "15:00",
 }: {
   booking: NeedsDetailsBooking;
   roomName: string;
   id?: string;
+  /** The property's check-in time, for a stay without one. */
+  defaultCheckIn?: string;
 }) {
   const save = useServerFn(saveBooking);
   const qc = useQueryClient();
   const [name, setName] = useState("");
-  const [time, setTime] = useState((booking.check_in_time ?? "15:00").slice(0, 5));
+  const [time, setTime] = useState((booking.check_in_time ?? defaultCheckIn).slice(0, 5));
   const [guests, setGuests] = useState(booking.guest_count ?? 1);
   const [busy, setBusy] = useState(false);
 
