@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { trackEvent } from "@/lib/track";
 import { pickUtm, type Utm } from "@/lib/attribution";
@@ -58,6 +58,7 @@ import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
 import { KioskCardBell } from "@/components/guest/KioskCardBell";
+import { xlCss } from "@/lib/kiosk-xl";
 import {
   KIOSK_COMPAT_SCRIPT,
   browserLabel,
@@ -804,8 +805,21 @@ function Kiosk() {
   const watching = useCameraWatch(shared && !tour ? (tablet?.camChannel ?? null) : null);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
-  // Door tablets only: keys, pads and buttons grow to use the whole screen (the host's Look and feel → Door tablet).
-  const expanded = shared && p.theme.kioskTouch === "expanded";
+  // Door tablets only: XL, the bold full-screen cards (the host's choice, else Latchkey's default).
+  const xl = shared && p.kioskLook?.look === "xl";
+  const xlStyle = useMemo(
+    () =>
+      xl && p.kioskLook
+        ? xlCss({
+            primary: p.theme.primary,
+            cardIn: p.kioskLook.cardIn,
+            cardOut: p.kioskLook.cardOut,
+          })
+        : "",
+    [xl, p.kioskLook, p.theme.primary],
+  );
+  // Door tablets only: keys, pads and buttons grow to use the whole screen (Look and feel → Door tablet, and always in XL).
+  const expanded = shared && (p.theme.kioskTouch === "expanded" || xl);
   // On <html>, so dialogs (portalled outside this page) are sized to match.
   useEffect(() => {
     if (!expanded) return;
@@ -1071,7 +1085,9 @@ function Kiosk() {
             "px-[max(var(--kiosk-header,16px),24px)] pb-[20px] sm:px-[max(calc(var(--kiosk-header,16px)*2),32px)]",
         )}
         onPointerDown={goFullscreen}
+        data-kiosk-xl={xl ? "" : undefined}
       >
+        {xl ? <style>{xlStyle}</style> : null}
         <ThemeBackdrop theme={p.theme} />
         {atWelcome ? <ThemeSideNotes theme={p.theme} /> : null}
         {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}
@@ -1087,7 +1103,14 @@ function Kiosk() {
             <LogoMark
               theme={p.theme}
               name={p.name}
-              className="size-[2.5em] shrink-0 text-[1.125em]"
+              className={cn(
+                "size-[2.5em] shrink-0 text-[1.125em]",
+                // XL: the mark on a light tile so it stands out on the property's colour.
+                xl &&
+                  (p.theme.logoUrl
+                    ? "rounded-[0.5em] bg-white p-[0.2em]"
+                    : "bg-foreground text-background ring-0"),
+              )}
             />
             <span className="min-w-0 flex-1">
               {/* A centred theme shows its name on the welcome itself; the bar keeps just the mark. */}

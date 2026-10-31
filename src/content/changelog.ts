@@ -46,6 +46,24 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.101.0",
+    date: "2026-10-31",
+    title: "XL door tablets",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "XL look for door tablets: check-in looks like your welcome and goodbye cards. Your main colour fills the screen, each step sits on a big bold card in your check-in card colour, buttons are large pills, your logo sits on a light tile and the phone QR is on a white tile in a card in your check-out colour. Choose Automatic, Standard or XL in Look and feel → Door tablet. Older tablets get it too.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin chooses whether door tablets left on Automatic show Standard or XL (Site settings → kiosk).",
+      },
+    ],
+  },
+  {
     version: "0.100.0",
     date: "2026-10-31",
     title: "Older tablets look like the full kiosk, and a level for each tablet",

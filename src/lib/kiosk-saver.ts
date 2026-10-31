@@ -37,6 +37,8 @@ export type SaverDefaults = {
   welcomeMinutes: number;
   /** On a door tablet's welcome: the full "check in on your phone" panel on the right, or just the small icon at the top. */
   qrStyle: "panel" | "icon";
+  /** The door tablets' look for hosts who haven't chosen one (kiosk-xl.ts). */
+  experience: "standard" | "xl";
 };
 export type SaverLook = { brightness: number; size: number };
 
@@ -49,6 +51,7 @@ export const DEFAULT_SAVER: SaverDefaults = {
   saverMinutes: 10,
   welcomeMinutes: 30,
   qrStyle: "panel",
+  experience: "standard",
 };
 
 const num = (v: unknown) =>
@@ -101,6 +104,7 @@ export function normaliseDefaults(raw: unknown): SaverDefaults {
     saverMinutes,
     welcomeMinutes,
     qrStyle,
+    experience: r["experience"] === "xl" ? "xl" : "standard",
   };
 }
 

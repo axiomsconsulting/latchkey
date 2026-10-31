@@ -222,6 +222,29 @@ export function KioskSaverAdmin() {
         )}
       </div>
       <div className="space-y-2 border-t border-border pt-4">
+        <h3 className="font-medium">{copy.kioskLookTitle}</h3>
+        <p className="text-sm text-muted-foreground">{copy.kioskLookHelp}</p>
+        <div
+          role="radiogroup"
+          aria-label={copy.kioskLookTitle}
+          className="grid gap-2 sm:grid-cols-2"
+        >
+          {(["standard", "xl"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="radio"
+              aria-checked={form.experience === v}
+              onClick={() => setForm((f) => ({ ...f, experience: v }))}
+              className={`rounded-xl border p-3 text-left text-sm transition-colors ${form.experience === v ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary"}`}
+            >
+              <span className="block font-medium">{copy.kioskLooks[v].label}</span>
+              <span className="block text-muted-foreground">{copy.kioskLooks[v].help}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2 border-t border-border pt-4">
         <h3 className="font-medium">{copy.kioskQrTitle}</h3>
         <p className="text-sm text-muted-foreground">{copy.kioskQrHelp}</p>
         <div role="radiogroup" aria-label={copy.kioskQrTitle} className="grid gap-2 sm:grid-cols-2">

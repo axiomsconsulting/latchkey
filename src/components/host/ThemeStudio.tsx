@@ -918,6 +918,26 @@ export function ThemeStudio({
               </label>
             </Group>
             <Group value="kiosk" title={copy.kioskGroup}>
+              <p className="text-sm font-medium">{copy.kioskLook}</p>
+              <div
+                role="radiogroup"
+                aria-label={copy.kioskLook}
+                className="grid gap-2 sm:grid-cols-3"
+              >
+                {(["auto", "standard", "xl"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={theme.kioskLook === v}
+                    onClick={() => set("kioskLook", v)}
+                    className={`rounded-xl border p-3 text-left text-sm transition-colors ${theme.kioskLook === v ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary"}`}
+                  >
+                    <span className="block font-medium">{copy.kioskLooks[v].label}</span>
+                    <span className="block text-muted-foreground">{copy.kioskLooks[v].help}</span>
+                  </button>
+                ))}
+              </div>
               <p className="text-sm font-medium">{copy.kioskTouch}</p>
               <div
                 role="radiogroup"
