@@ -1527,6 +1527,8 @@ export const doorTabletsCopy = branded({
     `This tablet's browser (${browser}) can't run the full kiosk. Tick this unless you've updated it.`,
   compatReset: "Let the tablet decide",
   compatShort: "Compatibility mode",
+  cameraUnsupported:
+    "This tablet's browser can't share its camera, so there's no camera view. Guests can still take their ID photo with it.",
   compatDetectedTag: "Detected",
   compatInfo: "What's compatibility mode?",
   cardPicker: "Bell on the tablet",
@@ -1613,6 +1615,18 @@ export const kioskLite = branded({
   bellEmpty: "No guests arriving or leaving today.",
   error: "That didn't work. Try again, or ask your host.",
   offline: "Can't reach the internet. Trying again…",
+  takeId: "Take a photo of your photo ID",
+  idHint: "Passport photo page or driving licence: lay it flat, fill the photo with it, no glare.",
+  orPhone: "Or check in on your phone",
+  reading: "Reading your ID…",
+  retry: "We couldn't read that",
+  tryAgain: "Try again",
+  locked: "Too many tries. Please ask your host, or check in on your phone.",
+  notFound: "We couldn't find your booking from that ID",
+  matched: (name: string) => (name ? `Welcome, ${name}!` : "Welcome!"),
+  finishPhone:
+    "We've found your booking and checked your ID. Scan with your phone to finish checking in from here.",
+  cameraOn: "Camera on: your host is viewing",
 });
 
 export const guest = branded({

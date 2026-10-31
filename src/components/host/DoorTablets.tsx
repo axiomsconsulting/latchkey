@@ -464,9 +464,14 @@ function TabletCard({
                 </span>
                 <Switch
                   checked={d.cameraAllowed}
+                  // An older tablet whose browser can't share its camera: nothing to switch on.
+                  disabled={d.screen?.camera === false && !d.cameraAllowed}
                   onCheckedChange={(on) => (on ? setAskCamera(true) : void camera(false))}
                 />
               </label>
+              {d.screen?.camera === false ? (
+                <p className="text-xs text-muted-foreground">{copy.cameraUnsupported}</p>
+              ) : null}
             </>
           )}
           {/* Older tablets: ticked by itself when the tablet needs it. What it means is in the info button, not repeated on every tablet. */}

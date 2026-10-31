@@ -90,6 +90,16 @@ function words(name: string) {
     bellApply: copy.bellApply,
     bellEmpty: copy.bellEmpty,
     error: copy.error,
+    takeId: copy.takeId,
+    idHint: copy.idHint,
+    orPhone: copy.orPhone,
+    reading: copy.reading,
+    retry: copy.retry,
+    tryAgain: copy.tryAgain,
+    locked: copy.locked,
+    notFound: copy.notFound,
+    matched: copy.matched("{name}"),
+    finishPhone: copy.finishPhone,
     offline: copy.offline,
   };
 }
@@ -195,6 +205,10 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webki
 .btns .pri{float:right;background:${col.primary};color:${col.primaryFg}}
 #saver{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#000;z-index:70}
 #saver span{position:absolute;color:#555;font-size:120px;font-weight:200}
+#saverdim{position:absolute;top:0;left:0;right:0;bottom:0;background:#000;opacity:0}
+#saverqr{display:none;position:absolute;width:180px;height:180px;background:#fff;padding:8px;border-radius:12px}
+#saverqr svg{width:100%;height:100%;display:block}
+#camon{display:none;position:absolute;left:12px;top:12px;z-index:80;background:#000;color:#fff;border-radius:20px;padding:8px 14px;font-size:15px}
 #net{display:none;position:absolute;right:12px;bottom:8px;font-size:14px;color:#B33;z-index:55}
 @media (max-width:820px){.welcome h1{font-size:36px}.qr{width:240px;height:240px}.welcome p{font-size:20px}}
 @media (orientation:portrait){.welcome{display:block;padding-top:24px;text-align:center}.welcome .txt{padding:0 0 24px}.qr{margin:0 auto}}
@@ -206,7 +220,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webki
 <div id="corner"><button id="fs" style="display:none" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button><button id="ver"><span id="lbl"></span>v${esc(APP_VERSION)}<span id="dot"></span></button></div>
 <button id="upd" class="big"></button>
 <div id="ov"></div>
-<div id="saver"><span></span></div>
+<div id="saver"><div id="saverdim"></div><span></span><div id="saverqr"></div></div>
+<div id="camon">${esc(copy.cameraOn)}</div>
 <div id="net"></div>
 <script>window.__LITE=${scriptJson(boot)};window.__LITE_QR=${scriptJson(qr)};</script>
 <script src="/kiosk-lite.js?v=${esc(APP_VERSION)}"></script>
@@ -222,9 +237,10 @@ export async function liteState(
     detected?: boolean | undefined;
     screen?:
       | {
-          view: "start" | "cards" | "welcome" | "saver";
+          view: "start" | "cards" | "welcome" | "saver" | "night" | "blank" | "checkin";
           lite?: boolean | undefined;
           fullscreen?: boolean | undefined;
+          camera?: boolean | undefined;
         }
       | undefined;
   },
@@ -246,15 +262,17 @@ export async function liteState(
               view: body.screen.view,
               lite: true,
               fullscreen: body.screen.fullscreen === true,
+              ...(typeof body.screen.camera === "boolean" ? { camera: body.screen.camera } : {}),
             },
           }
         : {}),
     },
   });
   const token = tablet.device ?? device;
-  const [cards, welcome] = await Promise.all([
+  const [cards, welcome, rest] = await Promise.all([
     kioskGoodbyes({ data: { code, ...(token ? { device: token } : {}) } }),
     kioskWelcome({ data: { code, ...(token ? { device: token } : {}) } }),
+    liteRest(code),
   ]);
   return {
     version: APP_VERSION,
@@ -269,7 +287,10 @@ export async function liteState(
       compatChosen: tablet.compatChosen,
       cardPicker: tablet.cardPicker,
       update: tablet.update,
+      // The host is looking through its camera until then (only where the browser can share it).
+      watchUntil: tablet.watchUntil,
     },
+    rest,
     cards: {
       ...cards,
       // Plain colours for each kind: the card, its text and its outline.
@@ -289,5 +310,60 @@ export async function liteState(
     welcome: welcome
       ? { headline: welcome.headline, body: welcome.body, version: welcome.version }
       : null,
+  };
+}
+
+/**
+ * The screensaver as the full kiosk has it, worked out here for the old
+ * tablet: what shows at rest now (the host's night light in its colours and
+ * brightness, the clock, or the screen off, by quiet hours), the clock's
+ * brightness, whether the phone QR shows, and the timings.
+ */
+export async function liteRest(code: string) {
+  const { kioskSaverLook } = await import("./kiosk.functions");
+  const { restNow, NIGHT_PALETTES, deepen, speedFactor } = await import("./kiosk-rest");
+  const { quietNow } = await import("./kiosk-clock");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const [look, prop] = await Promise.all([
+    kioskSaverLook({ data: { code } }),
+    (
+      supabaseAdmin as unknown as {
+        from: (t: string) => {
+          select: (c: string) => {
+            eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: unknown }> };
+          };
+        };
+      }
+    )
+      .from("properties")
+      .select("timezone, quiet_hours_start, quiet_hours_end")
+      .eq("short_code", code)
+      .maybeSingle()
+      .then(
+        (r) =>
+          r.data as {
+            timezone: string | null;
+            quiet_hours_start: string | null;
+            quiet_hours_end: string | null;
+          } | null,
+      ),
+  ]);
+  const tz = prop?.timezone ?? "Europe/London";
+  const quiet = quietNow(
+    new Date(),
+    tz,
+    (prop?.quiet_hours_start ?? "22:00").slice(0, 5),
+    (prop?.quiet_hours_end ?? "07:00").slice(0, 5),
+  ).active;
+  return {
+    show: restNow(look.rest, quiet),
+    nightColours: NIGHT_PALETTES[look.rest.palette].map((c) => deepen(c, look.night.depth)),
+    nightBrightness: look.night.brightness,
+    /** Seconds each colour takes to drift into the next. */
+    nightSeconds: Math.round(12 * speedFactor(look.rest.speed)),
+    clockBrightness: look.look.brightness,
+    qr: look.rest.clockQr,
+    saverMinutes: look.defaults.saverMinutes,
+    resetMinutes: look.defaults.resetMinutes,
   };
 }

@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.98.0",
+    date: "2026-10-31",
+    title: "More from older tablets",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Older tablets in compatibility mode can now take the guest's photo ID with their own camera: it finds the booking and checks the ID, then the guest scans a QR code to finish on their phone from that point. Guests can still check in on their phone from the start.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Compatibility mode now has your screensaver: the night light in your colours and brightness, the clock, or the screen off, by your quiet hours, with the phone QR if you show it, and the same timings as the full kiosk. Guest cards come on and go by themselves as on the full kiosk, a little sooner than before.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Camera view works on older Android tablets in compatibility mode where the browser can share the camera. Tablets that can't (such as an iPad 2) say so in Door tablets.",
+      },
+    ],
+  },
+  {
     version: "0.97.0",
     date: "2026-10-31",
     title: "Live view of every door tablet",

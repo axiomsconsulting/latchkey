@@ -24,6 +24,8 @@ export type KioskScreen = {
   fullscreen: boolean;
   /** The compatible kiosk for older tablets (/lite). */
   lite: boolean;
+  /** Whether its browser can share the camera (the host's camera view); null when it hasn't said. */
+  camera: boolean | null;
   /** When it last changed (ISO). */
   at: string | null;
 };
@@ -42,6 +44,7 @@ export function normaliseScreen(raw: unknown): KioskScreen | null {
     step: view === "checkin" ? step : null,
     fullscreen: r["fullscreen"] === true,
     lite: r["lite"] === true,
+    camera: typeof r["camera"] === "boolean" ? r["camera"] : null,
     at: typeof r["at"] === "string" ? r["at"] : null,
   };
 }

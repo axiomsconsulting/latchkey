@@ -21,7 +21,6 @@
   var overlay = null; // "qr" | "express" | "bell" | "update" | null
   var cardsAside = false;
   var saverOn = false;
-  var SAVER_MS = 10 * 60 * 1000;
   var UPDATE_IDLE_MS = 15 * 60 * 1000;
   var PER_PAGE = 10;
   var PAGE_MS = 5000;
@@ -127,16 +126,89 @@
       render();
       corner();
       maybeUpdate();
+      watchCamera(res.tablet.watchUntil);
     });
   }
 
   /** What's on screen, for the host's live view (kiosk-screen.ts): which screen only. */
   function currentScreen() {
     var view = "start";
-    if (saverOn) view = "saver";
+    if (saverOn) view = saverView();
+    else if (overlay === "checkin" || overlay === "qr") view = "checkin";
     else if (cards().length && !cardsAside) view = "cards";
     else if (state && state.welcome && !cardsAside) view = "welcome";
-    return { view: view, lite: true, fullscreen: isFull() };
+    return { view: view, lite: true, fullscreen: isFull(), camera: canCamera() };
+  }
+
+  // ---- The host's camera view: only where the browser can share the camera ----------
+
+  function getMedia() {
+    var md = navigator.mediaDevices;
+    if (md && md.getUserMedia)
+      return function (c, ok, no) {
+        md.getUserMedia(c).then(ok, no);
+      };
+    var old = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    return old
+      ? function (c, ok, no) {
+          old.call(navigator, c, ok, no);
+        }
+      : null;
+  }
+  function canCamera() {
+    return !!getMedia();
+  }
+  var cam = null; // { stream, video, timer }
+  function watchCamera(until) {
+    var watching = until && Date.parse(until) > now();
+    // Never while a guest is taking their ID photo (the camera is theirs then).
+    if (!watching || !canCamera() || overlay === "checkin" || overlay === "qr") return stopCamera();
+    $("camon").style.display = "block";
+    if (cam) return;
+    cam = { stream: null, video: document.createElement("video"), timer: 0 };
+    cam.video.setAttribute("playsinline", "");
+    cam.video.muted = true;
+    getMedia()(
+      { video: { facingMode: "user" }, audio: false },
+      function (stream) {
+        if (!cam)
+          return (
+            stream.getTracks &&
+            stream.getTracks().forEach(function (t) {
+              t.stop();
+            })
+          );
+        cam.stream = stream;
+        if ("srcObject" in cam.video) cam.video.srcObject = stream;
+        else cam.video.src = window.URL.createObjectURL(stream);
+        cam.video.play();
+        cam.timer = window.setInterval(snap, 3000);
+      },
+      function () {
+        stopCamera();
+      }
+    );
+  }
+  function snap() {
+    var device = get(DEVICE_KEY);
+    if (!cam || !cam.video.videoWidth || !device) return;
+    var image = shrink(cam.video.videoWidth ? videoFrame(cam.video) : null, 480, 0.6);
+    call({ action: "snapshot", device: device, image: image }, function (err, r) {
+      if (err || !r || !r.watchUntil) stopCamera();
+    });
+  }
+  function videoFrame(v) {
+    return { width: v.videoWidth, height: v.videoHeight, el: v };
+  }
+  function stopCamera() {
+    $("camon").style.display = "none";
+    if (!cam) return;
+    window.clearInterval(cam.timer);
+    if (cam.stream && cam.stream.getTracks)
+      cam.stream.getTracks().forEach(function (t) {
+        t.stop();
+      });
+    cam = null;
   }
 
   function cardsKey(s) {
@@ -301,22 +373,130 @@
     $("ov").innerHTML = "";
   }
 
+  /** A stable id for this tablet's tries (wrong IDs lock it for a while, as on the full kiosk). */
+  function triesId() {
+    var id = get("latchkey.liteTries." + L.code);
+    if (!id) {
+      id = "lite-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      put("latchkey.liteTries." + L.code, id);
+    }
+    return id;
+  }
+
+  /** Can this browser take a photo through a file field (iPad 2: yes, it opens the camera)? */
+  var canPhoto = (function () {
+    var i = document.createElement("input");
+    i.setAttribute("type", "file");
+    return i.type === "file" && !i.disabled && !!window.FileReader;
+  })();
+
+  /** Check in: a photo of the photo ID finds the booking; or the guest's own phone. */
   function phonePanel() {
     show(
       "qr",
       "<h2>" +
-        esc(W.checkInHere) +
-        "</h2><p>" +
-        esc(W.scan) +
-        "</p>" +
+        esc(canPhoto ? W.checkIn : W.checkInHere) +
+        "</h2>" +
+        (canPhoto
+          ? "<p>" +
+            esc(W.idHint) +
+            '</p><label class="big" style="display:block;text-align:center;margin:0 0 18px">' +
+            esc(W.takeId) +
+            '<input id="idphoto" type="file" accept="image/*" capture="environment" style="position:absolute;left:-9999px;opacity:0"></label><p class="grp">' +
+            esc(W.orPhone) +
+            "</p>"
+          : "<p>" + esc(W.scan) + "</p>") +
         qrBlock() +
         "<p>" +
         esc(W.orVisit) +
         "<br><b>" +
         esc(L.shortUrl) +
-        '</b></p><div class="btns"><button class="pri" data-act="close" style="width:100%">' +
-        esc(W.done) +
+        '</b></p><div class="btns"><button class="sec" data-act="close" style="width:100%">' +
+        esc(W.close) +
         "</button></div>"
+    );
+    var input = $("idphoto");
+    if (input)
+      input.onchange = function () {
+        var f = input.files && input.files[0];
+        if (f) readId(f);
+      };
+  }
+
+  /** The photo, made smaller in the browser: one to read, one small copy to keep (if the host keeps them). */
+  function shrink(img, max, quality) {
+    var k = Math.min(1, max / Math.max(img.width, img.height));
+    var c = document.createElement("canvas");
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img.el || img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", quality);
+  }
+
+  function readId(file) {
+    show("checkin", "<h2>" + esc(W.reading) + "</h2><p>&hellip;</p>");
+    var fr = new FileReader();
+    fr.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var big = shrink(img, 1600, 0.85);
+        var small = shrink(img, 480, 0.7);
+        call({ action: "findById", deviceId: triesId(), image: big, small: small }, idResult);
+      };
+      img.onerror = function () {
+        idResult("failed", null);
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
+
+  function idResult(err, r) {
+    var close =
+      '<div class="btns"><button class="pri" data-act="close" style="width:100%">' +
+      esc(W.done) +
+      "</button></div>";
+    if (err || !r) {
+      show("checkin", "<h2>" + esc(W.error) + "</h2>" + close);
+      return;
+    }
+    if (r.status === "retry") {
+      show(
+        "checkin",
+        "<h2>" +
+          esc(W.retry) +
+          "</h2><p>" +
+          esc(W.idHint) +
+          '</p><div class="btns"><button class="sec" data-act="close">' +
+          esc(W.close) +
+          '</button><button class="pri" data-act="again">' +
+          esc(W.tryAgain) +
+          "</button></div>"
+      );
+      return;
+    }
+    if (r.status === "locked") {
+      show("checkin", "<h2>" + esc(W.locked) + "</h2>" + close);
+      return;
+    }
+    // Found: they finish on their phone from here. Not found: their phone, the usual way.
+    show(
+      "checkin",
+      "<h2>" +
+        esc(r.status === "matched" ? fill(W.matched, "name", r.firstName || "") : W.notFound) +
+        "</h2><p>" +
+        esc(r.status === "matched" ? W.finishPhone : W.scan) +
+        '</p><div class="qr">' +
+        (r.qr || "") +
+        "</div>" +
+        close
+    );
+    // The link to their check-in only stays on screen for a few minutes.
+    window.setTimeout(
+      function () {
+        if (overlay === "checkin") hide();
+      },
+      3 * 60 * 1000
     );
   }
 
@@ -364,7 +544,7 @@
   function openBell() {
     var device = get(DEVICE_KEY);
     if (!device) return;
-    show("bell", "<h2>" + esc(W.bellTitle) + "</h2><p>\u2026</p>");
+    show("bell", "<h2>" + esc(W.bellTitle) + "</h2><p>&hellip;</p>");
     call({ action: "picker", device: device }, function (err, r) {
       if (overlay !== "bell") return;
       if (err || !r.on) {
@@ -530,32 +710,81 @@
 
   // ---- Screensaver: only when no cards or welcome are up -------------------------------
 
+  function rest() {
+    return (state && state.rest) || null;
+  }
+  function saverMs() {
+    var r = rest();
+    return (r && r.saverMinutes ? r.saverMinutes : 10) * 60 * 1000;
+  }
+  function resetMs() {
+    var r = rest();
+    return (r && r.resetMinutes ? r.resetMinutes : 2) * 60 * 1000;
+  }
+
+  /** At rest, as the host set it: the night light in their colours, the clock, or the screen off. */
+  var nightStep = 0;
   function saver(on) {
     var was = saverOn;
     saverOn = on;
     if (was !== on) window.setTimeout(refresh, 0);
     $("saver").style.display = on ? "block" : "none";
-    if (on) moveSaver();
+    if (on) drawSaver();
   }
-  function moveSaver() {
-    var s = $("saver").getElementsByTagName("span")[0];
-    s.innerHTML = esc(clockText());
+  function saverView() {
+    var r = rest();
+    return r ? (r.show === "night" ? "night" : r.show === "blank" ? "blank" : "saver") : "saver";
+  }
+  function drawSaver() {
+    var r = rest();
+    var box = $("saver");
+    var clock = box.getElementsByTagName("span")[0];
+    var qr = $("saverqr");
     var w = window.innerWidth;
     var h = window.innerHeight;
-    s.style.left = Math.round(Math.random() * Math.max(0, w - 360)) + "px";
-    s.style.top = Math.round(Math.random() * Math.max(0, h - 160)) + "px";
+    var view = saverView();
+    if (view === "night" && r) {
+      // The colours drift from one to the next (a CSS transition, light on old tablets).
+      var cs = r.nightColours || ["#ffd29a"];
+      nightStep = (nightStep + 1) % cs.length;
+      box.style.webkitTransition = "background-color " + r.nightSeconds + "s linear";
+      box.style.transition = "background-color " + r.nightSeconds + "s linear";
+      box.style.backgroundColor = cs[nightStep];
+      $("saverdim").style.opacity = String(1 - (r.nightBrightness || 1));
+      clock.style.display = "none";
+    } else {
+      box.style.backgroundColor = "#000";
+      $("saverdim").style.opacity = "0";
+      clock.style.display = view === "blank" ? "none" : "block";
+      var level = Math.round(60 + 140 * (r ? r.clockBrightness || 0.5 : 0.5));
+      clock.style.color = "rgb(" + level + "," + level + "," + level + ")";
+      clock.innerHTML = esc(clockText());
+      clock.style.left = Math.round(Math.random() * Math.max(0, w - 360)) + "px";
+      clock.style.top = Math.round(Math.random() * Math.max(0, h - 160)) + "px";
+    }
+    // The phone QR, when the host shows it at rest: in a corner that changes now and then.
+    if (r && r.qr) {
+      qr.innerHTML = window.__LITE_QR || "";
+      qr.style.display = "block";
+      var spot = Math.floor(now() / (3 * 60 * 1000)) % 4;
+      qr.style.left = spot % 2 ? "auto" : "24px";
+      qr.style.right = spot % 2 ? "24px" : "auto";
+      qr.style.top = spot < 2 ? "24px" : "auto";
+      qr.style.bottom = spot < 2 ? "auto" : "24px";
+      qr.style.opacity = view === "night" ? "0.9" : "0.35";
+    } else qr.style.display = "none";
   }
 
   function tick() {
     $("clk").innerHTML = esc(clockText());
     var idle = new Date().getTime() - lastTouch;
     var busy = cards().length || (state && state.welcome) || overlay;
-    if (!saverOn && !busy && idle >= SAVER_MS) saver(true);
+    if (!saverOn && !busy && idle >= saverMs()) saver(true);
     if (saverOn && busy && !overlay) saver(false);
     // Left open and walked away from: the panels close by themselves.
-    if (overlay && overlay !== "express" && idle >= 2 * 60 * 1000) hide();
+    if (overlay && overlay !== "express" && idle >= resetMs()) hide();
     // Someone said "check in" from a card, then left: the cards come back.
-    if (cardsAside && idle >= 2 * 60 * 1000) {
+    if (cardsAside && idle >= resetMs()) {
       cardsAside = false;
       render();
     }
@@ -598,6 +827,7 @@
       var act = attr(t, "data-act");
       if (act) {
         if (act.v === "close") hide();
+        if (act.v === "again") phonePanel();
         if (act.v === "apply") applyBell();
         return;
       }
@@ -625,11 +855,11 @@
   });
 
   refresh();
-  window.setInterval(refresh, 30000);
+  window.setInterval(refresh, 20000);
   window.setInterval(tick, 5000);
   // Turning pages of cards, and the screensaver's clock moving.
   window.setInterval(function () {
-    if (saverOn) moveSaver();
+    if (saverOn) drawSaver();
     else if (cards().length > PER_PAGE && !overlay) render();
   }, PAGE_MS);
   tick();

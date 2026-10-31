@@ -8,13 +8,27 @@ const body = z.discriminatedUnion("action", [
     detected: z.boolean().optional(),
     screen: z
       .object({
-        view: z.enum(["start", "cards", "welcome", "saver"]),
+        view: z.enum(["start", "cards", "welcome", "saver", "night", "blank", "checkin"]),
         lite: z.boolean().optional(),
         fullscreen: z.boolean().optional(),
+        camera: z.boolean().optional(),
       })
       .optional(),
   }),
   z.object({ action: z.literal("express"), handle: z.string().max(300) }),
+  // A photo of the guest's ID, taken with the tablet's camera: finds their booking.
+  z.object({
+    action: z.literal("findById"),
+    deviceId: z.string().min(8).max(80),
+    image: z.string().max(6_000_000),
+    small: z.string().max(560_000).optional(),
+  }),
+  // The host is watching this tablet's camera: one small picture.
+  z.object({
+    action: z.literal("snapshot"),
+    device: z.string().min(24).max(80),
+    image: z.string().max(280_000),
+  }),
   z.object({ action: z.literal("picker"), device: z.string().min(24).max(80) }),
   z.object({
     action: z.literal("setCards"),
@@ -60,6 +74,39 @@ export const Route = createFileRoute("/api/public/kiosk-lite/$code")({
             const { qrSvg } = await import("@/lib/kiosk-lite.server");
             const url = r.reviewCode ? `${new URL(request.url).origin}/g/${r.reviewCode}` : null;
             return json({ ...r, reviewUrl: url, reviewQr: url ? await qrSvg(url) : "" });
+          }
+          if (input.action === "findById") {
+            const { findByPhotoId } = await import("@/lib/checkin.functions");
+            const r = await findByPhotoId({
+              data: {
+                code,
+                deviceId: input.deviceId,
+                image: input.image,
+                ...(input.small ? { small: input.small } : {}),
+              },
+            });
+            const origin = new URL(request.url).origin;
+            const { qrSvg } = await import("@/lib/kiosk-lite.server");
+            // Found: the rest carries on, from here, on the guest's own phone (the full check-in).
+            const url =
+              r.status === "matched"
+                ? `${origin}/kiosk/${code}?guest=1&resume=${encodeURIComponent(r.token)}`
+                : `${origin}/kiosk/${code}?guest=1`;
+            return json({
+              status: r.status,
+              firstName: r.status === "matched" ? r.firstName : null,
+              reason: r.status === "retry" ? r.reason : null,
+              until: r.status === "locked" ? r.until : null,
+              qr: await qrSvg(url),
+            });
+          }
+          if (input.action === "snapshot") {
+            const { kioskSnapshotUpload } = await import("@/lib/kiosk-devices.functions");
+            return json(
+              await kioskSnapshotUpload({
+                data: { code, device: input.device, image: input.image },
+              }),
+            );
           }
           if (input.action === "picker") {
             const { kioskCardPicker } = await import("@/lib/goodbye.functions");
