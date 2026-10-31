@@ -138,7 +138,11 @@
       if (followLevel(res.tablet)) return;
       var before = state;
       state = res;
-      if (!before || cardsKey(before) !== cardsKey(res)) cardsAside = false;
+      // A card the host just put up shows, even if someone had put the cards aside.
+      if (!before || hasNewCard(before, res)) {
+        cardsAside = false;
+        if (saverOn) saver(false);
+      }
       render();
       header();
       corner();
@@ -247,6 +251,32 @@
         t.stop();
       });
     cam = null;
+  }
+
+  function cardKeys(s) {
+    var c = s.cards && s.cards.cards ? s.cards.cards : [];
+    var k = [];
+    for (var i = 0; i < c.length; i++) k.push(c[i].kind + ":" + (c[i].handle || c[i].firstName));
+    return k;
+  }
+  function hasNewCard(a, b) {
+    var seen = {};
+    var was = cardKeys(a);
+    var now = cardKeys(b);
+    for (var i = 0; i < was.length; i++) seen[was[i]] = true;
+    for (var j = 0; j < now.length; j++) if (!seen[now[j]]) return true;
+    return false;
+  }
+
+  /** Every few seconds: did the host show or take off a card? Then read everything now. */
+  var stampAt;
+  function checkStamp() {
+    if (document.hidden) return;
+    call({ action: "stamp" }, function (err, r) {
+      if (err || !r) return;
+      if (stampAt !== undefined && r.at !== stampAt) refresh();
+      stampAt = r.at;
+    });
   }
 
   function cardsKey(s) {
@@ -1004,6 +1034,7 @@
 
   refresh();
   window.setInterval(refresh, 20000);
+  window.setInterval(checkStamp, 5000);
   window.setInterval(tick, 5000);
   // Turning pages of cards, and the screensaver's clock moving.
   window.setInterval(function () {

@@ -144,6 +144,47 @@ async function propertyFor(shortCode: string) {
   return { db, p: error ? null : p };
 }
 
+/** Today's bookings for cards, with the tablets each card goes to (before migration 0076, without). */
+async function cardBookings(
+  db: any,
+  cols: string,
+  build: (q: any) => any,
+): Promise<{ data: any[] | null; error: unknown }> {
+  const first = await build(
+    db.from("bookings").select(`${cols}, welcome_card_devices, goodbye_card_devices`),
+  );
+  if (!first.error) return first;
+  return build(db.from("bookings").select(cols));
+}
+
+/** Cards changed at this property: tablets that check the stamp often react within seconds. */
+async function bumpCards(db: any, propertyId: string) {
+  await db
+    .from("properties")
+    .update({ kiosk_cards_at: new Date().toISOString() })
+    .eq("id", propertyId)
+    .then(
+      () => {},
+      () => {},
+    );
+}
+
+/**
+ * The door tablet's quick check (every few seconds): when the host last
+ * showed or took off a card. Cheap: one column of one row.
+ */
+export const kioskCardsStamp = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: p, error } = await db
+      .from("properties")
+      .select("kiosk_cards_at")
+      .eq("short_code", data.code.toLowerCase())
+      .maybeSingle();
+    return { at: error ? null : ((p?.kiosk_cards_at as string | null) ?? null) };
+  });
+
 export type GoodbyeCard = {
   /** "in": a guest arriving today; "out": a guest leaving today. */
   kind: "in" | "out";
@@ -200,22 +241,29 @@ async function cardsFor(
   const today = todayInZone(tz);
   const standardOut = (p.default_check_out_time ?? "11:00").slice(0, 5);
   const standardIn = (p.default_check_in_time ?? "15:00").slice(0, 5);
-  const { data: rows, error } = await db
-    .from("bookings")
-    .select(
-      "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
-    )
-    .eq("property_id", p.id)
-    .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
-    .limit(400);
+  const { data: rows, error } = await cardBookings(
+    db,
+    "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
+    (q) =>
+      q
+        .eq("property_id", p.id)
+        .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
+        .limit(400),
+  );
   if (error) return none;
   const now = Date.now();
+  const { onTablet } = await import("./kiosk-picker");
   const all = (rows ?? []) as any[];
   const byRoom = (x: any, y: any) =>
     (x.rooms?.sort_order ?? 0) - (y.rooms?.sort_order ?? 0) ||
     String(x.rooms?.display_name ?? "").localeCompare(String(y.rooms?.display_name ?? ""));
   const arrivingRows = all
-    .filter((b) => b.check_in_date === today && showsArrival(b, today, now, standardIn, tz, a))
+    .filter(
+      (b) =>
+        b.check_in_date === today &&
+        onTablet(b.welcome_card_devices, deviceId) &&
+        showsArrival(b, today, now, standardIn, tz, a),
+    )
     .sort(byRoom);
   const arriving: Array<GoodbyeCard & { bookingId: string }> = arrivingRows.map((b) => ({
     bookingId: b.id,
@@ -230,7 +278,10 @@ async function cardsFor(
   const leaving = await Promise.all(
     all
       .filter(
-        (b) => b.check_out_date === today && showsGoodbyeNow(b, today, now, standardOut, tz, g),
+        (b) =>
+          b.check_out_date === today &&
+          onTablet(b.goodbye_card_devices, deviceId) &&
+          showsGoodbyeNow(b, today, now, standardOut, tz, g),
       )
       .sort(byRoom)
       .map(async (b): Promise<GoodbyeCard> => ({
@@ -492,7 +543,15 @@ export const guideCheckout = createServerFn({ method: "POST" })
 export const setKioskCard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ bookingId: uuid, kind: z.enum(["in", "out"]), show: z.boolean() }).parse(d),
+    z
+      .object({
+        bookingId: uuid,
+        kind: z.enum(["in", "out"]),
+        show: z.boolean(),
+        /** The tablets it goes to (null = every tablet; left out = as before). */
+        devices: z.array(uuid).max(50).nullable().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const db = await admin();
@@ -504,14 +563,32 @@ export const setKioskCard = createServerFn({ method: "POST" })
     if (!b?.properties) throw new Error("We couldn't find that stay.");
     await requireWrite(context.supabase, b.properties.host_id);
     const { cardPatch } = await import("./kiosk-picker");
-    const patch = cardPatch(data.kind, data.show, new Date().toISOString());
-    const { error } = await db.from("bookings").update(patch).eq("id", b.id);
+    const devices =
+      data.devices === undefined ? undefined : data.devices?.length ? data.devices : null;
+    // Only this property's own tablets can be named.
+    if (devices?.length) {
+      const { data: own } = await db
+        .from("kiosk_devices")
+        .select("id")
+        .eq("property_id", b.property_id)
+        .in("id", devices);
+      if ((own ?? []).length !== devices.length) throw new Error("Pick tablets at this property.");
+    }
+    const patch = cardPatch(data.kind, data.show, new Date().toISOString(), devices);
+    let { error } = await db.from("bookings").update(patch).eq("id", b.id);
+    // Before migration 0076 there's no choice of tablets: every tablet shows it.
+    if (error && /card_devices/.test(error.message))
+      ({ error } = await db
+        .from("bookings")
+        .update(cardPatch(data.kind, data.show, new Date().toISOString()))
+        .eq("id", b.id));
     if (error)
       throw new Error(
         /now_at|card_dismissed/.test(error.message)
           ? "Showing cards from Today needs the latest update (migration 0070)."
           : error.message,
       );
+    await bumpCards(db, b.property_id);
     return { code: b.properties.short_code as string };
   });
 
@@ -528,7 +605,14 @@ export const todayKioskCards = createServerFn({ method: "GET" })
       )
       .eq("id", data.propertyId)
       .maybeSingle();
-    type CardGuest = { id: string; name: string | null; kind: "in" | "out"; state: string };
+    type CardGuest = {
+      id: string;
+      name: string | null;
+      kind: "in" | "out";
+      state: string;
+      /** The tablets it goes to (null = every tablet). */
+      devices: string[] | null;
+    };
     if (pe || !p)
       return {
         available: false as const,
@@ -537,16 +621,17 @@ export const todayKioskCards = createServerFn({ method: "GET" })
       };
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
-    const { data: rows, error } = await sb
-      .from("bookings")
-      .select(
-        "id, guest_full_name, status, check_in_date, check_out_date, check_in_time, check_out_time, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of",
-      )
-      .eq("property_id", data.propertyId)
-      .is("mirror_of", null)
-      .neq("status", "cancelled")
-      .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
-      .limit(400);
+    const { data: rows, error } = await cardBookings(
+      sb,
+      "id, guest_full_name, status, check_in_date, check_out_date, check_in_time, check_out_time, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of",
+      (q) =>
+        q
+          .eq("property_id", data.propertyId)
+          .is("mirror_of", null)
+          .neq("status", "cancelled")
+          .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
+          .limit(400),
+    );
     if (error)
       return {
         available: false as const,
@@ -593,6 +678,9 @@ export const todayKioskCards = createServerFn({ method: "GET" })
             name: b.guest_full_name ?? null,
             kind,
             state: states[`${kind}:${b.id}`]!,
+            devices:
+              ((kind === "in" ? b.welcome_card_devices : b.goodbye_card_devices) as
+                string[] | null | undefined) ?? null,
           });
     return { available: true as const, states, guests };
   });
@@ -636,17 +724,32 @@ export const kioskCardPicker = createServerFn({ method: "POST" })
     if (!p || !(await pickerTablet(db, p.id, data.device))) return { on: false, items: [] };
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
-    const { data: rows, error } = await db
-      .from("bookings")
-      .select(
-        "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
-      )
-      .eq("property_id", p.id)
-      .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
-      .limit(400);
+    const devId = await pickerTablet(db, p.id, data.device);
+    const { data: rows, error } = await cardBookings(
+      db,
+      "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
+      (q) =>
+        q
+          .eq("property_id", p.id)
+          .or(`check_out_date.eq.${today},check_in_date.eq.${today}`)
+          .limit(400),
+    );
     if (error) return { on: true, items: [] };
-    const { pickerItems } = await import("./kiosk-picker");
-    const items = pickerItems(rows ?? [], {
+    const { pickerItems, onTablet } = await import("./kiosk-picker");
+    // A card on other tablets only isn't "on screen" here: ticking it brings it to this one too.
+    const here = (rows ?? []).map((b: any) => ({
+      ...b,
+      ...(onTablet(b.welcome_card_devices, devId)
+        ? {}
+        : {
+            welcome_now_at: null,
+            welcome_card_dismissed_at: b.welcome_card_dismissed_at ?? "elsewhere",
+          }),
+      ...(onTablet(b.goodbye_card_devices, devId)
+        ? {}
+        : { goodbye_now_at: null, goodbye_dismissed_at: b.goodbye_dismissed_at ?? "elsewhere" }),
+    }));
+    const items = pickerItems(here, {
       today,
       now: Date.now(),
       tz,
@@ -687,20 +790,31 @@ export const kioskSetCards = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { db, p } = await propertyFor(data.code);
-    if (!p || !(await pickerTablet(db, p.id, data.device)))
-      throw new Error("This tablet can't change the cards. Ask your host.");
-    const { cardPatch } = await import("./kiosk-picker");
+    const devId = p ? await pickerTablet(db, p.id, data.device) : null;
+    if (!p || !devId) throw new Error("This tablet can't change the cards. Ask your host.");
+    const { cardPatch, devicesColumn, withTablet } = await import("./kiosk-picker");
     const now = new Date().toISOString();
     let changed = 0;
     for (const c of data.changes) {
       const id = await readHandle(c.handle, p.id);
       if (!id) continue;
+      // Put up from this tablet: it shows here too, whichever tablets the host chose.
+      let devices: string[] | null | undefined;
+      if (c.show) {
+        const { data: b, error: be } = await db
+          .from("bookings")
+          .select(devicesColumn(c.kind))
+          .eq("id", id)
+          .maybeSingle();
+        devices = be ? undefined : withTablet(b?.[devicesColumn(c.kind)], devId);
+      }
       const { error } = await db
         .from("bookings")
-        .update(cardPatch(c.kind, c.show, now))
+        .update(cardPatch(c.kind, c.show, now, devices))
         .eq("id", id)
         .eq("property_id", p.id);
       if (!error) changed += 1;
     }
+    if (changed) await bumpCards(db, p.id);
     return { changed };
   });

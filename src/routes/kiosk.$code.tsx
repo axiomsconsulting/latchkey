@@ -58,6 +58,7 @@ import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
 import { KioskCardBell } from "@/components/guest/KioskCardBell";
+import { newCards } from "@/lib/kiosk-picker";
 import { xlCss } from "@/lib/kiosk-xl";
 import {
   KIOSK_COMPAT_SCRIPT,
@@ -730,6 +731,9 @@ function useKioskIdle(o: {
   return bump;
 }
 
+/** A check-in untouched this long counts as walked away from when the host puts a card up. */
+const LEFT_MID_FLOW_MS = 45_000;
+
 function Kiosk() {
   const p = Route.useLoaderData();
   const { guest, resume, join } = Route.useSearch();
@@ -935,6 +939,37 @@ function Kiosk() {
     },
     onWelcomeRest: () => setWelcomeRest(true),
   });
+
+  // The host put a card up (Show now, or its time came): it shows, even if someone had put the
+  // cards aside. A check-in left half done for a while gives way to it; one in progress never does.
+  const lastTouch = useRef(Date.now());
+  useEffect(() => {
+    const touched = () => {
+      lastTouch.current = Date.now();
+    };
+    window.addEventListener("pointerdown", touched, true);
+    window.addEventListener("keydown", touched, true);
+    return () => {
+      window.removeEventListener("pointerdown", touched, true);
+      window.removeEventListener("keydown", touched, true);
+    };
+  }, []);
+  const cardKeys = useRef<string[] | null>(null);
+  useEffect(() => {
+    if (!shared || !goodbyes) return;
+    const keys = goodbyes.cards.map((c) => `${c.kind}:${c.handle || c.firstName}`);
+    const before = cardKeys.current;
+    cardKeys.current = keys;
+    if (!before || !newCards(before, keys).length) return;
+    setGoodbyeAside(false);
+    setSaver(false);
+    if (!atWelcome && Date.now() - lastTouch.current > LEFT_MID_FLOW_MS) {
+      setWelcomeStart(null);
+      setSession((n) => n + 1);
+    }
+    bump();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goodbyes]);
 
   /** The bell changed the cards: show them now (even if someone had put them aside). */
   function showPicked() {

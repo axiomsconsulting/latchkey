@@ -18,6 +18,8 @@ const body = z.discriminatedUnion("action", [
       })
       .optional(),
   }),
+  // Every few seconds: did the host change the cards? (Cheap; the full state follows when it did.)
+  z.object({ action: z.literal("stamp") }),
   z.object({ action: z.literal("express"), handle: z.string().max(300) }),
   // A photo of the guest's ID, taken with the tablet's camera: finds their booking.
   z.object({
@@ -70,6 +72,10 @@ export const Route = createFileRoute("/api/public/kiosk-lite/$code")({
           if (input.action === "state") {
             const { liteState } = await import("@/lib/kiosk-lite.server");
             return json(await liteState(code, input, request.headers.get("user-agent") ?? ""));
+          }
+          if (input.action === "stamp") {
+            const { kioskCardsStamp } = await import("@/lib/goodbye.functions");
+            return json(await kioskCardsStamp({ data: { code } }));
           }
           if (input.action === "express") {
             const { kioskExpressCheckout } = await import("@/lib/goodbye.functions");
