@@ -421,6 +421,7 @@ export const saveKioskSaverDefaults = createServerFn({ method: "POST" })
         saverMinutes: z.number().finite(),
         welcomeMinutes: z.number().finite(),
         qrStyle: z.enum(["panel", "icon"]),
+        experience: z.enum(["standard", "xl"]).optional(),
       })
       .parse(d),
   )

@@ -178,6 +178,8 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
     const today = todayInZone(tz);
     const methods = normaliseMethods(p.checkin_methods);
     const { channelLabels, guestSites } = await import("./checkin.server");
+    const theme = await withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? "");
+    const kioskLook = await kioskLookFor(srvMod, p.id, theme.kioskLook);
     return {
       found: true as const,
       name: p.name,
@@ -197,12 +199,45 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
       channelLabels: await channelLabels(p.host_id),
       sites: await guestSites(p.host_id),
-      theme: await withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? ""),
+      theme,
+      /** The door tablet's look (XL: bold full-screen cards in the card colours) and those colours. */
+      kioskLook,
       demoHint: isTour(p) ? await demoHint(p.id, today) : null,
       /** The public guest tour: the same kiosk, with a few demo hooks (kiosk.$code.tsx). */
       tour: isTour(p),
     };
   });
+
+/** XL or standard (the host's choice, else Latchkey's default) and the check-in / check-out card colours. */
+async function kioskLookFor(
+  srvMod: { admin: () => Promise<any> },
+  propertyId: string,
+  choice: "auto" | "standard" | "xl",
+) {
+  const { resolveLook } = await import("./kiosk-xl");
+  const { normaliseDefaults } = await import("./kiosk-saver");
+  const { normaliseArrivals, normaliseGoodbye } = await import("./checkout-goodbye");
+  const db = await srvMod.admin();
+  const [site, cards] = await Promise.all([
+    choice === "auto"
+      ? db.from("site_settings").select("kiosk_saver").eq("id", 1).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    db
+      .from("properties")
+      .select("checkin_welcome, checkout_goodbye")
+      .eq("id", propertyId)
+      .maybeSingle(),
+  ]);
+  const look = resolveLook(
+    choice,
+    normaliseDefaults(site.error ? null : site.data?.kiosk_saver).experience,
+  );
+  return {
+    look,
+    cardIn: normaliseArrivals(cards.error ? null : cards.data?.checkin_welcome).colour,
+    cardOut: normaliseGoodbye(cards.error ? null : cards.data?.checkout_goodbye).colour,
+  };
+}
 
 export const resolvePin = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ pin: z.string().regex(/^\d{6}$/) }).parse(d))

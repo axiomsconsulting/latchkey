@@ -114,6 +114,8 @@ type LiteProperty = {
   /** The property's usual times ("Rooms are ready from 15:00…" under Check in). */
   checkInFrom?: string | null | undefined;
   checkOutBy?: string | null | undefined;
+  /** XL (bold full-screen cards in the card colours) or standard (kiosk-xl.ts). */
+  kioskLook?: { look: "standard" | "xl"; cardIn: string; cardOut: string } | undefined;
 };
 
 /** A hex colour with see-through (old browsers have rgba, not colour mixing). */
@@ -277,6 +279,43 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
     `<button class="big" data-act="checkin">${esc(guestCopy.startCta)}</button>` +
     stayWindow +
     `</div></div><div class="qrp"><span class="pi">${icons.phone}</span><h2>${esc(guestCopy.kioskQrTitle)}</h2><div class="qr">${qr}</div><p>${esc(guestCopy.kioskQrBody)}</p></div></div>`;
+
+  // XL: the page in the property's colour, the welcome and phone panel as bold cards (kiosk-xl.ts).
+  const xl = p.kioskLook?.look === "xl" ? p.kioskLook : null;
+  const xlCard = (bg: string) => {
+    const ink = cardInk(bg);
+    return { bg, ink, edge: cardEdge(bg), muted: mix(ink, bg, 0.25) };
+  };
+  const pageInk = cardInk(col.primary);
+  const ci = xl ? xlCard(xl.cardIn) : null;
+  const co = xl ? xlCard(xl.cardOut) : null;
+  const xlStyles =
+    xl && ci && co
+      ? `html,body{background-color:${col.primary};background-image:none;color:${pageInk}}
+#bd{color:${pageInk}}
+#hd,#clk small,#nm small,.icon,#corner,#corner button,#ft{color:${pageInk}}
+#ft{border-top-color:${rgba(pageInk, 0.3)}}
+#ft b{color:${pageInk}}
+#hd .lm>span{background:${pageInk};color:${col.primary}}
+#hd .lm>img{background:#fff;padding:4px}
+.wcard{background:${ci.bg};color:${ci.ink};border:6px solid ${ci.edge};border-radius:28px;box-shadow:0 14px 36px rgba(0,0,0,.3)}
+.wc h1{font-weight:700;font-size:52px;line-height:1.05}
+.lead,.win,.bbs{color:${ci.muted}}
+.bbs i{background:${ci.muted}}
+.eyebrow,.dia{color:${ci.ink}}
+.dia i,.dia b{background:${ci.ink}}
+.bb .lm.crest>span{color:${ci.ink}}
+.fi{color:${ci.ink}}
+.wcard .big{background:${ci.ink};background-image:none;color:${ci.bg};border-color:${ci.ink};border-radius:999px;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.22)}
+.qrp{background:${co.bg};color:${co.ink};border:6px solid ${co.edge};border-radius:28px;box-shadow:0 14px 36px rgba(0,0,0,.3)}
+.qrp .pi{color:${co.ink}}
+.qrp h2{font-weight:700}
+.qrp p{color:${co.muted}}
+.qrp .qr{border-radius:16px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.panel .big,.btns .pri{border-radius:999px;font-weight:700}
+.btns .sec{border-radius:999px}
+`
+      : "";
 
   const footer =
     t.tagline || t.poweredBy
@@ -477,6 +516,7 @@ p{margin:0}
 .lv-lite .wcard,.lv-lite .qrp,.lv-lite .cards{box-shadow:none}
 .lv-lite .big,.lv-lite .btns .pri{background-image:none}
 .lv-lite #clk small{display:none}
+${xlStyles}
 @media (max-width:900px){.wc h1{font-size:36px}.lead{font-size:19px}.hostwel h1{font-size:46px}.qrp{width:250px}.qrp .qr{width:180px;height:180px}#main{padding:0 20px}#hd{padding-left:20px;padding-right:20px}}
 @media (orientation:portrait){
 .home{-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;${CENTER_JUSTIFY}}

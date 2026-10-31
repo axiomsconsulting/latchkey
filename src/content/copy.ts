@@ -2202,6 +2202,15 @@ export const themeStudio = branded({
   kioskGroup: "Door tablet",
   kioskTouch: "Button size on the door tablet",
   kioskTouchHelp: "Guests' own phones always keep the standard size.",
+  kioskLook: "Look on the door tablet",
+  kioskLooks: {
+    auto: { label: "Automatic", help: "Follows Latchkey's recommended look for door tablets." },
+    standard: { label: "Standard", help: "Your theme's page, with a card for each step." },
+    xl: {
+      label: "XL",
+      help: "Bold and full screen, like your welcome and goodbye cards: your main colour, each step on a big card in your check-in card colour, pill buttons, the QR on a white tile. Always uses the whole screen.",
+    },
+  },
   kioskTouches: {
     standard: { label: "Standard", help: "Buttons as designed, centred on the screen." },
     expanded: {
@@ -3841,6 +3850,16 @@ export const adminCopy = branded({
   kioskQrTitle: "Check in on a phone instead",
   kioskQrHelp:
     "How door tablets offer guests the square to scan with their own phone on the welcome screen. After the welcome it's always the small icon at the top.",
+  kioskLookTitle: "Door tablet look for hosts who haven't chosen",
+  kioskLookHelp:
+    "Hosts can pick Standard or XL in Look and feel → Door tablet; this is what tablets show when they leave it on Automatic.",
+  kioskLooks: {
+    standard: { label: "Standard", help: "The theme's own page, with a card for each step." },
+    xl: {
+      label: "XL",
+      help: "Bold and full screen, like the welcome and goodbye cards: the property's colour, big card-coloured steps, pill buttons.",
+    },
+  },
   kioskQrStyles: {
     panel: {
       label: "Full panel on the right",

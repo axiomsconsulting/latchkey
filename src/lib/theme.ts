@@ -97,6 +97,8 @@ export type ThemeConfig = {
   poweredBy: boolean;
   /** Door tablets: buttons as designed, or expanded to fill the screen for big, easy-to-press targets. */
   kioskTouch: "standard" | "expanded";
+  /** The door tablet's look: XL (bold cards, full screen), standard, or Latchkey's default (kiosk-xl.ts). */
+  kioskLook: "auto" | "standard" | "xl";
 };
 
 /** buttonRadius for fully round ("pill") buttons. */
@@ -135,6 +137,7 @@ const base = {
   features: [],
   poweredBy: false,
   kioskTouch: "standard",
+  kioskLook: "auto",
 } as const satisfies Partial<ThemeConfig>;
 
 type Preset = Omit<ThemePreset, keyof typeof base | "buttonRadius" | "sideNotes" | "features"> &
@@ -526,6 +529,7 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     features,
     poweredBy: typeof r.poweredBy === "boolean" ? r.poweredBy : preset.poweredBy,
     kioskTouch: pick(r.kioskTouch, ["standard", "expanded"] as const, "standard"),
+    kioskLook: pick(r.kioskLook, ["auto", "standard", "xl"] as const, "auto"),
   };
 }
 

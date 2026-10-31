@@ -27,6 +27,7 @@ export const Route = createFileRoute("/lite/$code")({
             theme: p.theme,
             checkInFrom: p.checkInFrom,
             checkOutBy: p.checkOutBy,
+            kioskLook: p.kioskLook,
           },
           new URL(request.url).origin,
         );
