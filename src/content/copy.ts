@@ -1627,6 +1627,7 @@ export const kioskLite = branded({
   takeId: "Take a photo of your photo ID",
   idHint: "Passport photo page or driving licence: lay it flat, fill the photo with it, no glare.",
   orPhone: "Or check in on your phone",
+  orPhoneShort: "Or scan to check in on your phone",
   reading: "Reading your ID…",
   retry: "We couldn't read that",
   tryAgain: "Try again",
