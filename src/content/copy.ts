@@ -1516,6 +1516,15 @@ export const kioskPreviewCopy = branded({
   } as Record<string, string>,
 });
 
+export const cameraLiveCopy = branded({
+  connecting: "Connecting to the tablet's camera…",
+  failed:
+    "Couldn't connect to the camera. The tablet may be off, or the networks don't allow a direct connection.",
+  switch: "Switch camera",
+  which: (n: number, of: number) => `Camera ${n} of ${of}`,
+  live: "Live",
+});
+
 export const doorTabletsCopy = branded({
   title: "Door tablets",
   compat: "Compatibility mode for older tablets",

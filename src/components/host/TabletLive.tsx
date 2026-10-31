@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Eye, Loader2, Maximize, MonitorSmartphone, Moon } from "lucide-react";
+import { Eye, Loader2, Maximize, MonitorSmartphone, Moon, SwitchCamera } from "lucide-react";
 
 import { KioskGoodbyeScreen } from "@/components/guest/KioskGoodbye";
 import { useNow } from "@/components/guest/KioskClocks";
@@ -13,11 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { kioskPreviewCopy as copy } from "@/content/copy";
+import { cameraLiveCopy as camCopy, kioskPreviewCopy as copy } from "@/content/copy";
 import { useLatestVersion } from "@/hooks/use-app-update";
 import { newerVersion } from "@/lib/app-update";
 import { zonedParts } from "@/lib/dates";
-import { useLiveScreens, type LiveScreens } from "@/hooks/use-tablet-live";
+import { useCameraLive, useLiveScreens, type LiveScreens } from "@/hooks/use-tablet-live";
 import { isOnline, tabletName } from "@/lib/kiosk-devices";
 import { stopWatchingKiosks, watchKiosks, type KioskDevice } from "@/lib/kiosk-devices.functions";
 import { kioskPinger } from "@/lib/kiosk-ping";
@@ -86,6 +86,70 @@ export function CameraShot({
         {shot ? ago(shot.takenAt) : "Connecting…"}
       </figcaption>
     </figure>
+  );
+}
+
+/**
+ * A tablet's live camera video (useCameraLive): connecting / live / couldn't
+ * connect, and a button to flip to the tablet's next camera when it has more
+ * than one.
+ */
+export function CameraVideo({ cam }: { cam: ReturnType<typeof useCameraLive> }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.srcObject = cam.stream;
+  }, [cam.stream]);
+  return (
+    <figure className="relative overflow-hidden rounded-xl bg-black">
+      <video ref={ref} autoPlay muted playsInline className="aspect-[4/3] w-full object-cover" />
+      {cam.state !== "live" || !cam.stream ? (
+        <div className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-white/80">
+          {cam.state === "failed" ? (
+            camCopy.failed
+          ) : cam.state === "error" ? (
+            (cam.error ?? camCopy.failed)
+          ) : (
+            <span className="flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" /> {camCopy.connecting}
+            </span>
+          )}
+        </div>
+      ) : null}
+      {cam.cams.count > 1 ? (
+        <button
+          type="button"
+          onClick={cam.switchCamera}
+          aria-label={camCopy.switch}
+          title={camCopy.switch}
+          className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white"
+        >
+          <SwitchCamera className="size-4" /> {camCopy.which(cam.cams.index + 1, cam.cams.count)}
+        </button>
+      ) : null}
+      {cam.state === "live" ? (
+        <span className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-xs text-white">
+          <span className="size-2 animate-pulse rounded-full bg-red-500" /> {camCopy.live}
+        </span>
+      ) : null}
+    </figure>
+  );
+}
+
+/** A tablet's camera on its own (Today's camera view): live video, or pictures from an older tablet. */
+export function CameraTile({
+  property,
+  device,
+  shot,
+}: {
+  property: { id: string; short_code: string };
+  device: KioskDevice;
+  shot: { image: string; takenAt: string } | undefined;
+}) {
+  const cam = useCameraLive(property, device.id, !device.screen?.lite);
+  return device.screen?.lite ? (
+    <CameraShot device={device} shot={shot} />
+  ) : (
+    <CameraVideo cam={cam} />
   );
 }
 
