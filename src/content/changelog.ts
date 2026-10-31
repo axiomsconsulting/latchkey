@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.96.0",
+    date: "2026-10-31",
+    title: "Older tablets, and cards from the tablet itself",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Compatibility mode for older door tablets, such as an iPad 2 or an older Android tablet: a simpler kiosk with today's guest cards, your welcome, Express check-out and the bell, where guests check in on their own phone with the QR code on the screen. A tablet that needs it switches by itself and shows as ticked in Settings → Kiosk → Door tablets; you can tick or untick it for any tablet.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "A bell beside the screensaver button on the door tablet lists today's arriving and leaving guests, with the time each card comes on by itself. Tick one or several to put their cards up now, or untick to take them off, without going to the dashboard. On by default; switch it off in Settings → Kiosk → Door tablets.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The door tablet's corner controls (full screen and Update) now take three quick taps instead of a long press, which brought up the browser's own menu. A red dot beside the version means an update is waiting.",
+      },
+    ],
+  },
+  {
     version: "0.95.0",
     date: "2026-10-31",
     title: "Door tablets stay put",

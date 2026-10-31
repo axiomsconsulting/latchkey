@@ -56,6 +56,8 @@ import { kioskSnapshotUpload, kioskTablet, type TabletState } from "@/lib/kiosk-
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
+import { KioskCardBell } from "@/components/guest/KioskCardBell";
+import { KIOSK_COMPAT_SCRIPT, browserLabel, compatKey } from "@/lib/kiosk-compat";
 import { enterFullscreen, fullscreenWanted } from "@/lib/kiosk-fullscreen";
 import { useAppUpdate } from "@/hooks/use-app-update";
 import { showPairCode, tabletName } from "@/lib/kiosk-devices";
@@ -117,7 +119,8 @@ export const Route = createFileRoute("/kiosk/$code")({
       },
     ],
     // Before anything is drawn: this tablet's remembered size and text scale, so nothing jumps.
-    scripts: [{ children: KIOSK_FIT_SCRIPT }],
+    // First of all: an older tablet that can't run this page goes to the compatible kiosk (/lite/<code>).
+    scripts: [{ children: KIOSK_COMPAT_SCRIPT }, { children: KIOSK_FIT_SCRIPT }],
   }),
   notFoundComponent: ({ data }) => (
     <GuestFrame>
@@ -565,11 +568,29 @@ function useKioskTablet(code: string, enabled: boolean) {
             ...(display ? { display } : {}),
             version: APP_VERSION,
             fix,
+            // It runs this page, so it doesn't need compatibility mode.
+            compat: { detected: false, reason: browserLabel(navigator.userAgent) },
           },
         });
       })
       .then((res) => {
         if (res.device) keepDeviceToken(code, res.device);
+        // The host put this tablet in compatibility mode (or took it out): remembered for the next start.
+        try {
+          if (res.compatChosen === false) localStorage.setItem(compatKey(code), "off");
+          else localStorage.removeItem(compatKey(code));
+        } catch {
+          // Not kept: the dashboard's choice still applies at each check-in.
+        }
+        if (res.compat) {
+          try {
+            localStorage.setItem(compatKey(code), "on");
+          } catch {
+            // Goes there anyway, now.
+          }
+          window.location.replace(`/lite/${code}`);
+          return;
+        }
         const { calibration, device: _d, ...rest } = res;
         setTablet(rest);
         const next = JSON.stringify(calibration);
@@ -892,6 +913,14 @@ function Kiosk() {
     onWelcomeRest: () => setWelcomeRest(true),
   });
 
+  /** The bell changed the cards: show them now (even if someone had put them aside). */
+  function showPicked() {
+    setGoodbyeAside(false);
+    setSaver(false);
+    reloadGoodbyes();
+    bump();
+  }
+
   /** From the welcome: check in as that guest (or find the stay as usual when it isn't for one). */
   function startWelcome() {
     if (!welcome) return;
@@ -918,7 +947,7 @@ function Kiosk() {
   }
 
   // Full screen from the start, and back into it on the next touch if anything takes it out,
-  // unless the host switched it off with the corner button (held for 3 seconds).
+  // unless the host switched it off with the corner button (tapped 3 times).
   // Browsers only allow it from a touch, so in a browser tab it begins at the first one; installed
   // as an app (manifest "fullscreen") it opens full screen. navigationUI "hide" also hides Android's bottom bar.
   function goFullscreen() {
@@ -1074,10 +1103,14 @@ function Kiosk() {
               id="kiosk-header-action"
               className={
                 shared
-                  ? "flex h-[3.5em] w-[6.75em] shrink-0 items-center justify-end gap-[0.5em]"
+                  ? "relative flex h-[3.5em] w-[10em] shrink-0 items-center justify-end gap-[0.5em]"
                   : "hidden"
               }
             >
+              {/* The bell: put today's guest cards up from the tablet itself (the host can switch it off). */}
+              {shared && atWelcome && !saver && tablet?.cardPicker ? (
+                <KioskCardBell code={p.code} onApplied={showPicked} />
+              ) : null}
               {shared && atWelcome && !saver ? (
                 <button
                   type="button"
@@ -1165,6 +1198,15 @@ function Kiosk() {
           <KioskGoodbyeScreen
             code={p.code}
             goodbyes={goodbyes}
+            bell={
+              tablet?.cardPicker ? (
+                <KioskCardBell
+                  code={p.code}
+                  onApplied={showPicked}
+                  className="text-[clamp(16px,2.4cqmin,28px)] text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
+                />
+              ) : null
+            }
             onCheckIn={() => {
               setGoodbyeAside(true);
               bump();
@@ -1198,7 +1240,7 @@ function Kiosk() {
         ) : null}
 
         {/* Which tablet this is and the app version, for the host and support; a waiting tablet's setup code.
-            On a door tablet: the full screen switch and, when there's a newer version, Update (both held for 3 seconds). */}
+            On a door tablet: the full screen switch and, when there's a newer version, Update (both tapped 3 times). */}
         {shared && !tour ? (
           <KioskCorner
             label={

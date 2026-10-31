@@ -84,3 +84,14 @@ export function kioskPinger(shortCode: string): { send: () => void; close: () =>
     close: () => void supabase.removeChannel(target),
   };
 }
+
+/**
+ * From a kiosk itself (its bell changed the cards): tells the property's
+ * other tablets on the channel it already listens on (a broadcast doesn't
+ * come back to the sender, which reloads by itself).
+ */
+export function pingOtherKiosks(shortCode: string) {
+  const e = listening.get(kioskChannel(shortCode));
+  if (e) void e.channel.send({ type: "broadcast", event: "refresh", payload: {} }).catch(() => {});
+  else void pingKiosk(shortCode);
+}

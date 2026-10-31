@@ -2,5 +2,11 @@
   "printWidth": 100,
   "semi": true,
   "singleQuote": false,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "overrides": [
+    {
+      "files": "public/kiosk-lite.js",
+      "options": { "trailingComma": "none" }
+    }
+  ]
 }

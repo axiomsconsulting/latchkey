@@ -1494,6 +1494,17 @@ export const kioskPreviewCopy = branded({
 
 export const doorTabletsCopy = branded({
   title: "Door tablets",
+  compat: "Compatibility mode for older tablets",
+  compatHelp:
+    "A simpler kiosk that works on older tablets (an iPad 2, older Android tablets): today's guest cards, your welcome, Express check-out and the bell. Guests check in on their own phone with the QR code on the screen.",
+  compatDetected: (browser: string) =>
+    `Ticked by itself: this tablet's browser (${browser}) can't run the full kiosk.`,
+  compatDetectedOff: (browser: string) =>
+    `This tablet's browser (${browser}) can't run the full kiosk. Tick this unless you've updated it.`,
+  compatReset: "Let the tablet decide",
+  cardPicker: "Bell on the tablet",
+  cardPickerHelp:
+    "A bell beside the screensaver button lists today's arriving and leaving guests (first name and initial), so whoever is at the tablet can put their cards up now, with the time each comes on by itself. Switch off if guests shouldn't see who else is arriving or leaving today.",
   body: "Every tablet at this property, by number. A tablet joins when it opens the kiosk: by itself on this property's Wi-Fi (if allowed below), or with the six-digit code it shows. Give each a name, line its screen up, and send a welcome to one tablet or all of them.",
   pairTitle: "Code shown on the tablet",
   pair: "Pair tablet",
@@ -1542,6 +1553,41 @@ export const alerts = branded({
   dismiss: "Mark as seen",
 });
 
+/** The compatible kiosk for older tablets (/lite/<code>, src/lib/kiosk-compat.ts): plain strings, sent to the page as they are. */
+export const kioskLite = branded({
+  welcome: (name: string) => `Welcome to ${name}`,
+  scan: "Scan with your phone to check in. It takes about a minute.",
+  orVisit: "Or open this link on your phone:",
+  checkIn: "Check in",
+  checkInHere: "Check in on your phone",
+  express: "Express check-out",
+  arriving: (t: string) => `Check-in from ${t}`,
+  leaving: (t: string) => `Check-out by ${t}`,
+  page: (n: number | string, of: number | string) => `${n} of ${of}`,
+  inCount: (n: number | string) => `Today: ${n} arriving`,
+  outCount: (n: number | string) => `${n} leaving`,
+  thanks: (name: string) =>
+    name ? `Thank you, ${name}. Safe travels!` : "Thank you. Safe travels!",
+  lockDoor: "Please close the front door behind you.",
+  review: "Tell us how it was:",
+  done: "Done",
+  close: "Close",
+  setup: (code: string) => `Set up this tablet: code ${code}`,
+  update: (v: string) => `Update to v${v}`,
+  tapHint: "Tap 3 times",
+  bellTitle: "Show guest cards now",
+  bellHelp: "Tick the guests whose card should be on the screen.",
+  bellArriving: "Arriving today",
+  bellLeaving: "Leaving today",
+  bellOnScreen: "On the screen now",
+  bellAutoAt: (t: string) => `Comes on by itself at ${t}`,
+  bellNotSet: "Not set to come on by itself",
+  bellApply: "Show on screen",
+  bellEmpty: "No guests arriving or leaving today.",
+  error: "That didn't work. Try again, or ask your host.",
+  offline: "Can't reach the internet. Trying again…",
+});
+
 export const guest = branded({
   welcomeDismiss: "Touch to check in",
   welcomeTap: "Tap here to check in",
@@ -1554,12 +1600,23 @@ export const guest = branded({
   stepCheckoutPickHint: "One of these is yours.",
   nights: (n: number) => (n === 1 ? "1 night" : `${n} nights`),
   cameraFlip: "Switch camera",
-  fullscreenOn: "Full screen (hold for 3 seconds)",
-  fullscreenOff: "Leave full screen (hold for 3 seconds)",
-  holdHint: "Hold for 3 seconds",
-  holdToUpdate: "Hold for 3 seconds to update",
-  newVersion: (v: string) => `new v${v}`,
+  fullscreenOn: "Full screen (tap 3 times)",
+  fullscreenOff: "Leave full screen (tap 3 times)",
+  tapHint: "Tap 3 times",
+  tapToUpdate: "A new version is ready: tap 3 times to update",
   updateNow: (v: string) => (v ? `Update to v${v}` : "Update now"),
+  bellOpen: "Guest cards: show one now",
+  bellTitle: "Show guest cards now",
+  bellHelp: "Tick the guests whose card should be on the screen.",
+  bellArriving: "Arriving today",
+  bellLeaving: "Leaving today",
+  bellOnScreen: "On the screen now",
+  bellAutoAt: (t: string) => `Comes on by itself at ${t}`,
+  bellNotSet: "Not set to come on by itself",
+  bellApply: "Show on screen",
+  bellClose: "Close",
+  bellEmpty: "No guests arriving or leaving today.",
+  bellError: "That didn't work. Try again, or ask your host.",
   goodbyeTitle: (n: number) => (n === 1 ? "Leaving today" : `${n} guests leaving today`),
   cardsTitle: (arriving: number, leaving: number) =>
     [arriving ? `${arriving} arriving` : null, leaving ? `${leaving} leaving` : null]
