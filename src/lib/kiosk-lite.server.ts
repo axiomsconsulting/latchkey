@@ -11,7 +11,7 @@ import { kioskLite as copy } from "@/content/copy";
 import { APP_VERSION } from "@/lib/app-version";
 import { cardEdge, cardInk } from "@/lib/checkout-goodbye";
 import { browserLabel } from "@/lib/kiosk-compat";
-import { themeVars } from "@/lib/theme";
+import { PILL, googleFontLinks, themeVars } from "@/lib/theme";
 import { zonedParts } from "@/lib/dates";
 
 /** Escapes text for HTML. */
@@ -91,6 +91,7 @@ function words(name: string) {
     bellEmpty: copy.bellEmpty,
     error: copy.error,
     takeId: copy.takeId,
+    orPhoneShort: copy.orPhoneShort,
     idHint: copy.idHint,
     orPhone: copy.orPhone,
     reading: copy.reading,
@@ -113,7 +114,8 @@ type LiteProperty = {
 
 /** The page itself: colours as plain values (no CSS variables, colour mixing or layers). */
 export async function liteHtml(p: LiteProperty, origin: string): Promise<string> {
-  const v = themeVars(p.theme);
+  const t = p.theme;
+  const v = themeVars(t);
   const c = (k: string, d: string) => {
     const x = v[k];
     return x && /^#[0-9a-f]{3,8}$/i.test(x) ? x : d;
@@ -124,12 +126,52 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
     card: c("--card", "#FFFFFF"),
     primary: c("--primary", "#183B2B"),
     primaryFg: c("--primary-foreground", "#FFFFFF"),
+    accent: c("--accent", "#C8643B"),
     muted: c("--muted-foreground", "#6B6B6B"),
     border: c("--border", "#DDDDDD"),
+    secondary: c("--secondary", "#EEEEEE"),
   };
+  // The button colour, corners and shapes the property's theme sets.
+  const btn = t.buttonColour === "accent" ? col.accent : col.primary;
+  const btnFg = t.buttonColour === "accent" ? c("--accent-foreground", "#FFFFFF") : col.primaryFg;
+  const btnRadius = t.buttonRadius >= PILL ? "999px" : `${Math.round(t.buttonRadius * 16)}px`;
+  const radius = `${Math.round(t.radius * 16)}px`;
+  const bigRadius = `${Math.round(t.radius * 24)}px`;
+  const headingFamily = `"${t.customFontName ?? t.headingFont}", Georgia, "Times New Roman", serif`;
+  const bodyFamily = `"${t.bodyFont}", "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  const headingCase =
+    t.headingCase === "upper"
+      ? "text-transform:uppercase;"
+      : t.headingCase === "smallcaps"
+        ? "font-variant:small-caps;"
+        : "";
+  const heading = `font-family:${headingFamily};font-weight:${t.headingWeight};letter-spacing:${t.headingTracking}em;${headingCase}`;
+  const btnCase = t.buttonCase === "upper" ? "text-transform:uppercase;letter-spacing:.06em;" : "";
+  const fonts = googleFontLinks(t)
+    .map((l) => `<link rel="stylesheet" href="${esc(l.href)}">`)
+    .join("");
+  const customFace =
+    t.customFontUrl && t.customFontName
+      ? `@font-face{font-family:"${t.customFontName.replace(/"/g, "")}";src:url("${t.customFontUrl.replace(/"/g, "")}")}`
+      : "";
+  const pageBg =
+    t.backgroundStyle === "gradient"
+      ? `background:${col.bg};background-image:-webkit-linear-gradient(top,${col.bg},${col.secondary});background-image:linear-gradient(to bottom,${col.bg},${col.secondary});`
+      : `background:${col.bg};`;
+  const band = t.headerBand;
   const phoneUrl = `${origin}/kiosk/${p.code}?guest=1`;
   const qr = await qrSvg(phoneUrl);
   const tz = p.timezone ?? "Europe/London";
+  const centred = t.layout === "centred";
+  const title = (t.welcomeTitle || "Welcome to {property}").replace(/\{property\}/g, p.name);
+  // The start screen, as on the full kiosk: the welcome, a big Check in, and the phone QR.
+  const homeHtml =
+    `<div class="home${centred ? " centred" : ""}"><div class="hometxt">` +
+    (t.eyebrow ? `<p class="eyebrow">${esc(t.eyebrow)}</p>` : "") +
+    `<h1>${esc(title)}</h1>` +
+    `<p class="lead">${esc(t.welcomeBody || copy.scan)}</p>` +
+    `<button class="big" data-act="checkin">${esc(copy.checkIn)}</button>` +
+    `</div><div class="phone"><div class="qr">${qr}</div><p>${esc(copy.orPhoneShort)}</p></div></div>`;
   const boot = {
     code: p.code,
     version: APP_VERSION,
@@ -138,9 +180,10 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
     offset: zoneOffsetMinutes(tz),
     serverNow: Date.now(),
     words: words(p.name),
+    homeHtml,
   };
-  const logo = p.theme.logoUrl
-    ? `<img id="logo" src="${esc(p.theme.logoUrl)}" alt="">`
+  const logo = t.logoUrl
+    ? `<img id="logo" src="${esc(t.logoUrl)}" alt="">`
     : `<span id="logo" class="initial">${esc((p.name.trim()[0] ?? "").toUpperCase())}</span>`;
   return `<!doctype html>
 <html lang="en">
@@ -151,36 +194,52 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex">
 <title>${esc(p.name)}</title>
+${fonts}
 <style>
 *{-webkit-box-sizing:border-box;box-sizing:border-box}
-html,body{margin:0;padding:0;height:100%;overflow:hidden;background:${col.bg};color:${col.fg};font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+${customFace}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;${pageBg}color:${col.fg};font-family:${bodyFamily};-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:rgba(0,0,0,0)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-appearance:none}
-#hd{position:absolute;top:0;left:0;right:0;height:72px;padding:12px 20px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
-#logo{width:48px;height:48px;border-radius:12px;margin-right:14px;-webkit-flex-shrink:0;flex-shrink:0}
-#logo.initial{display:block;background:${col.primary};color:${col.primaryFg};font-size:26px;line-height:48px;text-align:center;font-weight:bold}
-#nm{-webkit-box-flex:1;-webkit-flex:1;flex:1;font-size:22px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#clk{font-size:30px;font-weight:600;margin:0 12px}
-.icon{width:56px;height:56px;border-radius:14px;color:${col.muted};display:block}
+#hd{position:absolute;top:0;left:0;right:0;height:80px;padding:12px 24px;${band ? `background:${col.primary};color:${col.primaryFg};` : ""}display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
+#logo{height:52px;max-width:160px;margin-right:16px;-webkit-flex-shrink:0;flex-shrink:0}
+#logo.initial{display:block;width:52px;border-radius:${radius};background:${col.primary};color:${col.primaryFg};font-size:28px;line-height:52px;text-align:center;${heading}}
+#nm{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nm b{display:block;font-size:24px;font-weight:normal;${heading}overflow:hidden;text-overflow:ellipsis}
+#nm small{display:block;font-size:12px;letter-spacing:.25em;text-transform:uppercase;opacity:.7}
+#clk{font-size:34px;margin:0 12px;${heading}}
+.icon{width:56px;height:56px;border-radius:${radius};color:${band ? col.primaryFg : col.muted};display:block}
 .icon svg{width:30px;height:30px;display:block;margin:13px}
-#main{position:absolute;top:72px;left:0;right:0;bottom:40px;padding:8px 20px}
-.welcome{height:100%;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
-.welcome .txt{-webkit-box-flex:1;-webkit-flex:1;flex:1;padding-right:32px}
-.welcome h1{font-size:46px;line-height:1.1;margin:0 0 18px}
-.welcome p{font-size:24px;line-height:1.35;margin:0 0 14px;color:${col.fg}}
-.welcome .url{font-size:20px;color:${col.muted};word-break:break-all}
-.qr{width:300px;height:300px;background:#fff;padding:10px;border-radius:16px;-webkit-flex-shrink:0;flex-shrink:0}
+#main{position:absolute;top:80px;left:0;right:0;bottom:40px;padding:8px 24px}
+.home{height:100%;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
+.hometxt{-webkit-box-flex:1;-webkit-flex:1;flex:1;padding-right:40px}
+.home h1{font-size:54px;line-height:1.1;margin:0 0 18px;${heading}}
+.home .eyebrow{font-size:15px;letter-spacing:.25em;text-transform:uppercase;color:${col.primary};margin:0 0 12px}
+.home .lead{font-size:24px;line-height:1.4;margin:0 0 30px;color:${col.muted}}
+.home .phone{width:220px;text-align:center;-webkit-flex-shrink:0;flex-shrink:0}
+.home .phone .qr{width:200px;height:200px;margin:0 auto 10px}
+.home .phone p{font-size:16px;color:${col.muted};margin:0}
+.home.centred{-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;text-align:center}
+.home.centred .hometxt{-webkit-box-flex:0;-webkit-flex:none;flex:none;padding:0;max-width:820px}
+.home.centred .phone{margin-top:28px;width:auto;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
+.home.centred .phone .qr{width:120px;height:120px;margin:0 16px 0 0;padding:6px}
+.hostwel{position:absolute;top:0;left:0;right:0;bottom:0;background:${col.primary};color:${col.primaryFg};display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;align-items:center;text-align:center;padding:40px;z-index:30}
+.hostwel h1{font-size:64px;line-height:1.1;margin:0 0 20px;${heading}}
+.hostwel p{font-size:28px;line-height:1.35;margin:0 0 30px;max-width:900px}
+.hostwel .big{background:${col.primaryFg};color:${col.primary}}
+.hostwel .small{font-size:18px;opacity:.85;margin-top:24px}
+.qr{width:300px;height:300px;background:#fff;padding:10px;border-radius:${radius};-webkit-flex-shrink:0;flex-shrink:0}
 .qr svg{width:100%;height:100%;display:block}
-.big{display:inline-block;min-height:72px;padding:18px 36px;border-radius:40px;background:${col.primary};color:${col.primaryFg};font-size:26px;font-weight:bold}
-.cards{height:100%;background:${col.primary};color:${col.primaryFg};border-radius:20px;padding:12px;position:relative}
-.cards .top{height:44px;font-size:24px;font-weight:bold;padding:4px 8px;position:relative}
+.big{display:inline-block;min-height:76px;min-width:280px;padding:20px 44px;border-radius:${btnRadius};background:${btn};color:${btnFg};font-size:28px;font-weight:bold;${btnCase}}
+.cards{height:100%;background:${col.primary};color:${col.primaryFg};border-radius:${bigRadius};padding:12px;position:relative}
+.cards .top{height:44px;font-size:26px;padding:4px 8px;position:relative;${heading}}
 .cards .top .pg{position:absolute;right:8px;top:8px;font-size:18px;font-weight:normal}
 .grid{position:absolute;top:56px;left:12px;right:12px;bottom:12px}
 .card{position:absolute;padding:6px}
-.card .in{height:100%;border-radius:18px;border:5px solid;padding:16px;overflow:hidden;position:relative}
-.card .nm{font-weight:800;line-height:1.05;margin:0 0 6px}
+.card .in{height:100%;border-radius:${bigRadius};border:5px solid;padding:16px;overflow:hidden;position:relative}
+.card .nm{line-height:1.05;margin:0 0 6px;${heading}font-weight:700}
 .card .msg{line-height:1.25;margin:0 0 6px}
 .card .meta{opacity:.85}
-.card .go{position:absolute;left:14px;right:14px;bottom:14px;min-height:56px;border-radius:36px;font-weight:bold;font-size:20px;border:4px solid;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
+.card .go{position:absolute;left:14px;right:14px;bottom:14px;min-height:56px;border-radius:${btnRadius};${btnCase}font-weight:bold;font-size:20px;border:4px solid;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
 #corner{position:absolute;left:8px;bottom:4px;height:36px;font-size:14px;color:${col.muted};display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;z-index:50}
 #corner button{height:36px;padding:0 8px;color:${col.muted}}
 #fs svg{width:18px;height:18px;display:block}
@@ -188,11 +247,11 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webki
 #lbl b{color:${col.fg}}
 #upd{display:none;position:absolute;left:16px;bottom:56px;z-index:60}
 #ov{display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:40;background:rgba(0,0,0,.45)}
-.panel{position:absolute;left:50%;top:50%;width:640px;max-width:92%;margin-left:-320px;-webkit-transform:translateY(-50%);transform:translateY(-50%);background:${col.card};color:${col.fg};border-radius:24px;padding:28px;max-height:90%;overflow:auto;-webkit-overflow-scrolling:touch}
-.panel h2{font-size:30px;margin:0 0 10px}
+.panel{position:absolute;left:50%;top:50%;width:640px;max-width:92%;margin-left:-320px;-webkit-transform:translateY(-50%);transform:translateY(-50%);background:${col.card};color:${col.fg};border-radius:${bigRadius};padding:28px;max-height:90%;overflow:auto;-webkit-overflow-scrolling:touch}
+.panel h2{font-size:32px;margin:0 0 10px;${heading}}
 .panel p{font-size:20px;margin:0 0 12px;line-height:1.35}
 .panel .qr{margin:10px auto;width:260px;height:260px}
-.row{display:block;width:100%;text-align:left;border:3px solid ${col.border};border-radius:14px;padding:12px 14px 12px 64px;margin:0 0 8px;position:relative;min-height:66px;background:${col.card}}
+.row{display:block;width:100%;text-align:left;border:3px solid ${col.border};border-radius:${radius};padding:12px 14px 12px 64px;margin:0 0 8px;position:relative;min-height:66px;background:${col.card}}
 .row.on{border-color:${col.primary}}
 .row .box{position:absolute;left:16px;top:50%;margin-top:-16px;width:32px;height:32px;border-radius:8px;border:3px solid ${col.muted};color:${col.primaryFg};font-size:22px;line-height:26px;text-align:center;font-weight:bold}
 .row.on .box{background:${col.primary};border-color:${col.primary}}
@@ -200,9 +259,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webki
 .row .when{display:block;font-size:16px;color:${col.muted}}
 .grp{font-size:14px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:${col.muted};margin:14px 0 8px}
 .btns{margin-top:16px;overflow:hidden}
-.btns button{float:left;width:48%;min-height:64px;border-radius:16px;font-size:22px;font-weight:bold}
+.btns button{float:left;width:48%;min-height:64px;border-radius:${btnRadius};font-size:22px;font-weight:bold;${btnCase}}
 .btns .sec{border:2px solid ${col.border}}
-.btns .pri{float:right;background:${col.primary};color:${col.primaryFg}}
+.btns .pri{float:right;background:${btn};color:${btnFg}}
 #saver{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#000;z-index:70}
 #saver span{position:absolute;color:#555;font-size:120px;font-weight:200}
 #saverdim{position:absolute;top:0;left:0;right:0;bottom:0;background:#000;opacity:0}
@@ -210,13 +269,13 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webki
 #saverqr svg{width:100%;height:100%;display:block}
 #camon{display:none;position:absolute;left:12px;top:12px;z-index:80;background:#000;color:#fff;border-radius:20px;padding:8px 14px;font-size:15px}
 #net{display:none;position:absolute;right:12px;bottom:8px;font-size:14px;color:#B33;z-index:55}
-@media (max-width:820px){.welcome h1{font-size:36px}.qr{width:240px;height:240px}.welcome p{font-size:20px}}
-@media (orientation:portrait){.welcome{display:block;padding-top:24px;text-align:center}.welcome .txt{padding:0 0 24px}.qr{margin:0 auto}}
+@media (max-width:820px){.home h1{font-size:40px}.home .lead{font-size:20px}.hostwel h1{font-size:46px}}
+@media (orientation:portrait){.home{-webkit-box-orient:vertical;-webkit-flex-direction:column;flex-direction:column;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;text-align:center}.hometxt{-webkit-box-flex:0;-webkit-flex:none;flex:none;padding:0}.home .phone{margin-top:32px}}
 </style>
 </head>
 <body>
-<div id="hd">${logo}<span id="nm">${esc(p.name)}</span><span id="clk"></span><button id="bell" class="icon" style="display:none" aria-label="${esc(copy.bellTitle)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button></div>
-<div id="main"><div class="welcome"><div class="txt"><h1>${esc(copy.welcome(p.name))}</h1><p>${esc(copy.scan)}</p><p class="url">${esc(boot.shortUrl)}</p></div><div class="qr">${qr}</div></div></div>
+<div id="hd">${logo}<span id="nm"><b>${esc(p.name)}</b>${t.subname ? `<small>${esc(t.subname)}</small>` : ""}</span><span id="clk"></span><button id="bell" class="icon" style="display:none" aria-label="${esc(copy.bellTitle)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button></div>
+<div id="main">${homeHtml}</div>
 <div id="corner"><button id="fs" style="display:none" aria-label="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button><button id="ver"><span id="lbl"></span>v${esc(APP_VERSION)}<span id="dot"></span></button></div>
 <button id="upd" class="big"></button>
 <div id="ov"></div>

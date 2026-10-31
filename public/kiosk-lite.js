@@ -237,32 +237,23 @@
     return '<div class="qr">' + (window.__LITE_QR || "") + "</div>";
   }
 
+  /** The start screen, built by the page in the property's look (kiosk-lite.server.ts). */
   function renderHome(main) {
-    main.innerHTML =
-      '<div class="welcome"><div class="txt"><h1>' +
-      esc(W.welcome) +
-      "</h1><p>" +
-      esc(W.scan) +
-      '</p><p class="url">' +
-      esc(L.shortUrl) +
-      "</p></div>" +
-      qrBlock() +
-      "</div>";
+    main.innerHTML = L.homeHtml;
   }
 
+  /** The host's own welcome: full screen in the property's colour, with Check in. */
   function renderWelcome(main, w) {
     main.innerHTML =
-      '<div class="welcome"><div class="txt"><h1>' +
+      '<div class="hostwel"><h1>' +
       esc(w.headline) +
       "</h1>" +
       (w.body ? "<p>" + esc(w.body) + "</p>" : "") +
-      "<p>" +
-      esc(W.scan) +
-      '</p><p class="url">' +
-      esc(L.shortUrl) +
-      "</p></div>" +
-      qrBlock() +
-      "</div>";
+      '<button class="big" data-act="checkin">' +
+      esc(W.checkIn) +
+      '</button><p class="small">' +
+      esc(W.orPhoneShort) +
+      "</p></div>";
   }
 
   function gridFor(n) {
@@ -827,7 +818,7 @@
       var act = attr(t, "data-act");
       if (act) {
         if (act.v === "close") hide();
-        if (act.v === "again") phonePanel();
+        if (act.v === "again" || act.v === "checkin") phonePanel();
         if (act.v === "apply") applyBell();
         return;
       }

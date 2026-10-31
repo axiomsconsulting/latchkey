@@ -55,8 +55,16 @@ export function browserLabel(ua: string): string {
           : /Samsung/.test(m[0])
             ? "Samsung Internet"
             : "Safari";
-  const label = m ? `${name} ${m[1]}` : name;
-  return (os ? `${label} on ${os}` : label).slice(0, 120);
+  // An iPad or iPhone app saved to the home screen has no browser version: it's Safari.
+  const ios = ua.match(/OS (\d+)_(\d+)/);
+  const label = m
+    ? `${name} ${m[1]}`
+    : (os === "iPad" || os === "iPhone") && /AppleWebKit/.test(ua)
+      ? "Safari (home screen app)"
+      : name;
+  const where =
+    os && ios && (os === "iPad" || os === "iPhone") ? `${os}, iOS ${ios[1]}.${ios[2]}` : os;
+  return (where ? `${label} on ${where}` : label).slice(0, 120);
 }
 
 /**

@@ -27,10 +27,15 @@ describe("compatibility mode", () => {
   });
 
   it("names the browser for the host", () => {
-    expect(browserLabel(IPAD2)).toBe("Safari 9 on iPad");
+    expect(browserLabel(IPAD2)).toBe("Safari 9 on iPad, iOS 9.3");
+    expect(
+      browserLabel(
+        "Mozilla/5.0 (iPad; CPU OS 9_3_5 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Mobile/13G36",
+      ),
+    ).toBe("Safari (home screen app) on iPad, iOS 9.3");
     expect(browserLabel(OLD_ANDROID)).toBe("Chrome 70 on Android");
     expect(browserLabel("Mozilla/5.0 (iPad; CPU OS 12_5 like Mac OS X) CriOS/87.0 Mobile")).toBe(
-      "Chrome 87 on iPad",
+      "Chrome 87 on iPad, iOS 12.5",
     );
     expect(browserLabel("something")).toBe("Browser");
   });

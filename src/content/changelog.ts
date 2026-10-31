@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.99.1",
+    date: "2026-10-31",
+    title: "Older tablets in your own look",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Compatibility mode now uses your property's look throughout: its colours, fonts, logo, button shape, subtitle and welcome words. The start screen has a big Check in button (photo ID with the tablet's camera, or the guest's phone), with the phone QR beside it, and your own welcome shows full screen in your colour with Check in, as on the full kiosk.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Door tablets says which iOS version an iPad runs, and recognises the kiosk saved to an iPad's home screen.",
+      },
+    ],
+  },
+  {
     version: "0.99.0",
     date: "2026-10-31",
     title: "Live camera video, straight from the tablet",
