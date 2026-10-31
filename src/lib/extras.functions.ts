@@ -753,7 +753,7 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
     z
       .object({
         id: uuid,
-        action: z.enum(["approve", "decline", "suggest", "delivered", "mark_paid"]),
+        action: z.enum(["approve", "approve_free", "decline", "suggest", "delivered", "mark_paid"]),
         window: z.enum(["asap", "evening", "morning", "door"]).nullable().default(null),
         note: z.string().trim().max(200).nullable().default(null),
       })
@@ -773,37 +773,42 @@ export const decideExtrasRequest = createServerFn({ method: "POST" })
             status: r.total_pence > 0 ? "awaiting_payment" : "approved",
             pay_by: r.total_pence > 0 ? new Date(now.getTime() + HOLD_MS).toISOString() : null,
           }
-        : data.action === "decline"
-          ? { status: "declined", resolved_at: now.toISOString() }
-          : data.action === "suggest"
-            ? {
-                status: "suggested",
-                suggested_window: data.window,
-                suggestion_expires_at: new Date(now.getTime() + HOLD_MS).toISOString(),
-              }
-            : data.action === "mark_paid"
-              ? { status: "confirmed", paid_at: now.toISOString() }
-              : { status: "delivered", resolved_at: now.toISOString() };
+        : data.action === "approve_free"
+          ? // The host gives it free (a favour, or settled another way): nothing to pay, and the times apply now.
+            { status: "approved", total_pence: 0, pay_by: null }
+          : data.action === "decline"
+            ? { status: "declined", resolved_at: now.toISOString() }
+            : data.action === "suggest"
+              ? {
+                  status: "suggested",
+                  suggested_window: data.window,
+                  suggestion_expires_at: new Date(now.getTime() + HOLD_MS).toISOString(),
+                }
+              : data.action === "mark_paid"
+                ? { status: "confirmed", paid_at: now.toISOString() }
+                : { status: "delivered", resolved_at: now.toISOString() };
     if (data.note) patch["host_note"] = data.note;
     const { error } = await context.supabase
       .from("requests")
       .update(patch as never)
       .eq("id", data.id);
     if (error) throw new Error("Couldn't update that request.");
-    if (data.action === "approve" || data.action === "mark_paid")
+    if (data.action === "approve" || data.action === "approve_free" || data.action === "mark_paid")
       await applyStayTimes(context.supabase, data.id);
     const body =
       data.action === "approve"
         ? r.total_pence > 0
           ? "Your request is approved. Please pay within 2 hours to confirm it."
           : "Your request is approved."
-        : data.action === "decline"
-          ? "Sorry, your host can't do that request this time."
-          : data.action === "suggest"
-            ? "Your host has suggested another time. Please accept it within 2 hours."
-            : data.action === "mark_paid"
-              ? "Payment received. You're booked."
-              : "Your request has been delivered.";
+        : data.action === "approve_free"
+          ? "Your request is approved, free of charge."
+          : data.action === "decline"
+            ? "Sorry, your host can't do that request this time."
+            : data.action === "suggest"
+              ? "Your host has suggested another time. Please accept it within 2 hours."
+              : data.action === "mark_paid"
+                ? "Payment received. You're booked."
+                : "Your request has been delivered.";
     await context.supabase.from("messages").insert({
       booking_id: r.booking_id,
       direction: "outbound",
