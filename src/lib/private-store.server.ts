@@ -161,6 +161,12 @@ export type StoreInput = {
   bytes: Uint8Array;
   /** The column that will hold the returned reference (the queue updates it once moved). */
   ref: { table: string; column: string };
+  /**
+   * Someone is waiting (a guest at check-in): keep it in the queue now, a
+   * quick write, and let the next move take it to Drive. Links keep working
+   * across the move (resolveRef).
+   */
+  soon?: boolean;
 };
 
 /** Stores a private file in Drive, or queues it if Drive can't be reached. Returns the reference to save. */
@@ -170,7 +176,9 @@ export async function storePrivate(o: StoreInput): Promise<string> {
   const name = safePart(o.name);
   const sha = await sha256OfBytes(o.bytes);
   let lastError: string | null = null;
-  if (await driveReady()) {
+  if (o.soon) {
+    // Moved to Drive by syncDriveQueue (every calendar sync, about every 30 minutes).
+  } else if (await driveReady()) {
     try {
       const id = await uploadToDrive(
         await folderFor(o.kind, o.ownerKey, o.ownerLabel),
@@ -213,11 +221,29 @@ export async function storePrivate(o: StoreInput): Promise<string> {
 
 /* --------------------------------------------------------- read, delete */
 
+/**
+ * Where a file is now: a queued file that has since moved to Drive is
+ * followed to its Drive copy (drive_queue.moved_to, kept a day after the
+ * move, migration 0078), so a link made before the move still opens it.
+ */
+export async function resolveRef(ref: string): Promise<string> {
+  const r = readRef(ref);
+  if (r.where !== "queue") return ref;
+  const db = await sb();
+  const { data, error } = await db
+    .from("drive_queue")
+    .select("moved_to")
+    .eq("path", r.path)
+    .maybeSingle();
+  if (error || !data?.moved_to) return ref;
+  return data.moved_to as string;
+}
+
 /** A stored file's bytes, wherever it is now. */
 export async function readPrivate(
   ref: string,
 ): Promise<{ bytes: Uint8Array; mime: string } | null> {
-  const r = readRef(ref);
+  const r = readRef(await resolveRef(ref));
   if (r.where === "drive") {
     const { drive } = await import("./drive.server");
     const res = await drive(`/drive/v3/files/${encodeURIComponent(r.fileId)}?alt=media`);
@@ -314,18 +340,24 @@ export async function syncDriveQueue(limit = 25): Promise<SyncSummary> {
   const db = await sb();
   const summary: SyncSummary = { moved: 0, failed: 0, waiting: 0 };
   if (!(await driveReady())) {
-    const { count } = await db.from("drive_queue").select("id", { count: "exact", head: true });
-    summary.waiting = count ?? 0;
+    summary.waiting = await waitingCount();
     return summary;
   }
   // Two minutes' grace: the record that will point at a new file is saved just after the file.
   const settled = new Date(Date.now() - 120_000).toISOString();
-  const { data: rows } = await db
-    .from("drive_queue")
-    .select("*")
-    .lt("created_at", settled)
-    .order("created_at")
-    .limit(limit);
+  const { withLegacy } = await import("./checkin.server");
+  const { data: rows } = await withLegacy(
+    () =>
+      db
+        .from("drive_queue")
+        .select("*")
+        .is("moved_to", null)
+        .lt("created_at", settled)
+        .order("created_at")
+        .limit(limit),
+    () =>
+      db.from("drive_queue").select("*").lt("created_at", settled).order("created_at").limit(limit),
+  );
   for (const q of (rows ?? []) as QueueRow[]) {
     try {
       const { data: blob, error } = await db.storage.from(QUEUE_BUCKET).download(q.path);
@@ -350,7 +382,12 @@ export async function syncDriveQueue(limit = 25): Promise<SyncSummary> {
         await deleteFiles([id]);
       }
       await db.storage.from(QUEUE_BUCKET).remove([q.path]);
-      await db.from("drive_queue").delete().eq("id", q.id);
+      // Kept a day as a pointer, so links made before the move still open (resolveRef).
+      const { error: markErr } = await db
+        .from("drive_queue")
+        .update({ moved_to: driveRef(id), moved_at: new Date().toISOString() })
+        .eq("id", q.id);
+      if (markErr) await db.from("drive_queue").delete().eq("id", q.id);
       summary.moved++;
     } catch (e) {
       summary.failed++;
@@ -365,9 +402,28 @@ export async function syncDriveQueue(limit = 25): Promise<SyncSummary> {
     }
   }
   summary.moved += await moveLegacyGuestPhotos(Math.max(0, limit - summary.moved));
-  const { count } = await db.from("drive_queue").select("id", { count: "exact", head: true });
-  summary.waiting = count ?? 0;
+  // Pointers to moved files are only needed while links made before the move last (10 minutes).
+  await db
+    .from("drive_queue")
+    .delete()
+    .lt("moved_at", new Date(Date.now() - 86_400_000).toISOString());
+  summary.waiting = await waitingCount();
   return summary;
+}
+
+/** Files still waiting to move (not the pointers left by moved ones). */
+async function waitingCount(): Promise<number> {
+  const db = await sb();
+  const head = () => db.from("drive_queue").select("id", { count: "exact", head: true });
+  const res = await head().is("moved_to", null);
+  // Before migration 0078 every row is waiting.
+  const { count } = res.error ? await head() : res;
+  return count ?? 0;
+}
+
+/** Quick check before a frequent run: anything waiting at all? */
+export async function queueWaiting(): Promise<boolean> {
+  return (await waitingCount()) > 0;
 }
 
 /** Guest photos saved in the "guest-ids" bucket before Drive: moved across the same way. */
@@ -442,11 +498,11 @@ export async function driveQueueStatus(): Promise<{
   lastError: string | null;
 }> {
   const db = await sb();
-  const { data, count } = await db
-    .from("drive_queue")
-    .select("created_at, last_error", { count: "exact" })
-    .order("created_at")
-    .limit(1);
+  const list = () =>
+    db.from("drive_queue").select("created_at, last_error", { count: "exact" }).order("created_at");
+  const latest = await list().is("moved_to", null).limit(1);
+  // Before migration 0078 every row is waiting.
+  const { data, count } = latest.error ? await list().limit(1) : latest;
   const first = (data ?? [])[0] as { created_at?: string; last_error?: string | null } | undefined;
   return {
     driveConnected: await driveReady(),

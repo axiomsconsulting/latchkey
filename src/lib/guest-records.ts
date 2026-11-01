@@ -141,6 +141,8 @@ export type IdRead = {
   numberLast4: string | null;
   /** As printed: "GBR", "FRA", "British Citizen". Used to prefill the UK register. */
   nationality: string | null;
+  /** ISO alpha-2 of the issuing country: suggests a nationality when none is printed (UK driving licences). */
+  issuingCountryCode?: string | null;
   /** Full number, only ever kept in the register and only for non-Commonwealth guests. */
   documentNumber: string | null;
   /** Issuing authority or place, as printed. */

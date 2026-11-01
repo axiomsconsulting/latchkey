@@ -58,6 +58,13 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
         }
 
         const result = await syncAllConnections();
+        // Guests' check-in photos are saved to the queue first (quick at the door): moved to Drive here.
+        try {
+          const { queueWaiting, syncDriveQueue } = await import("@/lib/private-store.server");
+          if (await queueWaiting()) await syncDriveQueue(50);
+        } catch (e) {
+          console.error("Drive queue move failed", e instanceof Error ? e.message : e);
+        }
         await recordRun(key, `${result.connections} calendars, ${result.errors} errors`, started);
         return Response.json({ task: "sync", ...result });
       },

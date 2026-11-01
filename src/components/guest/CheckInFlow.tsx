@@ -1991,6 +1991,9 @@ function RegisterStep({
               ))}
             </SelectContent>
           </Select>
+          {only?.includes("nationality") && prefill?.nationality ? (
+            <p className="text-base text-muted-foreground">{copy.registerNationalityGuess}</p>
+          ) : null}
         </div>
 
         {alien ? (

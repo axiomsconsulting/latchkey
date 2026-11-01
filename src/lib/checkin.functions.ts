@@ -51,7 +51,7 @@ import {
 import {
   REGISTER_AGE,
   cleanRegisterEntry,
-  nationalityFromId,
+  suggestedNationality,
   registerApplies,
   registerFromRead,
   registerKeepUntil,
@@ -470,19 +470,21 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       .update({ confirmed: true, photo_attempts: 1 })
       .eq("token_hash", (await srv()).sha256(token));
     const ctx = await sessionContext(token);
-    try {
-      await savePerson(ctx, 0, {
+    // Side by side, so the guest waits for the slowest rather than all of them.
+    const [, , register] = await Promise.all([
+      savePerson(ctx, 0, {
         kind: "adult",
         read,
         nameMatch: hit.m,
         idChecked: true,
         skipped: false,
         idPhoto: data.small ?? null,
-      });
-    } catch (err) {
-      console.error("Saving lead guest ID failed", err);
-    }
-    await recordResult(ctx, "photo_id", hit.m);
+      }).catch((err) => {
+        console.error("Saving lead guest ID failed", err);
+      }),
+      recordResult(ctx, "photo_id", hit.m),
+      autoRegister(ctx, 0, read),
+    ]);
     return {
       status: "matched" as const,
       token,
@@ -490,7 +492,7 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       platform: platformKey(hit.b),
       returning: hit.b.status === "checked_in",
       prefill: prefillFrom(read),
-      register: await autoRegister(ctx, 0, read),
+      register,
     };
   });
 
@@ -1060,15 +1062,17 @@ async function recordResult(
   const deleteAfter = new Date(Date.parse(`${booking.check_out_date}T00:00:00Z`) + 30 * 86_400_000)
     .toISOString()
     .slice(0, 10);
-  await db.from("verification_results").insert({
-    booking_id: booking.id,
-    method,
-    passed: result === "matched" || result === "last4",
-    detail: result,
-    delete_after: deleteAfter,
-  });
-  await db.from("bookings").update({ id_check_status: result }).eq("id", booking.id);
-  await db.from("checkin_sessions").update({ verified_method: method }).eq("id", session.id);
+  await Promise.all([
+    db.from("verification_results").insert({
+      booking_id: booking.id,
+      method,
+      passed: result === "matched" || result === "last4",
+      detail: result,
+      delete_after: deleteAfter,
+    }),
+    db.from("bookings").update({ id_check_status: result }).eq("id", booking.id),
+    db.from("checkin_sessions").update({ verified_method: method }).eq("id", session.id),
+  ]);
 
   const who = firstName(booking.guest_full_name) || "A guest";
   if (
@@ -1107,7 +1111,8 @@ async function recordResult(
 function prefillFrom(read: IdRead) {
   return {
     fullName: read.fullName,
-    nationality: nationalityFromId(read.nationality),
+    // Printed nationality, else the issuing country to confirm (UK licences print none).
+    nationality: suggestedNationality(read),
     documentNumber: read.documentNumber,
     placeOfIssue: read.placeOfIssue ?? read.issuingCountry,
   };
@@ -1329,35 +1334,38 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
     if (!verdict.ok) return again(verdict.reason);
 
     const result = compareNames(ctx.booking.guest_full_name, read.fullName);
-    try {
-      await savePerson(ctx, 0, {
+    // Side by side, so the guest waits for the slowest rather than all of them.
+    const [, , register] = await Promise.all([
+      savePerson(ctx, 0, {
         kind: "adult",
         read,
         nameMatch: result,
         idChecked: true,
         skipped: false,
         idPhoto: data.small ?? null,
-      });
-    } catch (err) {
-      // The check itself passed; a failed save must not stop the guest at the door.
-      console.error("Saving lead guest ID failed", err);
-    }
-    await recordResult(ctx, "photo_id", result);
-    if (verdict.expired) {
-      const { raiseAlert } = await srv();
-      await raiseAlert({
-        hostId: ctx.property.host_id,
-        propertyId: ctx.property.id,
-        bookingId: ctx.booking.id,
-        kind: "id_partial",
-        message: `${firstName(ctx.booking.guest_full_name) || "A guest"} showed an expired ID at ${ctx.property.name}.`,
-      });
-    }
+      }).catch((err) => {
+        // The check itself passed; a failed save must not stop the guest at the door.
+        console.error("Saving lead guest ID failed", err);
+      }),
+      recordResult(ctx, "photo_id", result),
+      autoRegister(ctx, 0, read),
+      verdict.expired
+        ? srv().then(({ raiseAlert }) =>
+            raiseAlert({
+              hostId: ctx.property.host_id,
+              propertyId: ctx.property.id,
+              bookingId: ctx.booking.id,
+              kind: "id_partial",
+              message: `${firstName(ctx.booking.guest_full_name) || "A guest"} showed an expired ID at ${ctx.property.name}.`,
+            }),
+          )
+        : null,
+    ]);
     return {
       status: "done" as const,
       result,
       prefill: prefillFrom(read),
-      register: await autoRegister(ctx, 0, read),
+      register,
     };
   });
 

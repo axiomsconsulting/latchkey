@@ -6,6 +6,7 @@ import {
   isAlien,
   isNationality,
   nationalityFromId,
+  suggestedNationality,
   nationalityName,
   nationalityOptions,
   registerApplies,
@@ -60,6 +61,9 @@ describe("nationalities", () => {
   it("reads what passports print", () => {
     expect(nationalityFromId("GBR")).toBe("GB");
     expect(nationalityFromId("British Citizen")).toBe("GB");
+    expect(nationalityFromId("U.K.")).toBe("GB");
+    expect(nationalityFromId("Great Britain")).toBe("GB");
+    expect(nationalityFromId("PK")).toBe("PK");
     expect(nationalityFromId("D")).toBe("DE");
     expect(nationalityFromId("FRA")).toBe("FR");
     expect(nationalityFromId("France")).toBe("FR");
@@ -212,5 +216,17 @@ describe("the register from a guest's ID", () => {
         placeOfIssue: null,
       }),
     ).toEqual({ kind: "later" });
+  });
+});
+
+describe("suggestedNationality", () => {
+  it("prefers the printed nationality, else the issuing country to confirm", () => {
+    expect(suggestedNationality({ nationality: "FRA", issuingCountryCode: "GB" })).toBe("FR");
+    // A UK driving licence prints no nationality.
+    expect(suggestedNationality({ nationality: null, issuingCountryCode: "GB" })).toBe("GB");
+    expect(suggestedNationality({ nationality: null, issuingCountry: "United Kingdom" })).toBe(
+      "GB",
+    );
+    expect(suggestedNationality({ nationality: null })).toBeNull();
   });
 });

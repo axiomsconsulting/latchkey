@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.103.0",
+    date: "2026-11-01",
+    title: "Quicker ID checks that understand more names",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Names on IDs match the booking more often: hyphenated names with or without the hyphen, a booking that holds only the given names, surname first, extra middle names and a one-letter misread in a long name (Mohammed / Mohammad) all count as the same person.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Photo IDs and selfies are saved in a moment: they're kept in Latchkey's private queue straight away and moved to your restricted Google Drive folder within about half an hour. Links to the photos keep working across the move.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "While an ID is being read, the guest sees the photo they took and a progress bar saying what's happening (sending, reading the ID, matching it to the booking).",
+      },
+      {
+        kind: "improved",
+        area: "Guest register",
+        text: "Nationality is read as a country code from what the ID prints, including words like 'British citizen'. When the ID prints none (UK driving licences), the issuing country is picked for the guest to confirm with one tap instead of searching the list.",
+      },
+    ],
+  },
+  {
     version: "0.102.1",
     date: "2026-11-01",
     title: "Stays no longer marked cancelled after they happened",
