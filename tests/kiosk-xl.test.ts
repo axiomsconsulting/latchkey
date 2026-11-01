@@ -69,6 +69,26 @@ describe("Express mode on door tablets", () => {
     expect(tinted.cardOut).not.toBe("#183B2B");
   });
 
+  it("uses theme tints only when they're colourful and differ from the page", () => {
+    // Crimson page, near-black accent (The Trinity Suites): the warm cream and cool blue.
+    expect(expressCards({ primary: "#a50d36", accent: "#1e2229" }, null, null)).toEqual({
+      cardIn: "#F6E2A8",
+      cardOut: "#CFE3EC",
+    });
+    // Forest page, terracotta accent: a terracotta tint for arrivals, blue for departures.
+    const forest = expressCards({ primary: "#183b2b", accent: "#c8643b" }, null, null);
+    expect(forest.cardIn).not.toBe("#F6E2A8");
+    expect(forest.cardOut).toBe("#CFE3EC");
+    // A dark theme's own background as the page: both theme colours can tint.
+    const dark = expressCards(
+      { primary: "#ff6f61", accent: "#3ec5a5", background: "#16181d" },
+      null,
+      null,
+    );
+    expect(dark.cardIn).not.toBe("#F6E2A8");
+    expect(dark.cardOut).not.toBe("#CFE3EC");
+  });
+
   it("takes the theme's shapes and makes them bolder", () => {
     const square = expressShape(
       normaliseTheme({ radius: 0, buttonRadius: 0, cardStyle: "flat", headingCase: "upper" }),

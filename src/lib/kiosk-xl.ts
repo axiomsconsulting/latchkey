@@ -53,15 +53,52 @@ export function expressPage(primary: string, background?: string | null): string
   return luminance(p) > 0.2 ? mix(p, "#000000", 0.55) : p;
 }
 
-/** The card colours: the host's own, else light tints of the theme's accent and main colour. */
+/** Hue (0-360) and saturation (0-1) of a colour. */
+function hueSat(c: string): { h: number; s: number } {
+  const n = parseInt(c.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  const l = (max + min) / 2;
+  if (d === 0) return { h: 0, s: 0 };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: h * 60, s };
+}
+
+const hueGap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+
+/** Starting card colours: warm cream for arrivals, cool blue for departures. */
+const WARM = "#F6E2A8";
+const COOL = "#CFE3EC";
+
+/**
+ * The card colours: the host's own, else light tints of the theme's colours
+ * that read as colours (not greys) and stand apart from the page; otherwise
+ * the warm cream (arriving) and cool blue (leaving) everyone starts with.
+ */
 export function expressCards(
-  t: Pick<ExpressTheme, "primary" | "accent">,
+  t: Pick<ExpressTheme, "primary" | "accent"> & { background?: string | null },
   cardIn: string | null | undefined,
   cardOut: string | null | undefined,
 ): { cardIn: string; cardOut: string } {
+  const page = hueSat(expressPage(hex(t.primary, "#183B2B"), t.background));
+  const usable = [hex(t.accent, "#C8A24A"), hex(t.primary, "#183B2B")].filter((c) => {
+    const x = hueSat(c);
+    return x.s >= 0.25 && (page.s < 0.15 || hueGap(x.h, page.h) >= 30);
+  });
+  const [first, second] = usable;
   return {
-    cardIn: hex(cardIn, mix(hex(t.accent, "#C8A24A"), "#ffffff", 0.62)),
-    cardOut: hex(cardOut, mix(hex(t.primary, "#183B2B"), "#ffffff", 0.8)),
+    cardIn: hex(cardIn, first ? mix(first, "#ffffff", 0.62) : WARM),
+    cardOut: hex(
+      cardOut,
+      second && hueGap(hueSat(second).h, hueSat(first!).h) >= 30
+        ? mix(second, "#ffffff", 0.8)
+        : COOL,
+    ),
   };
 }
 

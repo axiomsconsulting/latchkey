@@ -207,6 +207,13 @@ export function TabletScreen({
             code={code}
             goodbyes={t.cards}
             contained
+            logo={
+              <LogoMark
+                theme={live.theme}
+                name={live.name}
+                className="size-[1.4em] shrink-0 rounded-[0.2em] bg-white p-[0.1em] text-[0.5em] text-primary ring-0 ring-offset-0"
+              />
+            }
             onCheckIn={() => {}}
             onArrive={() => {}}
             onLeft={() => {}}

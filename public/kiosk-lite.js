@@ -334,7 +334,9 @@
     if (drawn === "welcome:" + w.version) return;
     drawn = "welcome:" + w.version;
     main.innerHTML =
-      '<div class="hostwel"><div class="ring"></div><h1>' +
+      '<div class="hostwel"><div class="ring"></div>' +
+      (L.logo ? '<span class="lm">' + L.logo + "</span>" : "") +
+      "<h1>" +
       esc(w.headline) +
       "</h1>" +
       (w.body ? "<p>" + esc(w.body) + "</p>" : "") +
@@ -379,7 +381,7 @@
       '</div><div class="cgrid" id="grid">';
     for (var j = 0; j < items.length; j++) {
       var c = items[j];
-      var look = state.cards.look[c.kind === "in" ? "in" : "out"];
+      var look = (L.xlCards || state.cards.look)[c.kind === "in" ? "in" : "out"];
       var col = j % g.cols;
       var row = Math.floor(j / g.cols);
       html +=

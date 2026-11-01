@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.104.1",
+    date: "2026-11-01",
+    title: "Your logo on every door tablet screen",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Your logo now shows on the guest cards screen and on your welcome for a guest, on every door tablet, so your branding stays up while they cover the page.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Older tablets (such as the iPad 2) keep your theme's borders, icons, dividers and the date even at the Lite level; only the pictures, fonts and movement are left out. In Express mode their guest cards use the same corners, borders and lettering as the rest of Express.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Express card colours you haven't picked use your theme's colours only when they are real colours that stand apart from the page; otherwise they keep the warm cream for arrivals and cool blue for departures.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "What's new in the menu no longer repeats the version number; it stays at the bottom of the menu.",
+      },
+    ],
+  },
+  {
     version: "0.104.0",
     date: "2026-11-01",
     title: "Express mode: bold door tablets made from your theme",

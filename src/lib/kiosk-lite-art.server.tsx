@@ -32,7 +32,12 @@ import type { ThemeConfig } from "@/lib/theme";
 /** Markup with the theme's accent written in (presentation attributes can't use var() on old browsers). */
 function draw(node: ReactElement, accent: string): string {
   try {
-    return renderToStaticMarkup(node).replace(/var\(--accent\)/g, accent);
+    return (
+      renderToStaticMarkup(node)
+        .replace(/var\(--accent\)/g, accent)
+        // React adds a preload hint before an <img>; old browsers don't need it inside the mark.
+        .replace(/<link rel="preload"[^>]*\/?>/g, "")
+    );
   } catch {
     return "";
   }
