@@ -43,7 +43,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextField } from "@/components/host/RichTextField";
+import { normaliseTheme } from "@/lib/theme";
 import { common, guideAttachCopy, guideCopy as copy, inRoomCopy as roomCopy } from "@/content/copy";
 import { useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { GuideSectionList } from "@/components/host/GuideSectionList";
@@ -108,6 +109,8 @@ function GuidesPage() {
     theme_config?: unknown;
   }>;
   const { selectedId, select } = useSelectedProperty(properties);
+  const theme = normaliseTheme(properties.find((x) => x.id === selectedId)?.theme_config);
+  const fonts = { heading: theme.customFontName ?? theme.headingFont, body: theme.bodyFont };
   const tilesFn = useServerFn(getGuideTiles);
   // Shares its cache with the tiles editor: also carries each room's photo.
   const tilesQ = useQuery({
@@ -336,6 +339,7 @@ function GuidesPage() {
                     hint={sec.hint}
                     own={own}
                     inherited={house}
+                    fonts={fonts}
                   />
                   {roomId ? (
                     <p className="text-xs text-muted-foreground">{guideAttachCopy.roomNote}</p>
@@ -364,7 +368,10 @@ function SectionEditor({
   hint,
   own,
   inherited,
+  fonts,
 }: {
+  /** The theme's fonts, for the formatting advice. */
+  fonts: { heading: string; body: string } | null;
   propertyId: string;
   roomId: string | null;
   sectionKey: SectionKey;
@@ -468,11 +475,12 @@ function SectionEditor({
       </div>
       <div className="space-y-1">
         <Label htmlFor={`sum-${sectionKey}`}>{copy.summary}</Label>
-        <Textarea
+        <RichTextField
           id={`sum-${sectionKey}`}
           value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          maxLength={500}
+          onChange={setSummary}
+          maxLength={2000}
+          fonts={fonts}
         />
       </div>
 
@@ -492,12 +500,13 @@ function SectionEditor({
                   onChange={(e) => patch(i, { heading: e.target.value })}
                   maxLength={120}
                 />
-                <Textarea
-                  aria-label={copy.stepBody}
+                <RichTextField
+                  ariaLabel={copy.stepBody}
                   placeholder={copy.stepBody}
                   value={st.body ?? ""}
-                  onChange={(e) => patch(i, { body: e.target.value })}
+                  onChange={(v) => patch(i, { body: v })}
                   maxLength={2000}
+                  fonts={fonts}
                 />
                 {st.imageUrl || st.imagePath ? (
                   <div className="relative inline-block">

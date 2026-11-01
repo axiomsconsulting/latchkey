@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
+import { RichText } from "@/components/RichText";
 import { guideCopy as gcopy } from "@/content/copy";
+import { isFormatted } from "@/lib/rich-text";
 
 /**
  * Shows the first line of a rule or note, with the rest a tap away. Long
@@ -10,6 +12,8 @@ import { guideCopy as gcopy } from "@/content/copy";
 export function ExpandableText({ text, className = "" }: { text: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const trimmed = text.trim();
+  // Formatted text (headings, lists, tables) is laid out on purpose: shown whole.
+  if (isFormatted(trimmed)) return <RichText text={trimmed} className={className} />;
   const breakAt = trimmed.search(/\n|(?<=[.!?])\s/);
   const first = breakAt > 0 ? trimmed.slice(0, breakAt + 1).trim() : trimmed;
   const rest = breakAt > 0 ? trimmed.slice(breakAt + 1).trim() : "";
@@ -20,18 +24,24 @@ export function ExpandableText({ text, className = "" }: { text: string; classNa
     <div className="space-y-2">
       <p className={`whitespace-pre-line ${className}`}>{first}</p>
       {open ? <p className={`whitespace-pre-line ${className}`}>{rest}</p> : null}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="inline-flex min-h-11 items-center gap-1 text-base font-medium text-primary underline-offset-4 hover:underline"
-      >
-        {open ? gcopy.showLess : gcopy.showMore}
-        <ChevronDown
-          className={`size-4 transition-transform ${open ? "rotate-180" : ""}`}
-          aria-hidden
-        />
-      </button>
+      <MoreButton open={open} onClick={() => setOpen((v) => !v)} />
     </div>
+  );
+}
+
+function MoreButton({ open, onClick }: { open: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      className="inline-flex min-h-11 items-center gap-1 text-base font-medium text-primary underline-offset-4 hover:underline"
+    >
+      {open ? gcopy.showLess : gcopy.showMore}
+      <ChevronDown
+        className={`size-4 transition-transform ${open ? "rotate-180" : ""}`}
+        aria-hidden
+      />
+    </button>
   );
 }
