@@ -59,7 +59,7 @@ import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
 import { KioskCardBell } from "@/components/guest/KioskCardBell";
 import { newCards } from "@/lib/kiosk-picker";
-import { xlCss } from "@/lib/kiosk-xl";
+import { expressCards, xlCss } from "@/lib/kiosk-xl";
 import {
   KIOSK_COMPAT_SCRIPT,
   browserLabel,
@@ -809,20 +809,22 @@ function Kiosk() {
   const watching = useCameraWatch(shared && !tour ? (tablet?.camChannel ?? null) : null);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
-  // Door tablets only: XL, the bold full-screen cards (the host's choice, else Latchkey's default).
+  // Door tablets only: Express ("xl"), the bold full-screen cards made from the theme (the host's choice, else Latchkey's default).
   const xl = shared && p.kioskLook?.look === "xl";
   const xlStyle = useMemo(
     () =>
       xl && p.kioskLook
-        ? xlCss({
-            primary: p.theme.primary,
-            cardIn: p.kioskLook.cardIn,
-            cardOut: p.kioskLook.cardOut,
-          })
+        ? xlCss({ theme: p.theme, cardIn: p.kioskLook.cardIn, cardOut: p.kioskLook.cardOut })
         : "",
-    [xl, p.kioskLook, p.theme.primary],
+    [xl, p.kioskLook, p.theme],
   );
-  // Door tablets only: keys, pads and buttons grow to use the whole screen (Look and feel → Door tablet, and always in XL).
+  // Express: the guest cards in the same colours as the steps (the theme's tints where the host hasn't picked).
+  const expressColours = useMemo(() => {
+    if (!xl || !p.kioskLook) return undefined;
+    const c = expressCards(p.theme, p.kioskLook.cardIn, p.kioskLook.cardOut);
+    return { in: c.cardIn, out: c.cardOut };
+  }, [xl, p.kioskLook, p.theme]);
+  // Door tablets only: keys, pads and buttons grow to use the whole screen (Look and feel → Door tablet, and always in Express).
   const expanded = shared && (p.theme.kioskTouch === "expanded" || xl);
   // On <html>, so dialogs (portalled outside this page) are sized to match.
   useEffect(() => {
@@ -1140,7 +1142,7 @@ function Kiosk() {
               name={p.name}
               className={cn(
                 "size-[2.5em] shrink-0 text-[1.125em]",
-                // XL: the mark on a light tile so it stands out on the property's colour.
+                // Express: the mark on a light tile so it stands out on the property's colour.
                 xl &&
                   (p.theme.logoUrl
                     ? "rounded-[0.5em] bg-white p-[0.2em]"
@@ -1265,6 +1267,7 @@ function Kiosk() {
           <KioskGoodbyeScreen
             code={p.code}
             goodbyes={goodbyes}
+            colours={expressColours}
             bell={
               tablet?.cardPicker ? (
                 <KioskCardBell

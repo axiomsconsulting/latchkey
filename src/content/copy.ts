@@ -2220,8 +2220,8 @@ export const themeStudio = branded({
     auto: { label: "Automatic", help: "Follows Latchkey's recommended look for door tablets." },
     standard: { label: "Standard", help: "Your theme's page, with a card for each step." },
     xl: {
-      label: "XL",
-      help: "Bold and full screen, like your welcome and goodbye cards: your main colour, each step on a big card in your check-in card colour, pill buttons, the QR on a white tile. Always uses the whole screen.",
+      label: "Express",
+      help: "Bold and full screen, like your check-in and check-out cards, made from your theme: a deeper shade of your main colour behind, each step on a big card in your check-in card colour (the phone square in your check-out card colour, on a white tile), big text, heavier icons, and your theme's corners, borders, fonts and lettering made bolder. Card colours you haven't picked are tints of your theme's colours. Always uses the whole screen.",
     },
   },
   kioskTouches: {
@@ -3865,12 +3865,12 @@ export const adminCopy = branded({
     "How door tablets offer guests the square to scan with their own phone on the welcome screen. After the welcome it's always the small icon at the top.",
   kioskLookTitle: "Door tablet look for hosts who haven't chosen",
   kioskLookHelp:
-    "Hosts can pick Standard or XL in Look and feel → Door tablet; this is what tablets show when they leave it on Automatic.",
+    "Hosts can pick Standard or Express in Look and feel → Door tablet; this is what tablets show when they leave it on Automatic.",
   kioskLooks: {
     standard: { label: "Standard", help: "The theme's own page, with a card for each step." },
     xl: {
-      label: "XL",
-      help: "Bold and full screen, like the welcome and goodbye cards: the property's colour, big card-coloured steps, pill buttons.",
+      label: "Express",
+      help: "Bold and full screen, like the check-in and check-out cards, made from each property's theme: its colours, corners, borders and fonts, bolder.",
     },
   },
   kioskQrStyles: {

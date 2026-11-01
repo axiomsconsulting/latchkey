@@ -12,6 +12,7 @@ import { brandName } from "@/lib/brand";
 import { APP_VERSION } from "@/lib/app-version";
 import { cardEdge, cardInk } from "@/lib/checkout-goodbye";
 import { browserLabel, modeKey } from "@/lib/kiosk-compat";
+import { expressCards, expressPage } from "@/lib/kiosk-xl";
 import { PILL, googleFontLinks, mix, readableOn, themeVars, welcomeTitle } from "@/lib/theme";
 import { zonedParts } from "@/lib/dates";
 
@@ -115,7 +116,8 @@ type LiteProperty = {
   checkInFrom?: string | null | undefined;
   checkOutBy?: string | null | undefined;
   /** XL (bold full-screen cards in the card colours) or standard (kiosk-xl.ts). */
-  kioskLook?: { look: "standard" | "xl"; cardIn: string; cardOut: string } | undefined;
+  kioskLook?:
+    { look: "standard" | "xl"; cardIn: string | null; cardOut: string | null } | undefined;
 };
 
 /** A hex colour with see-through (old browsers have rgba, not colour mixing). */
@@ -280,40 +282,66 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
     stayWindow +
     `</div></div><div class="qrp"><span class="pi">${icons.phone}</span><h2>${esc(guestCopy.kioskQrTitle)}</h2><div class="qr">${qr}</div><p>${esc(guestCopy.kioskQrBody)}</p></div></div>`;
 
-  // XL: the page in the property's colour, the welcome and phone panel as bold cards (kiosk-xl.ts).
+  // Express ("xl"): the deepened main colour, the welcome and phone panel as bold cards, shapes from the theme (kiosk-xl.ts).
   const xl = p.kioskLook?.look === "xl" ? p.kioskLook : null;
   const xlCard = (bg: string) => {
     const ink = cardInk(bg);
     return { bg, ink, edge: cardEdge(bg), muted: mix(ink, bg, 0.25) };
   };
-  const pageInk = cardInk(col.primary);
-  const ci = xl ? xlCard(xl.cardIn) : null;
-  const co = xl ? xlCard(xl.cardOut) : null;
+  const cards = xl ? expressCards(t, xl.cardIn, xl.cardOut) : null;
+  const page = expressPage(col.primary, t.background);
+  const pageInk = cardInk(page);
+  const ci = cards ? xlCard(cards.cardIn) : null;
+  const co = cards ? xlCard(cards.cardOut) : null;
+  // Old browsers have no CSS variables: the theme's shapes written in as plain values (px for old WebKit).
+  const px = (rem: number) => Math.round(rem * 16);
+  const cardR = t.radius <= 0 ? 0 : Math.max(px(t.radius * 1.6), 14);
+  const btnR = t.buttonRadius >= PILL ? 999 : px(t.buttonRadius * 1.5);
+  const edgeW = t.cardStyle === "flat" ? 0 : t.cardStyle === "outline" ? 6 : 4;
+  const shadow =
+    t.cardStyle === "flat"
+      ? "none"
+      : t.cardStyle === "shadow"
+        ? "0 16px 40px rgba(0,0,0,.34)"
+        : "0 8px 20px rgba(0,0,0,.2)";
+  const headW = Math.min(900, Math.max(700, Math.round(t.headingWeight / 100) * 100 + 200));
+  const headCase =
+    (t.headingCase === "upper" ? "text-transform:uppercase;" : "") +
+    (t.headingCase === "smallcaps" ? "font-variant:small-caps;" : "") +
+    `letter-spacing:${Math.min(0.3, Math.max(0, t.headingTracking))}em;`;
+  const xBtnCase = t.buttonCase === "upper" ? "text-transform:uppercase;letter-spacing:.06em;" : "";
+  const outlineBtn = t.buttonFill === "outline";
+  const xBtn = (c: { bg: string; ink: string }) =>
+    outlineBtn
+      ? `background:transparent;background-image:none;color:${c.ink};border:3px solid ${c.ink};`
+      : `background:${c.ink};background-image:none;color:${c.bg};border-color:${c.ink};`;
   const xlStyles =
     xl && ci && co
-      ? `html,body{background-color:${col.primary};background-image:none;color:${pageInk}}
+      ? `html,body{background-color:${page};background-image:none;color:${pageInk}}
 #bd{color:${pageInk}}
 #hd,#clk small,#nm small,.icon,#corner,#corner button,#ft{color:${pageInk}}
 #ft{border-top-color:${rgba(pageInk, 0.3)}}
 #ft b{color:${pageInk}}
-#hd .lm>span{background:${pageInk};color:${col.primary}}
+#hd .lm>span{background:${pageInk};color:${page}}
 #hd .lm>img{background:#fff;padding:4px}
-.wcard{background:${ci.bg};color:${ci.ink};border:6px solid ${ci.edge};border-radius:28px;box-shadow:0 14px 36px rgba(0,0,0,.3)}
-.wc h1{font-weight:700;font-size:52px;line-height:1.05}
+#nm b{font-weight:${headW};${headCase}}
+.wcard{background:${ci.bg};color:${ci.ink};border:${edgeW}px solid ${ci.edge};border-radius:${cardR}px;box-shadow:${shadow}}
+.wc h1{font-weight:${headW};font-size:52px;line-height:1.05;${headCase}}
 .lead,.win,.bbs{color:${ci.muted}}
 .bbs i{background:${ci.muted}}
 .eyebrow,.dia{color:${ci.ink}}
 .dia i,.dia b{background:${ci.ink}}
 .bb .lm.crest>span{color:${ci.ink}}
 .fi{color:${ci.ink}}
-.wcard .big{background:${ci.ink};background-image:none;color:${ci.bg};border-color:${ci.ink};border-radius:999px;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.22)}
-.qrp{background:${co.bg};color:${co.ink};border:6px solid ${co.edge};border-radius:28px;box-shadow:0 14px 36px rgba(0,0,0,.3)}
+.wcard .big{${xBtn(ci)}border-radius:${btnR}px;font-weight:700;${xBtnCase}box-shadow:0 6px 16px rgba(0,0,0,.22)}
+.qrp{background:${co.bg};color:${co.ink};border:${edgeW}px solid ${co.edge};border-radius:${cardR}px;box-shadow:${shadow}}
 .qrp .pi{color:${co.ink}}
-.qrp h2{font-weight:700}
+.qrp h2{font-weight:${headW};${headCase}}
 .qrp p{color:${co.muted}}
-.qrp .qr{border-radius:16px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
-.panel .big,.btns .pri{border-radius:999px;font-weight:700}
-.btns .sec{border-radius:999px}
+.qrp .qr{border-radius:${t.radius <= 0 ? 0 : Math.max(px(t.radius), 10)}px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.panel .big,.btns .pri{border-radius:${btnR}px;font-weight:700;${xBtnCase}}
+.btns .sec{border-radius:${btnR}px;${xBtnCase}}
+#hd .icon svg,.fi svg,.pi svg{stroke-width:${Math.min(3, Math.max(2.25, t.iconStroke + 0.5))}}
 `
       : "";
 

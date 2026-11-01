@@ -101,6 +101,7 @@ function GuestCard({
   const big = (n: number) => `clamp(1rem, ${n}cqmin, ${n * 0.9}rem)`;
   return (
     <section
+      data-guest-card=""
       className="flex min-h-0 flex-col overflow-hidden rounded-[3cqmin]"
       style={{
         containerType: "size",
@@ -126,6 +127,7 @@ function GuestCard({
         type="button"
         disabled={busy}
         onClick={onPress}
+        data-guest-card-btn=""
         className="flex w-full shrink-0 items-center justify-center gap-[0.4em] rounded-full font-bold shadow-lg disabled:opacity-60"
         style={{
           background: ink,
@@ -207,6 +209,7 @@ export function KioskGoodbyeScreen({
   contained = false,
   page: fixedPage,
   bell,
+  colours,
 }: {
   code: string;
   goodbyes: Goodbyes;
@@ -219,6 +222,8 @@ export function KioskGoodbyeScreen({
   page?: number;
   /** The tablet's bell (KioskCardBell), top right: more cards up, or some off. */
   bell?: React.ReactNode;
+  /** Express: the card colours made from the theme where the host hasn't picked them (kiosk-xl.ts). */
+  colours?: { in: string; out: string } | undefined;
 }) {
   const now = useNow(1000);
   const express = useServerFn(kioskExpressCheckout);
@@ -283,8 +288,8 @@ export function KioskGoodbyeScreen({
             card={c}
             colour={
               c.kind === "in"
-                ? (goodbyes.colours?.in ?? "#F6E2A8")
-                : (goodbyes.colours?.out ?? "#CFE3EC")
+                ? (colours?.in ?? goodbyes.colours?.in ?? "#F6E2A8")
+                : (colours?.out ?? goodbyes.colours?.out ?? "#CFE3EC")
             }
             busy={c.kind === "out" && busy !== null}
             onPress={() => {

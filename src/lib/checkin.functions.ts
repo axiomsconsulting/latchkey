@@ -200,7 +200,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       channelLabels: await channelLabels(p.host_id),
       sites: await guestSites(p.host_id),
       theme,
-      /** The door tablet's look (XL: bold full-screen cards in the card colours) and those colours. */
+      /** The door tablet's look (Express: bold full-screen cards from the theme) and the card colours the host picked. */
       kioskLook,
       demoHint: isTour(p) ? await demoHint(p.id, today) : null,
       /** The public guest tour: the same kiosk, with a few demo hooks (kiosk.$code.tsx). */
@@ -208,7 +208,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
     };
   });
 
-/** XL or standard (the host's choice, else Latchkey's default) and the check-in / check-out card colours. */
+/** Express ("xl") or standard (the host's choice, else Latchkey's default) and the card colours the host picked. */
 async function kioskLookFor(
   srvMod: { admin: () => Promise<any> },
   propertyId: string,
@@ -216,7 +216,8 @@ async function kioskLookFor(
 ) {
   const { resolveLook } = await import("./kiosk-xl");
   const { normaliseDefaults } = await import("./kiosk-saver");
-  const { normaliseArrivals, normaliseGoodbye } = await import("./checkout-goodbye");
+  const { DEFAULT_ARRIVALS, DEFAULT_GOODBYE, normaliseArrivals, normaliseGoodbye } =
+    await import("./checkout-goodbye");
   const db = await srvMod.admin();
   const [site, cards] = await Promise.all([
     choice === "auto"
@@ -232,10 +233,13 @@ async function kioskLookFor(
     choice,
     normaliseDefaults(site.error ? null : site.data?.kiosk_saver).experience,
   );
+  // Only colours the host picked (not the starting ones): otherwise Express tints the theme's own (expressCards).
+  const cardIn = normaliseArrivals(cards.error ? null : cards.data?.checkin_welcome).colour;
+  const cardOut = normaliseGoodbye(cards.error ? null : cards.data?.checkout_goodbye).colour;
   return {
     look,
-    cardIn: normaliseArrivals(cards.error ? null : cards.data?.checkin_welcome).colour,
-    cardOut: normaliseGoodbye(cards.error ? null : cards.data?.checkout_goodbye).colour,
+    cardIn: cardIn.toUpperCase() === DEFAULT_ARRIVALS.colour ? null : cardIn,
+    cardOut: cardOut.toUpperCase() === DEFAULT_GOODBYE.colour ? null : cardOut,
   };
 }
 
