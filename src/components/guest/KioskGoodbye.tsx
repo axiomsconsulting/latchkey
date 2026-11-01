@@ -210,6 +210,7 @@ export function KioskGoodbyeScreen({
   page: fixedPage,
   bell,
   colours,
+  logo,
 }: {
   code: string;
   goodbyes: Goodbyes;
@@ -224,6 +225,8 @@ export function KioskGoodbyeScreen({
   bell?: React.ReactNode;
   /** Express: the card colours made from the theme where the host hasn't picked them (kiosk-xl.ts). */
   colours?: { in: string; out: string } | undefined;
+  /** The property's logo, so the brand stays on screen while the cards cover the page. */
+  logo?: React.ReactNode;
 }) {
   const now = useNow(1000);
   const express = useServerFn(kioskExpressCheckout);
@@ -260,7 +263,7 @@ export function KioskGoodbyeScreen({
     >
       <header className="flex items-center justify-between gap-4 px-[1cqmin] pb-[1.5cqmin]">
         <h1 className="flex items-center gap-3 font-display text-[clamp(1.75rem,5.5cqmin,4rem)] font-bold">
-          <Plane className="size-[1em]" aria-hidden />{" "}
+          {logo ?? <Plane className="size-[1em]" aria-hidden />}{" "}
           {copy.cardsTitle(
             goodbyes.cards.filter((c) => c.kind === "in").length,
             goodbyes.cards.filter((c) => c.kind !== "in").length,

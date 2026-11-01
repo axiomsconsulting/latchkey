@@ -153,6 +153,10 @@ export const Route = createFileRoute("/kiosk/$code")({
  * screen, including a door tablet stood upright (judged by the device's
  * screen, personalPhone, tested).
  */
+/** The logo on screens in the property's colour (cards, welcome): a light tile so it always shows. */
+const tileLogo = (size: string) =>
+  cn(size, "shrink-0 rounded-[0.2em] bg-white p-[0.1em] text-primary ring-0 ring-offset-0");
+
 function usePortraitPhone() {
   const [phone, setPhone] = useState(false);
   useEffect(() => {
@@ -1256,6 +1260,9 @@ function Kiosk() {
           ) : (
             <KioskWelcomeOverlay
               welcome={welcome}
+              logo={
+                <LogoMark theme={p.theme} name={p.name} className={tileLogo("size-24 text-4xl")} />
+              }
               onCheckIn={startWelcome}
               onNotMe={notThisGuest}
             />
@@ -1268,6 +1275,13 @@ function Kiosk() {
             code={p.code}
             goodbyes={goodbyes}
             colours={expressColours}
+            logo={
+              <LogoMark
+                theme={p.theme}
+                name={p.name}
+                className={tileLogo("size-[1.4em] text-[0.5em]")}
+              />
+            }
             bell={
               tablet?.cardPicker ? (
                 <KioskCardBell

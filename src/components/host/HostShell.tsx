@@ -738,7 +738,7 @@ function DesktopNav({
       <>
         {canWrite ? one("/app/register", hostNav.register, NotebookPen) : null}
         {isOwner ? one("/app/activity", hostNav.activity, History) : null}
-        {one("/app/whats-new", `${whatsNewCopy.navLabel} · v${APP_VERSION}`, Sparkles)}
+        {one("/app/whats-new", whatsNewCopy.navLabel, Sparkles)}
         <button type="button" onClick={() => openTour()} title={tourCopy.navLabel} className={cls}>
           <Compass className="size-5 shrink-0" />
           <span className={text}>{tourCopy.navLabel}</span>

@@ -341,6 +341,12 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
 .qrp .qr{border-radius:${t.radius <= 0 ? 0 : Math.max(px(t.radius), 10)}px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
 .panel .big,.btns .pri{border-radius:${btnR}px;font-weight:700;${xBtnCase}}
 .btns .sec{border-radius:${btnR}px;${xBtnCase}}
+.cards{background:${page};color:${pageInk};border-radius:0;box-shadow:none}
+.cards .top{font-weight:${headW};${headCase}}
+.card .in{border-radius:${cardR}px;border-width:${Math.max(edgeW, 3)}px;box-shadow:${shadow}}
+.card .nm{font-weight:${headW};${headCase}}
+.card .go{border-radius:${btnR}px;${xBtnCase}}
+.hostwel .lm{background:#fff;border-radius:${Math.max(px(t.radius), 6)}px}
 #hd .icon svg,.fi svg,.pi svg{stroke-width:${Math.min(3, Math.max(2.25, t.iconStroke + 0.5))}}
 `
       : "";
@@ -363,6 +369,15 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
     homeHtml,
     centred,
     icons,
+    // Express: the cards in the theme's colours (kiosk-xl.ts), else the stored ones from each state call.
+    xlCards:
+      ci && co
+        ? {
+            in: { bg: ci.bg, ink: ci.ink, edge: ci.edge },
+            out: { bg: co.bg, ink: co.ink, edge: co.edge },
+          }
+        : null,
+    logo,
   };
   // Picks the level before anything draws: the host's choice kept on the tablet, else what the browser can do.
   const levelScript = `(function(){var m=null;try{m=localStorage.getItem(${scriptJson(modeKey(p.code))})}catch(e){}
@@ -477,6 +492,7 @@ p{margin:0}
 #ft .tg{text-transform:uppercase;letter-spacing:.25em}
 #ft b{color:${col.fg}}
 .hostwel{position:fixed;top:0;left:0;right:0;bottom:0;background:${col.primary};color:${col.primaryFg};${COL}${CENTER_JUSTIFY}-webkit-box-align:center;-webkit-align-items:center;align-items:center;text-align:center;padding:40px;z-index:30}
+.hostwel .lm{width:96px;height:96px;margin:0 auto 28px;padding:6px}
 .hostwel h1{font-size:64px;line-height:1.1;margin:0 0 20px;${heading}}
 .hostwel p{font-size:28px;line-height:1.35;margin:0 0 10px;max-width:900px}
 .hostwel .big{background:${col.primaryFg};background-image:none;color:${col.primary};border-color:${col.primaryFg};width:auto;min-width:320px;display:inline-block}
@@ -540,10 +556,8 @@ p{margin:0}
 #saverqr svg{width:100%;height:100%;display:block}
 #camon{display:none;position:absolute;left:12px;top:12px;z-index:80;background:#000;color:#fff;border-radius:20px;padding:8px 14px;font-size:15px}
 #net{display:none;position:absolute;right:12px;bottom:8px;font-size:14px;color:#B33;z-index:55}
-.lv-lite #bd,.lv-lite .sn,.lv-lite .feat,.lv-lite .dia,.lv-lite #clocks,.lv-lite .qrp .pi{display:none}
-.lv-lite .wcard,.lv-lite .qrp,.lv-lite .cards{box-shadow:none}
+.lv-lite #bd .art,.lv-lite .sn,.lv-lite #clocks{display:none}
 .lv-lite .big,.lv-lite .btns .pri{background-image:none}
-.lv-lite #clk small{display:none}
 ${xlStyles}
 @media (max-width:900px){.wc h1{font-size:36px}.lead{font-size:19px}.hostwel h1{font-size:46px}.qrp{width:250px}.qrp .qr{width:180px;height:180px}#main{padding:0 20px}#hd{padding-left:20px;padding-right:20px}}
 @media (orientation:portrait){

@@ -90,10 +90,13 @@ export function KioskWelcomeOverlay({
   welcome,
   onCheckIn,
   onNotMe,
+  logo,
 }: {
   welcome: Welcome;
   onCheckIn: () => void;
   onNotMe: () => void;
+  /** The property's logo above the words (the welcome covers the header). */
+  logo?: React.ReactNode;
 }) {
   return (
     <div
@@ -106,7 +109,11 @@ export function KioskWelcomeOverlay({
         if (e.key === "Enter" || e.key === " ") onCheckIn();
       }}
     >
-      <Hand className="mb-8 size-14 opacity-80" aria-hidden />
+      {logo ? (
+        <div className="mb-8">{logo}</div>
+      ) : (
+        <Hand className="mb-8 size-14 opacity-80" aria-hidden />
+      )}
       <h1 className="max-w-5xl font-display text-5xl leading-tight sm:text-7xl">
         {welcome.headline}
       </h1>
