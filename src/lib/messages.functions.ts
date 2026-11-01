@@ -202,7 +202,8 @@ export const getHostThread = createServerFn({ method: "GET" })
           .from("messages")
           .select("id, body, direction, created_at, channel, platform, reply_to")
           .eq("booking_id", data.bookingId)
-          .in("channel", ["stay_page", "platform"])
+          // guest_text: welcome and goodbye messages Latchkey sent (guest-messages.server.ts).
+          .in("channel", ["stay_page", "platform", "guest_text"])
           .order("created_at", { ascending: true })
           .limit(200),
       () =>
@@ -231,6 +232,7 @@ export const getHostThread = createServerFn({ method: "GET" })
       fromHost: m.direction === "outbound",
       createdAt: m.created_at,
       platform: m.channel === "platform" ? (m.platform ?? "other") : null,
+      sentBy: m.channel === "guest_text" ? (m.platform ?? "sms") : null,
       replyTo: m.reply_to ?? null,
     }));
   });

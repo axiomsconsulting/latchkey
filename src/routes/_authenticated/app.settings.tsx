@@ -59,6 +59,7 @@ import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { removeDemoData, saveHost } from "@/lib/host.functions";
 import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
+import { GuestMessagesSettings } from "@/components/host/GuestMessagesSettings";
 import { StayAccessSettings } from "@/components/host/StayAccessSettings";
 import { ReviewSettings } from "@/components/host/ReviewSettings";
 import { CheckinJourney } from "@/components/host/CheckinJourney";
@@ -83,6 +84,7 @@ const FOCUS = [
   "privacy",
   "checkin",
   "records",
+  "guestTexts",
   "stayAccess",
   "reviews",
   "kioskRest",
@@ -124,6 +126,7 @@ const OWN_CARD = new Set([
   "privacy",
   "checkin",
   "records",
+  "guestTexts",
   "stayAccess",
   "reviews",
   "kioskRest",
@@ -621,6 +624,18 @@ function SettingsPage() {
             <div id="settings-checkin" className="scroll-mt-24 rounded-2xl">
               <CheckinJourney
                 property={themedProperty as unknown as { id: string; short_code: string }}
+              />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="guestTexts">
+          {themedProperty && workspace.data ? (
+            <div id="settings-guestTexts" className="scroll-mt-24 rounded-2xl">
+              {/* The shared demo can try it (always demo mode) but not ask support for WhatsApp. */}
+              <GuestMessagesSettings
+                propertyId={(themedProperty as unknown as { id: string }).id}
+                hostId={workspace.data.hostId}
+                isOwner={isOwner && !demo}
               />
             </div>
           ) : null}

@@ -65,6 +65,15 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
         } catch (e) {
           console.error("Drive queue move failed", e instanceof Error ? e.message : e);
         }
+        // Hosts' welcome and goodbye messages to guests, when due (src/lib/guest-messages.ts).
+        try {
+          if (await jobAllowed("guest_messages")) {
+            const { sendDueGuestMessages } = await import("@/lib/guest-messages.server");
+            await sendDueGuestMessages();
+          }
+        } catch (e) {
+          console.error("Guest messages failed", e instanceof Error ? e.message : e);
+        }
         await recordRun(key, `${result.connections} calendars, ${result.errors} errors`, started);
         return Response.json({ task: "sync", ...result });
       },

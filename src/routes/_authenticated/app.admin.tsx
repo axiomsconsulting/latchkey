@@ -30,6 +30,7 @@ import { VisitorAnalytics } from "@/components/host/VisitorAnalytics";
 import { LaunchFunnel } from "@/components/host/LaunchFunnel";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { PlatformStripeAdmin } from "@/components/host/PlatformStripeAdmin";
+import { WhatsAppAdmin } from "@/components/host/WhatsAppAdmin";
 import { LegalAdmin } from "@/components/host/LegalAdmin";
 import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
@@ -233,6 +234,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="integrations" className="mt-4">
           <PlatformStripeAdmin />
+          <div className="mt-4">
+            <WhatsAppAdmin />
+          </div>
           <div className="mt-6">
             <IntegrationsAdmin />
           </div>
