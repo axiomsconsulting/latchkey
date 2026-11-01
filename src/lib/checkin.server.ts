@@ -231,6 +231,9 @@ export async function readIdDetails(
                 "Return the holder's full name exactly as printed (given names then surname), the date of birth and expiry date " +
                 "as YYYY-MM-DD, the issuing country in English, the nationality exactly as printed (for example GBR or FRA), " +
                 "the document number, and the place or authority of issue as printed. " +
+                "Also give nationality_code: the ISO 3166-1 alpha-2 code of the nationality the document prints " +
+                "(as a code, a word or a demonym, for example British citizen is GB), or null when it prints no nationality; " +
+                "and issuing_country_code: the ISO 3166-1 alpha-2 code of the issuing country. " +
                 "Use null for anything you cannot read clearly. Do not guess and do not return any other details.",
             },
             { type: "input_image", image_url: imageDataUrl },
@@ -266,6 +269,8 @@ export async function readIdDetails(
               issuing_country: { type: ["string", "null"] },
               number_last4: { type: ["string", "null"] },
               nationality: { type: ["string", "null"] },
+              nationality_code: { type: ["string", "null"] },
+              issuing_country_code: { type: ["string", "null"] },
               document_number: { type: ["string", "null"] },
               place_of_issue: { type: ["string", "null"] },
             },
@@ -280,6 +285,8 @@ export async function readIdDetails(
               "issuing_country",
               "number_last4",
               "nationality",
+              "nationality_code",
+              "issuing_country_code",
               "document_number",
               "place_of_issue",
             ],
@@ -330,6 +337,8 @@ export async function readIdDetails(
   const date = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
   const str = (v: unknown, max: number) =>
     typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
+  const code2 = (v: unknown) =>
+    typeof v === "string" && /^[A-Za-z]{2}$/.test(v.trim()) ? v.trim().toUpperCase() : null;
   try {
     const p = JSON.parse(text) as Record<string, unknown>;
     const { last4Of } = await import("./guest-records");
@@ -356,7 +365,9 @@ export async function readIdDetails(
             ? p["number_last4"]
             : null,
       ),
-      nationality: str(p["nationality"], 40),
+      // The code when the reader gave one (a demonym like "Pakistani" has no other match).
+      nationality: code2(p["nationality_code"]) ?? str(p["nationality"], 40),
+      issuingCountryCode: code2(p["issuing_country_code"]),
       documentNumber: str(p["document_number"], 40),
       placeOfIssue: str(p["place_of_issue"], 80),
     };
@@ -381,8 +392,8 @@ export async function readIdDetails(
 /* ------------------------------ guest photos ----------------------------- */
 
 /**
- * Saves a small JPEG a guest's device already shrank, in the business's
- * restricted Google Drive folder (or the queue while Drive is unreachable).
+ * Saves a small JPEG a guest's device already shrank: queued at once and
+ * moved to the business's restricted Google Drive folder shortly after.
  * Returns the reference to keep on guest_ids.
  */
 export async function storeGuestPhoto(
@@ -405,6 +416,8 @@ export async function storeGuestPhoto(
     mime: "image/jpeg",
     bytes: new Uint8Array(bytes),
     ref: { table: "guest_ids", column: kind === "id" ? "id_photo_path" : "face_photo_path" },
+    // The guest is waiting at the door: a quick save now, moved to Drive shortly after.
+    soon: true,
   });
 }
 

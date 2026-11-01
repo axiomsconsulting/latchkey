@@ -144,18 +144,45 @@ export function nationalityOptions(): Array<{ code: string; name: string }> {
   return [...top.map((code) => ({ code, name: nationalityName(code) })), ...rest];
 }
 
+const BRITISH = new Set([
+  "GBR",
+  "GB",
+  "UK",
+  "BRITISH",
+  "BRITISH CITIZEN",
+  "UNITED KINGDOM",
+  "GREAT BRITAIN",
+  "ENGLAND",
+  "ENGLISH",
+  "SCOTLAND",
+  "SCOTTISH",
+  "WALES",
+  "WELSH",
+  "NORTHERN IRELAND",
+]);
+
+/**
+ * The nationality to start the register's choice on when the ID prints none
+ * (a UK driving licence): the issuing country. Still asked, so the guest
+ * confirms it with one tap rather than searching the list.
+ */
+export function suggestedNationality(read: {
+  nationality: string | null;
+  issuingCountry?: string | null;
+  issuingCountryCode?: string | null;
+}): string | null {
+  return (
+    nationalityFromId(read.nationality) ??
+    nationalityFromId(read.issuingCountryCode) ??
+    nationalityFromId(read.issuingCountry)
+  );
+}
+
 /** Turns what an ID reader saw ("GBR", "France", "FR") into a code we list. */
 export function nationalityFromId(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const v = raw.trim().toUpperCase();
-  if (
-    v === "GBR" ||
-    v === "GB" ||
-    v === "BRITISH" ||
-    v === "BRITISH CITIZEN" ||
-    v === "UNITED KINGDOM"
-  )
-    return "GB";
+  if (BRITISH.has(v.replace(/\./g, "").replace(/\s+/g, " "))) return "GB";
   if (ALPHA3[v]) return ALPHA3[v];
   if (v.length === 2 && isNationality(v)) return v;
   const byName = nationalityOptions().find((o) => o.name.toUpperCase() === v);

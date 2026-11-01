@@ -3,6 +3,7 @@ import { Camera, Loader2, SwitchCamera } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { guest as copy } from "@/content/copy";
+import { photoFill, photoStage } from "@/lib/photo-progress";
 import { cn } from "@/lib/utils";
 
 /** Draws the frame no larger than `max` pixels on its longest side. */
@@ -130,6 +131,36 @@ function IdHint() {
   );
 }
 
+/** While a photo is dealt with: what's happening now, and a bar that keeps moving. */
+function PhotoProgress({ kind }: { kind: "id" | "face" }) {
+  const [ms, setMs] = useState(0);
+  useEffect(() => {
+    const start = Date.now();
+    const t = setInterval(() => setMs(Date.now() - start), 200);
+    return () => clearInterval(t);
+  }, []);
+  const fill = photoFill(kind, ms);
+  return (
+    <div className="space-y-2" role="status" aria-live="polite">
+      <div
+        className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(fill * 100)}
+      >
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-200 ease-linear"
+          style={{ width: `${fill * 100}%` }}
+        />
+      </div>
+      <p className="text-center text-base text-muted-foreground">
+        {copy.photoStages[photoStage(kind, ms)]}
+      </p>
+    </div>
+  );
+}
+
 /** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
 const SMALL = {
   id: { max: 1024, quality: 0.62 },
@@ -174,6 +205,11 @@ export function IdCamera({
   const [current, setCurrent] = useState(facing);
   // Only offered when there's another camera to switch to.
   const [cameras, setCameras] = useState(0);
+  // The picture just taken stays on screen while it's dealt with.
+  const [shot, setShot] = useState<string | null>(null);
+  useEffect(() => {
+    if (!busy) setShot(null);
+  }, [busy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -216,10 +252,10 @@ export function IdCamera({
     if (!video || !video.videoWidth) return;
     const keepMirror = mirrored && kind === "face";
     const small = SMALL[kind];
-    onCapture(
-      still(video, 1600, 0.85, keepMirror),
-      still(video, small.max, small.quality, keepMirror),
-    );
+    const smallShot = still(video, small.max, small.quality, keepMirror);
+    setShot(smallShot);
+    // 1400px is plenty for the reader and quicker to send than a full camera frame.
+    onCapture(still(video, 1400, 0.8, keepMirror), smallShot);
   }
 
   return (
@@ -244,7 +280,15 @@ export function IdCamera({
             mirrored && "-scale-x-100",
           )}
         />
-        {ready && kind === "id" ? <IdHint /> : null}
+        {shot && busy ? (
+          <img
+            src={shot}
+            alt=""
+            // As kept: an ID the right way round, a face as the guest saw it.
+            className="absolute inset-0 size-full object-cover"
+          />
+        ) : null}
+        {ready && kind === "id" && !(shot && busy) ? <IdHint /> : null}
         {cameras > 1 ? (
           <button
             type="button"
@@ -267,6 +311,7 @@ export function IdCamera({
         <p className={cn("text-center text-muted-foreground", side && "text-lg")}>
           {help ?? copy.idCameraHelp}
         </p>
+        {busy && shot ? <PhotoProgress kind={kind} /> : null}
         <Button size="touch-xl" className="w-full" onClick={capture} disabled={!ready || busy}>
           {busy ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
           {busy ? (busyLabel ?? copy.idChecking) : (cta ?? copy.idTakePhoto)}

@@ -23,11 +23,25 @@ describe("compareNames", () => {
     expect(compareNames("Priya Shah", "priya a. shah")).toBe("matched");
     expect(compareNames("José Álvarez", "JOSE ALVAREZ")).toBe("matched");
   });
+  it("copes with hyphens, missing surnames, reversed order and small misreads", () => {
+    // Booking.com held only the given names, without the hyphen.
+    expect(compareNames("Jannat Mariah", "JANNAT-MARIAH ZULFIQAR")).toBe("matched");
+    expect(compareNames("Jannat-Mariah Zulfiqar", "Jannat Mariah Zulfiqar")).toBe("matched");
+    expect(compareNames("Jannatmariah Zulfiqar", "Jannat-Mariah Zulfiqar")).toBe("matched");
+    // Surname first, as Booking.com sometimes shows it.
+    expect(compareNames("Aldridge Cheryl", "CHERYL ANNE ALDRIDGE")).toBe("matched");
+    expect(compareNames("Rosario Ramirez Horta", "ROSARIO DONAJI RAMIREZ HORTA")).toBe("matched");
+    expect(compareNames("Mohammed Khan", "MOHAMMAD KHAN")).toBe("matched");
+    expect(compareNames("Sean O'Neill", "SEAN ONEILL")).toBe("matched");
+    expect(compareNames("J Smith", "JOHN SMITH")).toBe("matched");
+  });
   it("returns partial when only one name agrees", () => {
     expect(compareNames("Priya Shah", "Anita Shah")).toBe("partial");
   });
   it("returns not matched for a different person or no text", () => {
     expect(compareNames("Priya Shah", "John Smith")).toBe("not_matched");
+    expect(compareNames("Priya Shah", "Priyanka Shaw")).toBe("not_matched");
+    expect(compareNames("J Smith", "JANE BROWN")).toBe("not_matched");
     expect(compareNames("Priya Shah", "")).toBe("not_matched");
   });
 });

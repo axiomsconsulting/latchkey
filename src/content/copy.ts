@@ -1817,6 +1817,13 @@ export const guest = branded({
     "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
   idTakePhoto: "Take photo",
   idChecking: "Checking your name…",
+  photoStages: {
+    sending: "Sending your photo…",
+    reading: "Reading your ID…",
+    matching: "Matching it to your booking…",
+    nearly: "Nearly there: some IDs take a little longer to read…",
+    saving: "Saving your photo…",
+  },
   idRetry: (left: number) =>
     `We couldn't read that clearly. Try again with more light and less glare (${left} ${left === 1 ? "try" : "tries"} left).`,
   idCameraFailed: "The camera didn't start, so let's try another way.",
@@ -1987,6 +1994,8 @@ export const guest = branded({
   registerName: "Full name",
   registerNameHint: "As on the passport or ID card",
   registerNationality: "Nationality",
+  registerNationalityGuess:
+    "Picked from your ID (it doesn't print a nationality): change it if it isn't right.",
   registerPick: "Choose a nationality",
   registerAlienLead: "A few more details for this nationality.",
   registerAlienWhy:
