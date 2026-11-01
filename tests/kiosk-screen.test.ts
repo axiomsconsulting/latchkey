@@ -37,6 +37,7 @@ describe("what a tablet shows", () => {
       fullscreen: true,
       lite: false,
       camera: null,
+      camPermission: null,
       at: null,
     });
     expect(normaliseScreen({ view: "checkin", step: "<b>" })?.step).toBeNull();

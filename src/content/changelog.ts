@@ -46,6 +46,43 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.108.0",
+    date: "2026-11-01",
+    title: "Door tablet camera you can rely on, and smoother check-in on older tablets",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The live camera view no longer spins forever: when a tablet can't show its camera, it says why (not switched on, offline, no camera, or its browser blocks or would ask) and what to do. It gives up waiting after 15 seconds, not 45.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "When the networks won't let your screen and the tablet connect directly, the camera view carries on with a picture every few seconds instead. On the tablet, Allow camera on this tablet (behind the corner and your PIN) stops its browser asking each time.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Three quick taps on the door tablet's top-right corner now open the host's exit too, besides holding it (holding can bring up the browser's own menu on some tablets).",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Older tablets (Enhanced and Lite) now lead with Check in on your phone, whose camera is far clearer; the tablet's own camera is still there underneath.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Calmer words when a guest's phone can't open their guide from the room's QR code, and a tip to open the page in Safari or Chrome when Join Wi-Fi is tapped inside WhatsApp, Gmail or similar.",
+      },
+      {
+        kind: "fixed",
+        area: "Settings",
+        text: "When listing import can't run because of something on Latchkey's side, it now says so (and that your link is fine) instead of an unclear error.",
+      },
+    ],
+  },
+  {
     version: "0.107.0",
     date: "2026-11-01",
     title: "Welcome and goodbye messages to guests",

@@ -242,7 +242,8 @@ export function watchTabletCamera(
   }, 4000);
   const giveUp = window.setTimeout(() => {
     if (!pc || pc.connectionState !== "connected") on.state("failed");
-  }, 45_000);
+    // A tablet that's on and allowed answers within seconds; longer means the networks won't connect directly.
+  }, 15_000);
 
   return {
     switchCamera: () => sig.send({ t: "switch", viewer }),

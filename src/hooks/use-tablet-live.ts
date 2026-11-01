@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
+import { cameraLiveCopy as camCopy } from "@/content/copy";
 import { previewKioskScreens } from "@/lib/goodbye.functions";
 import { startCameraLive, stopWatchingKiosks, watchKiosks } from "@/lib/kiosk-devices.functions";
 import type { CameraState } from "@/lib/cam-p2p";
@@ -63,20 +64,25 @@ export function useCameraShots(property: Property, deviceIds: string[]) {
 /**
  * A tablet's live camera, straight from the tablet (cam-p2p.ts): asks
  * Latchkey for the private channel (and keeps the viewing going every 45
- * seconds), then receives the video directly. Stops, and tells the tablet,
- * when `on` turns false or the card goes. `switchCamera` flips to the
- * tablet's next camera (front, back, others).
+ * seconds), then receives the video directly. A tablet that can't show it
+ * (not allowed, offline, its browser would ask or refuses) is named with
+ * the reason at once; when the network won't let the two connect directly,
+ * it carries on with a picture every few seconds instead (`shot`). Stops,
+ * and tells the tablet, when `on` turns false or the card goes.
+ * `switchCamera` flips to the tablet's next camera (front, back, others).
  */
 export function useCameraLive(property: Property, deviceId: string, on: boolean) {
   const startFn = useServerFn(startCameraLive);
   const stopFn = useServerFn(stopWatchingKiosks);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [state, setState] = useState<CameraState | "error">("connecting");
+  const [state, setState] = useState<CameraState | "error" | "shots">("connecting");
   const [cams, setCams] = useState({ count: 1, index: 0 });
   const [error, setError] = useState<string | null>(null);
   const [control, setControl] = useState<{ switchCamera: () => void } | null>(null);
+  // Direct video couldn't connect: pictures through Latchkey instead.
+  const [fallback, setFallback] = useState(false);
   useEffect(() => {
-    if (!on) return;
+    if (!on || fallback) return;
     let gone = false;
     let session: { switchCamera: () => void; stop: () => void } | null = null;
     const pinger = kioskPinger(property.short_code);
@@ -88,6 +94,11 @@ export function useCameraLive(property: Property, deviceId: string, on: boolean)
           return null;
         },
       );
+      const blocked = res?.blocked?.find((b) => b.deviceId === deviceId);
+      if (blocked) {
+        setError(camCopy.blocked[blocked.reason] ?? null);
+        setState("error");
+      }
       return res?.channels[0]?.channel ?? null;
     };
     void (async () => {
@@ -99,7 +110,10 @@ export function useCameraLive(property: Property, deviceId: string, on: boolean)
       if (gone) return;
       session = watchTabletCamera(channel, {
         stream: setStream,
-        state: setState,
+        state: (s) => {
+          if (s === "failed") setFallback(true);
+          else setState(s);
+        },
         cams: (count, index) => setCams({ count, index }),
       });
       setControl({ switchCamera: session.switchCamera });
@@ -115,6 +129,17 @@ export function useCameraLive(property: Property, deviceId: string, on: boolean)
       setState("connecting");
       void stopFn({ data: { propertyId: property.id, deviceIds: [deviceId] } }).catch(() => {});
     };
-  }, [on, deviceId, property.id, property.short_code, startFn, stopFn]);
-  return { stream, state, cams, error, switchCamera: () => control?.switchCamera() };
+  }, [on, fallback, deviceId, property.id, property.short_code, startFn, stopFn]);
+  useEffect(() => {
+    if (!on) setFallback(false);
+  }, [on]);
+  const shots = useCameraShots(property, on && fallback ? [deviceId] : []);
+  return {
+    stream,
+    state: on && fallback ? ("shots" as const) : state,
+    shot: fallback ? (shots[deviceId] ?? null) : null,
+    cams,
+    error,
+    switchCamera: () => control?.switchCamera(),
+  };
 }

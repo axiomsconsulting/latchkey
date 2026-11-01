@@ -95,12 +95,24 @@ export const scrapeListing = createServerFn({ method: "POST" })
       body = (await res.json().catch(() => ({}))) as typeof body;
       if (!res.ok || body.success === false) {
         const why = body.error ?? `status ${res.status}`;
+        // Latchkey's own set-up (the reading service's key or credits): say so, not "your link".
+        if (res.status === 401 || res.status === 402 || res.status === 403) {
+          const { appError } = await import("./app-error");
+          throw appError({
+            code: "listing_import_setup",
+            title: "Listing import isn't available right now",
+            body: "This is on Latchkey's side (the service that reads listing pages needs attention), not your link. Your listing is fine.",
+            steps: [
+              { text: "Add your rooms and photos by hand for now, or try the import again later." },
+              { text: "Send this to Latchkey support so it's fixed." },
+            ],
+            detail: `Firecrawl ${res.status}: ${why}`,
+          });
+        }
         throw new Error(
-          res.status === 402
-            ? "The Firecrawl account is out of credits."
-            : res.status === 429
-              ? "Too many pages at once. Wait a minute and try again."
-              : `The page couldn't be read (${why}).`,
+          res.status === 429
+            ? "Too many pages at once. Wait a minute and try again."
+            : `The page couldn't be read (${why}).`,
         );
       }
     } catch (e) {

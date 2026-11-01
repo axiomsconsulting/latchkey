@@ -14,9 +14,11 @@ import { normaliseCalibrations, type Calibration } from "@/lib/kiosk-calibration
 import {
   PAIR_CODE_HOURS,
   besideTabletInUse,
+  cameraBlock,
   newPairCode,
   nextNumber,
   readPairCode,
+  type CameraBlock,
 } from "@/lib/kiosk-devices";
 import {
   KIOSK_MODES,
@@ -68,6 +70,7 @@ const screen = z.object({
   fullscreen: z.boolean().optional(),
   lite: z.boolean().optional(),
   camera: z.boolean().optional(),
+  camPermission: z.enum(["granted", "denied", "prompt", "none"]).optional(),
 });
 
 /** Before migration 0073 there's no column: the report is simply dropped. */
@@ -808,13 +811,14 @@ export const startCameraLive = createServerFn({ method: "POST" })
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
     const db = await admin();
     if (!data.deviceIds.length)
-      return { channels: [] as Array<{ deviceId: string; channel: string }> };
-    const { data: rows, error } = await db
+      return {
+        channels: [] as Array<{ deviceId: string; channel: string }>,
+        blocked: [] as Array<{ deviceId: string; reason: CameraBlock }>,
+      };
+    const { data: all, error } = await db
       .from("kiosk_devices")
-      .select("id, cam_channel")
+      .select("id, cam_channel, camera_allowed, status, last_seen_at, screen")
       .eq("property_id", data.propertyId)
-      .eq("camera_allowed", true)
-      .eq("status", "confirmed")
       .in("id", data.deviceIds);
     if (error)
       throw new Error(
@@ -822,9 +826,16 @@ export const startCameraLive = createServerFn({ method: "POST" })
           ? "The live camera needs the latest update (migration 0074)."
           : error.message,
       );
+    // Tablets that can't show their camera now are named with the reason, so the host isn't left waiting.
+    const blocked: Array<{ deviceId: string; reason: CameraBlock }> = [];
+    const rows = ((all ?? []) as any[]).filter((r) => {
+      const reason = cameraBlock({ ...r, screen: normaliseScreen(r.screen) }, Date.now());
+      if (reason) blocked.push({ deviceId: r.id, reason });
+      return !reason;
+    });
     const until = new Date(Date.now() + 120_000).toISOString();
     const out: Array<{ deviceId: string; channel: string }> = [];
-    for (const r of (rows ?? []) as any[]) {
+    for (const r of rows) {
       let channel = r.cam_channel as string | null;
       if (!channel) {
         const b = new Uint8Array(16);
@@ -837,7 +848,7 @@ export const startCameraLive = createServerFn({ method: "POST" })
         .eq("id", r.id);
       out.push({ deviceId: r.id, channel });
     }
-    return { channels: out };
+    return { channels: out, blocked };
   });
 
 /** The host stopped watching: the tablets stop sending, and the last pictures are deleted. */

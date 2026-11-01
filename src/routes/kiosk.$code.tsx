@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Camera } from "lucide-react";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { trackEvent } from "@/lib/track";
 import { pickUtm, type Utm } from "@/lib/attribution";
@@ -52,7 +53,13 @@ import {
 } from "@/lib/kiosk-fit";
 import { deviceOrientation, isTouchDevice } from "@/hooks/use-display";
 import { areaFor, type Area, type Calibrations } from "@/lib/kiosk-calibration";
-import { kioskScreenReport, kioskTablet, type TabletState } from "@/lib/kiosk-devices.functions";
+import {
+  kioskScreenReport,
+  kioskSnapshotUpload,
+  kioskTablet,
+  type TabletState,
+} from "@/lib/kiosk-devices.functions";
+import { useCameraPermission } from "@/hooks/use-camera-permission";
 import { screenFrom } from "@/lib/kiosk-screen";
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
@@ -76,6 +83,7 @@ import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { deviceToken, keepDeviceToken, readFix } from "@/lib/kiosk-presence";
 import { kioskHere } from "@/lib/stay-access.functions";
 import { rebrand } from "@/lib/brand";
+import { countTap } from "@/lib/kiosk-taps";
 
 // Press and hold the top-right corner this long for the host's exit.
 const HOLD_MS = 3_000;
@@ -675,6 +683,53 @@ function useCameraWatch(channel: string | null): boolean {
 }
 
 /**
+ * When the host's direct video can't connect (cam-p2p.ts), they watch
+ * pictures instead: while `active`, a 480px picture every 3 seconds to
+ * kioskSnapshotUpload (kept as the latest only, deleted when they stop).
+ */
+function useCameraSnapshots(code: string, active: boolean): boolean {
+  const upload = useServerFn(kioskSnapshotUpload);
+  useEffect(() => {
+    if (!active) return;
+    let gone = false;
+    let stream: MediaStream | null = null;
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    let timer = 0;
+    void navigator.mediaDevices
+      ?.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 } }, audio: false })
+      .then(async (s) => {
+        if (gone) return s.getTracks().forEach((t) => t.stop());
+        stream = s;
+        video.srcObject = s;
+        await video.play().catch(() => undefined);
+        const send = () => {
+          const device = deviceToken(code);
+          if (!device || !video.videoWidth) return;
+          const scale = Math.min(1, 480 / video.videoWidth);
+          const c = document.createElement("canvas");
+          c.width = Math.round(video.videoWidth * scale);
+          c.height = Math.round(video.videoHeight * scale);
+          c.getContext("2d")?.drawImage(video, 0, 0, c.width, c.height);
+          void upload({ data: { code, device, image: c.toDataURL("image/jpeg", 0.6) } }).catch(
+            () => {},
+          );
+        };
+        send();
+        timer = window.setInterval(send, 3000);
+      })
+      .catch(() => undefined);
+    return () => {
+      gone = true;
+      window.clearInterval(timer);
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [active, code, upload]);
+  return active;
+}
+
+/**
  * Idle kiosk, worked out from the clock (idleActions, tested), not chained
  * timers: only a real touch, tap, key or scroll counts as someone using it.
  * A reset or a new screen doesn't, so the screensaver still comes on after its
@@ -811,6 +866,12 @@ function Kiosk() {
   const tablet = calibration.tablet;
   // The host watching this tablet's camera, live, whatever is on screen.
   const watching = useCameraWatch(shared && !tour ? (tablet?.camChannel ?? null) : null);
+  // The host's direct video couldn't connect: a picture every few seconds through Latchkey instead.
+  const sendingShots = useCameraSnapshots(
+    p.code,
+    shared && !tour && !!tablet?.watchUntil && !tablet?.camChannel,
+  );
+  const camPermission = useCameraPermission(shared && !tour);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
   // Door tablets only: Express ("xl"), the bold full-screen cards made from the theme (the host's choice, else Latchkey's default).
@@ -885,7 +946,7 @@ function Kiosk() {
     step: stepKey,
     join: !!join,
   });
-  const screenKey = `${screenNow.view}:${screenNow.step ?? ""}:${isFull}`;
+  const screenKey = `${screenNow.view}:${screenNow.step ?? ""}:${isFull}:${camPermission.state ?? ""}`;
   const reportScreen = useServerFn(kioskScreenReport);
   useEffect(() => {
     if (!shared || tour) return;
@@ -896,7 +957,17 @@ function Kiosk() {
         data: {
           code: p.code,
           device,
-          screen: { view: screenNow.view, step: screenNow.step, fullscreen: isFull },
+          screen: {
+            view: screenNow.view,
+            step: screenNow.step,
+            fullscreen: isFull,
+            ...(camPermission.state
+              ? {
+                  camPermission: camPermission.state,
+                  camera: camPermission.state !== "none",
+                }
+              : {}),
+          },
         },
       }).catch(() => {});
     }, 800);
@@ -1022,7 +1093,7 @@ function Kiosk() {
     if (shared && !tour && fullscreenWanted()) enterFullscreen();
   }, [shared, tour]);
 
-  // The host's way out: press and hold the top-right corner. Watched on the whole page rather
+  // The host's way out: three quick taps on the top-right corner, or press and hold it. Watched on the whole page rather
   // than with a hidden button, so whatever sits in the corner (the phone QR, the day icon)
   // still answers a tap; only a hold that opened the exit swallows its click.
   const openExit = useRef(() => {});
@@ -1040,10 +1111,23 @@ function Kiosk() {
     const inCorner = (e: PointerEvent) =>
       e.clientX >= window.innerWidth - HOLD_CORNER && e.clientY <= HOLD_CORNER;
     const stop = () => window.clearTimeout(timer);
+    let taps: number[] = [];
     const down = (e: PointerEvent) => {
       fired = false;
       stop();
       if (!inCorner(e)) return;
+      // Three quick taps on the empty corner (an icon there still answers its own tap): no hold,
+      // which some tablets turn into the browser's own menu.
+      const onControl = (e.target as Element | null)?.closest?.("button, a, [role=button]");
+      if (!onControl) {
+        const t = countTap(taps, Date.now());
+        taps = t.taps;
+        if (t.fired) {
+          fired = true;
+          openExit.current();
+          return;
+        }
+      }
       timer = window.setTimeout(() => {
         fired = true;
         openExit.current();
@@ -1316,7 +1400,7 @@ function Kiosk() {
         ) : null}
 
         {/* The host is looking through this tablet's camera: always said on screen while they are. */}
-        {watching ? (
+        {watching || sendingShots ? (
           <div className="pointer-events-none fixed left-3 top-3 z-[100] flex items-center gap-2 rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white shadow-lg">
             <span className="size-2.5 animate-pulse rounded-full bg-red-500" aria-hidden />
             {copy.cameraOn}
@@ -1400,6 +1484,23 @@ function Kiosk() {
                 {copy.kioskExitCta}
               </Button>
             </form>
+            {/* Remote camera viewing can't stop at a question nobody's there to answer: allowed once, from the host's tap. */}
+            {!tour &&
+            camPermission.state &&
+            camPermission.state !== "granted" &&
+            camPermission.state !== "none" ? (
+              <div className="space-y-2 border-t border-border pt-3 text-center">
+                <Button
+                  variant="outline"
+                  size="touch"
+                  className="w-full"
+                  onClick={() => void camPermission.ask()}
+                >
+                  <Camera className="size-5" aria-hidden /> {copy.kioskAllowCamera}
+                </Button>
+                <p className="text-sm text-muted-foreground">{copy.kioskAllowCameraHint}</p>
+              </div>
+            ) : null}
             <div className="flex justify-center border-t border-border pt-3">
               <InstallApp kiosk size="sm" />
             </div>
