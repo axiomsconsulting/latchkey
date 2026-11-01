@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.102.1",
+    date: "2026-11-01",
+    title: "Stays no longer marked cancelled after they happened",
+    items: [
+      {
+        kind: "fixed",
+        area: "Calendar",
+        text: "A stay that drops off a booking site's calendar on its check-out day, or once it has started, is no longer marked cancelled. Only stays still ahead are cancelled when they vanish, and never one the guest has checked in to or out of. Stays this had already cancelled after check-out are put back to Checked out.",
+      },
+      {
+        kind: "fixed",
+        area: "Calendar",
+        text: "Nights you close on a booking site and give to a guest (an extension) keep the guest when you change the closed dates: the stay follows the site's new entry instead of being cancelled and replaced by an empty one. Stays from a calendar that you moved to another site, such as Direct, are still recognised, so they aren't copied.",
+      },
+      {
+        kind: "fixed",
+        area: "Bookings",
+        text: "Closed nights the site has opened again (such as Booking.com's rolling 'beyond the booking window' blocks) no longer fill the Cancelled list, and a cancelled stay never also shows under Closed nights.",
+      },
+    ],
+  },
+  {
     version: "0.102.0",
     date: "2026-10-31",
     title: "Guest cards on the tablets you choose, straight away",

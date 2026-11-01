@@ -39,8 +39,8 @@ export const GROUP_ORDER: StayGroup[] = [
 export const HIDDEN_BY_DEFAULT: StayGroup[] = ["past"];
 
 export function stayGroup(b: ListBooking, today: string): StayGroup {
-  if (b.status === "blocked" || b.mirror_of) return "closed";
   if (b.status === "cancelled") return "cancelled";
+  if (b.status === "blocked" || b.mirror_of) return "closed";
   if (b.status === "checked_out" || b.check_out_date < today) return "past";
   if (b.check_out_date === today) return "leaving";
   if (b.status === "checked_in") return "here";
@@ -115,6 +115,16 @@ export const DEFAULT_FILTERS: ListFilters = {
   hidePlatforms: [],
 };
 
+/**
+ * Closed nights the site has since opened again (a nameless calendar entry
+ * that left the feed): nothing was booked, so it isn't a cancelled stay.
+ * Booking.com's rolling "closed beyond the booking window" blocks end up here
+ * every day.
+ */
+export function liftedBlock(b: ListBooking): boolean {
+  return b.status === "cancelled" && !b.guest_full_name && !b.reservation_code;
+}
+
 export function filterBookings(
   list: ListBooking[],
   f: ListFilters,
@@ -123,6 +133,7 @@ export function filterBookings(
 ): ListBooking[] {
   const q = f.search.trim().toLocaleLowerCase("en-GB");
   return list.filter((b) => {
+    if (liftedBlock(b)) return false;
     if (f.hideGroups.includes(stayGroup(b, today))) return false;
     if (f.hideRooms.includes(b.room_id ?? "none")) return false;
     if (f.hidePlatforms.includes(platform(b))) return false;
