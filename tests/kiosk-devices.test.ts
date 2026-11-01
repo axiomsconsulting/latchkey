@@ -88,3 +88,27 @@ describe("door tablets", () => {
     expect(APP_VERSION).toBe(RELEASES[0]!.version);
   });
 });
+
+describe("why a tablet's live camera can't open", async () => {
+  const { cameraBlock } = await import("@/lib/kiosk-devices");
+  const now = Date.parse("2026-11-01T12:00:00Z");
+  const ok = {
+    status: "confirmed",
+    camera_allowed: true,
+    last_seen_at: "2026-11-01T11:58:00Z",
+    screen: { camera: true, camPermission: "granted" },
+  };
+  it("names the reason, most basic first", () => {
+    expect(cameraBlock(ok, now)).toBeNull();
+    expect(cameraBlock({ ...ok, status: "pending" }, now)).toBe("not_paired");
+    expect(cameraBlock({ ...ok, camera_allowed: false }, now)).toBe("not_allowed");
+    expect(cameraBlock({ ...ok, last_seen_at: "2026-11-01T11:40:00Z" }, now)).toBe("offline");
+    expect(cameraBlock({ ...ok, screen: { camera: false } }, now)).toBe("no_camera");
+    expect(cameraBlock({ ...ok, screen: { camPermission: "denied" } }, now)).toBe(
+      "browser_blocked",
+    );
+    expect(cameraBlock({ ...ok, screen: { camPermission: "prompt" } }, now)).toBe("needs_allow");
+    // A browser that won't say: try anyway.
+    expect(cameraBlock({ ...ok, screen: null }, now)).toBeNull();
+  });
+});

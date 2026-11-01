@@ -205,6 +205,17 @@ export function joinKind(userAgent: string): JoinKind {
   return "other";
 }
 
+/**
+ * A page opened inside another app (WhatsApp, Gmail, Instagram, Facebook,
+ * an Android webview): joining Wi-Fi from there often does nothing, so the
+ * guest is told to open the page in their browser.
+ */
+export function inAppBrowser(userAgent: string): boolean {
+  return /FBAN|FBAV|Instagram|WhatsApp|GSA\/|Line\/|LinkedInApp|Snapchat|Twitter|; wv\)|GmailApp/i.test(
+    userAgent,
+  );
+}
+
 const xml = (v: string) =>
   v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

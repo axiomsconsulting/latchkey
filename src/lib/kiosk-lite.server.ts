@@ -93,6 +93,8 @@ function words(name: string) {
     bellEmpty: copy.bellEmpty,
     error: copy.error,
     takeId: copy.takeId,
+    phoneFirst: copy.phoneFirst,
+    orTablet: copy.orTablet,
     orPhoneShort: copy.orPhoneShort,
     idHint: copy.idHint,
     orPhone: copy.orPhone,

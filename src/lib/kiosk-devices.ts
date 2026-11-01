@@ -73,3 +73,30 @@ export function gridFor(n: number): { cols: number; rows: number } {
 /** Seen recently enough to count as on now. */
 export const isOnline = (lastSeenAt: string | null, nowMs: number) =>
   !!lastSeenAt && nowMs - Date.parse(lastSeenAt) < 7 * 60_000;
+
+export type CameraBlock =
+  "not_paired" | "not_allowed" | "offline" | "no_camera" | "browser_blocked" | "needs_allow";
+
+/**
+ * Why a tablet's live camera can't be opened now, so the host is told
+ * instead of waiting: not set up yet, not allowed by the host, not seen
+ * lately, no camera, or its browser refuses or would ask (nobody's there
+ * to tap Allow). Null: try.
+ */
+export function cameraBlock(
+  d: {
+    status: string | null;
+    camera_allowed: boolean | null;
+    last_seen_at: string | null;
+    screen?: { camera?: boolean | null; camPermission?: string | null } | null;
+  },
+  nowMs: number,
+): CameraBlock | null {
+  if (d.status !== "confirmed") return "not_paired";
+  if (!d.camera_allowed) return "not_allowed";
+  if (!isOnline(d.last_seen_at, nowMs)) return "offline";
+  if (d.screen?.camera === false || d.screen?.camPermission === "none") return "no_camera";
+  if (d.screen?.camPermission === "denied") return "browser_blocked";
+  if (d.screen?.camPermission === "prompt") return "needs_allow";
+  return null;
+}

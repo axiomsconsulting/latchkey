@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { readAppError } from "@/lib/app-error";
+
 import { ChannelIcon } from "@/components/ChannelIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +74,12 @@ type Job = {
 };
 
 /** The Properties page's "Import from your listings" button: shown only when Latchkey admin has switched it on. */
+/** One readable line from any error, including Latchkey's explained ones (app-error.ts). */
+function errorLine(e: unknown): string {
+  const r = readAppError(e, common.errorBody);
+  return r.body ? `${r.title}. ${r.body}` : r.title;
+}
+
 export function ListingImportButton({
   property,
   rooms,
@@ -157,11 +165,7 @@ function ListingImport({
       );
     } catch (e) {
       setJobs((js) =>
-        js.map((j, k) =>
-          k === i
-            ? { ...j, state: "failed", error: e instanceof Error ? e.message : common.errorBody }
-            : j,
-        ),
+        js.map((j, k) => (k === i ? { ...j, state: "failed", error: errorLine(e) } : j)),
       );
     }
   }
@@ -585,7 +589,7 @@ function Review({
       toast.success(copy.applied(r));
       onDone(r);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : common.errorBody);
+      toast.error(errorLine(e));
     } finally {
       setBusy(false);
     }

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { wifiCopy as copy } from "@/content/copy";
-import { joinKind, wifiQrText, type JoinKind } from "@/lib/stay-access";
+import { inAppBrowser, joinKind, wifiQrText, type JoinKind } from "@/lib/stay-access";
 
 /**
  * The guest page's one Wi-Fi card. iPhone and iPad: Join installs the network
@@ -28,8 +28,12 @@ export function WifiCard({
   id?: string;
 }) {
   const [kind, setKind] = useState<JoinKind>("other");
+  const [inApp, setInApp] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
-  useEffect(() => setKind(joinKind(navigator.userAgent)), []);
+  useEffect(() => {
+    setKind(joinKind(navigator.userAgent));
+    setInApp(inAppBrowser(navigator.userAgent));
+  }, []);
   useEffect(() => {
     if (wifi.locked || kind !== "other") return;
     void QRCode.toDataURL(wifiQrText(wifi.name, wifi.password), { margin: 1, width: 220 })
@@ -97,6 +101,7 @@ export function WifiCard({
             </a>
           </Button>
           <p className="text-sm text-muted-foreground">{copy.iosHelp}</p>
+          {inApp ? <p className="text-sm font-medium">{copy.inApp}</p> : null}
         </div>
       ) : kind === "android" ? (
         <div className="space-y-1">
@@ -106,6 +111,7 @@ export function WifiCard({
           <p className="text-sm text-muted-foreground">
             {wifi.password ? copy.androidHelp : copy.androidOpenHelp}
           </p>
+          {inApp ? <p className="text-sm font-medium">{copy.inApp}</p> : null}
         </div>
       ) : qr ? (
         <div className="flex flex-wrap items-center gap-4">

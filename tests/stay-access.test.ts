@@ -7,6 +7,7 @@ import {
   starsOf,
   distanceMetres,
   inStayWindow,
+  inAppBrowser,
   joinKind,
   nearKiosk,
   networkKey,
@@ -132,5 +133,17 @@ describe("stay access", () => {
     expect(joinKind("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe("ios");
     expect(joinKind("Mozilla/5.0 (Linux; Android 15)")).toBe("android");
     expect(joinKind("Mozilla/5.0 (Windows NT 10.0)")).toBe("other");
+  });
+
+  it("spots a page opened inside another app, where joining often does nothing", () => {
+    expect(inAppBrowser("Mozilla/5.0 (iPhone) Mobile/15E148 WhatsApp/2.24")).toBe(true);
+    expect(inAppBrowser("Mozilla/5.0 (Linux; Android 14; wv) Chrome/120")).toBe(true);
+    expect(inAppBrowser("Mozilla/5.0 (iPhone) Mobile/15E148 [FBAN/FBIOS;FBAV/450]")).toBe(true);
+    expect(inAppBrowser("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Version/18.0 Safari/604.1")).toBe(
+      false,
+    );
+    expect(inAppBrowser("Mozilla/5.0 (Linux; Android 15) Chrome/131 Mobile Safari/537.36")).toBe(
+      false,
+    );
   });
 });

@@ -102,7 +102,20 @@ export function CameraVideo({ cam }: { cam: ReturnType<typeof useCameraLive> }) 
   return (
     <figure className="relative overflow-hidden rounded-xl bg-black">
       <video ref={ref} autoPlay muted playsInline className="aspect-[4/3] w-full object-cover" />
-      {cam.state !== "live" || !cam.stream ? (
+      {cam.state === "shots" ? (
+        <div className="absolute inset-0">
+          {cam.shot ? (
+            <img src={cam.shot.image} alt="" className="size-full object-cover" />
+          ) : (
+            <div className="grid size-full place-items-center">
+              <Loader2 className="size-5 animate-spin text-white/70" />
+            </div>
+          )}
+          <p className="absolute inset-x-0 bottom-0 bg-black/70 px-3 py-1.5 text-xs text-white">
+            {camCopy.shots}
+          </p>
+        </div>
+      ) : cam.state !== "live" || !cam.stream ? (
         <div className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-white/80">
           {cam.state === "failed" ? (
             camCopy.failed

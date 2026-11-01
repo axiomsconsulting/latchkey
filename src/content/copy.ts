@@ -1528,6 +1528,18 @@ export const cameraLiveCopy = branded({
   switch: "Switch camera",
   which: (n: number, of: number) => `Camera ${n} of ${of}`,
   live: "Live",
+  shots: "Direct video is blocked by the network, so this is a picture every few seconds.",
+  blocked: {
+    not_paired: "This tablet isn't set up yet.",
+    not_allowed:
+      "The camera view isn't switched on for this tablet. Turn it on once guests are told about it.",
+    offline: "This tablet hasn't been in touch for a few minutes. Check it's on and online.",
+    no_camera: "This tablet's browser can't share a camera.",
+    browser_blocked:
+      "The tablet's browser blocks the camera. On the tablet: tap the top-right corner three times, enter your PIN and tap Allow camera on this tablet (on an iPad, also Settings → Safari → Camera → Allow).",
+    needs_allow:
+      "The tablet's browser would ask before showing the camera, with nobody there to tap Allow. On the tablet: tap the top-right corner three times, enter your PIN and tap Allow camera on this tablet.",
+  } as Record<string, string>,
 });
 
 export const doorTabletsCopy = branded({
@@ -1637,6 +1649,9 @@ export const kioskLite = branded({
   error: "That didn't work. Try again, or ask your host.",
   offline: "Can't reach the internet. Trying again…",
   takeId: "Take a photo of your photo ID",
+  phoneFirst:
+    "Scan with your phone's camera to check in there: your phone takes a much clearer photo of your ID and selfie than this tablet.",
+  orTablet: "Or use this tablet's camera",
   idHint: "Passport photo page or driving licence: lay it flat, fill the photo with it, no glare.",
   orPhone: "Or check in on your phone",
   orPhoneShort: "Or scan to check in on your phone",
@@ -1903,6 +1918,9 @@ export const guest = branded({
   kioskExitTitle: "Host access",
   kioskExitBody: "Enter the door PIN to leave kiosk mode.",
   kioskExitCta: "Unlock",
+  kioskAllowCamera: "Allow camera on this tablet",
+  kioskAllowCameraHint:
+    "So you can see the door camera from your dashboard. On an iPad, also set Settings → Safari → Camera → Allow, or it asks again next time.",
   kioskWrongPin: "That PIN isn't right.",
   pinTitle: "Enter the property PIN",
   pinNote: "For guests with a booking PIN from their host.",
@@ -2870,6 +2888,8 @@ export const wifiCopy = branded({
   copy: "Copy the password",
   copied: "Password copied. Paste it when your phone asks.",
   join: "Join Wi-Fi",
+  inApp:
+    "Opened from inside another app? If Join does nothing, open this page in Safari or Chrome (the ⋯ or share menu → Open in browser) and tap Join there.",
   iosHelp:
     "Tap Join, then Allow. Open Settings, tap Profile Downloaded and Install: your phone joins straight away and whenever you're here.",
   androidHelp: "We'll copy the password and open your Wi-Fi: pick the network and paste it.",
@@ -2906,7 +2926,8 @@ export const stayProgressCopy = branded({
     "To open your own guide, connect to the Wi-Fi here, or let us check you're at the property.",
   roomLocate: "Check I'm here",
   roomLocating: "Checking…",
-  roomNotHere: "We couldn't tell you're at the property. Please check in to open your guide.",
+  roomNotHere:
+    "We couldn't open your guide from here, which often happens on mobile data. Join the Wi-Fi and scan again, or use Check in above to find your stay again: anything you've already done isn't asked twice.",
   roomLocateHelp: "Your location is only compared with the property's and isn't kept.",
 });
 
@@ -2927,7 +2948,7 @@ export const stayAccessCopy = branded({
     "Also lets a guest on mobile data confirm they're within about 150 m of the door tablet. Locations can be faked by someone determined, so choose Wi-Fi only if that matters to you.",
   tablets: "Door tablets",
   tabletsNone:
-    'No door tablet is paired yet. On the tablet, press and hold the top-right corner and enter your PIN once (or open the kiosk while signed in). Allow its location when asked if you\'d like the "close by" check.',
+    'No door tablet is paired yet. On the tablet, tap the top-right corner three times and enter your PIN once (or open the kiosk while signed in). Allow its location when asked if you\'d like the "close by" check.',
   tabletLine: (seen: string | null, located: boolean, by: string) =>
     `${seen ? `Last seen ${seen}` : "Not seen yet"} · ${located ? "location known" : "no location"} · paired ${by}`,
   pairedBy: { pin: "with your PIN", host: "while signed in" } as Record<string, string>,

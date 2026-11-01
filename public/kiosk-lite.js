@@ -487,30 +487,35 @@
     return i.type === "file" && !i.disabled && !!window.FileReader;
   })();
 
-  /** Check in: a photo of the photo ID finds the booking; or the guest's own phone. */
+  /**
+   * Check in: the guest's own phone first (its camera is far better than an
+   * old tablet's), then this tablet's camera (a photo of the photo ID finds
+   * the booking) where it has one.
+   */
   function phonePanel() {
     show(
       "qr",
       "<h2>" +
-        esc(canPhoto ? W.checkIn : W.checkInHere) +
-        "</h2>" +
-        (canPhoto
-          ? '<p class="hint">' +
-            esc(W.idHint) +
-            '</p><label class="big" style="display:block;text-align:center"><span class="bi">' +
-            (I.camera || "") +
-            "</span>" +
-            esc(W.takeId) +
-            '<input id="idphoto" type="file" accept="image/*" capture="environment" style="position:absolute;left:-9999px;opacity:0"></label><p class="grp">' +
-            esc(W.orPhone) +
-            "</p>"
-          : "<p>" + esc(W.scan) + "</p>") +
+        esc(W.checkInHere) +
+        "</h2><p>" +
+        esc(W.phoneFirst) +
+        "</p>" +
         qrBlock() +
         "<p>" +
         esc(W.orVisit) +
         "<br><b>" +
         esc(L.shortUrl) +
-        '</b></p><div class="btns"><button class="sec" data-act="close" style="width:100%">' +
+        "</b></p>" +
+        (canPhoto
+          ? '<p class="grp">' +
+            esc(W.orTablet) +
+            '</p><label class="row" style="text-align:center;padding-left:14px"><span class="bi">' +
+            (I.camera || "") +
+            "</span> " +
+            esc(W.takeId) +
+            '<input id="idphoto" type="file" accept="image/*" capture="environment" style="position:absolute;left:-9999px;opacity:0"></label>'
+          : "") +
+        '<div class="btns"><button class="sec" data-act="close" style="width:100%">' +
         esc(W.close) +
         "</button></div>"
     );

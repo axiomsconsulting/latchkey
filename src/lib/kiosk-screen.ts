@@ -26,6 +26,8 @@ export type KioskScreen = {
   lite: boolean;
   /** Whether its browser can share the camera (the host's camera view); null when it hasn't said. */
   camera: boolean | null;
+  /** Its browser's camera permission: granted, denied, prompt (would ask), none (no camera); null when unknown. */
+  camPermission: "granted" | "denied" | "prompt" | "none" | null;
   /** When it last changed (ISO). */
   at: string | null;
 };
@@ -45,6 +47,9 @@ export function normaliseScreen(raw: unknown): KioskScreen | null {
     fullscreen: r["fullscreen"] === true,
     lite: r["lite"] === true,
     camera: typeof r["camera"] === "boolean" ? r["camera"] : null,
+    camPermission: ["granted", "denied", "prompt", "none"].includes(r["camPermission"] as string)
+      ? (r["camPermission"] as KioskScreen["camPermission"])
+      : null,
     at: typeof r["at"] === "string" ? r["at"] : null,
   };
 }
