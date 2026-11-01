@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { cardVars, pageVars, resolveLook, xlCss } from "@/lib/kiosk-xl";
+import {
+  cardVars,
+  expressCards,
+  expressPage,
+  expressShape,
+  pageVars,
+  resolveLook,
+  xlCss,
+} from "@/lib/kiosk-xl";
 import { normaliseDefaults } from "@/lib/kiosk-saver";
-import { normaliseTheme } from "@/lib/theme";
+import { PILL, normaliseTheme } from "@/lib/theme";
 
-describe("the XL door tablet look", () => {
+describe("Express mode on door tablets", () => {
   it("follows the host's choice, else Latchkey's default", () => {
     expect(resolveLook("auto", "xl")).toBe("xl");
     expect(resolveLook("auto", "standard")).toBe("standard");
@@ -33,10 +41,54 @@ describe("the XL door tablet look", () => {
   });
 
   it("writes only checked colours into the style sheet", () => {
-    const css = xlCss({ primary: "#a50d36", cardIn: "red;}body{x:1", cardOut: "#CFE3EC" });
+    const theme = normaliseTheme({ primary: "#a50d36", accent: "#c9a227" });
+    const css = xlCss({ theme, cardIn: "red;}body{x:1", cardOut: "#CFE3EC" });
     expect(css).toContain("--background:#a50d36");
-    expect(css).toContain("--card:#F6E2A8");
+    // A bad colour falls back to the theme's own tint, never into the sheet.
+    expect(css).toContain(`--card:${expressCards(theme, null, null).cardIn}`);
     expect(css).not.toContain("body{");
     expect(css).toContain("[data-kiosk-xl] [data-kiosk-flow] aside{");
+  });
+
+  it("deepens a light main colour so the cards stand out, and keeps a dark one", () => {
+    expect(expressPage("#a50d36")).toBe("#a50d36");
+    expect(expressPage("#f2e8d5")).not.toBe("#f2e8d5");
+    expect(pageVars("#f2e8d5")["--foreground"]).toBe("#FFFFFF");
+    // A dark theme keeps its own background.
+    expect(expressPage("#ff6f61", "#16181d")).toBe("#16181d");
+  });
+
+  it("uses the host's card colours, else tints of the theme's", () => {
+    const t = { primary: "#183B2B", accent: "#C8A24A" };
+    expect(expressCards(t, "#123456", "#654321")).toEqual({
+      cardIn: "#123456",
+      cardOut: "#654321",
+    });
+    const tinted = expressCards(t, null, null);
+    expect(tinted.cardIn).not.toBe("#C8A24A");
+    expect(tinted.cardOut).not.toBe("#183B2B");
+  });
+
+  it("takes the theme's shapes and makes them bolder", () => {
+    const square = expressShape(
+      normaliseTheme({ radius: 0, buttonRadius: 0, cardStyle: "flat", headingCase: "upper" }),
+    );
+    expect(square["--x-card-radius"]).toBe("0px");
+    expect(square["--x-btn-radius"]).toBe("0px");
+    expect(square["--x-border-width"]).toBe("0px");
+    expect(square["--x-head-case"]).toBe("uppercase");
+    const round = expressShape(
+      normaliseTheme({ radius: 1, buttonRadius: PILL, cardStyle: "outline", headingWeight: 400 }),
+    );
+    expect(round["--x-btn-radius"]).toBe("9999px");
+    expect(round["--x-card-radius"]).toContain("1.6rem");
+    expect(Number(round["--x-head-weight"])).toBeGreaterThanOrEqual(700);
+    expect(Number(round["--x-icon-stroke"])).toBeGreaterThanOrEqual(2.25);
+  });
+
+  it("keeps outline buttons outlined, in the card's ink", () => {
+    const v = cardVars("#F6E2A8", "outline");
+    expect(v["--btn-bg"]).toBe("transparent");
+    expect(v["--btn-fg"]).toBe(v["--foreground"]);
   });
 });

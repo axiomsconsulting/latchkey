@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.104.0",
+    date: "2026-11-01",
+    title: "Express mode: bold door tablets made from your theme",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "XL is now called Express mode, and it's built from your theme: your corners (square stays square, round stays round), your card style's border and shadow, your heading lettering and fonts, and your button shape and case, all made bolder, with heavier icons. Dark themes keep their own dark background; light main colours are deepened so the cards stand out.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "In Express mode the guests' check-in and check-out cards share the look of the check-in steps. Card colours you haven't picked are tints of your theme's colours instead of the starting yellow and blue.",
+      },
+    ],
+  },
+  {
     version: "0.103.0",
     date: "2026-11-01",
     title: "Quicker ID checks that understand more names",

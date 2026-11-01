@@ -373,27 +373,35 @@
 }
 
 /*
- * XL door tablets (src/lib/kiosk-xl.ts; the kiosk sets data-kiosk-xl on its
- * page and writes the colours with xlCss): every step looks like the welcome
- * and goodbye cards. The page is the property's colour; each step is a bold
- * card in the check-in card colour with a strong outline, big heavy headings
- * and pill buttons filled with the card's ink; the phone panel is a card in
- * the check-out colour with its QR on a white tile. Expanded sizes apply too.
+ * Express door tablets (kioskLook "xl"; src/lib/kiosk-xl.ts: the kiosk sets
+ * data-kiosk-xl on its page and writes the colours and the theme's shapes
+ * with xlCss): every step looks like the welcome and goodbye cards. The page
+ * is the deepened main colour; each step is a bold card in the check-in card
+ * colour, the phone panel one in the check-out card colour. Corners, border,
+ * shadow, heading case/spacing/weight, button case and icon lines are the
+ * theme's own (--x-*), made bolder.
  */
 [data-kiosk-xl] [data-kiosk-flow] main.card-soft,
 [data-kiosk-xl] [data-kiosk-flow] aside {
   background-color: var(--card);
   color: var(--foreground);
-  border: max(4px, 0.8vmin) solid var(--border);
-  border-radius: max(1.25rem, 3vmin);
-  box-shadow: 0 1.5vmin 4vmin rgb(0 0 0 / 0.28);
+  border: var(--x-border-width) solid var(--border);
+  border-radius: var(--x-card-radius);
+  box-shadow: var(--x-shadow);
 }
 [data-kiosk-xl] [data-kiosk-flow] main.card-soft {
   padding: max(1.5rem, 4vmin);
 }
+[data-kiosk-xl] [data-kiosk-flow] main h1,
+[data-kiosk-xl] [data-kiosk-flow] main h2,
+[data-kiosk-xl] [data-kiosk-flow] aside h2 {
+  font-weight: var(--x-head-weight);
+  text-transform: var(--x-head-case);
+  font-variant-caps: var(--x-head-variant);
+  letter-spacing: var(--x-head-tracking);
+}
 [data-kiosk-xl] [data-kiosk-flow] main h1 {
   font-size: clamp(2.25rem, 6vmin, 4.75rem);
-  font-weight: 700;
   line-height: 1.05;
 }
 [data-kiosk-xl] [data-kiosk-flow] main p {
@@ -401,10 +409,13 @@
 }
 [data-kiosk-xl] [data-kiosk-flow] main [data-slot="button"],
 [data-kiosk-xl] [data-kiosk-flow] aside [data-slot="button"] {
-  border-radius: 9999px;
+  border-radius: var(--x-btn-radius);
   font-weight: 700;
+  text-transform: var(--x-btn-case);
+  letter-spacing: var(--x-btn-tracking);
 }
 [data-kiosk-xl] [data-kiosk-flow] main [data-slot="button"][data-variant="default"] {
+  border-width: max(3px, 0.4vmin);
   box-shadow: 0 0.6vmin 1.6vmin rgb(0 0 0 / 0.22);
 }
 [data-kiosk-xl] [data-kiosk-flow] main [data-slot="button"][data-variant="outline"] {
@@ -416,24 +427,46 @@
 [data-kiosk-xl] [data-kiosk-flow] aside {
   padding: max(1rem, 2.5vmin);
 }
-[data-kiosk-xl] [data-kiosk-flow] aside h2 {
-  font-weight: 700;
-}
 [data-kiosk-xl] [data-kiosk-flow] aside img {
   background-color: #fff;
   padding: max(0.5rem, 1vmin);
-  border-radius: max(0.75rem, 1.6vmin);
+  border-radius: var(--x-qr-radius);
   box-shadow: 0 0.4vmin 1.2vmin rgb(0 0 0 / 0.18);
 }
-/* Back, above the card: a pill outlined in the page's ink. */
+/* The Back button sits on the page, outside the card. */
 [data-kiosk-xl] [data-kiosk-flow] > [data-slot="button"] {
   color: var(--foreground);
   border: max(2px, 0.3vmin) solid var(--foreground);
-  border-radius: 9999px;
+  border-radius: var(--x-btn-radius);
   font-weight: 700;
+  text-transform: var(--x-btn-case);
+  letter-spacing: var(--x-btn-tracking);
 }
 [data-kiosk-xl] header .font-display {
-  font-weight: 700;
+  font-weight: var(--x-head-weight);
+  text-transform: var(--x-head-case);
+  font-variant-caps: var(--x-head-variant);
+  letter-spacing: var(--x-head-tracking);
+}
+/* Guest cards (KioskGoodbye.tsx) in Express: the theme's corners, border weight and lettering too. */
+[data-kiosk-xl] [data-guest-card] {
+  border-radius: var(--x-card-radius);
+  box-shadow: var(--x-shadow);
+}
+[data-kiosk-xl] [data-guest-card] .font-display {
+  font-weight: var(--x-head-weight);
+  text-transform: var(--x-head-case);
+  font-variant-caps: var(--x-head-variant);
+  letter-spacing: var(--x-head-tracking);
+}
+[data-kiosk-xl] [data-guest-card-btn] {
+  border-radius: var(--x-btn-radius);
+  text-transform: var(--x-btn-case);
+  letter-spacing: var(--x-btn-tracking);
+}
+/* Icons: the theme's line, heavier, so they read from a step away. */
+[data-kiosk-xl] svg.lucide {
+  stroke-width: var(--x-icon-stroke);
 }
 
 /*
