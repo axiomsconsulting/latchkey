@@ -1071,10 +1071,16 @@ export const saveIntegrationSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
     const db = await admin();
+    // Kept beside the other integration settings (WhatsApp lives in the same column).
+    const { data: cur } = await loose(db)
+      .from("site_settings")
+      .select("integrations")
+      .eq("id", 1)
+      .maybeSingle();
     const { error } = await loose(db)
       .from("site_settings")
       .update({
-        integrations: { inboundAddress: data.inboundAddress || null },
+        integrations: { ...(cur?.integrations ?? {}), inboundAddress: data.inboundAddress || null },
         updated_at: new Date().toISOString(),
       })
       .eq("id", 1);

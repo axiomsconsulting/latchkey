@@ -5,6 +5,7 @@ import { Building2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
+import { HostWhatsAppAdmin } from "@/components/host/WhatsAppAdmin";
 import { Button } from "@/components/ui/button";
 import { adminCopy as copy, common, settings as settingsCopy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
@@ -52,6 +53,7 @@ export function AdminBusinessTools() {
         </div>
       </div>
       <IntegrationSwitches hostId={hostId} />
+      <HostWhatsAppAdmin hostId={hostId} />
       <div className="card-soft p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">

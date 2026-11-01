@@ -3102,6 +3102,8 @@ export const trades = branded({
 
 export const hostInbox = branded({
   via: (platform: string) => `From ${platform}`,
+  sentBy: (via: string) =>
+    `Sent by ${via === "whatsapp" ? "WhatsApp" : via === "email" ? "email" : "text"}`,
   platformReplyHint: (platform: string) =>
     `Replying here sends it in Latchkey. To answer on ${platform}, reply by email from your own mailbox.`,
   replyByEmail: "Reply by email",
@@ -4551,6 +4553,7 @@ export const settingsMenuCopy = branded({
     messages: ["Airbnb and Booking.com messages", "apps"],
     checkin: ["Check-in journey", "checkin"],
     records: ["Who's staying and ID records", "checkin"],
+    guestTexts: ["Welcome and goodbye messages", "checkin"],
     stayAccess: ["Room QR codes and Wi-Fi", "rooms"],
     reviews: ["Reviews", "reviews"],
     privacy: ["Privacy and retention", "checkin"],
@@ -5638,4 +5641,109 @@ export const richTextCopy = branded({
   empty: "Nothing written yet.",
   advice: (fonts: { heading: string; body: string } | null) =>
     `${fonts ? `Large and Medium use your heading font (${fonts.heading}); everything else your body font (${fonts.body}). ` : "Large and Medium use your theme's heading font; everything else its body font. "}Keep to one Large line per section, bold for what guests must not miss (times, codes), a numbered list for steps, and a table for things like bin days or opening hours. Two or three columns read best on a phone.`,
+});
+
+/** Settings → Guests → Welcome and goodbye messages (GuestMessagesSettings). */
+export const guestTextsCopy = branded({
+  title: "Welcome and goodbye messages",
+  intro:
+    "A message to each guest on their arrival day and on their check-out day, by WhatsApp or text to their mobile and by email to their own address. Each stay's conversation shows what was sent. Keep each message under 160 characters so it goes as one text (about 70 if you use emoji or curly quotes); the link counts too.",
+  demo: "Demo mode: messages are written into each stay's conversation but not sent. Latchkey support switches your business to live.",
+  needsUpdate: "This needs the latest update (migration 0080).",
+  welcome: "Welcome, on the arrival day",
+  goodbye: "Goodbye, on the check-out day",
+  at: "Send at",
+  words: "Message",
+  placeholders: "Add:",
+  vars: {
+    name: "first name",
+    property: "property",
+    guide: "guide link",
+    checkin: "check-in time",
+    checkout: "check-out time",
+    room: "room",
+    book: "book direct link",
+  } as Record<string, string>,
+  length: (chars: number, parts: number, unicode: boolean) =>
+    `${chars} characters · ${parts === 1 ? "1 text" : `${parts} texts`}${unicode ? " (emoji or symbols: 70 per text)" : ""}`,
+  tooLong: "Over one text: guests get it in parts and each part is charged.",
+  sample: "With a guest's details:",
+  how: "How to reach guests",
+  phone: {
+    auto: "WhatsApp when it's set up, otherwise a text",
+    sms: "Text only",
+    whatsapp: "WhatsApp only",
+    none: "Not by phone",
+  } as Record<string, string>,
+  email: "Also by email, to the guest's own address",
+  emailNote:
+    "Booking sites' relay addresses (such as …@guest.booking.com) aren't used: Booking.com only passes on mail sent from the address registered on your extranet.",
+  attach: "Attach to the welcome (WhatsApp and email)",
+  attachNone: "Nothing",
+  attachHint: "Any PDF or photo you've attached to a guide section.",
+  waWording:
+    "On WhatsApp, guests get Latchkey's wording that Meta has approved, with their name, your property and the link. Your own words go by text and email.",
+  test: "Send me a test",
+  testTo: "Your mobile or email",
+  testEmail: "Email",
+  testText: "Text",
+  testWhatsApp: "WhatsApp",
+  testSent: "Sent. Check your phone or inbox.",
+  testDemo: "Demo mode: nothing was sent.",
+  testFailed: "That didn't send. Check the number or address.",
+  saved: "Welcome and goodbye messages saved",
+  waTitle: "WhatsApp",
+  waShared: (n: string) =>
+    `Messages come from Latchkey's WhatsApp number (${n}), with your property's name.`,
+  waNotSet: "WhatsApp isn't set up on Latchkey yet, so guests get a text instead.",
+  waRequested: (n: string) =>
+    `You asked for your own number (${n}) to be connected. Latchkey support will be in touch to finish it.`,
+  waLive: (n: string) => `Messages come from your own WhatsApp number, ${n}.`,
+  waOwn: "Use our own WhatsApp number",
+  waOwnBody:
+    "Latchkey support connects it for you: you'll get a code by text or call on that number and confirm your business with Meta once, in a few clicks. The number can't be in use on the WhatsApp or WhatsApp Business app at the same time.",
+  waNumber: "Your business mobile number",
+  waNote: "Anything we should know (optional)",
+  waSend: "Ask Latchkey to connect it",
+  waAsked: "Thanks. Latchkey support will be in touch.",
+  ownerOnly: "Only the owner can ask for this.",
+});
+
+/** Latchkey admin: WhatsApp for guest messages (WhatsAppAdmin). */
+export const whatsAppAdminCopy = branded({
+  title: "WhatsApp for guests",
+  body: "Guests' welcome and goodbye messages and the check-in photo link can go by WhatsApp through Latchkey's Twilio account. Until a business has its own number, Latchkey's shared number below sends them with the property's name.",
+  noTwilio:
+    "Twilio isn't set up (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM in Secrets), so nothing can be sent.",
+  sender: "Latchkey's shared WhatsApp number",
+  senderHint: (env: string | null) =>
+    env
+      ? `Empty: the server's TWILIO_WHATSAPP_FROM (${env}).`
+      : "In +44… form. Register it as a WhatsApp sender in Twilio first.",
+  templates: "Approved templates (Twilio Content ids, HX…)",
+  template: {
+    welcome: "Welcome: {{1}} name, {{2}} property, {{3}} guide link",
+    goodbye: "Goodbye: {{1}} name, {{2}} property, {{3}} book-direct link",
+    photo_link: "Check-in photo link: {{1}} property, {{2}} link",
+  } as Record<string, string>,
+  stepsTitle: "Setting it up (once, for every business)",
+  steps: [
+    "Meta Business Manager: verify Latchkey's business (company documents, website, a domain email).",
+    "Twilio console → Messaging → Senders → WhatsApp senders: register Latchkey's shared number (it gets a code by text or call; it can't be on the WhatsApp app).",
+    "Twilio → Content template builder: make the three templates above (category Utility), submit each for WhatsApp approval and paste their HX ids here once approved. Media header on the welcome lets it carry a PDF or photo.",
+    "Twilio → the sender's webhook: leave as is (guests' replies go to the booking sites or the stay page).",
+    "Switch each business's guest messages to live (Businesses → Demo or live) when they're ready.",
+  ],
+  ownTitle: "Hosts' own numbers (one click, like Stripe Connect)",
+  ownBody:
+    "To let hosts connect their own number themselves, Latchkey joins Twilio's Tech Provider programme and Meta's Embedded Signup (a Meta app with WhatsApp, its configuration id, and Twilio subaccounts per business). Until then, support connects a number that a host asks for (Feedback shows the request) and enters it under Businesses. Steps in docs/whatsapp.md.",
+  saved: "WhatsApp settings saved",
+  hostTitle: "This business's own WhatsApp number",
+  hostNone: "Not asked for. Messages use Latchkey's shared number.",
+  hostAsked: (n: string) => `Asked for ${n}. Register it in Twilio, then enter it here.`,
+  hostLive: (n: string) => `Live: ${n}.`,
+  hostNumber: "Their sender number (+44…)",
+  hostSave: "Make it live",
+  hostRemove: "Take it off",
+  hostSaved: "Saved",
 });

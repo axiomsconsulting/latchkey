@@ -106,6 +106,14 @@ export const JOBS: Job[] = branded([
     runnable: false,
   },
   {
+    key: "guest_messages",
+    name: "Welcome and goodbye messages to guests (paid per message)",
+    kind: "on_use",
+    what: "Hosts' welcome and goodbye texts, WhatsApp messages and emails to guests, checked with every calendar sync. Texts and WhatsApp messages cost a few pence each through Twilio. Off: none are sent.",
+    metric: "sms:guest",
+    runnable: false,
+  },
+  {
     key: "sms_alerts",
     name: "SMS alerts to hosts (paid per text)",
     kind: "on_use",

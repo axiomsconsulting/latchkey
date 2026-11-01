@@ -198,6 +198,10 @@ export function HostInbox({
                       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         {copy.via(PLATFORM_NAME[m.platform] ?? m.platform)}
                       </p>
+                    ) : m.sentBy ? (
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide opacity-80">
+                        {copy.sentBy(m.sentBy)}
+                      </p>
                     ) : null}
                     <p className="whitespace-pre-wrap">{m.body}</p>
                     <p

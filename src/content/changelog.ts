@@ -46,6 +46,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.107.0",
+    date: "2026-11-01",
+    title: "Welcome and goodbye messages to guests",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Send each guest a welcome on their arrival day and a goodbye on their check-out day, at the times you choose, by WhatsApp or text to their mobile and by email to their own address (Settings → Guests → Welcome and goodbye messages). Short links take them to their stay guide and to booking direct. The length is shown as you write, so each fits in one text. Each stay's conversation shows what was sent.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "WhatsApp messages come from Latchkey's number with your property's name, or from your own number: ask from the same card and Latchkey support connects it for you. A welcome by WhatsApp or email can carry a PDF or photo from your guide.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        admin: true,
+        text: "Latchkey admin → Integrations → WhatsApp for guests (shared number, approved templates, set-up steps) and Businesses → This business's own WhatsApp number. New routine: Welcome and goodbye messages to guests. Steps in docs/whatsapp.md.",
+      },
+    ],
+  },
+  {
     version: "0.106.0",
     date: "2026-11-01",
     title: "Formatting in your stay guide",
