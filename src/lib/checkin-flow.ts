@@ -77,7 +77,8 @@ export const STEPS: StepDef[] = [
 
 export const stepDef = (id: StepId): StepDef => STEPS.find((s) => s.id === id)!;
 
-export type CameraSide = "front" | "back";
+/** "none": the door tablet's camera isn't used; guests take the photos on a phone (photo-handoff.ts). */
+export type CameraSide = "front" | "back" | "none";
 /** How the check-out day is asked: three close choices, or the coming week. */
 export type CheckoutStyle = "three" | "week";
 
@@ -121,7 +122,8 @@ export function normaliseFlow(raw: unknown, fallback: FlowChoices = QUICK): Flow
   const steps = { ...fallback.steps };
   // A step added to Latchkey later, which this property never saw, takes the starting choice.
   for (const id of STEP_IDS) if (typeof s[id] === "boolean") steps[id] = s[id] as boolean;
-  const side = (v: unknown, d: CameraSide): CameraSide => (v === "front" || v === "back" ? v : d);
+  const side = (v: unknown, d: CameraSide): CameraSide =>
+    v === "front" || v === "back" || v === "none" ? v : d;
   return {
     steps,
     checkout:
@@ -254,15 +256,19 @@ export function toRecords(flow: FlowChoices, prev: GuestRecords): GuestRecords {
   };
 }
 
-/** Which camera a step opens: the host's choice on a shared tablet; on someone's own phone the back for ID, the front for a face. */
+/**
+ * Which camera a step opens: the host's choice on a shared tablet (null:
+ * none, the photo is taken on a phone); on someone's own phone the back for
+ * ID, the front for a face.
+ */
 export function cameraFor(
   kind: "id" | "face",
   shared: boolean,
   flow: Pick<FlowChoices, "idCamera" | "selfieCamera">,
-): "user" | "environment" {
+): "user" | "environment" | null {
   if (!shared) return kind === "id" ? "environment" : "user";
   const side = kind === "id" ? flow.idCamera : flow.selfieCamera;
-  return side === "front" ? "user" : "environment";
+  return side === "none" ? null : side === "front" ? "user" : "environment";
 }
 
 /** What the guest's screen needs to know (sent with the property). */
@@ -274,6 +280,8 @@ export type GuestFlow = {
   checkout: CheckoutStyle;
   idCamera: CameraSide;
   selfieCamera: CameraSide;
+  /** A face photo after the ID (so a phone taking the ID goes straight on to it). */
+  selfie?: boolean;
 };
 
 export const guestFlow = (f: FlowChoices): GuestFlow => ({
@@ -283,6 +291,7 @@ export const guestFlow = (f: FlowChoices): GuestFlow => ({
   checkout: f.checkout,
   idCamera: f.idCamera,
   selfieCamera: f.selfieCamera,
+  selfie: f.steps.selfie,
 });
 
 /** Which preset the choices are, if any (the editor highlights it). */

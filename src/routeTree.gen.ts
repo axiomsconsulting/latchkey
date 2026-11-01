@@ -33,6 +33,7 @@ import { Route as LiteCodeRouteImport } from './routes/lite.$code'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as PartnersAgreementRouteImport } from './routes/partners.agreement'
 import { Route as PartnersJoinRouteImport } from './routes/partners.join'
+import { Route as PhotosTokenRouteImport } from './routes/photos.$token'
 import { Route as ReserveTokenRouteImport } from './routes/reserve.$token'
 import { Route as RoomCodeRouteImport } from './routes/room.$code'
 import { Route as StayTokenRouteImport } from './routes/stay.$token'
@@ -202,6 +203,11 @@ const PartnersAgreementRoute = PartnersAgreementRouteImport.update({
 const PartnersJoinRoute = PartnersJoinRouteImport.update({
   id: '/partners/join',
   path: '/partners/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PhotosTokenRoute = PhotosTokenRouteImport.update({
+  id: '/photos/$token',
+  path: '/photos/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReserveTokenRoute = ReserveTokenRouteImport.update({
@@ -500,6 +506,7 @@ export interface FileRoutesByFullPath {
   '/p/$code': typeof PCodeRoute
   '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
+  '/photos/$token': typeof PhotosTokenRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
@@ -575,6 +582,7 @@ export interface FileRoutesByTo {
   '/p/$code': typeof PCodeRoute
   '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
+  '/photos/$token': typeof PhotosTokenRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
@@ -653,6 +661,7 @@ export interface FileRoutesById {
   '/p/$code': typeof PCodeRoute
   '/partners/agreement': typeof PartnersAgreementRoute
   '/partners/join': typeof PartnersJoinRoute
+  '/photos/$token': typeof PhotosTokenRoute
   '/reserve/$token': typeof ReserveTokenRoute
   '/room/$code': typeof RoomCodeRoute
   '/stay/$token': typeof StayTokenRoute
@@ -731,6 +740,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/partners/agreement'
     | '/partners/join'
+    | '/photos/$token'
     | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
@@ -806,6 +816,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/partners/agreement'
     | '/partners/join'
+    | '/photos/$token'
     | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
@@ -883,6 +894,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/partners/agreement'
     | '/partners/join'
+    | '/photos/$token'
     | '/reserve/$token'
     | '/room/$code'
     | '/stay/$token'
@@ -960,6 +972,7 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   PartnersAgreementRoute: typeof PartnersAgreementRoute
   PartnersJoinRoute: typeof PartnersJoinRoute
+  PhotosTokenRoute: typeof PhotosTokenRoute
   ReserveTokenRoute: typeof ReserveTokenRoute
   RoomCodeRoute: typeof RoomCodeRoute
   StayTokenRoute: typeof StayTokenRoute
@@ -1160,6 +1173,13 @@ declare module '@tanstack/react-router' {
       path: '/partners/join'
       fullPath: '/partners/join'
       preLoaderRoute: typeof PartnersJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/photos/$token': {
+      id: '/photos/$token'
+      path: '/photos/$token'
+      fullPath: '/photos/$token'
+      preLoaderRoute: typeof PhotosTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reserve/$token': {
@@ -1619,6 +1639,7 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   PartnersAgreementRoute: PartnersAgreementRoute,
   PartnersJoinRoute: PartnersJoinRoute,
+  PhotosTokenRoute: PhotosTokenRoute,
   ReserveTokenRoute: ReserveTokenRoute,
   RoomCodeRoute: RoomCodeRoute,
   StayTokenRoute: StayTokenRoute,

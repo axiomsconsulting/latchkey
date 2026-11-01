@@ -17,6 +17,9 @@ import { ChannelIcon } from "@/components/ChannelIcon";
 
 import { CheckInQr, KioskQr, GuideLink } from "@/components/guest/CheckInQr";
 import { IdCamera } from "@/components/guest/IdCamera";
+import { PhotoChoice } from "@/components/guest/PhonePhotos";
+import { usePhotoHandoff } from "@/hooks/use-photo-handoff";
+import { faceNext, type PhotoKind } from "@/lib/photo-handoff";
 import { PinPad } from "@/components/guest/PinPad";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,6 +264,15 @@ export function CheckInFlow({
   // same tap that set them, so kept in a ref rather than state.
   const childAges = useRef<number[]>([]);
   const onPhone = useIsMobile();
+  // Photos on a phone instead of the tablet's camera (photo-handoff.ts): one link for the whole check-in.
+  const phone = usePhotoHandoff(property.code, deviceId, kiosk);
+  // Answers from the phone already acted on (task number and part), and selfies the phone took.
+  const handled = useRef(new Set<string>());
+  const phoneFaces = useRef(new Set<number>());
+  // ID first on the phone found no stay: the phone keeps the photo and sends it once the stay is found.
+  const phoneHeldId = useRef(false);
+  // The guest chose this screen's camera for this step.
+  const [screenStep, setScreenStep] = useState<string | null>(null);
 
   const match = useServerFn(matchBooking);
   const options = useServerFn(checkoutOptions);
@@ -370,6 +382,11 @@ export function CheckInFlow({
   }
 
   function restart() {
+    phone.end();
+    handled.current.clear();
+    phoneFaces.current.clear();
+    phoneHeldId.current = false;
+    setScreenStep(null);
     setLetter("");
     setCheckOut("");
     setPicked(false);
@@ -452,19 +469,28 @@ export function CheckInFlow({
 
   /** ID first: the name on it finds the stay; otherwise the photo waits to be used once it's found. */
   async function onIdFirst(full: string, small: string) {
+    await phone.clear();
     const res = await run(() =>
       byPhoto({ data: { code: property.code, deviceId: deviceId(), image: full, small } }),
     );
-    if (!res) return;
+    if (res) await afterIdFirst(res, { full, small });
+  }
+
+  /** The answer to the ID first, from this screen's camera or the phone's (`photo` null: the phone keeps it). */
+  async function afterIdFirst(
+    res: Awaited<ReturnType<typeof findByPhotoId>>,
+    photo: { full: string; small: string } | null,
+  ) {
     if (res.status === "locked") return setStep({ name: "locked", until: res.until });
-    if (res.status === "retry") {
+    if (res.status === "retry" && photo) {
       idFirstTries.current += 1;
       if (idFirstTries.current < 2)
         return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
     }
-    if (res.status !== "matched") {
+    if (res.status !== "matched" || !res.token) {
       // Found the usual way instead; the same photo is then their ID check.
-      pendingPhoto.current = { full, small };
+      if (photo) pendingPhoto.current = photo;
+      else phoneHeldId.current = true;
       setStep({ name: "letter" });
       setTimeout(() => setMessage(copy.idFirstNoMatch), 0);
       return;
@@ -476,6 +502,71 @@ export function CheckInFlow({
     setPlatform(res.platform);
     await onConfirm(res.token);
   }
+
+  // The phone's task follows the photo step on screen; leaving one stops the phone (unless its selfie is still to come).
+  const facePendingAt = (() => {
+    const t = phone.task;
+    const r = phone.result;
+    if (!t || !r?.id || r.face) return null;
+    return faceNext(t, String(r.id["status"] ?? "")) ? t.position : null;
+  })();
+  const stepKey = `${step.name}:${"position" in step ? step.position : ""}`;
+  const onScreen = screenStep === stepKey;
+  const wanted: { kind: PhotoKind; position: number; face: boolean } | null =
+    !kiosk || onScreen
+      ? null
+      : step.name === "idFirst" && step.consented
+        ? { kind: "find", position: 0, face: !!flow.selfie }
+        : step.name === "identity" && step.method === "photo_id" && step.consented
+          ? { kind: "lead", position: 0, face: !!plan?.facePhoto }
+          : step.name === "companion" && step.ready
+            ? { kind: "companion", position: step.position, face: !!plan?.facePhoto }
+            : step.name === "face" && facePendingAt !== step.position
+              ? { kind: "face", position: step.position, face: false }
+              : null;
+  const wantedKey = wanted ? `${wanted.kind}:${wanted.position}:${wanted.face}` : "";
+  const keepFace = facePendingAt !== null;
+  useEffect(() => {
+    if (!kiosk) return;
+    if (wanted)
+      void phone.request({
+        ...wanted,
+        keep: !!plan?.keepIdPhoto,
+        token: tokenRef.current || undefined,
+      });
+    else if (!keepFace) void phone.clear();
+    // Only when the step's photo changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantedKey]);
+
+  // The phone's answers: acted on once each, exactly as this screen's own camera would.
+  useEffect(() => {
+    const t = phone.task;
+    const r = phone.result;
+    if (!kiosk || !t || !r) return;
+    if (r.id && !handled.current.has(`${t.n}:id`)) {
+      handled.current.add(`${t.n}:id`);
+      const id = r.id as never;
+      if (t.kind === "find") void afterIdFirst(id, null);
+      else if (t.kind === "lead") {
+        phoneHeldId.current = false;
+        afterPhoto(id);
+      } else if (t.kind === "companion") void afterCompanion(t.position, id);
+    }
+    if (r.face && !handled.current.has(`${t.n}:face`)) {
+      handled.current.add(`${t.n}:face`);
+      phoneFaces.current.add(t.position);
+      if (step.name === "face" && step.position === t.position) void advance(queue);
+    }
+    // Acted on when the answer arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phone.task?.n, phone.result]);
+
+  // The end screen: the phone's part is over.
+  useEffect(() => {
+    if (step.name === "done") phone.end();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step.name]);
 
   /** The surname initial: the stays with it, or the check-out day as the host's journey asks. */
   async function onLetter(l: string) {
@@ -624,6 +715,10 @@ export function CheckInFlow({
   async function startIdentity(list = listFlow, seq = sequence, people = adults, p = plan) {
     // Their ID found the stay: it's already checked.
     if (leadVerified.current) return afterLead(people, p);
+    // The phone kept the ID photo that didn't find the stay: it sends it as soon as the step asks.
+    if (phoneHeldId.current && !list && seq[0] === "photo_id") {
+      return setStep({ name: "identity", method: "photo_id", consented: true });
+    }
     // A photo taken first that didn't find the stay: used now rather than asked for again.
     const photo = pendingPhoto.current;
     if (photo && !list && seq[0] === "photo_id") {
@@ -684,6 +779,7 @@ export function CheckInFlow({
     const steps = all.filter(
       (x) =>
         !takenElsewhere(x.position) &&
+        !(x.kind === "face" && phoneFaces.current.has(x.position)) &&
         !(
           x.kind === "register" &&
           ["saved", "later"].includes(registerFrom.current[x.position] ?? "")
@@ -710,6 +806,7 @@ export function CheckInFlow({
   }
 
   async function onCompanion(position: number, full: string, small: string) {
+    await phone.clear();
     const tries = (companionTries.current[position] ?? 0) + 1;
     companionTries.current[position] = tries;
     const res = await run(() =>
@@ -723,7 +820,14 @@ export function CheckInFlow({
         },
       }),
     );
-    if (!res) return;
+    if (res) await afterCompanion(position, res);
+  }
+
+  /** The answer to another guest's ID, from this screen's camera or the phone's. */
+  async function afterCompanion(
+    position: number,
+    res: Awaited<ReturnType<typeof checkCompanionId>>,
+  ) {
     if (res.status === "retry") {
       return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
     }
@@ -759,6 +863,7 @@ export function CheckInFlow({
   }
 
   async function onFace(position: number, small: string) {
+    await phone.clear();
     const ok = await run(() => face({ data: { token: tokenRef.current, position, image: small } }));
     if (ok) await advance(queue);
   }
@@ -771,11 +876,21 @@ export function CheckInFlow({
   }
 
   async function onPhoto(full: string, small: string, p = plan, people = adults) {
+    await phone.clear();
     const res = await run(() =>
       photo({
         data: { token: tokenRef.current, image: full, ...(p?.keepIdPhoto ? { small } : {}) },
       }),
     );
+    afterPhoto(res, p, people);
+  }
+
+  /** The answer to the lead guest's ID, from this screen's camera or the phone's. */
+  function afterPhoto(
+    res: Awaited<ReturnType<typeof verifyPhotoId>> | null,
+    p = plan,
+    people = adults,
+  ) {
     if (!res) return fallback("photo_id");
     if (res.status === "retry") {
       return setMessage(
@@ -1208,12 +1323,14 @@ export function CheckInFlow({
                 </>
               ) : (
                 <div className="mt-6">
-                  <IdCamera
-                    busy={busy}
-                    side={cameraSide}
+                  <PhotoChoice
+                    kiosk={kiosk}
+                    phone={phone}
+                    kind="id"
+                    task="find"
                     facing={cameraFor("id", kiosk, flow)}
-                    onCapture={(full, small) => void onIdFirst(full, small)}
-                    onFail={() => setStep({ name: "letter" })}
+                    onUseScreen={() => setScreenStep(stepKey)}
+                    screen={onScreen}
                     extra={
                       <Button
                         variant="ghost"
@@ -1224,6 +1341,29 @@ export function CheckInFlow({
                         {copy.idFirstOther}
                       </Button>
                     }
+                    camera={({ facing, onFail, panel }) => (
+                      <IdCamera
+                        busy={busy}
+                        side={cameraSide}
+                        facing={facing}
+                        upload={!kiosk}
+                        onCapture={(full, small) => void onIdFirst(full, small)}
+                        onFail={kiosk ? onFail : () => setStep({ name: "letter" })}
+                        extra={
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="lg"
+                              className="w-full"
+                              onClick={() => setStep({ name: "letter" })}
+                            >
+                              {copy.idFirstOther}
+                            </Button>
+                            {panel}
+                          </>
+                        }
+                      />
+                    )}
                   />
                 </div>
               )}
@@ -1254,12 +1394,14 @@ export function CheckInFlow({
                 </>
               ) : (
                 <div className="mt-6">
-                  <IdCamera
-                    busy={busy}
-                    side={cameraSide}
+                  <PhotoChoice
+                    kiosk={kiosk}
+                    phone={phone}
+                    kind="id"
+                    task="lead"
                     facing={cameraFor("id", kiosk, flow)}
-                    onCapture={(full, small) => void onPhoto(full, small)}
-                    onFail={() => fallback("photo_id", copy.idCameraFailed)}
+                    onUseScreen={() => setScreenStep(stepKey)}
+                    screen={onScreen}
                     extra={
                       <Button
                         variant="ghost"
@@ -1270,6 +1412,29 @@ export function CheckInFlow({
                         {copy.idUseOther}
                       </Button>
                     }
+                    camera={({ facing, onFail, panel }) => (
+                      <IdCamera
+                        busy={busy}
+                        side={cameraSide}
+                        facing={facing}
+                        upload={!kiosk}
+                        onCapture={(full, small) => void onPhoto(full, small)}
+                        onFail={kiosk ? onFail : () => fallback("photo_id", copy.idCameraFailed)}
+                        extra={
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="lg"
+                              className="w-full"
+                              onClick={() => fallback("photo_id")}
+                            >
+                              {copy.idUseOther}
+                            </Button>
+                            {panel}
+                          </>
+                        }
+                      />
+                    )}
                   />
                 </div>
               )}
@@ -1354,13 +1519,15 @@ export function CheckInFlow({
                 </>
               ) : (
                 <div className="mt-6">
-                  <IdCamera
+                  <PhotoChoice
                     key={`companion-${step.position}`}
-                    busy={busy}
-                    side={cameraSide}
+                    kiosk={kiosk}
+                    phone={phone}
+                    kind="id"
+                    task="companion"
                     facing={cameraFor("id", kiosk, flow)}
-                    onCapture={(full, small) => void onCompanion(step.position, full, small)}
-                    onFail={() => void onSkipCompanion(step.position)}
+                    onUseScreen={() => setScreenStep(stepKey)}
+                    screen={onScreen}
                     extra={
                       <Button
                         variant="ghost"
@@ -1372,6 +1539,30 @@ export function CheckInFlow({
                         {copy.companionSkip}
                       </Button>
                     }
+                    camera={({ facing, onFail, panel }) => (
+                      <IdCamera
+                        busy={busy}
+                        side={cameraSide}
+                        facing={facing}
+                        upload={!kiosk}
+                        onCapture={(full, small) => void onCompanion(step.position, full, small)}
+                        onFail={kiosk ? onFail : () => void onSkipCompanion(step.position)}
+                        extra={
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="lg"
+                              className="w-full"
+                              disabled={busy}
+                              onClick={() => void onSkipCompanion(step.position)}
+                            >
+                              {copy.companionSkip}
+                            </Button>
+                            {panel}
+                          </>
+                        }
+                      />
+                    )}
                   />
                 </div>
               )}
@@ -1412,17 +1603,16 @@ export function CheckInFlow({
                 {step.position === 0 ? copy.faceTitle : copy.faceTitleOther(step.position + 1)}
               </h1>
               <div className="mt-6">
-                <IdCamera
+                <PhotoChoice
                   key={`face-${step.position}`}
-                  facing={cameraFor("face", kiosk, flow)}
+                  kiosk={kiosk}
+                  phone={phone}
                   kind="face"
-                  busy={busy}
-                  side={cameraSide}
-                  help={copy.faceBody}
-                  cta={copy.faceTake}
-                  busyLabel={copy.faceSaving}
-                  onCapture={(_full, small) => void onFace(step.position, small)}
-                  onFail={() => void advance(queue)}
+                  task="face"
+                  facePending={facePendingAt === step.position}
+                  facing={cameraFor("face", kiosk, flow)}
+                  onUseScreen={() => setScreenStep(stepKey)}
+                  screen={onScreen}
                   extra={
                     <Button
                       variant="ghost"
@@ -1434,6 +1624,33 @@ export function CheckInFlow({
                       {copy.faceSkip}
                     </Button>
                   }
+                  camera={({ facing, onFail, panel }) => (
+                    <IdCamera
+                      facing={facing}
+                      kind="face"
+                      busy={busy}
+                      side={cameraSide}
+                      help={copy.faceBody}
+                      cta={copy.faceTake}
+                      busyLabel={copy.faceSaving}
+                      onCapture={(_full, small) => void onFace(step.position, small)}
+                      onFail={kiosk ? onFail : () => void advance(queue)}
+                      extra={
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="lg"
+                            className="w-full"
+                            disabled={busy}
+                            onClick={() => void advance(queue)}
+                          >
+                            {copy.faceSkip}
+                          </Button>
+                          {panel}
+                        </>
+                      }
+                    />
+                  )}
                 />
               </div>
             </section>
@@ -2273,6 +2490,7 @@ export function JoinCheckIn({ share }: { share: string }) {
               <div className="mt-6">
                 <IdCamera
                   busy={busy}
+                  upload
                   onCapture={(full, small) =>
                     void run(() =>
                       companionId({

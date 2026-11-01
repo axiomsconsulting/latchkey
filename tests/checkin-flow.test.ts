@@ -147,6 +147,11 @@ describe("the check-in journey", () => {
     expect(cameraFor("id", true, { ...QUICK, idCamera: "back" })).toBe("environment");
     expect(cameraFor("id", false, QUICK)).toBe("environment");
     expect(cameraFor("face", false, { ...QUICK, selfieCamera: "back" })).toBe("user");
+    // None: the door tablet's camera isn't used (photos on a phone); a guest's own phone still uses its own.
+    expect(cameraFor("id", true, { ...QUICK, idCamera: "none" })).toBeNull();
+    expect(cameraFor("id", false, { ...QUICK, idCamera: "none" })).toBe("environment");
+    expect(normaliseFlow({ idCamera: "none", selfieCamera: "sideways" }).idCamera).toBe("none");
+    expect(normaliseFlow({ selfieCamera: "sideways" }).selfieCamera).toBe("front");
   });
 
   it("sends the guest's screen only what it needs", () => {
@@ -157,6 +162,7 @@ describe("the check-in journey", () => {
       checkout: "three",
       idCamera: "front",
       selfieCamera: "front",
+      selfie: true,
     });
   });
 });

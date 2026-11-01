@@ -1311,11 +1311,12 @@ export const checkinSettings = branded({
       "Automatic reading is off: turn on Keep the ID photo, or this step is skipped",
     cameras: "Cameras on the door tablet",
     camerasHelp:
-      "On a guest's own phone the back camera reads the ID and the front one takes the face photo. Guests can switch camera on the screen either way.",
+      "Every photo step on the door tablet also offers a square (and a link by text) to take the photos on a phone, which usually has the better camera. None: only the phone. On a guest's own phone the back camera reads the ID and the front one takes the face photo.",
     idCamera: "Photo ID",
     selfieCamera: "Face photo",
     front: "Front",
     back: "Back",
+    noCamera: "None (phone)",
     saved: "Check-in journey saved",
     adminTitle: "Check-in journey (Latchkey)",
     adminBody:
@@ -1816,7 +1817,47 @@ export const guest = branded({
   idCameraHelp:
     "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
   idTakePhoto: "Take photo",
+  idUpload: "Use a saved photo of my ID",
   idChecking: "Checking your name…",
+  // Photos on a phone, for a check-in at the door tablet (photo-handoff.ts)
+  phonePhotos: {
+    title: "Use your phone's camera",
+    titleOnly: "Take the photos on your phone",
+    body: "Scan the square with your phone's camera. You'll take a photo of your ID and then a selfie, and this screen carries on by itself.",
+    bodyId:
+      "Scan the square with your phone's camera to take the photo there. This screen carries on by itself.",
+    textMe: "Text me the link",
+    whatsAppMe: "WhatsApp me the link",
+    number: "Your mobile number",
+    sendLink: "Send",
+    sent: "Sent. Open the link on your phone.",
+    demo: "Demo: in live mode the link would be sent now.",
+    badNumber: "That number doesn't look right. Please check it.",
+    failed: "That didn't send. Please scan the square instead.",
+    onPhone: "Carry on on your phone",
+    onPhoneId: "Take the photo of the ID on your phone.",
+    onPhoneFace: "Take the selfie on your phone.",
+    onPhoneFind: "Take the photo of your ID on your phone. We'll find your booking from it.",
+    useScreen: "Use this screen's camera instead",
+    noCamera: "This screen has no camera, so the photos are taken on a phone.",
+  },
+  // The phone's own page (/photos/<link>)
+  photosPage: {
+    connected: "You're connected",
+    connectedBody:
+      "Carry on at the door screen. When it needs a photo, it will appear here straight away.",
+    idTitle: "A photo of your ID",
+    idTitleOther: (n: number) => `Guest ${n}'s photo ID`,
+    faceTitle: "Now a selfie",
+    faceTitleOther: (n: number) => `Guest ${n}: a selfie`,
+    faceBody: "Look at the camera. This is a live photo, so it can't be uploaded.",
+    faceSkip: "Skip the selfie",
+    sentTitle: "Thank you",
+    sentBody: "That's done. Carry on at the door screen.",
+    closedTitle: "All done",
+    closedBody: "Check-in at the door has finished. You can close this page.",
+    moved: "The door screen has moved on. Carry on there.",
+  },
   photoStages: {
     sending: "Sending your photo…",
     reading: "Reading your ID…",
