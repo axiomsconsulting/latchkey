@@ -5618,3 +5618,24 @@ export const partnerCopy = branded({
   statementSave: "Save details",
   statementSaved: "Saved.",
 });
+
+/** The guide text box's formatting toolbar (RichTextField). */
+export const richTextCopy = branded({
+  toolbar: "Formatting",
+  bold: "Bold",
+  italic: "Italic",
+  underline: "Underline",
+  large: "Large (heading font)",
+  medium: "Medium (heading font)",
+  small: "Small print",
+  bullets: "Bullet list",
+  numbers: "Numbered list",
+  table: "Table",
+  plain: "Plain",
+  plainTitle: "Turn the selected lines back into plain text",
+  preview: "Preview",
+  previewTitle: "How guests see it",
+  empty: "Nothing written yet.",
+  advice: (fonts: { heading: string; body: string } | null) =>
+    `${fonts ? `Large and Medium use your heading font (${fonts.heading}); everything else your body font (${fonts.body}). ` : "Large and Medium use your theme's heading font; everything else its body font. "}Keep to one Large line per section, bold for what guests must not miss (times, codes), a numbered list for steps, and a table for things like bin days or opening hours. Two or three columns read best on a phone.`,
+});

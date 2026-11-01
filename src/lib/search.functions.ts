@@ -8,6 +8,7 @@
  * entries, cleared guest details, removed guide sections, deleted extras,
  * inactive rooms and calendar links.
  */
+import { plainText } from "./rich-text";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -228,7 +229,7 @@ export const omniSearch = createServerFn({ method: "GET" })
         kind: "guide",
         id: k,
         title: g.title || g.section_key,
-        subtitle: (g.summary ?? "").slice(0, 80),
+        subtitle: plainText(g.summary).slice(0, 80),
         href: guideHref(g.section_key, g.room_id),
         propertyId: g.property_id,
       });

@@ -146,7 +146,7 @@ export const saveGuideSection = createServerFn({ method: "POST" })
         propertyId: uuid,
         roomId: uuid.nullable().default(null),
         sectionKey,
-        summary: z.string().max(500).nullable().default(null),
+        summary: z.string().max(2000).nullable().default(null),
         steps: z
           .array(
             z.object({

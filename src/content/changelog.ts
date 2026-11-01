@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.106.0",
+    date: "2026-11-01",
+    title: "Formatting in your stay guide",
+    items: [
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Guide text can now be formatted from a small toolbar: bold, italic, underline, Large and Medium lines in your heading font, small print, bullet and numbered lists, and tables (handy for bin days or opening hours). Preview shows how guests see it, with advice on keeping to your theme. Anything you wrote before looks the same.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "A section's opening text can now be up to 2,000 characters, so there's room for a table.",
+      },
+    ],
+  },
+  {
     version: "0.105.0",
     date: "2026-11-01",
     title: "Check-in photos on a phone",

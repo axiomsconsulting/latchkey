@@ -3,6 +3,7 @@
  * the "things people usually forget" card and link validity. Pure and tested.
  */
 
+import { plainText } from "./rich-text";
 import { addDays, dayOfWeek, zonedParts } from "./dates";
 
 export type BuiltInKey =
@@ -307,7 +308,8 @@ export function forgetCard(sections: GuideSection[], todayWindows: string[]): Fo
   const chosen = sections.filter((s) => s.pinned);
   const source = chosen.length ? chosen : sections.filter((s) => DEFAULT_PINNED.includes(s.key));
   const items: ForgetItem[] = source
-    .map((s) => ({ key: s.key, text: s.summary?.trim() || s.title }))
+    // A one-line reminder: the first line of the text, without its formatting.
+    .map((s) => ({ key: s.key, text: plainText(s.summary).split("\n")[0]?.trim() || s.title }))
     .filter((i) => i.text.length > 0);
   for (const t of todayWindows) items.push({ key: "today", text: `Today: ${t}` });
   return items;

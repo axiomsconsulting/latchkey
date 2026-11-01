@@ -5,10 +5,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ExpandableText } from "@/components/guest/ExpandableText";
+import { RichLine } from "@/components/RichText";
 import { GuideAttachments, type Attachment } from "@/components/guest/GuideAttachments";
 import { sectionIcon } from "@/components/guest/guide-icons";
 import { guideCopy as gcopy } from "@/content/copy";
-import { splitLead } from "@/lib/guide-lead";
+import { splitLeadRich } from "@/lib/guide-lead";
 import { cn } from "@/lib/utils";
 
 type Section = {
@@ -47,7 +48,7 @@ export function GuideSections({
         const locked = sec.summary === "DOOR_LOCKED";
         const { lead, rest } = locked
           ? { lead: lockedText ?? "", rest: "" }
-          : splitLead(sec.summary);
+          : splitLeadRich(sec.summary);
         const isOpen = open.includes(sec.key);
         return (
           <AccordionItem
@@ -73,7 +74,7 @@ export function GuideSections({
                         !isOpen && "line-clamp-1",
                       )}
                     >
-                      {lead}
+                      <RichLine text={lead} />
                     </span>
                   ) : null}
                 </span>
