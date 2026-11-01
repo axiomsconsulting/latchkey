@@ -6,6 +6,7 @@
 
 import { mapEventsToBookings, parseIcs, type Channel } from "./ical";
 import {
+  adoptReplacements,
   bookingsToCancel,
   buildPatch,
   detectRoomClashes,
@@ -158,31 +159,38 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
     const cols =
       "id, external_uid, connection_id, room_id, status, check_in_date, check_out_date, manual_fields, guest_full_name, phone_last4, guest_count, check_in_time, check_out_time, reservation_code";
     const { withLegacy } = await import("./checkin.server");
+    // This site's stays, and any from this calendar the host has since moved
+    // to another site (an extension marked direct), so they're still matched.
+    const sameFeed = `channel.eq.${conn.channel},connection_id.eq.${conn.id}`;
     const { data: existingRows } = await withLegacy(
       () =>
         supabaseAdmin
           .from("bookings")
           .select(`${cols}, archived_at`)
           .eq("property_id", conn.property_id)
-          .eq("channel", conn.channel),
+          .or(sameFeed),
       () =>
         supabaseAdmin
           .from("bookings")
           .select(cols)
           .eq("property_id", conn.property_id)
-          .eq("channel", conn.channel),
+          .or(sameFeed),
     );
 
     const existing = (existingRows ?? []) as unknown as ExistingBooking[];
     warnings.push(...detectRoomClashes(existing, incoming, conn.room_id));
 
     const byUid = new Map(existing.filter((b) => b.external_uid).map((b) => [b.external_uid!, b]));
+    const byId = new Map(existing.map((b) => [b.id, b]));
+    // Closed nights given to a guest that the site re-issued under a new entry.
+    const adopted = adoptReplacements(existing, incoming, conn.id, conn.room_id);
     const seen = new Set<string>();
     let unhidden = 0;
 
     for (const b of incoming) {
       seen.add(b.externalUid);
-      const prior = byUid.get(b.externalUid);
+      const adoptedId = adopted.get(b.externalUid);
+      const prior = byUid.get(b.externalUid) ?? (adoptedId ? byId.get(adoptedId) : undefined);
       if (prior) {
         if (prior.room_id && conn.room_id && prior.room_id !== conn.room_id) continue;
         const patch = buildPatch(prior, b);
@@ -194,6 +202,8 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
           listing_title: b.externalListingTitle,
         };
         if (!prior.connection_id) Object.assign(payload, { connection_id: conn.id });
+        if (prior.external_uid !== b.externalUid)
+          Object.assign(payload, { external_uid: b.externalUid });
         // Hidden stays stay hidden, unless the platform has changed them.
         if (shouldUnhide(prior, b)) {
           Object.assign(payload, { archived_at: null });
@@ -232,7 +242,8 @@ export async function syncConnection(connectionId: string): Promise<SyncOutcome>
       }
     }
 
-    const toCancel = bookingsToCancel(existing, seen, conn.id, today);
+    const keep = new Set(adopted.values());
+    const toCancel = bookingsToCancel(existing, seen, conn.id, today).filter((id) => !keep.has(id));
     if (toCancel.length > 0) {
       await supabaseAdmin.from("bookings").update({ status: "cancelled" }).in("id", toCancel);
       cancelled = toCancel.length;

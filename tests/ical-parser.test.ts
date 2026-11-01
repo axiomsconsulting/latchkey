@@ -7,7 +7,12 @@ import {
   maskUrl,
   parseIcs,
 } from "../src/lib/ical";
-import { bookingsToCancel, buildPatch, type ExistingBooking } from "../src/lib/sync-logic";
+import {
+  adoptReplacements,
+  bookingsToCancel,
+  buildPatch,
+  type ExistingBooking,
+} from "../src/lib/sync-logic";
 import { addDays, formatUkDate, nightsBetween, stayState } from "../src/lib/dates";
 
 const AIRBNB_FEED = `BEGIN:VCALENDAR
@@ -183,17 +188,97 @@ describe("sync reconciliation", () => {
   it("cancels only future stays from the same connection", () => {
     const rows: ExistingBooking[] = [
       { ...baseExisting, id: "past", check_out_date: "2026-01-01" },
-      { ...baseExisting, id: "future", external_uid: "uid-2", check_out_date: "2026-12-01" },
+      {
+        ...baseExisting,
+        id: "future",
+        external_uid: "uid-2",
+        check_in_date: "2026-11-28",
+        check_out_date: "2026-12-01",
+      },
       {
         ...baseExisting,
         id: "other-connection",
         external_uid: "uid-3",
         connection_id: "c2",
+        check_in_date: "2026-11-28",
         check_out_date: "2026-12-01",
       },
     ];
     const ids = bookingsToCancel(rows, new Set<string>(), "c1", "2026-06-01");
     expect(ids).toEqual(["future"]);
+  });
+
+  it("never cancels a stay that is under way, leaving today or checked out", () => {
+    const today = "2026-10-31";
+    const rows: ExistingBooking[] = [
+      // Booking.com drops a stay from its calendar on check-out day.
+      { ...baseExisting, id: "leaving", check_in_date: "2026-10-30", check_out_date: today },
+      { ...baseExisting, id: "started", check_in_date: "2026-10-29", check_out_date: "2026-11-02" },
+      {
+        ...baseExisting,
+        id: "checked-out-early",
+        status: "checked_out",
+        check_in_date: today,
+        check_out_date: "2026-11-02",
+      },
+      {
+        ...baseExisting,
+        id: "here",
+        status: "checked_in",
+        check_in_date: today,
+        check_out_date: "2026-11-02",
+      },
+      {
+        ...baseExisting,
+        id: "arriving",
+        check_in_date: today,
+        check_out_date: "2026-11-02",
+      },
+    ];
+    expect(bookingsToCancel(rows, new Set<string>(), "c1", today)).toEqual(["arriving"]);
+  });
+
+  it("keeps closed nights given to a guest when the site re-issues them", () => {
+    const extension: ExistingBooking = {
+      ...baseExisting,
+      id: "ext",
+      external_uid: "old-block",
+      check_in_date: "2026-10-27",
+      check_out_date: "2026-10-29",
+      guest_full_name: "Rosario Horta",
+      reservation_code: null,
+      manual_fields: ["guest_full_name", "status"],
+    };
+    const untouched: ExistingBooking = {
+      ...extension,
+      id: "plain",
+      external_uid: "plain-block",
+      check_in_date: "2026-12-01",
+      check_out_date: "2026-12-03",
+      guest_full_name: null,
+      manual_fields: [],
+    };
+    const block = (uid: string, from: string, to: string) => ({
+      externalUid: uid,
+      reservationCode: null,
+      guestFullName: null,
+      phoneLast4: null,
+      guestCount: null,
+      checkInDate: from,
+      checkOutDate: to,
+      checkInTime: "15:00",
+      checkOutTime: "11:00",
+      status: "blocked" as const,
+      externalListingTitle: null,
+    });
+    const adopted = adoptReplacements(
+      [extension, untouched],
+      [block("new-block", "2026-10-28", "2026-10-30"), block("far", "2026-12-02", "2026-12-04")],
+      "c1",
+      "r1",
+    );
+    // The guest's nights follow the new entry; a plain block the host never touched doesn't.
+    expect([...adopted]).toEqual([["new-block", "ext"]]);
   });
 });
 

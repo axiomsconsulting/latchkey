@@ -5,6 +5,7 @@ import {
   filterBookings,
   readFilters,
   sortBookings,
+  liftedBlock,
   stayGroup,
   type ListBooking,
 } from "../src/lib/booking-list";
@@ -177,5 +178,16 @@ describe("compact stay lines", () => {
         () => "Airbnb",
       ),
     ).toBe("Jane Brown");
+  });
+
+  it("leaves out closed nights the site opened again, and never calls a cancelled echo closed", () => {
+    const lifted = b("lifted", {
+      status: "cancelled",
+      guest_full_name: null,
+      reservation_code: null,
+    });
+    const echo = b("echo", { status: "cancelled", mirror_of: "x" });
+    expect(liftedBlock(lifted)).toBe(true);
+    expect(stayGroup(echo, today)).toBe("cancelled");
   });
 });

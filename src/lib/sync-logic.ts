@@ -109,9 +109,14 @@ export function shouldUnhide(existing: ExistingBooking, incoming: ParsedBooking)
   return moved;
 }
 
+/** Stays the guest has started or finished: a feed dropping them is not a cancellation. */
+const UNDER_WAY = new Set(["checked_in", "checked_out"]);
+
 /**
  * Bookings previously delivered by this connection that have vanished from the
- * feed. Past stays are left alone; future stays are cancelled, never deleted.
+ * feed. Only stays still ahead are cancelled, never deleted: sites drop a stay
+ * from their calendar once it is under way or on its check-out day, and a stay
+ * the guest has checked in to (or out of) was never cancelled.
  */
 export function bookingsToCancel(
   existing: ExistingBooking[],
@@ -126,9 +131,78 @@ export function bookingsToCancel(
         b.external_uid != null &&
         !seenUids.has(b.external_uid) &&
         b.status !== "cancelled" &&
-        b.check_out_date >= today,
+        !UNDER_WAY.has(b.status) &&
+        b.check_in_date >= today &&
+        b.check_out_date > today,
     )
     .map((b) => b.id);
+}
+
+function overlapsDates(a: { check_in_date: string; check_out_date: string }, b: ParsedBooking) {
+  return a.check_in_date < b.checkOutDate && b.checkInDate < a.check_out_date;
+}
+
+function sharedNightsWith(a: { check_in_date: string; check_out_date: string }, b: ParsedBooking) {
+  const start = a.check_in_date > b.checkInDate ? a.check_in_date : b.checkInDate;
+  const end = a.check_out_date < b.checkOutDate ? a.check_out_date : b.checkOutDate;
+  return Math.round(
+    (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000,
+  );
+}
+
+/** The host has made this entry theirs: named the guest, or set its status or dates. */
+function hostOwned(b: ExistingBooking): boolean {
+  const manual = new Set(b.manual_fields ?? []);
+  return (
+    manual.has("guest_full_name") ||
+    manual.has("status") ||
+    manual.has("check_in_date") ||
+    manual.has("check_out_date") ||
+    UNDER_WAY.has(b.status)
+  );
+}
+
+/**
+ * Closed nights the host gave to a guest (an extension kept free on the site
+ * by closing the dates) get a new calendar entry each time the host changes
+ * the closure: the old one vanishes and a nameless new one appears on the
+ * same room. Pairs each vanished, host-owned entry with the new nameless entry
+ * sharing most nights with it, so the stay keeps its guest and simply follows
+ * the new entry instead of being cancelled and replaced by an empty one.
+ * Returns new uid → existing booking id.
+ */
+export function adoptReplacements(
+  existing: ExistingBooking[],
+  incoming: ParsedBooking[],
+  connectionId: string,
+  roomId: string | null,
+): Map<string, string> {
+  const known = new Set(existing.map((b) => b.external_uid).filter(Boolean));
+  const seen = new Set(incoming.map((b) => b.externalUid));
+  const fresh = incoming.filter(
+    (b) => !known.has(b.externalUid) && !b.guestFullName && !b.reservationCode,
+  );
+  const vanished = existing.filter(
+    (b) =>
+      b.connection_id === connectionId &&
+      b.external_uid != null &&
+      !seen.has(b.external_uid) &&
+      b.status !== "cancelled" &&
+      (!roomId || !b.room_id || b.room_id === roomId) &&
+      hostOwned(b),
+  );
+  const out = new Map<string, string>();
+  const taken = new Set<string>();
+  for (const b of vanished) {
+    const match = fresh
+      .filter((f) => !out.has(f.externalUid) && overlapsDates(b, f))
+      .sort((x, y) => sharedNightsWith(b, y) - sharedNightsWith(b, x))[0];
+    if (match && !taken.has(b.id)) {
+      out.set(match.externalUid, b.id);
+      taken.add(b.id);
+    }
+  }
+  return out;
 }
 
 /**
