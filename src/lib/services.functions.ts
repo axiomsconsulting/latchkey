@@ -307,3 +307,35 @@ export const createHostJob = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { id: row.id };
   });
+
+/** Settings → Kiosk: just the door tablet's look and button size, kept in the property's theme. */
+export const saveKioskLook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        propertyId: uuid,
+        kioskLook: z.enum(["auto", "standard", "xl"]),
+        kioskTouch: z.enum(["standard", "expanded"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: p, error: readErr } = await context.supabase
+      .from("properties")
+      .select("theme_config, short_code")
+      .eq("id", data.propertyId)
+      .single();
+    if (readErr || !p) throw new Error("Property not found.");
+    const theme = normaliseTheme({
+      ...((p.theme_config as Record<string, unknown> | null) ?? {}),
+      kioskLook: data.kioskLook,
+      kioskTouch: data.kioskTouch,
+    });
+    const { error } = await context.supabase
+      .from("properties")
+      .update({ theme_config: theme as never })
+      .eq("id", data.propertyId);
+    if (error) throw new Error(error.message);
+    return { code: p.short_code as string };
+  });

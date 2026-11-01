@@ -46,6 +46,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.109.0",
+    date: "2026-11-01",
+    title: "Getting started checklist and door tablet settings in one place",
+    items: [
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Today shows a Getting started card until you're set up: add rooms, link your booking calendars, set your door PIN, write your stay guide, pair a door tablet and take card payments. Each step ticks itself off when it's done; the optional ones can be marked Not for us, and the card can be hidden.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Every door tablet setting is now under Settings → Kiosk, including its look (Standard or Express) and button size, which used to be in Look and feel. Today's kiosk card links straight there.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        admin: true,
+        text: "Latchkey admin → Integrations → Test all connections: a harmless call to Stripe, Twilio, WhatsApp, Google Drive, email, Telegram, app notifications, booking-site email and listing import, with what to do for anything not working, problems first.",
+      },
+    ],
+  },
+  {
     version: "0.108.0",
     date: "2026-11-01",
     title: "Door tablet camera you can rely on, and smoother check-in on older tablets",
