@@ -918,6 +918,7 @@ export const todayDash = branded({
   openKiosk: "Open kiosk",
   guestPage: "Guest check-in page",
   printQr: "Print QR code",
+  kioskSettings: "Door tablet settings",
   checkinSettings: "Check-in settings",
   kioskPeek: "Opens full screen in a new tab. Leave it running on a tablet by the front door.",
   pagePeek: (path: string) => `The page guests reach from the QR code: ${path}`,
@@ -2274,6 +2275,9 @@ export const themeStudio = branded({
   kioskGroup: "Door tablet",
   kioskTouch: "Button size on the door tablet",
   kioskTouchHelp: "Guests' own phones always keep the standard size.",
+  kioskSaved: "Door tablet look saved",
+  kioskMoved:
+    "The door tablet's look (Standard or Express) and button size are in Settings → Kiosk, with the rest of the door tablet.",
   kioskLook: "Look on the door tablet",
   kioskLooks: {
     auto: { label: "Automatic", help: "Follows Latchkey's recommended look for door tablets." },
@@ -4583,6 +4587,7 @@ export const settingsMenuCopy = branded({
     invoices: ["Invoices", "money"],
     theme: ["Look and feel", "look"],
     kioskTablets: ["Door tablets", "kiosk"],
+    kioskLook: ["Door tablet look", "kiosk"],
     welcomeCards: ["Check-in cards", "kiosk"],
     goodbye: ["Check-out cards", "kiosk"],
     kioskScreen: ["Door tablet screen", "kiosk"],
@@ -5767,4 +5772,47 @@ export const whatsAppAdminCopy = branded({
   hostSave: "Make it live",
   hostRemove: "Take it off",
   hostSaved: "Saved",
+});
+
+/** Today: the getting-started checklist (SetupChecklist). */
+export const setupCopy = branded({
+  title: "Getting started",
+  progress: (done: number, total: number) => `${done} of ${total} done`,
+  doneList: (steps: string[]) => `Done: ${steps.join(" · ")}`,
+  hide: "Hide for now",
+  skip: "Not for us",
+  undo: "Show again",
+  go: "Set up",
+  steps: {
+    rooms: ["Add your rooms", "Each bookable room, with its name and how many guests it sleeps."],
+    calendar: [
+      "Link your booking calendars",
+      "Paste each room's Airbnb or Booking.com calendar link so stays appear by themselves.",
+    ],
+    pin: ["Set your door PIN", "The code you use to leave the door tablet's check-in screen."],
+    guide: [
+      "Write your stay guide",
+      "Getting in, Wi-Fi, house rules: guests get it on their phone as soon as they check in.",
+    ],
+    tablet: [
+      "Pair a door tablet",
+      "Open your kiosk link on the tablet and enter the code it shows. No tablet? Guests can check in on their own phone.",
+    ],
+    payments: [
+      "Take card payments",
+      "Connect Stripe so guests can pay for extras and direct stays by card, straight to you.",
+    ],
+  } as Record<string, [string, string]>,
+});
+
+/** Latchkey admin → Integrations → Test all connections (ConnectionHealth). */
+export const connectionHealthCopy = branded({
+  title: "Test all connections",
+  body: "A harmless call to each outside service (nothing is sent to anyone), with what to do for anything not working. Problems are listed first.",
+  run: "Test all connections",
+  again: "Test again",
+  status: { ok: "Working", warn: "Needs a look", fail: "Not working", off: "Not set up" } as Record<
+    string,
+    string
+  >,
 });

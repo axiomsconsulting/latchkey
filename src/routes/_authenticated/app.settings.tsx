@@ -65,6 +65,7 @@ import { ReviewSettings } from "@/components/host/ReviewSettings";
 import { CheckinJourney } from "@/components/host/CheckinJourney";
 import { KioskCalibration } from "@/components/host/KioskCalibration";
 import { DoorTablets } from "@/components/host/DoorTablets";
+import { KioskLookSettings } from "@/components/host/KioskLookSettings";
 import { KioskRestSettings } from "@/components/host/KioskRestSettings";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { SaveButton, changed } from "@/components/host/SaveButton";
@@ -89,6 +90,7 @@ const FOCUS = [
   "reviews",
   "kioskRest",
   "kioskTablets",
+  "kioskLook",
   "kioskScreen",
   "goodbye",
   "welcomeCards",
@@ -131,6 +133,8 @@ const OWN_CARD = new Set([
   "reviews",
   "kioskRest",
   "kioskTablets",
+  "kioskLook",
+  "kioskLook",
   "kioskScreen",
   "goodbye",
   "welcomeCards",
@@ -692,6 +696,21 @@ function SettingsPage() {
             <div id="settings-kioskTablets" className="scroll-mt-24 rounded-2xl">
               <DoorTablets
                 property={themedProperty as unknown as { id: string; short_code: string }}
+              />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="kioskLook">
+          {themedProperty ? (
+            <div id="settings-kioskLook" className="scroll-mt-24 rounded-2xl">
+              <KioskLookSettings
+                property={
+                  themedProperty as unknown as {
+                    id: string;
+                    short_code: string;
+                    theme_config?: unknown;
+                  }
+                }
               />
             </div>
           ) : null}

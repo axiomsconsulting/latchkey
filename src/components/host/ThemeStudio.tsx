@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, ImagePlus, KeyRound, Loader2, Save, Tablet, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -918,47 +919,14 @@ export function ThemeStudio({
               </label>
             </Group>
             <Group value="kiosk" title={copy.kioskGroup}>
-              <p className="text-sm font-medium">{copy.kioskLook}</p>
-              <div
-                role="radiogroup"
-                aria-label={copy.kioskLook}
-                className="grid gap-2 sm:grid-cols-3"
+              <p className="text-sm text-muted-foreground">{copy.kioskMoved}</p>
+              <Link
+                to="/app/settings"
+                search={{ focus: "kioskLook" }}
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
               >
-                {(["auto", "standard", "xl"] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    role="radio"
-                    aria-checked={theme.kioskLook === v}
-                    onClick={() => set("kioskLook", v)}
-                    className={`rounded-xl border p-3 text-left text-sm transition-colors ${theme.kioskLook === v ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary"}`}
-                  >
-                    <span className="block font-medium">{copy.kioskLooks[v].label}</span>
-                    <span className="block text-muted-foreground">{copy.kioskLooks[v].help}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-sm font-medium">{copy.kioskTouch}</p>
-              <div
-                role="radiogroup"
-                aria-label={copy.kioskTouch}
-                className="grid gap-2 sm:grid-cols-2"
-              >
-                {(["standard", "expanded"] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    role="radio"
-                    aria-checked={theme.kioskTouch === v}
-                    onClick={() => set("kioskTouch", v)}
-                    className={`rounded-xl border p-3 text-left text-sm transition-colors ${theme.kioskTouch === v ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-secondary"}`}
-                  >
-                    <span className="block font-medium">{copy.kioskTouches[v].label}</span>
-                    <span className="block text-muted-foreground">{copy.kioskTouches[v].help}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">{copy.kioskTouchHelp}</p>
+                {copy.kioskGroup} →
+              </Link>
             </Group>
           </Accordion>
 

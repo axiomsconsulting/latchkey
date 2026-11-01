@@ -44,6 +44,7 @@ import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { GuestReviews } from "@/components/host/GuestReviews";
 import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
+import { SetupChecklist } from "@/components/host/SetupChecklist";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
 import { TabletStrip } from "@/components/host/DoorTablets";
 import { KioskCardsPanel } from "@/components/host/KioskCardsPanel";
@@ -195,6 +196,7 @@ function TodayPage() {
       <p className="-mt-3 text-xs text-muted-foreground">{copy.hint}</p>
 
       <AlertsPanel />
+      <SetupChecklist propertyId={selectedId} />
 
       <DashboardSections
         page="today"
@@ -1475,8 +1477,9 @@ function KioskCard({
       icon={QrCode}
       title={copy.kioskTitle}
       action={
-        <CardLink to="/app/settings" search={{ focus: "checkin" }}>
-          {copy.checkinSettings}
+        // Every door tablet setting is on Settings → Kiosk.
+        <CardLink to="/app/settings" search={{ focus: "kioskTablets" }}>
+          {copy.kioskSettings}
         </CardLink>
       }
     >
