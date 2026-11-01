@@ -422,6 +422,9 @@ export async function runRetentionSweep(): Promise<number> {
   await supabaseAdmin.from("check_in_attempts").delete().lt("created_at", monthAgo);
   await supabaseAdmin.from("checkin_sessions").delete().lt("expires_at", new Date().toISOString());
   await supabaseAdmin.from("stay_tokens").delete().lt("expires_at", new Date().toISOString());
+  // Phone links for check-in photos (photo-handoff.ts) end after 30 minutes.
+  const { purgeHandoffs } = await import("./photo-handoff.server");
+  await purgeHandoffs().catch(() => 0);
   // Demo rate-limit rows are only needed for an hour; keep a day at most.
   await db
     .from("demo_starts")

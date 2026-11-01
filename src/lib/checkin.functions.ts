@@ -813,19 +813,33 @@ export const setGuestName = createServerFn({ method: "POST" })
  * (checkin_joins) is only let in where `join` is allowed, and only for its
  * own guest; everywhere else its token is refused.
  */
-async function sessionContext(t: string, opts: { join?: boolean; share?: boolean } = {}) {
+async function sessionContext(
+  t: string,
+  opts: { join?: boolean; share?: boolean; photos?: boolean } = {},
+) {
   const { admin, loadSession, loadSessionById, loadSessionByShare, loadJoin } = await srv();
   let session: Awaited<ReturnType<typeof loadSession>>;
   let join: Awaited<ReturnType<typeof loadJoin>> | null = null;
+  // A phone taking the photos for a check-in at the door tablet (photo-handoff.ts): only its current task.
+  let handoff: import("./photo-handoff.server").PhoneHandoff | null = null;
   if (opts.share) {
     session = await loadSessionByShare(t);
   } else {
     try {
       session = await loadSession(t);
     } catch (err) {
-      if (!opts.join) throw err;
-      join = await loadJoin(t);
-      session = await loadSessionById(join.session_id);
+      if (opts.photos) {
+        const { loadPhoneHandoff } = await import("./photo-handoff.server");
+        handoff = await loadPhoneHandoff(t);
+      }
+      if (handoff?.session_id && handoff.task) {
+        session = await loadSessionById(handoff.session_id);
+      } else {
+        handoff = null;
+        if (!opts.join) throw err;
+        join = await loadJoin(t);
+        session = await loadSessionById(join.session_id);
+      }
     }
   }
   const db = await admin();
@@ -913,15 +927,19 @@ async function sessionContext(t: string, opts: { join?: boolean; share?: boolean
     register,
     aiOff,
     join,
+    handoff,
     formalitiesDone,
   };
 }
 
 type Ctx = Awaited<ReturnType<typeof sessionContext>>;
 
-/** A joined phone may only fill in the guest it picked. */
-function ownSlot(ctx: Ctx, position: number) {
+/** A joined phone may only fill in the guest it picked; a photo phone only the task the tablet set. */
+function ownSlot(ctx: Ctx, position: number, kinds?: readonly string[]) {
   if (ctx.join && ctx.join.position !== position) throw new Error("Not available.");
+  const task = ctx.handoff?.task;
+  if (ctx.handoff && (!task || task.position !== position || (kinds && !kinds.includes(task.kind))))
+    throw new Error("Not available.");
 }
 
 /** What the guest is asked about who's staying, given the host's settings. */
@@ -1303,7 +1321,8 @@ async function keepUnread(ctx: Ctx, position: number, small: string | undefined)
 export const verifyPhotoId = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token, image: jpeg, small: smallJpeg.optional() }).parse(d))
   .handler(async ({ data }) => {
-    const ctx = await sessionContext(data.token);
+    const ctx = await sessionContext(data.token, { photos: true });
+    ownSlot(ctx, 0, ["lead"]);
     const methods = normaliseMethods(ctx.property.checkin_methods);
     if (!ctx.session.confirmed || !methods.enabled.photo_id) throw new Error("Not available.");
     const unread = async () =>
@@ -1483,8 +1502,8 @@ export const checkCompanionId = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const ctx = await sessionContext(data.token, { join: true });
-    ownSlot(ctx, data.position);
+    const ctx = await sessionContext(data.token, { join: true, photos: true });
+    ownSlot(ctx, data.position, ["companion"]);
     const plan = partyPlan(ctx);
     const adults = ctx.session.adults ?? 1;
     // Every adult's ID when the host asks for it; or anyone the guest adds at the end of check-in.
@@ -1694,8 +1713,9 @@ export const addFacePhoto = createServerFn({ method: "POST" })
     z.object({ token, position: z.number().int().min(0).max(29), image: smallJpeg }).parse(d),
   )
   .handler(async ({ data }) => {
-    const ctx = await sessionContext(data.token, { join: true });
-    ownSlot(ctx, data.position);
+    const ctx = await sessionContext(data.token, { join: true, photos: true });
+    // The face after any ID task on the phone, or a face task of its own.
+    ownSlot(ctx, data.position, ["find", "lead", "companion", "face"]);
     if (!ctx.session.confirmed || data.position >= Math.max(1, ctx.session.adults ?? 1))
       throw new Error("Not available.");
     if (!partyPlan(ctx).facePhoto) return { ok: true as const };

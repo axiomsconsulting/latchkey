@@ -266,6 +266,7 @@ function Cameras({
   const sides: Array<{ value: CameraSide; label: string }> = [
     { value: "front", label: copy.front },
     { value: "back", label: copy.back },
+    { value: "none", label: copy.noCamera },
   ];
   return (
     <div className="rounded-2xl border border-border p-3">

@@ -111,6 +111,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Lovable AI Gateway and the AI model provider behind it (currently OpenAI): reading photo ID during guests' check-in (when the host turns ID checks on) and Commission Partners' identity checks. Images are sent for that check only; we ask the service not to keep them, and we don't use them to train any AI model.",
           "Stripe: hosts' subscriptions, and guests' card payments in the host's own Stripe account.",
           "Twilio (text messages) and Telegram (messages to hosts who link it): alerts to hosts. App notifications go through the browser maker's push service and carry no content.",
+          "Twilio, and Meta's WhatsApp through Twilio: messages to guests when the host turns them on, and the check-in photo link a guest asks for at the door tablet. They receive the guest's mobile number and the message. A number typed in for the photo link is used for that one message and isn't kept.",
           "Google: sign-in with Google, and Google Drive, where we store files hosts attach to their guides and, in restricted folders that are never shared, kept copies of guests' ID and face photos and Commission Partners' ID photos, drawn signatures and signed agreements. Apple: sign-in with Apple.",
           "Firecrawl: reading a host's public listing page when they import it. No guest data is sent.",
           "Frankfurter (exchange rates) and Cloudflare (checking a host's domain): no personal data is sent.",

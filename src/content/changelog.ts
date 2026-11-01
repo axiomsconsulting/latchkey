@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.105.0",
+    date: "2026-11-01",
+    title: "Check-in photos on a phone",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Every photo step on the door tablet now offers a square to scan (and Text me the link, or WhatsApp once it's set up): the guest's or your phone takes the photo of the ID and then the selfie, and the tablet carries on by itself the moment each is done. As soon as the phone opens the link, the tablet shows Carry on on your phone; Use this screen's camera instead is always there.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Cameras on the door tablet (Settings → Guests → Check-in journey) has a new choice, None (phone): the photos are then always taken on a phone. Tablets with no camera do the same by themselves.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "On their own phone, guests can use a saved photo of their ID instead of taking a new one. Selfies are always live.",
+      },
+    ],
+  },
+  {
     version: "0.104.1",
     date: "2026-11-01",
     title: "Your logo on every door tablet screen",

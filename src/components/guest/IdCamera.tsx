@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Camera, Loader2, SwitchCamera } from "lucide-react";
+import { Camera, ImageUp, Loader2, SwitchCamera } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { guest as copy } from "@/content/copy";
+import { fromFile } from "@/lib/photo-file";
 import { photoFill, photoStage } from "@/lib/photo-progress";
 import { cn } from "@/lib/utils";
 
@@ -183,7 +184,10 @@ export function IdCamera({
   busyLabel,
   side = false,
   extra,
+  upload = false,
 }: {
+  /** A guest's own phone: a saved photo of the ID may be used instead (never for a face, which is live). */
+  upload?: boolean;
   /** A door tablet on its side: the camera on the left, the help and buttons beside it, so nothing has to shrink. */
   side?: boolean;
   /** More buttons under the main one (skip, another way). */
@@ -200,6 +204,7 @@ export function IdCamera({
   busyLabel?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
   const [current, setCurrent] = useState(facing);
@@ -316,6 +321,36 @@ export function IdCamera({
           {busy ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
           {busy ? (busyLabel ?? copy.idChecking) : (cta ?? copy.idTakePhoto)}
         </Button>
+        {upload && kind === "id" ? (
+          <>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                void fromFile(f)
+                  .then(({ full, small }) => {
+                    setShot(small);
+                    onCapture(full, small);
+                  })
+                  .catch(() => undefined);
+              }}
+            />
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+            >
+              <ImageUp className="size-5" aria-hidden /> {copy.idUpload}
+            </Button>
+          </>
+        ) : null}
         {extra}
       </div>
     </div>
