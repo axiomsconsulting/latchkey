@@ -6,9 +6,13 @@ import {
   bookingTermsText,
   cancellationText,
   countryAdvice,
+  emptyAnswers,
+  keyPoints,
   licenceText,
   needsLicence,
   normaliseStayTerms,
+  stayLengthAdvice,
+  termsProblem,
   textSha256,
   tooLong,
   type TermsContext,
@@ -51,7 +55,18 @@ describe("terms for direct stays", () => {
       serviceDays: 30,
       houseRules: " x ",
     });
-    expect(t).toEqual({ maxNights: 90, licenceFrom: 0, serviceDays: 14, houseRules: "x" });
+    expect(t).toEqual({
+      maxNights: 365,
+      licenceFrom: 0,
+      serviceDays: 14,
+      houseRules: "x",
+      insurance: null,
+      policyMaxNights: null,
+    });
+    // A licence can't start later than four weeks; past that every stay signs.
+    const late = normaliseStayTerms({ maxNights: 120, licenceFrom: 60 });
+    expect(late.licenceFrom).toBe(28);
+    expect(needsLicence({ ...late, licenceFrom: 90 }, 29)).toBe(true);
     expect(needsLicence(terms, 27)).toBe(false);
     expect(needsLicence(terms, 28)).toBe(true);
     expect(tooLong(terms, 29)).toBe(true);
@@ -90,10 +105,58 @@ describe("terms for direct stays", () => {
     expect(addressProblem({ ...a, country: "FR", postcode: "" })).toBeNull();
   });
 
-  it("needs every declaration for a licence", () => {
+  it("asks one confirmation for a licence, still taking older pages' separate ticks", () => {
     expect(allTicked(false, ["terms"])).toBe(true);
+    expect(allTicked(false, ["agree_all"])).toBe(false);
+    expect(allTicked(true, ["terms"])).toBe(false);
+    expect(allTicked(true, ["agree_all"])).toBe(true);
     expect(allTicked(true, ["terms", "home", "licence", "access"])).toBe(false);
     expect(allTicked(true, ["terms", "home", "licence", "access", "leave"])).toBe(true);
+  });
+
+  it("puts the key points the guest confirms at the top of the kept licence", () => {
+    const points = keyPoints(ctx);
+    expect(points).toHaveLength(4);
+    expect(points.join(" ")).toContain("not a tenancy");
+    expect(points.join(" ")).toContain("every 7 days");
+    expect(points.join(" ")).toContain("29 Dec 2026");
+    const text = licenceText(ctx);
+    for (const k of points) expect(text).toContain(`- ${k}`);
+    expect(text.indexOf("## Key points")).toBeLessThan(text.indexOf("## 1. What this is"));
+  });
+
+  it("says what's missing before booking, in order", () => {
+    const a = emptyAnswers("GB");
+    expect(termsProblem(false, a)?.kind).toBe("ticks");
+    expect(termsProblem(false, { ...a, ticks: ["terms"] })).toBeNull();
+    expect(termsProblem(true, a)?.kind).toBe("home");
+    const home = { ...a, homeAddress: ctx.homeAddress! };
+    expect(termsProblem(true, home)?.kind).toBe("purpose");
+    const why = { ...home, purpose: "work" as const };
+    expect(termsProblem(true, why)?.kind).toBe("ticks");
+    const ticked = { ...why, ticks: ["agree_all"] };
+    expect(termsProblem(true, ticked)?.kind).toBe("sign");
+    expect(
+      termsProblem(true, { ...ticked, typedName: "Alex Doe", signature: "data:x" }),
+    ).toBeNull();
+    expect(termsProblem(true, ticked, "LS1 1AA")?.message).toContain("permanent home");
+  });
+
+  it("lets the policy's own longest stay lead the advice, with warnings past it", () => {
+    const base = { maxNights: 28, insurance: null, policyMaxNights: null };
+    expect(stayLengthAdvice("GB", base)).toMatchObject({ suggestedMax: 28, warnings: [] });
+    expect(stayLengthAdvice("GB", { ...base, maxNights: 120 }).warnings[0]).toContain("insurance");
+    const covered = { maxNights: 120, insurance: "str_host" as const, policyMaxNights: 365 };
+    const ok = stayLengthAdvice("GB", covered);
+    expect(ok.suggestedMax).toBe(365);
+    expect(ok.warnings).toEqual([]);
+    expect(ok.insuranceNote).toContain("policy wording");
+    expect(stayLengthAdvice("GB", { ...covered, policyMaxNights: 90 }).warnings[0]).toContain(
+      "up to 90",
+    );
+    expect(stayLengthAdvice("GB", { ...base, insurance: "home" }).warnings[0]).toContain(
+      "home insurer",
+    );
   });
 
   it("gives country advice that says to check, never that something is allowed", () => {
@@ -120,7 +183,7 @@ describe("the kept PDF", () => {
       guestEmail: "alex@example.com",
       guestPhone: "+447700900123",
       renderedSha256: await textSha256(text),
-      ticks: ["terms", "home", "licence", "access", "leave"],
+      ticks: ["agree_all"],
       homeAddress: "5 Oak Road, Leeds, LS1 1AA, GB",
       purpose: "Work or a temporary assignment",
       typedName: "Alex Doe",

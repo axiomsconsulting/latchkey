@@ -12,7 +12,8 @@ import { addDays } from "./dates";
 export const ENQUIRY_STATUSES = ["new", "offered", "booked", "declined"] as const;
 export type EnquiryStatus = (typeof ENQUIRY_STATUSES)[number];
 
-export const MAX_NIGHTS = 60;
+/** The longest stay a guest can ask about or pick on the calendar (a year, as MAX_STAY_LIMIT). */
+export const MAX_NIGHTS = 365;
 export const MAX_GUESTS = 20;
 
 /** The words the guest agrees to, kept with their consent exactly as shown. */

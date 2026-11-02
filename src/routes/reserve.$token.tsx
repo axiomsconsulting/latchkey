@@ -1,12 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Clock, Copy, Landmark, Mail, Phone, Printer, XCircle } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Clock,
+  Copy,
+  FileSignature,
+  Landmark,
+  Mail,
+  Phone,
+  Printer,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
 import { Button } from "@/components/ui/button";
-import { guest as guestCopy, reservationCopy as copy } from "@/content/copy";
+import { AgreementBlocks } from "@/components/partners/AgreementText";
+import {
+  guest as guestCopy,
+  reservationCopy as copy,
+  stayTermsCopy as termsCopy,
+} from "@/content/copy";
+import { parseMarkdown } from "@/lib/partner-agreement";
 import { formatUkDate, nightsBetween } from "@/lib/dates";
 import { money } from "@/lib/direct-rates";
 import { partyText } from "@/lib/direct-booking";
@@ -168,6 +185,22 @@ function ReservationPage() {
           </section>
         ) : null}
 
+        {r.agreements.length ? (
+          <section className="card-soft space-y-3 p-5">
+            <h2 className="flex items-center gap-2 text-xl">
+              <FileSignature className="size-5 text-primary" /> {termsCopy.yourCopy}
+            </h2>
+            <p className="text-sm text-muted-foreground">{termsCopy.yourCopyHelp}</p>
+            {r.agreements.map((a) => (
+              <AgreedText
+                key={a.kind}
+                title={a.kind === "licence" ? termsCopy.licenceTitle : termsCopy.termsTitle}
+                text={a.text}
+              />
+            ))}
+          </section>
+        ) : null}
+
         <section className="flex flex-wrap gap-2">
           {r.contactEmail ? (
             <Button asChild variant="outline">
@@ -185,12 +218,37 @@ function ReservationPage() {
               </a>
             </Button>
           ) : null}
-          <Button variant="ghost" onClick={() => window.print()}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // Each agreement prints in full.
+              document.querySelectorAll("details[data-print-open]").forEach((d) => {
+                (d as HTMLDetailsElement).open = true;
+              });
+              window.print();
+            }}
+          >
             <Printer className="size-4" /> {copy.print}
           </Button>
         </section>
         <p className="text-xs text-muted-foreground">{copy.keepLink}</p>
       </main>
     </GuestFrame>
+  );
+}
+
+/** One agreement as the guest agreed to it, folded (opened for printing). */
+function AgreedText({ title, text }: { title: string; text: string }) {
+  const blocks = useMemo(() => parseMarkdown(text), [text]);
+  return (
+    <details data-print-open className="group rounded-2xl border border-border">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+        {title}
+        <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="px-4 pb-4 text-sm leading-relaxed [&_h2]:text-xl [&_h3]:mt-4 [&_h3]:text-base [&_li]:ml-5 [&_li]:list-disc [&_p]:mt-2">
+        <AgreementBlocks blocks={blocks} />
+      </div>
+    </details>
   );
 }

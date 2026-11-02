@@ -53,8 +53,8 @@ import {
 } from "@/lib/direct-booking";
 import { getFxRate, reserveDirect } from "@/lib/direct-booking.functions";
 import { previewStayTerms } from "@/lib/stay-terms.functions";
-import { addressProblem, allTicked, emptyAnswers, type TermsAnswers } from "@/lib/stay-terms";
-import { StayTermsForm } from "@/components/guest/StayTermsForm";
+import { emptyAnswers, termsProblem, type TermsAnswers } from "@/lib/stay-terms";
+import { LongStayCard, ShortStayTerms } from "@/components/guest/StayTermsForm";
 import { stayTermsCopy } from "@/content/copy";
 import { money, quoteStay, roomTaken } from "@/lib/direct-rates";
 import { getEnquiryPage } from "@/lib/direct.functions";
@@ -129,6 +129,9 @@ function Booking({ page }: { page: Page }) {
     (Awaited<ReturnType<typeof previewStayTerms>> & { key: string }) | null
   >(null);
   const [answers, setAnswers] = useState<TermsAnswers>(() => emptyAnswers(page.country));
+  // A longer stay signs in a dialog; signedFor is the stay (termsKey) it was last signed for.
+  const [signOpen, setSignOpen] = useState(false);
+  const [signedFor, setSignedFor] = useState<string | null>(null);
   const [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -267,8 +270,13 @@ function Booking({ page }: { page: Page }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [termsKey, step]);
 
-  async function book(e: React.FormEvent) {
-    e.preventDefault();
+  /**
+   * Books: the form's button, or for a longer stay the signing dialog's
+   * "Agree and continue to pay" (fromDialog). A longer stay can't be booked
+   * without signing for the stay exactly as it stands.
+   */
+  async function book(e?: React.FormEvent, fromDialog = false) {
+    e?.preventDefault();
     if (!method || !chosen.length) return;
     const problem =
       enquiryProblem(
@@ -287,27 +295,43 @@ function Booking({ page }: { page: Page }) {
           ? copy.tooManyRooms
           : copy.needMore(guests - capacity)
         : null);
-    if (problem) return setError(problem);
+    if (problem) {
+      // Contact details are on the page, not in the dialog.
+      setSignOpen(false);
+      return setError(problem);
+    }
     setBusy(true);
     setError(null);
     try {
       // The terms exactly as they stand for what's being booked now.
       const t = terms && terms.key === termsKey ? terms : await loadTerms();
-      const home = addressProblem(answers.homeAddress);
-      const why = t.tooLong
-        ? stayTermsCopy.tooLong(t.maxNights)
-        : !allTicked(!!t.licenceText, answers.ticks)
-          ? stayTermsCopy.needTicks
-          : t.licenceText && (home || !answers.purpose)
-            ? (home ?? stayTermsCopy.needHome)
-            : t.licenceText && (answers.typedName.trim().length < 2 || !answers.signature)
-              ? stayTermsCopy.needSign
-              : null;
-      if (why) {
-        setError(why);
+      if (t.tooLong) {
+        setError(stayTermsCopy.tooLong(t.maxNights));
         setBusy(false);
         return;
       }
+      const licence = !!t.licenceText;
+      if (licence && !fromDialog && signedFor !== termsKey) {
+        if (signedFor) setError(stayTermsCopy.changed);
+        setSignOpen(true);
+        setBusy(false);
+        return;
+      }
+      const missing = termsProblem(licence, answers);
+      if (missing) {
+        setError(
+          missing.message ??
+            {
+              ticks: stayTermsCopy.needTicks,
+              home: stayTermsCopy.needHome,
+              purpose: stayTermsCopy.needHome,
+              sign: stayTermsCopy.needSign,
+            }[missing.kind],
+        );
+        setBusy(false);
+        return;
+      }
+      if (licence) setSignedFor(termsKey);
       const r = await reserve({
         data: {
           code: page.shortCode,
@@ -349,6 +373,20 @@ function Booking({ page }: { page: Page }) {
       setBusy(false);
     }
   }
+
+  const longStay = !!terms?.licenceText && !terms.tooLong;
+  const signed = longStay && signedFor === termsKey && !termsProblem(true, answers);
+  const amount = money(total, page.currency);
+  const bookLabel =
+    method === "card"
+      ? longStay && !signed
+        ? stayTermsCopy.signAndPay(amount)
+        : enquiryCopy.bookAndPay(amount)
+      : longStay && !signed
+        ? stayTermsCopy.signAndBook
+        : method === "bank"
+          ? enquiryCopy.bookBank
+          : enquiryCopy.bookProperty;
 
   const enquiryRoom = enquiry.room;
   const enquiryEstimate = enquiryRoom ? estimate(enquiryRoom) : null;
@@ -763,10 +801,32 @@ function Booking({ page }: { page: Page }) {
                       <p role="alert" className="rounded-2xl bg-muted p-3 text-sm">
                         {stayTermsCopy.tooLong(terms.maxNights)}
                       </p>
-                    ) : terms ? (
-                      <StayTermsForm
+                    ) : terms?.licenceText ? (
+                      <LongStayCard
                         termsText={terms.termsText}
                         licenceText={terms.licenceText}
+                        keyPoints={terms.keyPoints}
+                        nights={nights}
+                        value={answers}
+                        onChange={setAnswers}
+                        open={signOpen}
+                        onOpenChange={(o) => {
+                          setSignOpen(o);
+                          if (o) setError(null);
+                        }}
+                        signed={signed}
+                        action={
+                          method === "card"
+                            ? stayTermsCopy.agreeAndPay(amount)
+                            : stayTermsCopy.agreeAndBook(method === "bank" ? "bank" : "property")
+                        }
+                        busy={busy}
+                        error={signOpen ? error : null}
+                        onAgree={() => void book(undefined, true)}
+                      />
+                    ) : terms ? (
+                      <ShortStayTerms
+                        termsText={terms.termsText}
                         value={answers}
                         onChange={setAnswers}
                       />
@@ -775,16 +835,18 @@ function Booking({ page }: { page: Page }) {
                         <Loader2 className="size-4 animate-spin" /> {stayTermsCopy.loading}
                       </p>
                     )}
-                    {error ? (
+                    {error && !signOpen ? (
                       <p role="alert" className="text-sm text-destructive">
                         {error}
                       </p>
                     ) : null}
-                    <Button type="submit" size="lg" className="w-full" disabled={busy || !method}>
-                      {busy ? <Loader2 className="animate-spin" /> : <CalendarHeart />}{" "}
-                      {method === "card"
-                        ? enquiryCopy.bookAndPay(money(total, page.currency))
-                        : enquiryCopy.bookNow}
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full"
+                      disabled={busy || !method || !terms || terms.tooLong}
+                    >
+                      {busy ? <Loader2 className="animate-spin" /> : <CalendarHeart />} {bookLabel}
                     </Button>
                     <p className="text-xs text-muted-foreground">
                       {method === "card" ? enquiryCopy.cardNote : enquiryCopy.bookingNote}

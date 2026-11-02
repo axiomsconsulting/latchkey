@@ -57,6 +57,7 @@ export const previewStayTerms = createServerFn({ method: "POST" })
       termsSha: r.termsSha,
       licenceText: r.licenceText,
       licenceSha: r.licenceSha,
+      keyPoints: r.keyPoints,
       tooLong: r.tooLong,
       maxNights: r.terms.maxNights,
       licenceFrom: r.terms.licenceFrom,
@@ -202,6 +203,7 @@ export const getAgreementLink = createServerFn({ method: "POST" })
       termsSha: r.termsSha,
       licenceText: r.licenceText,
       licenceSha: r.licenceSha,
+      keyPoints: r.keyPoints,
     };
   });
 
