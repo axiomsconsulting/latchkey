@@ -43,6 +43,8 @@ export const previewStayTerms = createServerFn({ method: "POST" })
         name: z.string().max(120),
         homeAddress: address.nullable(),
         purpose: purpose.nullable(),
+        /** A Loyalty voucher code: the price in the terms is the voucher's, when it applies. */
+        voucher: z.string().max(30).nullable().default(null),
       })
       .parse(d),
   )
@@ -51,7 +53,8 @@ export const previewStayTerms = createServerFn({ method: "POST" })
     const db = await admin();
     const p = await termsProperty(db, { code: data.code });
     if (!p || p.active === false) throw new Error("This page isn't taking bookings.");
-    const r = await renderTerms(p, await directTermsInput(db, p, data));
+    const voucher = await usableVoucher(db, p, data);
+    const r = await renderTerms(p, await directTermsInput(db, p, { ...data, voucher }));
     return {
       termsText: r.termsText,
       termsSha: r.termsSha,
@@ -63,6 +66,22 @@ export const previewStayTerms = createServerFn({ method: "POST" })
       licenceFrom: r.terms.licenceFrom,
     };
   });
+
+/** The voucher a guest typed, when it works for this booking (otherwise priced without it). */
+async function usableVoucher(
+  db: any,
+  p: { id: string; timezone?: string | null },
+  b: { voucher: string | null; roomIds: string[]; checkIn: string; checkOut: string; name: string },
+) {
+  if (!b.voucher) return null;
+  const { voucherByCode } = await import("./vouchers.server");
+  const { voucherProblem } = await import("./vouchers");
+  const v = await voucherByCode(db, p.id, b.voucher);
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: p.timezone ?? "Europe/London",
+  }).format(new Date());
+  return v && !voucherProblem(v, { ...b, today }) ? v : null;
+}
 
 /** What a guest agreed to on the booking page, sent with the booking (reserveDirect). */
 export const agreedInput = z.object({

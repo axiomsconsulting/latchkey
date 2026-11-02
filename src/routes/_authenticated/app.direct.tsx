@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { common, directCopy as copy } from "@/content/copy";
+import { common, directCopy as copy, vouchersAdminCopy } from "@/content/copy";
 import { useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
 import { rebrand } from "@/lib/brand";
 import { formatUkDate } from "@/lib/dates";
@@ -43,6 +43,8 @@ import { setReservationStatus } from "@/lib/direct-booking.functions";
 import { money } from "@/lib/direct-rates";
 import { DirectRates } from "@/components/host/DirectRates";
 import { DirectBookingSettings } from "@/components/host/DirectBookingSettings";
+import { LoyaltyVouchers } from "@/components/host/LoyaltyVouchers";
+import { RoomGallery } from "@/components/host/RoomGallery";
 
 export const Route = createFileRoute("/_authenticated/app/direct")({
   head: () => ({ meta: [{ title: rebrand("Direct stays · Latchkey host dashboard") }] }),
@@ -136,6 +138,7 @@ function DirectPage() {
               </TabsTrigger>
               <TabsTrigger value="enquiries">{copy.enquiriesTab(fresh)}</TabsTrigger>
               <TabsTrigger value="guests">{copy.guestsTab(d.contacts.length)}</TabsTrigger>
+              <TabsTrigger value="vouchers">{vouchersAdminCopy.tab}</TabsTrigger>
             </TabsList>
             <TabsContent value="bookings" className="mt-4 space-y-3">
               {d.reservations.length === 0 ? (
@@ -171,10 +174,14 @@ function DirectPage() {
                 ))
               )}
             </TabsContent>
+            <TabsContent value="vouchers" className="mt-4">
+              {selectedId ? <LoyaltyVouchers propertyId={selectedId} /> : null}
+            </TabsContent>
           </Tabs>
 
           {/* The page's settings for the property chosen in the menu: rates and offers, then booking and paying. */}
           {selectedId ? <DirectRates propertyId={selectedId} /> : null}
+          {selectedId ? <RoomGallery propertyId={selectedId} /> : null}
           {selectedId ? <DirectBookingSettings propertyId={selectedId} /> : null}
         </>
       ) : null}

@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.114.0",
+    date: "2026-11-02",
+    title: "Room photos by space, and loyalty vouchers",
+    items: [
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Guests can look through every photo of a room on your booking page, grouped by space (bedroom, bathroom, kitchen, garden…), with arrows, swipe or a tap on a space. Add them in Direct stays → Photos guests see, per room or for the shared spaces that show with every room, with a space and a caption for each.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "AI can sort a room's photos by space and caption them for you. It comes with plans that include AI photo sorting; without it, try it free on two rooms.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Loyalty vouchers: thank a past guest with a one-use code in their name, for the rooms and dates you choose (whole months, days or ranges), worth a percentage off or a set price per night that replaces other discounts on those nights. Send it from your own WhatsApp, texts or email, or copy the message. The guest's link fills the code in, and they see the price for each night before booking.",
+      },
+    ],
+  },
+  {
     version: "0.113.1",
     date: "2026-11-02",
     title: "Booking terms load straight away",

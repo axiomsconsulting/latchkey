@@ -26,3 +26,26 @@ export async function fromFile(file: File): Promise<{ full: string; small: strin
     URL.revokeObjectURL(url);
   }
 }
+
+/** A photo for the web (room photos): at most `max` pixels on its long side, as a JPEG data URL. */
+export async function shrinkPhoto(file: File, max = 1600, quality = 0.82): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const out = canvas.toDataURL("image/jpeg", quality);
+    canvas.width = 0;
+    return out;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

@@ -374,6 +374,8 @@ export async function directTermsInput(
     name: string;
     homeAddress?: HomeAddress | null;
     purpose?: Purpose | null;
+    /** A Loyalty discount voucher the guest is using (already checked), priced the same way as the booking. */
+    voucher?: import("./vouchers").Voucher | null;
   },
 ): Promise<RenderInput> {
   const { normaliseDirectBooking, quotePlan, freeCancelUntil } = await import("./direct-booking");
@@ -389,11 +391,22 @@ export async function directTermsInput(
     .filter((r) => r.property_id === p.id)
     .sort((a, b) => i.roomIds.indexOf(a.id) - i.roomIds.indexOf(b.id));
   let total = 0;
+  const { quoteWithVoucher } = await import("./vouchers");
   for (const r of rooms) {
     if (typeof r.base_rate_pence !== "number") continue;
-    total +=
-      quotePlan(r.base_rate_pence, i.plan, settings, offers, r.id, i.checkIn, i.checkOut)?.total ??
-      0;
+    total += i.voucher
+      ? (quoteWithVoucher(
+          r.base_rate_pence,
+          i.plan,
+          settings,
+          offers,
+          r.id,
+          i.checkIn,
+          i.checkOut,
+          i.voucher,
+        )?.total ?? 0)
+      : (quotePlan(r.base_rate_pence, i.plan, settings, offers, r.id, i.checkIn, i.checkOut)
+          ?.total ?? 0);
   }
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: p.timezone ?? "Europe/London",

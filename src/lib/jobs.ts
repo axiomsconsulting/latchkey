@@ -66,6 +66,14 @@ export const JOBS: Job[] = branded([
     runnable: false,
   },
   {
+    key: "ai_photos",
+    name: "AI photo sorting",
+    kind: "on_use",
+    what: "Sorts a room's photos into spaces (bedroom, bathroom, kitchen…) for the booking page, for businesses with the AI photo sorting feature and a two-room trial for the rest. Off: hosts pick each photo's space themselves.",
+    metric: "ai:photo_sort",
+    runnable: false,
+  },
+  {
     key: "ai_trades",
     name: "AI trade suggestions",
     kind: "on_use",
