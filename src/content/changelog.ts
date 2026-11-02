@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.113.0",
+    date: "2026-11-02",
+    title: "Sign, then pay, for longer stays",
+    items: [
+      {
+        kind: "improved",
+        area: "Bookings",
+        text: "Longer stays on your booking page now sign in one step: a window lists the four key points of the agreement, asks for their home address, one confirmation and a signature, and its button agrees and goes straight on to pay. Nothing is booked or paid until it's signed. Shorter stays tick one box, with the booking terms a tap away.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Guests get their own copy of what they agreed to on their confirmation page, to print or save as a PDF. A card booking that's never paid leaves no agreement behind, and its PDF is only made once it's paid.",
+      },
+      {
+        kind: "improved",
+        area: "Bookings",
+        text: "Allow stays of up to 365 nights if your insurance covers them. Say what kind of insurance you have and the longest single stay your policy covers, and the advice follows it, with a warning if guests could book longer. Stays over 28 nights always sign the agreement.",
+      },
+    ],
+  },
+  {
     version: "0.112.0",
     date: "2026-11-02",
     title: "A clearer home page",

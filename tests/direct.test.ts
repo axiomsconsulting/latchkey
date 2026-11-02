@@ -34,7 +34,7 @@ describe("repeat direct stays", () => {
     expect(enquiryProblem({ ...ok, phone: "07700 900123" }, TODAY)).toMatch(/phone/);
     expect(enquiryProblem({ ...ok, checkIn: "2026-10-01" }, TODAY)).toMatch(/passed/);
     expect(enquiryProblem({ ...ok, checkOut: "2026-11-02" }, TODAY)).toMatch(/after/);
-    expect(enquiryProblem({ ...ok, checkOut: "2027-02-01" }, TODAY)).toMatch(/60 nights/);
+    expect(enquiryProblem({ ...ok, checkOut: "2028-01-01" }, TODAY)).toMatch(/365 nights/);
     expect(enquiryProblem({ ...ok, guests: 0 }, TODAY)).toMatch(/guests/);
     expect(nightsBetween(ok.checkIn, ok.checkOut)).toBe(3);
   });

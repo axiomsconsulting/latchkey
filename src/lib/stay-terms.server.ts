@@ -9,6 +9,7 @@
 import {
   bookingTermsText,
   cancellationText,
+  keyPoints,
   licenceText,
   needsLicence,
   normaliseStayTerms,
@@ -130,6 +131,7 @@ export async function renderTerms(p: TermsProperty, i: RenderInput) {
     termsSha: await textSha256(termsText),
     licenceText: licence,
     licenceSha: licence ? await textSha256(licence) : null,
+    keyPoints: licence ? keyPoints(ctx) : [],
   };
 }
 
@@ -166,6 +168,8 @@ export type Acceptance = {
   userAgent: string | null;
   /** A demo property's (shared demo, showcase, recording): kept two days, nothing stored in Drive. */
   demo?: boolean;
+  /** A card booking not yet paid: the PDF waits for the payment (agreementsPaid). */
+  awaitingPayment?: boolean;
 };
 
 /** Demo records go with the next daily reset. */
@@ -212,14 +216,18 @@ export async function recordAcceptance(a: Acceptance): Promise<string> {
     .single();
   if (error || !row) throw new Error("Your agreement couldn't be saved. Please try again.");
   if (!a.demo)
-    await storeFiles(row.id, a.signature ?? null).catch((e: unknown) =>
+    await storeFiles(row.id, a.signature ?? null, { pdf: !a.awaitingPayment }).catch((e: unknown) =>
       console.error("Stay agreement files", e instanceof Error ? e.message : e),
     );
   return row.id as string;
 }
 
 /** The signature and PDF for a record (again, if they weren't stored the first time). */
-export async function storeFiles(id: string, signature?: string | null): Promise<void> {
+export async function storeFiles(
+  id: string,
+  signature?: string | null,
+  opts: { pdf?: boolean } = {},
+): Promise<void> {
   const db = await admin();
   const { data: r } = await db.from("stay_agreements").select("*").eq("id", id).single();
   if (!r || r.pdf_sha256) return;
@@ -261,6 +269,7 @@ export async function storeFiles(id: string, signature?: string | null): Promise
       .then((f) => f?.bytes ?? null)
       .catch(() => null);
   }
+  if (opts.pdf === false) return;
   const { stayAgreementPdf } = await import("./stay-terms-pdf.server");
   const pdf = await stayAgreementPdf(r.rendered_text, {
     id,
@@ -293,6 +302,47 @@ export async function storeFiles(id: string, signature?: string | null): Promise
     .from("stay_agreements")
     .update({ pdf_path: pdfRef, pdf_sha256: await sha256OfBytes(pdf) })
     .eq("id", id);
+}
+
+/** A card booking was paid: its agreements' PDFs are made now. */
+export async function agreementsPaid(reservationId: string): Promise<void> {
+  const db = await admin();
+  const { data } = await db
+    .from("stay_agreements")
+    .select("id")
+    .eq("reservation_id", reservationId)
+    .is("pdf_sha256", null);
+  for (const r of (data ?? []) as Array<{ id: string }>)
+    await storeFiles(r.id).catch((e: unknown) =>
+      console.error("Stay agreement files", e instanceof Error ? e.message : e),
+    );
+}
+
+/**
+ * A booking that never went ahead (the card checkout ran out, or saving
+ * failed): nothing was agreed in the end, so its records and files go.
+ */
+export async function dropAgreements(reservationId: string): Promise<void> {
+  const db = await admin();
+  const { data } = await db
+    .from("stay_agreements")
+    .select("id, signature_path, pdf_path")
+    .eq("reservation_id", reservationId);
+  const rows = (data ?? []) as Array<{
+    id: string;
+    signature_path: string | null;
+    pdf_path: string | null;
+  }>;
+  if (!rows.length) return;
+  const { removePrivate } = await import("./private-store.server");
+  await removePrivate(rows.flatMap((r) => [r.signature_path, r.pdf_path])).catch(() => undefined);
+  await db
+    .from("stay_agreements")
+    .delete()
+    .in(
+      "id",
+      rows.map((r) => r.id),
+    );
 }
 
 /** Who's asking: their IP address and browser, from the request. */

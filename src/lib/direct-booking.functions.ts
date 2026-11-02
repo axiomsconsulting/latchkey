@@ -414,6 +414,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
         ticks: data.agreed.ticks,
         ...meta,
         demo: !!tp.is_demo,
+        awaitingPayment: data.method === "card",
       };
       await termsSrv.recordAcceptance({
         ...base,
@@ -436,6 +437,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
       // Without the record of what was agreed, the booking isn't made.
       await release();
       await db.from("direct_reservations").update({ status: "cancelled" }).eq("id", res.id);
+      await termsSrv.dropAgreements(res.id as string).catch(() => undefined);
       throw new Error(
         e instanceof Error && /migration|stay_agreements/.test(e.message)
           ? "Booking here isn't ready yet. Please send a request instead."
@@ -561,9 +563,11 @@ export async function markReservationPaid(
       })
       .eq("id", id);
   }
+  const { agreementsPaid } = await import("./stay-terms.server");
+  await agreementsPaid(reservationId).catch(() => undefined);
 }
 
-/** An unpaid card reservation whose checkout ran out: the room is released. */
+/** An unpaid card reservation whose checkout ran out: the room is released (and nothing agreed is kept). */
 export async function expireReservation(db: Loose, reservationId: string) {
   const { data: r } = await db
     .from("direct_reservations")
@@ -577,6 +581,8 @@ export async function expireReservation(db: Loose, reservationId: string) {
     .eq("id", reservationId);
   const ids = await reservationBookings(db, reservationId);
   if (ids.length) await db.from("bookings").update({ status: "cancelled" }).in("id", ids);
+  const { dropAgreements } = await import("./stay-terms.server");
+  await dropAgreements(reservationId).catch(() => undefined);
 }
 
 /** The guest's confirmation page: their booking, how to pay (bank details for a transfer), and its state. */
@@ -609,8 +615,19 @@ export const getReservation = createServerFn({ method: "GET" })
       country_code: r.properties?.country_code,
     });
     const { bankLinesFor } = await import("./bank-details");
+    // The guest's own copy of what they agreed to, word for word (a durable record for them too).
+    const { data: agreed } = await db
+      .from("stay_agreements")
+      .select("kind, rendered_text, signed_at")
+      .eq("reservation_id", r.id)
+      .order("kind", { ascending: false });
     return {
       found: true as const,
+      agreements: ((agreed ?? []) as any[]).map((a) => ({
+        kind: a.kind as "terms" | "licence",
+        text: a.rendered_text as string,
+        signedAt: a.signed_at as string,
+      })),
       reference: r.reference as string,
       status: r.status as "pending" | "confirmed" | "paid" | "cancelled" | "expired",
       method: r.method as "card" | "bank" | "property",

@@ -13,7 +13,7 @@
  */
 import { formatUkDate } from "./dates";
 
-export const STAY_TERMS_VERSION = "1.0";
+export const STAY_TERMS_VERSION = "1.1";
 
 export type StayTerms = {
   /** The longest stay a guest can book here, in nights; longer ones are asked about. */
@@ -24,33 +24,56 @@ export type StayTerms = {
   serviceDays: number;
   /** The host's own house rules, shown and agreed to as written. */
   houseRules: string;
+  /** What the host's insurance is, for advice on the longest stay (never enforced). */
+  insurance: InsuranceKind | null;
+  /** The longest single stay the host's policy covers, from its schedule or wording. */
+  policyMaxNights: number | null;
 };
+
+export const INSURANCE_KINDS = ["holiday_let", "str_host", "serviced", "home"] as const;
+export type InsuranceKind = (typeof INSURANCE_KINDS)[number];
 
 export const DEFAULT_STAY_TERMS: StayTerms = {
   maxNights: 28,
   licenceFrom: 28,
   serviceDays: 7,
   houseRules: "",
+  insurance: null,
+  policyMaxNights: null,
 };
 
 const int = (v: unknown, lo: number, hi: number, fb: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : fb;
 
-export const MAX_STAY_LIMIT = 90;
+/** The longest stay any host can allow: a year, as some short-term rental policies cover. */
+export const MAX_STAY_LIMIT = 365;
+/**
+ * Stays longer than this always sign the licence, whatever the host sets:
+ * past four weeks a stay looks more like a home, so the declarations matter.
+ */
+export const LICENCE_ALWAYS_OVER = 28;
 
 export function normaliseStayTerms(raw: unknown): StayTerms {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const maxNights = int(r["maxNights"], 1, MAX_STAY_LIMIT, DEFAULT_STAY_TERMS.maxNights);
   return {
     maxNights,
-    licenceFrom: int(r["licenceFrom"], 0, MAX_STAY_LIMIT, DEFAULT_STAY_TERMS.licenceFrom),
+    licenceFrom: int(r["licenceFrom"], 0, LICENCE_ALWAYS_OVER, DEFAULT_STAY_TERMS.licenceFrom),
     serviceDays: int(r["serviceDays"], 1, 14, DEFAULT_STAY_TERMS.serviceDays),
     houseRules: typeof r["houseRules"] === "string" ? r["houseRules"].trim().slice(0, 3000) : "",
+    insurance: INSURANCE_KINDS.includes(r["insurance"] as InsuranceKind)
+      ? (r["insurance"] as InsuranceKind)
+      : null,
+    policyMaxNights:
+      typeof r["policyMaxNights"] === "number" && r["policyMaxNights"] >= 1
+        ? int(r["policyMaxNights"], 1, MAX_STAY_LIMIT, 28)
+        : null,
   };
 }
 
-/** Whether this stay needs the signed licence. */
-export const needsLicence = (t: StayTerms, nights: number) => nights >= t.licenceFrom;
+/** Whether this stay needs the signed licence (always past four weeks). */
+export const needsLicence = (t: StayTerms, nights: number) =>
+  nights >= t.licenceFrom || nights > LICENCE_ALWAYS_OVER;
 
 /** Whether a stay can be booked here at all (longer ones go to the host as a request). */
 export const tooLong = (t: StayTerms, nights: number) => nights > t.maxNights;
@@ -67,17 +90,17 @@ export function countryAdvice(country: string | null | undefined): {
     case "GB":
       return {
         suggestedMax: 28,
-        note: "In the UK, 28 nights is the usual ceiling for short stays: many holiday-let mortgages and insurers set it, HMRC's VAT rules for stays change after 28 days, and longer stays look more like a home. In Greater London, renting a whole home short-term for more than 90 nights in a calendar year needs planning permission. Check your mortgage, insurance, lease and council rules.",
+        note: "In the UK, 28 nights is the usual ceiling for short stays: many holiday-let mortgages and insurers set it, HMRC's VAT rules for stays change after 28 days, and longer stays look more like a home. In England, since May 2026, a let that turns out to be a tenancy is a periodic tenancy with no fixed end, so a long stay must really be serviced accommodation (regular cleaning and access, a permanent home elsewhere). In Greater London, renting a whole home short-term for more than 90 nights in a calendar year needs planning permission, and in Scotland your short-term let licence may set conditions. Check your mortgage, insurance, lease and council rules.",
       };
     case "US":
       return {
         suggestedMax: 28,
-        note: "In many US states and cities (for example California and New York), a guest who stays 30 days or more can gain tenants' rights. Most hosts keep stays to 28 nights. Check your state and city rules.",
+        note: "In many US states and cities (for example California and New York), a guest who stays 30 days or more can gain tenants' rights, and some cities tax or license stays differently by length. Most hosts keep stays to 28 nights. Check your state and city rules.",
       };
     case "FR":
       return {
         suggestedMax: 90,
-        note: "In France, a meublé de tourisme can't be let to the same guest for more than 90 days in a row; longer needs a bail mobilité or a lease. Check your commune's rules, which may also limit nights per year.",
+        note: "In France, a meublé de tourisme can't be let to the same guest for more than 90 days in a row; longer needs a bail mobilité (1 to 10 months) or a lease. Check your commune's rules, which may also limit nights per year.",
       };
     case "ES":
       return {
@@ -90,6 +113,54 @@ export function countryAdvice(country: string | null | undefined): {
         note: "Short-stay rules depend on the country and often the city. Many places treat stays of about a month or more as residential. Check the rules where your property is before allowing longer stays.",
       };
   }
+}
+
+export const INSURANCE_LABELS: Record<InsuranceKind, string> = {
+  holiday_let: "Holiday-let insurance",
+  str_host: "Short-term rental or host insurance",
+  serviced: "Serviced accommodation insurance",
+  home: "Home insurance (letting rooms or the whole home)",
+};
+
+/** What each kind of policy usually means for stay length. Says to check the policy, never "covered". */
+export const INSURANCE_NOTES: Record<InsuranceKind, string> = {
+  holiday_let:
+    "Holiday-let policies are written for holiday stays; many don't cover a single let longer than about four weeks. Your policy wording or schedule says.",
+  str_host:
+    "Short-term rental and host policies vary a lot: some cover single stays of a few weeks, some up to a year. Use the longest single stay in your policy wording.",
+  serviced:
+    "Serviced accommodation policies are often written for longer work and relocation stays. Check the longest single stay and whether they expect a licence agreement for long stays.",
+  home: "Ordinary home insurance often doesn't cover paying guests at all, or only with the insurer's agreement. Ask your insurer before taking bookings.",
+};
+
+/**
+ * The host's stay length against their country and their policy: what we
+ * suggest, and anything to look at. The policy's own limit, when given,
+ * wins over the country's suggestion, since it's what they're covered for.
+ */
+export function stayLengthAdvice(
+  country: string | null | undefined,
+  t: Pick<StayTerms, "maxNights" | "insurance" | "policyMaxNights">,
+): { suggestedMax: number; countryNote: string; insuranceNote: string | null; warnings: string[] } {
+  const c = countryAdvice(country);
+  const suggestedMax = t.policyMaxNights ?? c.suggestedMax;
+  const warnings: string[] = [];
+  if (t.policyMaxNights && t.maxNights > t.policyMaxNights)
+    warnings.push(
+      `Guests can book ${t.maxNights} nights, but your policy covers single stays up to ${t.policyMaxNights}. A longer stay may not be covered.`,
+    );
+  else if (t.maxNights > c.suggestedMax && !t.policyMaxNights)
+    warnings.push(
+      `${t.maxNights} nights is longer than we suggest for your country. Before allowing it, check your insurance covers single stays this long and add its limit below.`,
+    );
+  if (t.insurance === "home" && t.maxNights > 0)
+    warnings.push("Check your home insurer agrees to paying guests before taking bookings.");
+  return {
+    suggestedMax,
+    countryNote: c.note,
+    insuranceNote: t.insurance ? INSURANCE_NOTES[t.insurance] : null,
+    warnings,
+  };
 }
 
 export const PURPOSES = [
@@ -140,13 +211,22 @@ export const addressLine = (a: HomeAddress) =>
     .filter(Boolean)
     .join(", ");
 
-/** What a guest ticks: the booking terms for every stay, the declarations for a longer one. */
+/**
+ * What a guest ticks: the booking terms for a shorter stay; for a longer one,
+ * one confirmation covering the terms, the house rules and the licence,
+ * whose key points it lists at the top (keyPoints) so none is missed.
+ * Older records hold one tick per declaration (LEGACY_TICKS).
+ */
 export const STANDARD_TICKS = ["terms"] as const;
-export const LICENCE_TICKS = ["home", "licence", "access", "leave"] as const;
-export type Tick = (typeof STANDARD_TICKS)[number] | (typeof LICENCE_TICKS)[number];
+export const LICENCE_TICKS = ["agree_all"] as const;
+export const LEGACY_TICKS = ["home", "licence", "access", "leave"] as const;
+export type Tick =
+  (typeof STANDARD_TICKS)[number] | (typeof LICENCE_TICKS)[number] | (typeof LEGACY_TICKS)[number];
 
 export const TICK_TEXT: Record<Tick, string> = {
   terms: "I have read and agree to the booking terms and house rules.",
+  agree_all:
+    "I confirm each of the key points of the agreement for a longer stay, and I agree to it, the booking terms and the house rules.",
   home: "The address I have given is my permanent home, where I live and pay local taxes. This stay will not be my only or main home.",
   licence:
     "I understand this is a licence to stay in serviced accommodation for a fixed short period, not a tenancy, and that it doesn't give me exclusive possession.",
@@ -157,11 +237,13 @@ export const TICK_TEXT: Record<Tick, string> = {
 };
 
 export const ticksFor = (licence: boolean): Tick[] =>
-  licence ? [...STANDARD_TICKS, ...LICENCE_TICKS] : [...STANDARD_TICKS];
+  licence ? [...LICENCE_TICKS] : [...STANDARD_TICKS];
 
-/** Every tick needed was given. */
+/** Every tick needed was given (the one confirmation, or for older pages each declaration). */
 export const allTicked = (licence: boolean, given: readonly string[]) =>
-  ticksFor(licence).every((t) => given.includes(t));
+  licence
+    ? given.includes("agree_all") || ["terms", ...LEGACY_TICKS].every((t) => given.includes(t))
+    : given.includes("terms");
 
 export type TermsContext = {
   /** Who provides the accommodation: the host's business name. */
@@ -224,6 +306,23 @@ export function bookingTermsText(c: TermsContext): string {
     .join("\n\n");
 }
 
+/**
+ * The licence's key points in plain words: shown above the guest's one
+ * confirmation and written at the top of the licence itself, so the kept
+ * text holds exactly what they confirmed.
+ */
+export function keyPoints(
+  c: Pick<TermsContext, "checkOut" | "checkOutBy" | "terms" | "guests">,
+): string[] {
+  const d = c.terms.serviceDays;
+  return [
+    "This is serviced accommodation for a fixed stay, not a tenancy or a lease. It doesn't give you exclusive possession of any room.",
+    "The home address you give is your permanent home. This stay won't be your only or main home, and you won't use its address for post, voting, credit or benefits.",
+    `We (or people working for us) will come in at least every ${d} ${d === 1 ? "day" : "days"} to clean, change linen and check the room, and at other reasonable times to make repairs or in an emergency. You won't change or add locks.`,
+    `Only the guests in the booking (up to ${c.guests}) may stay, and you'll leave by ${c.checkOutBy} on ${formatUkDate(c.checkOut, { withYear: true })} unless we agree an extension in writing.`,
+  ];
+}
+
 /** The licence a guest signs for a longer stay (Markdown, as shown, signed and kept). */
 export function licenceText(c: TermsContext): string {
   const home = c.homeAddress ? addressLine(c.homeAddress) : "(to be given by the guest)";
@@ -231,6 +330,9 @@ export function licenceText(c: TermsContext): string {
   return [
     `# Licence to occupy serviced accommodation: ${c.property}`,
     `Version ${STAY_TERMS_VERSION}. Between ${c.host} (the "provider") and ${c.guestName} (the "guest").`,
+    "## Key points",
+    "The guest confirms each of these. The full terms follow.",
+    ...keyPoints(c).map((k) => `- ${k}`),
     "## 1. What this is",
     "1.1 The provider gives the guest permission (a licence) to stay in serviced accommodation for the period below. It is not a tenancy or a lease, and the guest does not have exclusive possession of any part of the property.",
     "1.2 The provider keeps control of the property and provides the services in section 4 throughout the stay.",
@@ -292,3 +394,23 @@ export const emptyAnswers = (country: string): TermsAnswers => ({
   typedName: "",
   signature: null,
 });
+
+/**
+ * What's still missing before a guest can book or sign, or null: the tick,
+ * and for a licence the home address (addressProblem's words), why they're
+ * staying, the typed name and the drawn signature.
+ */
+export function termsProblem(
+  licence: boolean,
+  a: TermsAnswers,
+  propertyPostcode?: string | null,
+): { kind: "ticks" | "home" | "purpose" | "sign"; message?: string } | null {
+  if (licence) {
+    const home = addressProblem(a.homeAddress, propertyPostcode);
+    if (home) return { kind: "home", message: home };
+    if (!a.purpose) return { kind: "purpose" };
+  }
+  if (!allTicked(licence, a.ticks)) return { kind: "ticks" };
+  if (licence && (a.typedName.trim().length < 2 || !a.signature)) return { kind: "sign" };
+  return null;
+}

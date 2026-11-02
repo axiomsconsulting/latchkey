@@ -4953,6 +4953,8 @@ export const enquiryCopy = branded({
   bookingAgreeNeeded: "Please tick the box to agree to the cancellation terms.",
   bookAndPay: (amount: string) => `Book and pay ${amount}`,
   bookNow: "Book now",
+  bookBank: "Book and pay by bank transfer",
+  bookProperty: "Book and pay at the property",
   cardNote: "You'll pay on Stripe's secure page; your room is held for 30 minutes while you do.",
   bookingNote:
     "Your room is booked straight away. You'll see your confirmation and reference next.",
@@ -5787,7 +5789,18 @@ export const stayTermsCopy = branded({
   termsTitle: "Booking terms",
   licenceTitle: "Agreement for a longer stay",
   licenceIntro:
-    "For a stay this long, we ask you to sign a short agreement: your permanent home address, why you're staying, and that this is serviced accommodation with regular cleaning, not a tenancy.",
+    "Please check the key points, give your permanent home address and sign. Your booking is made when you press the button at the end.",
+  longIntro: (nights: number) =>
+    `A stay of ${nights} nights needs a short signed agreement: your permanent home address, and that this is serviced accommodation with regular cleaning, not a tenancy. You'll sign it before paying.`,
+  signedBy: (name: string) => `Signed by ${name || "you"}. You can review it before booking.`,
+  readAndSign: "Read and sign",
+  review: "Review",
+  keyPoints: "Key points you're agreeing to",
+  readFull: (title: string) => `Read the full ${title.toLowerCase()}`,
+  agreeBefore: "I have read and agree to the",
+  termsLink: "booking terms",
+  agreeAfter: "and house rules.",
+  agreeTerms: "I agree to these terms",
   home: "Your permanent home address",
   line1: "Address line 1",
   line2: "Address line 2 (optional)",
@@ -5798,13 +5811,28 @@ export const stayTermsCopy = branded({
   purposePick: "Choose one",
   typedName: "Your full name, as your signature",
   signature: "Sign here with your finger or mouse",
-  kept: "We keep a copy of what you agreed to and signed, with the date and time, for your host and in case of any disagreement about the stay.",
+  signedAlt: "Your signature",
+  signAgain: "Sign again",
+  kept: "We keep a copy of what you agreed to and signed, with the date and time, for your host and in case of any disagreement about the stay. You can save your own copy from your confirmation page.",
   loading: "Getting the terms…",
   tooLong: (n: number) =>
     `Stays here can be booked for up to ${n} nights. For a longer stay, please send the host a request.`,
-  needTicks: "Please tick each box to agree.",
+  needTicks: "Please tick the box to agree to the terms.",
   needHome: "Please give your permanent home address and why you're staying.",
   needSign: "Please type your full name and sign.",
+  changed: "Your booking details changed since you signed. Please check and sign again.",
+  /** The button that makes the booking: says it comes with paying (Consumer Contracts Regulations, reg 14(3)). */
+  agreeAndPay: (amount: string) => `Agree and continue to pay ${amount}`,
+  agreeAndBook: (method: "bank" | "property") =>
+    method === "bank"
+      ? "Agree and book, paying by bank transfer"
+      : "Agree and book, paying at the property",
+  signAndPay: (amount: string) => `Sign and pay ${amount}`,
+  signAndBook: "Sign and book",
+  // The guest's own copy (/reserve/<token>)
+  yourCopy: "What you agreed to",
+  yourCopyHelp: "Your own copy, word for word as you agreed to it. Print it or save it as a PDF.",
+  print: "Print or save as PDF",
   // The signing page (/agree/<token>)
   pageTitle: (property: string) => `Your stay at ${property}`,
   pageIntro: "Please read and agree to the terms for your stay.",
@@ -5821,10 +5849,17 @@ export const stayTermsSettingsCopy = branded({
     "Every guest who books here accepts your booking terms, and longer stays also sign a licence written to keep the stay serviced accommodation rather than a tenancy. This is a careful starting point, not legal advice: have it checked by a solicitor for your property, and keep to it in practice (going in to clean as often as it says).",
   maxNights: "Longest stay guests can book",
   maxHelp: (n: number) =>
-    `Longer stays can still send you a request. Suggested for your country: ${n} nights.`,
+    `Up to 365. Longer stays can still send you a request. Suggested: ${n} nights.`,
   licenceFrom: "Signed licence from",
-  licenceHelp:
-    "Stays this long or longer sign the licence, with their permanent home address. 0: every stay.",
+  licenceHelp: (always: number) =>
+    `Stays this long or longer sign the licence, with their permanent home address (0: every stay). Stays over ${always} nights always sign it.`,
+  insurance: "Your insurance",
+  insuranceUnsure: "Not sure or not listed",
+  insuranceHelp:
+    "Pick the kind of policy you have: how long a single stay can be usually depends on it.",
+  policyMax: "Longest single stay your policy covers",
+  policyHelp:
+    'From your policy wording or schedule (for example "maximum let" or "maximum booking length"). Leave blank if it doesn\'t say.',
   serviceDays: "Cleaning and checks during a long stay",
   serviceHelp: "Written into the licence: you or your team go in this often.",
   every: "Every",

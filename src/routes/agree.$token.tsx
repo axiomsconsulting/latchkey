@@ -4,13 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { GuestFrame, GuestMessage } from "@/components/guest/GuestFrame";
-import { StayTermsForm } from "@/components/guest/StayTermsForm";
+import { LongStaySign, ShortStayTerms } from "@/components/guest/StayTermsForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { stayTermsCopy as copy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
-import { addressProblem, allTicked, emptyAnswers, type TermsAnswers } from "@/lib/stay-terms";
+import { emptyAnswers, termsProblem, type TermsAnswers } from "@/lib/stay-terms";
 import { getAgreementLink, signAgreementLink } from "@/lib/stay-terms.functions";
 
 /**
@@ -85,17 +85,19 @@ function AgreePage() {
 
   async function sign() {
     if (!page?.found || !answers || name === null) return;
-    const home = addressProblem(answers.homeAddress);
+    const missing = termsProblem(!!page.licenceText, answers);
     const why =
       name.trim().length < 2
         ? copy.needSign
-        : !allTicked(!!page.licenceText, answers.ticks)
-          ? copy.needTicks
-          : page.licenceText && (home || !answers.purpose)
-            ? (home ?? copy.needHome)
-            : page.licenceText && (answers.typedName.trim().length < 2 || !answers.signature)
-              ? copy.needSign
-              : null;
+        : missing
+          ? (missing.message ??
+            {
+              ticks: copy.needTicks,
+              home: copy.needHome,
+              purpose: copy.needHome,
+              sign: copy.needSign,
+            }[missing.kind])
+          : null;
     if (why) return setError(why);
     setBusy(true);
     setError(null);
@@ -149,13 +151,16 @@ function AgreePage() {
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-            {answers ? (
-              <StayTermsForm
+            {answers && page.licenceText ? (
+              <LongStaySign
                 termsText={page.termsText}
                 licenceText={page.licenceText}
+                keyPoints={page.keyPoints}
                 value={answers}
                 onChange={setAnswers}
               />
+            ) : answers ? (
+              <ShortStayTerms termsText={page.termsText} value={answers} onChange={setAnswers} />
             ) : null}
             {error ? (
               <p role="alert" className="text-sm text-destructive">
