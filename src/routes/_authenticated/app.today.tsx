@@ -487,16 +487,19 @@ function Card({
   icon,
   title,
   action,
+  quiet,
   children,
 }: {
   id: string;
   icon: typeof DoorOpen;
   title: string;
   action?: ReactNode;
+  /** Nothing waiting: the card folds to this line (DashSection), so busy cards rise up the page. */
+  quiet?: string | null;
   children: ReactNode;
 }) {
   return (
-    <DashSection id={id} icon={icon} title={title} action={action}>
+    <DashSection id={id} icon={icon} title={title} action={action} quiet={quiet}>
       {children}
     </DashSection>
   );
@@ -720,6 +723,7 @@ function WaitingOnYou({ propertyId }: { propertyId: string }) {
       icon={Inbox}
       title={copy.waitingTitle}
       action={count ? <Badge>{count}</Badge> : null}
+      quiet={!jobs.isLoading && !extras.isLoading && count === 0 ? copy.waitingEmpty : null}
     >
       {jobs.isLoading || extras.isLoading ? <Skeleton className="h-20 rounded-xl" /> : null}
       {!jobs.isLoading && !extras.isLoading && count === 0 ? (
@@ -836,6 +840,7 @@ function CleaningToday({
       icon={SprayCan}
       title={copy.cleaningTitle}
       action={<CardLink to="/app/housekeeping">{copy.openBoard}</CardLink>}
+      quiet={today.length === 0 && tight.length === 0 ? copy.cleaningEmpty : null}
     >
       {today.length === 0 && tight.length === 0 ? (
         <p className="text-sm text-muted-foreground">{copy.cleaningEmpty}</p>
@@ -927,6 +932,7 @@ function MaintenanceAhead({ propertyId }: { propertyId: string }) {
       id="maintenance"
       icon={Wrench}
       title={copy.maintenanceTitle}
+      quiet={!jobs.isLoading && ahead.length === 0 ? copy.maintenanceEmpty : null}
       action={
         <CardLink to="/app/services" search={{ tab: "planned" }}>
           {copy.bookMaintenance}

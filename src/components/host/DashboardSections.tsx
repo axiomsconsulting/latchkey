@@ -10,7 +10,8 @@ import {
   placeCard,
   readLayout,
   setPlace,
-  toggleCollapsed,
+  isFolded,
+  toggleFold,
   type Layout,
   type Place,
 } from "@/lib/dashboard-layout";
@@ -18,8 +19,10 @@ import { moveItem } from "@/lib/reorder";
 import { cn } from "@/lib/utils";
 
 type Ctx = {
-  collapsed: (id: string) => boolean;
-  toggle: (id: string) => void;
+  collapsed: (id: string, quiet: boolean) => boolean;
+  toggle: (id: string, quiet?: boolean) => void;
+  /** Each card says whether it has nothing waiting, for folding from the grab bar or keyboard. */
+  setQuiet: (id: string, quiet: boolean) => void;
   grabProps: (id: string, title: string) => React.ButtonHTMLAttributes<HTMLButtonElement>;
   dragging: string | null;
   wide: (id: string) => boolean;
@@ -87,7 +90,9 @@ export function DashboardSections({
       // Not remembered this time.
     }
   };
-  const toggle = (id: string) => setLayout(toggleCollapsed(layout, id));
+  const quietCards = useRef<Record<string, boolean>>({});
+  const toggle = (id: string, quiet = quietCards.current[id] ?? false) =>
+    setLayout(toggleFold(layout, id, quiet));
   const move = (id: string, by: -1 | 1) => {
     const from = layout.order.indexOf(id);
     const next = moveItem(layout.order, from, from + by);
@@ -125,7 +130,7 @@ export function DashboardSections({
 
   const grabProps = (id: string, title: string): React.ButtonHTMLAttributes<HTMLButtonElement> => ({
     type: "button",
-    "aria-label": copy.grab(title, layout.collapsed.includes(id)),
+    "aria-label": copy.grab(title, isFolded(layout, id, quietCards.current[id] ?? false)),
     title: copy.grabHint,
     onPointerDown: (e) => {
       if (e.button !== 0) return;
@@ -204,7 +209,10 @@ export function DashboardSections({
   return (
     <SectionsContext.Provider
       value={{
-        collapsed: (id) => layout.collapsed.includes(id),
+        collapsed: (id, quiet) => isFolded(layout, id, quiet),
+        setQuiet: (id, quiet) => {
+          quietCards.current[id] = quiet;
+        },
         toggle,
         grabProps,
         dragging,
@@ -256,16 +264,21 @@ export function DashSection({
   icon: Icon,
   title,
   action,
+  quiet,
   children,
 }: {
   id: string;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   action?: ReactNode;
+  /** Nothing waiting: shown as this one line (folded) unless the host opens the card. */
+  quiet?: string | null | undefined;
   children: ReactNode;
 }) {
   const ctx = useContext(SectionsContext);
-  const folded = ctx?.collapsed(id) ?? false;
+  const isQuiet = !!quiet;
+  const folded = ctx?.collapsed(id, isQuiet) ?? false;
+  ctx?.setQuiet(id, isQuiet);
   return (
     <section
       id={`today-${id}`}
@@ -300,7 +313,7 @@ export function DashSection({
         {ctx ? (
           <button
             type="button"
-            onClick={() => ctx.toggle(id)}
+            onClick={() => ctx.toggle(id, isQuiet)}
             aria-expanded={!folded}
             aria-label={folded ? copy.unfold(title) : copy.fold(title)}
             className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
@@ -309,7 +322,13 @@ export function DashSection({
           </button>
         ) : null}
       </div>
-      {folded ? null : children}
+      {folded ? (
+        quiet ? (
+          <p className="-mt-1 text-sm text-muted-foreground">{quiet}</p>
+        ) : null
+      ) : (
+        children
+      )}
     </section>
   );
 }

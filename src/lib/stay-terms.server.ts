@@ -44,6 +44,8 @@ export type TermsProperty = {
   direct_offers?: unknown;
   short_code?: string;
   active?: boolean | null;
+  /** A demo property: records last a couple of days and no files are stored. */
+  is_demo?: boolean | null;
   timezone?: string | null;
   currency?: string | null;
   business: string;
@@ -56,7 +58,7 @@ export async function termsProperty(
   const q = db
     .from("properties")
     .select(
-      "id, host_id, name, short_code, active, address, postcode, country_code, timezone, currency, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, direct_booking, direct_offers, hosts(business_name, currency)",
+      "id, host_id, name, short_code, active, is_demo, address, postcode, country_code, timezone, currency, default_check_in_time, default_check_out_time, quiet_hours_start, quiet_hours_end, direct_booking, direct_offers, hosts(business_name, currency)",
     );
   const { data } = await (
     "id" in by ? q.eq("id", by.id) : q.eq("short_code", by.code.toLowerCase())
@@ -162,7 +164,12 @@ export type Acceptance = {
   signature?: string | null;
   ip: string | null;
   userAgent: string | null;
+  /** A demo property's (shared demo, showcase, recording): kept two days, nothing stored in Drive. */
+  demo?: boolean;
 };
+
+/** Demo records go with the next daily reset. */
+const demoKeep = () => new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
 
 /**
  * Keeps one acceptance: the row first (so it's never lost), then the drawn
@@ -199,14 +206,15 @@ export async function recordAcceptance(a: Acceptance): Promise<string> {
       signed_at: signedAt,
       ip: a.ip,
       user_agent: a.userAgent?.slice(0, 500) ?? null,
-      keep_until: keepUntil(a.checkOut),
+      keep_until: a.demo ? demoKeep() : keepUntil(a.checkOut),
     })
     .select("id")
     .single();
   if (error || !row) throw new Error("Your agreement couldn't be saved. Please try again.");
-  await storeFiles(row.id, a.signature ?? null).catch((e: unknown) =>
-    console.error("Stay agreement files", e instanceof Error ? e.message : e),
-  );
+  if (!a.demo)
+    await storeFiles(row.id, a.signature ?? null).catch((e: unknown) =>
+      console.error("Stay agreement files", e instanceof Error ? e.message : e),
+    );
   return row.id as string;
 }
 
@@ -215,6 +223,15 @@ export async function storeFiles(id: string, signature?: string | null): Promise
   const db = await admin();
   const { data: r } = await db.from("stay_agreements").select("*").eq("id", id).single();
   if (!r || r.pdf_sha256) return;
+  // Demo properties never put files in Drive (their PDFs are made when opened).
+  if (r.property_id) {
+    const { data: prop } = await db
+      .from("properties")
+      .select("is_demo")
+      .eq("id", r.property_id)
+      .maybeSingle();
+    if (prop?.is_demo) return;
+  }
   const { storePrivate, readPrivate } = await import("./private-store.server");
   const { sha256OfBytes } = await import("./private-store");
   const { data: host } = await db
@@ -344,4 +361,93 @@ export async function directTermsInput(
     homeAddress: i.homeAddress ?? null,
     purpose: i.purpose ?? null,
   };
+}
+
+/** A record's PDF made now and not stored (demo properties): as a data link to open. */
+export async function pdfDataUrl(id: string): Promise<string | null> {
+  const db = await admin();
+  const { data: r } = await db.from("stay_agreements").select("*").eq("id", id).maybeSingle();
+  if (!r) return null;
+  const { stayAgreementPdf } = await import("./stay-terms-pdf.server");
+  const pdf = await stayAgreementPdf(r.rendered_text, {
+    id,
+    kind: r.kind,
+    version: r.version,
+    property: r.property_name,
+    reference: r.reference,
+    guestName: r.guest_name,
+    guestEmail: r.guest_email,
+    guestPhone: r.guest_phone,
+    renderedSha256: r.rendered_sha256,
+    ticks: r.ticks ?? [],
+    homeAddress: r.home_address ? addressLine(r.home_address as HomeAddress) : null,
+    purpose: r.purpose ? (PURPOSE_LABELS[r.purpose as Purpose] ?? r.purpose) : null,
+    typedName: r.typed_name,
+    signedAt: r.signed_at,
+    ip: r.ip,
+    userAgent: r.user_agent,
+    signaturePng: null,
+  });
+  let bin = "";
+  for (const b of pdf) bin += String.fromCharCode(b);
+  return `data:application/pdf;base64,${btoa(bin)}`;
+}
+
+/**
+ * Sample records for a demo property's direct stays, so the guest card's
+ * Terms and agreement shows what hosts get (fictional, kept two days).
+ */
+export async function seedSampleAgreements(propertyId: string): Promise<void> {
+  const db = await admin();
+  const p = await termsProperty(db, { id: propertyId });
+  if (!p?.is_demo) return;
+  // A fresh set with each rebuild (a demo property's records are all samples).
+  await db.from("stay_agreements").delete().eq("property_id", propertyId);
+  const { data: stays } = await db
+    .from("bookings")
+    .select(
+      "id, guest_full_name, check_in_date, check_out_date, check_in_time, check_out_time, guest_count, reservation_code, rooms(display_name, public_title)",
+    )
+    .eq("property_id", propertyId)
+    .eq("channel", "direct")
+    .not("guest_full_name", "is", null)
+    .limit(3);
+  const { nightsBetween } = await import("./dates");
+  for (const b of (stays ?? []) as any[]) {
+    const nights = Math.max(1, nightsBetween(b.check_in_date, b.check_out_date));
+    const r = await renderTerms(p, {
+      rooms: [b.rooms?.public_title || b.rooms?.display_name || "Room"],
+      guestName: b.guest_full_name,
+      checkIn: b.check_in_date,
+      checkOut: b.check_out_date,
+      nights,
+      guests: Math.max(1, b.guest_count ?? 1),
+      plan: "flex",
+      freeUntil: null,
+      total: "",
+      checkInFrom: b.check_in_time,
+      checkOutBy: b.check_out_time,
+    });
+    await recordAcceptance({
+      hostId: p.host_id,
+      propertyId: p.id,
+      propertyName: p.name,
+      bookingId: b.id,
+      reservationId: null,
+      reference: b.reservation_code ?? null,
+      kind: "terms",
+      text: r.termsText,
+      sha: r.termsSha,
+      guestName: b.guest_full_name,
+      guestEmail: null,
+      guestPhone: null,
+      checkIn: b.check_in_date,
+      checkOut: b.check_out_date,
+      nights,
+      ticks: ["terms"],
+      ip: "198.51.100.24",
+      userAgent: "Sample record for the demo",
+      demo: true,
+    });
+  }
 }

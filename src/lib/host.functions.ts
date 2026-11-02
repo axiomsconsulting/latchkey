@@ -1328,6 +1328,14 @@ export async function seedDemo(
     })),
   );
 
+  // Sample booking-terms records on the direct stays, so the guest card shows them (stay-terms.server.ts).
+  try {
+    const { seedSampleAgreements } = await import("./stay-terms.server");
+    await seedSampleAgreements(property.id);
+  } catch {
+    // Before migration 0081 there are none to show.
+  }
+
   // The regional demos' own price list (with breakfast), tradespeople and guide text.
   if (seed.extras?.length) {
     const currency = (base["currency"] as string | undefined) ?? "GBP";
