@@ -3,10 +3,14 @@ import { describe, expect, it } from "vitest";
 import { marketing } from "../src/content/copy";
 
 describe("home page claims", () => {
-  it("never lists something that already exists as 'on the way'", () => {
-    const next = marketing.next.items.map((i) => i.title.toLowerCase()).join(" | ");
-    for (const shipped of ["housekeeping", "report", "direct stay", "enquir"])
-      expect(next).not.toContain(shipped);
+  it("doesn't advertise unfinished features on the sales page", () => {
+    const all = JSON.stringify(marketing).toLowerCase();
+    expect(all).not.toContain("on the way");
+    expect(all).not.toContain("not available yet");
+  });
+
+  it("keeps each feature frame to one short line until opened", () => {
+    for (const p of marketing.pillars.items) expect(p.summary.length).toBeLessThanOrEqual(100);
   });
 
   it("says 'hotel-grade' at most once on the home page", () => {

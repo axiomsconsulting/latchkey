@@ -193,15 +193,13 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
   home: {
     label: "Home page",
     sections: [
-      { id: "benefits", label: "Three outcomes" },
+      // New ids with the 2026-11 redesign, so an older saved order doesn't apply to it.
+      { id: "outcomes", label: "Three outcomes" },
+      { id: "gap", label: "Where booking sites stop" },
+      { id: "stay", label: "How a stay runs" },
+      { id: "included", label: "What's included" },
       { id: "audience", label: "Who it's for" },
-      { id: "journey", label: "The guest journey" },
-      { id: "pillars", label: "Four pillars" },
-      { id: "beforeAfter", label: "Before and with" },
-      { id: "why", label: "Booking platforms vs Latchkey" },
-      { id: "next", label: "On the way" },
-      { id: "pricing", label: "Pricing" },
-      { id: "developers", label: "For developers" },
+      { id: "plans", label: "Pricing" },
     ],
   },
   today: {

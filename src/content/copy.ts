@@ -82,133 +82,51 @@ export const marketing = branded({
   category: "Guest operations system for independent accommodation",
   headline: "Hotel-grade guest operations for the stays you run yourself.",
   subhead:
-    "Booking sites confirm the reservation. Latchkey runs everything after it: self check-in, a branded stay guide, requests and extras, guest records and alerts, for serviced accommodation, guest houses, B&Bs and Airbnb and Booking.com hosts.",
-  primaryCta: "See the guest journey",
-  hostCta: "Explore the host dashboard",
-  secondaryCta: "Start a 30-day free trial",
+    "Booking sites bring you the guest. Latchkey runs the stay: self check-in at any hour, a stay guide in your brand, requests and extras, and guest records, all in one place.",
+  /** The one main action, and the way to see it first. */
+  trialCta: "Start your free trial",
+  tourCta: "See a guest check in",
+  hostCta: "Or explore the host dashboard",
+  reassure: (days: number) => [
+    `${days}-day free trial`,
+    "No card needed to start",
+    "Cancel any time",
+  ],
   trust: "Works alongside",
   trustTail: "and any iCal calendar",
   footer: "© 2026 Latchkey. Guest operations for independent accommodation.",
   privacyLink: "Privacy policy",
-  /** The three outcomes, right under the hero. */
+  developersLink: "Developers: API and MCP",
+  /** Three outcomes, right under the hero. */
   benefits: [
     {
-      title: "Fewer late-night arrivals",
-      body: "Guests check themselves in at your door tablet or on their own phone, at any hour. No waiting up, no key handovers.",
+      title: "No more waiting up",
+      body: "Guests check themselves in at your door tablet or on their own phone, at any hour.",
     },
     {
-      title: "Fewer messages across apps",
-      body: "Arrivals, requests, extras and repairs from every booking site land in one calm workspace, with alerts where you want them.",
+      title: "One place for every booking site",
+      body: "Arrivals, requests, extras and repairs from every site in one calm workspace.",
     },
     {
-      title: "A more professional stay",
-      body: "Your logo, colours and guide from the first tap, so the stay feels like your business, not just the booking platform's.",
+      title: "A stay that feels like yours",
+      body: "Your logo, colours and guide from the first tap, not the booking platform's.",
     },
   ],
-  audience: {
-    title: "Built for independent accommodation",
-    body: "From one owner-run property to a small portfolio with a team, without a front desk or an enterprise hotel system.",
-    kinds: [
-      "Serviced accommodation",
-      "Guest houses and B&Bs",
-      "Boutique stays",
-      "Airbnb and Booking.com hosts",
-      "Multi-property operators",
-      "Short-stay shared houses",
-    ],
-  },
-  journey: {
-    eyebrow: "The guest journey",
-    title: "From booking to check-out, in one flow.",
-    steps: [
-      {
-        title: "A booking arrives",
-        body: "On any site. Its calendar link brings it into one list, with the same stay matched across sites.",
-      },
-      {
-        title: "The guest checks in",
-        body: "At your door tablet or on their own phone, any hour, the whole group on their own phones if you like.",
-      },
-      {
-        title: "A branded stay guide",
-        body: "Wi-Fi, getting in, house rules and room details, in your look, with a QR guide in every room.",
-      },
-      {
-        title: "Help and extras",
-        body: "Towels, a late check-out or a repair: asked from the stay page, paid by card when you charge.",
-      },
-      {
-        title: "You see it all",
-        body: "Arrivals, requests and messages on Today, with alerts by push, Telegram, email or text.",
-      },
-    ],
-  },
-  pillars: {
-    eyebrow: "What it does",
-    title: "Four things, done properly.",
-    items: [
-      {
-        title: "Arrivals and guest records",
-        points: [
-          "Self check-in at a front-door tablet or on the guest's phone",
-          "Groups check in together on their own phones",
-          "ID checks and photos, according to your settings",
-          "Supports UK guest-register record keeping for applicable accommodation",
-        ],
-      },
-      {
-        title: "Guest experience",
-        points: [
-          "Branded stay and room guides, on your own web address if you like",
-          "Room QR codes, quick tiles, photos and PDFs",
-          "Messages and requests from the guest's stay page",
-          "Invoices for direct stays, on a link guests keep",
-          "Your own enquiry page, so past guests can come back to you directly",
-        ],
-      },
-      {
-        title: "In-house operations",
-        points: [
-          "One bookings list across Airbnb, Booking.com, Homestay, direct and iCal",
-          "Requests, extras and service jobs in one shared flow",
-          "A housekeeping board: turnovers, cleaning progress and “ready for guest”",
-          "Maintenance with your own trades, and local ones found fast",
-          "Card payments for extras, straight to your own account",
-        ],
-      },
-      {
-        title: "Multi-property control",
-        points: [
-          "A Today dashboard for arrivals, departures and what needs you",
-          "Switch between properties; teams with owner, manager, cleaner and viewer roles",
-          "Operations reports across every booking site: occupancy, check-ins, service, extras",
-          "Alerts by push, Telegram, email and text",
-          "Open API and MCP server for your own tools and AI assistants",
-        ],
-      },
-    ],
-  },
-  beforeAfter: {
-    beforeTitle: (day: string) => `${day}, before`,
-    before: [
-      "Waiting up for a late arrival",
-      "Three apps to find who's coming",
-      "A paper register nobody fills in",
-      "Towels requested at 11pm, seen at 7am",
-    ],
-    afterTitle: (day: string) => `${day}, with Latchkey`,
-    after: [
-      "Guests let themselves in, any hour",
-      "One arrivals list for every site",
-      "Register details recorded as guests check in",
-      "Requests and extras land in one inbox",
-    ],
-  },
-  /** Booking platforms vs Latchkey, and what it does not replace. */
+  /** The gap: where booking sites stop, short, with the side-by-side folded away. */
   gap: {
-    eyebrow: "Booking platforms vs Latchkey",
-    title:
-      "Booking platforms help guests find you. Latchkey runs the stay, and helps them return to you.",
+    eyebrow: "Where booking sites stop",
+    title: "Booking sites find the guest. The stay is still yours to run.",
+    body: "That's the part Latchkey handles, alongside the sites you already use.",
+    keepTitle: "Keep your booking sites for",
+    keep: ["Listings and being found", "Rates and availability", "Taking the booking and payment"],
+    oursTitle: "Latchkey runs the stay",
+    ours: [
+      "Arrival and self check-in",
+      "Your guide, requests and extras",
+      "Guest records and the register",
+      "Direct stays when guests come back",
+    ],
+    compare: "Compare them side by side",
     theyLabel: "Booking platforms",
     usLabel: "Latchkey",
     rows: [
@@ -245,42 +163,92 @@ export const marketing = branded({
       {
         topic: "Coming back",
         they: "Through the platform again",
-        us: "Your own enquiry page, and past guests who asked to hear from you",
+        us: "Your own booking page, with your terms",
       },
     ],
-    keepTitle: "Keep using your booking sites for",
-    keep: [
-      "Listings and being found",
-      "Rates, availability and distribution",
-      "Taking the booking and its payment",
-      "Their own inbox (forward it to Latchkey if you like)",
-    ],
-    oursTitle: "Latchkey runs what happens after the booking",
-    ours: [
-      "Arrivals and self check-in",
-      "Stay and room guides",
-      "Requests, extras and repairs",
-      "Guest records and the register",
-      "Operations across every site",
-    ],
-    note: "Latchkey works alongside your booking sites and any channel manager. It isn't a channel manager, a booking engine or a hotel PMS.",
+    note: "Latchkey works alongside your booking sites and any channel manager. It isn't a channel manager, a booking engine for the sites or a hotel PMS.",
   },
-  next: {
-    eyebrow: "On the way",
-    title: "Next for your guest journey",
-    body: "Built around the work that starts after the booking. Not available yet.",
+  journey: {
+    eyebrow: "How a stay runs",
+    title: "From booking to check-out, in one flow.",
+    steps: [
+      { title: "A booking arrives", body: "From any site, matched into one list." },
+      { title: "The guest checks in", body: "At your door or on their phone, any hour." },
+      { title: "Their guide opens", body: "Wi-Fi, getting in and house rules, in your look." },
+      { title: "Help and extras", body: "Towels, late check-out or a repair, paid by card." },
+      { title: "You see it all", body: "On Today, with alerts where you want them." },
+    ],
+  },
+  /** What's included: four frames, each a short line that opens to the detail. */
+  pillars: {
+    eyebrow: "What's included",
+    title: "Everything after the booking, in four parts.",
+    more: "What's in it",
     items: [
       {
-        title: "Automated stay messages",
-        body: "Your own pre-arrival, arrival-day and check-out reminders, on the stay page and by email.",
+        title: "Arrivals and guest records",
+        summary: "Self check-in, ID checks and the UK guest register, handled as guests arrive.",
+        points: [
+          "Self check-in at a front-door tablet or on the guest's own phone",
+          "ID and selfie photos taken on a phone when the tablet's camera isn't up to it",
+          "Groups check in together, each on their own phone",
+          "ID checks and photos, according to your settings",
+          "Supports UK guest-register record keeping for applicable accommodation",
+          "Welcome and goodbye messages by WhatsApp, text or email",
+        ],
+      },
+      {
+        title: "Guest experience",
+        summary:
+          "A stay guide and room guides in your brand, with messages, extras and direct stays.",
+        points: [
+          "Branded stay and room guides, on your own web address if you like",
+          "Room QR codes, quick tiles, photos and PDFs",
+          "Messages and requests from the guest's stay page",
+          "Your own booking page: guests book and pay you directly, under your terms",
+          "Longer direct stays sign a licence with their permanent home address",
+          "Invoices for direct stays, on a link guests keep",
+        ],
+      },
+      {
+        title: "In-house operations",
+        summary: "One list of stays from every site, a housekeeping board, requests and repairs.",
+        points: [
+          "One bookings list across Airbnb, Booking.com, Homestay, direct and iCal",
+          "Requests, extras and service jobs in one shared flow",
+          "A housekeeping board: turnovers, cleaning progress and “ready for guest”",
+          "Maintenance with your own trades, and local ones found fast",
+          "Card payments for extras, straight to your own account",
+        ],
+      },
+      {
+        title: "More than one property",
+        summary: "A Today dashboard, team roles, reports and alerts across every property.",
+        points: [
+          "A Today dashboard for arrivals, departures and what needs you",
+          "Switch between properties; owner, manager, cleaner and viewer roles",
+          "Operations reports across every booking site: occupancy, check-ins, service, extras",
+          "Alerts by push, Telegram, email and text",
+          "An open API and MCP server for your own tools",
+        ],
       },
     ],
   },
-  developers: {
-    eyebrow: "For developers",
-    title: "Open API. MCP server for AI assistants.",
-    body: "Connect your own tools, or ask Claude or ChatGPT who's arriving today. Read-only or full keys, revoke any time.",
-    cta: "Developer docs",
+  audience: {
+    title: "Built for stays you run yourself",
+    kinds: [
+      "Serviced accommodation",
+      "Guest houses and B&Bs",
+      "Boutique stays",
+      "Airbnb and Booking.com hosts",
+      "Multi-property operators",
+      "Short-stay shared houses",
+    ],
+  },
+  /** The invitation at the end of the page. */
+  closing: {
+    title: "Your next guest could check themselves in.",
+    body: "Add your rooms, link your booking calendars and try a check-in yourself. Your stay guide starts with sections written for you to edit.",
   },
 });
 
@@ -3017,14 +2985,11 @@ export const homeArtCopy = branded({
   slots: {
     hero: "Behind the headline",
     benefits: "Behind: three outcomes",
+    why: "Behind: where booking sites stop",
+    journey: "Behind: how a stay runs",
+    pillars: "Behind: what's included",
     audience: "Behind: who it's for",
-    journey: "Behind: the guest journey",
-    pillars: "Behind: four pillars",
-    beforeAfter: "Behind: before and after",
     pricing: "Behind: pricing",
-    why: "Behind: booking sites vs Latchkey",
-    next: "Behind: on the way",
-    developers: "Behind: developers",
   } as Record<string, string>,
 });
 
