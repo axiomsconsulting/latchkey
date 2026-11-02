@@ -647,6 +647,7 @@ export function googleFontsHref(t: ThemeConfig): string {
 export const RESERVED_SLUGS = new Set([
   "g",
   "photos",
+  "agree",
   "lite",
   "app",
   "auth",

@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.110.0",
+    date: "2026-11-02",
+    title: "Booking terms and a signed licence for longer direct stays",
+    items: [
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Guests who book on your own page now read and agree to your booking terms (their stay, price, cancellation, conduct, your access to clean and your house rules) before booking. Exactly what each guest agreed to is kept with when and from where, and a PDF copy, on their guest card under Terms and agreement.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Longer stays (28 nights or more to start, your choice) also sign a short licence: their permanent home address, why they're staying, that this is serviced accommodation with regular cleaning and not a tenancy, and a drawn signature. You set the longest stay guests can book (28 nights to start; longer can still send a request), how often you go in to clean, and your house rules, in Direct stays → Book and pay here, with advice for your country.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "For a stay booked another way (a request, an extension, by phone), Copy a link to read and sign on the guest card sends the same terms and licence to the guest.",
+      },
+    ],
+  },
+  {
     version: "0.109.0",
     date: "2026-11-01",
     title: "Getting started checklist and door tablet settings in one place",

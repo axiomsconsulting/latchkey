@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { GuestInvoice } from "@/components/host/GuestInvoice";
+import { GuestAgreements } from "@/components/host/GuestAgreements";
 import { GuestPeople } from "@/components/host/GuestPeople";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 import { StatusBadge } from "@/components/host/StatusBadge";
@@ -42,7 +43,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { common, guestCard as copy, invoiceCopy } from "@/content/copy";
+import { common, guestAgreementsCopy, guestCard as copy, invoiceCopy } from "@/content/copy";
 import { useBookingSites, useRole, useWorkspace } from "@/hooks/use-host-data";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
 import { isE164, phoneLinks } from "@/lib/phone-links";
@@ -331,6 +332,10 @@ export function GuestSheet({
 
             <Section title={invoiceCopy.hostSection} count={0}>
               <GuestInvoice bookingId={b.id} channel={b.channel} canWrite={canWrite} />
+            </Section>
+
+            <Section title={guestAgreementsCopy.section} count={0}>
+              <GuestAgreements bookingId={b.id} canWrite={canWrite} />
             </Section>
 
             <Section title={copy.messages} count={d.messages.length}>

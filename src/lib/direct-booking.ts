@@ -11,6 +11,8 @@
 import { addDays } from "./dates";
 import { quoteStay, type Quote, type SeasonalOffer } from "./direct-rates";
 
+import { DEFAULT_STAY_TERMS, normaliseStayTerms, type StayTerms } from "./stay-terms";
+
 export type PayMethod = "card" | "bank" | "property";
 export type RatePlan = "flex" | "nonref";
 
@@ -29,6 +31,8 @@ export type DirectBooking = {
   bankPayDays: number;
   /** Ask how many children as well as adults (they count towards each room's sleeps). */
   children: boolean;
+  /** Longest stay, the longer-stay licence and the host's house rules (stay-terms.ts). */
+  terms: StayTerms;
 };
 
 export const DEFAULT_DIRECT_BOOKING: DirectBooking = {
@@ -40,6 +44,7 @@ export const DEFAULT_DIRECT_BOOKING: DirectBooking = {
   nonRef: { enabled: true, kind: "percent", value: 10 },
   bankPayDays: 3,
   children: false,
+  terms: DEFAULT_STAY_TERMS,
 };
 
 const int = (v: unknown, lo: number, hi: number, fb: number) =>
@@ -66,6 +71,7 @@ export function normaliseDirectBooking(raw: unknown): DirectBooking {
     },
     bankPayDays: int(r["bankPayDays"], 1, 14, DEFAULT_DIRECT_BOOKING.bankPayDays),
     children: r["children"] === true,
+    terms: normaliseStayTerms(r["terms"]),
   };
 }
 
