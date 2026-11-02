@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
+import { agreedInput, checkAgreed } from "./stay-terms.functions";
 
 type Loose = { from: (t: string) => any };
 const uuid = z.string().uuid();
@@ -129,6 +130,8 @@ export const reserveDirect = createServerFn({ method: "POST" })
         origin: z.string().url(),
         /** Left empty by people; filled by bots. */
         website: z.string().max(200).optional(),
+        /** The booking terms (and longer-stay licence) the guest read and agreed to (stay-terms.ts). */
+        agreed: agreedInput,
       })
       .refine((v) => v.children < v.guests, "At least one adult must stay.")
       .parse(d),
@@ -171,6 +174,23 @@ export const reserveDirect = createServerFn({ method: "POST" })
       throw new Error("That way of paying isn't available. Please choose another.");
     const children = setup.settings.children ? data.children : 0;
     const ids = [...new Set(data.roomIds)];
+
+    // The terms they agreed to are the terms now (and a long enough stay is signed for).
+    const termsSrv = await import("./stay-terms.server");
+    const tp = await termsSrv.termsProperty(db, { id: p.id });
+    if (!tp) throw new Error("This page isn't taking bookings.");
+    const agreedTerms = await checkAgreed(
+      tp,
+      await termsSrv.directTermsInput(db, tp, {
+        roomIds: ids,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        guests: data.guests,
+        plan: data.plan,
+        name: data.name,
+      }),
+      data.agreed,
+    );
 
     const { data: roomRows } = await db
       .from("rooms")
@@ -372,6 +392,53 @@ export const reserveDirect = createServerFn({ method: "POST" })
         /direct_reservations/.test(error?.message ?? "")
           ? "Booking here isn't ready yet. Please send a request instead."
           : "That booking couldn't be made. Please try again.",
+      );
+    }
+
+    // What they agreed to, kept word for word with when and from where (and the signed licence).
+    try {
+      const meta = await termsSrv.requestMeta();
+      const base = {
+        hostId: p.host_id as string,
+        propertyId: p.id as string,
+        propertyName: p.name as string,
+        bookingId: made[0]!.booking_id,
+        reservationId: res.id as string,
+        reference,
+        guestName: data.name.trim(),
+        guestEmail: email,
+        guestPhone: data.phone?.trim() || null,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        nights,
+        ticks: data.agreed.ticks,
+        ...meta,
+      };
+      await termsSrv.recordAcceptance({
+        ...base,
+        kind: "terms",
+        text: agreedTerms.termsText,
+        sha: agreedTerms.termsSha,
+      });
+      if (agreedTerms.licenceText && agreedTerms.licenceSha && data.agreed.licence)
+        await termsSrv.recordAcceptance({
+          ...base,
+          kind: "licence",
+          text: agreedTerms.licenceText,
+          sha: agreedTerms.licenceSha,
+          homeAddress: data.agreed.licence.homeAddress,
+          purpose: data.agreed.licence.purpose,
+          typedName: data.agreed.licence.typedName,
+          signature: data.agreed.licence.signature,
+        });
+    } catch (e) {
+      // Without the record of what was agreed, the booking isn't made.
+      await release();
+      await db.from("direct_reservations").update({ status: "cancelled" }).eq("id", res.id);
+      throw new Error(
+        e instanceof Error && /migration|stay_agreements/.test(e.message)
+          ? "Booking here isn't ready yet. Please send a request instead."
+          : "Your agreement couldn't be saved, so nothing was booked. Please try again.",
       );
     }
 
@@ -631,6 +698,7 @@ export const getDirectBookingSettings = createServerFn({ method: "GET" })
       settings: setup.settings,
       ready: setup.ready,
       currency: (p.currency as string | null) || (p.hosts?.currency as string | null) || "GBP",
+      country: (p.country_code as string | null) ?? null,
       // Rooms whose Latchkey calendar isn't shared yet: other sites can't see direct bookings for them.
       roomsNotShared: (
         (rooms ?? []) as Array<{

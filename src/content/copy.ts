@@ -5816,3 +5816,77 @@ export const connectionHealthCopy = branded({
     string
   >,
 });
+
+/** Direct stays: the booking terms and longer-stay licence a guest agrees to (StayTermsForm). */
+export const stayTermsCopy = branded({
+  termsTitle: "Booking terms",
+  licenceTitle: "Agreement for a longer stay",
+  licenceIntro:
+    "For a stay this long, we ask you to sign a short agreement: your permanent home address, why you're staying, and that this is serviced accommodation with regular cleaning, not a tenancy.",
+  home: "Your permanent home address",
+  line1: "Address line 1",
+  line2: "Address line 2 (optional)",
+  city: "Town or city",
+  postcode: "Postcode",
+  country: "Country",
+  purpose: "Why you're staying",
+  purposePick: "Choose one",
+  typedName: "Your full name, as your signature",
+  signature: "Sign here with your finger or mouse",
+  kept: "We keep a copy of what you agreed to and signed, with the date and time, for your host and in case of any disagreement about the stay.",
+  loading: "Getting the terms…",
+  tooLong: (n: number) =>
+    `Stays here can be booked for up to ${n} nights. For a longer stay, please send the host a request.`,
+  needTicks: "Please tick each box to agree.",
+  needHome: "Please give your permanent home address and why you're staying.",
+  needSign: "Please type your full name and sign.",
+  // The signing page (/agree/<token>)
+  pageTitle: (property: string) => `Your stay at ${property}`,
+  pageIntro: "Please read and agree to the terms for your stay.",
+  pageSign: "Agree and sign",
+  pageAgree: "Agree",
+  pageDone: "Thank you. Your host has a copy of what you agreed to.",
+  pageGone: "This link has expired or isn't right. Please ask your host for a new one.",
+});
+
+/** Direct stays → Book and pay here → Stay length and terms (StayTermsSettings). */
+export const stayTermsSettingsCopy = branded({
+  title: "Stay length and terms",
+  notAdvice:
+    "Every guest who books here accepts your booking terms, and longer stays also sign a licence written to keep the stay serviced accommodation rather than a tenancy. This is a careful starting point, not legal advice: have it checked by a solicitor for your property, and keep to it in practice (going in to clean as often as it says).",
+  maxNights: "Longest stay guests can book",
+  maxHelp: (n: number) =>
+    `Longer stays can still send you a request. Suggested for your country: ${n} nights.`,
+  licenceFrom: "Signed licence from",
+  licenceHelp:
+    "Stays this long or longer sign the licence, with their permanent home address. 0: every stay.",
+  serviceDays: "Cleaning and checks during a long stay",
+  serviceHelp: "Written into the licence: you or your team go in this often.",
+  every: "Every",
+  days: "days",
+  nights: "nights",
+  houseRules: "Your house rules",
+  houseRulesPlaceholder:
+    "For example: no pets; bins out on Thursday evenings; parking in bay 3 only.",
+  houseRulesHelp: "Shown in the booking terms each guest agrees to, as you write them here.",
+});
+
+/** The guest card: booking terms accepted and licences signed (GuestAgreements). */
+export const guestAgreementsCopy = branded({
+  section: "Terms and agreement",
+  terms: "Booking terms accepted",
+  licence: "Licence for a longer stay signed",
+  by: (who: string, when: string, version: string) => `By ${who}, ${when} (version ${version})`,
+  home: (a: string) => `Declared permanent home: ${a}`,
+  purpose: (p: string) => `Purpose: ${p}`,
+  fingerprint: (sha: string) => `Text fingerprint (SHA-256): ${sha}`,
+  openPdf: "Open the PDF",
+  pdfPending: "The PDF is being made. Open this stay again in a minute.",
+  none: "Nothing agreed for this stay yet.",
+  notYet:
+    "Stay terms need the latest update (migration 0081), or only owners and managers can see them.",
+  ask: "Copy a link to read and sign",
+  askHelp:
+    "For a stay booked another way (a request, an extension, by phone): send the guest this link to agree to your booking terms, and to sign the licence when the stay is long enough. It works for 14 days.",
+  copied: "Link copied. Send it to the guest.",
+});

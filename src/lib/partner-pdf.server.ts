@@ -11,9 +11,9 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 import { parseMarkdown, plain, splitSigning, ukDateTime, type Block } from "./partner-agreement";
 
 const A4: [number, number] = [595.28, 841.89];
-const MARGIN = 56;
+export const MARGIN = 56;
 const INK = rgb(0.1, 0.12, 0.11);
-const MUTED = rgb(0.38, 0.4, 0.39);
+export const MUTED = rgb(0.38, 0.4, 0.39);
 
 /** Text Helvetica can draw: accents dropped where needed, anything else "?". */
 function drawable(font: PDFFont, cache: Map<string, string>) {
@@ -42,7 +42,7 @@ function drawable(font: PDFFont, cache: Map<string, string>) {
       .join("");
 }
 
-type Writer = {
+export type Writer = {
   line: (
     text: string,
     o?: {
@@ -60,7 +60,7 @@ type Writer = {
   reserve: (h: number) => number;
 };
 
-function writer(doc: PDFDocument, regular: PDFFont, bold: PDFFont, footer: string): Writer {
+export function writer(doc: PDFDocument, regular: PDFFont, bold: PDFFont, footer: string): Writer {
   const cacheR = new Map<string, string>();
   const cacheB = new Map<string, string>();
   const safeR = drawable(regular, cacheR);
@@ -107,7 +107,7 @@ function writer(doc: PDFDocument, regular: PDFFont, bold: PDFFont, footer: strin
   return { line, space: (h) => (y -= h), page: () => page, newPage, reserve };
 }
 
-function writeBlocks(w: Writer, blocks: Block[], indent = 0) {
+export function writeBlocks(w: Writer, blocks: Block[], indent = 0) {
   for (const b of blocks) {
     if (b.type === "heading") {
       w.space(b.level <= 2 ? 6 : 2);

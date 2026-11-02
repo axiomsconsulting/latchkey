@@ -419,6 +419,32 @@ export async function runRetentionSweep(): Promise<number> {
   await purgeGuestIds(today);
   // The UK guest register is kept for 12 months from arrival, then removed.
   await supabaseAdmin.from("guest_register").delete().lt("keep_until", today);
+  // Guests' accepted terms and signed licences: kept six years after check-out, then removed with their files.
+  try {
+    const loose = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { data: old } = await loose
+      .from("stay_agreements")
+      .select("id, signature_path, pdf_path")
+      .lt("keep_until", today)
+      .limit(500);
+    if (old?.length) {
+      const { removePrivate } = await import("./private-store.server");
+      await removePrivate(old.flatMap((r: any) => [r.signature_path, r.pdf_path]));
+      await loose
+        .from("stay_agreements")
+        .delete()
+        .in(
+          "id",
+          old.map((r: any) => r.id),
+        );
+    }
+    await loose
+      .from("stay_agreement_links")
+      .delete()
+      .lt("expires_at", new Date(Date.now() - 30 * 86_400_000).toISOString());
+  } catch {
+    // Before migration 0081 there's nothing to remove.
+  }
   await supabaseAdmin.from("check_in_attempts").delete().lt("created_at", monthAgo);
   await supabaseAdmin.from("checkin_sessions").delete().lt("expires_at", new Date().toISOString());
   await supabaseAdmin.from("stay_tokens").delete().lt("expires_at", new Date().toISOString());

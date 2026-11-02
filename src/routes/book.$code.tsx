@@ -52,6 +52,10 @@ import {
   type RatePlan,
 } from "@/lib/direct-booking";
 import { getFxRate, reserveDirect } from "@/lib/direct-booking.functions";
+import { previewStayTerms } from "@/lib/stay-terms.functions";
+import { addressProblem, allTicked, emptyAnswers, type TermsAnswers } from "@/lib/stay-terms";
+import { StayTermsForm } from "@/components/guest/StayTermsForm";
+import { stayTermsCopy } from "@/content/copy";
 import { money, quoteStay, roomTaken } from "@/lib/direct-rates";
 import { getEnquiryPage } from "@/lib/direct.functions";
 import { cn } from "@/lib/utils";
@@ -119,7 +123,12 @@ function Booking({ page }: { page: Page }) {
   const [contact, setContact] = useState<Contact>(() => emptyContact(page.country));
   const [method, setMethod] = useState<PayMethod | null>(page.booking.methods[0] ?? null);
   const [message, setMessage] = useState("");
-  const [agree, setAgree] = useState(false);
+  // The booking terms (and a longer stay's licence) as the server will keep them, and what the guest gave.
+  const termsFn = useServerFn(previewStayTerms);
+  const [terms, setTerms] = useState<
+    (Awaited<ReturnType<typeof previewStayTerms>> & { key: string }) | null
+  >(null);
+  const [answers, setAnswers] = useState<TermsAnswers>(() => emptyAnswers(page.country));
   const [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,6 +240,33 @@ function Booking({ page }: { page: Page }) {
   const toggle = (id: string) =>
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
+  // The terms follow the rooms, dates, rate and name (and for a licence, the home and purpose given).
+  const termsInput = {
+    code: page.shortCode,
+    roomIds: chosen.map((x) => x.id),
+    checkIn: stay.checkIn,
+    checkOut: stay.checkOut,
+    guests,
+    plan: usePlan,
+    name: contact.name.trim(),
+    homeAddress: answers.homeAddress.line1.trim() ? answers.homeAddress : null,
+    purpose: answers.purpose,
+  };
+  const termsKey = JSON.stringify(termsInput);
+  const loadTerms = () =>
+    termsFn({ data: termsInput }).then((t) => {
+      const next = { ...t, key: termsKey };
+      setTerms(next);
+      return next;
+    });
+  useEffect(() => {
+    if (step !== "book" || !chosen.length) return;
+    const id = window.setTimeout(() => void loadTerms().catch(() => setTerms(null)), 500);
+    return () => window.clearTimeout(id);
+    // Each change to what the terms say.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [termsKey, step]);
+
   async function book(e: React.FormEvent) {
     e.preventDefault();
     if (!method || !chosen.length) return;
@@ -250,12 +286,28 @@ function Booking({ page }: { page: Page }) {
         ? guests < chosen.length
           ? copy.tooManyRooms
           : copy.needMore(guests - capacity)
-        : null) ??
-      (agree ? null : enquiryCopy.bookingAgreeNeeded);
+        : null);
     if (problem) return setError(problem);
     setBusy(true);
     setError(null);
     try {
+      // The terms exactly as they stand for what's being booked now.
+      const t = terms && terms.key === termsKey ? terms : await loadTerms();
+      const home = addressProblem(answers.homeAddress);
+      const why = t.tooLong
+        ? stayTermsCopy.tooLong(t.maxNights)
+        : !allTicked(!!t.licenceText, answers.ticks)
+          ? stayTermsCopy.needTicks
+          : t.licenceText && (home || !answers.purpose)
+            ? (home ?? stayTermsCopy.needHome)
+            : t.licenceText && (answers.typedName.trim().length < 2 || !answers.signature)
+              ? stayTermsCopy.needSign
+              : null;
+      if (why) {
+        setError(why);
+        setBusy(false);
+        return;
+      }
       const r = await reserve({
         data: {
           code: page.shortCode,
@@ -273,6 +325,20 @@ function Booking({ page }: { page: Page }) {
           message: message || null,
           origin: window.location.origin,
           website,
+          agreed: {
+            termsSha: t.termsSha,
+            ticks: answers.ticks,
+            licence:
+              t.licenceText && t.licenceSha && answers.purpose && answers.signature
+                ? {
+                    sha: t.licenceSha,
+                    homeAddress: answers.homeAddress,
+                    purpose: answers.purpose,
+                    typedName: answers.typedName.trim(),
+                    signature: answers.signature,
+                  }
+                : null,
+          },
         },
       });
       // Card: on to the host's Stripe checkout; otherwise straight to the confirmation.
@@ -693,14 +759,22 @@ function Booking({ page }: { page: Page }) {
                         />
                       </label>
                     </div>
-                    <label className="flex items-start gap-3 rounded-2xl bg-muted p-3 text-sm">
-                      <Checkbox
-                        checked={agree}
-                        onCheckedChange={(v) => setAgree(v === true)}
-                        className="mt-0.5"
+                    {terms?.tooLong ? (
+                      <p role="alert" className="rounded-2xl bg-muted p-3 text-sm">
+                        {stayTermsCopy.tooLong(terms.maxNights)}
+                      </p>
+                    ) : terms ? (
+                      <StayTermsForm
+                        termsText={terms.termsText}
+                        licenceText={terms.licenceText}
+                        value={answers}
+                        onChange={setAnswers}
                       />
-                      <span>{enquiryCopy.bookingAgree(page.business)}</span>
-                    </label>
+                    ) : (
+                      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" /> {stayTermsCopy.loading}
+                      </p>
+                    )}
                     {error ? (
                       <p role="alert" className="text-sm text-destructive">
                         {error}

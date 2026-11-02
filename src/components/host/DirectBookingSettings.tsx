@@ -6,6 +6,7 @@ import { AlertTriangle, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 import { SaveButton, changed } from "@/components/host/SaveButton";
+import { StayTermsSettings } from "@/components/host/StayTermsSettings";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -221,6 +222,12 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
           </div>
         </div>
       </fieldset>
+
+      <StayTermsSettings
+        value={form.terms}
+        country={d.country}
+        onChange={(terms) => set({ terms })}
+      />
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{copy.payTitle}</legend>

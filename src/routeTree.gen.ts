@@ -21,6 +21,7 @@ import { Route as StartRouteImport } from './routes/start'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TourRouteImport } from './routes/tour'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AgreeTokenRouteImport } from './routes/agree.$token'
 import { Route as BookCodeRouteImport } from './routes/book.$code'
 import { Route as DemoIndexRouteImport } from './routes/demo.index'
 import { Route as DemoHostRouteImport } from './routes/demo.host'
@@ -144,6 +145,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AgreeTokenRoute = AgreeTokenRouteImport.update({
+  id: '/agree/$token',
+  path: '/agree/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BookCodeRoute = BookCodeRouteImport.update({
   id: '/book/$code',
@@ -495,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/agree/$token': typeof AgreeTokenRoute
   '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
@@ -571,6 +578,7 @@ export interface FileRoutesByTo {
   '/start': typeof StartRoute
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
+  '/agree/$token': typeof AgreeTokenRoute
   '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
@@ -650,6 +658,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/agree/$token': typeof AgreeTokenRoute
   '/book/$code': typeof BookCodeRoute
   '/demo/host': typeof DemoHostRoute
   '/enquire/$code': typeof EnquireCodeRoute
@@ -729,6 +738,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/tour'
     | '/app'
+    | '/agree/$token'
     | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
@@ -805,6 +815,7 @@ export interface FileRouteTypes {
     | '/start'
     | '/terms'
     | '/tour'
+    | '/agree/$token'
     | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
@@ -883,6 +894,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/tour'
     | '/_authenticated/app'
+    | '/agree/$token'
     | '/book/$code'
     | '/demo/host'
     | '/enquire/$code'
@@ -961,6 +973,7 @@ export interface RootRouteChildren {
   StartRoute: typeof StartRoute
   TermsRoute: typeof TermsRoute
   TourRoute: typeof TourRoute
+  AgreeTokenRoute: typeof AgreeTokenRoute
   BookCodeRoute: typeof BookCodeRoute
   DemoHostRoute: typeof DemoHostRoute
   EnquireCodeRoute: typeof EnquireCodeRoute
@@ -1090,6 +1103,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/agree/$token': {
+      id: '/agree/$token'
+      path: '/agree/$token'
+      fullPath: '/agree/$token'
+      preLoaderRoute: typeof AgreeTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/book/$code': {
       id: '/book/$code'
@@ -1628,6 +1648,7 @@ const rootRouteChildren: RootRouteChildren = {
   StartRoute: StartRoute,
   TermsRoute: TermsRoute,
   TourRoute: TourRoute,
+  AgreeTokenRoute: AgreeTokenRoute,
   BookCodeRoute: BookCodeRoute,
   DemoHostRoute: DemoHostRoute,
   EnquireCodeRoute: EnquireCodeRoute,

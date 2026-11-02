@@ -16,7 +16,9 @@ export type StoreKind =
   | "partner_id"
   | "partner_selfie"
   | "partner_signature"
-  | "partner_agreement";
+  | "partner_agreement"
+  | "stay_signature"
+  | "stay_agreement";
 
 /** Folders under the root, so the records stay apart: guests by business, partners by person. */
 export const STORE_GROUPS: Record<StoreKind, { key: string; name: string }> = {
@@ -32,6 +34,9 @@ export const STORE_GROUPS: Record<StoreKind, { key: string; name: string }> = {
     key: "partner_agreements",
     name: "Commission Partner agreements (restricted)",
   },
+  // Guests' signed stay terms and licences (stay-terms.ts), in each business's folder.
+  stay_signature: { key: "stay_agreements", name: "Guest stay agreements (restricted)" },
+  stay_agreement: { key: "stay_agreements", name: "Guest stay agreements (restricted)" },
 };
 
 export const ROOT_FOLDER_NAME = "Latchkey private records (restricted, do not share)";
@@ -41,6 +46,7 @@ export const REF_COLUMNS: Record<string, readonly string[]> = {
   guest_ids: ["id_photo_path", "face_photo_path"],
   partner_id_checks: ["id_image_path", "selfie_image_path"],
   partner_agreement_acceptances: ["signature_png_path", "pdf_path"],
+  stay_agreements: ["signature_path", "pdf_path"],
 };
 
 export function refAllowed(table: string, column: string): boolean {
