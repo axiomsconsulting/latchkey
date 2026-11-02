@@ -24,6 +24,7 @@ describe("Today's layout", () => {
       order: D,
       collapsed: [],
       place: { guests: "w", messages: "l", requests: "r", cleaning: "l", settings: "w" },
+      opened: [],
     });
     expect(readLayout("not json", D, P).order).toEqual(D);
   });
@@ -73,5 +74,22 @@ describe("Today's layout", () => {
     ]);
     expect(placeCard(l, "messages", "messages", "before", "l")).toBe(l);
     expect(setPlace(l, "messages", "w").place.messages).toBe("w");
+  });
+});
+
+describe("quiet cards", async () => {
+  const { isFolded, readLayout, toggleFold } = await import("@/lib/dashboard-layout");
+  it("fold to a line when nothing's waiting, unless the host opens them", () => {
+    let l = readLayout(null, ["a", "b"]);
+    expect(isFolded(l, "a", true)).toBe(true);
+    expect(isFolded(l, "a", false)).toBe(false);
+    l = toggleFold(l, "a", true);
+    expect(isFolded(l, "a", true)).toBe(false);
+    // Opening a quiet card doesn't change how it folds when busy.
+    expect(l.collapsed).toEqual([]);
+    l = toggleFold(l, "b", false);
+    expect(isFolded(l, "b", false)).toBe(true);
+    // Kept in the browser.
+    expect(readLayout(JSON.stringify(l), ["a", "b"]).opened).toEqual(["a"]);
   });
 });

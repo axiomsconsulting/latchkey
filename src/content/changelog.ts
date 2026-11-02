@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.111.0",
+    date: "2026-11-02",
+    title: "Today puts what needs you first",
+    items: [
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "On Today, a card with nothing waiting (guest messages, waiting on you, cleaning, maintenance) folds to one line saying so, so the cards that need you sit higher up the page. Your cards stay where you put them; tap the arrow to open a quiet card anyway, and it stays open.",
+      },
+      {
+        kind: "improved",
+        area: "Demo",
+        text: "The demo shows sample booking-terms records on its direct stays (open the PDF from the guest card), never keeps anything a visitor signs for more than two days or stores it in Drive, and leaves out the Getting started card, since demo properties are already set up.",
+      },
+    ],
+  },
+  {
     version: "0.110.0",
     date: "2026-11-02",
     title: "Booking terms and a signed licence for longer direct stays",

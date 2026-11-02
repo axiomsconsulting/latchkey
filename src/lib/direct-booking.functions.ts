@@ -413,6 +413,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
         nights,
         ticks: data.agreed.ticks,
         ...meta,
+        demo: !!tp.is_demo,
       };
       await termsSrv.recordAcceptance({
         ...base,

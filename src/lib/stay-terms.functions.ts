@@ -240,6 +240,7 @@ export const signAgreementLink = createServerFn({ method: "POST" })
       nights: linkInput(s.b, s.p, data.name).nights,
       ticks: data.agreed.ticks,
       ...meta,
+      demo: !!s.p.is_demo,
     };
     await recordAcceptance({
       ...base,
@@ -305,24 +306,38 @@ export const listStayAgreements = createServerFn({ method: "GET" })
     const sb = context.supabase as unknown as { from: (t: string) => any };
     const { data: b } = await sb
       .from("bookings")
-      .select("reservation_code")
+      .select("reservation_code, property_id")
       .eq("id", data.bookingId)
       .maybeSingle();
     let q = sb
       .from("stay_agreements")
       .select(
-        "id, kind, version, guest_name, signed_at, home_address, purpose, typed_name, pdf_path, rendered_sha256, check_in, check_out, nights",
+        "id, property_id, kind, version, guest_name, signed_at, home_address, purpose, typed_name, pdf_path, rendered_sha256, check_in, check_out, nights",
       )
       .order("signed_at", { ascending: false });
     q = b?.reservation_code
-      ? q.or(`booking_id.eq.${data.bookingId},reference.eq.${b.reservation_code}`)
+      ? // The other rooms of the same booking share its reference (same property only).
+        q.or(
+          `booking_id.eq.${data.bookingId},and(reference.eq.${b.reservation_code},property_id.eq.${b.property_id})`,
+        )
       : q.eq("booking_id", data.bookingId);
     const { data: rows, error } = await q;
     if (error) return { available: false as const, items: [] };
     const list = (rows ?? []) as any[];
-    // A PDF that couldn't be made at the time is made now.
-    const { storeFiles } = await srv();
-    for (const r of list.filter((x) => !x.pdf_path)) await storeFiles(r.id).catch(() => undefined);
+    // A PDF that couldn't be made at the time is made now; a demo property's is made to open, never stored.
+    const { storeFiles, pdfDataUrl, admin } = await srv();
+    const propIds = [...new Set(list.map((r) => r.property_id).filter(Boolean))];
+    const { data: props } = propIds.length
+      ? await (await admin()).from("properties").select("id, is_demo").in("id", propIds)
+      : { data: [] };
+    const demoProps = new Set(
+      ((props ?? []) as any[]).filter((x) => x.is_demo).map((x) => x.id as string),
+    );
+    const demoPdf: Record<string, string | null> = {};
+    for (const r of list.filter((x) => !x.pdf_path)) {
+      if (demoProps.has(r.property_id)) demoPdf[r.id] = await pdfDataUrl(r.id).catch(() => null);
+      else await storeFiles(r.id).catch(() => undefined);
+    }
     const { signPrivateLinks } = await import("./private-store.server");
     const { data: again } = await sb
       .from("stay_agreements")
@@ -346,7 +361,7 @@ export const listStayAgreements = createServerFn({ method: "GET" })
         typedName: (r.typed_name as string | null) ?? null,
         sha: r.rendered_sha256 as string,
         nights: r.nights as number,
-        pdf: paths[r.id] ? (links[paths[r.id]] ?? null) : null,
+        pdf: paths[r.id] ? (links[paths[r.id]] ?? null) : (demoPdf[r.id] ?? null),
       })),
     };
   });

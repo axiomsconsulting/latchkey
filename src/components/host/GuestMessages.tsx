@@ -64,6 +64,8 @@ export function GuestMessages({ propertyId }: { propertyId: string }) {
       id="messages"
       icon={MessagesSquare}
       title={copy.title}
+      // No conversations with guests here now: folded to this line until opened.
+      quiet={!q.isLoading && scope === "now" && stays.length === 0 ? copy.empty["now"] : null}
       action={
         <span className="flex items-center gap-1.5">
           {unread ? <Badge variant="destructive">{copy.newCount(unread)}</Badge> : null}

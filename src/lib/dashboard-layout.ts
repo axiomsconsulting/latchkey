@@ -7,7 +7,13 @@
  * Pure.
  */
 export type Place = "l" | "r" | "w";
-export type Layout = { order: string[]; collapsed: string[]; place: Record<string, Place> };
+export type Layout = {
+  order: string[];
+  collapsed: string[];
+  place: Record<string, Place>;
+  /** Quiet cards (nothing waiting) the host opened anyway; quiet cards are otherwise folded. */
+  opened?: string[];
+};
 
 /** Default places: full width where the page says so; the rest alternate left and right within each band. */
 export function defaultPlaces(items: Array<{ id: string; wide?: boolean }>): Record<string, Place> {
@@ -59,7 +65,32 @@ export function readLayout(
     const p = savedPlace[id];
     place[id] = p === "l" || p === "r" || p === "w" ? p : (defaultPlace[id] ?? "l");
   }
-  return { order: [...new Set(order)], collapsed: [...new Set(collapsed)], place };
+  const opened = (Array.isArray(saved.opened) ? saved.opened : []).filter(
+    (id): id is string => typeof id === "string" && known.has(id),
+  );
+  return {
+    order: [...new Set(order)],
+    collapsed: [...new Set(collapsed)],
+    place,
+    opened: [...new Set(opened)],
+  };
+}
+
+/**
+ * Whether a card shows folded: one with nothing waiting (quiet) folds to a
+ * one-line status unless the host opened it; any other card as the host left it.
+ */
+export const isFolded = (l: Layout, id: string, quiet: boolean) =>
+  quiet ? !(l.opened ?? []).includes(id) : l.collapsed.includes(id);
+
+/** The fold button: a quiet card is opened or closed on its own, without changing how it folds when busy. */
+export function toggleFold(l: Layout, id: string, quiet: boolean): Layout {
+  if (!quiet) return toggleCollapsed(l, id);
+  const opened = l.opened ?? [];
+  return {
+    ...l,
+    opened: opened.includes(id) ? opened.filter((x) => x !== id) : [...opened, id],
+  };
 }
 
 export function toggleCollapsed(l: Layout, id: string): Layout {

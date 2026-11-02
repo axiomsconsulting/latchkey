@@ -23,10 +23,11 @@ export const getSetupFacts = createServerFn({ method: "GET" })
     };
     const { data: p } = await sb
       .from("properties")
-      .select("host_id, check_in_pin")
+      .select("host_id, check_in_pin, is_demo")
       .eq("id", data.propertyId)
       .maybeSingle();
-    if (!p) return null;
+    // Demo, showcase and recording properties are set up already (and can't pair tablets or take payments).
+    if (!p || p.is_demo) return null;
     const [rooms, calendars, guideEdits, tablets, host] = await Promise.all([
       count("rooms"),
       count("channel_connections"),
