@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
   BedDouble,
   Building2,
   CalendarCheck,
   Check,
-  Code2,
+  ChevronDown,
   DoorOpen,
-  Hourglass,
   Inbox,
   LayoutDashboard,
   MessagesSquare,
-  Minus,
   MoonStar,
   Palette,
   Sparkles,
@@ -26,7 +26,7 @@ import { OfferRibbon, PricingSection } from "@/components/PricingSection";
 import { sessionUtm, type Utm } from "@/lib/attribution";
 import { LegalLinks } from "@/components/LegalPage";
 import { HomeArt } from "@/components/HomeArt";
-import { DEFAULT_HOME_GLASS, glassVars, HOME_ART_SLOTS, type HomeArtSlot } from "@/lib/home-art";
+import { DEFAULT_HOME_GLASS, glassVars, type HomeArtSlot } from "@/lib/home-art";
 import { useSite } from "@/hooks/use-site";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,9 @@ import { HOME_REDIRECT_SCRIPT, rememberDashboard } from "@/lib/home-redirect";
 import { footerText } from "@/lib/brand";
 import { PageSections, Section } from "@/components/PageSections";
 import { rebrand } from "@/lib/brand";
+import { getPricing } from "@/lib/pricing.functions";
+import { DEFAULT_PRICING } from "@/lib/pricing";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   // ?home=1 shows this page even to a signed-in host (the logo and "Home" link use it).
@@ -64,18 +67,41 @@ const benefitIcons = [MoonStar, Inbox, Palette];
 const journeyIcons = [CalendarCheck, DoorOpen, BedDouble, MessagesSquare, LayoutDashboard];
 const pillarIcons = [DoorOpen, Palette, Wrench, Building2];
 
-/** "Tuesday", in the visitor's own time zone when given one. */
-function weekday(timeZone?: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    ...(timeZone ? { timeZone } : {}),
-  }).format(new Date());
+/** Each section's background picture slot (Latchkey admin → Home page pictures). */
+const ART: Record<string, HomeArtSlot> = {
+  outcomes: "benefits",
+  gap: "why",
+  stay: "journey",
+  included: "pillars",
+  audience: "audience",
+  plans: "pricing",
+};
+
+/** A short visible line that opens to the detail: keeps the page light, the facts a tap away. */
+function Unfold({
+  summary,
+  children,
+  className,
+}: {
+  summary: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <details className={cn("group", className)}>
+      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1">{summary}</span>
+        <ChevronDown
+          className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="pt-4">{children}</div>
+    </details>
+  );
 }
 
 function Landing() {
-  // The server renders UK time; the browser then switches to the visitor's day.
-  const [day, setDay] = useState(() => weekday("Europe/London"));
-  useEffect(() => setDay(weekday()), []);
   const { home } = Route.useSearch();
   const navigate = useNavigate();
   // The session's utm_* on the demo and trial links, read after hydration.
@@ -83,6 +109,10 @@ function Landing() {
   useEffect(() => setUtm(sessionUtm()), []);
   // The boxes as frosted glass over the background photos, as the Latchkey admin set it.
   const glass = useSite()?.homeGlass ?? DEFAULT_HOME_GLASS;
+  // The trial's length, as the super admin set it (shared with the pricing section).
+  const fetchPricing = useServerFn(getPricing);
+  const pricing = useQuery({ queryKey: ["pricing"], queryFn: () => fetchPricing() });
+  const days = (pricing.data ?? DEFAULT_PRICING).trial_days;
 
   // Hosts and managers who are signed in go straight to their dashboard.
   useEffect(() => {
@@ -102,6 +132,42 @@ function Landing() {
       live = false;
     };
   }, [home, navigate]);
+
+  const touch = "pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base";
+  // One main action (the trial) and one way to see it first; the host demo is a quieter link.
+  const actions = (
+    <>
+      <div className="flex flex-wrap gap-3">
+        {/* Real links (shareable, crawlable); the session's utm_* go along. */}
+        <Button asChild size="lg" variant="accent" className={touch}>
+          <Link to="/start" search={utm as never}>
+            {marketing.trialCta}
+            <ArrowRight />
+          </Link>
+        </Button>
+        <Button asChild size="lg" variant="outline" className={touch}>
+          <Link to="/tour" search={utm as never}>
+            {marketing.tourCta}
+          </Link>
+        </Button>
+      </div>
+      <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+        {marketing.reassure(days).map((r) => (
+          <span key={r} className="inline-flex items-center gap-1.5">
+            <Check className="size-4 text-primary" aria-hidden /> {r}
+          </span>
+        ))}
+        <Link
+          to="/demo/host"
+          search={utm as never}
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          {marketing.hostCta} →
+        </Link>
+      </p>
+    </>
+  );
+
   return (
     // isolate: the home page's background photos sit behind everything; overflow-x-clip: their full width never scrolls sideways.
     // data-home-glass: the boxes as frosted glass over the photos (Latchkey admin's choice; styles.css).
@@ -113,7 +179,7 @@ function Landing() {
       <SiteHeader />
 
       <main className="mx-auto max-w-6xl px-5 pb-24">
-        {/* Above the fold: what it does, for whom, and the two ways in. Nothing else. */}
+        {/* Above the fold: what it does, for whom, one main action and one way to see it. */}
         <section className="relative pb-14 pt-8 sm:pb-20 sm:pt-14">
           {/* The super admin's photo, faint, behind the headline (Latchkey admin → Site settings → Home page pictures). */}
           <HomeArt slot="hero" />
@@ -126,41 +192,7 @@ function Landing() {
           <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
             {marketing.subhead}
           </p>
-          {/* See it first: the guest journey, then the host's side; the trial for anyone ready. */}
-          <div className="mt-9 flex flex-wrap gap-3">
-            {/* Real links (shareable, crawlable); the session's utm_* go along. */}
-            <Button
-              asChild
-              size="lg"
-              variant="accent"
-              className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base"
-            >
-              <Link to="/tour" search={utm as never}>
-                {marketing.primaryCta}
-                <ArrowRight />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base"
-            >
-              <Link to="/demo/host" search={utm as never}>
-                {marketing.hostCta}
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="ghost"
-              className="pointer-coarse:h-14 pointer-coarse:px-7 pointer-coarse:text-base"
-            >
-              <Link to="/start" search={utm as never}>
-                {marketing.secondaryCta}
-              </Link>
-            </Button>
-          </div>
+          <div className="mt-9">{actions}</div>
           <OfferRibbon />
           <div className="mt-8 flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">{marketing.trust}</span>
@@ -172,17 +204,13 @@ function Landing() {
           </div>
         </section>
 
-        {/* Everything below the headline, in the order the super admin chose (Latchkey admin → Menu and pages). */}
+        {/* Below the headline, in the order the super admin chose (Latchkey admin → Menu and pages). */}
         <div className="space-y-16">
           <PageSections
             page="home"
-            decorate={(id) =>
-              HOME_ART_SLOTS.includes(id as HomeArtSlot) ? (
-                <HomeArt slot={id as HomeArtSlot} />
-              ) : null
-            }
+            decorate={(id) => (ART[id] ? <HomeArt slot={ART[id]} /> : null)}
           >
-            <Section id="benefits">
+            <Section id="outcomes">
               <section className="grid gap-5 sm:grid-cols-3">
                 {marketing.benefits.map((benefit, i) => {
                   const Icon = benefitIcons[i] ?? Sparkles;
@@ -201,141 +229,8 @@ function Landing() {
               </section>
             </Section>
 
-            <Section id="audience">
-              <section
-                className="rounded-3xl border border-border bg-surface p-6 sm:p-8"
-                aria-labelledby="audience-title"
-              >
-                <h2 id="audience-title" className="text-2xl">
-                  {marketing.audience.title}
-                </h2>
-                <p className="mt-2 max-w-2xl text-muted-foreground">{marketing.audience.body}</p>
-                <ul className="mt-5 flex flex-wrap gap-2">
-                  {marketing.audience.kinds.map((k) => (
-                    <li
-                      key={k}
-                      className="rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground"
-                    >
-                      {k}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </Section>
-
-            <Section id="journey">
-              <section aria-labelledby="journey-title">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                  {marketing.journey.eyebrow}
-                </p>
-                <h2
-                  id="journey-title"
-                  className="mt-3 max-w-3xl text-balance text-2xl leading-tight sm:text-3xl"
-                >
-                  {marketing.journey.title}
-                </h2>
-                <ol className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                  {marketing.journey.steps.map((st, i) => {
-                    const Icon = journeyIcons[i] ?? Sparkles;
-                    return (
-                      <li
-                        key={st.title}
-                        className="card-soft relative flex gap-4 p-5 lg:flex-col lg:gap-3"
-                      >
-                        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
-                          <Icon className="size-5" />
-                        </span>
-                        <span>
-                          <span className="block text-xs font-semibold uppercase tracking-wide text-accent">
-                            {i + 1}
-                          </span>
-                          <span className="block font-display text-lg leading-tight">
-                            {st.title}
-                          </span>
-                          <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
-                            {st.body}
-                          </span>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ol>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Button asChild variant="outline">
-                    <Link to="/tour" search={utm as never}>
-                      {marketing.primaryCta} <ArrowRight />
-                    </Link>
-                  </Button>
-                </div>
-              </section>
-            </Section>
-
-            <Section id="pillars">
-              <section aria-labelledby="pillars-title">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                  {marketing.pillars.eyebrow}
-                </p>
-                <h2 id="pillars-title" className="mt-3 text-2xl leading-tight sm:text-3xl">
-                  {marketing.pillars.title}
-                </h2>
-                <div className="mt-6 grid gap-5 md:grid-cols-2">
-                  {marketing.pillars.items.map((p, i) => {
-                    const Icon = pillarIcons[i] ?? Sparkles;
-                    return (
-                      <article key={p.title} className="card-soft p-6">
-                        <h3 className="flex items-center gap-3 text-xl">
-                          <span className="grid size-11 place-items-center rounded-2xl bg-secondary text-primary">
-                            <Icon className="size-5" />
-                          </span>
-                          {p.title}
-                        </h3>
-                        <ul className="mt-4 space-y-2">
-                          {p.points.map((pt) => (
-                            <li key={pt} className="flex gap-2 text-sm leading-relaxed">
-                              <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {pt}
-                            </li>
-                          ))}
-                        </ul>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            </Section>
-
-            <Section id="beforeAfter">
-              <section className="grid gap-5 md:grid-cols-2">
-                <article className="rounded-3xl border border-border bg-muted p-6 sm:p-8">
-                  <h2 className="text-xl">{marketing.beforeAfter.beforeTitle(day)}</h2>
-                  <ul className="mt-5 space-y-3">
-                    {marketing.beforeAfter.before.map((item) => (
-                      <li key={item} className="flex gap-3 leading-relaxed text-muted-foreground">
-                        <Minus className="mt-1 size-4 shrink-0" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-                <article className="rounded-3xl bg-primary p-6 text-primary-foreground shadow-lifted sm:p-8">
-                  <h2 className="text-xl">{marketing.beforeAfter.afterTitle(day)}</h2>
-                  <ul className="mt-5 space-y-3">
-                    {marketing.beforeAfter.after.map((item) => (
-                      <li key={item} className="flex gap-3 leading-relaxed opacity-95">
-                        <Check className="mt-1 size-4 shrink-0 text-accent" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              </section>
-            </Section>
-
-            <Section id="pricing">
-              <PricingSection />
-            </Section>
-
-            {/* The facts, for anyone comparing: where the booking sites stop. */}
-            <Section id="why">
+            {/* The gap in the market, in a glance; the full side-by-side folded away. */}
+            <Section id="gap">
               <section aria-labelledby="gap-title">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
                   {marketing.gap.eyebrow}
@@ -346,33 +241,8 @@ function Landing() {
                 >
                   {marketing.gap.title}
                 </h2>
-                <div className="card-soft mt-6 overflow-hidden p-0">
-                  <div className="hidden grid-cols-[10rem_1fr_1fr] gap-4 border-b border-border px-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
-                    <span />
-                    <span>{marketing.gap.theyLabel}</span>
-                    <span className="text-primary">{marketing.gap.usLabel}</span>
-                  </div>
-                  <dl className="divide-y divide-border">
-                    {marketing.gap.rows.map((r) => (
-                      <div
-                        key={r.topic}
-                        className="grid gap-1 px-6 py-4 sm:grid-cols-[10rem_1fr_1fr] sm:gap-4"
-                      >
-                        <dt className="font-display">{r.topic}</dt>
-                        <dd className="text-sm text-muted-foreground">
-                          <span className="sm:hidden">{marketing.gap.theyLabel}: </span>
-                          {r.they}
-                        </dd>
-                        <dd className="flex items-start gap-2 text-sm font-medium">
-                          <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                          {r.us}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-                {/* What Latchkey does, and what it does not replace. */}
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <p className="mt-2 max-w-2xl text-muted-foreground">{marketing.gap.body}</p>
+                <div className="mt-6 grid gap-4 md:grid-cols-2">
                   <div className="rounded-3xl border border-border bg-muted p-6">
                     <h3 className="text-lg">{marketing.gap.keepTitle}</h3>
                     <ul className="mt-3 space-y-2">
@@ -394,64 +264,199 @@ function Landing() {
                     </ul>
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-muted-foreground">{marketing.gap.note}</p>
+                <Unfold
+                  className="card-soft mt-4 px-6 py-4"
+                  summary={<span className="font-medium">{marketing.gap.compare}</span>}
+                >
+                  <dl className="divide-y divide-border">
+                    <div className="hidden grid-cols-[10rem_1fr_1fr] gap-4 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
+                      <span />
+                      <span>{marketing.gap.theyLabel}</span>
+                      <span className="text-primary">{marketing.gap.usLabel}</span>
+                    </div>
+                    {marketing.gap.rows.map((r) => (
+                      <div
+                        key={r.topic}
+                        className="grid gap-1 py-3 sm:grid-cols-[10rem_1fr_1fr] sm:gap-4"
+                      >
+                        <dt className="font-display">{r.topic}</dt>
+                        <dd className="text-sm text-muted-foreground">
+                          <span className="sm:hidden">{marketing.gap.theyLabel}: </span>
+                          {r.they}
+                        </dd>
+                        <dd className="flex items-start gap-2 text-sm font-medium">
+                          <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                          {r.us}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="mt-3 text-sm text-muted-foreground">{marketing.gap.note}</p>
+                </Unfold>
               </section>
             </Section>
 
-            <Section id="next">
-              <section
-                className="rounded-3xl border border-dashed border-border p-6 sm:p-8"
-                aria-labelledby="next-title"
-              >
-                <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                  <Hourglass className="size-4" /> {marketing.next.eyebrow}
+            <Section id="stay">
+              <section aria-labelledby="journey-title">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+                  {marketing.journey.eyebrow}
                 </p>
-                <h2 id="next-title" className="mt-2 text-xl sm:text-2xl">
-                  {marketing.next.title}
+                <h2
+                  id="journey-title"
+                  className="mt-3 max-w-3xl text-balance text-2xl leading-tight sm:text-3xl"
+                >
+                  {marketing.journey.title}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">{marketing.next.body}</p>
-                <ul className="mt-5 grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]">
-                  {marketing.next.items.map((it) => (
-                    <li key={it.title} className="rounded-2xl bg-muted p-4">
-                      <span className="block font-display">{it.title}</span>
-                      <span className="mt-1 block text-sm text-muted-foreground">{it.body}</span>
+                <ol className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  {marketing.journey.steps.map((st, i) => {
+                    const Icon = journeyIcons[i] ?? Sparkles;
+                    return (
+                      <li key={st.title} className="card-soft flex gap-4 p-5 lg:flex-col lg:gap-3">
+                        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
+                          <Icon className="size-5" />
+                        </span>
+                        <span>
+                          <span className="block text-xs font-semibold uppercase tracking-wide text-accent">
+                            {i + 1}
+                          </span>
+                          <span className="block font-display text-lg leading-tight">
+                            {st.title}
+                          </span>
+                          <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                            {st.body}
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <div className="mt-5">
+                  <Button asChild variant="outline">
+                    <Link to="/tour" search={utm as never}>
+                      {marketing.tourCta} <ArrowRight />
+                    </Link>
+                  </Button>
+                </div>
+              </section>
+            </Section>
+
+            {/* What's included: one line each, the detail a tap away. */}
+            <Section id="included">
+              <section aria-labelledby="pillars-title">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+                  {marketing.pillars.eyebrow}
+                </p>
+                <h2 id="pillars-title" className="mt-3 text-2xl leading-tight sm:text-3xl">
+                  {marketing.pillars.title}
+                </h2>
+                <div className="mt-6 grid items-start gap-4 md:grid-cols-2">
+                  {marketing.pillars.items.map((p, i) => {
+                    const Icon = pillarIcons[i] ?? Sparkles;
+                    return (
+                      <Unfold
+                        key={p.title}
+                        className="card-soft p-5"
+                        summary={
+                          <span className="flex items-start gap-3">
+                            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-primary">
+                              <Icon className="size-5" />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block font-display text-xl">{p.title}</span>
+                              <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                                {p.summary}
+                              </span>
+                            </span>
+                          </span>
+                        }
+                      >
+                        <ul className="space-y-2 border-t border-border pt-4">
+                          {p.points.map((pt) => (
+                            <li key={pt} className="flex gap-2 text-sm leading-relaxed">
+                              <Check className="mt-0.5 size-4 shrink-0 text-primary" /> {pt}
+                            </li>
+                          ))}
+                        </ul>
+                      </Unfold>
+                    );
+                  })}
+                </div>
+              </section>
+            </Section>
+
+            <Section id="audience">
+              <section
+                className="flex flex-col gap-4 rounded-3xl border border-border bg-surface p-6 sm:p-8 lg:flex-row lg:items-center"
+                aria-labelledby="audience-title"
+              >
+                <h2 id="audience-title" className="shrink-0 text-xl lg:w-64">
+                  {marketing.audience.title}
+                </h2>
+                <ul className="flex flex-wrap gap-2">
+                  {marketing.audience.kinds.map((k) => (
+                    <li
+                      key={k}
+                      className="rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground"
+                    >
+                      {k}
                     </li>
                   ))}
                 </ul>
               </section>
             </Section>
 
-            <Section id="developers">
-              <section
-                className="flex flex-col gap-4 rounded-3xl border border-border bg-muted p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"
-                aria-labelledby="dev-title"
-              >
-                <div>
-                  <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                    <Code2 className="size-4" /> {marketing.developers.eyebrow}
-                  </p>
-                  <h2 id="dev-title" className="mt-2 text-xl sm:text-2xl">
-                    {marketing.developers.title}
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                    {marketing.developers.body}
-                  </p>
-                </div>
-                <Button asChild variant="outline" size="lg" className="shrink-0">
-                  <Link to="/developers">
-                    {marketing.developers.cta} <ArrowRight />
-                  </Link>
-                </Button>
-              </section>
+            <Section id="plans">
+              <PricingSection />
             </Section>
           </PageSections>
+
+          {/* The invitation, always last. */}
+          <section
+            className="rounded-3xl bg-primary p-8 text-primary-foreground shadow-lifted sm:p-12"
+            aria-labelledby="closing-title"
+          >
+            <h2
+              id="closing-title"
+              className="max-w-3xl text-balance text-3xl leading-tight sm:text-4xl"
+            >
+              {marketing.closing.title}
+            </h2>
+            <p className="mt-3 max-w-2xl opacity-90">{marketing.closing.body}</p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Button asChild size="lg" variant="accent" className={touch}>
+                <Link to="/start" search={utm as never}>
+                  {marketing.trialCta}
+                  <ArrowRight />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className={cn(
+                  touch,
+                  "border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground",
+                )}
+              >
+                <Link to="/tour" search={utm as never}>
+                  {marketing.tourCta}
+                </Link>
+              </Button>
+            </div>
+            <p className="mt-4 text-sm opacity-80">{marketing.reassure(days).join(" · ")}</p>
+          </section>
         </div>
       </main>
 
       <footer className="border-t border-border px-5 pb-28 pt-8 sm:pb-8">
         <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 text-sm text-muted-foreground">
           <span>{footerText(marketing.footer)}</span>
-          <LegalLinks />
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link to="/developers" className="underline-offset-2 hover:underline">
+              {marketing.developersLink}
+            </Link>
+            <LegalLinks />
+          </div>
         </div>
       </footer>
     </div>

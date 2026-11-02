@@ -11,14 +11,11 @@
 export const HOME_ART_SLOTS = [
   "hero",
   "benefits",
-  "audience",
+  "why",
   "journey",
   "pillars",
-  "beforeAfter",
+  "audience",
   "pricing",
-  "why",
-  "next",
-  "developers",
 ] as const;
 export type HomeArtSlot = (typeof HOME_ART_SLOTS)[number];
 
