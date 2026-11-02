@@ -5815,6 +5815,8 @@ export const stayTermsCopy = branded({
   signAgain: "Sign again",
   kept: "We keep a copy of what you agreed to and signed, with the date and time, for your host and in case of any disagreement about the stay. You can save your own copy from your confirmation page.",
   loading: "Getting the terms…",
+  failed: "The terms couldn't be loaded.",
+  retry: "Try again",
   tooLong: (n: number) =>
     `Stays here can be booked for up to ${n} nights. For a longer stay, please send the host a request.`,
   needTicks: "Please tick the box to agree to the terms.",

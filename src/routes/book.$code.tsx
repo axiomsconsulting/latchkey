@@ -53,7 +53,14 @@ import {
 } from "@/lib/direct-booking";
 import { getFxRate, reserveDirect } from "@/lib/direct-booking.functions";
 import { previewStayTerms } from "@/lib/stay-terms.functions";
-import { emptyAnswers, termsProblem, type TermsAnswers } from "@/lib/stay-terms";
+import {
+  emptyAnswers,
+  needsLicence,
+  normaliseStayTerms,
+  termsProblem,
+  tooLong,
+  type TermsAnswers,
+} from "@/lib/stay-terms";
 import { LongStayCard, ShortStayTerms } from "@/components/guest/StayTermsForm";
 import { stayTermsCopy } from "@/content/copy";
 import { money, quoteStay, roomTaken } from "@/lib/direct-rates";
@@ -132,6 +139,7 @@ function Booking({ page }: { page: Page }) {
   // A longer stay signs in a dialog; signedFor is the stay (termsKey) it was last signed for.
   const [signOpen, setSignOpen] = useState(false);
   const [signedFor, setSignedFor] = useState<string | null>(null);
+  const [termsFailed, setTermsFailed] = useState(false);
   const [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -260,15 +268,20 @@ function Booking({ page }: { page: Page }) {
     termsFn({ data: termsInput }).then((t) => {
       const next = { ...t, key: termsKey };
       setTerms(next);
+      setTermsFailed(false);
       return next;
     });
+  // As soon as a room is chosen (the form sits beside the rooms on a wide screen), then after
+  // each change to what the terms say; the first load straight away.
   useEffect(() => {
-    if (step !== "book" || !chosen.length) return;
-    const id = window.setTimeout(() => void loadTerms().catch(() => setTerms(null)), 500);
+    if (!chosen.length) return;
+    const id = window.setTimeout(
+      () => void loadTerms().catch(() => setTermsFailed(true)),
+      terms ? 400 : 0,
+    );
     return () => window.clearTimeout(id);
-    // Each change to what the terms say.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [termsKey, step]);
+  }, [termsKey]);
 
   /**
    * Books: the form's button, or for a longer stay the signing dialog's
@@ -374,7 +387,9 @@ function Booking({ page }: { page: Page }) {
     }
   }
 
-  const longStay = !!terms?.licenceText && !terms.tooLong;
+  // Known from the page at once; the texts follow from the server.
+  const stayTerms = normaliseStayTerms(page.booking.terms);
+  const longStay = needsLicence(stayTerms, nights) && !tooLong(stayTerms, nights);
   const signed = longStay && signedFor === termsKey && !termsProblem(true, answers);
   const amount = money(total, page.currency);
   const bookLabel =
@@ -797,9 +812,21 @@ function Booking({ page }: { page: Page }) {
                         />
                       </label>
                     </div>
-                    {terms?.tooLong ? (
+                    {tooLong(stayTerms, nights) ? (
                       <p role="alert" className="rounded-2xl bg-muted p-3 text-sm">
-                        {stayTermsCopy.tooLong(terms.maxNights)}
+                        {stayTermsCopy.tooLong(stayTerms.maxNights)}
+                      </p>
+                    ) : termsFailed && !terms ? (
+                      <p role="alert" className="flex flex-wrap items-center gap-2 text-sm">
+                        {stayTermsCopy.failed}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void loadTerms().catch(() => setTermsFailed(true))}
+                        >
+                          {stayTermsCopy.retry}
+                        </Button>
                       </p>
                     ) : terms?.licenceText ? (
                       <LongStayCard
@@ -844,7 +871,7 @@ function Booking({ page }: { page: Page }) {
                       type="submit"
                       size="lg"
                       className="w-full"
-                      disabled={busy || !method || !terms || terms.tooLong}
+                      disabled={busy || !method || tooLong(stayTerms, nights)}
                     >
                       {busy ? <Loader2 className="animate-spin" /> : <CalendarHeart />} {bookLabel}
                     </Button>

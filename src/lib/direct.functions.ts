@@ -198,6 +198,11 @@ export const getEnquiryPage = createServerFn({ method: "GET" })
           nonRef: s.settings.nonRef,
           bankPayDays: s.settings.bankPayDays,
           children: s.settings.children,
+          // So the page knows at once whether a stay signs the longer-stay agreement or is too long.
+          terms: {
+            licenceFrom: s.settings.terms.licenceFrom,
+            maxNights: s.settings.terms.maxNights,
+          },
         };
       })(),
       // Direct guests' reviews scoring 9 or more out of 10, when the host shows them and the guest agreed (migration 0058).
