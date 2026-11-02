@@ -419,6 +419,21 @@ export async function runRetentionSweep(): Promise<number> {
   await purgeGuestIds(today);
   // The UK guest register is kept for 12 months from arrival, then removed.
   await supabaseAdmin.from("guest_register").delete().lt("keep_until", today);
+  // Loyalty vouchers: removed a year after the last date they could be used (vouchers.ts voucherExpired).
+  try {
+    const loose = supabaseAdmin as unknown as { from: (t: string) => any };
+    const { voucherExpired } = await import("./vouchers");
+    const { data: vs } = await loose
+      .from("direct_vouchers")
+      .select("id, periods, created_at")
+      .limit(2000);
+    const gone = ((vs ?? []) as any[])
+      .filter((v) => voucherExpired(v.periods, today))
+      .map((v) => v.id);
+    if (gone.length) await loose.from("direct_vouchers").delete().in("id", gone);
+  } catch {
+    // Before migration 0082 there are none.
+  }
   // Guests' accepted terms and signed licences: kept six years after check-out, then removed with their files.
   try {
     const loose = supabaseAdmin as unknown as { from: (t: string) => any };

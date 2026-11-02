@@ -61,7 +61,7 @@ async function pageRooms(db: Loose, propertyId: string, today: string) {
   const { normaliseOffers, upcomingOffers } = await import("./direct-rates");
   const roomCols =
     "id, display_name, public_title, description, max_guests, has_ensuite, cover_image_url, sort_order";
-  const [{ data: rooms }, { data: prop }, { data: stays }] = await Promise.all([
+  const [{ data: rooms }, { data: prop }, { data: stays }, gallery] = await Promise.all([
     withLegacy<any>(
       () =>
         db
@@ -90,7 +90,23 @@ async function pageRooms(db: Loose, propertyId: string, today: string) {
       .neq("status", "cancelled")
       .gte("check_out_date", today)
       .lte("check_in_date", addDays(today, 730)),
+    // Photos by space (migration 0082); none before it.
+    db
+      .from("room_photos")
+      .select("id, room_id, space, caption, url, position")
+      .eq("property_id", propertyId)
+      .order("position")
+      .limit(400),
   ]);
+  const { normaliseSpace } = await import("./room-photos");
+  const photos = ((gallery?.error ? [] : (gallery?.data ?? [])) as any[]).map((r) => ({
+    id: r.id as string,
+    roomId: (r.room_id as string | null) ?? null,
+    space: normaliseSpace(r.space),
+    caption: (r.caption as string | null) ?? null,
+    url: r.url as string,
+    position: (r.position as number) ?? 0,
+  }));
   const taken: Record<string, Array<{ from: string; to: string }>> = {};
   for (const b of (stays ?? []) as Array<{
     room_id: string | null;
@@ -123,6 +139,7 @@ async function pageRooms(db: Loose, propertyId: string, today: string) {
     })),
     offers: upcomingOffers(normaliseOffers(prop?.direct_offers), today),
     taken,
+    photos,
   };
 }
 

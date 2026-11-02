@@ -3,7 +3,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
-  BedDouble,
   CalendarHeart,
   Check,
   Loader2,
@@ -62,6 +61,9 @@ import {
   type TermsAnswers,
 } from "@/lib/stay-terms";
 import { LongStayCard, ShortStayTerms } from "@/components/guest/StayTermsForm";
+import { RoomPhotos } from "@/components/guest/RoomPhotos";
+import { VoucherBox, type AppliedVoucher } from "@/components/guest/VoucherBox";
+import { quoteWithVoucher } from "@/lib/vouchers";
 import { stayTermsCopy } from "@/content/copy";
 import { money, quoteStay, roomTaken } from "@/lib/direct-rates";
 import { getEnquiryPage } from "@/lib/direct.functions";
@@ -78,6 +80,9 @@ import { phoneCountries } from "@/lib/world";
  * the page. When the host hasn't turned booking on, rooms are enquired about only.
  */
 export const Route = createFileRoute("/book/$code")({
+  // ?voucher= : a Loyalty voucher sent by the host, filled in for the guest.
+  validateSearch: (s: Record<string, unknown>): { voucher?: string } =>
+    typeof s["voucher"] === "string" && s["voucher"].length <= 30 ? { voucher: s["voucher"] } : {},
   loader: ({ params }) => getEnquiryPage({ data: { code: params.code } }),
   head: ({ loaderData }) => ({
     meta: [
@@ -126,6 +131,8 @@ function Booking({ page }: { page: Page }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [plan, setPlan] = useState<RatePlan>("flex");
   const [step, setStep] = useState<"rooms" | "book">("rooms");
+  const search = Route.useSearch();
+  const [voucher, setVoucher] = useState<AppliedVoucher | null>(null);
   const [guestCountry, setGuestCountry] = useState(page.country);
   const [contact, setContact] = useState<Contact>(() => emptyContact(page.country));
   const [method, setMethod] = useState<PayMethod | null>(page.booking.methods[0] ?? null);
@@ -193,10 +200,30 @@ function Booking({ page }: { page: Page }) {
 
   const free = (r: Room) => !roomTaken(page.taken[r.id] ?? [], stay.checkIn, stay.checkOut);
   const bookable = (r: Room) => canBook && r.ratePence !== null && free(r);
-  const quote = (r: Room, p: RatePlan) =>
+  const planQuote = (r: Room, p: RatePlan) =>
     r.ratePence !== null
       ? quotePlan(r.ratePence, p, settings, page.offers, r.id, stay.checkIn, stay.checkOut)
       : null;
+  // Each night's price with the guest's Loyalty voucher (on its rooms), replacing other discounts.
+  const voucherQuote = (r: Room, p: RatePlan) =>
+    voucher && r.ratePence !== null && voucher.roomIds.includes(r.id)
+      ? quoteWithVoucher(
+          r.ratePence,
+          p,
+          settings,
+          page.offers,
+          r.id,
+          stay.checkIn,
+          stay.checkOut,
+          voucher,
+        )
+      : null;
+  const quote = (r: Room, p: RatePlan) => {
+    const v = voucherQuote(r, p);
+    return v && v.voucherNights
+      ? { nights: v.nights.length, base: v.base, discount: v.discount, total: v.total, applied: [] }
+      : planQuote(r, p);
+  };
   const estimate = (r: Room) =>
     r.ratePence !== null
       ? quoteStay(r.ratePence, page.offers, r.id, stay.checkIn, stay.checkOut)
@@ -230,7 +257,7 @@ function Booking({ page }: { page: Page }) {
   const chosen = selected
     .map((id) => page.rooms.find((r) => r.id === id))
     .filter((r): r is Room => !!r);
-  const nonRefOffered = chosen.length > 0 && chosen.every((r) => quote(r, "nonref") !== null);
+  const nonRefOffered = chosen.length > 0 && chosen.every((r) => planQuote(r, "nonref") !== null);
   const usePlan: RatePlan = plan === "nonref" && nonRefOffered ? "nonref" : "flex";
   const totals = (p: RatePlan) => chosen.reduce((a, r) => a + (quote(r, p)?.total ?? 0), 0);
   const total = totals(usePlan);
@@ -262,6 +289,7 @@ function Booking({ page }: { page: Page }) {
     name: contact.name.trim(),
     homeAddress: answers.homeAddress.line1.trim() ? answers.homeAddress : null,
     purpose: answers.purpose,
+    voucher: voucher?.code ?? null,
   };
   const termsKey = JSON.stringify(termsInput);
   const loadTerms = () =>
@@ -362,6 +390,7 @@ function Booking({ page }: { page: Page }) {
           message: message || null,
           origin: window.location.origin,
           website,
+          voucher: voucher?.code ?? null,
           agreed: {
             termsSha: t.termsSha,
             ticks: answers.ticks,
@@ -480,18 +509,7 @@ function Booking({ page }: { page: Page }) {
                       !isFree && "opacity-70",
                     )}
                   >
-                    {r.photo ? (
-                      <img
-                        src={r.photo}
-                        alt=""
-                        loading="lazy"
-                        className="aspect-[16/9] w-full object-cover"
-                      />
-                    ) : (
-                      <div className="grid aspect-[16/9] w-full place-items-center bg-primary/10 text-primary">
-                        <BedDouble className="size-10" />
-                      </div>
-                    )}
+                    <RoomPhotos roomId={r.id} name={r.name} cover={r.photo} photos={page.photos} />
                     <div className="flex flex-1 flex-col gap-2 p-4">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-xl leading-tight">{r.name}</h3>
@@ -718,6 +736,23 @@ function Booking({ page }: { page: Page }) {
                           ))}
                       </div>
                     </fieldset>
+
+                    <VoucherBox
+                      pageCode={page.shortCode}
+                      initial={search.voucher ?? null}
+                      name={contact.name}
+                      onName={(name) => setContact((c) => ({ ...c, name }))}
+                      roomIds={chosen.map((r) => r.id)}
+                      checkIn={stay.checkIn}
+                      checkOut={stay.checkOut}
+                      currency={page.currency}
+                      applied={voucher}
+                      onApplied={setVoucher}
+                      breakdown={chosen.flatMap((r) => {
+                        const v = voucherQuote(r, usePlan);
+                        return v ? [{ room: r.name, nights: v.nights }] : [];
+                      })}
+                    />
 
                     <div className="flex items-baseline justify-between border-t border-border pt-3">
                       <span className="font-medium">{copy.total}</span>

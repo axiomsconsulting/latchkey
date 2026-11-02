@@ -13,6 +13,7 @@ export const FEATURES = {
   calendar_sync: "Calendar sync with every booking site",
   extras: "Extras and card payments to your own Stripe",
   id_check: "AI photo ID reading",
+  ai_photos: "AI photo sorting by space for your booking page",
   guest_register: "UK guest register",
   invoices: "Invoices for direct stays",
   team: "Team members and roles",

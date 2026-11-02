@@ -132,6 +132,8 @@ export const reserveDirect = createServerFn({ method: "POST" })
         website: z.string().max(200).optional(),
         /** The booking terms (and longer-stay licence) the guest read and agreed to (stay-terms.ts). */
         agreed: agreedInput,
+        /** A Loyalty discount voucher's code (vouchers.ts), if the guest has one. */
+        voucher: z.string().max(30).nullable().default(null),
       })
       .refine((v) => v.children < v.guests, "At least one adult must stay.")
       .parse(d),
@@ -175,6 +177,22 @@ export const reserveDirect = createServerFn({ method: "POST" })
     const children = setup.settings.children ? data.children : 0;
     const ids = [...new Set(data.roomIds)];
 
+    // A Loyalty discount voucher: for this guest, these rooms and dates, not used yet.
+    const vSrv = await import("./vouchers.server");
+    const { voucherProblem, quoteWithVoucher } = await import("./vouchers");
+    const voucher = data.voucher ? await vSrv.voucherByCode(db, p.id, data.voucher) : null;
+    if (data.voucher && !voucher) throw new Error("That code isn't right. Please check it.");
+    if (voucher) {
+      const why = voucherProblem(voucher, {
+        roomIds: [...new Set(data.roomIds)],
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        name: data.name,
+        today,
+      });
+      if (why) throw new Error(why);
+    }
+
     // The terms they agreed to are the terms now (and a long enough stay is signed for).
     const termsSrv = await import("./stay-terms.server");
     const tp = await termsSrv.termsProperty(db, { id: p.id });
@@ -188,6 +206,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
         guests: data.guests,
         plan: data.plan,
         name: data.name,
+        voucher,
       }),
       data.agreed,
     );
@@ -241,15 +260,29 @@ export const reserveDirect = createServerFn({ method: "POST" })
 
     const offers = normaliseOffers(p.direct_offers);
     const priced = rooms.map((room, i) => {
-      const quote = quotePlan(
-        room.base_rate_pence,
-        data.plan,
-        setup.settings,
-        offers,
-        room.id,
-        data.checkIn,
-        data.checkOut,
-      );
+      const withVoucher = voucher
+        ? quoteWithVoucher(
+            room.base_rate_pence,
+            data.plan,
+            setup.settings,
+            offers,
+            room.id,
+            data.checkIn,
+            data.checkOut,
+            voucher,
+          )
+        : null;
+      const quote = withVoucher
+        ? { nights: withVoucher.nights.length, total: withVoucher.total }
+        : quotePlan(
+            room.base_rate_pence,
+            data.plan,
+            setup.settings,
+            offers,
+            room.id,
+            data.checkIn,
+            data.checkOut,
+          );
       if (!quote) throw new Error("That rate isn't offered. Please choose another.");
       return {
         room,
@@ -275,6 +308,13 @@ export const reserveDirect = createServerFn({ method: "POST" })
           : "Paying at the property";
     const party = partyText(data.guests - children, children);
     const roomList = priced.map((x) => x.name).join(", ");
+
+    // The voucher is held now, so two bookings can't both use it.
+    if (voucher && !(await vSrv.claimVoucher(db, voucher.id)))
+      throw new Error("This code has already been used.");
+    const freeVoucher = async () => {
+      if (voucher) await vSrv.releaseVoucher(db, { id: voucher.id }).catch(() => undefined);
+    };
 
     // One stay per room, each holding its room straight away (and showing on the room's Latchkey calendar to other sites).
     const made: Array<{
@@ -319,6 +359,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
               ? `${party}.`
               : null,
           payNote,
+          voucher ? `Loyalty voucher ${voucher.code}.` : null,
           data.message?.trim() ? `Guest's note: ${data.message.trim().slice(0, 400)}` : null,
         ]
           .filter(Boolean)
@@ -332,6 +373,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
       );
       if (bookingError || !booking) {
         await release();
+        await freeVoucher();
         throw new Error("That booking couldn't be made. Please try again.");
       }
       made.push({
@@ -386,6 +428,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
     );
     if (error || !res) {
       await release();
+      await freeVoucher();
       if (error?.message === "multi-room")
         throw new Error("Please book one room at a time for now.");
       throw new Error(
@@ -394,6 +437,8 @@ export const reserveDirect = createServerFn({ method: "POST" })
           : "That booking couldn't be made. Please try again.",
       );
     }
+
+    if (voucher) await vSrv.linkVoucher(db, voucher.id, res.id as string).catch(() => undefined);
 
     // What they agreed to, kept word for word with when and from where (and the signed licence).
     try {
@@ -438,6 +483,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
       await release();
       await db.from("direct_reservations").update({ status: "cancelled" }).eq("id", res.id);
       await termsSrv.dropAgreements(res.id as string).catch(() => undefined);
+      await freeVoucher();
       throw new Error(
         e instanceof Error && /migration|stay_agreements/.test(e.message)
           ? "Booking here isn't ready yet. Please send a request instead."
@@ -583,6 +629,9 @@ export async function expireReservation(db: Loose, reservationId: string) {
   if (ids.length) await db.from("bookings").update({ status: "cancelled" }).in("id", ids);
   const { dropAgreements } = await import("./stay-terms.server");
   await dropAgreements(reservationId).catch(() => undefined);
+  // The guest can use their Loyalty voucher again.
+  const { releaseVoucher } = await import("./vouchers.server");
+  await releaseVoucher(db, { reservationId }).catch(() => undefined);
 }
 
 /** The guest's confirmation page: their booking, how to pay (bank details for a transfer), and its state. */

@@ -5844,6 +5844,114 @@ export const stayTermsCopy = branded({
   pageGone: "This link has expired or isn't right. Please ask your host for a new one.",
 });
 
+/** The booking page's room photos (RoomPhotos): a tap opens them by space. */
+export const roomPhotosCopy = branded({
+  open: (room: string, n: number) => `See ${n === 1 ? "the photo" : `all ${n} photos`} of ${room}`,
+  count: (n: number) => `${n} photos`,
+  help: "Photos of the room and the shared spaces. Use the arrows, swipe, or pick a space.",
+  previous: "Previous photo",
+  next: "Next photo",
+});
+
+/** The booking page's Loyalty voucher box (VoucherBox). */
+export const voucherCopy = branded({
+  have: "Have a loyalty code?",
+  title: "Loyalty code",
+  nameLabel: "Your full name (the code is in your name)",
+  codeLabel: "Your code",
+  apply: "Apply",
+  enterCode: "Please enter your code.",
+  needName: "Please enter your name: the code is in your name.",
+  failed: "The code couldn't be checked. Please try again.",
+  applied: (code: string) => `Code ${code} applied.`,
+  worth: (value: string, kind: "percent" | "price", when: string) =>
+    kind === "percent"
+      ? `${value} off the room rate for ${when}, instead of other discounts.`
+      : `${value} a night for ${when}, instead of other discounts.`,
+  when: (when: string) => `It's for ${when}.`,
+  remove: "Remove the code",
+  perNight: "Price for each night",
+  dotNote: "● Loyalty price. Other nights are at the usual rate.",
+});
+
+/** Direct stays → Photos guests see (RoomGallery). */
+export const roomGalleryCopy = branded({
+  title: "Photos guests see",
+  body: "Guests tap a room on your booking page to look through its photos, grouped by space like bedroom, bathroom and kitchen. Shared spaces show with every room.",
+  notReady: "Room photos need the latest update (migration 0082).",
+  shared: "Shared spaces",
+  newSpace: "Space for new photos",
+  add: "Add photos",
+  added: (n: number) => (n === 1 ? "Photo added." : `${n} photos added.`),
+  full: (n: number) => `Up to ${n} photos each. Remove some first.`,
+  ai: "Sort by space with AI",
+  aiDone: (n: number) =>
+    `${n} ${n === 1 ? "photo" : "photos"} sorted. Check each space and change any.`,
+  trialLeft: (left: number, of: number) =>
+    `Free trial: AI can sort ${left} more of ${of} rooms (once each). Plans with AI photo sorting cover every room.`,
+  trialUsed:
+    "This room's free AI sort is used (or the trial is). Plans with AI photo sorting cover every room; you can still pick each photo's space.",
+  none: "No photos here yet. Add some, then pick each one's space.",
+  space: "Space",
+  caption: "Caption (optional)",
+  earlier: "Move earlier",
+  later: "Move later",
+  remove: "Remove photo",
+});
+
+/** Direct stays → Loyalty vouchers (LoyaltyVouchers). */
+export const vouchersAdminCopy = branded({
+  tab: "Loyalty vouchers",
+  body: "Thank a past guest with a one-use code in their name: for the rooms and dates you choose, a percentage off or a set price per night, instead of any other discount on those nights. You send it from your own WhatsApp, texts or email; Latchkey sends nothing.",
+  notReady: "Vouchers need the latest update (migration 0082).",
+  create: "New voucher",
+  none: "No vouchers yet.",
+  oldRoom: "A removed room",
+  status: { active: "Not used yet", used: "Used", cancelled: "Cancelled" },
+  send: "Send",
+  cancel: "Cancel",
+  createTitle: "New loyalty voucher",
+  createHelp: "Only the guest named here can use it, once, when booking on your booking page.",
+  guest: "Who it's for",
+  pickGuest: "Pick a past guest",
+  name: "Guest's full name",
+  email: "Email (optional)",
+  changePhone: "Change",
+  rooms: "Rooms",
+  when: "When it can be used",
+  month: "A whole month",
+  addMonth: "Add month",
+  from: "From",
+  to: "To (blank: one day)",
+  addDates: "Add dates",
+  removeDates: "Remove these dates",
+  whenHelp:
+    "Add whole months, single days or date ranges. Only nights inside them get the voucher price.",
+  offer: "What it gives",
+  percent: "Percentage off",
+  price: "Set price per night",
+  perNight: "a night",
+  aNight: "a night",
+  noRate: "no rate set",
+  replaces: "On these nights this replaces seasonal offers and the non-refundable discount.",
+  note: "A personal line (optional)",
+  notePlaceholder: "For example: It was lovely having you in the spring.",
+  make: "Make the code",
+  needName: "Please give the guest's full name.",
+  needRooms: "Pick at least one room.",
+  needDates: "Add when it can be used.",
+  needValue: "Set the percentage (1 to 100) or the price per night.",
+  shareTitle: (name: string) => `Send ${name} their code`,
+  shareHelp: "Change the message if you like, then send it from your phone or email, or copy it.",
+  message: "Message",
+  subject: (property: string) => `A thank-you code for ${property}`,
+  text: "Text",
+  emailIt: "Email",
+  copy: "Copy",
+  copied: "Message copied.",
+  noContact: "No phone or email for this guest: copy the message and send it your own way.",
+});
+
 /** Direct stays → Book and pay here → Stay length and terms (StayTermsSettings). */
 export const stayTermsSettingsCopy = branded({
   title: "Stay length and terms",
