@@ -68,7 +68,7 @@ export const getOperationsReport = createServerFn({ method: "GET" })
         sb
           .from("bookings")
           .select(
-            "id, room_id, check_in_date, check_out_date, status, channel, site_key, guest_count, checked_in_at",
+            "id, room_id, check_in_date, check_out_date, status, channel, site_key, guest_count, checked_in_at, archived_at",
           )
           .in("property_id", ids)
           .is("mirror_of", null)
@@ -98,17 +98,22 @@ export const getOperationsReport = createServerFn({ method: "GET" })
           .lt("day", data.to),
       ]);
     const stayRows: ReportStay[] = (
-      (stays ?? []) as Array<ReportStay & { channel: string; site_key: string | null }>
-    ).map((s) => ({
-      id: s.id,
-      room_id: s.room_id,
-      check_in_date: s.check_in_date,
-      check_out_date: s.check_out_date,
-      status: s.status,
-      site: platformKey(s),
-      guest_count: s.guest_count,
-      checked_in_at: s.checked_in_at,
-    }));
+      (stays ?? []) as Array<
+        ReportStay & { channel: string; site_key: string | null; archived_at: string | null }
+      >
+    )
+      // A guest held for a room (hidden, no room) isn't a stay yet.
+      .filter((s) => s.room_id || !s.archived_at)
+      .map((s) => ({
+        id: s.id,
+        room_id: s.room_id,
+        check_in_date: s.check_in_date,
+        check_out_date: s.check_out_date,
+        status: s.status,
+        site: platformKey(s),
+        guest_count: s.guest_count,
+        checked_in_at: s.checked_in_at,
+      }));
     // Messages with guests on these stays: how fast they got an answer.
     const messages: ReportMessage[] = [];
     const stayIds = stayRows.map((s) => s.id);

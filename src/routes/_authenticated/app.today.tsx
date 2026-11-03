@@ -44,6 +44,7 @@ import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { GuestReviews } from "@/components/host/GuestReviews";
 import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
+import { RoomChecks } from "@/components/host/RoomChecks";
 import { SetupChecklist } from "@/components/host/SetupChecklist";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
 import { TabletStrip } from "@/components/host/DoorTablets";
@@ -197,6 +198,7 @@ function TodayPage() {
 
       <AlertsPanel />
       <SetupChecklist propertyId={selectedId} />
+      <RoomChecks propertyId={selectedId} />
 
       <DashboardSections
         page="today"

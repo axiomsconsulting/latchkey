@@ -143,6 +143,8 @@ type Step =
       roomName: string | null;
       roomTitle: string | null;
       stayToken: string;
+      /** No room yet: the host places them. */
+      held?: boolean;
       /** Three words for /g/<words>, the easy-to-remember link to the guide. */
       shortCode?: string | null;
     }
@@ -244,6 +246,9 @@ export function CheckInFlow({
   // ID first: the lead guest's ID is already checked (found their stay), or the photo to reuse once it's found another way.
   const leadVerified = useRef(false);
   const pendingPhoto = useRef<{ full: string; small: string } | null>(null);
+  // ID first: the selfie follows straight away, before anything else is asked.
+  const faceFirst = useRef(false);
+  const leadFaceDone = useRef(false);
   const idFirstTries = useRef(0);
   // The register from each guest's ID: saved, left for the host, or only a few things to ask.
   const registerFrom = useRef<Record<number, string>>({});
@@ -397,6 +402,8 @@ export function CheckInFlow({
     setQueue([]);
     setPrefill({});
     childAges.current = [];
+    faceFirst.current = false;
+    leadFaceDone.current = false;
     setStep({ name: "welcome" });
   }
 
@@ -500,7 +507,21 @@ export function CheckInFlow({
     noteRegister(0, res.register);
     setToken(res.token);
     setPlatform(res.platform);
+    if (phoneFaces.current.has(0)) leadFaceDone.current = true;
+    else if (res.facePhoto) {
+      faceFirst.current = true;
+      setQueue([]);
+      return setStep({ name: "face", position: 0 });
+    }
     await onConfirm(res.token);
+  }
+
+  /** A face photo is done with: after the ID-first selfie the rest of the check-in starts, otherwise on to the next step. */
+  function faceDone() {
+    if (!faceFirst.current) return void advance(queue);
+    faceFirst.current = false;
+    leadFaceDone.current = true;
+    void onConfirm();
   }
 
   // The phone's task follows the photo step on screen; leaving one stops the phone (unless its selfie is still to come).
@@ -556,7 +577,7 @@ export function CheckInFlow({
     if (r.face && !handled.current.has(`${t.n}:face`)) {
       handled.current.add(`${t.n}:face`);
       phoneFaces.current.add(t.position);
-      if (step.name === "face" && step.position === t.position) void advance(queue);
+      if (step.name === "face" && step.position === t.position) faceDone();
     }
     // Acted on when the answer arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -780,6 +801,7 @@ export function CheckInFlow({
       (x) =>
         !takenElsewhere(x.position) &&
         !(x.kind === "face" && phoneFaces.current.has(x.position)) &&
+        !(x.kind === "face" && x.position === 0 && leadFaceDone.current) &&
         !(
           x.kind === "register" &&
           ["saved", "later"].includes(registerFrom.current[x.position] ?? "")
@@ -865,7 +887,7 @@ export function CheckInFlow({
   async function onFace(position: number, small: string) {
     await phone.clear();
     const ok = await run(() => face({ data: { token: tokenRef.current, position, image: small } }));
-    if (ok) await advance(queue);
+    if (ok) faceDone();
   }
 
   function fallback(from: CheckinMethod, note?: string) {
@@ -1619,7 +1641,7 @@ export function CheckInFlow({
                       size="lg"
                       className="w-full"
                       disabled={busy}
-                      onClick={() => void advance(queue)}
+                      onClick={() => faceDone()}
                     >
                       {copy.faceSkip}
                     </Button>
@@ -1634,7 +1656,7 @@ export function CheckInFlow({
                       cta={copy.faceTake}
                       busyLabel={copy.faceSaving}
                       onCapture={(_full, small) => void onFace(step.position, small)}
-                      onFail={kiosk ? onFail : () => void advance(queue)}
+                      onFail={kiosk ? onFail : () => faceDone()}
                       extra={
                         <>
                           <Button
@@ -1642,7 +1664,7 @@ export function CheckInFlow({
                             size="lg"
                             className="w-full"
                             disabled={busy}
-                            onClick={() => void advance(queue)}
+                            onClick={() => faceDone()}
                           >
                             {copy.faceSkip}
                           </Button>
@@ -1731,9 +1753,15 @@ export function CheckInFlow({
             >
               <div>
                 <CheckCircle2 className="mx-auto size-14 text-success" />
-                <h1 className="mt-4 text-3xl sm:text-5xl">{copy.doneTitle(step.firstName)}</h1>
+                <h1 className="mt-4 text-3xl sm:text-5xl">
+                  {step.held ? copy.heldTitle(step.firstName) : copy.doneTitle(step.firstName)}
+                </h1>
                 <p className="mt-4 text-2xl">
-                  {step.roomName ? copy.roomLine(step.roomName, step.roomTitle) : copy.noRoom}
+                  {step.held
+                    ? copy.heldLine
+                    : step.roomName
+                      ? copy.roomLine(step.roomName, step.roomTitle)
+                      : copy.noRoom}
                 </p>
                 {/* A shared tablet never opens the guide: the guest takes the link away instead. */}
                 {!kiosk ? (

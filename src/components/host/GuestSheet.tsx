@@ -22,6 +22,7 @@ import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { GuestInvoice } from "@/components/host/GuestInvoice";
 import { GuestAgreements } from "@/components/host/GuestAgreements";
 import { GuestPeople } from "@/components/host/GuestPeople";
+import { MoveCheckIn } from "@/components/host/RoomChecks";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
 import { StatusBadge } from "@/components/host/StatusBadge";
 import {
@@ -322,6 +323,7 @@ export function GuestSheet({
             ) : null}
 
             <Section title={copy.whoStaying} count={d.people.length}>
+              {canWrite && d.people.length ? <MoveCheckIn bookingId={b.id} /> : null}
               <GuestPeople
                 people={d.people}
                 arrivedAdults={b.arrivedAdults}

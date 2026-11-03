@@ -41,7 +41,7 @@ import { StayAgain } from "@/components/guest/StayAgain";
 import { StayServices } from "@/components/guest/StayServices";
 
 import { sectionIcon } from "@/components/guest/guide-icons";
-import { guideCopy as gcopy, guest as copy, stayHeroCopy } from "@/content/copy";
+import { guideCopy as gcopy, guest as copy, stayHeldCopy, stayHeroCopy } from "@/content/copy";
 import { getStay, startCheckInFromStay } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
 import { ThemeIcon } from "@/components/theme/ThemeDecor";
@@ -87,6 +87,7 @@ function Stay() {
     if (s.found) rememberStay(s.propertyId, token, s.checkOutDate);
   }, [s, token]);
   if (!s.found) {
+    if ("held" in s && s.held) return <StayHeld held={s.held} />;
     const opens =
       "opensAt" in s && s.opensAt
         ? new Intl.DateTimeFormat("en-GB", {
@@ -103,6 +104,37 @@ function Stay() {
     );
   }
   return <StayPage s={s} token={token} theme={s.theme} />;
+}
+
+/** Registered, room still with the host: looks again every 20 seconds, so the guide opens by itself. */
+function StayHeld({
+  held,
+}: {
+  held: NonNullable<Extract<Awaited<ReturnType<typeof getStay>>, { held: unknown }>["held"]>;
+}) {
+  const router = useRouter();
+  useEffect(() => {
+    const id = window.setInterval(() => void router.invalidate(), 20_000);
+    return () => window.clearInterval(id);
+  }, [router]);
+  return (
+    <GuestFrame theme={held.theme} name={held.propertyName}>
+      <div className="mx-auto max-w-2xl py-16">
+        <div className="card-soft p-8 text-center">
+          <h1 className="text-3xl">{stayHeldCopy.title(held.firstName)}</h1>
+          <p className="mt-4 text-lg">{stayHeldCopy.body(held.propertyName)}</p>
+          {held.phone ? (
+            <a
+              href={`tel:${held.phone}`}
+              className="mt-6 inline-block text-lg font-medium underline underline-offset-4"
+            >
+              {stayHeldCopy.call}
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </GuestFrame>
+  );
 }
 
 type StayData = Extract<Awaited<ReturnType<typeof getStay>>, { found: true }>;

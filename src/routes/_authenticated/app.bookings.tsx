@@ -186,7 +186,11 @@ function BookingsPage() {
 
   const data = board.data;
   const rooms = (data?.rooms ?? []) as Array<{ id: string; display_name: string }>;
-  const everything = (data?.bookings ?? []) as Array<BookingRow & { archived_at?: string | null }>;
+  const everything = (
+    (data?.bookings ?? []) as Array<
+      BookingRow & { archived_at?: string | null; room_check?: { held?: boolean } | null }
+    >
+  ).filter((b) => !b.room_check?.held); // Guests held for a room are on Today until they're placed.
   // Archived stays live only in the Archive view.
   const all = everything.filter((b) => (scope === "archive") === !!b.archived_at);
   const activity = (data as { activity?: Activity } | undefined)?.activity ?? {};

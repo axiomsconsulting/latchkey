@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.115.0",
+    date: "2026-11-03",
+    title: "ID and selfie first, room second",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "With ID first switched on, guests start with their photo ID and selfie and are on your records straight away, with no questions to find their booking. Latchkey then works out the room: from the name on their ID, otherwise from the one stay they could be, even if someone else booked for them.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "When Latchkey isn't sure, it says so. Unsure rooms and guests still waiting for one appear at the top of Today, and you get an alert. Guests waiting for a room see no door details until you've placed them, and their link opens the stay guide by itself once you have.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Move a check-in to another stay from the guest's card or Today. Their ID, register entry, guide link and messages go with them, and if that stay already has a guest the two swap.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "A booking with no guest name now takes the name from the guest's ID, so they no longer type it.",
+      },
+    ],
+  },
+  {
     version: "0.114.0",
     date: "2026-11-02",
     title: "Room photos by space, and loyalty vouchers",

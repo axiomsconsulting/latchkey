@@ -268,7 +268,7 @@ const HANDLERS: Record<string, Handler> = {
       .limit(Math.min(200, Number(i["limit"] ?? 50)));
     if (i["status"]) q = q.eq("status", i["status"]);
     const { data } = await q;
-    return { data: ((data ?? []) as any[]).map(bookingOut) };
+    return { data: ((data ?? []) as any[]).filter((b) => !b.room_check?.held).map(bookingOut) };
   },
 
   async get_booking(c, i) {
@@ -293,7 +293,7 @@ const HANDLERS: Record<string, Handler> = {
       .gte("check_out_date", date)
       .is("mirror_of", null)
       .not("status", "in", "(cancelled,blocked)");
-    const rows = (data ?? []) as any[];
+    const rows = ((data ?? []) as any[]).filter((b) => !b.room_check?.held);
     const brief = (b: any) => ({
       booking_id: b.id,
       guest_name: b.guest_full_name ?? null,

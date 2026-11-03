@@ -18,11 +18,13 @@ export type AlertKind =
   | "handover"
   | "direct_enquiry"
   | "tablet_joined"
+  | "room_check"
+  | "room_needed"
   | "system_update"
   | "test";
 
 /** Kinds that need the host now: the only ones sent by SMS unless the host asks for everything. */
-export const URGENT: AlertKind[] = ["lockout", "handover", "party"];
+export const URGENT: AlertKind[] = ["lockout", "handover", "party", "room_needed"];
 
 export type NotifyPrefs = {
   email: boolean;
@@ -80,6 +82,8 @@ const TITLES: Record<AlertKind, string> = {
   handover: "Guest wants you to check them in",
   direct_enquiry: "New direct enquiry",
   tablet_joined: "A door tablet joined",
+  room_check: "Please check this room",
+  room_needed: "A guest needs a room",
   system_update: "Latchkey update",
   test: "Test alert",
 };
@@ -92,6 +96,7 @@ export function alertTitle(kind: string): string {
 export function alertPath(kind: string, bookingId: string | null): string {
   if (kind === "direct_enquiry") return "/app/direct";
   if (kind === "tablet_joined") return "/app/settings?focus=kioskTablets";
+  if (kind === "room_check" || kind === "room_needed") return "/app/today";
   if (bookingId && kind !== "test") return `/app/bookings?guest=${bookingId}`;
   return "/app/today";
 }
