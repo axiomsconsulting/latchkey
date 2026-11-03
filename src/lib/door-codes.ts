@@ -1,15 +1,17 @@
 /**
- * Door codes (properties.door_codes): the host says what their lock takes and
- * Latchkey makes codes to fit, the same every time or a new one per stay. A code
- * another stay holds now or later is never given out, and one from a past guest
- * only comes round again after the host's chosen time. Latchkey doesn't work the
- * lock itself: the host puts each code on it. Pure, tested.
+ * Door codes (properties.door_codes): for the front door and the room door, the
+ * host says whether it takes a new code each stay, one fixed code, or a key, and
+ * what the lock takes. Latchkey makes codes to fit. A code another stay holds now
+ * or later is never given out; a past guest's only comes round again after the
+ * host's chosen time, and one no guest ever saw doesn't count as used. Latchkey
+ * doesn't work the lock itself: the host puts each code on it. Pure, tested.
  */
 
-export type DoorCodes = {
-  on: boolean;
-  mode: "per_stay" | "static";
-  /** The code: letters, then digits, then letters. */
+export type DoorKey = "front" | "room";
+export const DOOR_KEYS: DoorKey[] = ["front", "room"];
+
+/** What a lock takes: letters, then digits, then letters. */
+export type CodeFormat = {
   lettersStart: number;
   digits: number;
   lettersEnd: number;
@@ -20,27 +22,40 @@ export type DoorCodes = {
   letterTo: string;
   /** Patterns people remember (483 483), when the lock has enough buttons. */
   memorable: boolean;
-  /** Days before a past guest's code can come round again; 0 = never. */
-  reuseAfterDays: number;
+};
+
+export type Door = CodeFormat & {
+  /** per_stay: new code each stay. static: fixed. off: a key, or nothing to do. */
+  mode: "per_stay" | "static" | "off";
+  /** Off: what guests are told instead ("The key is in the safe by the door."). */
+  keyNote: string;
   /** Pressed before or after the code: "*", "#", "Unlock". */
   pressBefore: string;
   pressAfter: string;
   unlockHow: string;
   lockHow: string;
+  /** Fixed codes: the front door's. */
+  staticCode: string;
+  /** Fixed codes: each room's own, for the room door. */
+  roomCodes: Record<string, string>;
+  /** Fixed codes can't be changed or regenerated until the host unlocks them. */
+  locked: boolean;
+};
+
+export type DoorCodes = {
+  front: Door;
+  room: Door;
+  /** Days before a past guest's code can come round again; 0 = never. */
+  reuseAfterDays: number;
   /** When guests see it. */
   reveal: "check_in" | "arrival_day";
-  /** "The same code every time": the property's, and any room's own. */
-  staticCode: string;
-  roomCodes: Record<string, string>;
 };
 
 export const REUSE_CHOICES = [30, 90, 180, 365, 0] as const;
 export const MAX_DIGITS = 12;
 export const MAX_LETTERS = 3;
 
-export const DEFAULT_DOOR_CODES: DoorCodes = {
-  on: false,
-  mode: "per_stay",
+const DEFAULT_FORMAT: CodeFormat = {
   lettersStart: 0,
   digits: 6,
   lettersEnd: 0,
@@ -49,14 +64,38 @@ export const DEFAULT_DOOR_CODES: DoorCodes = {
   letterFrom: "A",
   letterTo: "Z",
   memorable: true,
-  reuseAfterDays: 90,
+};
+
+/** Common locks, one tap each, so nobody has to work out the fields. */
+export const FORMAT_PRESETS: Array<{ id: string; format: CodeFormat }> = [
+  { id: "six", format: DEFAULT_FORMAT },
+  { id: "four", format: { ...DEFAULT_FORMAT, digits: 4 } },
+  { id: "eight", format: { ...DEFAULT_FORMAT, digits: 8 } },
+  { id: "buttons", format: { ...DEFAULT_FORMAT, digits: 4, digitFrom: 1, digitTo: 5 } },
+  { id: "letter", format: { ...DEFAULT_FORMAT, lettersStart: 1, digits: 5, letterTo: "D" } },
+];
+
+const FORMAT_KEYS = Object.keys(DEFAULT_FORMAT) as Array<keyof CodeFormat>;
+
+/** Which preset this format is, or null for one of the host's own. */
+export function presetOfFormat(f: CodeFormat): string | null {
+  return (
+    FORMAT_PRESETS.find((p) => FORMAT_KEYS.every((k) => k === "memorable" || p.format[k] === f[k]))
+      ?.id ?? null
+  );
+}
+
+const DEFAULT_DOOR: Door = {
+  ...DEFAULT_FORMAT,
+  mode: "off",
+  keyNote: "",
   pressBefore: "",
   pressAfter: "",
   unlockHow: "",
   lockHow: "",
-  reveal: "check_in",
   staticCode: "",
   roomCodes: {},
+  locked: false,
 };
 
 const whole = (v: unknown, min: number, max: number, fallback: number) => {
@@ -80,8 +119,8 @@ export function cleanCode(v: unknown): string {
     : "";
 }
 
-export function normaliseDoorCodes(raw: unknown): DoorCodes {
-  const d = DEFAULT_DOOR_CODES;
+function normaliseDoor(raw: unknown): Door {
+  const d = DEFAULT_DOOR;
   const v = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const a = whole(v["digitFrom"], 0, 9, d.digitFrom);
   const b = whole(v["digitTo"], 0, 9, d.digitTo);
@@ -97,10 +136,9 @@ export function normaliseDoorCodes(raw: unknown): DoorCodes {
   const rooms = (
     v["roomCodes"] && typeof v["roomCodes"] === "object" ? v["roomCodes"] : {}
   ) as Record<string, unknown>;
-  const reuse = whole(v["reuseAfterDays"], 0, 3650, d.reuseAfterDays);
   return {
-    on: v["on"] === true,
-    mode: v["mode"] === "static" ? "static" : "per_stay",
+    mode: v["mode"] === "per_stay" || v["mode"] === "static" ? v["mode"] : "off",
+    keyNote: text(v["keyNote"], 300),
     lettersStart,
     digits,
     lettersEnd,
@@ -109,31 +147,74 @@ export function normaliseDoorCodes(raw: unknown): DoorCodes {
     letterFrom: la <= lb ? la : lb,
     letterTo: la <= lb ? lb : la,
     memorable: v["memorable"] !== false,
-    reuseAfterDays: reuse,
     pressBefore: text(v["pressBefore"], 24),
     pressAfter: text(v["pressAfter"], 24),
     unlockHow: text(v["unlockHow"], 500),
     lockHow: text(v["lockHow"], 500),
-    reveal: v["reveal"] === "arrival_day" ? "arrival_day" : "check_in",
     staticCode: cleanCode(v["staticCode"]),
     roomCodes: Object.fromEntries(
       Object.entries(rooms)
         .map(([k, c]) => [k, cleanCode(c)] as const)
         .filter(([, c]) => !!c),
     ),
+    locked: v["locked"] === true,
   };
 }
 
-const digitSpan = (f: DoorCodes) => f.digitTo - f.digitFrom + 1;
-const letterSpan = (f: DoorCodes) => f.letterTo.charCodeAt(0) - f.letterFrom.charCodeAt(0) + 1;
+export function normaliseDoorCodes(raw: unknown): DoorCodes {
+  const v = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const reveal = v["reveal"] === "arrival_day" ? "arrival_day" : "check_in";
+  const reuseAfterDays = whole(v["reuseAfterDays"], 0, 3650, 90);
+  // Saved before there were two doors: one lock, on the front door.
+  if (!("front" in v) && !("room" in v)) {
+    return {
+      front: normaliseDoor({ ...v, mode: v["on"] === true ? v["mode"] : "off", roomCodes: {} }),
+      room: normaliseDoor(
+        v["on"] === true && v["mode"] === "static" && v["roomCodes"]
+          ? { ...v, mode: "static", staticCode: "" }
+          : null,
+      ),
+      reveal,
+      reuseAfterDays,
+    };
+  }
+  return {
+    front: { ...normaliseDoor(v["front"]), roomCodes: {} },
+    room: { ...normaliseDoor(v["room"]), staticCode: "" },
+    reveal,
+    reuseAfterDays,
+  };
+}
+
+/** Anything on: a code on either door, or a note about a key. */
+export function doorsOn(f: DoorCodes): boolean {
+  return DOOR_KEYS.some((k) => f[k].mode !== "off" || !!f[k].keyNote);
+}
+
+/** Locked fixed codes stay as they were, whatever the page sends. */
+export function keepLocked(prev: DoorCodes, next: DoorCodes): DoorCodes {
+  const keep = (k: DoorKey): Door =>
+    prev[k].locked && next[k].locked
+      ? { ...next[k], staticCode: prev[k].staticCode, roomCodes: prev[k].roomCodes }
+      : next[k];
+  return { ...next, front: keep("front"), room: keep("room") };
+}
+
+/** The format changed, so codes not yet used should be made again to fit. */
+export function formatChanged(a: CodeFormat, b: CodeFormat): boolean {
+  return FORMAT_KEYS.some((k) => k !== "memorable" && a[k] !== b[k]);
+}
+
+const digitSpan = (f: CodeFormat) => f.digitTo - f.digitFrom + 1;
+const letterSpan = (f: CodeFormat) => f.letterTo.charCodeAt(0) - f.letterFrom.charCodeAt(0) + 1;
 
 /** How many different codes this format has. */
-export function possibleCodes(f: DoorCodes): number {
+export function possibleCodes(f: CodeFormat): number {
   return digitSpan(f) ** f.digits * letterSpan(f) ** (f.lettersStart + f.lettersEnd);
 }
 
 /** How many it will really choose from: memorable patterns use far fewer than the format allows. */
-export function likelyCodes(f: DoorCodes): number {
+export function likelyCodes(f: CodeFormat): number {
   if (!f.memorable || f.digits < 4 || digitSpan(f) < 3) return possibleCodes(f);
   let picks = 1;
   const span = digitSpan(f);
@@ -153,7 +234,7 @@ const secureRand: Rand = (below) => {
 };
 
 /** Guessed first: one digit over and over, or counting up or down. */
-export function isWeakDigits(d: string, f: Pick<DoorCodes, "digitFrom" | "digitTo">): boolean {
+export function isWeakDigits(d: string, f: Pick<CodeFormat, "digitFrom" | "digitTo">): boolean {
   if (d.length < 3 || f.digitTo - f.digitFrom < 3) return false;
   if (new Set(d).size === 1) return true;
   const steps = [...d].slice(1).map((c, i) => Number(c) - Number(d[i]));
@@ -163,7 +244,7 @@ export function isWeakDigits(d: string, f: Pick<DoorCodes, "digitFrom" | "digitT
 }
 
 /** Distinct digits where the buttons allow, so patterns don't collapse to 4444. */
-function someDigits(n: number, f: DoorCodes, rand: Rand): number[] {
+function someDigits(n: number, f: CodeFormat, rand: Rand): number[] {
   const pool = Array.from({ length: digitSpan(f) }, (_, i) => f.digitFrom + i);
   const out: number[] = [];
   for (let i = 0; i < n; i++) {
@@ -174,7 +255,7 @@ function someDigits(n: number, f: DoorCodes, rand: Rand): number[] {
 }
 
 /** 483 483, 483 384 or 44 88 33: half the digits to remember. */
-function memorableDigits(f: DoorCodes, rand: Rand): string {
+function memorableDigits(f: CodeFormat, rand: Rand): string {
   const n = f.digits;
   const half = someDigits(Math.ceil(n / 2), f, rand);
   const shapes = [
@@ -185,16 +266,16 @@ function memorableDigits(f: DoorCodes, rand: Rand): string {
   return shapes[rand(shapes.length)]!().join("");
 }
 
-const plainDigits = (f: DoorCodes, rand: Rand) =>
+const plainDigits = (f: CodeFormat, rand: Rand) =>
   Array.from({ length: f.digits }, () => f.digitFrom + rand(digitSpan(f))).join("");
 
-const someLetters = (n: number, f: DoorCodes, rand: Rand) =>
+const someLetters = (n: number, f: CodeFormat, rand: Rand) =>
   Array.from({ length: n }, () =>
     String.fromCharCode(f.letterFrom.charCodeAt(0) + rand(letterSpan(f))),
   ).join("");
 
 /** The nth code of the format, for going through them all when few are left. */
-function nthCode(i: number, f: DoorCodes): string {
+function nthCode(i: number, f: CodeFormat): string {
   let rest = i;
   const take = (span: number) => {
     const v = rest % span;
@@ -216,7 +297,7 @@ function nthCode(i: number, f: DoorCodes): string {
  * isn't easily guessed, otherwise any free one at all. Null when every code is taken.
  */
 export function generateCode(
-  f: DoorCodes,
+  f: CodeFormat,
   blocked: ReadonlySet<string>,
   rand: Rand = secureRand,
 ): string | null {
@@ -249,13 +330,16 @@ export function generateCode(
 export type CodeHistory = {
   id: string;
   door_code: string | null;
+  door_code_room?: string | null;
+  door_code_shown_at?: string | null;
   status: string;
   check_out_date: string;
 };
 
 /**
- * Codes this stay can't have. Any stay here now or still to come keeps its code to
- * itself, always; a past guest's is free once `reuseAfterDays` have gone by (0 = never).
+ * Codes this stay can't have. Any stay here now or still to come keeps its codes to
+ * itself, always. A past guest's are free once `reuseAfterDays` have gone by (0 = never),
+ * and straight away if they never saw them: an unused code wasn't given to anyone.
  */
 export function blockedCodes(
   stays: CodeHistory[],
@@ -270,17 +354,18 @@ export function blockedCodes(
     : null;
   const out = new Set<string>();
   for (const s of stays) {
-    if (!s.door_code || s.id === selfId || s.status === "cancelled") continue;
-    if (s.check_out_date >= today || !free || s.check_out_date > free) out.add(s.door_code);
+    if (s.id === selfId || s.status === "cancelled") continue;
+    const current = s.check_out_date >= today;
+    const given = !!s.door_code_shown_at && (!free || s.check_out_date > free);
+    if (!current && !given) continue;
+    if (s.door_code) out.add(s.door_code);
+    if (s.door_code_room) out.add(s.door_code_room);
   }
   return out;
 }
 
 /** What the guest does, step by step. */
-export function codeSteps(
-  f: Pick<DoorCodes, "pressBefore" | "pressAfter">,
-  code: string,
-): string[] {
+export function codeSteps(f: Pick<Door, "pressBefore" | "pressAfter">, code: string): string[] {
   return [
     ...(f.pressBefore ? [`Press ${f.pressBefore}`] : []),
     `Enter ${code}`,
@@ -288,17 +373,20 @@ export function codeSteps(
   ];
 }
 
-/** Easier to read and remember: letters apart, digits in threes (B 483 483). */
+/** Easier to read and remember: letters apart, six or eight digits in halves (483 483), longer in threes. */
 export function spacedCode(code: string): string {
   const parts = code.match(/[A-Z]+|[0-9]+|[^A-Z0-9]+/g) ?? [code];
-  return parts
-    .map((p) => (/^[0-9]{5,}$/.test(p) ? (p.match(/.{1,3}/g)?.join(" ") ?? p) : p))
-    .join(" ");
+  const group = (p: string) => {
+    if (!/^[0-9]{5,}$/.test(p)) return p;
+    const size = p.length === 6 || p.length === 8 ? p.length / 2 : 3;
+    return p.match(new RegExp(`.{1,${size}}`, "g"))?.join(" ") ?? p;
+  };
+  return parts.map(group).join(" ");
 }
 
-/** The code a static set-up gives this room. */
-export function staticCodeFor(f: DoorCodes, roomId: string | null): string {
-  return (roomId && f.roomCodes[roomId]) || f.staticCode;
+/** The fixed code for this door: the front door's, or this room's. */
+export function staticCodeFor(f: DoorCodes, door: DoorKey, roomId: string | null): string {
+  return door === "front" ? f.front.staticCode : (roomId && f.room.roomCodes[roomId]) || "";
 }
 
 /** Whether the guest sees their code now. Never before arrival day, never after they've left. */

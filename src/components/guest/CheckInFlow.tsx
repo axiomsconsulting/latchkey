@@ -146,7 +146,7 @@ type Step =
       stayToken: string;
       /** No room yet: the host places them. */
       held?: boolean;
-      door?: GuestDoor | null;
+      doors?: GuestDoor[];
       /** Three words for /g/<words>, the easy-to-remember link to the guide. */
       shortCode?: string | null;
     }
@@ -1765,9 +1765,9 @@ export function CheckInFlow({
                       ? copy.roomLine(step.roomName, step.roomTitle)
                       : copy.noRoom}
                 </p>
-                {step.door ? (
-                  <DoorCodeCard door={step.door} className="mx-auto mt-6 max-w-md" />
-                ) : null}
+                {step.doors?.map((d) => (
+                  <DoorCodeCard key={d.door} door={d} className="mx-auto mt-6 max-w-md" />
+                ))}
                 {/* A shared tablet never opens the guide: the guest takes the link away instead. */}
                 {!kiosk ? (
                   <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">

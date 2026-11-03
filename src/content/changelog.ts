@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.117.0",
+    date: "2026-11-03",
+    title: "Door codes for each door",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Set up the front door and room door separately: a new code each stay, one fixed code (one per room on the room door), or a key with a note for guests. Each door has its own lock type, with examples to pick from.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Fixed codes can be typed, made for you or made again, then locked so they aren't changed by accident.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Each stay's door codes now show in the bookings list and on the guest's card, where you can make a new one or choose not to give that guest a code. A code a guest never saw doesn't count as used.",
+      },
+    ],
+  },
+  {
     version: "0.116.0",
     date: "2026-11-03",
     title: "Door codes",

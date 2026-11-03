@@ -2201,10 +2201,10 @@ export const completeCheckIn = createServerFn({ method: "POST" })
       .select("room_check")
       .eq("id", booking.id)
       .maybeSingle();
-    const { doorForGuest } = await import("./door-codes.server");
+    const { doorsForGuest } = await import("./door-codes.server");
     return {
       shortCode,
-      door: await doorForGuest(booking.id).catch(() => null),
+      doors: await doorsForGuest(booking.id).catch(() => []),
       // No room yet: the host places them, and their link opens the guide once they have.
       held: !!normaliseRoomCheck(flagged?.room_check)?.held,
       firstName: firstName(booking.guest_full_name),
@@ -2289,7 +2289,7 @@ export const getStay = createServerFn({ method: "GET" })
 
     const { buildGuide, forgetCard, weeklyLines, windowsOn, guideWindow, DOOR_SECTIONS } =
       await import("./guide");
-    const { doorForGuest } = await import("./door-codes.server");
+    const { doorsForGuest } = await import("./door-codes.server");
     const tz = p?.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const checkOutTime = (b.check_out_time ?? p?.default_check_out_time ?? "11:00").slice(0, 5);
@@ -2491,7 +2491,7 @@ export const getStay = createServerFn({ method: "GET" })
       guide: sections.filter((sec) => !reminded.has(sec.key)),
       pinnedSections: sections.filter((sec) => reminded.has(sec.key)),
       doorOpensAt: win.doorOpensAt.toISOString(),
-      door: await doorForGuest(t.booking_id).catch(() => null),
+      doors: await doorsForGuest(t.booking_id).catch(() => []),
       readOnly,
       forget,
       tiles,

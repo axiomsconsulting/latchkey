@@ -215,7 +215,9 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
           />
         </div>
 
-        {s.door ? <DoorCodeCard door={s.door} /> : null}
+        {s.doors.map((d) => (
+          <DoorCodeCard key={d.door} door={d} />
+        ))}
 
         {/* Check-out day: what to do, where the keys go, the door, and "I've checked out", first. */}
         {s.goodbye ? (

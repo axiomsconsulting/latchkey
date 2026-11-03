@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { bookings as bookingCopy, bookingTable as copy } from "@/content/copy";
+import { bookings as bookingCopy, bookingTable as copy, doorCodesCopy } from "@/content/copy";
+import { spacedCode } from "@/lib/door-codes";
 import {
   GROUP_ORDER,
   closedNote,
@@ -189,6 +190,32 @@ export function BookingFilters({
 }
 
 // Arrival, departure and nights share one column; the site and status are icons.
+/** Under the room: this stay's own door codes, or that the host isn't giving one. */
+function StayCodes({ b }: { b: ListBooking }) {
+  const r = b as ListBooking & {
+    door_code?: string | null;
+    door_code_room?: string | null;
+    door_code_hidden?: boolean;
+  };
+  if (b.status === "cancelled" || b.status === "blocked" || b.mirror_of) return null;
+  if (r.door_code_hidden)
+    return <span className="block text-xs text-muted-foreground">{doorCodesCopy.notGiven}</span>;
+  const both = !!r.door_code && !!r.door_code_room;
+  const line = (label: string, code: string | null | undefined) =>
+    code ? (
+      <span className="block whitespace-nowrap text-xs text-muted-foreground">
+        {both ? `${label} ` : ""}
+        <span className="font-mono text-foreground">{spacedCode(code)}</span>
+      </span>
+    ) : null;
+  return (
+    <>
+      {line(doorCodesCopy.short.front, r.door_code)}
+      {line(doorCodesCopy.short.room, r.door_code_room)}
+    </>
+  );
+}
+
 const COLUMNS: SortKey[] = ["guest", "room", "checkIn", "platform", "status", "amount"];
 
 /**
@@ -355,7 +382,10 @@ export function BookingsTable({
                     </td>
                   ) : null}
                   <td className="w-[34%] min-w-[13rem] max-w-0 px-2 py-2">{guestCell(b)}</td>
-                  <td className="px-3 py-2">{roomName(b.room_id)}</td>
+                  <td className="px-3 py-2">
+                    {roomName(b.room_id)}
+                    <StayCodes b={b} />
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2">
                     {stayDates(b.check_in_date, b.check_out_date, today)}
                     <span className="ml-1.5 text-xs text-muted-foreground">· {nightsText(b)}</span>
@@ -428,6 +458,7 @@ export function BookingsTable({
                 >
                   {roomName(b.room_id)} · {stayDates(b.check_in_date, b.check_out_date, today)} ·{" "}
                   {nightsText(b)}
+                  <StayCodes b={b} />
                 </button>
               </div>
               <button
