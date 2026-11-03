@@ -265,20 +265,25 @@ export const getPropertyBoard = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const [{ data: property }, { data: rooms }, { data: bookings }, { data: windows }] =
-      await Promise.all([
-        supabase.from("properties").select("*").eq("id", data.propertyId).maybeSingle(),
-        supabase
-          .from("rooms")
-          .select("*")
-          .eq("property_id", data.propertyId)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("bookings")
-          .select("*")
-          .eq("property_id", data.propertyId)
-          .order("check_in_date", { ascending: true }),
-        supabase.from("unavailability_windows").select("*").eq("property_id", data.propertyId),
-      ]);
+      await (async () => {
+        // Anything due gets its door code first, so the list shows it.
+        const { ensureCodesForProperty } = await import("./door-codes.server");
+        await ensureCodesForProperty(data.propertyId);
+        return Promise.all([
+          supabase.from("properties").select("*").eq("id", data.propertyId).maybeSingle(),
+          supabase
+            .from("rooms")
+            .select("*")
+            .eq("property_id", data.propertyId)
+            .order("sort_order", { ascending: true }),
+          supabase
+            .from("bookings")
+            .select("*")
+            .eq("property_id", data.propertyId)
+            .order("check_in_date", { ascending: true }),
+          supabase.from("unavailability_windows").select("*").eq("property_id", data.propertyId),
+        ]);
+      })();
 
     // What each stay has waiting: unread guest messages and open requests.
     const [{ data: unread }, { data: openRequests }, { data: openJobs }] = await Promise.all([

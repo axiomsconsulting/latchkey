@@ -1,51 +1,121 @@
 import { describe, expect, it } from "vitest";
 
+import { doorCodesCopy } from "../src/content/copy";
 import {
+  FORMAT_PRESETS,
   blockedCodes,
   cleanCode,
   codeShows,
   codeSteps,
+  doorsOn,
+  formatChanged,
   generateCode,
   isWeakDigits,
+  keepLocked,
   likelyCodes,
   normaliseDoorCodes,
   possibleCodes,
+  presetOfFormat,
   spacedCode,
   staticCodeFor,
 } from "../src/lib/door-codes";
 
-const fmt = (over: Record<string, unknown> = {}) => normaliseDoorCodes({ on: true, ...over });
+const fmt = (over: Record<string, unknown> = {}) =>
+  normaliseDoorCodes({ front: { mode: "per_stay", ...over } }).front;
 const many = (over: Record<string, unknown>, n = 200) =>
   Array.from({ length: n }, () => generateCode(fmt(over), new Set())!);
 
 describe("normaliseDoorCodes", () => {
-  it("starts off, with six digits", () => {
+  it("starts with both doors off, six digits ready", () => {
     const d = normaliseDoorCodes(null);
-    expect(d).toMatchObject({ on: false, mode: "per_stay", digits: 6, digitFrom: 0, digitTo: 9 });
+    expect(doorsOn(d)).toBe(false);
+    expect(d.front).toMatchObject({ mode: "off", digits: 6, digitFrom: 0, digitTo: 9 });
+    expect(d.reveal).toBe("check_in");
   });
   it("tidies what's saved", () => {
     const d = normaliseDoorCodes({
-      digits: 99,
-      digitFrom: 7,
-      digitTo: 2,
-      letterFrom: "z",
-      letterTo: "b",
-      staticCode: " 12 34# ",
-      roomCodes: { a: "9 9", b: "" },
+      front: {
+        mode: "static",
+        digits: 99,
+        digitFrom: 7,
+        digitTo: 2,
+        letterFrom: "z",
+        letterTo: "b",
+        staticCode: " 12 34# ",
+      },
+      room: { mode: "static", roomCodes: { a: "9 9", b: "" } },
     });
-    expect(d).toMatchObject({
+    expect(d.front).toMatchObject({
       digits: 12,
       digitFrom: 2,
       digitTo: 7,
       letterFrom: "B",
       letterTo: "Z",
       staticCode: "1234#",
-      roomCodes: { a: "99" },
     });
+    expect(d.room.roomCodes).toEqual({ a: "99" });
   });
   it("always leaves at least three characters", () => {
-    expect(normaliseDoorCodes({ digits: 0 }).digits).toBe(3);
-    expect(normaliseDoorCodes({ digits: 0, lettersStart: 3 }).digits).toBe(0);
+    expect(fmt({ digits: 0 }).digits).toBe(3);
+    expect(fmt({ digits: 0, lettersStart: 3 }).digits).toBe(0);
+  });
+  it("reads a set-up saved before there were two doors", () => {
+    const perStay = normaliseDoorCodes({ on: true, mode: "per_stay", digits: 4, pressAfter: "#" });
+    expect(perStay.front).toMatchObject({ mode: "per_stay", digits: 4, pressAfter: "#" });
+    expect(perStay.room.mode).toBe("off");
+    const off = normaliseDoorCodes({ on: false, mode: "per_stay" });
+    expect(doorsOn(off)).toBe(false);
+    const rooms = normaliseDoorCodes({
+      on: true,
+      mode: "static",
+      staticCode: "1111",
+      roomCodes: { a: "2222" },
+    });
+    expect(rooms.front.staticCode).toBe("1111");
+    expect(rooms.room).toMatchObject({ mode: "static", roomCodes: { a: "2222" } });
+  });
+});
+
+describe("doors with no code", () => {
+  it("a key note alone counts as something to tell guests", () => {
+    expect(doorsOn(normaliseDoorCodes({ room: { keyNote: "Key in the safe" } }))).toBe(true);
+  });
+});
+
+describe("locked fixed codes", () => {
+  const prev = normaliseDoorCodes({
+    front: { mode: "static", staticCode: "1111", locked: true },
+    room: { mode: "static", roomCodes: { a: "2222" }, locked: false },
+  });
+  it("can't be changed while locked, whatever the page sends", () => {
+    const sent = normaliseDoorCodes({
+      front: { mode: "static", staticCode: "9999", locked: true },
+      room: { mode: "static", roomCodes: { a: "8888" }, locked: false },
+    });
+    const kept = keepLocked(prev, sent);
+    expect(kept.front.staticCode).toBe("1111");
+    expect(kept.room.roomCodes).toEqual({ a: "8888" });
+  });
+  it("can be changed once the host unlocks them", () => {
+    const sent = normaliseDoorCodes({
+      front: { mode: "static", staticCode: "9999", locked: false },
+    });
+    expect(keepLocked(prev, sent).front.staticCode).toBe("9999");
+  });
+});
+
+describe("lock types", () => {
+  it("every preset is recognised, and has its words", () => {
+    for (const p of FORMAT_PRESETS) {
+      expect(presetOfFormat(p.format)).toBe(p.id);
+      expect(doorCodesCopy.presets[p.id]).toHaveLength(2);
+    }
+    expect(presetOfFormat(fmt({ digits: 7 }))).toBeNull();
+    expect(presetOfFormat({ ...FORMAT_PRESETS[0]!.format, memorable: false })).toBe("six");
+  });
+  it("a format change is noticed, turning memorable on or off isn't", () => {
+    expect(formatChanged(fmt({ digits: 6 }), fmt({ digits: 4 }))).toBe(true);
+    expect(formatChanged(fmt({ memorable: true }), fmt({ memorable: false }))).toBe(false);
   });
 });
 
@@ -117,12 +187,13 @@ describe("isWeakDigits", () => {
 
 describe("blockedCodes", () => {
   const T = "2026-11-03";
-  const stay = (id: string, door_code: string, check_out_date: string, status = "upcoming") => ({
-    id,
-    door_code,
-    check_out_date,
-    status,
-  });
+  const stay = (
+    id: string,
+    door_code: string,
+    check_out_date: string,
+    status = "upcoming",
+    door_code_shown_at: string | null = "2026-01-01",
+  ) => ({ id, door_code, check_out_date, status, door_code_shown_at });
   it("never shares with anyone here or still to come, whatever the reuse setting", () => {
     const s = [
       stay("here", "111", T, "checked_in"),
@@ -142,6 +213,23 @@ describe("blockedCodes", () => {
     const s = [stay("old", "222", "2019-01-01", "checked_out")];
     expect([...blockedCodes(s, "x", T, 0)]).toEqual(["222"]);
   });
+  it("a past code no guest saw wasn't used, so it's free", () => {
+    const s = [
+      stay("unseen", "111", "2026-11-01", "checked_out", null),
+      stay("seen", "222", "2026-11-01", "checked_out"),
+    ];
+    expect([...blockedCodes(s, "x", T, 90)]).toEqual(["222"]);
+    expect([...blockedCodes(s, "x", T, 0)]).toEqual(["222"]);
+  });
+  it("a code held by someone still to come is blocked even if unseen", () => {
+    expect([
+      ...blockedCodes([stay("soon", "111", "2027-01-01", "upcoming", null)], "x", T, 90),
+    ]).toEqual(["111"]);
+  });
+  it("blocks both doors' codes", () => {
+    const s = [{ ...stay("soon", "111", "2027-01-01"), door_code_room: "222" }];
+    expect([...blockedCodes(s, "x", T, 90)].sort()).toEqual(["111", "222"]);
+  });
   it("a cancelled stay frees its code", () => {
     expect(blockedCodes([stay("c", "111", "2027-01-01", "cancelled")], "x", T, 90).size).toBe(0);
   });
@@ -158,14 +246,19 @@ describe("what the guest sees", () => {
   });
   it("spaces long codes", () => {
     expect(spacedCode("483483")).toBe("483 483");
+    expect(spacedCode("48324832")).toBe("4832 4832");
     expect(spacedCode("1234")).toBe("1234");
     expect(spacedCode("B483483")).toBe("B 483 483");
     expect(spacedCode("48348XY")).toBe("483 48 XY");
   });
-  it("a room's own static code wins", () => {
-    const f = fmt({ mode: "static", staticCode: "1111", roomCodes: { a: "2222" } });
-    expect(staticCodeFor(f, "a")).toBe("2222");
-    expect(staticCodeFor(f, "b")).toBe("1111");
+  it("fixed codes: the front door's for all, the room door's by room", () => {
+    const f = normaliseDoorCodes({
+      front: { mode: "static", staticCode: "1111" },
+      room: { mode: "static", roomCodes: { a: "2222" } },
+    });
+    expect(staticCodeFor(f, "front", "a")).toBe("1111");
+    expect(staticCodeFor(f, "room", "a")).toBe("2222");
+    expect(staticCodeFor(f, "room", "b")).toBe("");
   });
   it("cleans a typed code", () => {
     expect(cleanCode("ab 12-#")).toBe("AB12#");

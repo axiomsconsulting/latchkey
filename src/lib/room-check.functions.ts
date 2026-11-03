@@ -226,27 +226,38 @@ export const moveCheckIn = createServerFn({ method: "POST" })
  * True when any per-stay code is involved, so the host can check the lock.
  */
 async function followDoorCodes(db: Loose, fromId: string, toId: string): Promise<boolean> {
-  const cols = "id, door_code, door_code_set_at, door_code_removed_at, status";
+  const cols =
+    "id, status, door_code, door_code_set_at, door_code_removed_at, door_code_room, door_code_room_set_at, door_code_room_removed_at";
   const { data, error } = await db.from("bookings").select(cols).in("id", [fromId, toId]);
   if (error) return false;
   const rows = (data ?? []) as any[];
   const from = rows.find((r) => r.id === fromId);
   const to = rows.find((r) => r.id === toId);
-  if (!from || !to || (!from.door_code && !to.door_code)) return false;
-  const bothHere = ["checked_in", "checked_out"].includes(from.status);
+  const any = (r: any) => !!(r?.door_code || r?.door_code_room);
+  if (!from || !to || (!any(from) && !any(to))) return false;
   const codes = (r: any) => ({
     door_code: r.door_code,
     door_code_set_at: r.door_code_set_at,
     door_code_removed_at: r.door_code_removed_at,
+    door_code_room: r.door_code_room,
+    door_code_room_set_at: r.door_code_room_set_at,
+    door_code_room_removed_at: r.door_code_room_removed_at,
   });
-  if (bothHere) {
-    await db.from("bookings").update({ door_code: null }).eq("id", fromId);
+  if (["checked_in", "checked_out"].includes(from.status)) {
     await db.from("bookings").update(codes(from)).eq("id", toId);
     await db.from("bookings").update(codes(to)).eq("id", fromId);
   } else {
     await db
       .from("bookings")
-      .update({ door_code: null, door_code_set_at: null, door_code_removed_at: null })
+      .update({
+        door_code: null,
+        door_code_set_at: null,
+        door_code_removed_at: null,
+        door_code_room: null,
+        door_code_room_set_at: null,
+        door_code_room_removed_at: null,
+        door_code_shown_at: null,
+      })
       .eq("id", fromId);
   }
   return true;
