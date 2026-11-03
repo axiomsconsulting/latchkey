@@ -202,6 +202,7 @@ export const moveCheckIn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     // The host has decided: nothing left to check on the stay they chose.
     await db.from("bookings").update({ room_check: null }).eq("id", data.toId);
+    const doorCode = await followDoorCodes(db, data.fromId, data.toId);
     if (normaliseRoomCheck(from.room_check)?.held) {
       // The holding row has done its job, unless a swap left someone else on it.
       const { count } = await db
@@ -215,8 +216,41 @@ export const moveCheckIn = createServerFn({ method: "POST" })
       await followDates(db, data.fromId);
     }
     await followDates(db, data.toId);
-    return { ok: true };
+    return { ok: true, doorCode };
   });
+
+/**
+ * A guest has seen their old stay's code. Swapped with another guest: each keeps
+ * the code they know. Moved to an empty stay: they take that stay's (nobody's seen
+ * it), and the stay they left gets a new one, since this guest knows the old.
+ * True when any per-stay code is involved, so the host can check the lock.
+ */
+async function followDoorCodes(db: Loose, fromId: string, toId: string): Promise<boolean> {
+  const cols = "id, door_code, door_code_set_at, door_code_removed_at, status";
+  const { data, error } = await db.from("bookings").select(cols).in("id", [fromId, toId]);
+  if (error) return false;
+  const rows = (data ?? []) as any[];
+  const from = rows.find((r) => r.id === fromId);
+  const to = rows.find((r) => r.id === toId);
+  if (!from || !to || (!from.door_code && !to.door_code)) return false;
+  const bothHere = ["checked_in", "checked_out"].includes(from.status);
+  const codes = (r: any) => ({
+    door_code: r.door_code,
+    door_code_set_at: r.door_code_set_at,
+    door_code_removed_at: r.door_code_removed_at,
+  });
+  if (bothHere) {
+    await db.from("bookings").update({ door_code: null }).eq("id", fromId);
+    await db.from("bookings").update(codes(from)).eq("id", toId);
+    await db.from("bookings").update(codes(to)).eq("id", fromId);
+  } else {
+    await db
+      .from("bookings")
+      .update({ door_code: null, door_code_set_at: null, door_code_removed_at: null })
+      .eq("id", fromId);
+  }
+  return true;
+}
 
 /** Someone held with no booking to go on: their own stay, in a free room. */
 export const makeStayForHeld = createServerFn({ method: "POST" })

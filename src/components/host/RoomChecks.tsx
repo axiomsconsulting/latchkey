@@ -121,7 +121,16 @@ export function RoomChecks({ propertyId }: { propertyId: string | null }) {
     <section className="card-soft mb-4 space-y-4 p-5" data-tour="room-checks">
       {group(copy.needRoomTitle, held)}
       {group(copy.checkTitle, unsure)}
-      <p className="text-xs text-muted-foreground">{copy.intro}</p>
+      <p className="text-xs text-muted-foreground">
+        {copy.intro}{" "}
+        <Link
+          to="/app/settings"
+          search={{ focus: "checkin" } as never}
+          className="underline underline-offset-2"
+        >
+          {copy.howDecided}
+        </Link>
+      </p>
       {moving ? <MoveDialog bookingId={moving} onClose={() => setMoving(null)} /> : null}
     </section>
   );
@@ -160,8 +169,8 @@ function MoveDialog({ bookingId, onClose }: { bookingId: string; onClose: () => 
   async function act(f: () => Promise<unknown>, done: string) {
     setBusy(true);
     try {
-      await f();
-      toast.success(done);
+      const r = (await f()) as { doorCode?: boolean } | undefined;
+      toast.success(r?.doorCode ? copy.movedDoor : done);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["room-checks"] }),
         qc.invalidateQueries({ queryKey: ["board"] }),

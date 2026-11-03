@@ -46,6 +46,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.116.0",
+    date: "2026-11-03",
+    title: "Door codes",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Door codes in Settings → Check-in and records: say what your lock takes (digits, which buttons, letters at the start or end, anything pressed before or after) and how to unlock and lock it. Use one code, one per room, or a new code for each stay.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "New codes can be easy to remember, such as 483 483. Two guests never share one while either is staying or still to come, and a past guest's only comes round again after the time you choose.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Guests see their code and what to press at the end of check-in and on their stay guide. Today lists the codes to put on the lock and the ones to take off.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Settings → Check-in journey now explains how Latchkey finds the room after a guest gives their ID, and what gets flagged for you.",
+      },
+    ],
+  },
+  {
     version: "0.115.0",
     date: "2026-11-03",
     title: "ID and selfie first, room second",

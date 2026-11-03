@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { GuestDemoDock } from "@/components/DemoDock";
+import { DoorCodeCard } from "@/components/guest/DoorCodeCard";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { rememberStay } from "@/lib/stay-link";
 import {
@@ -213,6 +214,8 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
             progress={s.progress}
           />
         </div>
+
+        {s.door ? <DoorCodeCard door={s.door} /> : null}
 
         {/* Check-out day: what to do, where the keys go, the door, and "I've checked out", first. */}
         {s.goodbye ? (

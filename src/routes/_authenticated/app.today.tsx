@@ -44,6 +44,7 @@ import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { EmptyState } from "@/components/host/EmptyState";
 import { GuestReviews } from "@/components/host/GuestReviews";
 import { DashboardSections, DashSection } from "@/components/host/DashboardSections";
+import { DoorCodeJobs } from "@/components/host/DoorCodeJobs";
 import { RoomChecks } from "@/components/host/RoomChecks";
 import { SetupChecklist } from "@/components/host/SetupChecklist";
 import { KioskWelcomePanel } from "@/components/host/KioskWelcomePanel";
@@ -290,6 +291,7 @@ function TodayPage() {
           },
           { id: "maintenance", node: <MaintenanceAhead propertyId={selectedId} /> },
           { id: "connections", node: <Connections propertyId={selectedId} rooms={rooms} /> },
+          { id: "doorCodes", node: <DoorCodeJobs propertyId={selectedId} /> },
           {
             id: "guide",
             node: <GuideCard propertyId={selectedId} arriving={lists.arriving} rooms={rooms} />,

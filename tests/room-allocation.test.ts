@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { roomCheckCopy, roomRulesCopy } from "../src/content/copy";
 import {
   allocateArrival,
+  ROOM_RULES,
   normaliseRoomCheck,
   rankStays,
   type AllocatableStay,
@@ -132,6 +134,66 @@ describe("allocateArrival", () => {
     const late = stay("a", null, { check_in_date: "2026-11-02" });
     expect(place([late], "Mark Smith", 2)).toMatchObject({ kind: "stay", stayId: "a" });
     expect(place([late], "Mark Smith", 15)).toEqual({ kind: "held", reason: "no_stay" });
+  });
+});
+
+describe("the rules hosts read in Settings", () => {
+  // One example per row. A rule that changes must change this table and the words in copy.ts.
+  const examples: Record<string, Array<() => ReturnType<typeof place>>> = {
+    clear: [() => place([stay("a", "Mark Smith")])],
+    partial: [() => place([stay("a", "Mark Anderson"), stay("b", "Sarah Jones")])],
+    sameName: [() => place([stay("a", "Mark Smith"), stay("b", "Mark Smith")])],
+    oneNameless: [
+      () => place([stay("a", null)]),
+      () => place([stay("a", null), stay("b", "Sarah Jones")]),
+    ],
+    someoneElse: [() => place([stay("a", "Sarah Jones")])],
+    cantTell: [
+      () => place([stay("a", null), stay("b", null)]),
+      () => place([stay("a", "Sarah Jones"), stay("b", "Ann Lee")]),
+      () => place([]),
+    ],
+    bookerLate: [
+      () =>
+        place([
+          stay("a", "Mark Smith", {
+            status: "checked_in",
+            room_check: { reason: "someone_else", held: false, idName: "Ann Lee", at: "" },
+          }),
+        ]),
+    ],
+  };
+  for (const rule of ROOM_RULES.filter((r) => r.id !== "unread")) {
+    it(`"${rule.id}" does what it says`, () => {
+      const list = examples[rule.id]!;
+      expect(list.length).toBeGreaterThan(0);
+      for (const run of list) {
+        const r = run();
+        expect(r.kind === "stay").toBe(rule.placed);
+        const reason = r.kind === "held" ? r.reason : r.check;
+        expect(reason !== null).toBe(rule.flagged);
+        if (reason) expect(rule.reasons).toContain(reason);
+      }
+    });
+  }
+  it("every reason Latchkey can flag has a row", () => {
+    const covered = ROOM_RULES.flatMap((r) => r.reasons).sort();
+    expect(covered).toEqual(
+      [
+        "booker_after_other",
+        "name_close",
+        "name_from_id",
+        "no_stay",
+        "only_nameless",
+        "only_stay",
+        "same_name",
+        "several_named",
+        "several_nameless",
+        "someone_else",
+      ].sort(),
+    );
+    for (const reason of covered) expect(roomCheckCopy.reasons[reason]).toBeTruthy();
+    for (const rule of ROOM_RULES) expect(roomRulesCopy[rule.id]).toHaveLength(2);
   });
 });
 

@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { ChannelBadge, type Channel } from "@/components/ChannelBadge";
 import { GuestInvoice } from "@/components/host/GuestInvoice";
 import { GuestAgreements } from "@/components/host/GuestAgreements";
+import { GuestDoorCode } from "@/components/host/DoorCodeJobs";
 import { GuestPeople } from "@/components/host/GuestPeople";
 import { MoveCheckIn } from "@/components/host/RoomChecks";
 import { GuideLinkButton } from "@/components/host/GuideLinkButton";
@@ -321,6 +322,8 @@ export function GuestSheet({
                 ) : null}
               </div>
             ) : null}
+
+            <GuestDoorCode bookingId={b.id} />
 
             <Section title={copy.whoStaying} count={d.people.length}>
               {canWrite && d.people.length ? <MoveCheckIn bookingId={b.id} /> : null}

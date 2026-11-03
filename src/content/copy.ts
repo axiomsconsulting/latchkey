@@ -1,3 +1,4 @@
+import type { RoomRuleId } from "@/lib/room-allocation";
 import { branded, currentBrand } from "@/lib/brand";
 
 /**
@@ -983,6 +984,7 @@ export const properties = branded({
     checkin: ["Check-in journey", "Settings → Guests"],
     records: ["Who's staying and ID records", "Settings → Guests"],
     stayAccess: ["Room QR codes and Wi-Fi", "Settings → Guests"],
+    doorCodes: ["Door codes", "Settings → Check-in and records"],
     kioskRest: ["Screen saver (night light, clocks, screen off)", "Settings → Look"],
     schedule: ["Cleaning and unavailable times", "Housekeeping → Schedule"],
     calendars: ["Calendar links and each room's shared calendar", "Connections"],
@@ -4548,6 +4550,7 @@ export const settingsMenuCopy = branded({
     records: ["Who's staying and ID records", "checkin"],
     guestTexts: ["Welcome and goodbye messages", "checkin"],
     stayAccess: ["Room QR codes and Wi-Fi", "rooms"],
+    doorCodes: ["Door codes", "checkin"],
     reviews: ["Reviews", "reviews"],
     privacy: ["Privacy and retention", "checkin"],
     money: ["Tax, bank details and away", "money"],
@@ -6043,6 +6046,9 @@ export const roomCheckCopy = {
   swap: "Checked in: swaps",
   noStays: "No other stays around these dates.",
   moved: "Moved. Their guide link shows the new room.",
+  movedDoor:
+    "Moved. Their guide link shows the new room: please check their door code is on the lock.",
+  howDecided: "How Latchkey decides",
   confirmed: "Thanks, that's confirmed.",
   newStay: "Not on the list: make a new stay",
   room: "Room",
@@ -6055,4 +6061,102 @@ export const roomCheckCopy = {
   removed: "Removed.",
   moveFromSheet: "Move check-in to another stay",
   taken: "That room already has a stay on those dates.",
+};
+
+/** Settings → Check-in journey: when the room is worked out. One row per ROOM_RULES entry (room-allocation.ts). */
+export const roomRulesCopy: Record<RoomRuleId, [string, string]> = {
+  clear: ["The name on their ID clearly matches one arrival", "Placed. Nothing to check."],
+  partial: ["The name only partly matches", "Placed, and flagged for you."],
+  sameName: [
+    "The same name is on two stays (a group booking)",
+    "Placed on the first, and flagged for you.",
+  ],
+  oneNameless: [
+    "Their ID fits no named booking, and one stay today has no name",
+    "Placed on it, with the name from their ID, and flagged for you.",
+  ],
+  someoneElse: [
+    "One arrival today, in someone else's name (they may have booked for this guest)",
+    "Placed, and flagged for you.",
+  ],
+  cantTell: [
+    "Several stays have no name, several named stays and none fit, or no booking today",
+    "Held with no room and no door details. You're alerted straight away.",
+  ],
+  bookerLate: [
+    "The booker arrives after someone else's ID went on their stay",
+    "Held, with nothing overwritten. You're alerted straight away.",
+  ],
+  unread: [
+    "Their ID can't be read",
+    "They answer the usual questions instead. A booking with no name takes it from their ID if a later photo reads, and that's flagged.",
+  ],
+};
+export const roomRulesTitle = "How Latchkey finds the room";
+export const roomRulesIntro =
+  "Guests give their ID and selfie first, so they're on your records whatever happens next. They're never asked to choose a room. Anything flagged appears at the top of Today, where you can confirm it or move them.";
+export const roomRulesHead = ["What Latchkey finds", "What happens"];
+
+export const doorCodesCopy = {
+  title: "Door codes",
+  body: "Tell Latchkey what your lock takes, and it makes codes to fit and shows guests what to press. Latchkey doesn't work the lock: you put each code on it yourself.",
+  notReady: "This needs the latest database update (migration 0084).",
+  saved: "Door codes saved.",
+  on: "Give guests a door code",
+  modes: {
+    per_stay: [
+      "A new code for each stay",
+      "Latchkey makes one for every stay. You put it on the lock.",
+    ],
+    static: ["The same code every time", "One code for the property, or one for each room."],
+  },
+  formatTitle: "What your lock takes",
+  lettersStart: "Letters first",
+  digits: "Digits",
+  lettersEnd: "Letters last",
+  digitFrom: "Digits from",
+  digitTo: "Digits to",
+  letterFrom: "Letters from",
+  letterTo: "Letters to",
+  sample: "For example:",
+  another: "Another",
+  possible: (n: string) => `Latchkey can choose from about ${n} codes.`,
+  few: "That's few enough for someone to guess, and codes will come round again sooner. More digits or buttons would help.",
+  memorable: "Make them easy to remember",
+  memorableHelp:
+    "Patterns such as 483 483, 483 384 or 44 88 33. Far fewer possible codes, so a little easier to guess: use more digits if that matters to you.",
+  reuse: "A past guest's code can come round again",
+  reuseChoice: (d: number) => (d ? `After ${d} days` : "Never"),
+  reuseHelp:
+    "Two guests never share a code if either is staying or still to come, whatever you choose here.",
+  staticCode: "The code",
+  makeOne: "Make one",
+  roomCodes: "Rooms with their own code",
+  lockTitle: "Using the lock",
+  pressBefore: "Press before the code",
+  pressBeforeHint: "e.g. *",
+  pressAfter: "Press after the code",
+  pressAfterHint: "e.g. # or Unlock",
+  unlockHow: "To unlock (anything else guests should know)",
+  unlockHint: "e.g. Wait for the green light, then turn the handle.",
+  lockHow: "To lock",
+  lockHint: "e.g. Close the door and press the lock button.",
+  reveal: "Guests see their code",
+  revealCheckIn: "Once they've checked in",
+  revealArrival: "From the start of arrival day",
+  jobsTitle: "Door codes",
+  nothingToDo: "All codes are on the lock.",
+  putOn: "Put on the lock",
+  takeOff: "Take off the lock",
+  onLock: "On the lock",
+  takenOff: "Taken off",
+  arrives: (d: string) => `Arrives ${d}`,
+  left: (d: string) => `Left ${d}`,
+  noName: "No name yet",
+  jobsNote:
+    "Guests see the code here even if it isn't on the lock yet, so please do arrivals first.",
+  guestCard: "Door code",
+  newCode: "New code",
+  guestTitle: "Your door code",
+  guestLock: "To lock:",
 };
