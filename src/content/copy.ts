@@ -1872,6 +1872,9 @@ export const guest = branded({
   roomLine: (room: string, title: string | null) =>
     `You're in ${room}${title ? `, ${title}` : ""}.`,
   noRoom: "Your host will show you to your room.",
+  heldTitle: (name: string) => (name ? `You're registered, ${name}` : "You're registered"),
+  heldLine:
+    "Thank you. Your host has been told and will confirm your room shortly. Your link below opens your stay guide as soon as they have.",
   stayGuideCta: "Open your guest guide",
   guideLinkTitle: "Your guest guide link",
   guideLinkBody:
@@ -6000,3 +6003,56 @@ export const guestAgreementsCopy = branded({
     "For a stay booked another way (a request, an extension, by phone): send the guest this link to agree to your booking terms, and to sign the licence when the stay is long enough. It works for 14 days.",
   copied: "Link copied. Send it to the guest.",
 });
+
+export const stayHeldCopy = {
+  title: (name: string) => (name ? `You're registered, ${name}` : "You're registered"),
+  body: (property: string) =>
+    `${property ? `${property} has` : "Your host has"} your details and is confirming your room. This page opens your stay guide by itself as soon as that's done.`,
+  call: "Call your host",
+};
+
+/** Today's card for guests Latchkey couldn't place for certain, and moving a check-in between stays. */
+export const roomCheckCopy = {
+  needRoomTitle: "Guests waiting for a room",
+  checkTitle: "Please check these rooms",
+  intro:
+    "These guests have given their ID, so they're on your records. Latchkey wasn't sure of the room, so it's yours to confirm.",
+  reasons: {
+    name_close: "The names only partly match",
+    same_name: "That name is on more than one stay",
+    only_stay: "The booking had no name, so it came from their ID",
+    name_from_id: "The booking had no name, so it came from their ID",
+    only_nameless: "Their ID fits no named booking, so they went on the one with no name",
+    someone_else: "Someone else's booking: they may have booked for this guest",
+    several_nameless: "Several bookings today have no name",
+    several_named: "Their ID fits none of today's bookings",
+    no_stay: "No booking today",
+    booker_after_other: "Their booking already has someone else's ID on it",
+  } as Record<string, string>,
+  bookedAs: (name: string) => `Booked as ${name}`,
+  noRoom: "No room yet",
+  looksRight: "Looks right",
+  move: "Move",
+  place: "Place",
+  seeId: "See their ID",
+  dialogTitle: (name: string) => `Where is ${name} staying?`,
+  dialogBody:
+    "Their ID, register entry, guide link and messages all move with them. If that stay already has a guest, the two swap.",
+  likely: "Likely",
+  noName: "No name yet",
+  swap: "Checked in: swaps",
+  noStays: "No other stays around these dates.",
+  moved: "Moved. Their guide link shows the new room.",
+  confirmed: "Thanks, that's confirmed.",
+  newStay: "Not on the list: make a new stay",
+  room: "Room",
+  nights: "Nights",
+  makeStay: "Make the stay",
+  made: "Stay made. Their guide link is ready.",
+  removeHeld: "Remove: not staying here",
+  removeSure:
+    "Remove this person and their ID photos? Any guest register entry stays on the register.",
+  removed: "Removed.",
+  moveFromSheet: "Move check-in to another stay",
+  taken: "That room already has a stay on those dates.",
+};

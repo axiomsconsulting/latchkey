@@ -59,6 +59,14 @@ import {
   type RegisterProblem,
 } from "./hotel-register";
 import { compareNames } from "./name-match";
+import {
+  MAX_HELD_ARRIVALS,
+  allocateArrival,
+  normaliseRoomCheck,
+  roomCheckMessage,
+  type RoomCheck,
+  type RoomCheckReason,
+} from "./room-allocation";
 import { normaliseTheme } from "./theme";
 
 const code = z
@@ -289,7 +297,10 @@ async function startSession(propertyId: string, bookingId: string) {
   return t.token;
 }
 
-/** Stays overlapping today, with their added booking site when the database has it. */
+/**
+ * Stays overlapping today, with their added booking site when the database has it.
+ * Guests held for the host (no room yet) come back apart: they're nobody's stay to find.
+ */
 async function arrivalsAround(propertyId: string, today: string, limit: number) {
   const { admin, withLegacy } = await srv();
   const db = await admin();
@@ -302,18 +313,33 @@ async function arrivalsAround(propertyId: string, today: string, limit: number) 
       .lte("check_in_date", today)
       .gt("check_out_date", today)
       .limit(limit);
-  const res = await withLegacy(
+  const res = await withLegacy<any>(
+    () => q(`${cols}, site_key, room_check`),
     () =>
-      db
-        .from("bookings")
-        .select(`${cols}, site_key`)
-        .eq("property_id", propertyId)
-        .lte("check_in_date", today)
-        .gt("check_out_date", today)
-        .limit(limit),
-    () => q(cols),
+      withLegacy<any>(
+        () => q(`${cols}, site_key`),
+        () => q(cols),
+      ),
   );
-  return { data: (res.data ?? []) as MatchableBooking[] };
+  const rows = ((res.data ?? []) as Array<MatchableBooking & { room_check?: unknown }>).map(
+    (b) => ({
+      ...b,
+      room_check: normaliseRoomCheck(b.room_check),
+    }),
+  );
+  return {
+    data: rows.filter((b) => !b.room_check?.held),
+    held: rows.filter((b) => b.room_check?.held),
+  };
+}
+
+/** Whether this property's check-in will read the guest's ID, so the name can come from it rather than be typed. */
+async function readsIds(p: { host_id: string; flow?: { steps?: { lead_id?: boolean } } }) {
+  if (!p.flow?.steps?.lead_id) return false;
+  const { hostModes } = await srv();
+  if ((await hostModes(p.host_id)).id_check === "demo") return false;
+  const { jobAllowed } = await import("./usage.server");
+  return jobAllowed("ai_id_reading");
 }
 
 export const matchBooking = createServerFn({ method: "POST" })
@@ -379,17 +405,18 @@ export const matchBooking = createServerFn({ method: "POST" })
       token: await startSession(p.id, hit.id),
       firstName: firstName(hit.guest_full_name),
       returning: found.kind === "match" && found.returning,
-      needsName: found.kind === "match" && found.needsName,
+      needsName: found.kind === "match" && found.needsName && !(await readsIds(p)),
       platform: platformKey(hit),
     };
   });
 
 /**
- * ID first: the guest photographs their ID and the name on it finds their
- * stay among today's arrivals (compareNames: one full match, or one partial
- * when there's no full one). The same photo is then their ID check, so it
- * isn't asked again, and the register is filled from it. No match, or two
- * stays that fit: the usual questions (surname initial, check-out day).
+ * ID first: the guest photographs their ID and is registered there and then;
+ * finding the room comes after and asks them nothing (allocateArrival in
+ * room-allocation.ts). A clear name match is sure. Otherwise they're placed on the
+ * one stay they could be, or held with no room, and the host is told either way.
+ * The same photo is their ID check and fills the register. Only when the ID can't
+ * be read at all does it fall back to the usual questions.
  */
 export const findByPhotoId = createServerFn({ method: "POST" })
   .inputValidator((d) =>
@@ -406,11 +433,7 @@ export const findByPhotoId = createServerFn({ method: "POST" })
     const db = await admin();
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
-    const { data: rows } = await arrivalsAround(p.id, today, 200);
-    const all = rows ?? [];
-    const candidates = [...arrivalCandidates(all, today), ...stayingCandidates(all, today)].filter(
-      (b) => !!b.guest_full_name?.trim(),
-    );
+    const { data: all, held } = await arrivalsAround(p.id, today, 200);
 
     // Read the ID: the tour's "ID" is its sample guest; demo mode reads nothing, so it finds by the usual questions.
     let read: IdRead;
@@ -451,54 +474,139 @@ export const findByPhotoId = createServerFn({ method: "POST" })
     const verdict = judgeId(read, today);
     if (!verdict.ok) return { status: "retry" as const, reason: verdict.reason };
 
-    const scored = candidates.map((b) => ({
-      b,
-      m: compareNames(b.guest_full_name, read.fullName),
-    }));
-    const full = scored.filter((x) => x.m === "matched");
-    const part = scored.filter((x) => x.m === "partial");
-    const hit =
-      full.length === 1 ? full[0]! : full.length === 0 && part.length === 1 ? part[0]! : null;
+    const idName = read.fullName?.trim() ?? "";
+    if (!idName) return { status: "find" as const };
+
+    const placed = allocateArrival(all, idName, today, hourIn(tz));
+    const check = placed.kind === "held" ? placed.reason : placed.check;
+    let bookingId: string;
+    let booking: MatchableBooking | null = null;
+    if (placed.kind === "held") {
+      // The same guest scanning again goes back to the row already holding them.
+      const again = held.find((b) => compareNames(b.guest_full_name, idName) === "matched");
+      if (again) bookingId = again.id;
+      else {
+        if (isTour(p) || held.length >= MAX_HELD_ARRIVALS) return { status: "find" as const };
+        const made = await holdArrival(db, p.id, idName, today, placed.reason);
+        if (!made) return { status: "find" as const };
+        bookingId = made;
+      }
+    } else {
+      booking = all.find((b) => b.id === placed.stayId) ?? null;
+      bookingId = placed.stayId;
+      const patch: Record<string, unknown> = {};
+      if (placed.nameMatch === null) {
+        Object.assign(patch, { guest_full_name: idName, name_from_id: true });
+        if (booking?.status === "needs_details") patch["status"] = "upcoming";
+      }
+      if (check) patch["room_check"] = roomCheckFor(check, idName);
+      if (Object.keys(patch).length) {
+        const { error } = await db
+          .from("bookings")
+          .update(patch as never)
+          .eq("id", bookingId);
+        // Before the migration: the questions, as ever.
+        if (error) return { status: "find" as const };
+      }
+    }
     await db.from("check_in_attempts").insert({
       property_id: p.id,
-      booking_id: hit?.b.id ?? null,
-      surname_attempt: surnameInitial(read.fullName) ?? "-",
-      succeeded: !!hit,
+      booking_id: bookingId,
+      surname_attempt: surnameInitial(idName) ?? "-",
+      succeeded: true,
       device_hash: hash,
     });
-    if (!hit) return { status: "find" as const };
 
-    const token = await startSession(p.id, hit.b.id);
+    const token = await startSession(p.id, bookingId);
     await db
       .from("checkin_sessions")
       .update({ confirmed: true, photo_attempts: 1 })
       .eq("token_hash", (await srv()).sha256(token));
     const ctx = await sessionContext(token);
+    const nameMatch = placed.kind === "stay" ? placed.nameMatch : null;
     // Side by side, so the guest waits for the slowest rather than all of them.
     const [, , register] = await Promise.all([
       savePerson(ctx, 0, {
         kind: "adult",
         read,
-        nameMatch: hit.m,
+        nameMatch,
         idChecked: true,
         skipped: false,
         idPhoto: data.small ?? null,
       }).catch((err) => {
         console.error("Saving lead guest ID failed", err);
       }),
-      recordResult(ctx, "photo_id", hit.m),
+      // The host hears about an unsure placement once, in the room's own words.
+      recordResult(ctx, "photo_id", nameMatch ?? "id_read", !!check),
       autoRegister(ctx, 0, read),
     ]);
+    if (check && !isTour(p)) {
+      const { raiseAlert } = await srv();
+      const room = await roomNameOf(db, ctx.booking.room_id);
+      await raiseAlert({
+        hostId: p.host_id,
+        propertyId: p.id,
+        bookingId,
+        kind: placed.kind === "held" ? "room_needed" : "room_check",
+        message: roomCheckMessage(check, idName, booking?.guest_full_name ?? null, room, p.name),
+      });
+    }
     return {
       status: "matched" as const,
       token,
-      firstName: firstName(hit.b.guest_full_name),
-      platform: platformKey(hit.b),
-      returning: hit.b.status === "checked_in",
+      firstName: firstName(idName),
+      platform: booking ? platformKey(booking) : null,
+      returning: placed.kind === "stay" && placed.returning,
       prefill: prefillFrom(read),
       register,
+      // The selfie comes straight after the ID, before anything else is asked.
+      facePhoto: partyPlan(ctx).facePhoto,
     };
   });
+
+/** The row holding a guest who can't be placed yet: no room, hidden from every list, for the host to place. */
+async function holdArrival(
+  db: any,
+  propertyId: string,
+  idName: string,
+  today: string,
+  reason: RoomCheckReason,
+): Promise<string | null> {
+  const now = new Date().toISOString();
+  const { data, error } = await db
+    .from("bookings")
+    .insert({
+      property_id: propertyId,
+      room_id: null,
+      source: "manual",
+      channel: "other",
+      guest_full_name: idName,
+      name_from_id: true,
+      check_in_date: today,
+      check_out_date: addDays(today, 1),
+      status: "checked_in",
+      checked_in_at: now,
+      archived_at: now,
+      room_check: roomCheckFor(reason, idName, true),
+    })
+    .select("id")
+    .single();
+  if (error) console.error("Holding an arrival failed", error);
+  return (data?.id as string | undefined) ?? null;
+}
+
+const roomCheckFor = (reason: RoomCheckReason, idName: string, held = false): RoomCheck => ({
+  reason,
+  held,
+  idName,
+  at: new Date().toISOString(),
+});
+
+async function roomNameOf(db: any, roomId: string | null | undefined): Promise<string | null> {
+  if (!roomId) return null;
+  const { data } = await db.from("rooms").select("display_name").eq("id", roomId).maybeSingle();
+  return (data?.display_name as string | undefined) ?? null;
+}
 
 /**
  * The three check-out days to pick from after the surname initial
@@ -624,7 +732,7 @@ export const startFromWelcome = createServerFn({ method: "POST" })
       status: "matched" as const,
       token: await startSession(p.id, b.id),
       firstName: firstName(b.guest_full_name),
-      needsName: !b.guest_full_name?.trim(),
+      needsName: !b.guest_full_name?.trim() && !(await readsIds(p)),
       returning: b.status === "checked_in",
       platform: platformKey(b),
     };
@@ -807,6 +915,45 @@ export const setGuestName = createServerFn({ method: "POST" })
   });
 
 /* ------------------------------ identity -------------------------------- */
+
+/** Fills a nameless stay from the guest's ID and tells the host, who can move them if it's the wrong stay. */
+async function fillNameFromId(ctx: Ctx, idName: string) {
+  const { db, booking, property } = ctx;
+  const patch = {
+    guest_full_name: idName,
+    name_from_id: true,
+    room_check: roomCheckFor("name_from_id", idName),
+    ...(booking.status === "needs_details" ? { status: "upcoming" as const } : {}),
+  };
+  const { error } = await db
+    .from("bookings")
+    .update(patch as never)
+    .eq("id", booking.id);
+  if (error)
+    await db
+      .from("bookings")
+      .update({
+        guest_full_name: idName,
+        ...(booking.status === "needs_details" ? { status: "upcoming" as const } : {}),
+      })
+      .eq("id", booking.id);
+  booking.guest_full_name = idName;
+  if (isTour(property)) return;
+  const { raiseAlert } = await srv();
+  await raiseAlert({
+    hostId: property.host_id,
+    propertyId: property.id,
+    bookingId: booking.id,
+    kind: "room_check",
+    message: roomCheckMessage(
+      "name_from_id",
+      idName,
+      null,
+      await roomNameOf(db, booking.room_id),
+      property.name,
+    ),
+  });
+}
 
 /**
  * Everything a check-in step needs. A guest's phone that joined the check-in
@@ -1077,7 +1224,10 @@ export const resumeSession = createServerFn({ method: "POST" })
 async function recordResult(
   ctx: Ctx,
   method: string,
-  result: "matched" | "partial" | "not_matched" | "photo_only" | "last4" | "self_declared",
+  result:
+    "matched" | "partial" | "not_matched" | "photo_only" | "last4" | "self_declared" | "id_read",
+  /** The caller tells the host itself. */
+  quiet = false,
 ) {
   const { raiseAlert } = await srv();
   const { db, session, booking, property } = ctx;
@@ -1088,7 +1238,7 @@ async function recordResult(
     db.from("verification_results").insert({
       booking_id: booking.id,
       method,
-      passed: result === "matched" || result === "last4",
+      passed: result === "matched" || result === "last4" || result === "id_read",
       detail: result,
       delete_after: deleteAfter,
     }),
@@ -1098,10 +1248,11 @@ async function recordResult(
 
   const who = firstName(booking.guest_full_name) || "A guest";
   if (
-    result === "not_matched" ||
-    result === "partial" ||
-    result === "self_declared" ||
-    result === "photo_only"
+    !quiet &&
+    (result === "not_matched" ||
+      result === "partial" ||
+      result === "self_declared" ||
+      result === "photo_only")
   ) {
     const message =
       result === "self_declared"
@@ -1356,13 +1507,16 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
     const verdict = judgeId(read, todayInZone(tz));
     if (!verdict.ok) return again(verdict.reason);
 
-    const result = compareNames(ctx.booking.guest_full_name, read.fullName);
+    // A stay with no name yet (found by its check-out day, or the host's welcome): the name comes from the ID.
+    const nameless = !ctx.booking.guest_full_name?.trim() && !!read.fullName?.trim();
+    const result = nameless ? "id_read" : compareNames(ctx.booking.guest_full_name, read.fullName);
+    if (nameless) await fillNameFromId(ctx, read.fullName!);
     // Side by side, so the guest waits for the slowest rather than all of them.
     const [, , register] = await Promise.all([
       savePerson(ctx, 0, {
         kind: "adult",
         read,
-        nameMatch: result,
+        nameMatch: nameless ? null : (result as "matched" | "partial" | "not_matched"),
         idChecked: true,
         skipped: false,
         idPhoto: data.small ?? null,
@@ -2042,8 +2196,15 @@ export const completeCheckIn = createServerFn({ method: "POST" })
     const { shortLinkFor } = await import("./stay-links.server");
     const shortCode = await shortLinkFor(booking.id, win.expiresAt).catch(() => null);
 
+    const { data: flagged } = await (db as unknown as Loose)
+      .from("bookings")
+      .select("room_check")
+      .eq("id", booking.id)
+      .maybeSingle();
     return {
       shortCode,
+      // No room yet: the host places them, and their link opens the guide once they have.
+      held: !!normaliseRoomCheck(flagged?.room_check)?.held,
       firstName: firstName(booking.guest_full_name),
       roomName: room?.display_name ?? null,
       roomTitle: room?.public_title ?? null,
@@ -2073,6 +2234,28 @@ export const getStay = createServerFn({ method: "GET" })
       .eq("id", t.booking_id)
       .single();
     if (!b || b.status === "cancelled") return { found: false as const };
+    // Held for the host: registered, but nothing about getting in until they have a room.
+    const { data: flagged } = await (db as unknown as Loose)
+      .from("bookings")
+      .select("room_check")
+      .eq("id", t.booking_id)
+      .maybeSingle();
+    if (normaliseRoomCheck(flagged?.room_check)?.held) {
+      const { data: hp } = await db
+        .from("properties")
+        .select("name, theme_config, host_contact_phone")
+        .eq("id", b.property_id)
+        .single();
+      return {
+        found: false as const,
+        held: {
+          firstName: firstName(b.guest_full_name),
+          propertyName: hp?.name ?? "",
+          phone: hp?.host_contact_phone ?? null,
+          theme: normaliseTheme(hp?.theme_config),
+        },
+      };
+    }
     const [{ data: p }, { data: room }, { data: guides }, { data: windows }] = await Promise.all([
       db
         .from("properties")

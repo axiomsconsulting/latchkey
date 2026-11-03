@@ -150,11 +150,15 @@ async function cardBookings(
   cols: string,
   build: (q: any) => any,
 ): Promise<{ data: any[] | null; error: unknown }> {
+  // Hidden stays get no card: that includes a guest held for the host, who has no room yet.
   const first = await build(
-    db.from("bookings").select(`${cols}, welcome_card_devices, goodbye_card_devices`),
+    db
+      .from("bookings")
+      .select(`${cols}, welcome_card_devices, goodbye_card_devices`)
+      .is("archived_at", null),
   );
   if (!first.error) return first;
-  return build(db.from("bookings").select(cols));
+  return build(db.from("bookings").select(cols).is("archived_at", null));
 }
 
 /** Cards changed at this property: tablets that check the stamp often react within seconds. */

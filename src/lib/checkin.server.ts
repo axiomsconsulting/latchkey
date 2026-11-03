@@ -161,7 +161,9 @@ export async function raiseAlert(input: {
     | "party"
     | "handover"
     | "direct_enquiry"
-    | "tablet_joined";
+    | "tablet_joined"
+    | "room_check"
+    | "room_needed";
   message: string;
   /** Channels not to use for this one (e.g. email, when the platform already emailed). */
   skip?: Array<"email" | "push" | "telegram" | "sms">;
