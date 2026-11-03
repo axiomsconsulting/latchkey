@@ -17,7 +17,15 @@ import { toast } from "sonner";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { checkinSettings, common } from "@/content/copy";
+import {
+  checkinSettings,
+  common,
+  roomRulesCopy,
+  roomRulesHead,
+  roomRulesIntro,
+  roomRulesTitle,
+} from "@/content/copy";
+import { ROOM_RULES } from "@/lib/room-allocation";
 import {
   PRESETS,
   STEPS,
@@ -450,7 +458,30 @@ export function CheckinJourney({ property }: { property: { id: string; short_cod
       <div className="mt-4">
         <Cameras choices={draft} setChoices={edit} />
       </div>
+      <RoomRules />
     </section>
+  );
+}
+
+/** Folded under the journey: what happens to the room once a guest has given their ID. */
+export function RoomRules() {
+  return (
+    <details id="room-rules" className="mt-4 rounded-xl border border-border p-3">
+      <summary className="cursor-pointer font-medium">{roomRulesTitle}</summary>
+      <p className="mt-2 text-sm text-muted-foreground">{roomRulesIntro}</p>
+      <div className="mt-3 divide-y divide-border">
+        <div className="hidden gap-4 pb-1 text-xs font-medium text-muted-foreground sm:grid sm:grid-cols-2">
+          <span>{roomRulesHead[0]}</span>
+          <span>{roomRulesHead[1]}</span>
+        </div>
+        {ROOM_RULES.map((r) => (
+          <div key={r.id} className="grid gap-x-4 gap-y-0.5 py-2 text-sm sm:grid-cols-2">
+            <span>{roomRulesCopy[r.id][0]}</span>
+            <span className="text-muted-foreground">{roomRulesCopy[r.id][1]}</span>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 

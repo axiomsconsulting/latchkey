@@ -118,7 +118,7 @@ describe("page sections", () => {
       },
     });
     const order = l["settings"]!.order;
-    expect(order.slice(0, 10)).toEqual([
+    expect(order.slice(0, 11)).toEqual([
       "business",
       "group",
       "team",
@@ -128,6 +128,7 @@ describe("page sections", () => {
       "checkin",
       "records",
       "guestTexts",
+      "doorCodes",
       "stayAccess",
     ]);
     expect(order).toHaveLength(new Set(order).size);

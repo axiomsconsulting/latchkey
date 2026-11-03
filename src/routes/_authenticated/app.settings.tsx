@@ -60,6 +60,7 @@ import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { removeDemoData, saveHost } from "@/lib/host.functions";
 import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
 import { GuestMessagesSettings } from "@/components/host/GuestMessagesSettings";
+import { DoorCodesSettings } from "@/components/host/DoorCodesSettings";
 import { StayAccessSettings } from "@/components/host/StayAccessSettings";
 import { ReviewSettings } from "@/components/host/ReviewSettings";
 import { CheckinJourney } from "@/components/host/CheckinJourney";
@@ -86,6 +87,7 @@ const FOCUS = [
   "checkin",
   "records",
   "guestTexts",
+  "doorCodes",
   "stayAccess",
   "reviews",
   "kioskRest",
@@ -129,6 +131,7 @@ const OWN_CARD = new Set([
   "checkin",
   "records",
   "guestTexts",
+  "doorCodes",
   "stayAccess",
   "reviews",
   "kioskRest",
@@ -656,6 +659,13 @@ function SettingsPage() {
                   }
                 }
               />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="doorCodes">
+          {themedProperty ? (
+            <div id="settings-doorCodes" className="scroll-mt-24 rounded-2xl">
+              <DoorCodesSettings propertyId={(themedProperty as { id: string }).id} />
             </div>
           ) : null}
         </Section>

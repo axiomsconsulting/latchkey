@@ -153,6 +153,42 @@ export function allocateArrival(
   return { kind: "held", reason: others.length ? "several_named" : "no_stay" };
 }
 
+/**
+ * The rules as hosts read them (Settings → Check-in journey, words in
+ * copy.ts roomRulesCopy). Change allocateArrival and this list together:
+ * tests/room-allocation.test.ts runs an example of every row against it.
+ */
+export const ROOM_RULES: ReadonlyArray<{
+  id: RoomRuleId;
+  /** The room_check reasons this row covers. */
+  reasons: RoomCheckReason[];
+  placed: boolean;
+  flagged: boolean;
+}> = [
+  { id: "clear", reasons: [], placed: true, flagged: false },
+  { id: "partial", reasons: ["name_close"], placed: true, flagged: true },
+  { id: "sameName", reasons: ["same_name"], placed: true, flagged: true },
+  { id: "oneNameless", reasons: ["only_stay", "only_nameless"], placed: true, flagged: true },
+  { id: "someoneElse", reasons: ["someone_else"], placed: true, flagged: true },
+  {
+    id: "cantTell",
+    reasons: ["several_nameless", "several_named", "no_stay"],
+    placed: false,
+    flagged: true,
+  },
+  { id: "bookerLate", reasons: ["booker_after_other"], placed: false, flagged: true },
+  { id: "unread", reasons: ["name_from_id"], placed: true, flagged: true },
+];
+export type RoomRuleId =
+  | "clear"
+  | "partial"
+  | "sameName"
+  | "oneNameless"
+  | "someoneElse"
+  | "cantTell"
+  | "bookerLate"
+  | "unread";
+
 /** The most this property holds at once: past it, a stranger with a pile of IDs goes the usual way. */
 export const MAX_HELD_ARRIVALS = 6;
 
