@@ -6,9 +6,16 @@
  * open and is on the task, the tablet just says to carry on there.
  */
 import { useState, type ReactNode } from "react";
-import { Loader2, MessageCircle, MessageSquareText, Smartphone } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  Loader2,
+  MessageCircle,
+  MessageSquareText,
+  Smartphone,
+} from "lucide-react";
 
-import { useQrImage } from "@/components/guest/CheckInQr";
+import { PhoneQrIcon, useQrImage } from "@/components/guest/CheckInQr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guest as copy } from "@/content/copy";
@@ -18,15 +25,7 @@ import { kioskHandoff, type PhotoKind } from "@/lib/photo-handoff";
 import { cn } from "@/lib/utils";
 
 /** The square and "Text me the link". */
-function PhonePanel({
-  phone,
-  kind,
-  big,
-}: {
-  phone: PhotoHandoff;
-  kind: "id" | "face";
-  big: boolean;
-}) {
+function PhonePanel({ phone, big }: { phone: PhotoHandoff; big: boolean }) {
   const qr = useQrImage(phone.link?.phoneUrl ?? null, { dark: "#111111", light: "#ffffff" });
   const [via, setVia] = useState<"sms" | "whatsapp" | null>(null);
   const [number, setNumber] = useState("");
@@ -54,32 +53,32 @@ function PhonePanel({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-card p-4 text-card-foreground",
+        "@container rounded-2xl border border-border bg-card p-4 text-card-foreground",
         big ? "sm:p-6" : "",
       )}
       data-phone-photos
     >
-      <div className={cn("flex items-center gap-4", big ? "flex-col text-center" : "")}>
+      {/* One glance: a phone, an arrow, the square. Stacked in a narrow column, side by side when wide. */}
+      <div className="flex flex-col items-center gap-2 text-center @lg:flex-row @lg:justify-center @lg:gap-6 @lg:text-left">
+        <div className="flex items-center gap-3">
+          <PhoneQrIcon className="size-12 shrink-0 text-primary @lg:size-16" />
+          <p className="font-display text-2xl leading-tight @lg:text-3xl">
+            {copy.phonePhotos.scan}
+          </p>
+        </div>
+        <ArrowDown className="size-7 shrink-0 text-primary @lg:hidden" aria-hidden />
+        <ArrowRight className="hidden size-9 shrink-0 text-primary @lg:block" aria-hidden />
         <div
           className={cn(
             "grid shrink-0 place-items-center rounded-xl bg-white p-2",
-            big ? "size-[min(18rem,40vmin)]" : "size-32",
+            big ? "size-[min(24rem,48vmin)]" : "size-[min(17rem,calc(var(--kiosk-h,100dvh)*0.3))]",
           )}
         >
           {qr ? (
-            <img src={qr} alt="" className="size-full" />
+            <img src={qr} alt={copy.phonePhotos.scan} className="size-full" />
           ) : (
             <Loader2 className="size-8 animate-spin text-neutral-400" />
           )}
-        </div>
-        <div className="min-w-0 space-y-1">
-          <p className="flex items-center gap-2 font-display text-xl">
-            <Smartphone className="size-5 shrink-0" aria-hidden />
-            {big ? copy.phonePhotos.titleOnly : copy.phonePhotos.title}
-          </p>
-          <p className="text-muted-foreground">
-            {kind === "face" ? copy.phonePhotos.bodyId : copy.phonePhotos.body}
-          </p>
         </div>
       </div>
       {can && (can.sms || can.whatsapp) ? (
@@ -235,7 +234,7 @@ export function PhotoChoice({
         {hasCamera && facing !== null && !failed ? null : (
           <p className="text-center text-muted-foreground">{copy.phonePhotos.noCamera}</p>
         )}
-        {phone.failed ? null : <PhonePanel phone={phone} kind={kind} big />}
+        {phone.failed ? null : <PhonePanel phone={phone} big />}
         {extra}
       </div>
     );
@@ -244,7 +243,7 @@ export function PhotoChoice({
       {camera({
         facing: facingNow,
         onFail: () => setFailed(true),
-        panel: <PhonePanel phone={phone} kind={kind} big={false} />,
+        panel: <PhonePanel phone={phone} big={false} />,
       })}
     </>
   );

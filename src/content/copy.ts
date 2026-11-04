@@ -1852,11 +1852,7 @@ export const guest = branded({
   idChecking: "Checking your name…",
   // Photos on a phone, for a check-in at the door tablet (photo-handoff.ts)
   phonePhotos: {
-    title: "Use your phone's camera",
-    titleOnly: "Take the photos on your phone",
-    body: "Scan the square with your phone's camera. You'll take a photo of your ID and then a selfie, and this screen carries on by itself.",
-    bodyId:
-      "Scan the square with your phone's camera to take the photo there. This screen carries on by itself.",
+    scan: "Scan with your phone",
     textMe: "Text me the link",
     whatsAppMe: "WhatsApp me the link",
     number: "Your mobile number",
