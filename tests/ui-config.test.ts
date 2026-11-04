@@ -127,9 +127,9 @@ describe("page sections", () => {
       "messages",
       "checkin",
       "records",
+      "returning",
       "guestTexts",
       "doorCodes",
-      "stayAccess",
     ]);
     expect(order).toHaveLength(new Set(order).size);
   });

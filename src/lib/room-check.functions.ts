@@ -200,6 +200,8 @@ export const moveCheckIn = createServerFn({ method: "POST" })
       throw new Error("That stay can't take a guest.");
     const { error } = await db.rpc("exchange_check_ins", { _a: data.fromId, _b: data.toId });
     if (error) throw new Error(error.message);
+    const { forgetPasses } = await import("./returning-trust.server");
+    await forgetPasses(db, [data.fromId, data.toId]);
     // The host has decided: nothing left to check on the stay they chose.
     await db.from("bookings").update({ room_check: null }).eq("id", data.toId);
     const doorCode = await followDoorCodes(db, data.fromId, data.toId);

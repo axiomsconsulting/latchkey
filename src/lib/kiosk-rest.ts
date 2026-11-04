@@ -74,12 +74,8 @@ export type KioskRest = {
   firstCheckOut: string | null;
   /** Minutes of nobody touching it before it rests; null follows Latchkey's default. */
   idleMinutes: number | null;
-  /** Smart Screensaver: what wakes it as well as a touch. */
-  wakeBy: WakeBy;
 };
 
-export type WakeBy = "off" | "camera" | "sound";
-export const WAKE_BY: readonly WakeBy[] = ["off", "camera", "sound"];
 export const IDLE_CHOICES = [2, 5, 10, 15, 30, 60] as const;
 export const DEFAULT_NIGHT_FROM = "00:00";
 export const DEFAULT_NIGHT_TO = "05:00";
@@ -96,7 +92,6 @@ export const DEFAULT_REST: KioskRest = {
   lastCheckIn: null,
   firstCheckOut: null,
   idleMinutes: null,
-  wakeBy: "off",
 };
 
 const hhmmOrNull = (v: unknown) =>
@@ -141,7 +136,6 @@ export function normaliseRest(raw: unknown): KioskRest {
     idleMinutes: (IDLE_CHOICES as readonly number[]).includes(r["idleMinutes"] as number)
       ? (r["idleMinutes"] as number)
       : null,
-    wakeBy: pick(r["wakeBy"], WAKE_BY, "off"),
   };
 }
 

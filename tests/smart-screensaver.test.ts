@@ -34,12 +34,10 @@ describe("what shows at rest", () => {
     expect([nightFrom(own), nightTo(own)]).toEqual(["22:30", "06:15"]);
     expect(rest({ lastCheckIn: "nonsense" }).lastCheckIn).toBeNull();
   });
-  it("starts off, touch only", () => {
-    expect(rest()).toMatchObject({ smart: false, wakeBy: "off", idleMinutes: null });
-    expect(rest({ wakeBy: "laser", idleMinutes: 7 })).toMatchObject({
-      wakeBy: "off",
-      idleMinutes: null,
-    });
+  it("starts off, and ignores the older wake choice", () => {
+    expect(rest()).toMatchObject({ smart: false, idleMinutes: null });
+    expect(rest({ wakeBy: "sound", idleMinutes: 7 })).not.toHaveProperty("wakeBy");
+    expect(rest({ idleMinutes: 7 }).idleMinutes).toBeNull();
     expect(rest({ idleMinutes: 15 }).idleMinutes).toBe(15);
   });
 });

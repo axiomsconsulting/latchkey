@@ -72,6 +72,7 @@ import { demoLine, type DemoHint } from "@/lib/demo-guide";
 import {
   REGISTER_AGE,
   cleanRegisterEntry,
+  homeDestination,
   isAlien,
   nationalityOptions,
 } from "@/lib/hotel-register";
@@ -104,6 +105,8 @@ type Prefill = {
   nationality: string | null;
   documentNumber: string | null;
   placeOfIssue: string | null;
+  /** From their last stay, for them to confirm. */
+  fromLastStay?: boolean;
 };
 
 /** Steps after the lead guest's ID, run in order. */
@@ -246,6 +249,8 @@ export function CheckInFlow({
   const flow = property.flow ?? DEFAULT_GUEST_FLOW;
   // ID first: the lead guest's ID is already checked (found their stay), or the photo to reuse once it's found another way.
   const leadVerified = useRef(false);
+  // Stayed before with a passed ID check: no selfie for them. Cleared if they fall back to the ID photo.
+  const trustedLead = useRef(false);
   const pendingPhoto = useRef<{ full: string; small: string } | null>(null);
   // ID first: the selfie follows straight away, before anything else is asked.
   const faceFirst = useRef(false);
@@ -392,6 +397,7 @@ export function CheckInFlow({
   function restart() {
     phone.end();
     setStayedBefore(false);
+    trustedLead.current = false;
     handled.current.clear();
     phoneFaces.current.clear();
     phoneHeldId.current = false;
@@ -522,6 +528,7 @@ export function CheckInFlow({
     setToken(res.token);
     setPlatform(res.platform);
     setStayedBefore(res.again === true);
+    trustedLead.current = res.trusted === true;
     if (phoneFaces.current.has(0)) leadFaceDone.current = true;
     else if (res.facePhoto) {
       faceFirst.current = true;
@@ -746,6 +753,7 @@ export function CheckInFlow({
     setKinds(res.last4Kinds);
     setPlan(res.party);
     setListFlow(res.listFlow);
+    if (res.trusted) trustedLead.current = true;
     if (res.party.ask) {
       // The booking (or the host) already says how many: nothing to ask; anyone else can be added at the end.
       if (res.party.booked !== null)
@@ -824,7 +832,7 @@ export function CheckInFlow({
       (x) =>
         !takenElsewhere(x.position) &&
         !(x.kind === "face" && phoneFaces.current.has(x.position)) &&
-        !(x.kind === "face" && x.position === 0 && leadFaceDone.current) &&
+        !(x.kind === "face" && x.position === 0 && (leadFaceDone.current || trustedLead.current)) &&
         !(
           x.kind === "register" &&
           ["saved", "later"].includes(registerFrom.current[x.position] ?? "")
@@ -914,6 +922,7 @@ export function CheckInFlow({
   }
 
   function fallback(from: CheckinMethod, note?: string) {
+    trustedLead.current = false;
     const i = sequence.indexOf(from);
     const next = sequence[Math.min(i + 1, sequence.length - 1)] ?? "self_declare";
     setStep({ name: "identity", method: next, consented: false });
@@ -1499,6 +1508,10 @@ export function CheckInFlow({
                 if (!res) return;
                 if (res.status === "retry") return setMessage(copy.last4Retry(res.left));
                 if (res.status === "fallback") return fallback("last4");
+                if (res.prefill) {
+                  const known = res.prefill;
+                  setPrefill((p) => ({ ...p, 0: known }));
+                }
                 afterLead();
               }}
               onOther={() => fallback("last4")}
@@ -2230,7 +2243,9 @@ function RegisterStep({
       <p className="mt-2 text-lg text-muted-foreground">{lead}</p>
       <WhyAsk>{copy.registerWhy}</WhyAsk>
       {prefill?.fullName && !only ? (
-        <p className="mt-3 text-sm text-muted-foreground">{copy.registerFromId}</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {prefill.fromLastStay ? copy.registerFromLastStay : copy.registerFromId}
+        </p>
       ) : null}
       <form
         className="mt-6 space-y-4"
@@ -2307,6 +2322,27 @@ function RegisterStep({
               <label htmlFor="reg-next" className="text-lg">
                 {copy.registerNext}
               </label>
+              <div data-kx="grid" className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  size="touch"
+                  variant={nextDestination === homeDestination(nationality) ? "default" : "outline"}
+                  onClick={() => setNextDestination(homeDestination(nationality))}
+                >
+                  {copy.registerGoingHome}
+                </Button>
+                <Button
+                  type="button"
+                  size="touch"
+                  variant="outline"
+                  onClick={() => {
+                    setNextDestination("");
+                    document.getElementById("reg-next")?.focus();
+                  }}
+                >
+                  {copy.registerGoingElsewhere}
+                </Button>
+              </div>
               <Input
                 id="reg-next"
                 className="h-14 text-xl"

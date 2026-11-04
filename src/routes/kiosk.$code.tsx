@@ -1036,8 +1036,13 @@ function Kiosk() {
   }, [saver, restShowing]);
   // Smart Screensaver: walking up (or a sound) wakes it, on this tablet alone. Nothing is kept or sent.
   useMotionWake(
-    saverLook.rest.smart && !tour ? saverLook.rest.wakeBy : "off",
-    shared && saver && restShowing !== "awake" && !welcomeUp && !goodbyeUp,
+    saverLook.rest.smart &&
+      !tour &&
+      shared &&
+      saver &&
+      restShowing !== "awake" &&
+      !welcomeUp &&
+      !goodbyeUp,
     () => {
       setSaver(false);
       bump();
@@ -1537,7 +1542,7 @@ function Kiosk() {
                 <p className="text-sm text-muted-foreground">{copy.kioskAllowCameraHint}</p>
               </div>
             ) : null}
-            {!tour && saverLook.rest.smart && saverLook.rest.wakeBy === "sound" ? (
+            {!tour && saverLook.rest.smart ? (
               <div className="border-t border-border pt-3 text-center">
                 <Button
                   variant="outline"
@@ -1545,12 +1550,12 @@ function Kiosk() {
                   className="w-full"
                   onClick={() =>
                     void navigator.mediaDevices
-                      ?.getUserMedia({ audio: true })
+                      ?.getUserMedia({ audio: true, video: true })
                       .then((s) => s.getTracks().forEach((t) => t.stop()))
                       .catch(() => {})
                   }
                 >
-                  <Mic className="size-5" aria-hidden /> {copy.kioskAllowMic}
+                  <Mic className="size-5" aria-hidden /> {copy.kioskAllowWake}
                 </Button>
               </div>
             ) : null}

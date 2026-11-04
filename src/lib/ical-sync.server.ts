@@ -346,6 +346,8 @@ export async function runRetentionSweep(): Promise<number> {
   const { normalisePrivacy, detailsCutoff, messagesCutoff } = await import("./privacy");
   const db = supabaseAdmin as unknown as { from: (t: string) => any };
   const today = new Date().toISOString().slice(0, 10);
+  // Remembered ID checks for returning guests: 12 months. Before migration 0088 this just does nothing.
+  await db.from("guest_id_passes").delete().lt("keep_until", today);
   // Before migration 0041 there is no privacy column: everyone gets the defaults.
   let hostRows: Array<{ id: string; privacy?: unknown }> = [];
   {

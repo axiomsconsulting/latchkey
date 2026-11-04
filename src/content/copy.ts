@@ -983,6 +983,7 @@ export const properties = branded({
   elsewhere: {
     checkin: ["Check-in journey", "Settings → Check-in"],
     records: ["Who's staying and ID records", "Settings → Check-in"],
+    returning: ["Returning guests", "Settings → Check-in"],
     stayAccess: ["Room QR codes and Wi-Fi", "Settings → Check-in"],
     doorCodes: ["Door codes", "Settings → Check-in"],
     kioskRest: ["Screen saver (night light, clocks, screen off)", "Settings → Door tablets"],
@@ -1114,16 +1115,11 @@ export const kioskRestCopy = branded({
   firstCheckOut: "First check-out",
   blankMidnight: "Empty means midnight",
   blank5am: "Empty means 5am",
-  wakeTitle: "Wake when someone comes up",
+  wakeTitle: "Wakes on touch, movement or sound",
   wakeHelp:
-    "As well as a touch. It only looks at a very small picture, or how loud the room is, on the tablet itself: nothing is kept or sent, and it stops as soon as the tablet wakes. Guests can still see the camera in use, so mention it in your door notice.",
-  wakeOptions: {
-    off: "Touch only",
-    camera: "Movement (front camera)",
-    sound: "Sound (microphone)",
-  },
+    "Whichever comes first. It only looks at a very small picture and how loud the room is, on the tablet itself: nothing is kept or sent, and it stops as soon as the tablet wakes. Guests can see the camera in use, so mention it in your door notice.",
   wakeAllow:
-    "Allow it once on the tablet: open the host menu there (three taps top right) and choose Allow. Older tablets on Lite or Enhanced can't do this and wake by touch.",
+    "Allow the camera and microphone once on the tablet: open the host menu there (three taps top right) and choose Allow. If one isn't allowed, the others still work. Older tablets on Lite or Enhanced wake by touch.",
   previewNight: "At night",
   previewDayTime: "By day",
   nightLight: "Night light",
@@ -1212,6 +1208,22 @@ export const checkinSettings = branded({
   listFlowNote:
     "ID checks are off: guests choose their platform, then pick their booking from a list showing first name and initial only.",
   saved: "Check-in settings saved",
+  returning: {
+    title: "Returning guests",
+    body: "Let someone who has already passed your ID check skip the ID photo and selfie next time. It's your choice: UK law doesn't ask you to check ID, but check your insurer is happy.",
+    ukOnly: "Only for UK properties for now, as rules on ID differ elsewhere.",
+    on: "Skip the ID photo and selfie for returning guests",
+    needsUpdate: "This needs the latest update (migration 0088).",
+    rules: [
+      "Only for ID checks made after you turn this on, and only for 12 months.",
+      "The booking must have the same email or phone, and the same name. Booking sites often hide these, so those guests usually check in as normal.",
+      "Their ID must still be valid on the day they arrive.",
+      "They prove it's them with the last digits of their phone or booking, and confirm their guest register details. Anyone else in the party still shows ID.",
+      "Someone who knows those details could get past this, so leave it off if you want to see an ID every time.",
+    ],
+    privacy:
+      "To do this, Latchkey keeps the name and expiry date from the ID and scrambled contact details for 12 months. No photos and no document number. Make sure your privacy notice covers it.",
+  },
   records: {
     title: "Who's staying and ID records",
     body: "Ask how many people arrived, check every adult's ID, and choose what you keep. Children only give their age.",
@@ -1911,7 +1923,7 @@ export const guest = branded({
   dayScreenCheckIn: "Check in",
   dayScreenQr: "Or scan to use your own phone",
   dayScreenWake: "Tap to use this screen",
-  kioskAllowMic: "Allow microphone on this tablet (for waking it)",
+  kioskAllowWake: "Allow camera and microphone (for waking it)",
   heldTitle: (name: string) => (name ? `You're registered, ${name}` : "You're registered"),
   heldLine:
     "Thank you. Your host has been told and will confirm your room shortly. Your link below opens your stay guide as soon as they have.",
@@ -2076,6 +2088,9 @@ export const guest = branded({
   registerPlaceHint: "As printed on it, for example the city, country or issuing office",
   registerNext: "Where are you going after this stay?",
   registerNextHint: "A town and country is fine",
+  registerGoingHome: "Going home",
+  registerGoingElsewhere: "Somewhere else",
+  registerFromLastStay: "From your last stay with us. Please check it's still right.",
   registerAddress: "Address there, if you know it (optional)",
   registerSave: "Save and continue",
   registerMissing: {
@@ -4605,6 +4620,7 @@ export const settingsMenuCopy = branded({
     doorCodes: ["Door codes", "checkin"],
     stayAccess: ["Room QR codes and Wi-Fi", "checkin"],
     records: ["Who's staying and ID records", "checkin"],
+    returning: ["Returning guests", "checkin"],
     privacy: ["Privacy and retention", "checkin"],
     guestTexts: ["Welcome and goodbye messages", "guests"],
     reviews: ["Reviews", "guests"],
@@ -4636,6 +4652,7 @@ export const settingsMenuCopy = branded({
     doorCodes: "Codes or keys, for the front door and each room.",
     stayAccess: "What room QR codes open, and when guests get the Wi-Fi.",
     records: "Keeping ID photos, and for how long.",
+    returning: "Let returning guests skip the ID photo and selfie.",
     privacy: "How long guests' details and messages are kept.",
     guestTexts: "Sent by WhatsApp, text or email on arrival and leaving days.",
     reviews: "Asking for a review, and showing them on your booking page.",
@@ -4728,6 +4745,7 @@ export const omniCopy = branded({
     checkin:
       "check-in journey steps quick thorough welcome surname check-out nights photo id selfie face camera front back last digits phone self declare kiosk qr print",
     records: "who's staying adults children id photo face register keep days",
+    returning: "returning repeat guests skip id photo selfie stayed before trust",
     stayAccess:
       "room qr code wifi wi-fi password network door tablet presence location guide before check-in message",
     reviews: "reviews review stars score ask last day booking page feedback",

@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { isPlatformKey, platformKey } from "./booking-sites";
 import { addDays, formatUkDate, todayInZone, zonedParts } from "./dates";
+import { isMaskedDocument } from "./returning-trust";
 import {
   MAX_FAILED_CHOICES,
   MAX_LAST4_ATTEMPTS,
@@ -546,6 +547,9 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       recordResult(ctx, "photo_id", nameMatch ?? "id_read", !!check),
       autoRegister(ctx, 0, read),
     ]);
+    const { rememberPass, trustedPass } = await import("./returning-trust.server");
+    const known = !isTour(p) && !check && (await trustedPass(db, bookingId));
+    if (!isTour(p) && !check) await rememberPass(db, bookingId, p.id, nameMatch, read);
     if (check && !isTour(p)) {
       const { raiseAlert } = await srv();
       const room = await roomNameOf(db, ctx.booking.room_id);
@@ -567,7 +571,8 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       prefill: prefillFrom(read),
       register,
       // The selfie comes straight after the ID, before anything else is asked.
-      facePhoto: partyPlan(ctx).facePhoto,
+      facePhoto: partyPlan(ctx).facePhoto && !known,
+      trusted: !!known,
     };
   });
 
@@ -1089,6 +1094,13 @@ async function sessionContext(
 
 type Ctx = Awaited<ReturnType<typeof sessionContext>>;
 
+/** Their earlier passed ID check applies to this stay (the host's switch, returning-trust.ts). Never on the tour. */
+async function knownGuest(ctx: Ctx) {
+  if (isTour(ctx.property)) return null;
+  const { trustedPass } = await import("./returning-trust.server");
+  return trustedPass(ctx.db, ctx.booking.id);
+}
+
 /** A joined phone may only fill in the guest it picked; a photo phone only the task the tablet set. */
 function ownSlot(ctx: Ctx, position: number, kinds?: readonly string[]) {
   if (ctx.join && ctx.join.position !== position) throw new Error("Not available.");
@@ -1190,13 +1202,20 @@ export const confirmBooking = createServerFn({ method: "POST" })
     await db.from("checkin_sessions").update({ confirmed: true }).eq("id", session.id);
     const methods = normaliseMethods(property.checkin_methods);
     const kinds = last4Kinds(booking);
+    const list = usesListFlow(methods);
+    const sequence: CheckinMethod[] = list
+      ? ["self_declare"]
+      : await withoutPhotoIfOff(ctx, methodSequence(methods, { last4: kinds.length > 0 }));
+    // Stayed before with a passed ID check: a quick proof comes first, and the usual ID check if that fails.
+    const trusted = !list && kinds.length > 0 && !!(await knownGuest(ctx));
     return {
-      listFlow: usesListFlow(methods),
-      sequence: usesListFlow(methods)
-        ? (["self_declare"] as const)
-        : await withoutPhotoIfOff(ctx, methodSequence(methods, { last4: kinds.length > 0 })),
+      listFlow: list,
+      sequence: trusted
+        ? (["last4", ...sequence.filter((m) => m !== "last4")] as CheckinMethod[])
+        : sequence,
       last4Kinds: kinds,
       party: partyPlan(ctx),
+      trusted,
     };
   });
 
@@ -1546,6 +1565,10 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
           )
         : null,
     ]);
+    if (!isTour(ctx.property)) {
+      const { rememberPass } = await import("./returning-trust.server");
+      await rememberPass(ctx.db, ctx.booking.id, ctx.property.id, result, read);
+    }
     return {
       status: "done" as const,
       result,
@@ -1860,7 +1883,14 @@ export const saveRegister = createServerFn({ method: "POST" })
         .maybeSingle();
       if (!child || (child.age ?? 0) < REGISTER_AGE) throw new Error("Not available.");
     }
-    const clean = cleanRegisterEntry(data);
+    // "Same as last time": the number was never sent to this screen, so it's filled in here.
+    let documentNumber = data.documentNumber;
+    if (isMaskedDocument(documentNumber)) {
+      const known = data.position === 0 ? await knownGuest(ctx) : null;
+      const { lastDocumentNumber } = await import("./returning-trust.server");
+      documentNumber = known ? await lastDocumentNumber(ctx.db, known) : null;
+    }
+    const clean = cleanRegisterEntry({ ...data, documentNumber });
     if (!clean.ok) return { ok: false as const, missing: clean.missing };
     // The public tour never keeps what visitors type.
     if (isTour(ctx.property)) return { ok: true as const };
@@ -2104,7 +2134,9 @@ export const verifyLast4 = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const ctx = await sessionContext(data.token);
     const methods = normaliseMethods(ctx.property.checkin_methods);
-    if (!ctx.session.confirmed || !methods.enabled.last4) throw new Error("Not available.");
+    const known = await knownGuest(ctx);
+    if (!ctx.session.confirmed || (!methods.enabled.last4 && !known))
+      throw new Error("Not available.");
     if (ctx.session.last4_attempts >= MAX_LAST4_ATTEMPTS) return { status: "fallback" as const };
 
     const b = ctx.booking;
@@ -2125,8 +2157,10 @@ export const verifyLast4 = createServerFn({ method: "POST" })
         ? { status: "fallback" as const }
         : { status: "retry" as const, left: MAX_LAST4_ATTEMPTS - used };
     }
-    await recordResult(ctx, "last4", "last4");
-    return { status: "done" as const };
+    await recordResult(ctx, known ? "returning" : "last4", "last4");
+    if (!known) return { status: "done" as const };
+    const { lastEntry } = await import("./returning-trust.server");
+    return { status: "done" as const, prefill: await lastEntry(ctx.db, known) };
   });
 
 export const selfDeclare = createServerFn({ method: "POST" })
