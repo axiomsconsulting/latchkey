@@ -1,22 +1,35 @@
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  ArrowDown,
-  ArrowRight,
+  Archive,
+  BookUser,
+  CalendarDays,
+  Camera,
+  CaseSensitive,
   CheckCircle2,
+  ChevronDown,
+  Hand,
+  Hash,
+  IdCard,
   Lock,
+  MessageCircle,
   MonitorSmartphone,
   Printer,
   Route as RouteIcon,
+  ScanLine,
   Sparkles,
+  UserCheck,
+  Users,
+  UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { InfoTip } from "@/components/host/InfoTip";
 import {
   checkinSettings,
   common,
@@ -53,13 +66,33 @@ import { cn } from "@/lib/utils";
 
 const copy = checkinSettings.journey;
 
-/** One box: tick, name, what it asks, and why it's fixed (if it is). */
+const STEP_ICONS: Record<StepId, typeof Lock> = {
+  welcome_go: Hand,
+  find_id: ScanLine,
+  find_letter: CaseSensitive,
+  find_checkout: CalendarDays,
+  find_confirm: UserCheck,
+  party: Users,
+  lead_id: IdCard,
+  keep_id: Archive,
+  every_adult_id: UsersRound,
+  selfie: Camera,
+  register: BookUser,
+  last4: Hash,
+  self_declare: MessageCircle,
+};
+
+/**
+ * One step on the branch: its icon, tick and name. Tapping the name opens what it
+ * does, so the list stays short enough to read in one go.
+ */
 function StepBox({
   def,
   on,
   lock,
   onToggle,
   note,
+  nested,
   children,
 }: {
   def: StepDef;
@@ -67,69 +100,81 @@ function StepBox({
   lock: StepLock;
   onToggle?: ((on: boolean) => void) | undefined;
   note?: ReactNode;
+  /** Belongs to the step above. */
+  nested?: boolean;
   children?: ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   const fixed = lock !== null || !onToggle;
+  const Icon = STEP_ICONS[def.id];
   return (
-    <div
+    <li
       data-tour={`journey-${def.id}`}
       className={cn(
-        "relative flex min-w-0 flex-col gap-2 rounded-2xl border-2 p-3 transition-colors md:flex-1 md:basis-44",
-        on ? "border-primary bg-primary/5" : "border-dashed border-border bg-background opacity-70",
+        "relative before:absolute before:left-[-1rem] before:top-[1.35rem] before:h-0.5 before:w-3 before:bg-border",
+        nested && "ml-5",
       )}
     >
-      <label className={cn("flex items-start gap-2", !fixed && "cursor-pointer")}>
-        {fixed ? (
-          <span className="mt-0.5 grid size-4 shrink-0 place-items-center text-primary">
-            {on ? <Lock className="size-4" aria-hidden /> : null}
-          </span>
-        ) : (
-          <Checkbox
-            className="mt-0.5"
-            checked={on}
-            onCheckedChange={(v) => onToggle?.(v === true)}
-          />
+      <div
+        className={cn(
+          "rounded-xl border p-2 transition-colors",
+          on ? "border-primary/40 bg-primary/5" : "border-dashed border-border opacity-70",
         )}
-        <span className="min-w-0">
-          <span className="block font-medium leading-snug">{copy.steps[def.id]}</span>
-          <span className="mt-0.5 block text-xs text-muted-foreground">{copy.help[def.id]}</span>
-        </span>
-      </label>
-      {lock ? (
-        <span className="w-fit rounded-full bg-muted px-2 py-0.5 text-xs">{copy.locks[lock]}</span>
-      ) : null}
-      {note ? <div className="text-xs">{note}</div> : null}
-      {children}
-    </div>
+      >
+        <div className="flex items-center gap-2">
+          <Icon className="size-4 shrink-0 text-primary" aria-hidden />
+          {fixed ? (
+            <span className="grid size-4 shrink-0 place-items-center text-primary">
+              {on ? <Lock className="size-3.5" aria-hidden /> : null}
+            </span>
+          ) : (
+            <Checkbox
+              checked={on}
+              aria-label={copy.steps[def.id]}
+              onCheckedChange={(v) => onToggle?.(v === true)}
+            />
+          )}
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+            className="flex min-h-7 min-w-0 flex-1 items-center gap-1 text-left text-sm font-medium"
+          >
+            <span className="min-w-0">{copy.steps[def.id]}</span>
+            <ChevronDown
+              className={cn(
+                "size-3.5 shrink-0 text-muted-foreground transition-transform",
+                open && "rotate-180",
+              )}
+              aria-hidden
+            />
+          </button>
+          {lock ? (
+            <span className="hidden shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] sm:inline">
+              {copy.locks[lock]}
+            </span>
+          ) : null}
+        </div>
+        {open ? (
+          <p className="mt-1.5 pl-12 text-xs text-muted-foreground">
+            {copy.help[def.id]}
+            {lock ? <span className="sm:hidden"> {copy.locks[lock]}.</span> : null}
+          </p>
+        ) : null}
+        {note ? <div className="mt-1.5 pl-12 text-xs">{note}</div> : null}
+        {children ? <div className="mt-1.5 pl-12">{children}</div> : null}
+      </div>
+    </li>
   );
 }
 
-/** Boxes in a row joined by arrows; stacked with arrows down on narrow screens. */
-function Chain({ children }: { children: ReactNode[] }) {
-  const items = children.filter(Boolean);
-  return (
-    <div className="flex flex-col items-stretch gap-1 md:flex-row md:flex-wrap md:items-stretch md:gap-1.5">
-      {items.map((c, i) => (
-        <Fragment key={i}>
-          {i > 0 ? (
-            <span aria-hidden className="grid place-items-center text-muted-foreground">
-              <ArrowDown className="size-4 md:hidden" />
-              <ArrowRight className="hidden size-4 md:block" />
-            </span>
-          ) : null}
-          {c}
-        </Fragment>
-      ))}
-    </div>
-  );
+/** A group's steps hanging off one line, like branches. */
+function Branch({ children }: { children: ReactNode }) {
+  return <ul className="ml-3 space-y-1.5 border-l-2 border-border pl-4">{children}</ul>;
 }
 
 function LaneTitle({ lane }: { lane: Lane }) {
-  return (
-    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-      {copy.lanes[lane]}
-    </p>
-  );
+  return <p className="mb-1.5 text-sm font-semibold">{copy.lanes[lane]}</p>;
 }
 
 function Segment<T extends string>({
@@ -177,7 +222,7 @@ type BoxView = {
   note?: (id: StepId) => ReactNode;
 };
 
-/** The whole journey drawn as connected boxes: two ways in, the steps for everyone, the fallbacks. */
+/** The whole journey as a tree: two ways in, the steps for everyone, the fallbacks. */
 function JourneyMap({
   steps,
   view,
@@ -189,7 +234,7 @@ function JourneyMap({
   choices: FlowChoices;
   setChoices?: ((f: (c: FlowChoices) => FlowChoices) => void) | undefined;
 }) {
-  const box = (id: StepId, children?: ReactNode) => {
+  const box = (id: StepId, nested: boolean, children?: ReactNode) => {
     const def = steps.find((s) => s.id === id);
     if (!def) return null;
     const lock = view.lock(id);
@@ -199,6 +244,7 @@ function JourneyMap({
         def={def}
         on={view.on(id)}
         lock={lock}
+        nested={nested}
         onToggle={view.toggle && lock === null ? (v) => view.toggle!(id, v) : undefined}
         note={view.note?.(id)}
       >
@@ -207,58 +253,42 @@ function JourneyMap({
       </StepBox>
     );
   };
-  const lane = (l: Lane) => steps.filter((s) => s.lane === l).map((s) => s.id);
+  const lane = (l: Lane) => {
+    const list = steps.filter((s) => s.lane === l);
+    return list.map((s, i) => {
+      // Goes under the step it depends on, when that's the one above it.
+      const nested = !!s.needs && list[i - 1]?.id === s.needs;
+      return box(
+        s.id,
+        nested,
+        s.id === "find_checkout" ? (
+          <Segment
+            label={copy.steps[s.id]!}
+            value={choices.checkout}
+            options={[
+              { value: "three", label: copy.checkoutThree },
+              { value: "week", label: copy.checkoutWeek },
+            ]}
+            onChange={setChoices ? (v) => setChoices((c) => ({ ...c, checkout: v })) : undefined}
+          />
+        ) : undefined,
+      );
+    });
+  };
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <div className="rounded-2xl bg-muted/40 p-3">
-          <LaneTitle lane="welcome" />
-          <Chain>{lane("welcome").map((id) => box(id))}</Chain>
+      {(["welcome", "find", "everyone"] as const).map((l) => (
+        <div key={l}>
+          <LaneTitle lane={l} />
+          <Branch>{lane(l)}</Branch>
         </div>
-        <div className="rounded-2xl bg-muted/40 p-3">
-          <LaneTitle lane="find" />
-          <Chain>
-            {lane("find").map((id) =>
-              id === "find_checkout"
-                ? box(
-                    id,
-                    <Segment
-                      label={copy.steps[id]!}
-                      value={choices.checkout}
-                      options={[
-                        { value: "three", label: copy.checkoutThree },
-                        { value: "week", label: copy.checkoutWeek },
-                      ]}
-                      onChange={
-                        setChoices ? (v) => setChoices((c) => ({ ...c, checkout: v })) : undefined
-                      }
-                    />,
-                  )
-                : box(id),
-            )}
-          </Chain>
-        </div>
-      </div>
-      <div className="grid place-items-center text-muted-foreground" aria-hidden>
-        <ArrowDown className="size-5" />
-      </div>
-      <div className="rounded-2xl bg-muted/40 p-3">
-        <LaneTitle lane="everyone" />
-        <Chain>
-          {[
-            ...lane("everyone").map((id) => box(id)),
-            <div
-              key="done"
-              className="flex min-w-0 items-center gap-2 rounded-2xl bg-success/10 p-3 text-sm font-medium md:basis-32"
-            >
-              <CheckCircle2 className="size-5 shrink-0 text-success" aria-hidden /> {copy.done}
-            </div>,
-          ]}
-        </Chain>
-      </div>
-      <div className="rounded-2xl border border-dashed border-border p-3">
+      ))}
+      <p className="flex items-center gap-2 pl-1 text-sm font-medium">
+        <CheckCircle2 className="size-5 shrink-0 text-success" aria-hidden /> {copy.done}
+      </p>
+      <div>
         <LaneTitle lane="fallback" />
-        <Chain>{lane("fallback").map((id) => box(id))}</Chain>
+        <Branch>{lane("fallback")}</Branch>
       </div>
     </div>
   );
@@ -298,7 +328,7 @@ function Cameras({
 }
 
 /**
- * Settings → Guests: this property's check-in journey as connected boxes.
+ * Settings → Check-in: this property's check-in journey as a tree of steps.
  * Quick and Thorough fill the ticks in one go; "Use Latchkey's journey"
  * follows the starting journey from Latchkey admin again. Steps Latchkey
  * requires are locked on, removed ones aren't shown.
@@ -394,7 +424,10 @@ export function CheckinJourney({ property }: { property: { id: string; short_cod
             <RouteIcon className="size-5" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-xl">{copy.title}</h2>
+            <h2 className="flex items-center gap-1 text-xl">
+              {copy.title}
+              <InfoTip label={copy.title}>{copy.info}</InfoTip>
+            </h2>
             <p className="text-sm text-muted-foreground">{copy.body}</p>
           </div>
         </div>

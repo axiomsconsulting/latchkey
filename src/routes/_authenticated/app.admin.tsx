@@ -5,19 +5,16 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Building2,
   ChartLine,
-  Handshake,
   Eye,
-  Flag,
+  Globe,
+  Handshake,
   LayoutDashboard,
-  ListTree,
   Loader2,
-  Megaphone,
   MessageSquareHeart,
   Plug,
   Settings,
   ShieldCheck,
   Tag,
-  Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,6 +33,8 @@ import { LegalAdmin } from "@/components/host/LegalAdmin";
 import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
 import { CheckinJourneyAdmin } from "@/components/host/CheckinJourney";
+import { ArrangedSections } from "@/components/host/ArrangedSections";
+import { adminArrangeTitles as titles, adminTabs } from "@/content/copy";
 import { AppUpdatesAdmin } from "@/components/host/AppUpdatesAdmin";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
@@ -133,12 +132,8 @@ function AdminPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <PageHeader title={copy.title} subtitle={copy.subtitle} />
-      {/* Back from connecting Google Drive: straight to Integrations, where the result shows. */}
-      <Tabs
-        defaultValue={
-          backFromDrive ? "integrations" : search.tab === "hosts" ? "hosts" : "overview"
-        }
-      >
+      {/* Back from connecting Google Drive: straight to System, where the result shows. */}
+      <Tabs defaultValue={backFromDrive ? "system" : search.tab === "hosts" ? "hosts" : "overview"}>
         <TabsList className="h-auto min-h-12 flex-wrap justify-start gap-1 rounded-2xl p-1">
           <TabsTrigger value="overview" className="h-10 gap-2 rounded-xl px-4">
             <LayoutDashboard className="size-4" aria-hidden />
@@ -146,24 +141,16 @@ function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="hosts" className="h-10 gap-2 rounded-xl px-4">
             <Building2 className="size-4" aria-hidden />
-            {copy.tabHosts}
-          </TabsTrigger>
-          <TabsTrigger value="flags" className="h-10 gap-2 rounded-xl px-4">
-            <Flag className="size-4" aria-hidden />
-            {copy.tabFlags}{" "}
+            {copy.tabHosts}{" "}
             {openFlags ? (
               <Badge variant="destructive" className="ml-2">
                 {openFlags}
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="feedback" className="h-10 gap-2 rounded-xl px-4">
+          <TabsTrigger value="inbox" className="h-10 gap-2 rounded-xl px-4">
             <MessageSquareHeart className="size-4" aria-hidden />
-            {copy.tabFeedback}
-          </TabsTrigger>
-          <TabsTrigger value="messages" className="h-10 gap-2 rounded-xl px-4">
-            <Megaphone className="size-4" aria-hidden />
-            {copy.tabMessages}
+            {adminTabs.inbox}
           </TabsTrigger>
           <TabsTrigger value="visitors" className="h-10 gap-2 rounded-xl px-4">
             <ChartLine className="size-4" aria-hidden />
@@ -177,21 +164,17 @@ function AdminPage() {
             <Handshake className="size-4" aria-hidden />
             Commission Partners
           </TabsTrigger>
-          <TabsTrigger value="routines" className="h-10 gap-2 rounded-xl px-4">
-            <Timer className="size-4" aria-hidden />
-            {copy.tabRoutines}
+          <TabsTrigger value="site" className="h-10 gap-2 rounded-xl px-4">
+            <Globe className="size-4" aria-hidden />
+            {adminTabs.site}
           </TabsTrigger>
-          <TabsTrigger value="integrations" className="h-10 gap-2 rounded-xl px-4">
-            <Plug className="size-4" aria-hidden />
-            {copy.tabIntegrations}
-          </TabsTrigger>
-          <TabsTrigger value="menu" className="h-10 gap-2 rounded-xl px-4">
-            <ListTree className="size-4" aria-hidden />
-            {menuAdminCopy.tab}
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="h-10 gap-2 rounded-xl px-4">
+          <TabsTrigger value="defaults" className="h-10 gap-2 rounded-xl px-4">
             <Settings className="size-4" aria-hidden />
-            {copy.tabSettings}
+            {adminTabs.defaults}
+          </TabsTrigger>
+          <TabsTrigger value="system" className="h-10 gap-2 rounded-xl px-4">
+            <Plug className="size-4" aria-hidden />
+            {adminTabs.system}
           </TabsTrigger>
         </TabsList>
 
@@ -202,67 +185,96 @@ function AdminPage() {
             <Overview hosts={hosts} pricing={pricing} />
           )}
         </TabsContent>
-        <TabsContent value="hosts" className="mt-4 space-y-6">
-          {/* Demo / live and sample data for the business being viewed (moved here from Settings). */}
-          <AdminBusinessTools />
-          {q.isLoading ? (
-            <Skeleton className="h-48 rounded-2xl" />
-          ) : (
-            <HostTable hosts={hosts} pricing={pricing} />
-          )}
+        <TabsContent value="hosts" className="mt-4">
+          <ArrangedSections
+            storageKey="latchkey.adminLayout.hosts"
+            items={[
+              {
+                id: "hosts",
+                title: titles.hosts,
+                node: q.isLoading ? (
+                  <Skeleton className="h-48 rounded-2xl" />
+                ) : (
+                  <HostTable hosts={hosts} pricing={pricing} />
+                ),
+              },
+              {
+                id: "flags",
+                title: openFlags ? `${titles.flags} (${openFlags})` : titles.flags,
+                node: <Flags flags={q.data?.flags ?? []} hosts={hosts} />,
+              },
+              { id: "tools", title: titles.tools, node: <AdminBusinessTools /> },
+            ]}
+          />
         </TabsContent>
-        <TabsContent value="flags" className="mt-4">
-          <Flags flags={q.data?.flags ?? []} hosts={hosts} />
+        <TabsContent value="inbox" className="mt-4">
+          <ArrangedSections
+            storageKey="latchkey.adminLayout.inbox"
+            items={[
+              { id: "feedback", title: titles.feedback, node: <FeedbackInbox /> },
+              { id: "messages", title: titles.messages, node: <Announcements hosts={hosts} /> },
+            ]}
+          />
         </TabsContent>
-        <TabsContent value="feedback" className="mt-4">
-          <FeedbackInbox />
-        </TabsContent>
-        <TabsContent value="messages" className="mt-4">
-          <Announcements hosts={hosts} />
-        </TabsContent>
-        <TabsContent value="visitors" className="mt-4 space-y-5">
-          <LaunchFunnel />
-          <VisitorAnalytics />
+        <TabsContent value="visitors" className="mt-4">
+          <ArrangedSections
+            storageKey="latchkey.adminLayout.visitors"
+            items={[
+              { id: "funnel", title: titles.funnel, node: <LaunchFunnel /> },
+              { id: "visitors", title: titles.visitors, node: <VisitorAnalytics /> },
+            ]}
+          />
         </TabsContent>
         <TabsContent value="pricing" className="mt-4">
-          <PricingStudio />
+          <ArrangedSections
+            storageKey="latchkey.adminLayout.pricing"
+            items={[
+              { id: "studio", title: titles.studio, node: <PricingStudio /> },
+              { id: "pricing", title: titles.pricing, node: <PricingAdmin /> },
+            ]}
+          />
         </TabsContent>
         <TabsContent value="partners" className="mt-4">
           <PartnerAdmin />
         </TabsContent>
-        <TabsContent value="routines" className="mt-4">
-          <RoutinesAdmin />
+        <TabsContent value="site" className="mt-4">
+          <ArrangedSections
+            storageKey="latchkey.adminLayout.site"
+            items={[
+              { id: "site", title: titles.site, node: <SiteSettings /> },
+              { id: "brand", title: titles.brand, node: <BrandAdmin /> },
+              { id: "home", title: titles.home, node: <HomeArtAdmin /> },
+              { id: "legal", title: titles.legal, node: <LegalAdmin /> },
+              { id: "domains", title: titles.domains, node: <DomainsAdmin /> },
+              { id: "menu", title: titles.menu, node: <MenuPagesAdmin /> },
+              { id: "admins", title: titles.admins, node: <SuperAdmins /> },
+            ]}
+          />
         </TabsContent>
-        <TabsContent value="integrations" className="mt-4">
-          <ConnectionHealth />
-          <div className="mt-4">
-            <PlatformStripeAdmin />
-          </div>
-          <div className="mt-4">
-            <WhatsAppAdmin />
-          </div>
-          <div className="mt-6">
-            <IntegrationsAdmin />
-          </div>
-          <div className="mt-6">
-            <DriveAdmin />
-          </div>
+        <TabsContent value="defaults" className="mt-4">
+          <ArrangedSections
+            storageKey="latchkey.adminLayout.defaults"
+            items={[
+              { id: "journey", title: titles.journey, node: <CheckinJourneyAdmin /> },
+              { id: "saver", title: titles.saver, node: <KioskSaverAdmin /> },
+              { id: "starters", title: titles.starters, node: <StarterSectionsAdmin /> },
+            ]}
+          />
         </TabsContent>
-        <TabsContent value="menu" className="mt-4 space-y-6">
-          <MenuPagesAdmin />
-          <StarterSectionsAdmin />
-        </TabsContent>
-        <TabsContent value="settings" className="mt-4 space-y-6">
-          <BrandAdmin />
-          <HomeArtAdmin />
-          <LegalAdmin />
-          <SiteSettings />
-          <DomainsAdmin />
-          <AppUpdatesAdmin />
-          <CheckinJourneyAdmin />
-          <KioskSaverAdmin />
-          <PricingAdmin />
-          <SuperAdmins />
+        <TabsContent value="system" className="mt-4">
+          <ArrangedSections
+            storageKey="latchkey.adminLayout.system"
+            focus={backFromDrive ? "drive" : null}
+            items={[
+              { id: "health", title: titles.health, node: <ConnectionHealth /> },
+              { id: "stripe", title: titles.stripe, node: <PlatformStripeAdmin /> },
+              { id: "whatsapp", title: titles.whatsapp, node: <WhatsAppAdmin /> },
+              { id: "drive", title: titles.drive, node: <DriveAdmin /> },
+              { id: "integrations", title: titles.integrations, node: <IntegrationsAdmin /> },
+              { id: "routines", title: titles.routines, node: <RoutinesAdmin /> },
+              { id: "updates", title: titles.updates, node: <AppUpdatesAdmin /> },
+            ]}
+          />
         </TabsContent>
       </Tabs>
     </div>

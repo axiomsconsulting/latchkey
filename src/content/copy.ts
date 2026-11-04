@@ -981,11 +981,11 @@ export const properties = branded({
   tabExtras: "Extras",
   elsewhereTitle: "Also for this property",
   elsewhere: {
-    checkin: ["Check-in journey", "Settings → Guests"],
-    records: ["Who's staying and ID records", "Settings → Guests"],
-    stayAccess: ["Room QR codes and Wi-Fi", "Settings → Guests"],
-    doorCodes: ["Door codes", "Settings → Check-in and records"],
-    kioskRest: ["Screen saver (night light, clocks, screen off)", "Settings → Look"],
+    checkin: ["Check-in journey", "Settings → Check-in"],
+    records: ["Who's staying and ID records", "Settings → Check-in"],
+    stayAccess: ["Room QR codes and Wi-Fi", "Settings → Check-in"],
+    doorCodes: ["Door codes", "Settings → Check-in"],
+    kioskRest: ["Screen saver (night light, clocks, screen off)", "Settings → Door tablets"],
     schedule: ["Cleaning and unavailable times", "Housekeeping → Schedule"],
     calendars: ["Calendar links and each room's shared calendar", "Connections"],
   } as Record<string, [string, string]>,
@@ -1242,7 +1242,8 @@ export const checkinSettings = branded({
   },
   journey: {
     title: "Check-in journey",
-    body: "What a guest goes through at the door tablet or on their phone. Tick the steps you want; the boxes show the order.",
+    body: "What guests do to check in. Tick the steps you want.",
+    info: "This is what a guest goes through at the door tablet or on their phone, from top to bottom. Tap a step's name to see what it does. Steps with a lock are required. Quick and Thorough fill in the ticks for you.",
     quick: "Quick",
     quickHelp: "Photo ID finds the stay, then a face photo. About a minute.",
     thorough: "Thorough",
@@ -1442,7 +1443,7 @@ export const kioskCardsCopy = branded({
   offOut: "Check-out cards are off.",
   turnOn: "Turn on in Settings",
   title: "Door tablet: welcome and goodbye",
-  body: "Each guest arriving or leaving today gets a card on the door tablet, on the timings in Settings → Kiosk. Show one now, or take it off.",
+  body: "Each guest arriving or leaving today gets a card on the door tablet, on the timings in Settings → Door tablets. Show one now, or take it off.",
   tabIn: (n: number) => `Check-in (${n})`,
   tabOut: (n: number) => `Check-out (${n})`,
   noName: "Guest (no name yet)",
@@ -2284,7 +2285,7 @@ export const themeStudio = branded({
   kioskTouchHelp: "Guests' own phones always keep the standard size.",
   kioskSaved: "Door tablet look saved",
   kioskMoved:
-    "The door tablet's look (Standard or Express) and button size are in Settings → Kiosk, with the rest of the door tablet.",
+    "The door tablet's look (Standard or Express) and button size are in Settings → Door tablets, with the rest of the door tablet.",
   kioskLook: "Look on the door tablet",
   kioskLooks: {
     auto: { label: "Automatic", help: "Follows Latchkey's recommended look for door tablets." },
@@ -2987,7 +2988,7 @@ export const roomWifiCopy = branded({
   password: "Password",
 });
 
-/** Latchkey admin → Site settings → Home page pictures. */
+/** Latchkey admin → Site → Home page pictures. */
 export const homeArtCopy = branded({
   title: "Home page pictures",
   body: "Photos of happy guests arriving, checking in and settling in, each one a faint full-width background behind the headline or a section. Choose how faint below so the words always stay easy to read.",
@@ -3707,7 +3708,7 @@ export const invoiceCopy = branded({
   hostNotDirect:
     "Invoices are for direct bookings. This stay came from a booking site, which invoices the guest itself.",
   hostNeedsAmount: "Add the amount the guest paid (edit the booking) to make an invoice.",
-  hostOff: "Invoices are switched off. Turn them on in Settings → Invoices.",
+  hostOff: "Invoices are switched off. Turn them on in Settings → Payments.",
   hostMake: "Make invoice",
   hostEdit: "Edit invoice",
   hostOpen: "Open",
@@ -3725,7 +3726,7 @@ export const invoiceCopy = branded({
   includesTax: (tax: string) => `This amount includes ${tax}`,
   useBookingAmount: (amount: string) => `Use the booking's amount (${amount})`,
   notRegistered:
-    "You're not registered for tax, so no tax line is shown. Change this in Settings → Extras.",
+    "You're not registered for tax, so no tax line is shown. Change this in Settings → Payments.",
   totalsPreview: (net: string, tax: string, total: string, name: string) =>
     `${net} + ${tax} ${name} = ${total}`,
   saved: "Invoice saved",
@@ -4567,47 +4568,84 @@ export const roomPhotoCopy = branded({
 /** The Settings menu: its groups (tabs) and which section sits in which. */
 export const settingsMenuCopy = branded({
   label: "Settings menu",
+  advanced: "Show advanced settings",
   groups: {
     business: "Business",
-    checkin: "Check-in and records",
-    rooms: "QR",
-    reviews: "Reviews",
+    checkin: "Check-in",
+    guests: "Guest messages",
+    kiosk: "Door tablets",
     money: "Payments",
-    kiosk: "Kiosk",
     look: "Branding",
     apps: "Alerts and apps",
   } as Record<string, string>,
+  groupHints: {
+    business: "Who you are and who works with you.",
+    checkin: "How guests check in, get through the door and what you keep.",
+    guests: "What guests hear from you, and reviews.",
+    kiosk: "The tablet by your door: what it shows, and when.",
+    money: "How guests pay you, and your invoices.",
+    look: "How your guest pages look.",
+    apps: "How Latchkey tells you things, and connecting other tools.",
+  } as Record<string, string>,
   sections: {
     business: ["Business details", "business"],
-    group: ["Group brand", "business"],
     team: ["Team", "business"],
-    support: ["Support access", "business"],
+    group: ["Group brand", "business"],
     domain: ["Own web address", "business"],
+    support: ["Support access", "business"],
     demo: ["Sample data", "business"],
-    messages: ["Airbnb and Booking.com messages", "apps"],
     checkin: ["Check-in journey", "checkin"],
-    records: ["Who's staying and ID records", "checkin"],
-    guestTexts: ["Welcome and goodbye messages", "checkin"],
-    stayAccess: ["Room QR codes and Wi-Fi", "rooms"],
     doorCodes: ["Door codes", "checkin"],
-    reviews: ["Reviews", "reviews"],
+    stayAccess: ["Room QR codes and Wi-Fi", "checkin"],
+    records: ["Who's staying and ID records", "checkin"],
     privacy: ["Privacy and retention", "checkin"],
-    money: ["Tax, bank details and away", "money"],
-    payments: ["Card payments", "money"],
-    invoices: ["Invoices", "money"],
-    theme: ["Look and feel", "look"],
+    guestTexts: ["Welcome and goodbye messages", "guests"],
+    reviews: ["Reviews", "guests"],
+    messages: ["Airbnb and Booking.com messages", "guests"],
     kioskTablets: ["Door tablets", "kiosk"],
-    kioskLook: ["Door tablet look", "kiosk"],
+    kioskRest: ["Screen saver", "kiosk"],
     welcomeCards: ["Check-in cards", "kiosk"],
     goodbye: ["Check-out cards", "kiosk"],
-    kioskScreen: ["Door tablet screen", "kiosk"],
-    kioskRest: ["Screen saver", "kiosk"],
+    kioskLook: ["Door tablet look", "kiosk"],
+    kioskScreen: ["Door tablet screen fit", "kiosk"],
+    payments: ["Card payments", "money"],
+    money: ["Tax, bank details and away", "money"],
+    invoices: ["Invoices", "money"],
+    theme: ["Look and feel", "look"],
     alerts: ["Alerts", "apps"],
     api: ["API & MCP", "apps"],
     shortcuts: ["Phone shortcuts", "apps"],
     shortcuts2: ["More shortcuts", "apps"],
     adminLink: ["Latchkey admin", "apps"],
   } as Record<string, [string, string]>,
+  hints: {
+    business: "Name, contact details, currency and time zone.",
+    team: "Invite people and choose what they can do.",
+    group: "Your business's logo, across several properties.",
+    domain: "Guest pages on your own address.",
+    support: "Let Latchkey support make changes for a while.",
+    demo: "Remove the sample stays.",
+    checkin: "The steps a guest goes through.",
+    doorCodes: "Codes or keys, for the front door and each room.",
+    stayAccess: "What room QR codes open, and when guests get the Wi-Fi.",
+    records: "Keeping ID photos, and for how long.",
+    privacy: "How long guests' details and messages are kept.",
+    guestTexts: "Sent by WhatsApp, text or email on arrival and leaving days.",
+    reviews: "Asking for a review, and showing them on your booking page.",
+    messages: "Forward booking-site emails into your inbox.",
+    kioskTablets: "Pair tablets, see their screens and update them.",
+    kioskRest: "Smart Screensaver, night light and clocks.",
+    welcomeCards: "A card for each guest arriving today.",
+    goodbye: "A card for each guest leaving today.",
+    kioskLook: "Standard or Express, and button size.",
+    kioskScreen: "Line the screen up on a tablet that doesn't fit.",
+    payments: "Connect Stripe to take card payments.",
+    money: "Tax details, your bank account and away dates.",
+    invoices: "Tax number and invoice numbering for direct stays.",
+    alerts: "Push, Telegram, email and text.",
+    api: "Connect AI assistants and other apps.",
+    shortcuts: "Add Latchkey to your phone.",
+  } as Record<string, string>,
 });
 
 export const omniCopy = branded({
@@ -5213,10 +5251,10 @@ export const directBookingCopy = branded({
   } as Record<string, string>,
   cardHelp:
     "Guests pay on Stripe's secure page; the money goes straight to your Stripe account. Unpaid after 30 minutes, the room is released.",
-  connectStripe: "Connect Stripe in Settings → Money",
+  connectStripe: "Connect Stripe in Settings → Payments",
   bankHelp: (days: number) =>
     `Guests see your bank details (local or international, by their country) and a reference, and pay within ${days} ${days === 1 ? "day" : "days"}. Mark it paid when it arrives.`,
-  addBank: "Add your bank details in Settings → Money",
+  addBank: "Add your bank details in Settings → Payments",
   propertyHelp: "Guests pay when they arrive. Only if you take payments on site.",
   bankDaysLabel: "Bank transfers due within",
   days: "days",
@@ -5478,6 +5516,7 @@ export const groupBrandCopy = branded({
   logo: "Group logo",
   upload: "Upload a logo",
   removeLogo: "Remove",
+  logoModes: { none: "No logo", preset: "Choose one of ours", own: "Use your own" },
   noLogo: "No group logo",
   propertyLogos: "Property logos",
   own: "Each property's own logo (the group logo where a property has none)",
@@ -5858,7 +5897,7 @@ export const setupCopy = branded({
   } as Record<string, [string, string]>,
 });
 
-/** Latchkey admin → Integrations → Test all connections (ConnectionHealth). */
+/** Latchkey admin → System → Test all connections (ConnectionHealth). */
 export const connectionHealthCopy = branded({
   title: "Test all connections",
   body: "A harmless call to each outside service (nothing is sent to anyone), with what to do for anything not working. Problems are listed first.",
@@ -6269,3 +6308,47 @@ export const doorCodesCopy = {
   takeOffNow: "That code was on the lock: please take it off.",
   guestLock: "To lock:",
 };
+
+/** Folding and moving sections, on Settings and Latchkey admin. */
+export const arrangeCopy = branded({
+  openAll: "Open all",
+  foldAll: "Fold all",
+  up: (title: string) => `Move ${title} up`,
+  down: (title: string) => `Move ${title} down`,
+});
+
+export const adminArrangeTitles = branded({
+  flags: "Trial flags",
+  feedback: "Feedback",
+  messages: "Announcements",
+  funnel: "Launch funnel",
+  visitors: "Visitors",
+  studio: "Pricing studio",
+  pricing: "Per-room pricing",
+  brand: "Brand",
+  home: "Home page pictures",
+  legal: "Legal details",
+  site: "Site settings",
+  domains: "Hosts' own web addresses",
+  menu: "Menu and page layouts",
+  starters: "Starter guide sections",
+  admins: "Super admins",
+  journey: "Check-in journey for new properties",
+  saver: "Screen saver defaults",
+  health: "Test all connections",
+  stripe: "Stripe",
+  whatsapp: "WhatsApp",
+  integrations: "Alerts and other connections",
+  drive: "Google Drive",
+  routines: "Routines",
+  updates: "App updates",
+  tools: "Tools for the business being viewed",
+  hosts: "Businesses",
+});
+
+export const adminTabs = branded({
+  inbox: "Feedback and announcements",
+  site: "Site",
+  defaults: "Defaults for hosts",
+  system: "System",
+});

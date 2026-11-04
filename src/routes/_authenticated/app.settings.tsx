@@ -18,20 +18,20 @@ import {
   History,
   IdCard,
   Loader2,
-  NotebookPen,
+  MessageSquare,
   MonitorSmartphone,
+  NotebookPen,
   Palette,
   Plus,
-  QrCode,
   ShieldCheck,
   Sparkles,
-  Star,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/host/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -110,13 +110,27 @@ const FOCUS = [
 const SETTINGS_GROUPS = [
   { id: "business", icon: Building2 },
   { id: "checkin", icon: IdCard },
-  { id: "rooms", icon: QrCode },
-  { id: "reviews", icon: Star },
-  { id: "money", icon: CreditCard },
+  { id: "guests", icon: MessageSquare },
   { id: "kiosk", icon: MonitorSmartphone },
+  { id: "money", icon: CreditCard },
   { id: "look", icon: Palette },
   { id: "apps", icon: Bell },
 ] as const;
+/** Set once or rarely, so out of the way until asked for. */
+const ADVANCED = new Set([
+  "group",
+  "domain",
+  "support",
+  "demo",
+  "privacy",
+  "messages",
+  "kioskLook",
+  "kioskScreen",
+  "api",
+  "shortcuts",
+  "shortcuts2",
+]);
+const ADVANCED_KEY = "latchkey.settingsAdvanced";
 // Latchkey-wide and per-business admin switches (demo / live, sample data) live in Latchkey admin → Businesses.
 const OWN_CARD = new Set([
   "business",
@@ -177,6 +191,23 @@ function SettingsPage() {
   // The menu at the top: one tab per group; a link to a section opens its tab, then lands on it.
   const superAdmin = workspace.data?.isSuperAdmin === true;
   const groupOf = (id: string): string => settingsMenuCopy.sections[id]?.[1] ?? "business";
+  // Basic or advanced: remembered on this device. A link to an advanced section shows it anyway.
+  const [advanced, setAdvanced] = useState(false);
+  useEffect(() => {
+    try {
+      setAdvanced(window.localStorage.getItem(ADVANCED_KEY) === "1");
+    } catch {
+      // Private window: starts basic.
+    }
+  }, []);
+  const chooseAdvanced = (on: boolean) => {
+    setAdvanced(on);
+    try {
+      window.localStorage.setItem(ADVANCED_KEY, on ? "1" : "0");
+    } catch {
+      // As above.
+    }
+  };
   const [tab, setTab] = useState<string>(() =>
     focus ? (settingsMenuCopy.sections[focus]?.[1] ?? "business") : "business",
   );
@@ -357,7 +388,24 @@ function SettingsPage() {
         </TabsList>
       </Tabs>
 
-      <PageSections page="settings" anchors only={(id) => groupOf(id) === tab}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">{settingsMenuCopy.groupHints[tab]}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={advanced} onCheckedChange={chooseAdvanced} />
+          {settingsMenuCopy.advanced}
+        </label>
+      </div>
+
+      <PageSections
+        page="settings"
+        only={(id) => groupOf(id) === tab && (advanced || !ADVANCED.has(id) || id === focus)}
+        fold={{
+          storageKey: "latchkey.settingsLayout",
+          title: (id) => settingsMenuCopy.sections[id]?.[0] ?? id,
+          hint: (id) => settingsMenuCopy.hints[id],
+          focus,
+        }}
+      >
         <Section id="business">
           <form id="settings-business" onSubmit={submit} className="card-soft scroll-mt-24 p-5">
             {/* Business details and billing are the owner's; others can read them. */}
