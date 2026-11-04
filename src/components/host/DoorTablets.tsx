@@ -1,3 +1,4 @@
+import { CameraSpotPad } from "@/components/host/CameraSpotPad";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -491,7 +492,9 @@ function TabletCard({
               </label>
               {d.screen?.camera === false ? (
                 <p className="text-xs text-muted-foreground">{copy.cameraUnsupported}</p>
-              ) : null}
+              ) : (
+                <CameraSpotPad device={d} onChanged={onChanged} />
+              )}
             </>
           )}
           {/* Lite, enhanced or full: what the tablet detected is marked; what each level means is in the info button, once. */}

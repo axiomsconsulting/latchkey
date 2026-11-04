@@ -1607,6 +1607,13 @@ export const doorTabletsCopy = branded({
   screen: (w: number, h: number, o: string) =>
     `${w} × ${h} px, ${o === "portrait" ? "upright" : "on its side"}`,
   camera: "Camera view for you",
+  spotTitle: "Where's the front camera?",
+  spotHelp: "Drag the camera to where it is on this tablet. The photo preview opens beside it.",
+  spotDrag: "Camera position. Use the arrow keys to move it.",
+  spotSide: "On its side",
+  spotUpright: "Upright",
+  spotPreview: "Preview",
+  spotReset: "Use the suggestion",
   cameraTitle: "Let me view this tablet's camera",
   cameraBody:
     "You'll see a picture from the tablet's front camera every few seconds while you have the camera view open: nothing is recorded, and the tablet says \"Camera on: your host is viewing\" the whole time. It pauses while a guest is checking in. Cameras that see guests are CCTV: in the UK, put up a clear notice by the tablet saying it has a camera and who to contact, mention it in your privacy notice, and only use it for security.",
@@ -2101,6 +2108,27 @@ export const guest = branded({
   faceTitleOther: (n: number) => `A quick photo of adult ${n}`,
   faceBody: "Look at the screen. It's only shared with your host and deleted after your stay.",
   faceTake: "Take photo",
+  faceTimer: "Take photo in 3 seconds",
+  autoSnap: {
+    id: {
+      look: "Show your whole ID",
+      cut_off: "Show your whole ID",
+      small: "Bring your ID closer",
+      blurry: "Hold your ID still",
+      dark: "It's too dark",
+      glare: "Tilt it to avoid the glare",
+      hold: "Hold still",
+    },
+    face: {
+      look: "Look at the screen",
+      cut_off: "Move into the picture",
+      small: "Come closer",
+      blurry: "Hold still",
+      dark: "It's too dark",
+      glare: "Look at the screen",
+      hold: "Hold still",
+    },
+  },
   faceSkip: "Skip this",
   faceSaving: "Saving…",
   // Stay page

@@ -1,5 +1,5 @@
 import { DoorCodeCard, type GuestDoor } from "@/components/guest/DoorCodeCard";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/select";
 import { guest as copy } from "@/content/copy";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { deviceSignature } from "@/lib/kiosk-devices";
+import { previewPlace, spotFor, type CameraSpots } from "@/lib/kiosk-camera-spot";
 import { useLandscapeDisplay } from "@/hooks/use-display";
 import type { CheckinMethod } from "@/lib/checkin-logic";
 import {
@@ -108,6 +110,8 @@ type Prefill = {
   /** From their last stay, for them to confirm. */
   fromLastStay?: boolean;
 };
+
+const NO_SPOTS: CameraSpots = {};
 
 /** Steps after the lead guest's ID, run in order. */
 type After =
@@ -204,6 +208,7 @@ export function CheckInFlow({
   onWelcome,
   onStep,
   qrPanel = true,
+  cameraSpots = NO_SPOTS,
   resumeToken,
   welcomeStart = null,
   onDone,
@@ -218,6 +223,8 @@ export function CheckInFlow({
   welcomeStart?: { version: number | null; n: number; source?: "device" | "all" } | null;
   /** Door tablet welcome: the full phone panel on the right (Latchkey admin setting), else only the icon at the top. */
   qrPanel?: boolean;
+  /** Where this tablet's front camera is, as the host set it. */
+  cameraSpots?: CameraSpots;
   /** Tells the kiosk whether the welcome (first) screen is showing. */
   onWelcome?: (atWelcome: boolean) => void;
   /** Each new screen (and which guest it's for), so the kiosk can fit it to the display. */
@@ -1010,6 +1017,18 @@ export function CheckInFlow({
   // A door tablet on its side: the camera beside its buttons, the guide's QR beside its button,
   // so those steps use the width instead of shrinking the text to fit the height.
   const cameraSide = kiosk && landscape;
+  // The preview opens beside the tablet's front camera.
+  const cameraPlace = useMemo(() => {
+    if (!kiosk || typeof window === "undefined") return null;
+    const way = landscape ? ("landscape" as const) : ("portrait" as const);
+    const sig = deviceSignature(navigator.userAgent, {
+      w: window.screen.width,
+      h: window.screen.height,
+      dpr: window.devicePixelRatio,
+      touch: navigator.maxTouchPoints,
+    });
+    return previewPlace(spotFor(cameraSpots, sig, way), way);
+  }, [kiosk, landscape, cameraSpots]);
   const phoneUrl =
     typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
   // While other guests are being filled in: the square lets each use their own phone at once.
@@ -1399,6 +1418,8 @@ export function CheckInFlow({
                     }
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
+                        auto={kiosk}
+                        place={cameraPlace}
                         busy={busy}
                         side={cameraSide}
                         facing={facing}
@@ -1470,6 +1491,8 @@ export function CheckInFlow({
                     }
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
+                        auto={kiosk}
+                        place={cameraPlace}
                         busy={busy}
                         side={cameraSide}
                         facing={facing}
@@ -1601,6 +1624,8 @@ export function CheckInFlow({
                     }
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
+                        auto={kiosk}
+                        place={cameraPlace}
                         busy={busy}
                         side={cameraSide}
                         facing={facing}
@@ -1686,6 +1711,8 @@ export function CheckInFlow({
                   }
                   camera={({ facing, onFail, panel }) => (
                     <IdCamera
+                      auto={kiosk}
+                      place={cameraPlace}
                       facing={facing}
                       kind="face"
                       busy={busy}

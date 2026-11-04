@@ -6,6 +6,7 @@
  * the property's tablets and calibrates one from the dashboard, then pings
  * it (kiosk-ping.ts) so it applies the change at once.
  */
+import { normaliseSpots, type CameraSpots } from "./kiosk-camera-spot";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -124,6 +125,8 @@ export type TabletState = {
   fullFailedAt: string | null;
   /** The bell that puts today's guest cards up from the tablet itself (properties.kiosk_card_picker). */
   cardPicker: boolean;
+  /** Where the front camera is, as the host set it (kiosk-camera-spot.ts). */
+  cameraSpot: CameraSpots;
 };
 
 const notPaired: TabletState = {
@@ -143,6 +146,7 @@ const notPaired: TabletState = {
   modeChosen: null,
   fullFailedAt: null,
   cardPicker: false,
+  cameraSpot: {},
 };
 
 /**
@@ -286,6 +290,7 @@ export const kioskTablet = createServerFn({ method: "POST" })
       ...modeState(r, data.compat),
       fullFailedAt: data.compat?.fullFailed ? now.toISOString() : (r.full_failed_at ?? null),
       cardPicker: cardPicker && r.status !== "pending",
+      cameraSpot: normaliseSpots(r.camera_spot),
     });
 
     if (data.device) {
@@ -412,6 +417,20 @@ export const kioskTablet = createServerFn({ method: "POST" })
       .single();
     if (insErr || !made) return notPaired;
     await reportCompat(made.id);
+    // Another tablet of this kind already has its camera placed: start from that.
+    if (data.sig) {
+      const { data: same } = await db
+        .from("kiosk_devices")
+        .select("camera_spot")
+        .eq("property_id", p.id)
+        .eq("device_sig", data.sig)
+        .not("camera_spot", "is", null)
+        .limit(1);
+      if (same?.[0]?.camera_spot) {
+        made.camera_spot = same[0].camera_spot;
+        await db.from("kiosk_devices").update({ camera_spot: made.camera_spot }).eq("id", made.id);
+      }
+    }
     if (auto) {
       const { raiseAlert } = await import("./checkin.server");
       await raiseAlert({
@@ -487,6 +506,8 @@ export const kioskSnapshotUpload = createServerFn({ method: "POST" })
   });
 
 export type KioskDevice = {
+  deviceSig: string | null;
+  cameraSpot: CameraSpots;
   id: string;
   label: string | null;
   number: number | null;
@@ -567,6 +588,8 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         compatReason: r.compat_reason ?? null,
         display: r.display ?? null,
         calibration: normaliseCalibrations(r.calibration),
+        deviceSig: r.device_sig ?? null,
+        cameraSpot: normaliseSpots(r.camera_spot),
       })),
     };
   });
@@ -812,6 +835,43 @@ export const removeKioskDevice = createServerFn({ method: "POST" })
  * Lets the host view a tablet's camera. Switching it on needs the host to
  * confirm guests are told (a notice by the tablet, and their privacy notice).
  */
+/** Where the tablet's front camera is, for one way up; null goes back to the suggestion. Others of its kind with none set follow. */
+export const setKioskCameraSpot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        deviceId: uuid,
+        way: z.enum(["landscape", "portrait"]),
+        spot: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    const dev = await deviceProperty(db, data.deviceId);
+    await requireWrite(context.supabase, dev.properties.host_id);
+    const { data: row, error: readErr } = await db
+      .from("kiosk_devices")
+      .select("camera_spot, device_sig, property_id")
+      .eq("id", dev.id)
+      .maybeSingle();
+    if (readErr) throw new Error("This needs the latest update (migration 0090).");
+    const spots = normaliseSpots(row?.camera_spot);
+    if (data.spot) spots[data.way] = data.spot;
+    else delete spots[data.way];
+    const next = Object.keys(spots).length ? spots : null;
+    await db.from("kiosk_devices").update({ camera_spot: next }).eq("id", dev.id);
+    if (next && row?.device_sig)
+      await db
+        .from("kiosk_devices")
+        .update({ camera_spot: next })
+        .eq("property_id", row.property_id)
+        .eq("device_sig", row.device_sig)
+        .is("camera_spot", null);
+    return { code: dev.properties.short_code };
+  });
+
 export const setKioskCamera = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

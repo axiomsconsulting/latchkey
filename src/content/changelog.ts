@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.126.0",
+    date: "2026-11-04",
+    title: "The door tablet takes the photo",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "On a door tablet, the photo is taken by itself: it outlines a whole, readable ID or a face, and snaps once it's held still. The selfie button also counts down from 3, so guests can step back.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Show where each door tablet's front camera is, by dragging a camera icon in Settings → Door tablets. The photo preview opens beside it, so guests look the right way.",
+      },
+    ],
+  },
+  {
     version: "0.125.1",
     date: "2026-11-04",
     title: "A clearer way to use your phone",
