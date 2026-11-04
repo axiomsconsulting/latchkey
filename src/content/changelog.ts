@@ -46,6 +46,39 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.121.0",
+    date: "2026-11-04",
+    title: "Settings you can find",
+    items: [
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Settings is regrouped by what you're doing: Business, Check-in, Guest messages, Door tablets, Payments, Branding, and Alerts and apps. Rarely-used settings wait behind Show advanced settings.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Each settings section is now one line that opens with a tap, and you can move it with the arrows or by dragging. Your arrangement is remembered on your device.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "The check-in journey is now a simple list of steps with an icon each. Tap a step's name to see what it does.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Group logo: choose none, one of ours or your own, with a preview. The door tablets under Room QR codes now say which tablet is which, in a list that scrolls.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        admin: true,
+        text: "Latchkey admin is regrouped: Overview, Businesses (with flags), Feedback and announcements, Visitors, Pricing, Commission Partners, Site, Defaults for hosts and System. Every section folds and moves.",
+      },
+    ],
+  },
+  {
     version: "0.120.0",
     date: "2026-11-04",
     title: "Clearer calendar links",

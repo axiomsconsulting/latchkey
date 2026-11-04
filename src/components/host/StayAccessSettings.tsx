@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { common, stayAccessCopy as copy } from "@/content/copy";
+import { tabletName } from "@/lib/kiosk-devices";
 import { normaliseStayAccess, type StayAccess } from "@/lib/stay-access";
 import { forgetTablet, getStayAccess, saveStayAccess } from "@/lib/stay-access.functions";
 import { cn } from "@/lib/utils";
@@ -150,15 +151,18 @@ export function StayAccessSettings({ propertyId }: { propertyId: string }) {
               <Tablet className="size-4 text-primary" /> {copy.tablets}
             </p>
             {d.tablets.length ? (
-              <ul className="divide-y divide-border rounded-xl border border-border">
+              <ul className="max-h-48 divide-y divide-border overflow-y-auto rounded-xl border border-border">
                 {d.tablets.map((t) => (
                   <li key={t.id} className="flex items-center gap-2 px-3 py-2 text-sm">
                     <span className="min-w-0 flex-1">
-                      {copy.tabletLine(
-                        when(t.last_seen_at),
-                        !!t.located_at,
-                        copy.pairedBy[t.paired_by] ?? "",
-                      )}
+                      <span className="block font-medium">{tabletName(t)}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {copy.tabletLine(
+                          when(t.last_seen_at),
+                          !!t.located_at,
+                          copy.pairedBy[t.paired_by] ?? "",
+                        )}
+                      </span>
                     </span>
                     <button
                       type="button"

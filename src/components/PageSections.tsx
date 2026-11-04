@@ -1,5 +1,6 @@
 import { Children, Fragment, isValidElement, type ReactElement, type ReactNode } from "react";
 
+import { ArrangedSections } from "@/components/host/ArrangedSections";
 import { useUi } from "@/hooks/use-site";
 import { arrange } from "@/lib/ui-config";
 
@@ -15,6 +16,7 @@ export function PageSections({
   only,
   anchors = false,
   decorate,
+  fold,
 }: {
   page: string;
   children: ReactNode;
@@ -24,6 +26,13 @@ export function PageSections({
   anchors?: boolean;
   /** Something drawn around a block (the home page's pictures in the margins). */
   decorate?: (id: string) => ReactNode;
+  /** Settings: one line per section, folded and arranged by each person (ArrangedSections). */
+  fold?: {
+    storageKey: string;
+    title: (id: string) => string;
+    hint?: (id: string) => string | undefined;
+    focus?: string | null | undefined;
+  };
 }) {
   const ui = useUi();
   const items = Children.toArray(children).filter(
@@ -31,10 +40,33 @@ export function PageSections({
       isValidElement(c) && typeof (c.props as { id?: unknown }).id === "string",
   );
   const byId = new Map(items.map((c) => [c.props.id, c]));
-  const ids = arrange(
+  const allIds = arrange(
     ui.pages[page],
     items.map((c) => c.props.id),
-  ).filter((id) => !only || only(id));
+  );
+  if (fold) {
+    // A section with nothing in it (not for this person, say) doesn't get a line.
+    const filled = (id: string) => {
+      const kids = (byId.get(id)?.props as { children?: ReactNode } | undefined)?.children;
+      return Children.toArray(kids).length > 0;
+    };
+    return (
+      <ArrangedSections
+        storageKey={fold.storageKey}
+        allIds={allIds}
+        focus={fold.focus}
+        items={allIds
+          .filter((id) => (!only || only(id)) && filled(id))
+          .map((id) => ({
+            id,
+            title: fold.title(id),
+            ...(fold.hint?.(id) ? { hint: fold.hint(id)! } : {}),
+            node: byId.get(id),
+          }))}
+      />
+    );
+  }
+  const ids = allIds.filter((id) => !only || only(id));
   return (
     <>
       {ids.map((id) =>

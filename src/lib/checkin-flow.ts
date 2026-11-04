@@ -1,6 +1,6 @@
 /**
  * The guest check-in journey as steps the host ticks on or off
- * (properties.checkin_flow), drawn as connected boxes in Settings → Guests.
+ * (properties.checkin_flow), drawn as a tree of steps in Settings → Check-in.
  * Two ways in, then the same steps for everyone:
  *  - The host put a welcome on the door tablet for this guest: its Check in
  *    button opens that guest's stay, so nothing is asked to find it.
@@ -65,11 +65,11 @@ export const STEPS: StepDef[] = [
   { id: "find_letter", lane: "find", locked: "always" },
   { id: "find_checkout", lane: "find", locked: "always" },
   { id: "find_confirm", lane: "find" },
-  { id: "party", lane: "everyone" },
   { id: "lead_id", lane: "everyone" },
   { id: "keep_id", lane: "everyone", needs: "lead_id", photo: true },
-  { id: "every_adult_id", lane: "everyone", needs: "lead_id" },
   { id: "selfie", lane: "everyone", photo: true },
+  { id: "party", lane: "everyone" },
+  { id: "every_adult_id", lane: "everyone", needs: "lead_id" },
   { id: "register", lane: "everyone", locked: "uk" },
   { id: "last4", lane: "fallback" },
   { id: "self_declare", lane: "fallback", locked: "always" },

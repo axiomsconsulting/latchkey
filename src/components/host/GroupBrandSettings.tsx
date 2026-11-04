@@ -39,6 +39,9 @@ export function GroupBrandSettings({
   }, [q.data]);
   const theme = normaliseTheme(themeConfig);
   const editable = isOwner && !!q.data?.available;
+  // Which way of choosing is open: what's saved, until they pick another.
+  const [picking, setPicking] = useState<"none" | "preset" | "own" | null>(null);
+  const logoMode = picking ?? (form.logoUrl ? "own" : form.logoPreset ? "preset" : "none");
 
   async function save(next: GroupBrand) {
     setForm(next);
@@ -90,70 +93,93 @@ export function GroupBrandSettings({
       <fieldset disabled={!editable || busy !== null} className="space-y-4">
         <div className="space-y-2">
           <p className="text-sm font-medium">{copy.logo}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              aria-pressed={!form.logoUrl && !form.logoPreset}
-              onClick={() => void save({ ...form, logoUrl: null, logoPreset: null })}
-              className={cn(
-                "min-h-14 rounded-2xl border px-3 text-xs",
-                !form.logoUrl && !form.logoPreset
-                  ? "border-primary ring-2 ring-primary/30"
-                  : "border-border",
-              )}
-            >
-              {copy.noLogo}
-            </button>
-            {LOGO_PRESETS.filter((l) => l !== "site").map((l) => (
-              <button
-                key={l}
-                type="button"
-                title={themeStudio.logoNames[l] ?? l}
-                aria-label={themeStudio.logoNames[l] ?? l}
-                aria-pressed={!form.logoUrl && form.logoPreset === l}
-                onClick={() => void save({ ...form, logoUrl: null, logoPreset: l })}
-                className={cn(
-                  "rounded-2xl p-1",
-                  !form.logoUrl && form.logoPreset === l ? "ring-2 ring-primary" : "",
-                )}
-              >
+          <div className="flex flex-wrap items-start gap-3">
+            {/* What it looks like now. */}
+            <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border">
+              {form.logoUrl ? (
+                <img src={form.logoUrl} alt="" className="size-full object-contain" />
+              ) : form.logoPreset ? (
                 <ThemeScope theme={theme} className="rounded-xl bg-transparent">
                   <LogoMark
-                    theme={{ logoPreset: l, logoUrl: null }}
+                    theme={{ logoPreset: form.logoPreset, logoUrl: null }}
                     name={q.data?.name || "Group"}
-                    className="size-12"
+                    className="size-14"
                   />
                 </ThemeScope>
-              </button>
-            ))}
-            {form.logoUrl ? (
-              <img
-                src={form.logoUrl}
-                alt=""
-                className="size-14 rounded-2xl border border-primary object-contain ring-2 ring-primary/30"
-              />
-            ) : null}
-            <label
-              className="flex size-14 cursor-pointer items-center justify-center rounded-2xl border border-dashed border-border"
-              aria-label={copy.upload}
-              title={copy.upload}
-            >
-              {busy === "upload" ? (
-                <Loader2 className="size-5 animate-spin" />
               ) : (
-                <ImagePlus className="size-5" />
+                <Building className="size-6 text-muted-foreground" aria-hidden />
               )}
-              <input
-                type="file"
-                accept=".png,.jpg,.jpeg,.webp,.svg"
-                className="sr-only"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (f) void upload(f);
-                }}
-              />
-            </label>
+            </span>
+            <div className="min-w-0 flex-1 basis-52 space-y-2">
+              <div role="radiogroup" aria-label={copy.logo} className="flex flex-wrap gap-2">
+                {(["none", "preset", "own"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={logoMode === m}
+                    onClick={() => {
+                      setPicking(m);
+                      if (m === "none") void save({ ...form, logoUrl: null, logoPreset: null });
+                    }}
+                    className={cn(
+                      "min-h-9 rounded-full border px-3 text-sm",
+                      logoMode === m
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background",
+                    )}
+                  >
+                    {copy.logoModes[m]}
+                  </button>
+                ))}
+              </div>
+              {logoMode === "preset" ? (
+                <div className="flex flex-wrap gap-2 rounded-2xl border border-border p-2">
+                  {LOGO_PRESETS.filter((l) => l !== "site").map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      title={themeStudio.logoNames[l] ?? l}
+                      aria-label={themeStudio.logoNames[l] ?? l}
+                      aria-pressed={!form.logoUrl && form.logoPreset === l}
+                      onClick={() => void save({ ...form, logoUrl: null, logoPreset: l })}
+                      className={cn(
+                        "rounded-2xl p-1",
+                        !form.logoUrl && form.logoPreset === l ? "ring-2 ring-primary" : "",
+                      )}
+                    >
+                      <ThemeScope theme={theme} className="rounded-xl bg-transparent">
+                        <LogoMark
+                          theme={{ logoPreset: l, logoUrl: null }}
+                          name={q.data?.name || "Group"}
+                          className="size-12"
+                        />
+                      </ThemeScope>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {logoMode === "own" ? (
+                <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border px-3 text-sm">
+                  {busy === "upload" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <ImagePlus className="size-4" />
+                  )}
+                  {copy.upload}
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.webp,.svg"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void upload(f);
+                    }}
+                  />
+                </label>
+              ) : null}
+            </div>
           </div>
         </div>
 

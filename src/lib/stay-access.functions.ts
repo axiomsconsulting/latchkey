@@ -325,7 +325,7 @@ export const getStayAccess = createServerFn({ method: "GET" })
       .maybeSingle();
     const { data: devices, error: devError } = await sb
       .from("kiosk_devices")
-      .select("id, paired_by, last_seen_at, located_at, created_at")
+      .select("id, number, label, paired_by, last_seen_at, located_at, created_at")
       .eq("property_id", data.propertyId)
       .order("last_seen_at", { ascending: false, nullsFirst: false });
     return {
@@ -333,6 +333,8 @@ export const getStayAccess = createServerFn({ method: "GET" })
       settings: normaliseStayAccess(error ? null : p?.stay_access),
       tablets: ((devError ? [] : devices) ?? []) as Array<{
         id: string;
+        number: number | null;
+        label: string | null;
         paired_by: "pin" | "host";
         last_seen_at: string | null;
         located_at: string | null;
