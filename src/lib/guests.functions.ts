@@ -126,9 +126,12 @@ export const getGuestDetails = createServerFn({ method: "GET" })
       channel_connections: { listing_name: string | null; channel: string } | null;
       archived_at?: string | null;
     };
+    const { isRepeatStay } = await import("./repeat-guest.server");
+    const stayedBefore = await isRepeatStay(sb, b.id);
     return {
       booking: {
         id: b.id,
+        stayedBefore,
         guestName: b.guest_full_name,
         closedReason: closed,
         status: b.status,

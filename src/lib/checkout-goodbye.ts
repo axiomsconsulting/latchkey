@@ -183,6 +183,8 @@ export type ArrivalCards = {
   on: boolean;
   /** {name} is the guest's first name. */
   message: string;
+  /** The same card for a guest who has stayed before. */
+  messageAgain: string;
   startBeforeMinutes: number;
   /** A set time of day to start ("12:00") instead of a time before check-in; null = before check-in. */
   startAt: string | null;
@@ -194,6 +196,8 @@ export type ArrivalCards = {
 export const DEFAULT_ARRIVALS: ArrivalCards = {
   on: false,
   message: "Welcome, {name}! We're so glad you're here. Tap Check in to get your room.",
+  messageAgain:
+    "Welcome back, {name}! It's lovely to have you with us again. Tap Check in to get your room.",
   startBeforeMinutes: 120,
   startAt: null,
   earlyLeadMinutes: 30,
@@ -208,6 +212,8 @@ export function normaliseArrivals(raw: unknown): ArrivalCards {
   return {
     on: typeof r["on"] === "boolean" ? r["on"] : DEFAULT_ARRIVALS.on,
     message: text(r["message"], DEFAULT_ARRIVALS.message, 300) || DEFAULT_ARRIVALS.message,
+    messageAgain:
+      text(r["messageAgain"], DEFAULT_ARRIVALS.messageAgain, 300) || DEFAULT_ARRIVALS.messageAgain,
     startBeforeMinutes: pick(
       r["startBeforeMinutes"],
       START_CHOICES,
@@ -226,8 +232,8 @@ export function normaliseArrivals(raw: unknown): ArrivalCards {
   };
 }
 
-export const arrivalText = (a: ArrivalCards, firstName: string) =>
-  a.message
+export const arrivalText = (a: ArrivalCards, firstName: string, again = false) =>
+  (again ? a.messageAgain : a.message)
     .replace(/\{name\}/g, firstName || "")
     .replace(/\s+([,.!])/g, "$1")
     .trim();

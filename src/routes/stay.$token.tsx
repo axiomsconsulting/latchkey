@@ -194,7 +194,9 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
                 {theme.eyebrow}
               </p>
             ) : null}
-            <h1 className="text-3xl sm:text-5xl">{copy.stayTitle(s.firstName)}</h1>
+            <h1 className="text-3xl sm:text-5xl">
+              {s.again ? copy.stayTitleAgain(s.firstName) : copy.stayTitle(s.firstName)}
+            </h1>
             {/* Today, where they are: the date and the weather. */}
             <StayToday token={token} timeZone={p?.timezone ?? "Europe/London"} />
           </div>

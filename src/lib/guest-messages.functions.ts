@@ -31,6 +31,7 @@ const choice = z.object({
 });
 const settings = z.object({
   welcome: choice,
+  welcomeAgain: z.string().max(600).optional(),
   goodbye: choice,
   phone: z.enum(["auto", "sms", "whatsapp", "none"]),
   email: z.boolean(),

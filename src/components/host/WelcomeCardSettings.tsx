@@ -90,6 +90,16 @@ export function WelcomeCardSettings({
             />
             <p className="text-xs text-muted-foreground">{goodbyeCopy.messageHelp}</p>
           </div>
+          <div className="space-y-1">
+            <Label htmlFor="wc-again">{copy.messageAgain}</Label>
+            <Textarea
+              id="wc-again"
+              rows={3}
+              maxLength={300}
+              value={form.messageAgain}
+              onChange={(e) => set("messageAgain", e.target.value)}
+            />
+          </div>
           {/* From the check-in time, never earlier; a booked early check-in starts it at that time. */}
           <p className="rounded-xl border border-border p-3 text-sm">{copy.whenItStarts}</p>
           <p className="rounded-xl bg-muted p-3 text-sm">{copy.howItEnds}</p>
