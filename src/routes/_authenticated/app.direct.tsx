@@ -19,6 +19,8 @@ import { EmptyState } from "@/components/host/EmptyState";
 import { PageHeader } from "@/components/host/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -39,7 +41,21 @@ import {
   removeDirectRecord,
   setEnquiryStatus,
 } from "@/lib/direct.functions";
-import { setReservationStatus } from "@/lib/direct-booking.functions";
+import {
+  hostCancelReservation,
+  markRefundDone,
+  setReservationStatus,
+} from "@/lib/direct-booking.functions";
+import { cancelPolicy, cleanRefund, refundMethod } from "@/lib/direct-cancel";
+import { ErrorReport } from "@/components/host/ErrorReport";
+import { readAppError } from "@/lib/app-error";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { money } from "@/lib/direct-rates";
 import { DirectRates } from "@/components/host/DirectRates";
 import { DirectBookingSettings } from "@/components/host/DirectBookingSettings";
@@ -412,18 +428,21 @@ function ContactRow({
 /** A booking made on the Stay with us page: what, when, how it's paid, and the host's next step. */
 function ReservationRow({ r, hostId }: { r: Data["reservations"][number]; hostId: string }) {
   const fn = useServerFn(setReservationStatus);
+  const doneFn = useServerFn(markRefundDone);
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
-  async function act(status: "paid" | "cancelled") {
-    if (status === "cancelled" && !window.confirm(copy.cancelConfirm)) return;
+  const [cancelling, setCancelling] = useState(false);
+  const refresh = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["direct", hostId] }),
+      qc.invalidateQueries({ queryKey: ["board"] }),
+    ]);
+  async function act(f: () => Promise<unknown>, done: string) {
     setBusy(true);
     try {
-      await fn({ data: { id: r.id, status } });
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["direct", hostId] }),
-        qc.invalidateQueries({ queryKey: ["board"] }),
-      ]);
-      toast.success(status === "paid" ? copy.markedPaid : copy.cancelled);
+      await f();
+      await refresh();
+      toast.success(done);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : common.errorBody);
     } finally {
@@ -469,6 +488,13 @@ function ReservationRow({ r, hostId }: { r: Data["reservations"][number]; hostId
           {r.plan === "flex"
             ? copy.resFlex(r.free_cancel_until ? formatUkDate(r.free_cancel_until) : null)
             : copy.resNonRef}
+          {r.status === "cancelled" && r.refund_pence
+            ? ` · ${
+                r.refund_status === "to_do"
+                  ? copy.refundToDo(money(r.refund_pence, r.currency))
+                  : copy.refundDone(money(r.refund_pence, r.currency))
+              }`
+            : ""}
           {r.status === "pending" && r.pay_by
             ? ` · ${copy.payBy(new Date(r.pay_by).toLocaleDateString("en-GB", { day: "numeric", month: "short" }))}`
             : ""}
@@ -483,7 +509,13 @@ function ReservationRow({ r, hostId }: { r: Data["reservations"][number]; hostId
           </Button>
         ) : null}
         {r.status === "pending" && r.method === "bank" ? (
-          <Button size="sm" disabled={busy} onClick={() => void act("paid")}>
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              void act(() => fn({ data: { id: r.id, status: "paid" } }), copy.markedPaid)
+            }
+          >
             {copy.markPaid}
           </Button>
         ) : null}
@@ -493,12 +525,126 @@ function ReservationRow({ r, hostId }: { r: Data["reservations"][number]; hostId
             variant="ghost"
             className="text-destructive"
             disabled={busy}
-            onClick={() => void act("cancelled")}
+            onClick={() => setCancelling(true)}
           >
             {copy.cancel}
           </Button>
         ) : null}
+        {r.status === "cancelled" && r.refund_status === "to_do" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void act(() => doneFn({ data: { id: r.id } }), copy.refundMarked)}
+          >
+            {copy.refundMarkDone}
+          </Button>
+        ) : null}
+        {cancelling ? (
+          <CancelDialog r={r} onClose={() => setCancelling(false)} onDone={() => void refresh()} />
+        ) : null}
       </div>
     </article>
+  );
+}
+
+/** Cancels by the rate the guest agreed to, with the refund to change if the host wants to be kinder (or firmer). */
+function CancelDialog({
+  r,
+  onClose,
+  onDone,
+}: {
+  r: Data["reservations"][number];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const fn = useServerFn(hostCancelReservation);
+  const today = new Date().toISOString().slice(0, 10);
+  const policy = cancelPolicy(r, today);
+  const [amount, setAmount] = useState((policy.refundPence / 100).toFixed(2));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ReturnType<typeof readAppError> | null>(null);
+  const pence = cleanRefund(Math.round(Number(amount) * 100), r);
+  const how = refundMethod(r.method, pence);
+
+  async function go() {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn({ data: { id: r.id, refundPence: pence } });
+      toast.success(copy.cancelled);
+      onDone();
+      onClose();
+    } catch (e) {
+      setError(readAppError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90dvh] grid-cols-[minmax(0,1fr)] overflow-y-auto overflow-x-hidden">
+        <DialogHeader>
+          <DialogTitle>{copy.cancelTitle(r.name)}</DialogTitle>
+          <DialogDescription>
+            {policy.free
+              ? copy.cancelPolicyFree
+              : r.plan === "flex"
+                ? copy.cancelPolicyLate
+                : copy.cancelPolicyNonRef}{" "}
+            {copy.cancelRoomFree}
+          </DialogDescription>
+        </DialogHeader>
+        {policy.paid ? (
+          <div className="space-y-2">
+            <Label htmlFor="refund-amount">
+              {copy.refundLabel(money(r.total_pence, r.currency))}
+            </Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                id="refund-amount"
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-32"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAmount((r.total_pence / 100).toFixed(2))}
+              >
+                {copy.refundAll}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setAmount("0.00")}>
+                {copy.refundNone}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {how === "card"
+                ? copy.refundByCard
+                : how === "by_host"
+                  ? copy.refundByYou
+                  : copy.refundNothing}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{copy.notPaidYet}</p>
+        )}
+        {error ? <ErrorReport error={error} /> : null}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="ghost" disabled={busy} onClick={onClose}>
+            {copy.cancelKeep}
+          </Button>
+          <Button variant="destructive" disabled={busy} onClick={() => void go()}>
+            {busy ? <Loader2 className="animate-spin" /> : null}{" "}
+            {pence > 0 ? copy.cancelAndRefund(money(pence, r.currency)) : copy.cancelNoRefundBtn}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

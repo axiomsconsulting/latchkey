@@ -17,6 +17,7 @@ export type AlertKind =
   | "party"
   | "handover"
   | "direct_enquiry"
+  | "direct_cancelled"
   | "tablet_joined"
   | "room_check"
   | "room_needed"
@@ -81,6 +82,7 @@ const TITLES: Record<AlertKind, string> = {
   party: "More guests than booked",
   handover: "Guest wants you to check them in",
   direct_enquiry: "New direct enquiry",
+  direct_cancelled: "A direct stay was cancelled",
   tablet_joined: "A door tablet joined",
   room_check: "Please check this room",
   room_needed: "A guest needs a room",
@@ -94,7 +96,7 @@ export function alertTitle(kind: string): string {
 
 /** Where tapping the alert should land. */
 export function alertPath(kind: string, bookingId: string | null): string {
-  if (kind === "direct_enquiry") return "/app/direct";
+  if (kind === "direct_enquiry" || kind === "direct_cancelled") return "/app/direct";
   if (kind === "tablet_joined") return "/app/settings?focus=kioskTablets";
   if (kind === "room_check" || kind === "room_needed") return "/app/today";
   if (bookingId && kind !== "test") return `/app/bookings?guest=${bookingId}`;

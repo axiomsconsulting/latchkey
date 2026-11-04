@@ -634,6 +634,176 @@ export async function expireReservation(db: Loose, reservationId: string) {
   await releaseVoucher(db, { reservationId }).catch(() => undefined);
 }
 
+/**
+ * Cancels a reservation and releases its room(s). A card refund goes through
+ * Stripe first: if Stripe refuses, nothing has changed and the booking still stands.
+ */
+async function cancelReservation(
+  db: Loose,
+  r: any,
+  o: { refundPence: number; by: "guest" | "host" },
+): Promise<{ refundStatus: "none" | "done" | "to_do" }> {
+  const { refundMethod } = await import("./direct-cancel");
+  const how = refundMethod(r.method, o.refundPence);
+  let refundId: string | null = null;
+  const { stripeCall } = await import("./stripe.server");
+  if (how === "card") {
+    let intent = r.stripe_payment_intent as string | null;
+    if (!intent && r.stripe_session_id) {
+      const session = await stripeCall<{ payment_intent: string | null }>(
+        `/checkout/sessions/${r.stripe_session_id}`,
+        undefined,
+        "GET",
+        r.stripe_account_id ?? null,
+      );
+      intent = session.payment_intent;
+    }
+    if (!intent) throw new Error("We couldn't find the card payment to refund.");
+    const { stripeAmount } = await import("./extras");
+    const refund = await stripeCall<{ id: string }>(
+      "/refunds",
+      {
+        payment_intent: intent,
+        amount: stripeAmount(o.refundPence, String(r.currency).toLowerCase()),
+        metadata: { kind: "direct_reservation", reservation_id: r.id },
+      },
+      "POST",
+      r.stripe_account_id ?? null,
+      `cancel-${r.id}-${o.refundPence}`,
+    );
+    refundId = refund.id;
+  } else if (r.status === "pending" && r.method === "card" && r.stripe_session_id) {
+    // Still at the payment page: it mustn't be possible to pay for a cancelled booking.
+    await stripeCall(
+      `/checkout/sessions/${r.stripe_session_id}/expire`,
+      {},
+      "POST",
+      r.stripe_account_id ?? null,
+    ).catch(() => undefined);
+  }
+  const now = new Date().toISOString();
+  const refundStatus = how === "card" ? "done" : how === "by_host" ? "to_do" : "none";
+  const { error } = await db
+    .from("direct_reservations")
+    .update({
+      status: "cancelled",
+      updated_at: now,
+      cancelled_at: now,
+      cancelled_by: o.by,
+      refund_pence: o.refundPence,
+      refund_status: refundStatus,
+      stripe_refund_id: refundId,
+    })
+    .eq("id", r.id);
+  if (error)
+    await db
+      .from("direct_reservations")
+      .update({ status: "cancelled", updated_at: now })
+      .eq("id", r.id);
+  const ids = await reservationBookings(db, r.id);
+  if (ids.length) await db.from("bookings").update({ status: "cancelled" }).in("id", ids);
+  // A voucher on a stay that didn't happen wasn't used.
+  const { releaseVoucher } = await import("./vouchers.server");
+  await releaseVoucher(db, { reservationId: r.id }).catch(() => undefined);
+  return { refundStatus };
+}
+
+const todayFor = (tz: string | null | undefined) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: tz ?? "Europe/London" }).format(new Date());
+
+/** The guest cancels from their booking page, by the policy they agreed to. */
+export const cancelMyReservation = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: accessToken, expectRefund: z.number().int().min(0) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: r } = await db
+      .from("direct_reservations")
+      .select("*, properties(name, timezone, host_id)")
+      .eq("access_token", data.token)
+      .maybeSingle();
+    if (!r) throw new Error("We couldn't find that booking.");
+    const { cancelPolicy } = await import("./direct-cancel");
+    const policy = cancelPolicy(r, todayFor(r.properties?.timezone));
+    if (!policy.guestCan)
+      throw new Error("This booking can't be cancelled here. Please contact the property.");
+    // The date passed while the page was open: they must see the new answer first.
+    if (policy.refundPence !== data.expectRefund) return { ok: false as const, changed: true };
+    try {
+      const { refundStatus } = await cancelReservation(db, r, {
+        refundPence: policy.refundPence,
+        by: "guest",
+      });
+      const { raiseAlert } = await import("./checkin.server");
+      await raiseAlert({
+        hostId: r.host_id,
+        propertyId: r.property_id,
+        bookingId: r.booking_id ?? null,
+        kind: "direct_cancelled",
+        message: `${r.name} cancelled their booking ${r.reference} at ${r.properties?.name ?? "your property"}. The room is free again.${
+          refundStatus === "to_do"
+            ? " They paid by bank or at the property, so please pay their refund back."
+            : refundStatus === "done"
+              ? " Their card has been refunded."
+              : ""
+        }`,
+      });
+      return { ok: true as const, changed: false };
+    } catch (e) {
+      console.error("Guest cancellation failed", e);
+      throw new Error(
+        "We couldn't cancel this just now, and nothing has changed. Please try again or contact the property.",
+      );
+    }
+  });
+
+/** The host cancels: the policy's refund to start with, or the amount they choose. */
+export const hostCancelReservation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: uuid, refundPence: z.number().int().min(0).max(100_000_000) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as unknown as Loose;
+    const { data: mine } = await sb
+      .from("direct_reservations")
+      .select("id, host_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!mine) throw new Error("Reservation not found.");
+    const { requireWrite } = await import("./roles");
+    await requireWrite(context.supabase, mine.host_id);
+    const db = await admin();
+    const { data: r } = await db.from("direct_reservations").select("*").eq("id", data.id).single();
+    if (!["pending", "confirmed", "paid"].includes(r.status))
+      throw new Error("This booking has already ended.");
+    const { cleanRefund } = await import("./direct-cancel");
+    try {
+      return await cancelReservation(db, r, {
+        refundPence: cleanRefund(data.refundPence, r),
+        by: "host",
+      });
+    } catch (e) {
+      const { stripeFailure } = await import("./stripe-identity");
+      throw stripeFailure(e, "The refund");
+    }
+  });
+
+/** The host has paid back a bank or cash refund. */
+export const markRefundDone = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as unknown as Loose;
+    const { error } = await sb
+      .from("direct_reservations")
+      .update({ refund_status: "done" })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /** The guest's confirmation page: their booking, how to pay (bank details for a transfer), and its state. */
 export const getReservation = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ token: accessToken }).parse(d))
@@ -642,7 +812,7 @@ export const getReservation = createServerFn({ method: "GET" })
     const { data: r } = await db
       .from("direct_reservations")
       .select(
-        "*, rooms(display_name, public_title), properties(name, short_code, country_code, host_id, theme_config, hosts(business_name, contact_email, contact_phone))",
+        "*, rooms(display_name, public_title), properties(name, short_code, country_code, host_id, theme_config, timezone, hosts(business_name, contact_email, contact_phone))",
       )
       .eq("access_token", data.token)
       .maybeSingle();
@@ -670,8 +840,12 @@ export const getReservation = createServerFn({ method: "GET" })
       .select("kind, rendered_text, signed_at")
       .eq("reservation_id", r.id)
       .order("kind", { ascending: false });
+    const { cancelPolicy } = await import("./direct-cancel");
     return {
       found: true as const,
+      cancel: cancelPolicy(r, todayFor(r.properties?.timezone)),
+      refundPence: (r.refund_pence as number | null) ?? 0,
+      refundStatus: (r.refund_status as "none" | "done" | "to_do" | null) ?? null,
       agreements: ((agreed ?? []) as any[]).map((a) => ({
         kind: a.kind as "terms" | "licence",
         text: a.rendered_text as string,

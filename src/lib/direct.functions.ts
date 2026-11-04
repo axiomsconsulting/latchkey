@@ -562,6 +562,8 @@ export const listDirect = createServerFn({ method: "GET" })
         withdraw_token: string;
       }>,
       reservations: (reservations.error ? [] : (reservations.data ?? [])) as Array<{
+        refund_pence?: number | null;
+        refund_status?: "none" | "done" | "to_do" | null;
         id: string;
         property_id: string;
         booking_id: string | null;
