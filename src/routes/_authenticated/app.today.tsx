@@ -37,6 +37,7 @@ import {
   MessagesSquare,
   Users,
   Wallet,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -1680,27 +1681,34 @@ function AlertsPanel() {
   const alerts = useAlerts();
   const mark = useServerFn(markAlertRead);
   const qc = useQueryClient();
-  const items = alerts.data?.alerts ?? [];
-  if (items.length === 0) return null;
-  return (
-    <section
-      role="alert"
-      className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4"
-    >
+  const all = alerts.data?.alerts ?? [];
+  // A guest checking in is good news, so it gets its own calm list.
+  const arrived = all.filter((a) => a.kind === "checked_in");
+  const items = all.filter((a) => a.kind !== "checked_in");
+  const dismiss = async (id: string) => {
+    try {
+      await mark({ data: { id } });
+      await qc.invalidateQueries({ queryKey: ["alerts"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    }
+  };
+  const good = arrived.length ? (
+    <section role="status" className="rounded-2xl border border-success/40 bg-success/10 p-4">
       <h2 className="flex items-center gap-2 text-lg">
-        <AlertTriangle className="size-5 text-destructive" /> {alertCopy.title}
+        <ShieldCheck className="size-5 text-success" /> {alertCopy.checkedInTitle}
       </h2>
       <ul className="mt-3 space-y-2">
-        {items.map((a) => (
+        {arrived.map((a) => (
           <li
             key={a.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface p-3 text-sm"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-card p-3"
           >
             <span className="min-w-0 flex-1">
-              {(a as { booking_id?: string | null }).booking_id ? (
+              {a.booking_id ? (
                 <Link
                   to="/app/bookings"
-                  search={{ guest: (a as { booking_id: string }).booking_id }}
+                  search={{ guest: a.booking_id }}
                   className="hover:underline"
                 >
                   {a.message}
@@ -1710,23 +1718,63 @@ function AlertsPanel() {
               )}
               <span className="block text-xs text-muted-foreground">{clock(a.created_at)}</span>
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                try {
-                  await mark({ data: { id: a.id } });
-                  await qc.invalidateQueries({ queryKey: ["alerts"] });
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : common.errorBody);
-                }
-              }}
-            >
+            <Button variant="outline" size="sm" onClick={() => void dismiss(a.id)}>
               {alertCopy.dismiss}
             </Button>
           </li>
         ))}
       </ul>
     </section>
+  ) : null;
+  if (items.length === 0) return good;
+  return (
+    <>
+      {good}
+      <section
+        role="alert"
+        className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4"
+      >
+        <h2 className="flex items-center gap-2 text-lg">
+          <AlertTriangle className="size-5 text-destructive" /> {alertCopy.title}
+        </h2>
+        <ul className="mt-3 space-y-2">
+          {items.map((a) => (
+            <li
+              key={a.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface p-3 text-sm"
+            >
+              <span className="min-w-0 flex-1">
+                {(a as { booking_id?: string | null }).booking_id ? (
+                  <Link
+                    to="/app/bookings"
+                    search={{ guest: (a as { booking_id: string }).booking_id }}
+                    className="hover:underline"
+                  >
+                    {a.message}
+                  </Link>
+                ) : (
+                  a.message
+                )}
+                <span className="block text-xs text-muted-foreground">{clock(a.created_at)}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await mark({ data: { id: a.id } });
+                    await qc.invalidateQueries({ queryKey: ["alerts"] });
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : common.errorBody);
+                  }
+                }}
+              >
+                {alertCopy.dismiss}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
   );
 }

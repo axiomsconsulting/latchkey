@@ -18,6 +18,8 @@ export type ListBooking = {
   guest_count?: number | null;
   stay_amount_pence?: number | null;
   notes?: string | null;
+  property_id?: string | null;
+  id_check_status?: string | null;
 };
 
 /** Where a stay sits for the host, in the order they care about. */
@@ -227,4 +229,44 @@ export function stayDates(checkIn: string, checkOut: string, today: string): str
   if (a.y === b.y && a.m === b.m)
     return `${a.dow} ${a.day} – ${b.dow} ${b.day} ${MONTH[b.m]}${yearB}`;
   return `${a.dow} ${a.day} ${MONTH[a.m]}${yearA} – ${b.dow} ${b.day} ${MONTH[b.m]}${yearB}`;
+}
+
+/* ---------- how a guest's check-in went ---------- */
+
+export type CheckInMark = { tone: "ok" | "warn" | "bad" | "none"; word: string } | null;
+
+/** What the ID column shows for a stay, from the check result kept on the booking. */
+export function checkInMark(status: string | null | undefined): CheckInMark {
+  switch (status) {
+    case "matched":
+      return { tone: "ok", word: "ID matches the booking" };
+    case "id_read":
+      return { tone: "ok", word: "ID checked" };
+    case "partial":
+      return { tone: "warn", word: "ID only partly matches the booking" };
+    case "photo_only":
+      return { tone: "warn", word: "ID photo kept, couldn't be read: please check it" };
+    case "not_matched":
+      return { tone: "bad", word: "ID doesn't match the booking" };
+    case "last4":
+      return { tone: "none", word: "Checked in with a code, no new ID photo" };
+    case "self_declared":
+      return { tone: "none", word: "Checked in without an ID" };
+    default:
+      return null;
+  }
+}
+
+/** The message for Today, only when the guest checked in with an ID that passed. */
+export function checkedInMessage(o: {
+  name: string | null;
+  room: string | null;
+  status: string | null;
+  returning: boolean;
+}): string | null {
+  const ok = o.status === "matched" || o.status === "id_read" || o.returning;
+  if (!ok) return null;
+  const who = o.name?.trim() || "A guest";
+  const where = o.room ? ` to ${o.room}` : "";
+  return `${who} checked in${where}. ${o.returning ? "ID checked on an earlier stay." : "ID checked."}`;
 }

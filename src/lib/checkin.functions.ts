@@ -4,6 +4,7 @@
  * validated, rate-limited per device, and only ever returns a first name.
  */
 
+import { checkedInMessage } from "./booking-list";
 import { createServerFn } from "@tanstack/react-start";
 import { withGroup } from "./group-brand.server";
 import { z } from "zod";
@@ -1093,6 +1094,41 @@ async function sessionContext(
 }
 
 type Ctx = Awaited<ReturnType<typeof sessionContext>>;
+
+/** A guest who checked in with their ID: a calm message on Today and in the bell, with no push or text. */
+async function tellHostCheckedIn(ctx: Ctx, room: string | null) {
+  if (isTour(ctx.property)) return;
+  const { data: row } = await ctx.db
+    .from("bookings")
+    .select("id_check_status, guest_full_name")
+    .eq("id", ctx.booking.id)
+    .maybeSingle();
+  const { data: fresh } = await ctx.db
+    .from("checkin_sessions")
+    .select("verified_method")
+    .eq("id", ctx.session.id)
+    .maybeSingle();
+  const message = checkedInMessage({
+    name: row?.guest_full_name ?? null,
+    room,
+    status: row?.id_check_status ?? null,
+    returning: fresh?.verified_method === "returning",
+  });
+  if (!message) return;
+  await ctx.db
+    .from("host_alerts")
+    .insert({
+      host_id: ctx.property.host_id,
+      property_id: ctx.property.id,
+      booking_id: ctx.booking.id,
+      kind: "checked_in",
+      message,
+    })
+    .then(
+      () => {},
+      () => {},
+    );
+}
 
 /** Their earlier passed ID check applies to this stay (the host's switch, returning-trust.ts). Never on the tour. */
 async function knownGuest(ctx: Ctx) {
@@ -2187,7 +2223,8 @@ export const completeCheckIn = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token }).parse(d))
   .handler(async ({ data }) => {
     const { newToken } = await srv();
-    const { db, session, booking } = await sessionContext(data.token);
+    const ctx = await sessionContext(data.token);
+    const { db, session, booking } = ctx;
     if (!session.verified_method) throw new Error("Please finish the check-in steps first.");
 
     const { data: room } = booking.room_id
@@ -2208,6 +2245,7 @@ export const completeCheckIn = createServerFn({ method: "POST" })
         .from("presence_log")
         .insert({ booking_id: booking.id, event: "arrived", source: "self_check_in" });
       await db.from("checkin_sessions").update({ completed_at: now }).eq("id", session.id);
+      await tellHostCheckedIn(ctx, room?.display_name ?? null);
     }
 
     const stay = newToken();

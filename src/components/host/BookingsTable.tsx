@@ -1,3 +1,8 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Shield, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
+import { getCheckInMarks } from "@/lib/guests.functions";
 import { ArrowDown, ArrowUp, ChevronDown, Search } from "lucide-react";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
@@ -28,6 +33,7 @@ import {
   type ListFilters,
   type SortKey,
   type StayGroup,
+  checkInMark,
 } from "@/lib/booking-list";
 import { platformKey, type Site } from "@/lib/booking-sites";
 import { formatUkDate, stayState } from "@/lib/dates";
@@ -216,6 +222,72 @@ function StayCodes({ b }: { b: ListBooking }) {
   );
 }
 
+/**
+ * How a stay's check-in went: the guest's face photo in a circle when there is one, with a tick
+ * if their ID passed, otherwise a shield. Never the ID photo. Past the host's keep days only the
+ * shield remains, since the result stays on the booking.
+ */
+function CheckInBadge({
+  status,
+  mark,
+}: {
+  status: string | null | undefined;
+  mark: { faceUrl: string | null; idsChecked: number } | undefined;
+}) {
+  const [broken, setBroken] = useState(false);
+  const verdict = checkInMark(status);
+  const face = !broken ? (mark?.faceUrl ?? null) : null;
+  if (!verdict && !face) return null;
+  const tone = verdict?.tone ?? "none";
+  const colour =
+    tone === "ok"
+      ? "text-success"
+      : tone === "warn"
+        ? "text-amber-600"
+        : tone === "bad"
+          ? "text-destructive"
+          : "text-muted-foreground";
+  const Icon =
+    tone === "ok" ? ShieldCheck : tone === "warn" ? ShieldAlert : tone === "bad" ? ShieldX : Shield;
+  const label = [
+    verdict?.word,
+    (mark?.idsChecked ?? 0) > 1 ? copy.idsChecked(mark!.idsChecked) : null,
+    face ? copy.facePhotoTaken : null,
+  ]
+    .filter(Boolean)
+    .join(". ");
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          aria-label={label}
+          className="relative inline-flex shrink-0 align-middle"
+        >
+          {face ? (
+            <>
+              <img
+                src={face}
+                alt=""
+                onError={() => setBroken(true)}
+                className="size-9 rounded-full object-cover ring-2 ring-border"
+              />
+              {verdict ? (
+                <span className="absolute -bottom-1 -right-1 grid size-4 place-items-center rounded-full bg-card">
+                  <Icon className={cn("size-3.5", colour)} aria-hidden />
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <Icon className={cn("size-5", colour)} aria-hidden />
+          )}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 const COLUMNS: SortKey[] = ["guest", "room", "checkIn", "platform", "status", "amount"];
 
 /**
@@ -253,6 +325,17 @@ export function BookingsTable({
   onToggle: (id: string) => void;
   onOpen: (id: string) => void;
 }) {
+  // How each stay's check-in went; the links to face photos last 10 minutes.
+  const marksFn = useServerFn(getCheckInMarks);
+  const propertyIds = [
+    ...new Set(rows.map((r) => r.property_id).filter(Boolean)),
+  ].sort() as string[];
+  const marks = useQuery({
+    queryKey: ["checkin-marks", propertyIds.join()],
+    enabled: propertyIds.length > 0,
+    refetchInterval: 8 * 60_000,
+    queryFn: () => marksFn({ data: { propertyIds: propertyIds.slice(0, 50) } }),
+  });
   if (rows.length === 0)
     return <div className="card-soft p-8 text-center text-muted-foreground">{copy.nothing}</div>;
   const roomName = (id: string | null) =>
@@ -301,7 +384,6 @@ export function BookingsTable({
     </span>
   );
   const grouped = sort.key === "smart";
-
   function header(key: SortKey) {
     const active = sort.key === key;
     const next = active && sort.dir === "asc" ? "desc" : "asc";
@@ -353,7 +435,9 @@ export function BookingsTable({
           <thead className="border-b border-border text-xs text-muted-foreground">
             <tr>
               {selecting ? <th className="w-10 px-3" /> : null}
-              {COLUMNS.map(header)}
+              {header(COLUMNS[0]!)}
+              <th className="px-1 py-2 text-center font-medium">{copy.idColumn}</th>
+              {COLUMNS.slice(1).map(header)}
             </tr>
           </thead>
           <tbody>
@@ -361,7 +445,7 @@ export function BookingsTable({
               <BookingRowGroup
                 key={b.id}
                 heading={heading}
-                span={COLUMNS.length + (selecting ? 1 : 0)}
+                span={COLUMNS.length + 1 + (selecting ? 1 : 0)}
               >
                 <tr
                   id={`stay-${b.id}`}
@@ -382,6 +466,9 @@ export function BookingsTable({
                     </td>
                   ) : null}
                   <td className="w-[34%] min-w-[13rem] max-w-0 px-2 py-2">{guestCell(b)}</td>
+                  <td className="px-1 py-2 text-center">
+                    <CheckInBadge status={b.id_check_status} mark={marks.data?.marks[b.id]} />
+                  </td>
                   <td className="px-3 py-2">
                     {roomName(b.room_id)}
                     <StayCodes b={b} />
@@ -447,6 +534,7 @@ export function BookingsTable({
                 label={site(b)?.label ?? b.channel}
                 size={28}
               />
+              <CheckInBadge status={b.id_check_status} mark={marks.data?.marks[b.id]} />
               <div className="min-w-0 flex-1">
                 {guestCell(b)}
                 <button

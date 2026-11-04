@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  checkInMark,
+  checkedInMessage,
   DEFAULT_FILTERS,
   filterBookings,
   readFilters,
@@ -189,5 +191,33 @@ describe("compact stay lines", () => {
     const echo = b("echo", { status: "cancelled", mirror_of: "x" });
     expect(liftedBlock(lifted)).toBe(true);
     expect(stayGroup(echo, today)).toBe("cancelled");
+  });
+});
+
+describe("how a check-in went", () => {
+  it("marks each result", () => {
+    expect(checkInMark("matched")?.tone).toBe("ok");
+    expect(checkInMark("id_read")?.tone).toBe("ok");
+    expect(checkInMark("partial")?.tone).toBe("warn");
+    expect(checkInMark("photo_only")?.tone).toBe("warn");
+    expect(checkInMark("not_matched")?.tone).toBe("bad");
+    expect(checkInMark("last4")?.tone).toBe("none");
+    expect(checkInMark("self_declared")?.tone).toBe("none");
+    expect(checkInMark(null)).toBeNull();
+  });
+  it("tells the host only about a passed ID", () => {
+    const base = { name: "Anna Nowak", room: "Suite 1", returning: false };
+    expect(checkedInMessage({ ...base, status: "matched" })).toBe(
+      "Anna Nowak checked in to Suite 1. ID checked.",
+    );
+    expect(checkedInMessage({ ...base, status: "last4", returning: true })).toBe(
+      "Anna Nowak checked in to Suite 1. ID checked on an earlier stay.",
+    );
+    expect(checkedInMessage({ ...base, status: "last4" })).toBeNull();
+    expect(checkedInMessage({ ...base, status: "not_matched" })).toBeNull();
+    expect(checkedInMessage({ ...base, status: "self_declared" })).toBeNull();
+    expect(checkedInMessage({ name: null, room: null, status: "matched", returning: false })).toBe(
+      "A guest checked in. ID checked.",
+    );
   });
 });

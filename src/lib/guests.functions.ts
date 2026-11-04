@@ -37,6 +37,47 @@ async function requireWriteForBookings(
 }
 
 /** The guest card: the stay, its room and platform, messages, requests and activity. */
+/**
+ * For the bookings list: how many IDs were checked on each stay and a short-lived link to the
+ * lead guest's face photo. Never an ID photo. Rows go when the host's keep days end, and only
+ * people who may see private records get any.
+ */
+export const getCheckInMarks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyIds: z.array(uuid).max(50) }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!data.propertyIds.length) return { marks: {} };
+    const { data: rows } = await context.supabase
+      .from("guest_ids")
+      .select("booking_id, position, kind, id_checked, face_photo_path")
+      .in("property_id", data.propertyIds)
+      .order("created_at", { ascending: false })
+      .limit(600);
+    const list = (rows ?? []) as Array<{
+      booking_id: string;
+      position: number;
+      id_checked: boolean;
+      face_photo_path: string | null;
+    }>;
+    const { signGuestPhotos } = await import("./checkin.server");
+    const lead = (id: string) =>
+      list
+        .filter((r) => r.booking_id === id && r.face_photo_path)
+        .sort((a, b) => a.position - b.position)[0]?.face_photo_path ?? null;
+    const ids = [...new Set(list.map((r) => r.booking_id))];
+    const faces = ids.map(lead).filter((x): x is string => !!x);
+    const signed = await signGuestPhotos(faces);
+    const marks: Record<string, { faceUrl: string | null; idsChecked: number }> = {};
+    for (const id of ids) {
+      const face = lead(id);
+      marks[id] = {
+        faceUrl: face ? (signed[face] ?? null) : null,
+        idsChecked: list.filter((r) => r.booking_id === id && r.id_checked).length,
+      };
+    }
+    return { marks };
+  });
+
 export const getGuestDetails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ bookingId: uuid }).parse(d))
