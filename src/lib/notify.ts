@@ -22,6 +22,7 @@ export type AlertKind =
   | "room_check"
   | "room_needed"
   | "system_update"
+  | "checked_in"
   | "test";
 
 /** Kinds that need the host now: the only ones sent by SMS unless the host asks for everything. */
@@ -87,6 +88,7 @@ const TITLES: Record<AlertKind, string> = {
   room_check: "Please check this room",
   room_needed: "A guest needs a room",
   system_update: "Latchkey update",
+  checked_in: "Guest checked in",
   test: "Test alert",
 };
 

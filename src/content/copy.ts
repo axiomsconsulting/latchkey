@@ -1635,6 +1635,7 @@ export const doorTabletsCopy = branded({
 
 export const alerts = branded({
   title: "Needs your attention",
+  checkedInTitle: "Checked in",
   dismiss: "Mark as seen",
 });
 
@@ -4267,6 +4268,9 @@ export const bookingTable = branded({
     cancelled: "Cancelled",
     closed: "Closed nights",
   } as Record<string, string>,
+  idColumn: "ID",
+  idsChecked: (n: number) => `${n} IDs checked`,
+  facePhotoTaken: "Face photo taken",
   cols: {
     guest: "Guest",
     room: "Room",
