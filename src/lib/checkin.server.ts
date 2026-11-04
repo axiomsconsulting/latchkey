@@ -161,6 +161,7 @@ export async function raiseAlert(input: {
     | "party"
     | "handover"
     | "direct_enquiry"
+    | "direct_cancelled"
     | "tablet_joined"
     | "room_check"
     | "room_needed";

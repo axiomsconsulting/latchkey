@@ -62,6 +62,8 @@ export async function stripeCall<T>(
   method: "GET" | "POST" | "DELETE" = body ? "POST" : "GET",
   /** A host's connected account: the call is made on their behalf. */
   account?: string | null,
+  /** The same key never does it twice (a refund, say). */
+  idempotencyKey?: string,
 ): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     method,
@@ -69,6 +71,7 @@ export async function stripeCall<T>(
       Authorization: `Bearer ${stripeKey()}`,
       "Content-Type": "application/x-www-form-urlencoded",
       ...(account ? { "Stripe-Account": account } : {}),
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
     ...(body && method === "POST" ? { body: form(body).toString() } : {}),
     signal: AbortSignal.timeout(15_000),

@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.119.0",
+    date: "2026-11-04",
+    title: "Cancel and refund direct stays",
+    items: [
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Guests can cancel their own direct stay from their booking page, by the rate they booked: within free cancellation, a card payment goes straight back. The room becomes free at once, and you get an alert.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "On Direct stays, cancelling a booking now starts from what the policy gives back, with the amount yours to change. Card refunds go through Stripe; bank or cash refunds stay on the list until you say they're paid.",
+      },
+    ],
+  },
+  {
     version: "0.118.0",
     date: "2026-11-04",
     title: "Smart Screensaver",

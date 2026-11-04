@@ -1,3 +1,5 @@
+import { cancelMyReservation } from "@/lib/direct-booking.functions";
+import type { CancelPolicy } from "@/lib/direct-cancel";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,6 +10,7 @@ import {
   Copy,
   FileSignature,
   Landmark,
+  Loader2,
   Mail,
   Phone,
   Printer,
@@ -201,6 +204,23 @@ function ReservationPage() {
           </section>
         ) : null}
 
+        {r.status === "cancelled" && r.refundPence > 0 ? (
+          <p className="card-soft p-4 text-sm">
+            {r.refundStatus === "to_do"
+              ? copy.refundFromHost(money(r.refundPence, r.currency), r.business)
+              : copy.refundDone(money(r.refundPence, r.currency))}
+          </p>
+        ) : null}
+
+        <CancelBooking
+          token={token}
+          cancel={r.cancel}
+          currency={r.currency}
+          total={r.totalPence}
+          business={r.business}
+          freeUntil={r.freeCancelUntil}
+        />
+
         <section className="flex flex-wrap gap-2">
           {r.contactEmail ? (
             <Button asChild variant="outline">
@@ -234,6 +254,81 @@ function ReservationPage() {
         <p className="text-xs text-muted-foreground">{copy.keepLink}</p>
       </main>
     </GuestFrame>
+  );
+}
+
+/** Cancelling from the booking page, saying plainly what happens to the money first. */
+function CancelBooking({
+  token,
+  cancel,
+  currency,
+  total,
+  business,
+  freeUntil,
+}: {
+  token: string;
+  cancel: CancelPolicy;
+  currency: string;
+  total: number;
+  business: string;
+  freeUntil: string | null;
+}) {
+  const fn = useServerFn(cancelMyReservation);
+  const router = useRouter();
+  const [sure, setSure] = useState(false);
+  const [busy, setBusy] = useState(false);
+  if (!cancel.open) return null;
+  if (!cancel.guestCan)
+    return (
+      <section className="card-soft p-5 text-sm">
+        <h2 className="text-xl">{copy.cancelTitle}</h2>
+        <p className="mt-1 text-muted-foreground">{copy.cancelAskHost(business)}</p>
+      </section>
+    );
+  const refund = money(cancel.refundPence, currency);
+  const says = cancel.free
+    ? cancel.refund === "card"
+      ? copy.cancelFreeCard(refund)
+      : cancel.refund === "by_host"
+        ? copy.cancelFreeHost(refund, business)
+        : copy.cancelFreeUnpaid
+    : copy.cancelNoRefund(money(total, currency));
+  async function go() {
+    setBusy(true);
+    try {
+      const res = await fn({ data: { token, expectRefund: cancel.refundPence } });
+      if (res.changed) toast.info(copy.cancelChanged);
+      await router.invalidate();
+      setSure(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : copy.cancelFailed);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="card-soft space-y-3 p-5">
+      <h2 className="text-xl">{copy.cancelTitle}</h2>
+      <p className="text-sm">
+        {freeUntil && cancel.free ? `${copy.cancelFreeUntil(formatUkDate(freeUntil))} ` : ""}
+        {says}
+      </p>
+      {sure ? (
+        <div className="flex flex-wrap gap-2">
+          <Button variant="destructive" disabled={busy} onClick={() => void go()}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null}{" "}
+            {cancel.refundPence > 0 ? copy.cancelDoRefund(refund) : copy.cancelDo}
+          </Button>
+          <Button variant="ghost" disabled={busy} onClick={() => setSure(false)}>
+            {copy.cancelKeep}
+          </Button>
+        </div>
+      ) : (
+        <Button variant="outline" onClick={() => setSure(true)}>
+          {copy.cancelOpen}
+        </Button>
+      )}
+    </section>
   );
 }
 

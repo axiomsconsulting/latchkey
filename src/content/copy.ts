@@ -4902,6 +4902,26 @@ export const reportsCopy = branded({
 });
 
 export const reservationCopy = branded({
+  cancelTitle: "Cancel this booking",
+  cancelOpen: "Cancel this booking",
+  cancelDo: "Yes, cancel and release the room",
+  cancelDoRefund: (amount: string) => `Yes, cancel and refund ${amount}`,
+  cancelKeep: "Keep my booking",
+  cancelFreeUntil: (date: string) => `Free cancellation until ${date}.`,
+  cancelFreeCard: (amount: string) =>
+    `${amount} goes back to the card you paid with, usually within 5 to 10 working days.`,
+  cancelFreeHost: (amount: string, business: string) =>
+    `${business} will pay your ${amount} back to you directly.`,
+  cancelFreeUnpaid: "You haven't paid anything, so there's nothing more to do.",
+  cancelNoRefund: (amount: string) =>
+    `Under the rate you booked, your ${amount} isn't refunded if you cancel, but the room goes back on sale.`,
+  cancelAskHost: (business: string) =>
+    `Please contact ${business} to change or cancel this booking.`,
+  cancelChanged: "The free cancellation date has just passed. Please check what happens now.",
+  cancelFailed: "We couldn't cancel this just now. Please contact the property.",
+  refundDone: (amount: string) => `${amount} has been refunded to your card.`,
+  refundFromHost: (amount: string, business: string) =>
+    `${business} will pay your ${amount} back to you directly.`,
   pageTitle: "Your booking",
   notFound:
     "We couldn't find that booking. Please check the link in your email, or contact the property.",
@@ -5245,6 +5265,27 @@ export const directCopy = branded({
   openBooking: "Open the booking",
   markPaid: "Mark paid",
   markedPaid: "Marked as paid.",
+  cancelTitle: (name: string) => `Cancel ${name}'s booking`,
+  cancelPolicyFree: "This is within the free cancellation period, so what they paid goes back.",
+  cancelPolicyLate:
+    "The free cancellation date has passed, so the rate doesn't give anything back.",
+  cancelPolicyNonRef: "This is a non-refundable rate, so nothing goes back.",
+  cancelRoomFree: "The room becomes free straight away.",
+  refundLabel: (total: string) => `Refund (paid: ${total})`,
+  refundAll: "All of it",
+  refundNone: "Nothing",
+  refundByCard: "This goes back to their card straight away through Stripe.",
+  refundByYou:
+    "They didn't pay by card, so you pay this back yourself. It'll stay on the list until you say it's done.",
+  refundNothing: "Nothing goes back.",
+  notPaidYet: "They haven't paid yet, so there's nothing to refund.",
+  cancelKeep: "Keep the booking",
+  cancelAndRefund: (amount: string) => `Cancel and refund ${amount}`,
+  cancelNoRefundBtn: "Cancel with no refund",
+  refundToDo: (amount: string) => `${amount} for you to pay back`,
+  refundDone: (amount: string) => `${amount} refunded`,
+  refundMarkDone: "I've paid the refund",
+  refundMarked: "Refund marked as paid back.",
   cancel: "Cancel",
   cancelConfirm:
     "Cancel this booking? The room is freed. Any refund for a card payment is made in your Stripe account.",
