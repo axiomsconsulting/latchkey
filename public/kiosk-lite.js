@@ -959,8 +959,9 @@
     header();
     var idle = new Date().getTime() - lastTouch;
     var busy = cards().length || (state && state.welcome) || overlay;
-    if (!saverOn && !busy && idle >= saverMs()) saver(true);
-    if (saverOn && busy && !overlay) saver(false);
+    var awake = rest() && rest().show === "awake";
+    if (!saverOn && !busy && !awake && idle >= saverMs()) saver(true);
+    if (saverOn && ((busy && !overlay) || awake)) saver(false);
     // Left open and walked away from: the panels close by themselves.
     if (overlay && overlay !== "express" && idle >= resetMs()) hide();
     // Someone said "check in" from a card, then left: the cards come back.

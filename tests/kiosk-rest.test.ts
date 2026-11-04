@@ -45,7 +45,7 @@ describe("kiosk at rest settings", () => {
         otherwise: "blank",
         clockQr: true,
       }),
-    ).toEqual({
+    ).toMatchObject({
       nightLight: true,
       nightWhen: "quiet",
       mode: "aurora",
@@ -87,7 +87,7 @@ describe("kiosk at rest settings", () => {
     expect(restNow(on, false)).toBe("night");
     const quiet = normaliseRest({ nightLight: true, nightWhen: "quiet", otherwise: "blank" });
     expect(restNow(quiet, true)).toBe("night");
-    expect(restNow(quiet, false)).toBe("blank");
+    expect(restNow(quiet, false)).toBe("awake");
     expect(restNow(normaliseRest({}), true)).toBe("clock");
     expect(restNow(normaliseRest({ otherwise: "blank" }), true)).toBe("blank");
   });

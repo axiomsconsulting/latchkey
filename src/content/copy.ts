@@ -1100,6 +1100,31 @@ export const common = branded({
 export const kioskRestCopy = branded({
   title: "Screen saver",
   body: "What the door tablet shows when nobody is using it. Any touch wakes it, ready to check in.",
+  smart: "Smart Screensaver",
+  smartHelp:
+    "By day, when nobody's using the tablet, it shows a larger logo, Check in with a QR code, and the time and date. Today's guest cards stay up with the time and date above them. When this is off, the tablet stays on its usual screen by day.",
+  idle: "Rest after nobody's touched it for",
+  idleDefault: "Latchkey's usual time",
+  idleChoice: (m: number) => `${m} minutes`,
+  nightTitle: "Night look",
+  nightHelp: (start: string, end: string) =>
+    `The clock, night light or dark screen only show at night: during quiet hours (${start} to ${end}) and between the times below.`,
+  lastCheckIn: "Last check-in",
+  firstCheckOut: "First check-out",
+  blankMidnight: "Empty means midnight",
+  blank5am: "Empty means 5am",
+  wakeTitle: "Wake when someone comes up",
+  wakeHelp:
+    "As well as a touch. It only looks at a very small picture, or how loud the room is, on the tablet itself: nothing is kept or sent, and it stops as soon as the tablet wakes. Guests can still see the camera in use, so mention it in your door notice.",
+  wakeOptions: {
+    off: "Touch only",
+    camera: "Movement (front camera)",
+    sound: "Sound (microphone)",
+  },
+  wakeAllow:
+    "Allow it once on the tablet: open the host menu there (three taps top right) and choose Allow. Older tablets on Lite or Enhanced can't do this and wake by touch. Keeps the tablet a little busier, so keep it plugged in.",
+  previewNight: "At night",
+  previewDayTime: "By day",
   nightLight: "Night light",
   nightLightHelp:
     "Bright, softly changing colours that light the hallway at night, instead of the clock screensaver. A fine shimmer keeps every pixel changing, so nothing burns in.",
@@ -1145,6 +1170,8 @@ export const kioskRestCopy = branded({
     night: "Night light",
     clock: "Clock screensaver",
     blank: "Screen off",
+    day: "Logo, Check in and QR",
+    awake: "The usual screen",
   } as Record<string, string>,
   bandsNote:
     "On the kiosk, slide the left edge for brightness and the right edge for colour depth.",
@@ -1877,6 +1904,10 @@ export const guest = branded({
   roomLine: (room: string, title: string | null) =>
     `You're in ${room}${title ? `, ${title}` : ""}.`,
   noRoom: "Your host will show you to your room.",
+  dayScreenCheckIn: "Check in",
+  dayScreenQr: "Or scan to use your own phone",
+  dayScreenWake: "Tap to use this screen",
+  kioskAllowMic: "Allow microphone on this tablet (for waking it)",
   heldTitle: (name: string) => (name ? `You're registered, ${name}` : "You're registered"),
   heldLine:
     "Thank you. Your host has been told and will confirm your room shortly. Your link below opens your stay guide as soon as they have.",

@@ -1,24 +1,34 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Clock3, Moon, MonitorOff, QrCode } from "lucide-react";
+import { Clock3, KeyRound, Moon, MonitorOff, QrCode, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { useQrImage } from "@/components/guest/CheckInQr";
 import { NightGlow } from "@/components/guest/KioskNightLight";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { common, kioskRestCopy as copy } from "@/content/copy";
+import { common, guest, kioskRestCopy as copy } from "@/content/copy";
 import { saveKioskRest } from "@/lib/kiosk.functions";
 import { pingKiosk } from "@/lib/kiosk-ping";
 import {
   DEFAULT_NIGHT_LOOK,
+  IDLE_CHOICES,
   NIGHT_MODES,
   NIGHT_PALETTES,
   NIGHT_PALETTE_KEYS,
   NIGHT_SPEED,
+  WAKE_BY,
   normaliseRest,
   restNow,
   type KioskRest,
@@ -107,6 +117,103 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
 
       <div className="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_14rem]">
         <div className="space-y-4">
+          <div className="space-y-3 rounded-xl border border-border p-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <Label htmlFor="kr-smart" className="flex items-center gap-2 text-base">
+                  <Sparkles className="size-4 text-primary" /> {copy.smart}
+                </Label>
+                <p className="text-sm text-muted-foreground">{copy.smartHelp}</p>
+              </div>
+              <Switch
+                id="kr-smart"
+                checked={rest.smart}
+                onCheckedChange={(v) => set({ smart: v })}
+              />
+            </div>
+            {rest.smart ? (
+              <fieldset className="space-y-1.5">
+                <legend className="text-sm font-medium">{copy.wakeTitle}</legend>
+                <div role="radiogroup" className="grid gap-2 sm:grid-cols-3">
+                  {WAKE_BY.map((w) => (
+                    <button
+                      key={w}
+                      type="button"
+                      role="radio"
+                      aria-checked={rest.wakeBy === w}
+                      onClick={() => set({ wakeBy: w })}
+                      className={cn(tile(rest.wakeBy === w), "p-2.5 font-medium")}
+                    >
+                      {copy.wakeOptions[w]}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">{copy.wakeHelp}</p>
+                {rest.wakeBy !== "off" ? (
+                  <p className="text-xs text-muted-foreground">{copy.wakeAllow}</p>
+                ) : null}
+              </fieldset>
+            ) : null}
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-border p-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-base font-medium">
+                <Moon className="size-4 text-primary" /> {copy.nightTitle}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {copy.nightHelp(quiet.start, quiet.end)}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="kr-last" className="text-xs">
+                  {copy.lastCheckIn}
+                </Label>
+                <Input
+                  id="kr-last"
+                  type="time"
+                  className="w-36"
+                  value={rest.lastCheckIn ?? ""}
+                  onChange={(e) => set({ lastCheckIn: e.target.value || null })}
+                />
+                <p className="text-xs text-muted-foreground">{copy.blankMidnight}</p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="kr-first" className="text-xs">
+                  {copy.firstCheckOut}
+                </Label>
+                <Input
+                  id="kr-first"
+                  type="time"
+                  className="w-36"
+                  value={rest.firstCheckOut ?? ""}
+                  onChange={(e) => set({ firstCheckOut: e.target.value || null })}
+                />
+                <p className="text-xs text-muted-foreground">{copy.blank5am}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">{copy.idle}</Label>
+                <Select
+                  value={String(rest.idleMinutes ?? "")}
+                  onValueChange={(v) => set({ idleMinutes: v === "default" ? null : Number(v) })}
+                >
+                  <SelectTrigger className="h-10 w-48" aria-label={copy.idle}>
+                    <SelectValue placeholder={copy.idleDefault} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">{copy.idleDefault}</SelectItem>
+                    {IDLE_CHOICES.map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        {copy.idleChoice(m)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-3">
             <div>
               <Label htmlFor="kr-night" className="flex items-center gap-2 text-base">
@@ -282,18 +389,18 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
 
 /** What the kiosk shows at rest, in miniature; alternates every 2 s when the night light is for quiet hours only. */
 function RestPreview({ rest, shortCode }: { rest: KioskRest; shortCode: string }) {
-  const cycles = rest.nightLight && rest.nightWhen === "quiet";
-  const [inQuiet, setInQuiet] = useState(true);
+  const [atNight, setAtNight] = useState(true);
   useEffect(() => {
-    if (!cycles) return;
-    const id = window.setInterval(() => setInQuiet((q) => !q), 2000);
+    const id = window.setInterval(() => setAtNight((q) => !q), 2000);
     return () => window.clearInterval(id);
-  }, [cycles]);
-  const showing = restNow(rest, cycles ? inQuiet : true);
+  }, []);
+  const showing = restNow(rest, atNight, atNight);
   const url =
     typeof window === "undefined" ? null : `${window.location.origin}/kiosk/${shortCode}?guest=1`;
   const qr = useQrImage(
-    rest.clockQr ? url : null,
+    rest.clockQr && (showing === "night" || showing === "clock" || showing === "blank")
+      ? url
+      : null,
     showing === "night"
       ? { dark: "#000000e6", light: "#00000000" }
       : { dark: "#c8c8c8ff", light: "#00000000" },
@@ -303,7 +410,21 @@ function RestPreview({ rest, shortCode }: { rest: KioskRest; shortCode: string }
   const minute = now.getMinutes() * 6;
   return (
     <div className="space-y-1">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-black">
+      <div
+        className={cn(
+          "relative aspect-[4/3] overflow-hidden rounded-2xl border border-border",
+          showing === "day" || showing === "awake" ? "bg-background" : "bg-black",
+        )}
+      >
+        {showing === "day" ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+            <span className="absolute right-2 top-1 text-xs font-bold tabular-nums">12:30</span>
+            <KeyRound className="size-8 text-primary" aria-hidden />
+            <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
+              {guest.dayScreenCheckIn}
+            </span>
+          </div>
+        ) : null}
         {showing === "night" ? (
           <NightGlow
             rest={rest}
@@ -343,9 +464,7 @@ function RestPreview({ rest, shortCode }: { rest: KioskRest; shortCode: string }
         {qr ? <img src={qr} alt="" className="absolute bottom-2 right-2 size-12" /> : null}
       </div>
       <p className="text-center text-xs text-muted-foreground">
-        {cycles ? (inQuiet ? copy.previewQuiet : copy.previewDay) : null}
-        {cycles ? " · " : null}
-        {copy.previewShowing[showing]}
+        {atNight ? copy.previewNight : copy.previewDayTime} · {copy.previewShowing[showing]}
       </p>
     </div>
   );

@@ -1,3 +1,4 @@
+import { DigitalClockBar } from "@/components/guest/KioskDayScreen";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, DoorClosed, KeyRound, LogIn, Plane } from "lucide-react";
@@ -211,7 +212,10 @@ export function KioskGoodbyeScreen({
   bell,
   colours,
   logo,
+  clock,
 }: {
+  /** Smart Screensaver: the time and date along the top. */
+  clock?: { tz: string } | null;
   code: string;
   goodbyes: Goodbyes;
   onCheckIn: () => void;
@@ -270,6 +274,9 @@ export function KioskGoodbyeScreen({
           )}
         </h1>
         <div className="flex items-center gap-3">
+          {clock ? (
+            <DigitalClockBar tz={clock.tz} className="text-[clamp(1.5rem,4.5cqmin,3.25rem)]" />
+          ) : null}
           {pages > 1 ? (
             <span className="text-[clamp(0.9rem,2cqmin,1.25rem)] opacity-80">
               {copy.goodbyePage(page + 1, pages)}

@@ -10,6 +10,8 @@ import {
   carePattern,
   nightFrame,
   qrSpot,
+  nightFrom,
+  nightTo,
   restNow,
   type KioskRest,
 } from "@/lib/kiosk-rest";
@@ -201,5 +203,9 @@ export function RestQr({ url, on }: { url: string; on: "light" | "dark" }) {
 /** Which of the three shows at rest right now: the night light (always, or in quiet hours), the clocks, or nothing. */
 export function useRestShowing(rest: KioskRest, tz: string, quiet: { start: string; end: string }) {
   const now = useNow(30_000);
-  return restNow(rest, quietNow(now, tz, quiet.start, quiet.end).active);
+  return restNow(
+    rest,
+    quietNow(now, tz, quiet.start, quiet.end).active,
+    quietNow(now, tz, nightFrom(rest), nightTo(rest)).active,
+  );
 }

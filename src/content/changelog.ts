@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.118.0",
+    date: "2026-11-04",
+    title: "Smart Screensaver",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Smart Screensaver for door tablets: by day, when nobody's using it, a larger logo, Check in with a QR code, and the time and date. Today's guest cards stay up with the time and date above them. Switch it on in Settings → Kiosk → Screen saver.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Door tablets can wake when someone comes up, by movement or sound as well as a touch. It only compares a very small picture or a sound level on the tablet itself: nothing is kept or sent.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The clock, night light and dark screen now only show at night: during quiet hours, and between your last check-in and first check-out (midnight to 5am unless you say otherwise).",
+      },
+    ],
+  },
+  {
     version: "0.117.1",
     date: "2026-11-04",
     title: "Off now means off",

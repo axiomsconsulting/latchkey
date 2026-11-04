@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Camera } from "lucide-react";
+import { Camera, Mic } from "lucide-react";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { trackEvent } from "@/lib/track";
 import { pickUtm, type Utm } from "@/lib/attribution";
@@ -61,6 +61,8 @@ import {
 } from "@/lib/kiosk-devices.functions";
 import { useCameraPermission } from "@/hooks/use-camera-permission";
 import { screenFrom } from "@/lib/kiosk-screen";
+import { KioskDayScreen } from "@/components/guest/KioskDayScreen";
+import { useMotionWake } from "@/hooks/use-motion-wake";
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
@@ -836,7 +838,8 @@ function Kiosk() {
   const [atWelcome, setAtWelcome] = useState(true);
   // Brightness, clock size and timings: the host's own where set, else Latchkey's (super admin).
   const saverLook = useSaverLook(p.code, shared);
-  const { resetMinutes, saverMinutes, welcomeMinutes } = saverLook.defaults;
+  const { resetMinutes, welcomeMinutes } = saverLook.defaults;
+  const saverMinutes = saverLook.rest.idleMinutes ?? saverLook.defaults.saverMinutes;
   const { welcome, dismiss, reload: reloadWelcome } = useKioskWelcome(p.code, shared);
   // The welcome is put aside for this guest's go (they tapped Check in, or "Not you?"); it comes
   // back when the kiosk resets, until the guest has checked in, the host takes it off or it ends.
@@ -1020,6 +1023,26 @@ function Kiosk() {
   // The host put a card up (Show now, or its time came): it shows, even if someone had put the
   // cards aside. A check-in left half done for a while gives way to it; one in progress never does.
   const lastTouch = useRef(Date.now());
+  // By day with no Smart Screensaver the tablet stays as it is, ready to rest when night comes. A touch ends that.
+  useEffect(() => {
+    if (!saver || restShowing !== "awake") return;
+    const wake = () => setSaver(false);
+    window.addEventListener("pointerdown", wake, true);
+    window.addEventListener("keydown", wake, true);
+    return () => {
+      window.removeEventListener("pointerdown", wake, true);
+      window.removeEventListener("keydown", wake, true);
+    };
+  }, [saver, restShowing]);
+  // Smart Screensaver: walking up (or a sound) wakes it, on this tablet alone. Nothing is kept or sent.
+  useMotionWake(
+    saverLook.rest.smart && !tour ? saverLook.rest.wakeBy : "off",
+    shared && saver && restShowing !== "awake" && !welcomeUp && !goodbyeUp,
+    () => {
+      setSaver(false);
+      bump();
+    },
+  );
   useEffect(() => {
     const touched = () => {
       lastTouch.current = Date.now();
@@ -1268,7 +1291,7 @@ function Kiosk() {
               {shared && atWelcome && !saver && tablet?.cardPicker ? (
                 <KioskCardBell code={p.code} onApplied={showPicked} />
               ) : null}
-              {shared && atWelcome && !saver ? (
+              {shared && atWelcome && !saver && restShowing !== "awake" ? (
                 <button
                   type="button"
                   onClick={() => setSaver(true)}
@@ -1359,6 +1382,7 @@ function Kiosk() {
             code={p.code}
             goodbyes={goodbyes}
             colours={expressColours}
+            clock={saverLook.rest.smart ? { tz: p.timezone ?? "Europe/London" } : null}
             logo={
               <LogoMark
                 theme={p.theme}
@@ -1464,6 +1488,18 @@ function Kiosk() {
               setSaver(false);
               bump();
             }}
+            onCheckIn={() => {
+              setSaver(false);
+              bump();
+              setWelcomeStart({ version: null, n: Date.now(), source: "all" });
+            }}
+            logo={
+              <LogoMark
+                theme={p.theme}
+                name={p.name}
+                className="size-[clamp(8rem,28vmin,16rem)] text-[clamp(3rem,10vmin,6rem)]"
+              />
+            }
           />
         ) : null}
 
@@ -1501,6 +1537,23 @@ function Kiosk() {
                 <p className="text-sm text-muted-foreground">{copy.kioskAllowCameraHint}</p>
               </div>
             ) : null}
+            {!tour && saverLook.rest.smart && saverLook.rest.wakeBy === "sound" ? (
+              <div className="border-t border-border pt-3 text-center">
+                <Button
+                  variant="outline"
+                  size="touch"
+                  className="w-full"
+                  onClick={() =>
+                    void navigator.mediaDevices
+                      ?.getUserMedia({ audio: true })
+                      .then((s) => s.getTracks().forEach((t) => t.stop()))
+                      .catch(() => {})
+                  }
+                >
+                  <Mic className="size-5" aria-hidden /> {copy.kioskAllowMic}
+                </Button>
+              </div>
+            ) : null}
             <div className="flex justify-center border-t border-border pt-3">
               <InstallApp kiosk size="sm" />
             </div>
@@ -1523,6 +1576,8 @@ function KioskAtRest({
   tz,
   quiet,
   onWake,
+  onCheckIn,
+  logo,
 }: {
   name: string;
   code: string;
@@ -1530,6 +1585,8 @@ function KioskAtRest({
   tz: string;
   quiet: { start: string; end: string };
   onWake: () => void;
+  onCheckIn: () => void;
+  logo: React.ReactNode;
 }) {
   const showing = useRestShowing(saver.rest, tz, quiet);
   // The host's QR choice applies whatever shows at rest.
@@ -1537,6 +1594,21 @@ function KioskAtRest({
     saver.rest.clockQr && typeof window !== "undefined"
       ? `${window.location.origin}/kiosk/${code}?guest=1`
       : null;
+  // By day with no Smart Screensaver, nothing covers the usual screen.
+  if (showing === "awake") return null;
+  if (showing === "day")
+    return (
+      <KioskDayScreen
+        name={name}
+        tz={tz}
+        logo={logo}
+        qrUrl={
+          typeof window !== "undefined" ? `${window.location.origin}/kiosk/${code}?guest=1` : null
+        }
+        onWake={onWake}
+        onCheckIn={onCheckIn}
+      />
+    );
   if (showing === "night") return <KioskNightLight saver={saver} onWake={onWake} qrUrl={qrUrl} />;
   if (showing === "blank") return <KioskBlank onWake={onWake} qrUrl={qrUrl} />;
   return (

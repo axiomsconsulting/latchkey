@@ -67,7 +67,22 @@ export type KioskRest = {
   otherwise: "clock" | "blank";
   /** The "check in on your phone" QR code whatever shows at rest (clock, night light, screen off). Stored as clockQr. */
   clockQr: boolean;
+  /** Smart Screensaver: by day, the day screen when nobody's using the tablet. Off: it stays on its usual screen by day. */
+  smart: boolean;
+  /** The night look runs from the last check-in (null: midnight) to the first check-out (null: 5am), besides quiet hours. */
+  lastCheckIn: string | null;
+  firstCheckOut: string | null;
+  /** Minutes of nobody touching it before it rests; null follows Latchkey's default. */
+  idleMinutes: number | null;
+  /** Smart Screensaver: what wakes it as well as a touch. */
+  wakeBy: WakeBy;
 };
+
+export type WakeBy = "off" | "camera" | "sound";
+export const WAKE_BY: readonly WakeBy[] = ["off", "camera", "sound"];
+export const IDLE_CHOICES = [2, 5, 10, 15, 30, 60] as const;
+export const DEFAULT_NIGHT_FROM = "00:00";
+export const DEFAULT_NIGHT_TO = "05:00";
 
 export const DEFAULT_REST: KioskRest = {
   nightLight: false,
@@ -77,7 +92,15 @@ export const DEFAULT_REST: KioskRest = {
   speed: NIGHT_SPEED.default,
   otherwise: "clock",
   clockQr: false,
+  smart: false,
+  lastCheckIn: null,
+  firstCheckOut: null,
+  idleMinutes: null,
+  wakeBy: "off",
 };
+
+const hhmmOrNull = (v: unknown) =>
+  typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : null;
 
 const pick = <T extends string>(v: unknown, options: readonly T[], fallback: T): T =>
   typeof v === "string" && (options as readonly string[]).includes(v) ? (v as T) : fallback;
@@ -112,13 +135,32 @@ export function normaliseRest(raw: unknown): KioskRest {
     ),
     otherwise: pick(r["otherwise"], ["clock", "blank"] as const, DEFAULT_REST.otherwise),
     clockQr: r["clockQr"] === true,
+    smart: r["smart"] === true,
+    lastCheckIn: hhmmOrNull(r["lastCheckIn"]),
+    firstCheckOut: hhmmOrNull(r["firstCheckOut"]),
+    idleMinutes: (IDLE_CHOICES as readonly number[]).includes(r["idleMinutes"] as number)
+      ? (r["idleMinutes"] as number)
+      : null,
+    wakeBy: pick(r["wakeBy"], WAKE_BY, "off"),
   };
 }
 
-/** What shows at rest right now. */
-export function restNow(rest: KioskRest, quietHours: boolean): "night" | "clock" | "blank" {
-  if (rest.nightLight && (rest.nightWhen === "always" || quietHours)) return "night";
-  return rest.otherwise;
+/** From the last check-in to the first check-out, as the host set them. */
+export const nightFrom = (rest: KioskRest) => rest.lastCheckIn ?? DEFAULT_NIGHT_FROM;
+export const nightTo = (rest: KioskRest) => rest.firstCheckOut ?? DEFAULT_NIGHT_TO;
+
+export type RestShowing = "night" | "clock" | "blank" | "day" | "awake";
+
+/**
+ * What shows at rest right now. Night (quiet hours, or between the last check-in
+ * and the first check-out): the night light if chosen, otherwise the clock or a dark
+ * screen. By day: the Smart Screensaver's day screen, or the tablet stays as it is
+ * ("awake"), unless the host chose the night light for whenever it rests.
+ */
+export function restNow(rest: KioskRest, quietHours: boolean, nightWindow = false): RestShowing {
+  if (rest.nightLight && rest.nightWhen === "always") return "night";
+  if (quietHours || nightWindow) return rest.nightLight ? "night" : rest.otherwise;
+  return rest.smart ? "day" : "awake";
 }
 
 /* ------------------------------ night look ------------------------------ */
