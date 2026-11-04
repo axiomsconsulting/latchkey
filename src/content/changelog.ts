@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.124.0",
+    date: "2026-11-04",
+    title: "Quicker for guests who come back",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Returning guests: a new switch lets someone who has passed your ID check skip the ID photo and selfie next time, for 12 months while their ID is valid. They prove it's them with a few digits and confirm their register details. It's off until you turn it on, in Settings → Check-in.",
+      },
+      {
+        kind: "improved",
+        area: "Guest register",
+        text: "Next destination is now one tap: Going home fills in their country, and they can still change it before continuing.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Smart Screensaver now wakes on touch, movement or sound, whichever comes first, instead of one choice.",
+      },
+    ],
+  },
+  {
     version: "0.123.0",
     date: "2026-11-04",
     title: "Welcome back",

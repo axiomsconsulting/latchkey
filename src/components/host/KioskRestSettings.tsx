@@ -28,7 +28,6 @@ import {
   NIGHT_PALETTES,
   NIGHT_PALETTE_KEYS,
   NIGHT_SPEED,
-  WAKE_BY,
   normaliseRest,
   restNow,
   type KioskRest,
@@ -132,27 +131,11 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
               />
             </div>
             {rest.smart ? (
-              <fieldset className="space-y-1.5">
-                <legend className="text-sm font-medium">{copy.wakeTitle}</legend>
-                <div role="radiogroup" className="grid gap-2 sm:grid-cols-3">
-                  {WAKE_BY.map((w) => (
-                    <button
-                      key={w}
-                      type="button"
-                      role="radio"
-                      aria-checked={rest.wakeBy === w}
-                      onClick={() => set({ wakeBy: w })}
-                      className={cn(tile(rest.wakeBy === w), "p-2.5 font-medium")}
-                    >
-                      {copy.wakeOptions[w]}
-                    </button>
-                  ))}
-                </div>
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">{copy.wakeTitle}</p>
                 <p className="text-xs text-muted-foreground">{copy.wakeHelp}</p>
-                {rest.wakeBy !== "off" ? (
-                  <p className="text-xs text-muted-foreground">{copy.wakeAllow}</p>
-                ) : null}
-              </fieldset>
+                <p className="text-xs text-muted-foreground">{copy.wakeAllow}</p>
+              </div>
             ) : null}
           </div>
 

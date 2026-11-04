@@ -233,6 +233,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "messages", label: "Booking-site messages" },
       { id: "checkin", label: "Check-in journey" },
       { id: "records", label: "Who's staying and ID records" },
+      { id: "returning", label: "Returning guests" },
       { id: "guestTexts", label: "Welcome and goodbye messages" },
       { id: "doorCodes", label: "Door codes" },
       { id: "stayAccess", label: "Room QR codes and Wi-Fi" },

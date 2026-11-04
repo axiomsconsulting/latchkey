@@ -1593,6 +1593,33 @@ export const saveCheckinMethods = createServerFn({ method: "POST" })
   });
 
 /** Who's staying, ID checks for every adult, and what is kept and for how long. */
+/** The returning guests switch (migration 0088). `available` is false until the migration is applied. */
+export const getReturningTrust = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ propertyId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as unknown as { from: (t: string) => any };
+    const { data: row, error } = await sb
+      .from("properties")
+      .select("returning_trust")
+      .eq("id", data.propertyId)
+      .maybeSingle();
+    return { available: !error, on: !error && row?.returning_trust === true };
+  });
+
+export const saveReturningTrust = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ propertyId: uuid, on: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as unknown as { from: (t: string) => any };
+    const { error } = await sb
+      .from("properties")
+      .update({ returning_trust: data.on })
+      .eq("id", data.propertyId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const saveGuestRecords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>

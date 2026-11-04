@@ -11,35 +11,41 @@ import {
   movedIn,
   nextBaseline,
 } from "@/lib/motion-wake";
-import type { WakeBy } from "@/lib/kiosk-rest";
+
+/** How many looks in a row must agree, counted apart for the camera and the microphone. */
+function counter(onHit: () => void) {
+  let steps = 0;
+  let hits = 0;
+  return (hit: boolean) => {
+    steps += 1;
+    if (steps <= WAKE_SETTLE_STEPS) return;
+    hits = hit ? hits + 1 : 0;
+    if (hits >= WAKE_NEEDS_STEPS) onHit();
+  };
+}
 
 /**
- * While `active`, watches for movement (camera) or listens for sound (mic) and
- * calls onMotion. Only compares a tiny picture or a sound level on this tablet:
- * nothing is kept or sent. Closes the camera or mic as soon as it's not needed.
- * Without permission it does nothing, and a touch still wakes the tablet.
+ * While `active`, watches for movement (camera) and listens for sound (mic), and
+ * calls onMotion on whichever comes first; a touch wakes the tablet anyway. Only
+ * compares a tiny picture and a sound level on this tablet: nothing is kept or
+ * sent. Each is asked for on its own, so one refused or missing leaves the other
+ * working, and both close as soon as they're not needed.
  */
-export function useMotionWake(by: WakeBy, active: boolean, onMotion: () => void) {
+export function useMotionWake(active: boolean, onMotion: () => void) {
   const latest = useRef(onMotion);
   latest.current = onMotion;
   useEffect(() => {
-    if (!active || by === "off") return;
+    if (!active) return;
     const md = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
     if (!md?.getUserMedia) return;
     let stopped = false;
-    let stream: MediaStream | null = null;
-    let timer: number | undefined;
+    const streams: MediaStream[] = [];
+    const timers: number[] = [];
     let audio: AudioContext | null = null;
-    let steps = 0;
-    let hits = 0;
-    const tell = (hit: boolean) => {
-      steps += 1;
-      if (steps <= WAKE_SETTLE_STEPS) return;
-      hits = hit ? hits + 1 : 0;
-      if (hits >= WAKE_NEEDS_STEPS) latest.current();
-    };
+    const wake = () => latest.current();
 
     const watch = (s: MediaStream) => {
+      const tell = counter(wake);
       const video = document.createElement("video");
       video.muted = true;
       video.playsInline = true;
@@ -50,16 +56,19 @@ export function useMotionWake(by: WakeBy, active: boolean, onMotion: () => void)
       canvas.height = WAKE_FRAME.height;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       let before: Uint8ClampedArray | null = null;
-      timer = window.setInterval(() => {
-        if (!ctx || video.readyState < 2) return;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const now = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        if (before) tell(movedIn(changedShare(before, now)));
-        before = now;
-      }, WAKE_STEP_MS);
+      timers.push(
+        window.setInterval(() => {
+          if (!ctx || video.readyState < 2) return;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const now = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          if (before) tell(movedIn(changedShare(before, now)));
+          before = now;
+        }, WAKE_STEP_MS),
+      );
     };
 
     const listen = (s: MediaStream) => {
+      const tell = counter(wake);
       audio = new AudioContext();
       void audio.resume().catch(() => {});
       const analyser = audio.createAnalyser();
@@ -67,33 +76,33 @@ export function useMotionWake(by: WakeBy, active: boolean, onMotion: () => void)
       audio.createMediaStreamSource(s).connect(analyser);
       const samples = new Float32Array(analyser.fftSize);
       let baseline = 0;
-      timer = window.setInterval(() => {
-        analyser.getFloatTimeDomainData(samples);
-        const level = loudness(samples);
-        tell(baseline > 0 && isLoud(level, baseline));
-        baseline = nextBaseline(baseline, level);
-      }, WAKE_STEP_MS);
+      timers.push(
+        window.setInterval(() => {
+          analyser.getFloatTimeDomainData(samples);
+          const level = loudness(samples);
+          tell(baseline > 0 && isLoud(level, baseline));
+          baseline = nextBaseline(baseline, level);
+        }, WAKE_STEP_MS),
+      );
     };
 
-    void md
-      .getUserMedia(
-        by === "camera"
-          ? { video: { facingMode: "user", width: 160, height: 120 }, audio: false }
-          : { audio: true, video: false },
-      )
-      .then((s) => {
-        if (stopped) return s.getTracks().forEach((t) => t.stop());
-        stream = s;
-        if (by === "camera") watch(s);
-        else listen(s);
-      })
-      .catch(() => {});
+    const open = (constraints: MediaStreamConstraints, use: (s: MediaStream) => void) =>
+      void md
+        .getUserMedia(constraints)
+        .then((s) => {
+          if (stopped) return s.getTracks().forEach((t) => t.stop());
+          streams.push(s);
+          use(s);
+        })
+        .catch(() => {});
+    open({ video: { facingMode: "user", width: 160, height: 120 }, audio: false }, watch);
+    open({ audio: true, video: false }, listen);
 
     return () => {
       stopped = true;
-      if (timer) window.clearInterval(timer);
-      stream?.getTracks().forEach((t) => t.stop());
-      void audio?.close().catch(() => {});
+      timers.forEach((t) => window.clearInterval(t));
+      streams.forEach((s) => s.getTracks().forEach((t) => t.stop()));
+      void (audio as AudioContext | null)?.close().catch(() => {});
     };
-  }, [by, active]);
+  }, [active]);
 }

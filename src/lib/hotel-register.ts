@@ -117,6 +117,11 @@ export function isAlien(code: string | null | undefined): boolean {
   return !NOT_ALIEN.has(code);
 }
 
+/** "Going home" on the register: their country from the ID, which they can still change. */
+export function homeDestination(code: string | null | undefined): string {
+  return code && code !== "XX" && isNationality(code) ? `Home (${nationalityName(code)})` : "Home";
+}
+
 let names: Intl.DisplayNames | null = null;
 
 /** "France", "British citizen", or "Stateless". */

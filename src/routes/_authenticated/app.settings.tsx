@@ -58,6 +58,7 @@ import { ExtrasPriceList } from "@/components/host/ExtrasPriceList";
 import { PaymentsPanel } from "@/components/host/PaymentsPanel";
 import { ThemeStudio } from "@/components/host/ThemeStudio";
 import { removeDemoData, saveHost } from "@/lib/host.functions";
+import { ReturningGuestsSettings } from "@/components/host/ReturningGuestsSettings";
 import { GuestRecordsSettings } from "@/components/host/GuestRecordsSettings";
 import { GuestMessagesSettings } from "@/components/host/GuestMessagesSettings";
 import { DoorCodesSettings } from "@/components/host/DoorCodesSettings";
@@ -86,6 +87,7 @@ const FOCUS = [
   "privacy",
   "checkin",
   "records",
+  "returning",
   "guestTexts",
   "doorCodes",
   "stayAccess",
@@ -144,6 +146,7 @@ const OWN_CARD = new Set([
   "privacy",
   "checkin",
   "records",
+  "returning",
   "guestTexts",
   "doorCodes",
   "stayAccess",
@@ -691,6 +694,15 @@ function SettingsPage() {
                 propertyId={(themedProperty as unknown as { id: string }).id}
                 hostId={workspace.data.hostId}
                 isOwner={isOwner && !demo}
+              />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="returning">
+          {themedProperty ? (
+            <div id="settings-returning" className="scroll-mt-24 rounded-2xl">
+              <ReturningGuestsSettings
+                property={themedProperty as unknown as { id: string; country_code?: string | null }}
               />
             </div>
           ) : null}
