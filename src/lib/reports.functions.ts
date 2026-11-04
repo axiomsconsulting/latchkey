@@ -42,11 +42,7 @@ export const getOperationsReport = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as Loose;
     const [{ data: host }, { data: props }] = await Promise.all([
-      sb
-        .from("hosts")
-        .select("currency, channel_labels, booking_sites")
-        .eq("id", data.hostId)
-        .maybeSingle(),
+      sb.from("hosts").select("currency, booking_sites").eq("id", data.hostId).maybeSingle(),
       sb.from("properties").select("id, timezone").eq("host_id", data.hostId),
     ]);
     const all = (props ?? []) as Array<{ id: string; timezone: string | null }>;
@@ -128,8 +124,8 @@ export const getOperationsReport = createServerFn({ method: "GET" })
       messages.push(...((m ?? []) as ReportMessage[]));
     }
     const sites = resolveSites(
-      host.channel_labels as Record<string, string> | null,
       host.booking_sites,
+      await (await import("./booking-sites.server")).platformSites(),
       channels as unknown as Record<string, string>,
     );
     return {

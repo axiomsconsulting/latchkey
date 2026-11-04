@@ -46,6 +46,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.122.0",
+    date: "2026-11-04",
+    title: "Booking sites, simpler",
+    items: [
+      {
+        kind: "improved",
+        area: "Calendar",
+        text: "Airbnb, Booking.com and the other built-in sites now come ready to use, with their names and logos looked after by Latchkey. You can add any other site you take bookings from, with its website.",
+      },
+      {
+        kind: "new",
+        area: "Calendar",
+        text: "Pasting a calendar link now picks its site for you, and a link under the wrong site is caught before it's saved.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        admin: true,
+        text: "Latchkey admin → Site → Booking sites: the name, logo and calendar web address rule for each built-in site.",
+      },
+    ],
+  },
+  {
     version: "0.121.1",
     date: "2026-11-04",
     title: "A tidier Direct stays page",

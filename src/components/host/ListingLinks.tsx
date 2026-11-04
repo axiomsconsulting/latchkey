@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { listingLinksCopy as copy } from "@/content/copy";
 import { useBookingSites } from "@/hooks/use-host-data";
+import { siteForUrl } from "@/lib/booking-sites";
 import { normaliseListingLinks, type ListingLink } from "@/lib/listing-links";
 
 /** The sites' icons, each opening that listing on the site in a new tab. */
@@ -15,7 +16,7 @@ export function ListingLinkIcons({ links, className }: { links: unknown; classNa
   return (
     <span className={className ?? "inline-flex flex-wrap items-center gap-1"}>
       {list.map((l: ListingLink) => {
-        const site = sites.find((s) => s.key === l.site);
+        const site = siteForUrl(sites, l.url) ?? sites.find((s) => s.key === l.site);
         const label = site?.label ?? copy.otherSite;
         return (
           <a
@@ -27,11 +28,11 @@ export function ListingLinkIcons({ links, className }: { links: unknown; classNa
             aria-label={copy.open(label)}
             className="grid size-8 place-items-center rounded-lg hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {l.site === "other" ? (
+            {!site || site.key === "other" ? (
               <Globe className="size-4 text-muted-foreground" />
             ) : (
               <ChannelIcon
-                channel={l.site}
+                channel={site.key}
                 iconUrl={site?.iconUrl ?? null}
                 label={label}
                 size="1.1rem"

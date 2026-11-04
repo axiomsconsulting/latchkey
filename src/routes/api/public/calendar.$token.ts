@@ -44,16 +44,17 @@ export const Route = createFileRoute("/api/public/calendar/$token")({
           )
           .eq("room_id", room.id);
         const { resolveSites, platformKey } = await import("@/lib/booking-sites");
+        const { platformSites } = await import("@/lib/booking-sites.server");
         const { guest: guestCopy } = await import("@/content/copy");
         const platformLabels = guestCopy.platforms as Record<string, string>;
         const { data: host } = await (supabaseAdmin as any)
           .from("properties")
-          .select("hosts(booking_sites, channel_labels)")
+          .select("hosts(booking_sites)")
           .eq("id", (room as any).property_id)
           .maybeSingle();
         const sites = resolveSites(
-          host?.hosts?.channel_labels,
           host?.hosts?.booking_sites,
+          await platformSites(),
           platformLabels,
         );
         const siteLabel = (b: FeedBooking) =>

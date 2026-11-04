@@ -1056,11 +1056,12 @@ export const settings = branded({
   removeDemo: "Remove demo data",
   demoBanner: "You are looking at demo content.",
   removing: "Removing…",
-  channelsTitle: "What you call each booking site",
-  channelsBody:
-    'Guests see these names and icons when they check in. Rename any of them — for example "Booked directly" to "Our website" — tap an icon to upload your own, and add new sites as you start using them. Leave a name blank to keep the standard one. Your calendars and reports are unaffected.',
-  channelsSaved: "Booking sites saved",
-  channelsAdd: "Add a booking site",
+  channelsTitle: "Booking sites",
+  channelsBody: "These come ready to use. Add any other site you take bookings from.",
+  channelsBuiltIn: "Ready to use",
+  channelsSaved: "Booking sites saved.",
+  channelsWebsite: "Website",
+  channelsAdd: "Add another site",
   channelsNewName: "Site name",
   channelsNewPlaceholder: "For example Expedia",
   channelsIcon: "Icon",
@@ -2624,6 +2625,8 @@ export const calendarUi = branded({
   managerBody:
     "Expedia and hotel-style listings connect through a channel manager rather than a calendar link. Add the channel manager's calendar link here instead.",
   errors: {
+    wrongSite: (domains: string[]) =>
+      `That link doesn't look like it's from this site: it should contain ${domains.join(" or ")}. Choose the site it's from, or Other website.`,
     https: "The link must start with https://",
     notCalendar: "This link looks like a web page, not a calendar.",
     noEvents: "The link returned no events. Check you copied the export link, not the import box.",
@@ -6338,6 +6341,7 @@ export const adminArrangeTitles = branded({
   studio: "Pricing studio",
   pricing: "Per-room pricing",
   brand: "Brand",
+  bookingSites: "Booking sites",
   home: "Home page pictures",
   legal: "Legal details",
   site: "Site settings",
@@ -6363,4 +6367,18 @@ export const adminTabs = branded({
   site: "Site",
   defaults: "Defaults for hosts",
   system: "System",
+});
+
+export const bookingSitesAdminCopy = branded({
+  title: "Booking sites",
+  body: "What every host sees for each built-in site. Hosts can't change these; they can only add other sites of their own.",
+  notReady: "This needs the latest database update (migration 0087).",
+  name: "Name",
+  logo: (name: string) => `Choose a logo for ${name}`,
+  removeLogo: (name: string) => `Remove the logo for ${name}`,
+  domains: "Calendar links must contain",
+  domainsNone: "Any web address",
+  domainsHelp:
+    "Separate with commas. A link for that site must have one of these in its web address, so airbnb accepts airbnb.co.uk and airbnb.com. This catches a link pasted under the wrong site and picks the right one when a link is pasted. Links already saved aren't affected.",
+  saved: "Booking sites saved for every host.",
 });

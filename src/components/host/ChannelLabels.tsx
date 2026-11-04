@@ -9,88 +9,33 @@ import { Button } from "@/components/ui/button";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { channels, common, settings as copy } from "@/content/copy";
-import {
-  BUILT_IN_SITES,
-  isBuiltIn,
-  newSiteKey,
-  normaliseStoredSites,
-  type StoredSite,
-} from "@/lib/booking-sites";
+import { common, settings as copy } from "@/content/copy";
+import { useBookingSites } from "@/hooks/use-host-data";
+import { isBuiltIn, newSiteKey, normaliseStoredSites, type StoredSite } from "@/lib/booking-sites";
 import { saveBookingSites } from "@/lib/host.functions";
+import { toIcon } from "@/lib/site-icon";
 
-const ICON_PX = 64;
-
-/** Shrinks any image to a small square PNG so it sits neatly on one line. */
-async function toIcon(file: File): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error(copy.channelsIconBad));
-      el.src = url;
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = ICON_PX;
-    canvas.height = ICON_PX;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error(copy.channelsIconBad);
-    // Some SVGs report no size of their own; draw those to fill the square.
-    const iw = img.naturalWidth || ICON_PX;
-    const ih = img.naturalHeight || ICON_PX;
-    const scale = Math.min(ICON_PX / iw, ICON_PX / ih);
-    const w = iw * scale;
-    const h = ih * scale;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, (ICON_PX - w) / 2, (ICON_PX - h) / 2, w, h);
-    return canvas.toDataURL("image/png");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-type Row = StoredSite & { builtIn: boolean };
-
-function initialRows(labels: Record<string, string>, stored: unknown): Row[] {
-  const list = normaliseStoredSites(stored);
-  const byKey = new Map(list.map((s) => [s.key, s]));
-  return [
-    ...BUILT_IN_SITES.map((key) => ({
-      key,
-      label: byKey.get(key)?.label || labels[key] || "",
-      icon_url: byKey.get(key)?.icon_url ?? null,
-      builtIn: true,
-    })),
-    ...list.filter((s) => !isBuiltIn(s.key)).map((s) => ({ ...s, builtIn: false })),
-  ];
+function initialRows(stored: unknown): StoredSite[] {
+  return normaliseStoredSites(stored).filter((s) => !isBuiltIn(s.key));
 }
 
 /**
- * The booking sites guests choose from. Hosts rename any of them, give each
- * its own icon, and add new sites as they start using them. Built-in ids
- * never change, so calendar matching and reports keep working.
+ * Booking sites on Connections: the built-in ones as Latchkey sets them, to read
+ * only, and any other sites this host adds, with a name, website and icon.
  */
-export function ChannelLabels({
-  hostId,
-  labels,
-  sites,
-}: {
-  hostId: string;
-  labels: Record<string, string>;
-  sites?: unknown;
-}) {
+export function ChannelLabels({ hostId, sites }: { hostId: string; sites?: unknown }) {
   const qc = useQueryClient();
   const save = useServerFn(saveBookingSites);
-  const [rows, setRows] = useState<Row[]>(() => initialRows(labels, sites));
+  const all = useBookingSites();
+  const [rows, setRows] = useState<StoredSite[]>(() => initialRows(sites));
   const [busy, setBusy] = useState(false);
   const fileFor = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => setRows(initialRows(labels, sites)), [labels, sites]);
-  const dirty = changed(rows, initialRows(labels, sites));
+  useEffect(() => setRows(initialRows(sites)), [sites]);
+  const dirty = changed(rows, initialRows(sites));
 
-  const update = (key: string, patch: Partial<Row>) =>
+  const update = (key: string, patch: Partial<StoredSite>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
   async function onFile(file: File | undefined) {
@@ -106,7 +51,7 @@ export function ChannelLabels({
   }
 
   async function submit() {
-    if (rows.some((r) => !r.builtIn && !r.label.trim())) {
+    if (rows.some((r) => !r.label.trim())) {
       toast.error(copy.channelsNeedName);
       return;
     }
@@ -115,7 +60,12 @@ export function ChannelLabels({
       await save({
         data: {
           hostId,
-          sites: rows.map((r) => ({ key: r.key, label: r.label.trim(), icon_url: r.icon_url })),
+          sites: rows.map((r) => ({
+            key: r.key,
+            label: r.label.trim(),
+            icon_url: r.icon_url,
+            url: r.url?.trim() || null,
+          })),
         },
       });
       await qc.invalidateQueries({ queryKey: ["workspace"] });
@@ -133,10 +83,19 @@ export function ChannelLabels({
         <div className="min-w-0">
           <h2 className="text-lg">{copy.channelsTitle}</h2>
           <p className="text-sm text-muted-foreground">{copy.channelsBody}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{copy.channelsIconHelp}</p>
         </div>
         <SaveButton dirty={dirty} busy={busy} label={copy.save} onClick={() => void submit()} />
       </div>
+      <ul className="flex flex-wrap gap-x-4 gap-y-2" aria-label={copy.channelsBuiltIn}>
+        {all
+          .filter((x) => x.builtIn && x.key !== "other")
+          .map((x) => (
+            <li key={x.key} className="flex items-center gap-1.5 text-sm">
+              <ChannelIcon channel={x.key} iconUrl={x.iconUrl} label={x.label} size="1.25rem" />
+              {x.label}
+            </li>
+          ))}
+      </ul>
       <input
         ref={fileInput}
         type="file"
@@ -144,56 +103,69 @@ export function ChannelLabels({
         className="hidden"
         onChange={(e) => void onFile(e.target.files?.[0])}
       />
-      <div className="grid gap-3 sm:grid-cols-2">
-        {rows.map((r) => {
-          const standard = r.builtIn ? ((channels as Record<string, string>)[r.key] ?? r.key) : "";
-          const name = r.label.trim() || standard || copy.channelsNewName;
-          return (
-            <div key={r.key} className="flex items-end gap-3">
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  type="button"
-                  className="rounded-[22%] outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
-                  aria-label={copy.channelsUploadIcon(name)}
-                  title={copy.channelsUploadIcon(name)}
-                  onClick={() => {
-                    fileFor.current = r.key;
-                    fileInput.current?.click();
-                  }}
-                >
-                  <span className="relative block">
-                    <ChannelIcon channel={r.key} iconUrl={r.icon_url} label={name} size={44} />
-                    <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full border border-border bg-background">
-                      <ImagePlus className="size-3 text-muted-foreground" />
-                    </span>
-                  </span>
-                </button>
-                {r.icon_url ? (
+      {rows.length ? (
+        <div className="space-y-3 border-t border-border pt-3">
+          {rows.map((r) => {
+            const name = r.label.trim() || copy.channelsNewName;
+            return (
+              <div key={r.key} className="flex flex-wrap items-end gap-3">
+                <div className="flex flex-col items-center gap-1">
                   <button
                     type="button"
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label={copy.channelsRemoveIcon}
-                    title={copy.channelsRemoveIcon}
-                    onClick={() => update(r.key, { icon_url: null })}
+                    className="rounded-[22%] outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
+                    aria-label={copy.channelsUploadIcon(name)}
+                    title={copy.channelsUploadIcon(name)}
+                    onClick={() => {
+                      fileFor.current = r.key;
+                      fileInput.current?.click();
+                    }}
                   >
-                    <X className="size-4" />
+                    <span className="relative block">
+                      <ChannelIcon channel={r.key} iconUrl={r.icon_url} label={name} size={44} />
+                      <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full border border-border bg-background">
+                        <ImagePlus className="size-3 text-muted-foreground" />
+                      </span>
+                    </span>
                   </button>
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1 space-y-1">
-                <Label htmlFor={`ch-${r.key}`} className="text-sm text-muted-foreground">
-                  {r.builtIn ? standard : copy.channelsNewName}
-                </Label>
-                <Input
-                  id={`ch-${r.key}`}
-                  className="h-11"
-                  maxLength={40}
-                  placeholder={r.builtIn ? standard : copy.channelsNewPlaceholder}
-                  value={r.label}
-                  onChange={(e) => update(r.key, { label: e.target.value })}
-                />
-              </div>
-              {!r.builtIn ? (
+                  {r.icon_url ? (
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={copy.channelsRemoveIcon}
+                      title={copy.channelsRemoveIcon}
+                      onClick={() => update(r.key, { icon_url: null })}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1 basis-40 space-y-1">
+                  <Label htmlFor={`ch-${r.key}`} className="text-sm text-muted-foreground">
+                    {copy.channelsNewName}
+                  </Label>
+                  <Input
+                    id={`ch-${r.key}`}
+                    className="h-11"
+                    maxLength={40}
+                    placeholder={copy.channelsNewPlaceholder}
+                    value={r.label}
+                    onChange={(e) => update(r.key, { label: e.target.value })}
+                  />
+                </div>
+                <div className="min-w-0 flex-1 basis-48 space-y-1">
+                  <Label htmlFor={`url-${r.key}`} className="text-sm text-muted-foreground">
+                    {copy.channelsWebsite}
+                  </Label>
+                  <Input
+                    id={`url-${r.key}`}
+                    className="h-11"
+                    type="url"
+                    maxLength={300}
+                    placeholder="https://www.expedia.co.uk"
+                    value={r.url ?? ""}
+                    onChange={(e) => update(r.key, { url: e.target.value })}
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -204,26 +176,21 @@ export function ChannelLabels({
                 >
                   <Trash2 className="size-4" />
                 </Button>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={rows.length >= BUILT_IN_SITES.length + 20}
-          onClick={() =>
-            setRows((rs) => [
-              ...rs,
-              { key: newSiteKey(), label: "", icon_url: null, builtIn: false },
-            ])
-          }
-        >
-          <Plus className="size-4" /> {copy.channelsAdd}
-        </Button>
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        disabled={rows.length >= 20}
+        onClick={() =>
+          setRows((rs) => [...rs, { key: newSiteKey(), label: "", icon_url: null, url: null }])
+        }
+      >
+        <Plus className="size-4" /> {copy.channelsAdd}
+      </Button>
     </section>
   );
 }

@@ -5,6 +5,7 @@
  * calendar-secret and sync paths use elevated access.
  */
 
+import type { BuiltInSite } from "./booking-sites";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -240,6 +241,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
         : (memberships.find((m) => m.host_id === hostId)?.role ?? "owner"),
       isSuperAdmin,
       support,
+      platformSites: await (await import("./booking-sites.server")).platformSites(),
       // Before migration 0024 there's no subscription yet, so access is open.
       access: known ? hasAccess(billing as never) : true,
       billingPhase: known ? billingPhase(billing as never) : "trial",
@@ -941,6 +943,14 @@ export const saveConnection = createServerFn({ method: "POST" })
     let fingerprint: string | null = null;
     if (data.ical_url) {
       assertSafeFeedUrl(data.ical_url);
+      // A link under the wrong site: said now, rather than as mixed-up stays later.
+      const { urlFitsSite } = await import("./booking-sites");
+      const { platformSites } = await import("./booking-sites.server");
+      const rule = (await platformSites())[data.channel as BuiltInSite];
+      if (!data.site_key && rule && !urlFitsSite(data.ical_url, rule)) {
+        const { calendarUi } = await import("@/content/copy");
+        throw new Error(calendarUi.errors.wrongSite(rule.domains));
+      }
       masked = maskUrl(data.ical_url);
       const { createHash } = await import("node:crypto");
       fingerprint = createHash("sha256").update(data.ical_url.trim()).digest("hex");
@@ -1694,6 +1704,7 @@ export const saveBookingSites = createServerFn({ method: "POST" })
               key: z.string().max(40),
               label: z.string().trim().max(40),
               icon_url: z.string().max(40_000).nullable(),
+              url: z.string().max(300).nullable().optional(),
             }),
           )
           .max(40),
@@ -1704,13 +1715,11 @@ export const saveBookingSites = createServerFn({ method: "POST" })
     const { isBuiltIn, normaliseStoredSites } = await import("./booking-sites");
     if (data.sites.some((s) => !isBuiltIn(s.key) && !s.label.trim()))
       throw new Error("Give each site you add a name.");
-    const sites = normaliseStoredSites(data.sites);
-    // Older screens still read channel_labels, so keep it in step.
-    const labels: Record<string, string> = {};
-    for (const s of sites) if (isBuiltIn(s.key) && s.label) labels[s.key] = s.label;
+    // Hosts only keep the sites they add: the built-in ones are Latchkey admin's.
+    const sites = normaliseStoredSites(data.sites).filter((s) => !isBuiltIn(s.key));
     const { error } = await (context.supabase as unknown as RpcClient).rpc("update_host_sites", {
       _host_id: data.hostId,
-      _channel_labels: labels,
+      _channel_labels: {},
       _booking_sites: sites,
     });
     if (error?.code === "PGRST202") {
@@ -1718,34 +1727,6 @@ export const saveBookingSites = createServerFn({ method: "POST" })
       throw new Error(
         "Adding booking sites needs the latest database update. Please try again shortly.",
       );
-    } else if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-/** Host wording for each booking platform; internal ids are never changed. */
-export const saveChannelLabels = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z
-      .object({ hostId: uuid, labels: z.record(z.string(), z.string().trim().max(40)) })
-      .parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    const clean: Record<string, string> = {};
-    for (const [k, v] of Object.entries(data.labels)) if (v.trim()) clean[k] = v.trim();
-    // Managers may rename platforms, but hosts itself is owner-only, so this
-    // goes through a narrow function that checks write access.
-    const { error } = await (context.supabase as unknown as RpcClient).rpc("update_host_ops", {
-      _host_id: data.hostId,
-      _channel_labels: clean,
-    });
-    if (error?.code === "PGRST202") {
-      // Before migration 0017 is applied the function doesn't exist yet.
-      const { error: e2 } = await context.supabase
-        .from("hosts")
-        .update({ channel_labels: clean })
-        .eq("id", data.hostId);
-      if (e2) throw new Error(e2.message);
     } else if (error) throw new Error(error.message);
     return { ok: true };
   });
