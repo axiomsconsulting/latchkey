@@ -730,15 +730,19 @@ export async function liteRest(code: string) {
     (prop?.quiet_hours_start ?? "22:00").slice(0, 5),
     (prop?.quiet_hours_end ?? "07:00").slice(0, 5),
   ).active;
+  const { nightFrom, nightTo } = await import("./kiosk-rest");
+  const nightWindow = quietNow(new Date(), tz, nightFrom(look.rest), nightTo(look.rest)).active;
+  const showing = restNow(look.rest, quiet, nightWindow);
   return {
-    show: restNow(look.rest, quiet),
+    // By day older tablets stay on their usual screen, which already has the clock and Check in.
+    show: showing === "day" ? "awake" : showing,
     nightColours: NIGHT_PALETTES[look.rest.palette].map((c) => deepen(c, look.night.depth)),
     nightBrightness: look.night.brightness,
     /** Seconds each colour takes to drift into the next. */
     nightSeconds: Math.round(12 * speedFactor(look.rest.speed)),
     clockBrightness: look.look.brightness,
     qr: look.rest.clockQr,
-    saverMinutes: look.defaults.saverMinutes,
+    saverMinutes: look.rest.idleMinutes ?? look.defaults.saverMinutes,
     resetMinutes: look.defaults.resetMinutes,
     tz,
   };

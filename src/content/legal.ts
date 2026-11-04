@@ -134,6 +134,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Website statistics: 13 months.",
           "Guests' names and contact details on a stay: cleared 30, 90, 180 or 365 days after check-out, as the host chooses (90 days unless changed). Messages: deleted after the period the host chooses, or kept with the stay.",
           "Copies of photo ID and face photos: 7, 14 or 30 days after check-out, as the host chooses, then deleted from Google Drive (deleted, not moved to the bin).",
+          "Door tablet waking on movement or sound, if a host switches it on: a very small picture or a sound level is compared on the tablet itself while it rests. Nothing is kept or sent.",
           "Door codes: kept with the stay, so that a code isn't given to another guest too soon.",
           "Someone who gives their ID at check-in but can't be matched to a booking straight away: their details are kept for the host to place them or remove them, under the same rules as any other guest.",
           "UK guest register: 12 months from arrival, as the law requires, then deleted.",

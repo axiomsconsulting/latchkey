@@ -10,6 +10,7 @@ export const SCREEN_VIEWS = [
   "welcome",
   "welcomeRest",
   "saver",
+  "day",
   "night",
   "blank",
   "checkin",
@@ -60,16 +61,23 @@ export function screenFrom(s: {
   welcomeRest: boolean;
   cardsUp: boolean;
   saver: boolean;
-  rest: "night" | "blank" | "clock";
+  rest: "night" | "blank" | "clock" | "day" | "awake";
   atWelcome: boolean;
   step: string;
   join: boolean;
 }): { view: ScreenView; step: string | null } {
   if (s.welcomeUp) return { view: s.welcomeRest ? "welcomeRest" : "welcome", step: null };
   if (s.cardsUp) return { view: "cards", step: null };
-  if (s.saver)
+  if (s.saver && s.rest !== "awake")
     return {
-      view: s.rest === "night" ? "night" : s.rest === "blank" ? "blank" : "saver",
+      view:
+        s.rest === "night"
+          ? "night"
+          : s.rest === "blank"
+            ? "blank"
+            : s.rest === "day"
+              ? "day"
+              : "saver",
       step: null,
     };
   if (s.join) return { view: "join", step: null };
