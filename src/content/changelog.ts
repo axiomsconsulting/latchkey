@@ -46,6 +46,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.121.1",
+    date: "2026-11-04",
+    title: "A tidier Direct stays page",
+    items: [
+      {
+        kind: "improved",
+        area: "Bookings",
+        text: "Direct stays now shows one property at a time. Bookings are sorted into what needs you, what's coming up and what's finished, and rates, photos and booking rules have moved to their own Set-up tab.",
+      },
+    ],
+  },
+  {
     version: "0.121.0",
     date: "2026-11-04",
     title: "Settings you can find",

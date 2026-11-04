@@ -423,6 +423,7 @@ export const JOURNEYS: Journey[] = [
       {
         id: "rates",
         page: "/app/direct",
+        search: { tab: "setup", focus: "rates" },
         target: "direct-rates",
         action: "look",
         title: "Rates and offers",
@@ -431,6 +432,7 @@ export const JOURNEYS: Journey[] = [
       {
         id: "book",
         page: "/app/direct",
+        search: { tab: "setup", focus: "booking" },
         target: "direct-booking-settings",
         action: "look",
         quick: true,

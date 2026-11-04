@@ -60,3 +60,35 @@ export function cleanRefund(pence: number, r: Pick<Cancellable, "status" | "tota
   if (r.status !== "paid" || !Number.isFinite(pence)) return 0;
   return Math.max(0, Math.min(r.total_pence, Math.round(pence)));
 }
+
+type ListedReservation = {
+  status: string;
+  method: string;
+  check_in: string;
+  check_out: string;
+  refund_status?: string | null;
+};
+
+/**
+ * The bookings list by what it asks of the host: something to do (a transfer to
+ * look out for, a refund to pay back), coming up (soonest first), and finished
+ * (kept out of the way, most recent first).
+ */
+export function groupReservations<T extends ListedReservation>(
+  list: T[],
+  today: string,
+): { attention: T[]; upcoming: T[]; finished: T[] } {
+  const out = { attention: [] as T[], upcoming: [] as T[], finished: [] as T[] };
+  for (const r of list) {
+    if (r.refund_status === "to_do" || (r.status === "pending" && r.method === "bank"))
+      out.attention.push(r);
+    else if (["cancelled", "expired"].includes(r.status) || r.check_out < today)
+      out.finished.push(r);
+    else out.upcoming.push(r);
+  }
+  const soonest = (a: T, b: T) => a.check_in.localeCompare(b.check_in);
+  out.attention.sort(soonest);
+  out.upcoming.sort(soonest);
+  out.finished.sort((a, b) => b.check_in.localeCompare(a.check_in));
+  return out;
+}
