@@ -27,7 +27,8 @@ export type Goodbye = {
 };
 
 export const DEFAULT_GOODBYE: Goodbye = {
-  on: true,
+  // Nothing appears on a guest's screen until the host has chosen it.
+  on: false,
   message: "Thank you for staying with us, {name}. Safe travels, and we hope to see you again.",
   keyDrop: "Please leave your keys on the table in your room, and close the door behind you.",
   lockDoor: true,
@@ -191,7 +192,7 @@ export type ArrivalCards = {
 };
 
 export const DEFAULT_ARRIVALS: ArrivalCards = {
-  on: true,
+  on: false,
   message: "Welcome, {name}! We're so glad you're here. Tap Check in to get your room.",
   startBeforeMinutes: 120,
   startAt: null,
@@ -273,9 +274,10 @@ export function showsArrival(
   a: ArrivalCards,
 ): boolean {
   if (b.mirror_of || b.welcome_card_dismissed_at || !ARRIVING.has(b.status)) return false;
-  if (b.check_in_date !== today) return false;
+  // Off means off: "Show now" can't bring back a card the host has turned off.
+  if (!a.on || b.check_in_date !== today) return false;
   if (b.welcome_now_at) return true;
-  return a.on && nowMs >= arrivalStart(b, standardTime, tz, a).from;
+  return nowMs >= arrivalStart(b, standardTime, tz, a).from;
 }
 
 /** A goodbye the host asked to show now shows whatever the time, until they leave or it's taken off. */
@@ -287,7 +289,8 @@ export function showsGoodbyeNow(
   tz: string,
   g: Goodbye,
 ): boolean {
-  if (b.goodbye_now_at && !b.goodbye_dismissed_at && !b.mirror_of && STAYING.has(b.status))
+  // Off means off: "Show now" can't bring back a card the host has turned off.
+  if (g.on && b.goodbye_now_at && !b.goodbye_dismissed_at && !b.mirror_of && STAYING.has(b.status))
     return b.check_out_date === today;
   return showsGoodbye(b, today, nowMs, standardTime, tz, g);
 }

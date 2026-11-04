@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   cardEdge,
   cardInk,
-  DEFAULT_ARRIVALS,
-  DEFAULT_GOODBYE,
+  DEFAULT_ARRIVALS as OFF_ARRIVALS,
+  DEFAULT_GOODBYE as OFF_GOODBYE,
   arrivalStart,
   arrivalText,
   normaliseArrivals,
@@ -20,6 +20,38 @@ import {
 const tz = "Europe/London";
 const at = (t: string) => Date.parse(`2026-10-30T${t}:00Z`); // GMT on 30 Oct 2026
 const stay = { status: "checked_in", check_out_date: "2026-10-30", check_out_time: null };
+
+// Cards are off until the host chooses them, so these say what happens once they're on.
+const DEFAULT_ARRIVALS = { ...OFF_ARRIVALS, on: true };
+const DEFAULT_GOODBYE = { ...OFF_GOODBYE, on: true };
+
+describe("the switches", () => {
+  const today = "2026-10-30";
+  const now = Date.parse("2026-10-30T14:00:00Z");
+  it("nothing shows until the host turns it on", () => {
+    expect(normaliseGoodbye(null).on).toBe(false);
+    expect(normaliseArrivals(null).on).toBe(false);
+  });
+  it("off beats Show now, for both kinds", () => {
+    const stay = {
+      status: "upcoming",
+      check_in_date: today,
+      check_out_date: today,
+      check_in_time: null,
+      check_out_time: null,
+      mirror_of: null,
+      welcome_card_dismissed_at: null,
+      goodbye_dismissed_at: null,
+      welcome_now_at: "2026-10-30T08:00:00Z",
+      goodbye_now_at: "2026-10-30T08:00:00Z",
+    } as never;
+    const tz = "Europe/London";
+    expect(showsArrival(stay, today, now, "15:00", tz, OFF_ARRIVALS)).toBe(false);
+    expect(showsGoodbyeNow(stay, today, now, "11:00", tz, OFF_GOODBYE)).toBe(false);
+    expect(showsArrival(stay, today, now, "15:00", tz, DEFAULT_ARRIVALS)).toBe(true);
+    expect(showsGoodbyeNow(stay, today, now, "11:00", tz, DEFAULT_GOODBYE)).toBe(true);
+  });
+});
 
 describe("check-out goodbye", () => {
   it("shows from two hours before check-out until it", () => {
@@ -113,16 +145,18 @@ describe("check-in cards", () => {
     });
   });
 
-  it("show at once when the host asks, even when switched off", () => {
+  it("show at once when the host asks, whatever the time", () => {
     const b = { ...arriving, welcome_now_at: "x" };
+    expect(showsArrival(b, "2026-10-30", at("08:00"), "15:00", tz, DEFAULT_ARRIVALS)).toBe(true);
     expect(
-      showsArrival(b, "2026-10-30", at("08:00"), "15:00", tz, { ...DEFAULT_ARRIVALS, on: false }),
-    ).toBe(true);
-    expect(
-      showsGoodbyeNow({ ...stay, goodbye_now_at: "x" }, "2026-10-30", at("06:00"), "11:00", tz, {
-        ...DEFAULT_GOODBYE,
-        on: false,
-      }),
+      showsGoodbyeNow(
+        { ...stay, goodbye_now_at: "x" },
+        "2026-10-30",
+        at("06:00"),
+        "11:00",
+        tz,
+        DEFAULT_GOODBYE,
+      ),
     ).toBe(true);
   });
 

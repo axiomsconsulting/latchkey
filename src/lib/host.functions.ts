@@ -1186,6 +1186,9 @@ export async function seedDemo(
     check_in_pin: String(100000 + Math.floor(Math.random() * 899999)),
     ...(seed.property ?? {}),
     ...(seed.theme ? { theme_config: seed.theme } : {}),
+    // The tour shows the door tablet's cards, which every real property turns on itself.
+    checkin_welcome: { on: true },
+    checkout_goodbye: { on: true },
     short_code: shortCode ?? `${DEMO_PROPERTY.short_code}-${suffix}`,
     host_id: hostId,
     is_demo: true,

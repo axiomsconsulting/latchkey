@@ -1411,6 +1411,9 @@ export const updateCopy = branded({
 });
 
 export const kioskCardsCopy = branded({
+  offIn: "Check-in cards are off.",
+  offOut: "Check-out cards are off.",
+  turnOn: "Turn on in Settings",
   title: "Door tablet: welcome and goodbye",
   body: "Each guest arriving or leaving today gets a card on the door tablet, on the timings in Settings → Kiosk. Show one now, or take it off.",
   tabIn: (n: number) => `Check-in (${n})`,
