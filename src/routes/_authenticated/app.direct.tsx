@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   CalendarHeart,
   CalendarPlus,
+  ChevronDown,
   Copy,
   ExternalLink,
   Heart,
@@ -42,11 +43,12 @@ import {
   setEnquiryStatus,
 } from "@/lib/direct.functions";
 import {
+  getDirectBookingSettings,
   hostCancelReservation,
   markRefundDone,
   setReservationStatus,
 } from "@/lib/direct-booking.functions";
-import { cancelPolicy, cleanRefund, refundMethod } from "@/lib/direct-cancel";
+import { cancelPolicy, cleanRefund, groupReservations, refundMethod } from "@/lib/direct-cancel";
 import { ErrorReport } from "@/components/host/ErrorReport";
 import { readAppError } from "@/lib/app-error";
 import {
@@ -57,12 +59,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { money } from "@/lib/direct-rates";
+import { ArrangedSections } from "@/components/host/ArrangedSections";
+import { InfoTip } from "@/components/host/InfoTip";
+import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { DirectRates } from "@/components/host/DirectRates";
 import { DirectBookingSettings } from "@/components/host/DirectBookingSettings";
 import { LoyaltyVouchers } from "@/components/host/LoyaltyVouchers";
 import { RoomGallery } from "@/components/host/RoomGallery";
 
+const TABS = ["bookings", "enquiries", "guests", "vouchers", "setup"] as const;
+const SETUP = ["rates", "photos", "booking"] as const;
+
 export const Route = createFileRoute("/_authenticated/app/direct")({
+  // ?tab= opens a part of the page; ?focus= opens a section of its set-up.
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { tab?: (typeof TABS)[number]; focus?: (typeof SETUP)[number] } => ({
+    ...(TABS.includes(s["tab"] as never) ? { tab: s["tab"] as (typeof TABS)[number] } : {}),
+    ...(SETUP.includes(s["focus"] as never) ? { focus: s["focus"] as (typeof SETUP)[number] } : {}),
+  }),
   head: () => ({ meta: [{ title: rebrand("Direct stays · Latchkey host dashboard") }] }),
   component: DirectPage,
 });
@@ -74,26 +89,59 @@ function DirectPage() {
   const { canWrite, loading } = useRole();
   const hostId = ws.data?.hostId ?? null;
   const fn = useServerFn(listDirect);
-  const { selectedId } = useSelectedProperty(
-    (ws.data?.properties ?? []) as Array<{ id: string; name: string }>,
-  );
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const properties = (ws.data?.properties ?? []) as Array<{ id: string; name: string }>;
+  const { selectedId, select } = useSelectedProperty(properties);
   const q = useQuery({
     queryKey: ["direct", hostId],
     enabled: !!hostId && canWrite,
     queryFn: () => fn({ data: { hostId: hostId! } }),
   });
+  const settingsFn = useServerFn(getDirectBookingSettings);
+  const setup = useQuery({
+    queryKey: ["direct-booking", selectedId],
+    enabled: !!selectedId && canWrite,
+    queryFn: () => settingsFn({ data: { propertyId: selectedId! } }),
+  });
+  const openTab = (tab: (typeof TABS)[number]) =>
+    void navigate({ to: "/app/direct", search: { tab }, replace: true });
 
   if (ws.isLoading || loading) return <Skeleton className="mx-auto h-64 max-w-5xl rounded-2xl" />;
   if (!canWrite)
     return <EmptyState icon={CalendarHeart} title={copy.title} body={copy.staffOnly} />;
 
   const d = q.data;
-  const fresh = d?.enquiries.filter((e) => e.status === "new").length ?? 0;
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+  // Everything on the page is for the property chosen above.
+  const mine = <T extends { property_id: string | null }>(list: T[]) =>
+    selectedId ? list.filter((x) => !x.property_id || x.property_id === selectedId) : list;
+  const reservations = d ? mine(d.reservations) : [];
+  const enquiries = d ? mine(d.enquiries) : [];
+  const contacts = d ? mine(d.contacts) : [];
+  const today = new Date().toISOString().slice(0, 10);
+  const grouped = groupReservations(reservations, today);
+  const openEnquiries = enquiries.filter((e) => e.status === "new" || e.status === "offered");
+  const doneEnquiries = enquiries.filter((e) => e.status !== "new" && e.status !== "offered");
+  const fresh = enquiries.filter((e) => e.status === "new").length;
+  const tab = search.tab ?? (reservations.length || !enquiries.length ? "bookings" : "enquiries");
+  const page = d?.properties.find((p) => p.id === selectedId && p.short_code);
+  const url = page ? `${origin}/book/${page.short_code}` : null;
+  const row = (r: (typeof reservations)[number]) => (
+    <ReservationRow key={r.id} r={r} hostId={hostId!} />
+  );
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <PageHeader title={copy.title} subtitle={copy.subtitle} />
+    <div className="mx-auto w-full max-w-5xl space-y-5">
+      <PageHeader
+        title={copy.title}
+        subtitle={copy.subtitle}
+        actions={
+          properties.length > 1 ? (
+            <PropertyPicker properties={properties} value={selectedId} onChange={select} />
+          ) : undefined
+        }
+      />
       {q.isLoading ? (
         <Skeleton className="h-64 rounded-2xl" />
       ) : q.error ? (
@@ -105,87 +153,124 @@ function DirectPage() {
       ) : d ? (
         <>
           {/* The link to share: on the website, in the guide, in a thank-you email. */}
-          <section className="card-soft space-y-3 p-5" data-tour="direct-page-link">
-            <h2 className="text-lg">{copy.linkTitle}</h2>
-            <p className="text-sm text-muted-foreground">{copy.linkBody}</p>
-            <ul className="space-y-2">
-              {d.properties
-                .filter((p) => p.short_code)
-                .map((p) => {
-                  const url = `${origin}/book/${p.short_code}`;
-                  return (
-                    <li
-                      key={p.id}
-                      className="flex flex-wrap items-center gap-2 rounded-2xl bg-muted p-3"
-                    >
-                      <span className="min-w-0 flex-1 basis-48">
-                        <span className="block text-sm font-medium">{p.name}</span>
-                        <span className="block truncate font-mono text-xs text-muted-foreground">
-                          {url}
-                        </span>
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          void navigator.clipboard.writeText(url).then(
-                            () => toast.success(copy.copied),
-                            () => toast.error(common.errorBody),
-                          )
-                        }
-                      >
-                        <Copy className="size-4" /> {copy.copy}
-                      </Button>
-                      <Button size="sm" variant="ghost" asChild>
-                        <a href={url} target="_blank" rel="noreferrer">
-                          <ExternalLink className="size-4" /> {copy.open}
-                        </a>
-                      </Button>
-                    </li>
-                  );
-                })}
-            </ul>
-          </section>
+          {url ? (
+            <section
+              className="card-soft flex flex-wrap items-center gap-2 p-3"
+              data-tour="direct-page-link"
+            >
+              <span className="min-w-0 flex-1 basis-56">
+                <span className="flex items-center gap-1 text-sm font-medium">
+                  {copy.linkTitle} <InfoTip label={copy.linkTitle}>{copy.linkBody}</InfoTip>
+                </span>
+                <span className="block truncate font-mono text-xs text-muted-foreground">
+                  {url}
+                </span>
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  void navigator.clipboard.writeText(url).then(
+                    () => toast.success(copy.copied),
+                    () => toast.error(common.errorBody),
+                  )
+                }
+              >
+                <Copy className="size-4" /> {copy.copy}
+              </Button>
+              <Button size="sm" variant="ghost" asChild>
+                <a href={url} target="_blank" rel="noreferrer">
+                  <ExternalLink className="size-4" /> {copy.open}
+                </a>
+              </Button>
+            </section>
+          ) : null}
 
-          <Tabs defaultValue={d.reservations.length ? "bookings" : "enquiries"}>
+          {/* Guests can only ask until the host turns booking on: say so where it matters. */}
+          {setup.data && !setup.data.settings.instant && tab !== "setup" ? (
+            <p className="flex flex-wrap items-center gap-2 rounded-xl bg-muted p-3 text-sm">
+              <span className="min-w-0 flex-1 basis-56">{copy.enquiriesOnly}</span>
+              <Button size="sm" variant="outline" onClick={() => openTab("setup")}>
+                {copy.setUpBooking}
+              </Button>
+            </p>
+          ) : null}
+
+          <Tabs value={tab} onValueChange={(v) => openTab(v as (typeof TABS)[number])}>
             <TabsList data-tour="direct-tabs">
               <TabsTrigger value="bookings">
-                {copy.bookingsTab(d.reservations.filter((r) => r.status === "pending").length)}
+                {copy.bookingsTab(grouped.attention.length)}
               </TabsTrigger>
               <TabsTrigger value="enquiries">{copy.enquiriesTab(fresh)}</TabsTrigger>
-              <TabsTrigger value="guests">{copy.guestsTab(d.contacts.length)}</TabsTrigger>
+              <TabsTrigger value="guests">{copy.guestsTab(contacts.length)}</TabsTrigger>
               <TabsTrigger value="vouchers">{vouchersAdminCopy.tab}</TabsTrigger>
+              <TabsTrigger value="setup" data-tour="direct-setup-tab">
+                {copy.setupTab}
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="bookings" className="mt-4 space-y-3">
-              {d.reservations.length === 0 ? (
+              {reservations.length === 0 ? (
                 <EmptyState
                   icon={CalendarHeart}
                   title={copy.noBookings}
                   body={copy.noBookingsBody}
                 />
               ) : (
-                d.reservations.map((r) => <ReservationRow key={r.id} r={r} hostId={hostId!} />)
+                <>
+                  {grouped.attention.length ? (
+                    <h2 className="text-sm font-semibold">{copy.needsYou}</h2>
+                  ) : null}
+                  {grouped.attention.map(row)}
+                  {grouped.attention.length && grouped.upcoming.length ? (
+                    <h2 className="pt-2 text-sm font-semibold">{copy.comingUp}</h2>
+                  ) : null}
+                  {grouped.upcoming.map(row)}
+                  {grouped.finished.length ? (
+                    <details className="group pt-2">
+                      <summary className="flex cursor-pointer list-none items-center gap-1 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                        <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                        {copy.finished(grouped.finished.length)}
+                      </summary>
+                      <div className="mt-3 space-y-3">{grouped.finished.map(row)}</div>
+                    </details>
+                  ) : null}
+                </>
               )}
             </TabsContent>
             <TabsContent value="enquiries" className="mt-4 space-y-3">
-              {d.enquiries.length === 0 ? (
+              {enquiries.length === 0 ? (
                 <EmptyState
                   icon={CalendarHeart}
                   title={copy.noEnquiries}
                   body={copy.noEnquiriesBody}
                 />
               ) : (
-                d.enquiries.map((e) => (
-                  <EnquiryCard key={e.id} e={e} data={d} hostId={hostId!} origin={origin} />
-                ))
+                <>
+                  {openEnquiries.map((e) => (
+                    <EnquiryCard key={e.id} e={e} data={d} hostId={hostId!} origin={origin} />
+                  ))}
+                  {doneEnquiries.length ? (
+                    <details className="group pt-2">
+                      <summary className="flex cursor-pointer list-none items-center gap-1 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                        <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                        {copy.finished(doneEnquiries.length)}
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        {doneEnquiries.map((e) => (
+                          <EnquiryCard key={e.id} e={e} data={d} hostId={hostId!} origin={origin} />
+                        ))}
+                      </div>
+                    </details>
+                  ) : null}
+                </>
               )}
             </TabsContent>
             <TabsContent value="guests" className="mt-4 space-y-3">
               <p className="text-sm text-muted-foreground">{copy.guestsBody}</p>
-              {d.contacts.length === 0 ? (
+              {contacts.length === 0 ? (
                 <EmptyState icon={Heart} title={copy.noGuests} body={copy.noGuestsBody} />
               ) : (
-                d.contacts.map((c) => (
+                contacts.map((c) => (
                   <ContactRow key={c.id} c={c} data={d} hostId={hostId!} origin={origin} />
                 ))
               )}
@@ -193,12 +278,36 @@ function DirectPage() {
             <TabsContent value="vouchers" className="mt-4">
               {selectedId ? <LoyaltyVouchers propertyId={selectedId} /> : null}
             </TabsContent>
+            {/* What the booking page offers, for this property: set once, then left alone. */}
+            <TabsContent value="setup" className="mt-4">
+              {selectedId ? (
+                <ArrangedSections
+                  storageKey="latchkey.directLayout"
+                  focus={search.focus}
+                  items={[
+                    {
+                      id: "booking",
+                      title: copy.setupBooking,
+                      hint: copy.setupBookingHint,
+                      node: <DirectBookingSettings propertyId={selectedId} />,
+                    },
+                    {
+                      id: "rates",
+                      title: copy.setupRates,
+                      hint: copy.setupRatesHint,
+                      node: <DirectRates propertyId={selectedId} />,
+                    },
+                    {
+                      id: "photos",
+                      title: copy.setupPhotos,
+                      hint: copy.setupPhotosHint,
+                      node: <RoomGallery propertyId={selectedId} />,
+                    },
+                  ]}
+                />
+              ) : null}
+            </TabsContent>
           </Tabs>
-
-          {/* The page's settings for the property chosen in the menu: rates and offers, then booking and paying. */}
-          {selectedId ? <DirectRates propertyId={selectedId} /> : null}
-          {selectedId ? <RoomGallery propertyId={selectedId} /> : null}
-          {selectedId ? <DirectBookingSettings propertyId={selectedId} /> : null}
         </>
       ) : null}
     </div>

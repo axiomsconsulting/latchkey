@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { cancelPolicy, cleanRefund, refundMethod } from "../src/lib/direct-cancel";
+import {
+  cancelPolicy,
+  cleanRefund,
+  groupReservations,
+  refundMethod,
+} from "../src/lib/direct-cancel";
 
 const r = (o: Record<string, unknown> = {}) =>
   ({
@@ -86,5 +91,35 @@ describe("refunds the host chooses", () => {
     expect(refundMethod("card", 1)).toBe("card");
     expect(refundMethod("bank", 1)).toBe("by_host");
     expect(refundMethod("card", 0)).toBe("none");
+  });
+});
+
+describe("the bookings list", () => {
+  const row = (id: string, o: Record<string, unknown>) => ({
+    id,
+    status: "paid",
+    method: "card",
+    check_in: "2026-12-05",
+    check_out: "2026-12-07",
+    refund_status: null,
+    ...o,
+  });
+  it("puts what needs the host first, then what's coming, then what's over", () => {
+    const g = groupReservations(
+      [
+        row("old", { check_in: "2026-01-01", check_out: "2026-01-03" }),
+        row("later", { check_in: "2027-01-01", check_out: "2027-01-02" }),
+        row("soon", {}),
+        row("transfer", { status: "pending", method: "bank" }),
+        row("refund", { status: "cancelled", method: "bank", refund_status: "to_do" }),
+        row("gone", { status: "cancelled" }),
+        row("expired", { status: "expired" }),
+      ],
+      "2026-11-04",
+    );
+    expect(g.attention.map((r) => r.id).sort()).toEqual(["refund", "transfer"]);
+    expect(g.upcoming.map((r) => r.id)).toEqual(["soon", "later"]);
+    expect(g.finished.map((r) => r.id)[2]).toBe("old");
+    expect(g.finished).toHaveLength(3);
   });
 });
