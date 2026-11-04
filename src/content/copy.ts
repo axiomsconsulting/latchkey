@@ -1468,6 +1468,7 @@ export const kioskCardsCopy = branded({
   settingsIn: "Check-in card settings",
   settingsOut: "Check-out card settings",
   settingsTitle: "Check-in cards",
+  messageAgain: "For a guest who has stayed with you before",
   settingsBody:
     "On arrival day the door tablet welcomes each guest by name. Its Check in button starts with their photo ID, which finds their booking, so a card never skips the ID check.",
   on: "Welcome arriving guests on the door tablet",
@@ -1903,6 +1904,7 @@ export const guest = branded({
     "Thank you. Your host will say hello and check your ID in person during your stay. Nothing more to do for now.",
   continue: "Continue",
   doneTitle: (name: string) => `You're all checked in, ${name}`,
+  doneTitleAgain: (name: string) => `Welcome back, ${name}. You're all checked in`,
   roomLine: (room: string, title: string | null) =>
     `You're in ${room}${title ? `, ${title}` : ""}.`,
   noRoom: "Your host will show you to your room.",
@@ -2092,6 +2094,7 @@ export const guest = branded({
   faceSaving: "Saving…",
   // Stay page
   stayTitle: (name: string) => `Welcome, ${name}`,
+  stayTitleAgain: (name: string) => `Welcome back, ${name}`,
   stayWifi: "Wi-Fi",
   stayNetwork: "Network",
   stayPassword: "Password",
@@ -3450,6 +3453,7 @@ export const guestCard = branded({
   adult: (n: number) => `Adult ${n}`,
   child: (age: number | null) => (age === null ? "Child" : `Child, ${age}`),
   verified: "ID matches booking",
+  stayedBefore: "Stayed before",
   idChecked: "ID checked",
   idPartial: "ID partly matches",
   idMismatch: "ID doesn't match",
@@ -5784,6 +5788,9 @@ export const guestTextsCopy = branded({
   demo: "Demo mode: messages are written into each stay's conversation but not sent. Latchkey support switches your business to live.",
   needsUpdate: "This needs the latest update (migration 0080).",
   welcome: "Welcome, on the arrival day",
+  welcomeAgain: "Welcome words for a guest who has stayed with you before",
+  welcomeAgainHelp:
+    "For texts and email, with the same {placeholders}. WhatsApp uses its approved wording.",
   goodbye: "Goodbye, on the check-out day",
   at: "Send at",
   words: "Message",

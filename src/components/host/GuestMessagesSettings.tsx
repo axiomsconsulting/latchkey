@@ -278,6 +278,19 @@ export function GuestMessagesSettings({
         property={info.property.name}
         origin={info.origin}
       />
+      <div className="space-y-1">
+        <label htmlFor="gm-again" className="text-sm font-medium">
+          {copy.welcomeAgain}
+        </label>
+        <Textarea
+          id="gm-again"
+          rows={3}
+          maxLength={600}
+          value={form.welcomeAgain}
+          onChange={(e) => setForm({ ...form, welcomeAgain: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">{copy.welcomeAgainHelp}</p>
+      </div>
       <MessageBox
         label={copy.goodbye}
         value={form.goodbye}

@@ -127,7 +127,7 @@ type Step =
   | { name: "no_match" }
   | { name: "locked"; until: string }
   | { name: "guestName" }
-  | { name: "confirm"; firstName: string; returning?: boolean }
+  | { name: "confirm"; firstName: string; returning?: boolean; again?: boolean }
   | { name: "party" }
   | { name: "companion"; position: number; ready: boolean }
   | { name: "face"; position: number }
@@ -284,6 +284,8 @@ export function CheckInFlow({
   const options = useServerFn(checkoutOptions);
   const fromWelcome = useServerFn(startFromWelcome);
   const byPhoto = useServerFn(findByPhotoId);
+  // They've stayed with this business before: greeted as someone returning.
+  const [stayedBefore, setStayedBefore] = useState(false);
   const list = useServerFn(listArrivals);
   const pick = useServerFn(pickArrival);
   const confirm = useServerFn(confirmBooking);
@@ -389,6 +391,7 @@ export function CheckInFlow({
 
   function restart() {
     phone.end();
+    setStayedBefore(false);
     handled.current.clear();
     phoneFaces.current.clear();
     phoneHeldId.current = false;
@@ -447,7 +450,15 @@ export function CheckInFlow({
     if (res.status === "locked") return setStep({ name: "locked", until: res.until });
     if (res.status === "no_match") return setStep({ name: "no_match" });
     if (res.status === "choose_platform") return setStep({ name: "platform", only: res.channels });
-    await found(res.token, res.platform, res.firstName, res.needsName, res.returning === true);
+    await found(
+      res.token,
+      res.platform,
+      res.firstName,
+      res.needsName,
+      res.returning === true,
+      flow.confirm,
+      res.again === true,
+    );
   }
 
   /** The stay is found: a name if it has none, then "Is this you?" unless the host left it out. */
@@ -458,12 +469,14 @@ export function CheckInFlow({
     needsName: boolean,
     returning: boolean,
     ask = flow.confirm,
+    again = false,
   ) {
     setToken(t);
+    setStayedBefore(again);
     setPlatform(site);
     if (needsName) return setStep({ name: "guestName" });
     if (!ask && !returning) return void onConfirm(t);
-    setStep({ name: "confirm", firstName: first, returning });
+    setStep({ name: "confirm", firstName: first, returning, again });
   }
 
   /** Finding the stay: the photo ID first when the journey has it, otherwise the surname initial. */
@@ -508,6 +521,7 @@ export function CheckInFlow({
     noteRegister(0, res.register);
     setToken(res.token);
     setPlatform(res.platform);
+    setStayedBefore(res.again === true);
     if (phoneFaces.current.has(0)) leadFaceDone.current = true;
     else if (res.facePhoto) {
       faceFirst.current = true;
@@ -622,7 +636,15 @@ export function CheckInFlow({
       if (!live) return;
       if (!res || res.status !== "matched") return startFind();
       // The host already said who's arriving: no "Is this you?".
-      void found(res.token, res.platform, res.firstName, res.needsName, res.returning, false);
+      void found(
+        res.token,
+        res.platform,
+        res.firstName,
+        res.needsName,
+        res.returning,
+        false,
+        res.again === true,
+      );
     });
     return () => {
       live = false;
@@ -1295,7 +1317,9 @@ export function CheckInFlow({
           {step.name === "confirm" ? (
             <section data-kx="col" className="py-4 text-center">
               <h1 className="text-4xl sm:text-6xl">
-                {step.returning ? copy.welcomeBack(step.firstName) : copy.hi(step.firstName)}
+                {step.returning || step.again
+                  ? copy.welcomeBack(step.firstName)
+                  : copy.hi(step.firstName)}
               </h1>
               <p className="mt-4 text-xl text-muted-foreground">
                 {step.returning ? (
@@ -1755,7 +1779,11 @@ export function CheckInFlow({
               <div>
                 <CheckCircle2 className="mx-auto size-14 text-success" />
                 <h1 className="mt-4 text-3xl sm:text-5xl">
-                  {step.held ? copy.heldTitle(step.firstName) : copy.doneTitle(step.firstName)}
+                  {step.held
+                    ? copy.heldTitle(step.firstName)
+                    : stayedBefore
+                      ? copy.doneTitleAgain(step.firstName)
+                      : copy.doneTitle(step.firstName)}
                 </h1>
                 <p className="mt-4 text-2xl">
                   {step.held

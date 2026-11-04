@@ -75,6 +75,7 @@ const goodbyeInput = z.object({
 const arrivalsInput = z.object({
   on: z.boolean(),
   message: z.string().max(300),
+  messageAgain: z.string().max(300).optional(),
   startBeforeMinutes: z.number().refine((n) => (START_CHOICES as readonly number[]).includes(n)),
   startAt: z
     .string()
@@ -269,16 +270,19 @@ async function cardsFor(
         showsArrival(b, today, now, standardIn, tz, a),
     )
     .sort(byRoom);
-  const arriving: Array<GoodbyeCard & { bookingId: string }> = arrivingRows.map((b) => ({
-    bookingId: b.id,
-    kind: "in",
-    handle: "",
-    firstName: firstName(b.guest_full_name),
-    room: b.rooms?.display_name ?? null,
-    message: arrivalText(a, firstName(b.guest_full_name)),
-    until: arrivalStart(b, standardIn, tz, a).time,
-    late: arrivalStart(b, standardIn, tz, a).early,
-  }));
+  const { isRepeatStay } = await import("./repeat-guest.server");
+  const arriving: Array<GoodbyeCard & { bookingId: string }> = await Promise.all(
+    arrivingRows.map(async (b) => ({
+      bookingId: b.id,
+      kind: "in" as const,
+      handle: "",
+      firstName: firstName(b.guest_full_name),
+      room: b.rooms?.display_name ?? null,
+      message: arrivalText(a, firstName(b.guest_full_name), await isRepeatStay(db, b.id)),
+      until: arrivalStart(b, standardIn, tz, a).time,
+      late: arrivalStart(b, standardIn, tz, a).early,
+    })),
+  );
   const leaving = await Promise.all(
     all
       .filter(

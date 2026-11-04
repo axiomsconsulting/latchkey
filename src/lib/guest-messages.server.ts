@@ -109,7 +109,12 @@ async function sendOne(
     room: stay.rooms?.display_name ?? "",
     book: `${origin}/book/${p.short_code}`,
   };
-  const body = fillMessage(kind === "welcome" ? s.welcome.text : s.goodbye.text, vars);
+  const { isRepeatStay } = await import("./repeat-guest.server");
+  const again = kind === "welcome" && (await isRepeatStay(await db(), stay.id));
+  const body = fillMessage(
+    kind === "welcome" ? (again ? s.welcomeAgain : s.welcome.text) : s.goodbye.text,
+    vars,
+  );
   const ch = await guestChannels(p.host_id);
   const media = kind === "welcome" ? await attachmentLink(p.id, s.attachmentId) : null;
   const log: Array<{ via: string; status: string }> = [];
@@ -148,7 +153,12 @@ async function sendOne(
       const { sendGuestEmail } = await import("./alert-email.server");
       const ok = await sendGuestEmail({
         to: stay.guest_email,
-        subject: kind === "welcome" ? `Welcome to ${p.name}` : `Thank you for staying at ${p.name}`,
+        subject:
+          kind === "welcome"
+            ? again
+              ? `Welcome back to ${p.name}`
+              : `Welcome to ${p.name}`
+            : `Thank you for staying at ${p.name}`,
         body: media ? `${body}\n\nAttached for you: ${media}` : body,
         from: p.name,
         key: `${kind}-${stay.id}`,

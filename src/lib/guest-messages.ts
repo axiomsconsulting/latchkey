@@ -51,6 +51,8 @@ export type MessageChoice = {
 
 export type GuestMessagesSettings = {
   welcome: MessageChoice;
+  /** The welcome's words for a guest who has stayed before; same time and switch. */
+  welcomeAgain: string;
   goodbye: MessageChoice;
   /** By phone: WhatsApp when it's set up (else a text), a text only, WhatsApp only, or not at all. */
   phone: PhoneRoute;
@@ -62,11 +64,14 @@ export type GuestMessagesSettings = {
 
 export const DEFAULT_WELCOME =
   "Hi {name}, welcome to {property}! Check-in from {checkin}. Wi-Fi, getting in and more: {guide}";
+export const DEFAULT_WELCOME_AGAIN =
+  "Hi {name}, welcome back to {property}! It's lovely to have you with us again. Check-in from {checkin}. Wi-Fi, getting in and more: {guide}";
 export const DEFAULT_GOODBYE =
   "Thank you for staying at {property}, {name}. Check-out is by {checkout}. Safe travels, and book direct next time: {book}";
 
 export const DEFAULT_GUEST_MESSAGES: GuestMessagesSettings = {
   welcome: { on: false, time: "12:00", text: DEFAULT_WELCOME },
+  welcomeAgain: DEFAULT_WELCOME_AGAIN,
   goodbye: { on: false, time: "08:00", text: DEFAULT_GOODBYE },
   phone: "auto",
   email: true,
@@ -93,6 +98,7 @@ export function normaliseGuestMessages(raw: unknown): GuestMessagesSettings {
   const att = r["attachmentId"];
   return {
     welcome: choice(r["welcome"], DEFAULT_GUEST_MESSAGES.welcome),
+    welcomeAgain: txt(r["welcomeAgain"], DEFAULT_WELCOME_AGAIN),
     goodbye: choice(r["goodbye"], DEFAULT_GUEST_MESSAGES.goodbye),
     phone:
       phone === "auto" || phone === "sms" || phone === "whatsapp" || phone === "none"

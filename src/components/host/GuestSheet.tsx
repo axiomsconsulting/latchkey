@@ -173,6 +173,11 @@ export function GuestSheet({
               </SheetTitle>
               <SheetDescription className="flex flex-wrap items-center gap-2">
                 <ChannelBadge channel={b.channel as Channel} label={site?.label} />
+                {b.stayedBefore ? (
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-foreground">
+                    {copy.stayedBefore}
+                  </span>
+                ) : null}
                 <StatusBadge
                   state={stayState(
                     { status: b.status, check_in_date: b.checkIn, check_out_date: b.checkOut },

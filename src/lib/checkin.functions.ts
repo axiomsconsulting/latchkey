@@ -404,10 +404,17 @@ export const matchBooking = createServerFn({ method: "POST" })
       token: await startSession(p.id, hit.id),
       firstName: firstName(hit.guest_full_name),
       returning: found.kind === "match" && found.returning,
+      again: await repeatStay(db, hit.id),
       needsName: found.kind === "match" && found.needsName && !(await readsIds(p)),
       platform: platformKey(hit),
     };
   });
+
+/** Has this guest stayed with the business before? Only for the greeting. */
+async function repeatStay(db: unknown, bookingId: string, idName?: string | null) {
+  const { isRepeatStay } = await import("./repeat-guest.server");
+  return isRepeatStay(db, bookingId, idName);
+}
 
 /**
  * ID first: the guest photographs their ID and is registered there and then;
@@ -556,6 +563,7 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       firstName: firstName(idName),
       platform: booking ? platformKey(booking) : null,
       returning: placed.kind === "stay" && placed.returning,
+      again: await repeatStay(db, bookingId, idName),
       prefill: prefillFrom(read),
       register,
       // The selfie comes straight after the ID, before anything else is asked.
@@ -733,6 +741,7 @@ export const startFromWelcome = createServerFn({ method: "POST" })
       firstName: firstName(b.guest_full_name),
       needsName: !b.guest_full_name?.trim() && !(await readsIds(p)),
       returning: b.status === "checked_in",
+      again: await repeatStay(db, b.id),
       platform: platformKey(b),
     };
   });
@@ -2403,6 +2412,7 @@ export const getStay = createServerFn({ method: "GET" })
 
     return {
       found: true as const,
+      again: await repeatStay(db, t.booking_id),
       propertyId: b.property_id,
       firstName: firstName(b.guest_full_name),
       checkInDate: b.check_in_date as string,
