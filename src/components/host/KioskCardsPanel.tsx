@@ -65,6 +65,21 @@ export function TodayCardList({
   }
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">…</p>;
+  const switchedOff =
+    (q.data as { on?: { in: boolean; out: boolean } } | undefined)?.on?.[kind] === false;
+  if (switchedOff)
+    return (
+      <p className="text-sm text-muted-foreground">
+        {kind === "in" ? copy.offIn : copy.offOut}{" "}
+        <Link
+          to="/app/settings"
+          search={{ focus: kind === "in" ? "welcomeCards" : "goodbye" } as never}
+          className="underline underline-offset-2"
+        >
+          {copy.turnOn}
+        </Link>
+      </p>
+    );
   if (!list.length)
     return (
       <p className="text-sm text-muted-foreground">{kind === "in" ? copy.noneIn : copy.noneOut}</p>

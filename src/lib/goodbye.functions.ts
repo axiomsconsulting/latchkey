@@ -647,7 +647,7 @@ export const todayKioskCards = createServerFn({ method: "GET" })
     const a = normaliseArrivals(p.checkin_welcome);
     const states: Record<string, string> = {};
     for (const b of (rows ?? []) as any[]) {
-      if (b.check_in_date === today)
+      if (a.on && b.check_in_date === today)
         states[`in:${b.id}`] =
           b.status === "checked_in"
             ? "done"
@@ -656,7 +656,7 @@ export const todayKioskCards = createServerFn({ method: "GET" })
               : showsArrival(b, today, now, (p.default_check_in_time ?? "15:00").slice(0, 5), tz, a)
                 ? "showing"
                 : "later";
-      if (b.check_out_date === today)
+      if (g.on && b.check_out_date === today)
         states[`out:${b.id}`] =
           b.status === "checked_out"
             ? "done"
@@ -686,7 +686,7 @@ export const todayKioskCards = createServerFn({ method: "GET" })
               ((kind === "in" ? b.welcome_card_devices : b.goodbye_card_devices) as
                 string[] | null | undefined) ?? null,
           });
-    return { available: true as const, states, guests };
+    return { available: true as const, states, guests, on: { in: a.on, out: g.on } };
   });
 
 /** A confirmed door tablet of this property whose bell is on, by its device token; else null. */
@@ -726,6 +726,9 @@ export const kioskCardPicker = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ on: boolean; items: PickerEntry[] }> => {
     const { db, p } = await propertyFor(data.code);
     if (!p || !(await pickerTablet(db, p.id, data.device))) return { on: false, items: [] };
+    // Both kinds of card off: there's nothing for the bell to do.
+    if (!normaliseArrivals(p.checkin_welcome).on && !normaliseGoodbye(p.checkout_goodbye).on)
+      return { on: false, items: [] };
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const devId = await pickerTablet(db, p.id, data.device);

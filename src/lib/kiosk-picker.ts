@@ -66,7 +66,7 @@ export function pickerItems(rows: PickerRow[], c: PickerContext): PickerItem[] {
   const live = rows.filter((b) => !b.mirror_of && b.guest_full_name?.trim()).sort(byRoom);
   const items: PickerItem[] = [];
   for (const b of live) {
-    if (b.check_in_date !== c.today || !ARRIVING.has(b.status)) continue;
+    if (!c.arrivals.on || b.check_in_date !== c.today || !ARRIVING.has(b.status)) continue;
     const showing = showsArrival(b, c.today, c.now, c.standardIn, c.tz, c.arrivals);
     const from = arrivalStart(b, c.standardIn, c.tz, c.arrivals).from;
     items.push({
@@ -82,7 +82,7 @@ export function pickerItems(rows: PickerRow[], c: PickerContext): PickerItem[] {
     });
   }
   for (const b of live) {
-    if (b.check_out_date !== c.today || !STAYING.has(b.status)) continue;
+    if (!c.goodbye.on || b.check_out_date !== c.today || !STAYING.has(b.status)) continue;
     const showing = showsGoodbyeNow(b, c.today, c.now, c.standardOut, c.tz, c.goodbye);
     const w = goodbyeWindow(b, c.standardOut, c.tz, c.goodbye);
     items.push({

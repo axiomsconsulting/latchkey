@@ -196,10 +196,15 @@ export const kioskTablet = createServerFn({ method: "POST" })
     // Before migration 0072 there's no bell setting: it's off until then.
     const { data: pick, error: pickErr } = await db
       .from("properties")
-      .select("kiosk_card_picker")
+      .select("kiosk_card_picker, checkin_welcome, checkout_goodbye")
       .eq("id", p.id)
       .maybeSingle();
-    const cardPicker = !pickErr && pick?.kiosk_card_picker !== false;
+    // The bell only shows when there are cards it could put up.
+    const { normaliseArrivals, normaliseGoodbye } = await import("./checkout-goodbye");
+    const cardPicker =
+      !pickErr &&
+      pick?.kiosk_card_picker !== false &&
+      (normaliseArrivals(pick?.checkin_welcome).on || normaliseGoodbye(pick?.checkout_goodbye).on);
     const { requestNet } = await import("./stay-access.server");
     const net = await requestNet();
     const now = new Date();
