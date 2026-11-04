@@ -29,6 +29,27 @@ export function RoomFeedPanel({ roomId, roomName }: { roomId: string; roomName: 
     q.data?.enabled && q.data.token && typeof window !== "undefined"
       ? `${window.location.origin}/api/public/calendar/${q.data.token}.ics`
       : null;
+  const link = (label: string, help: string, value: string) => (
+    <div className="space-y-1">
+      <p className="font-medium">{label}</p>
+      <p className="text-xs text-muted-foreground">{help}</p>
+      <div className="flex items-center gap-2">
+        <code className="block min-w-0 flex-1 truncate rounded-xl bg-surface px-3 py-2 text-xs">
+          {value}
+        </code>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            void navigator.clipboard.writeText(value);
+            toast.success(copy.copied);
+          }}
+        >
+          {copy.copy}
+        </Button>
+      </div>
+    </div>
+  );
 
   async function save(enabled: boolean, regenerate = false) {
     try {
@@ -54,23 +75,12 @@ export function RoomFeedPanel({ roomId, roomName }: { roomId: string; roomName: 
         {copy.enable}
       </label>
       {url ? (
-        <div className="mt-2 space-y-2">
-          <code className="block truncate rounded-xl bg-surface px-3 py-2 text-xs">{url}</code>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                void navigator.clipboard.writeText(url);
-                toast.success(copy.copied);
-              }}
-            >
-              {copy.copy}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => save(true, true)}>
-              {copy.regenerate}
-            </Button>
-          </div>
+        <div className="mt-3 space-y-3 text-sm">
+          {link(copy.forSitesLabel, copy.forSitesHelp, url)}
+          {link(copy.forYouLabel, copy.forYouHelp, `${url}?view=all`)}
+          <Button size="sm" variant="ghost" onClick={() => save(true, true)}>
+            {copy.regenerate}
+          </Button>
         </div>
       ) : null}
     </div>
