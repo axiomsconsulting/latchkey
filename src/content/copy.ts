@@ -4590,7 +4590,9 @@ export const roomPhotoCopy = branded({
 /** The Settings menu: its groups (tabs) and which section sits in which. */
 export const settingsMenuCopy = branded({
   label: "Settings menu",
-  advanced: "Show advanced settings",
+  basic: "Basic",
+  advanced: "Advanced",
+  basicOrAdvanced: "Show advanced settings",
   groups: {
     business: "Business",
     checkin: "Check-in",
@@ -6352,7 +6354,7 @@ export const doorCodesCopy = {
 /** Folding and moving sections, on Settings and Latchkey admin. */
 export const arrangeCopy = branded({
   openAll: "Open all",
-  foldAll: "Fold all",
+  closeAll: "Close all",
   up: (title: string) => `Move ${title} up`,
   down: (title: string) => `Move ${title} down`,
 });

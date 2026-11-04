@@ -394,8 +394,17 @@ function SettingsPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">{settingsMenuCopy.groupHints[tab]}</p>
         <label className="flex items-center gap-2 text-sm">
-          <Switch checked={advanced} onCheckedChange={chooseAdvanced} />
-          {settingsMenuCopy.advanced}
+          <span className={advanced ? "text-muted-foreground" : "font-medium"}>
+            {settingsMenuCopy.basic}
+          </span>
+          <Switch
+            checked={advanced}
+            onCheckedChange={chooseAdvanced}
+            aria-label={settingsMenuCopy.basicOrAdvanced}
+          />
+          <span className={advanced ? "font-medium" : "text-muted-foreground"}>
+            {settingsMenuCopy.advanced}
+          </span>
         </label>
       </div>
 

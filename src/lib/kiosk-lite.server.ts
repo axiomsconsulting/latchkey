@@ -7,6 +7,7 @@
  * happens on the guest's own phone, by QR code (old tablets have no camera
  * access in the browser).
  */
+import { deviceSignature } from "./kiosk-devices";
 import { guest as guestCopy, kioskLite as copy } from "@/content/copy";
 import { brandName } from "@/lib/brand";
 import { APP_VERSION } from "@/lib/app-version";
@@ -600,6 +601,7 @@ export async function liteState(
     detected?: boolean | undefined;
     mode?: "lite" | "enhanced" | "full" | undefined;
     fullFailed?: boolean | undefined;
+    hw?: { w: number; h: number; dpr?: number | undefined; touch?: number | undefined } | undefined;
     screen?:
       | {
           view: "start" | "cards" | "welcome" | "saver" | "night" | "blank" | "checkin";
@@ -620,6 +622,7 @@ export async function liteState(
       code,
       ...(device ? { device } : {}),
       version: APP_VERSION,
+      ...liteSig(userAgent, body.hw),
       compat: {
         detected: body.detected !== false,
         reason: browserLabel(userAgent),
@@ -736,6 +739,8 @@ export async function liteRest(code: string) {
   return {
     // By day older tablets stay on their usual screen, which already has the clock and Check in.
     show: showing === "day" ? "awake" : showing,
+    // What the sun or moon button shows, whatever the time.
+    restShow: restNow(look.rest, true, true),
     nightColours: NIGHT_PALETTES[look.rest.palette].map((c) => deepen(c, look.night.depth)),
     nightBrightness: look.night.brightness,
     /** Seconds each colour takes to drift into the next. */
@@ -765,4 +770,12 @@ export async function liteClock(tz: string, now = new Date()) {
       offset: zoneOffsetMinutes(c.tz, now),
     })),
   };
+}
+
+function liteSig(
+  userAgent: string,
+  hw: { w: number; h: number; dpr?: number | undefined; touch?: number | undefined } | undefined,
+) {
+  const sig = hw ? deviceSignature(userAgent, hw) : null;
+  return sig ? { sig } : {};
 }

@@ -14,6 +14,8 @@ import { normaliseCalibrations, type Calibration } from "@/lib/kiosk-calibration
 import {
   PAIR_CODE_HOURS,
   besideTabletInUse,
+  twinFor,
+  type TwinRow,
   cameraBlock,
   newPairCode,
   nextNumber,
@@ -171,6 +173,8 @@ export const kioskTablet = createServerFn({ method: "POST" })
           })
           .optional(),
         screen: screen.optional(),
+        /** What kind of device this is, the same in every browser on it (deviceSignature). */
+        sig: z.string().max(60).optional(),
       })
       .parse(d),
   )
@@ -227,6 +231,16 @@ export const kioskTablet = createServerFn({ method: "POST" })
     };
     // Also before migration 0072: written on its own so the rest of the report never fails with it.
     const reportCompat = async (id: string) => {
+      // Migration 0089: on its own for the same reason.
+      if (data.sig)
+        await db
+          .from("kiosk_devices")
+          .update({ device_sig: data.sig })
+          .eq("id", id)
+          .then(
+            () => {},
+            () => {},
+          );
       if (!data.compat) return;
       await db
         .from("kiosk_devices")
@@ -350,6 +364,35 @@ export const kioskTablet = createServerFn({ method: "POST" })
         Date.now(),
       );
     const t = newToken();
+    // The same device in another browser takes up its old entry: name, number and calibration stay.
+    // Into a confirmed entry only where it could have joined by itself, or on that entry's own connection.
+    const { data: sigs } = await db
+      .from("kiosk_devices")
+      .select("id, status, device_sig, last_seen_at")
+      .eq("property_id", p.id);
+    const twin = twinFor(
+      ((sigs ?? []) as TwinRow[]).filter((r) => live.some((x) => x.id === r.id)),
+      data.sig ?? null,
+      Date.now(),
+    );
+    const twinRow = twin ? live.find((r) => r.id === twin.id) : null;
+    if (
+      twinRow &&
+      (twinRow.status === "pending" ||
+        auto ||
+        (!!net?.hash && twinRow.net_hash === net.hash && twinRow.net_day === net.day))
+    ) {
+      const { data: back, error: backErr } = await db
+        .from("kiosk_devices")
+        .update({ token_hash: t.hash, ...report })
+        .eq("id", twinRow.id)
+        .select("*")
+        .single();
+      if (!backErr && back) {
+        await reportCompat(back.id);
+        return state(back, t.token);
+      }
+    }
     const row = {
       property_id: p.id,
       token_hash: t.hash,
@@ -561,6 +604,31 @@ export const pairKioskByCode = createServerFn({ method: "POST" })
         pair_code_expires_at: null,
       })
       .eq("id", dev.id);
+    // A second browser on a tablet already listed: this code takes over that entry, so nothing is added.
+    const { data: sibs } = await db
+      .from("kiosk_devices")
+      .select("id, status, device_sig, last_seen_at, number, token_hash")
+      .eq("property_id", data.propertyId);
+    const all = (sibs ?? []) as Array<TwinRow & { number: number; token_hash: string }>;
+    const me = all.find((r) => r.id === dev.id);
+    const twin = me
+      ? twinFor(
+          all.filter((r) => r.id !== dev.id && r.status !== "pending"),
+          me.device_sig,
+          Date.now(),
+        )
+      : null;
+    if (me && twin) {
+      await db.from("kiosk_devices").delete().eq("id", me.id);
+      await db
+        .from("kiosk_devices")
+        .update({ token_hash: me.token_hash, last_seen_at: new Date().toISOString() })
+        .eq("id", twin.id);
+      return {
+        code: dev.properties?.short_code as string,
+        number: (twin as unknown as { number: number }).number,
+      };
+    }
     return { code: dev.properties?.short_code as string, number: dev.number as number };
   });
 

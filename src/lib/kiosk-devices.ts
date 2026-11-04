@@ -100,3 +100,65 @@ export function cameraBlock(
   if (d.screen?.camPermission === "prompt") return "needs_allow";
   return null;
 }
+
+/* ---------- the same tablet in another browser ---------- */
+
+type OsFamily = "ipad" | "iphone" | "android" | "mac" | "windows" | "linux" | "other";
+
+function osFamily(ua: string, touchPoints: number): OsFamily {
+  if (/iPad/.test(ua)) return "ipad";
+  if (/iPhone|iPod/.test(ua)) return "iphone";
+  if (/Android/.test(ua)) return "android";
+  // Newer iPads in Safari call themselves a Mac; only the touch screen gives them away.
+  if (/Mac OS X|Macintosh/.test(ua)) return touchPoints > 1 ? "ipad" : "mac";
+  if (/Windows/.test(ua)) return "windows";
+  if (/Linux|CrOS/.test(ua)) return "linux";
+  return "other";
+}
+
+/**
+ * What kind of device this is, the same in every browser on it: operating system
+ * family and screen, either way up. Browsers offer no real device identifier, so
+ * two identical tablets give the same answer; twinFor tells those apart by whether
+ * both are in use. Sharpness only on touch devices, as browser zoom changes it on computers.
+ */
+export function deviceSignature(
+  ua: string,
+  hw: { w: number; h: number; dpr?: number | undefined; touch?: number | undefined },
+): string | null {
+  const w = Math.round(Math.min(hw.w, hw.h));
+  const h = Math.round(Math.max(hw.w, hw.h));
+  if (!(w > 0)) return null;
+  const os = osFamily(ua, hw.touch ?? 0);
+  const touchDevice = os === "ipad" || os === "iphone" || os === "android";
+  return `${os}|${w}x${h}${touchDevice && hw.dpr ? `@${Math.round(hw.dpr * 100) / 100}` : ""}`;
+}
+
+export type TwinRow = {
+  id: string;
+  status: string;
+  device_sig: string | null;
+  last_seen_at: string | null;
+};
+
+/**
+ * The entry a device opening the kiosk should take over: the same kind of device,
+ * and quiet for SAME_NETWORK_MINUTES. One still reporting is another tablet, or the
+ * same one open in two browsers at once, which can't be told apart. A confirmed
+ * entry is preferred, then the one seen last.
+ */
+export function twinFor(rows: TwinRow[], sig: string | null, now: number): TwinRow | null {
+  if (!sig) return null;
+  const quiet = rows.filter(
+    (r) =>
+      r.device_sig === sig &&
+      (!r.last_seen_at || Date.parse(r.last_seen_at) < now - SAME_NETWORK_MINUTES * 60_000),
+  );
+  const seen = (r: TwinRow) => (r.last_seen_at ? Date.parse(r.last_seen_at) : 0);
+  return (
+    [...quiet].sort(
+      (a, b) =>
+        Number(b.status !== "pending") - Number(a.status !== "pending") || seen(b) - seen(a),
+    )[0] ?? null
+  );
+}

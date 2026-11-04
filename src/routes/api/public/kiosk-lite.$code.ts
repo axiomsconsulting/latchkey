@@ -8,6 +8,14 @@ const body = z.discriminatedUnion("action", [
     detected: z.boolean().optional(),
     /** The richest level this browser can run, and whether the full kiosk just failed to start here. */
     mode: z.enum(["lite", "enhanced", "full"]).optional(),
+    hw: z
+      .object({
+        w: z.number().min(0).max(20000),
+        h: z.number().min(0).max(20000),
+        dpr: z.number().min(0).max(10).optional(),
+        touch: z.number().min(0).max(100).optional(),
+      })
+      .optional(),
     fullFailed: z.boolean().optional(),
     screen: z
       .object({
