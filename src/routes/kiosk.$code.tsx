@@ -1367,6 +1367,7 @@ function Kiosk() {
                   : undefined
               }
               qrPanel={saverLook.defaults.qrStyle === "panel"}
+              {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
             />
           )}
           <ThemeFooter

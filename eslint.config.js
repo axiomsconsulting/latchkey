@@ -9,6 +9,7 @@ export default tseslint.config(
   {
     // Lovable writes these two itself (database types, preview sign-in), in its own formatting.
     ignores: [
+      "public/vision/**",
       "dist",
       ".output",
       ".vinxi",

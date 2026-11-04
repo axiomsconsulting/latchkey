@@ -136,6 +136,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Website statistics: 13 months.",
           "Guests' names and contact details on a stay: cleared 30, 90, 180 or 365 days after check-out, as the host chooses (90 days unless changed). Messages: deleted after the period the host chooses, or kept with the stay.",
           "Copies of photo ID and face photos: 7, 14 or 30 days after check-out, as the host chooses, then deleted from Google Drive (deleted, not moved to the bin).",
+          "Door tablet photos: while a guest is on the photo step, the tablet looks at a tiny copy of the camera picture for a whole ID or a face, so it can take the photo by itself. That happens on the tablet, using Latchkey's own files, and only the photo it then takes is sent.",
           "Door tablet waking on movement or sound, if a host turns on Smart Screensaver: a very small picture and a sound level are compared on the tablet itself while it rests. Nothing is kept or sent.",
           "Door codes: kept with the stay, so that a code isn't given to another guest too soon.",
           "Someone who gives their ID at check-in but can't be matched to a booking straight away: their details are kept for the host to place them or remove them, under the same rules as any other guest.",

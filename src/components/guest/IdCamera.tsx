@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Camera, ImageUp, Loader2, SwitchCamera } from "lucide-react";
+import { Camera, ImageUp, Loader2, SwitchCamera, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { guest as copy } from "@/content/copy";
 import { fromFile } from "@/lib/photo-file";
 import { photoFill, photoStage } from "@/lib/photo-progress";
+import { useAutoSnap, type SnapShape } from "@/hooks/use-auto-snap";
+import type { PreviewPlace } from "@/lib/kiosk-camera-spot";
 import { cn } from "@/lib/utils";
 
 /** Draws the frame no larger than `max` pixels on its longest side. */
@@ -162,6 +164,55 @@ function PhotoProgress({ kind }: { kind: "id" | "face" }) {
   );
 }
 
+/** The ID's edges or the face, drawn over the preview in the video's own pixels (which line up with object-cover). */
+function SnapOverlay({
+  video,
+  shape,
+  mirrored,
+}: {
+  video: HTMLVideoElement | null;
+  shape: SnapShape;
+  mirrored: boolean;
+}) {
+  if (!video?.videoWidth) return null;
+  const colour = shape.good ? "#22c55e" : "#ffffff";
+  const xs = shape.points.map((p) => p.x);
+  const ys = shape.points.map((p) => p.y);
+  const left = Math.min(...xs);
+  const right = Math.max(...xs);
+  const top = Math.min(...ys);
+  const bottom = Math.max(...ys);
+  const line = Math.max(video.videoWidth / 160, 3);
+  return (
+    <svg
+      viewBox={`0 0 ${video.videoWidth} ${video.videoHeight}`}
+      preserveAspectRatio="xMidYMid slice"
+      className={cn("pointer-events-none absolute inset-0 size-full", mirrored && "-scale-x-100")}
+      aria-hidden
+    >
+      {shape.kind === "id" ? (
+        <polygon
+          points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
+          fill="none"
+          stroke={colour}
+          strokeWidth={line}
+          strokeLinejoin="round"
+        />
+      ) : (
+        <ellipse
+          cx={(left + right) / 2}
+          cy={(top + bottom) / 2}
+          rx={((right - left) / 2) * 1.15}
+          ry={((bottom - top) / 2) * 1.35}
+          fill="none"
+          stroke={colour}
+          strokeWidth={line}
+        />
+      )}
+    </svg>
+  );
+}
+
 /** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
 const SMALL = {
   id: { max: 1024, quality: 0.62 },
@@ -185,7 +236,13 @@ export function IdCamera({
   side = false,
   extra,
   upload = false,
+  auto = false,
+  place = null,
 }: {
+  /** A door tablet: takes the photo by itself once it sees a whole ID or a face, and a selfie's button counts down. */
+  auto?: boolean;
+  /** A door tablet: where to put the preview so it's beside the front camera. */
+  place?: PreviewPlace | null;
   /** A guest's own phone: a saved photo of the ID may be used instead (never for a face, which is live). */
   upload?: boolean;
   /** A door tablet on its side: the camera on the left, the help and buttons beside it, so nothing has to shrink. */
@@ -252,6 +309,27 @@ export function IdCamera({
 
   // The front camera shows like a mirror, so moving feels natural; an ID is always kept the right way round.
   const mirrored = current === "user";
+  // A selfie on a door tablet: the button counts down, as it's hard to stand back and tap it.
+  const [count, setCount] = useState<number | null>(null);
+  const timed = auto && kind === "face";
+  useEffect(() => {
+    if (count === null) return;
+    if (busy) return setCount(null);
+    if (count === 0) {
+      setCount(null);
+      capture();
+      return;
+    }
+    const t = window.setTimeout(() => setCount(count - 1), 1000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, busy]);
+  const snap = useAutoSnap(videoRef, kind, auto && ready && !busy && !shot && count === null, () =>
+    capture(),
+  );
+  // Beside the camera only for the front one: the back one is on the other side of the tablet.
+  const near = place && current === "user" ? place : null;
+  const last = !!near && !near.first;
   function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
@@ -266,10 +344,24 @@ export function IdCamera({
   return (
     <div
       className={
-        side ? "grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-center gap-8" : "space-y-4"
+        side
+          ? cn(
+              "grid gap-8",
+              last
+                ? "grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]"
+                : "grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]",
+              near?.align === "start"
+                ? "items-start"
+                : near?.align === "end"
+                  ? "items-end"
+                  : "items-center",
+            )
+          : last
+            ? "flex flex-col gap-4"
+            : "space-y-4"
       }
     >
-      <div className="relative overflow-hidden rounded-2xl bg-muted">
+      <div className={cn("relative overflow-hidden rounded-2xl bg-muted", last && "order-2")}>
         <video
           ref={videoRef}
           playsInline
@@ -293,7 +385,26 @@ export function IdCamera({
             className="absolute inset-0 size-full object-cover"
           />
         ) : null}
-        {ready && kind === "id" && !(shot && busy) ? <IdHint /> : null}
+        {ready && kind === "id" && !(shot && busy) && !snap.shape ? <IdHint /> : null}
+        {auto && ready && snap.shape && !shot ? (
+          <SnapOverlay video={videoRef.current} shape={snap.shape} mirrored={mirrored} />
+        ) : null}
+        {auto && ready && !shot && count === null ? (
+          <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit max-w-[90%] rounded-full bg-black px-4 py-1.5 text-center text-lg text-white">
+            {copy.autoSnap[kind][snap.say]}
+          </p>
+        ) : null}
+        {count !== null && count > 0 ? (
+          <div
+            className="pointer-events-none absolute inset-0 grid place-items-center"
+            role="status"
+            aria-live="assertive"
+          >
+            <span className="grid size-32 place-items-center rounded-full bg-black font-display text-7xl text-white">
+              {count}
+            </span>
+          </div>
+        ) : null}
         {cameras > 1 ? (
           <button
             type="button"
@@ -317,9 +428,24 @@ export function IdCamera({
           {help ?? copy.idCameraHelp}
         </p>
         {busy && shot ? <PhotoProgress kind={kind} /> : null}
-        <Button size="touch-xl" className="w-full" onClick={capture} disabled={!ready || busy}>
-          {busy ? <Loader2 className="size-6 animate-spin" /> : <Camera className="size-6" />}
-          {busy ? (busyLabel ?? copy.idChecking) : (cta ?? copy.idTakePhoto)}
+        <Button
+          size="touch-xl"
+          className="w-full"
+          onClick={() => (timed ? setCount(3) : capture())}
+          disabled={!ready || busy || count !== null}
+        >
+          {busy ? (
+            <Loader2 className="size-6 animate-spin" />
+          ) : timed ? (
+            <Timer className="size-6" aria-hidden />
+          ) : (
+            <Camera className="size-6" />
+          )}
+          {busy
+            ? (busyLabel ?? copy.idChecking)
+            : timed
+              ? copy.faceTimer
+              : (cta ?? copy.idTakePhoto)}
         </Button>
         {upload && kind === "id" ? (
           <>
