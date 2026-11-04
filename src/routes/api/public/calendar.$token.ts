@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
 import { createFileRoute } from "@tanstack/react-router";
 import { rebrand } from "@/lib/brand";
+import { feedBookings, feedSummary, type FeedBooking, type FeedView } from "@/lib/calendar-feed";
 
 /** Escape text for an iCalendar property value. */
 function esc(v: string) {
@@ -16,32 +17,47 @@ function dateOnly(d: string) {
 }
 
 /**
- * Outbound calendar for one room. Only bookings entered in Latchkey are shared:
- * anything imported from a platform stays out, so two linked calendars can't
- * echo the same stay back and forth.
+ * Outbound calendar for one room: what's entered in Latchkey (for booking sites),
+ * or every stay with ?view=all (for the host's own calendar). See calendar-feed.ts.
  */
 export const Route = createFileRoute("/api/public/calendar/$token")({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ params, request }) => {
+        const view: FeedView =
+          new URL(request.url).searchParams.get("view") === "all" ? "all" : "direct";
         const token = String(params.token ?? "").replace(/\.ics$/i, "");
         if (token.length < 20) return new Response("Not found", { status: 404 });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: room } = await supabaseAdmin
           .from("rooms")
-          .select("id, display_name, export_feed_enabled, properties(name)")
+          .select("id, property_id, display_name, export_feed_enabled, properties(name)")
           .eq("feed_token", token)
           .maybeSingle();
         if (!room || !room.export_feed_enabled) return new Response("Not found", { status: 404 });
 
         const { data: rows } = await supabaseAdmin
           .from("bookings")
-          .select("id, check_in_date, check_out_date, status, channel, mirror_of, guest_full_name")
-          .eq("room_id", room.id)
-          .is("mirror_of", null)
-          .in("channel", ["direct", "other"])
-          .in("status", ["upcoming", "checked_in", "checked_out", "blocked", "needs_details"]);
+          .select(
+            "id, check_in_date, check_out_date, status, channel, site_key, mirror_of, connection_id",
+          )
+          .eq("room_id", room.id);
+        const { resolveSites, platformKey } = await import("@/lib/booking-sites");
+        const { guest: guestCopy } = await import("@/content/copy");
+        const platformLabels = guestCopy.platforms as Record<string, string>;
+        const { data: host } = await (supabaseAdmin as any)
+          .from("properties")
+          .select("hosts(booking_sites, channel_labels)")
+          .eq("id", (room as any).property_id)
+          .maybeSingle();
+        const sites = resolveSites(
+          host?.hosts?.channel_labels,
+          host?.hosts?.booking_sites,
+          platformLabels,
+        );
+        const siteLabel = (b: FeedBooking) =>
+          sites.find((x: { key: string }) => x.key === platformKey(b as never))?.label ?? b.channel;
 
         const now = stamp(new Date());
         const lines = [
@@ -51,14 +67,14 @@ export const Route = createFileRoute("/api/public/calendar/$token")({
           "CALSCALE:GREGORIAN",
           `X-WR-CALNAME:${esc(`${(room as any).properties?.name ?? rebrand("Latchkey")} · ${room.display_name}`)}`,
         ];
-        for (const b of rows ?? []) {
+        for (const b of feedBookings((rows ?? []) as FeedBooking[], view)) {
           lines.push(
             "BEGIN:VEVENT",
             `UID:latchkey-${b.id}@latchkey`,
             `DTSTAMP:${now}`,
             `DTSTART;VALUE=DATE:${dateOnly(b.check_in_date)}`,
             `DTEND;VALUE=DATE:${dateOnly(b.check_out_date)}`,
-            `SUMMARY:${esc(b.status === "blocked" ? "Not available" : "Booked")}`,
+            `SUMMARY:${esc(feedSummary(b, view, siteLabel))}`,
             "END:VEVENT",
           );
         }

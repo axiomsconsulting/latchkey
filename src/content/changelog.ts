@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.120.0",
+    date: "2026-11-04",
+    title: "Clearer calendar links",
+    items: [
+      {
+        kind: "new",
+        area: "Calendar",
+        text: "Each room now has two links: one for your booking sites, holding only what you entered here (your direct stays), and one for your own calendar, showing every stay from every site.",
+      },
+      {
+        kind: "fixed",
+        area: "Calendar",
+        text: "The booking-site link no longer sends back stays from a site you added yourself, and no longer leaves out direct stays flagged for a check.",
+      },
+    ],
+  },
+  {
     version: "0.119.0",
     date: "2026-11-04",
     title: "Cancel and refund direct stays",

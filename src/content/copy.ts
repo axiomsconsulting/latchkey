@@ -2722,10 +2722,15 @@ export const listingLinksCopy = branded({
 });
 
 export const feedCopy = branded({
-  title: "Share each room's Latchkey calendar",
-  body: "Only needed if you take direct bookings in Latchkey. If your platforms already sync with each other, leave this off.",
-  detail:
-    "The feed includes direct bookings and whole-day blocks you created here. It never repeats bookings imported from a platform, and it doesn't include cleaning or late check-out times.",
+  forSitesLabel: "For your booking sites",
+  forSitesHelp:
+    "Paste into Airbnb, Booking.com and the rest. It holds your direct stays and anything else you entered here, never another site's stays, so nothing echoes back.",
+  forYouLabel: "For your own calendar",
+  forYouHelp:
+    "Every stay from every site, for Google or Apple Calendar or your cleaner. Don't give this one to a booking site. No guest names.",
+  title: "Share each room's calendar",
+  body: "Each room gets two links when you switch this on: one so your booking sites know about your direct stays, and one to see every stay in your own calendar.",
+  detail: "Neither shows cleaning or late check-out times.",
   enable: "Share this calendar",
   copy: "Copy feed link",
   copied: "Feed link copied",
