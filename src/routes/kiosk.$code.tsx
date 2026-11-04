@@ -63,6 +63,8 @@ import { useCameraPermission } from "@/hooks/use-camera-permission";
 import { screenFrom } from "@/lib/kiosk-screen";
 import { KioskDayScreen } from "@/components/guest/KioskDayScreen";
 import { useMotionWake } from "@/hooks/use-motion-wake";
+import { restNow, type RestShowing } from "@/lib/kiosk-rest";
+import { deviceSignature } from "@/lib/kiosk-devices";
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
@@ -567,7 +569,13 @@ function useKioskTablet(code: string, enabled: boolean) {
   const [tablet, setTablet] = useState<Omit<TabletState, "calibration" | "device"> | null>(null);
   const last = useRef<string>("{}");
   const reportRef = useRef<FitReport | null>(null);
+  // Joining: one request at a time, or two starts at once add the same tablet twice.
+  const joining = useRef(false);
   const load = useCallback(() => {
+    if (!deviceToken(code)) {
+      if (joining.current) return;
+      joining.current = true;
+    }
     const r = reportRef.current;
     const display = r
       ? {
@@ -591,6 +599,15 @@ function useKioskTablet(code: string, enabled: boolean) {
             ...(display ? { display } : {}),
             version: APP_VERSION,
             fix,
+            ...(() => {
+              const sig = deviceSignature(navigator.userAgent, {
+                w: window.screen.width,
+                h: window.screen.height,
+                dpr: window.devicePixelRatio,
+                touch: navigator.maxTouchPoints,
+              });
+              return sig ? { sig } : {};
+            })(),
             // What this browser can run (the host may have chosen full on one that can't quite).
             compat: (() => {
               const mode = detectMode({
@@ -626,7 +643,10 @@ function useKioskTablet(code: string, enabled: boolean) {
         setCals(calibration);
         setChangedAt(Date.now());
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        joining.current = false;
+      });
   }, [code, fn]);
   useEffect(() => {
     if (!enabled) return;
@@ -928,10 +948,16 @@ function Kiosk() {
   });
   const goodbyeUp = shared && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
   // What's on screen now, for the host's live view (Settings → Door tablets): which screen only.
-  const restShowing = useRestShowing(saverLook.rest, p.timezone ?? "Europe/London", {
+  // The sun or moon button: the night look now, whatever the time, until the next touch.
+  const [restTapped, setRestTapped] = useState(false);
+  useEffect(() => {
+    if (!saver) setRestTapped(false);
+  }, [saver]);
+  const restByClock = useRestShowing(saverLook.rest, p.timezone ?? "Europe/London", {
     start: p.quietStart,
     end: p.quietEnd,
   });
+  const restShowing = restTapped ? restNow(saverLook.rest, true, true) : restByClock;
   const [isFull, setIsFull] = useState(false);
   useEffect(() => {
     const sync = () => setIsFull(!!document.fullscreenElement);
@@ -1040,6 +1066,7 @@ function Kiosk() {
       !tour &&
       shared &&
       saver &&
+      !restTapped &&
       restShowing !== "awake" &&
       !welcomeUp &&
       !goodbyeUp,
@@ -1296,10 +1323,13 @@ function Kiosk() {
               {shared && atWelcome && !saver && tablet?.cardPicker ? (
                 <KioskCardBell code={p.code} onApplied={showPicked} />
               ) : null}
-              {shared && atWelcome && !saver && restShowing !== "awake" ? (
+              {shared && atWelcome && !saver ? (
                 <button
                   type="button"
-                  onClick={() => setSaver(true)}
+                  onClick={() => {
+                    setRestTapped(true);
+                    setSaver(true);
+                  }}
                   aria-label={`${copy.dayPhases[dayProgress(new Date(), p.timezone ?? "Europe/London").phase] ?? ""} · ${copy.saverStart}`}
                   title={copy.saverStart}
                   className={headerIconClass}
@@ -1487,6 +1517,7 @@ function Kiosk() {
             name={p.name}
             code={p.code}
             saver={saverLook}
+            showing={restShowing}
             tz={p.timezone ?? "Europe/London"}
             quiet={{ start: p.quietStart, end: p.quietEnd }}
             onWake={() => {
@@ -1578,6 +1609,7 @@ function KioskAtRest({
   name,
   code,
   saver,
+  showing,
   tz,
   quiet,
   onWake,
@@ -1587,13 +1619,13 @@ function KioskAtRest({
   name: string;
   code: string;
   saver: ReturnType<typeof useSaverLook>;
+  showing: RestShowing;
   tz: string;
   quiet: { start: string; end: string };
   onWake: () => void;
   onCheckIn: () => void;
   logo: React.ReactNode;
 }) {
-  const showing = useRestShowing(saver.rest, tz, quiet);
   // The host's QR choice applies whatever shows at rest.
   const qrUrl =
     saver.rest.clockQr && typeof window !== "undefined"

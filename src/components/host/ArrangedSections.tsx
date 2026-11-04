@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, GripVertical } from "lucide-react";
+import {
+  ChevronsDownUp,
+  ChevronsUpDown,
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  GripVertical,
+} from "lucide-react";
 
 import { arrangeCopy as copy } from "@/content/copy";
 import {
@@ -74,20 +81,22 @@ export function ArrangedSections({
   return (
     <div className="space-y-2">
       {visible.length > 1 ? (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
           <button
             type="button"
-            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-            onClick={() =>
-              save({
-                ...layout,
-                open: allOpen
-                  ? layout.open.filter((x) => !ids.includes(x))
-                  : [...new Set([...layout.open, ...ids])],
-              })
-            }
+            disabled={allOpen}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50 disabled:hover:no-underline"
+            onClick={() => save({ ...layout, open: [...new Set([...layout.open, ...ids])] })}
           >
-            {allOpen ? copy.foldAll : copy.openAll}
+            <ChevronsUpDown className="size-3.5" aria-hidden /> {copy.openAll}
+          </button>
+          <button
+            type="button"
+            disabled={!visible.some(opened)}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50 disabled:hover:no-underline"
+            onClick={() => save({ ...layout, open: layout.open.filter((x) => !ids.includes(x)) })}
+          >
+            <ChevronsDownUp className="size-3.5" aria-hidden /> {copy.closeAll}
           </button>
         </div>
       ) : null}

@@ -124,7 +124,13 @@
       action: "state",
       detected: detected(),
       mode: detectedMode(),
-      screen: currentScreen()
+      screen: currentScreen(),
+      hw: {
+        w: window.screen.width,
+        h: window.screen.height,
+        dpr: window.devicePixelRatio || 1,
+        touch: navigator.maxTouchPoints || 0
+      }
     };
     if (fullFailed) body.fullFailed = true;
     if (device) body.device = device;
@@ -828,7 +834,10 @@
 
   /** At rest, as the host set it: the night light in their colours, the clock, or the screen off. */
   var nightStep = 0;
+  // The sun or moon button: the night look now, until the next touch.
+  var restTapped = false;
   function saver(on) {
+    if (!on) restTapped = false;
     var was = saverOn;
     saverOn = on;
     if (was !== on) window.setTimeout(refresh, 0);
@@ -837,6 +846,8 @@
   }
   function saverView() {
     var r = rest();
+    if (r && restTapped && r.restShow)
+      return r.restShow === "night" ? "night" : r.restShow === "blank" ? "blank" : "saver";
     return r ? (r.show === "night" ? "night" : r.show === "blank" ? "blank" : "saver") : "saver";
   }
   function drawSaver() {
@@ -959,7 +970,7 @@
     header();
     var idle = new Date().getTime() - lastTouch;
     var busy = cards().length || (state && state.welcome) || overlay;
-    var awake = rest() && rest().show === "awake";
+    var awake = rest() && rest().show === "awake" && !restTapped;
     if (!saverOn && !busy && !awake && idle >= saverMs()) saver(true);
     if (saverOn && ((busy && !overlay) || awake)) saver(false);
     // Left open and walked away from: the panels close by themselves.
@@ -1027,6 +1038,7 @@
   $("bell").onclick = openBell;
   $("day").onclick = function () {
     window.setTimeout(function () {
+      restTapped = true;
       saver(true);
     }, 50);
   };

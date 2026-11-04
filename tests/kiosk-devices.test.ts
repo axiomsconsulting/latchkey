@@ -9,6 +9,9 @@ import {
   readPairCode,
   showPairCode,
   tabletName,
+  deviceSignature,
+  twinFor,
+  type TwinRow,
 } from "@/lib/kiosk-devices";
 import { APP_VERSION } from "@/lib/app-version";
 import { RELEASES } from "@/content/changelog";
@@ -110,5 +113,53 @@ describe("why a tablet's live camera can't open", async () => {
     expect(cameraBlock({ ...ok, screen: { camPermission: "prompt" } }, now)).toBe("needs_allow");
     // A browser that won't say: try anyway.
     expect(cameraBlock({ ...ok, screen: null }, now)).toBeNull();
+  });
+});
+
+describe("the same tablet in another browser", () => {
+  const safari =
+    "Mozilla/5.0 (iPad; CPU OS 9_3_5 like Mac OS X) AppleWebKit/601.1.46 Version/9.0 Mobile/13G36 Safari/601.1";
+  const chromeIos =
+    "Mozilla/5.0 (iPad; CPU OS 9_3_5 like Mac OS X) AppleWebKit/601.1 CriOS/37.0 Mobile/13G36 Safari/601.1.46";
+  const now = Date.parse("2026-11-04T12:00:00Z");
+  const row = (o: Partial<TwinRow> = {}): TwinRow => ({
+    id: "a",
+    status: "confirmed",
+    device_sig: "ipad|768x1024@1",
+    last_seen_at: "2026-11-04T10:00:00Z",
+    ...o,
+  });
+
+  it("gives every browser on a device the same answer, either way up", () => {
+    const hw = { w: 768, h: 1024, dpr: 1 };
+    expect(deviceSignature(safari, hw)).toBe(deviceSignature(chromeIos, hw));
+    expect(deviceSignature(safari, { w: 1024, h: 768, dpr: 1 })).toBe(deviceSignature(safari, hw));
+  });
+  it("sees a newer iPad calling itself a Mac, and ignores zoom on computers", () => {
+    const mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15";
+    expect(deviceSignature(mac, { w: 810, h: 1080, dpr: 2, touch: 5 })).toMatch(/^ipad/);
+    expect(deviceSignature(mac, { w: 1920, h: 1080, dpr: 2 })).toBe(
+      deviceSignature(mac, { w: 1920, h: 1080, dpr: 1.5 }),
+    );
+  });
+  it("takes over a quiet entry of the same kind", () => {
+    expect(twinFor([row()], "ipad|768x1024@1", now)?.id).toBe("a");
+  });
+  it("leaves one still in use: that's another tablet", () => {
+    expect(
+      twinFor([row({ last_seen_at: "2026-11-04T11:55:00Z" })], "ipad|768x1024@1", now),
+    ).toBeNull();
+  });
+  it("needs the same kind of device, and a known one", () => {
+    expect(twinFor([row()], "android|800x1280@2", now)).toBeNull();
+    expect(twinFor([row({ device_sig: null })], null, now)).toBeNull();
+  });
+  it("prefers a confirmed entry, then the one seen last", () => {
+    const rows = [
+      row({ id: "wait", status: "pending", last_seen_at: "2026-11-04T11:00:00Z" }),
+      row({ id: "old", last_seen_at: "2026-11-01T11:00:00Z" }),
+      row({ id: "new", last_seen_at: "2026-11-03T11:00:00Z" }),
+    ];
+    expect(twinFor(rows, "ipad|768x1024@1", now)?.id).toBe("new");
   });
 });
