@@ -171,7 +171,6 @@ export type CheckinProperty = {
   listFlow: boolean;
   checkInFrom?: string;
   checkOutBy?: string;
-  channelLabels?: Record<string, string>;
   sites?: GuestSite[];
   /** The property's look and words (src/lib/theme.ts). */
   theme?: ThemeConfig;
@@ -414,7 +413,7 @@ export function CheckInFlow({
     return (
       property.sites?.find((s) => s.key === key) ?? {
         key,
-        label: property.channelLabels?.[key] ?? copy.platforms[key] ?? key,
+        label: copy.platforms[key] ?? key,
         iconUrl: null,
       }
     );

@@ -437,31 +437,16 @@ export async function signGuestPhotos(paths: string[]): Promise<Record<string, s
   return signPrivateLinks(paths, 600, "guest-photo.jpg");
 }
 
-/**
- * Host-chosen wording for each booking platform. The internal channel id never
- * changes, so a host renaming "Direct" to "Our website" can't break matching.
- */
-export async function channelLabels(hostId: string): Promise<Record<string, string>> {
-  const db = await admin();
-  const { data } = await db.from("hosts").select("channel_labels").eq("id", hostId).maybeSingle();
-  const raw = data?.channel_labels;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof v === "string" && v.trim()) out[k] = v.trim().slice(0, 40);
-  }
-  return out;
-}
-
-/** Booking sites in the guest's words, with any icon the host uploaded. */
+/** Booking sites in the guest's words: Latchkey admin's names and logos, then any the host added. */
 export async function guestSites(hostId: string) {
   const { resolveSites } = await import("./booking-sites");
+  const { platformSites } = await import("./booking-sites.server");
   const { channels, guest } = await import("@/content/copy");
   const db = await admin();
   const { data } = await db.from("hosts").select("booking_sites").eq("id", hostId).maybeSingle();
   return resolveSites(
-    await channelLabels(hostId),
     (data as { booking_sites?: unknown } | null)?.booking_sites,
+    await platformSites(),
     {
       ...channels,
       ...guest.platforms,

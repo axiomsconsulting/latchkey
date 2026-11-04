@@ -365,3 +365,55 @@ export const uploadHomeArt = createServerFn({ method: "POST" })
     if (signed.error) throw new Error(signed.error.message);
     return { url: signed.data.signedUrl };
   });
+
+/** Super admin: the built-in booking sites, straight from the database so the form saves what it shows. */
+export const getBookingSitesSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { normalisePlatformSites } = await import("./booking-sites");
+    const { data, error } = await (supabaseAdmin as unknown as Loose)
+      .from("site_settings")
+      .select("booking_sites")
+      .eq("id", 1)
+      .maybeSingle();
+    return {
+      available: !error,
+      sites: normalisePlatformSites(error ? null : data?.booking_sites),
+    };
+  });
+
+export const saveBookingSitesSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        sites: z.record(
+          z.string(),
+          z.object({
+            label: z.string().max(40),
+            icon_url: z.string().max(40_000).nullable(),
+            domains: z.array(z.string().max(60)).max(8),
+          }),
+        ),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { normalisePlatformSites, BUILT_IN_SITES } = await import("./booking-sites");
+    const clean = normalisePlatformSites(data.sites);
+    const booking_sites = Object.fromEntries(
+      BUILT_IN_SITES.map((k) => [
+        k,
+        { label: clean[k].label, icon_url: clean[k].iconUrl, domains: clean[k].domains },
+      ]),
+    );
+    const { error } = await (context.supabase as unknown as Loose)
+      .from("site_settings")
+      .update({ booking_sites, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

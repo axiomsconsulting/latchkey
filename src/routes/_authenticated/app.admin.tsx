@@ -34,6 +34,7 @@ import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
 import { CheckinJourneyAdmin } from "@/components/host/CheckinJourney";
 import { ArrangedSections } from "@/components/host/ArrangedSections";
+import { BookingSitesAdmin } from "@/components/host/BookingSitesAdmin";
 import { adminArrangeTitles as titles, adminTabs } from "@/content/copy";
 import { AppUpdatesAdmin } from "@/components/host/AppUpdatesAdmin";
 import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
@@ -243,6 +244,7 @@ function AdminPage() {
             items={[
               { id: "site", title: titles.site, node: <SiteSettings /> },
               { id: "brand", title: titles.brand, node: <BrandAdmin /> },
+              { id: "bookingSites", title: titles.bookingSites, node: <BookingSitesAdmin /> },
               { id: "home", title: titles.home, node: <HomeArtAdmin /> },
               { id: "legal", title: titles.legal, node: <LegalAdmin /> },
               { id: "domains", title: titles.domains, node: <DomainsAdmin /> },

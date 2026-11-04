@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { channels } from "@/content/copy";
-import { resolveSites, type Site } from "@/lib/booking-sites";
+import { normalisePlatformSites, resolveSites, type Site } from "@/lib/booking-sites";
 import { getPropertyBoard, getWorkspace, listAlerts, listConnections } from "@/lib/host.functions";
 import { partnerIntent } from "@/lib/partner-intent";
 import { canWrite, isOwner } from "@/lib/roles";
@@ -122,13 +122,13 @@ export function useAlerts() {
   });
 }
 
-/** The host's booking sites: built-ins with their wording and icons, then any they added. */
+/** The host's booking sites: the built-ins as Latchkey admin set them, then any they added. */
 export function useBookingSites(): Site[] {
   const { data } = useWorkspace();
-  const host = data?.host as
-    { channel_labels?: Record<string, string>; booking_sites?: unknown } | null | undefined;
+  const host = data?.host as { booking_sites?: unknown } | null | undefined;
+  const platform = data?.platformSites;
   return useMemo(
-    () => resolveSites(host?.channel_labels ?? {}, host?.booking_sites, channels),
-    [host?.channel_labels, host?.booking_sites],
+    () => resolveSites(host?.booking_sites, platform ?? normalisePlatformSites(null), channels),
+    [host?.booking_sites, platform],
   );
 }

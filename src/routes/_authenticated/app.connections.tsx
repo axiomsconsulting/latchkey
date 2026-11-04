@@ -70,7 +70,7 @@ import {
   useRole,
   useWorkspace,
 } from "@/hooks/use-host-data";
-import { platformKey, toChannel } from "@/lib/booking-sites";
+import { platformKey, siteForUrl, toChannel, urlFitsSite } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime } from "@/lib/dates";
 import { syncPropertyNow } from "@/lib/guests.functions";
 import {
@@ -173,6 +173,7 @@ function ConnectionDialog({
   // A built-in id or a site the host added; saved as channel plus site_key.
   const [siteKey, setSiteKey] = useState<string>(existing ? platformKey(existing) : "airbnb");
   const channel = toChannel(siteKey).channel;
+  const chosenSite = sites.find((x) => x.key === siteKey);
   const [roomId, setRoomId] = useState(
     existing ? (existing.room_id ?? "none") : (roomIdDefault ?? rooms[0]?.id ?? "none"),
   );
@@ -256,10 +257,19 @@ function ConnectionDialog({
               onChange={(e) => {
                 setUrl(e.target.value);
                 setPreview(null);
+                // Pasting a link picks its site.
+                const found = editing ? null : siteForUrl(sites, e.target.value);
+                if (found) setSiteKey(found.key);
               }}
               placeholder="https://www.airbnb.co.uk/calendar/ical/…"
             />
-            {urlIssue(url) ? <p className="text-sm text-destructive">{urlIssue(url)}</p> : null}
+            {urlIssue(url) ? (
+              <p className="text-sm text-destructive">{urlIssue(url)}</p>
+            ) : url.trim() && chosenSite && !urlFitsSite(url, chosenSite) ? (
+              <p className="text-sm text-destructive">
+                {calendarUi.errors.wrongSite(chosenSite.domains)}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -437,11 +447,7 @@ function ConnectionsPage() {
       {/* What each booking site is called and its icon (was in Settings). */}
       {workspace.data ? (
         <div id="booking-sites" className="scroll-mt-24 rounded-2xl" data-tour="booking-sites">
-          <ChannelLabels
-            hostId={workspace.data.hostId}
-            labels={(host?.channel_labels ?? {}) as Record<string, string>}
-            sites={host?.booking_sites}
-          />
+          <ChannelLabels hostId={workspace.data.hostId} sites={host?.booking_sites} />
         </div>
       ) : null}
 

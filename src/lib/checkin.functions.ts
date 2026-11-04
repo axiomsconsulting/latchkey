@@ -185,7 +185,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const methods = normaliseMethods(p.checkin_methods);
-    const { channelLabels, guestSites } = await import("./checkin.server");
+    const { guestSites } = await import("./checkin.server");
     const theme = await withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? "");
     const kioskLook = await kioskLookFor(srvMod, p.id, theme.kioskLook);
     return {
@@ -205,7 +205,6 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       hostPhone: p.host_contact_phone,
       checkInFrom: (p.default_check_in_time ?? "15:00").slice(0, 5),
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
-      channelLabels: await channelLabels(p.host_id),
       sites: await guestSites(p.host_id),
       theme,
       /** The door tablet's look (Express: bold full-screen cards from the theme) and the card colours the host picked. */
@@ -2453,15 +2452,16 @@ export const getStay = createServerFn({ method: "GET" })
             site: await (async () => {
               const { resolveSites, platformKey } = await import("./booking-sites");
               const { channels } = await import("@/content/copy");
+              const { platformSites } = await import("./booking-sites.server");
               const { data: h } = await db
                 .from("hosts")
-                .select("channel_labels, booking_sites")
+                .select("booking_sites")
                 .eq("id", (p as { host_id?: string } | null)?.host_id ?? "")
                 .maybeSingle();
               const key = platformKey(b as { channel: string; site_key?: string | null });
               const site = resolveSites(
-                (h as { channel_labels?: Record<string, string> } | null)?.channel_labels,
                 (h as { booking_sites?: unknown } | null)?.booking_sites,
+                await platformSites(),
                 channels as Record<string, string>,
               ).find((x) => x.key === key);
               return {
