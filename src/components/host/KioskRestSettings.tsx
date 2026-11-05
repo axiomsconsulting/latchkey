@@ -400,7 +400,7 @@ function RestPreview({ rest, shortCode }: { rest: KioskRest; shortCode: string }
         )}
       >
         {showing === "day" ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-background text-center grayscale invert">
             <span className="absolute right-2 top-1 text-xs font-bold tabular-nums">12:30</span>
             <KeyRound className="size-8 text-primary" aria-hidden />
             <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">

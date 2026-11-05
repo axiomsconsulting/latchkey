@@ -761,3 +761,19 @@ html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] > :first-child {
 html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] > :last-child {
   margin-bottom: auto;
 }
+
+/* Smart Screensaver by day (KioskLowPower): the usual kiosk screen, not one size changed, in black and
+   white. A light page turns dark; photos and QR codes are turned back so they still read and scan. */
+html[data-kiosk-lowpower] {
+  background: #000;
+}
+html[data-kiosk-lowpower] [data-kiosk-root] {
+  filter: grayscale(1) brightness(var(--lp-brightness, 0.7)) contrast(var(--lp-contrast, 1));
+}
+html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] {
+  filter: grayscale(1) invert(1) brightness(var(--lp-brightness, 0.7)) contrast(var(--lp-contrast, 1));
+}
+html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] img,
+html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
+  filter: invert(1);
+}

@@ -82,7 +82,7 @@ export function cameraCallout(
   const pw = Math.round(
     wide
       ? Math.min(w * 0.46, ((h - buttonH) * 0.6 * 4) / 3)
-      : Math.min(w * 0.86, (h * 0.42 * 4) / 3),
+      : Math.min(w * 0.86, (h * 0.34 * 4) / 3),
   );
   const ph = Math.round((pw * 3) / 4);
   const bw = pw;

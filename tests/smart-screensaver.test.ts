@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { normaliseRest, nightFrom, nightTo, restNow } from "../src/lib/kiosk-rest";
+import {
+  normaliseRest,
+  nightFrom,
+  nightTo,
+  restNow,
+  dayLookFor,
+  lowPowerNow,
+  shouldInvert,
+} from "../src/lib/kiosk-rest";
 import { screenFrom } from "../src/lib/kiosk-screen";
 import { changedShare, isLoud, loudness, movedIn, nextBaseline } from "../src/lib/motion-wake";
 
@@ -86,5 +94,37 @@ describe("waking", () => {
   it("the room's level follows slowly", () => {
     expect(nextBaseline(0, 0.1)).toBe(0.1);
     expect(nextBaseline(0.1, 0.2)).toBeCloseTo(0.105);
+  });
+});
+
+describe("the low power look by day", () => {
+  const on = {
+    shared: true,
+    smart: true,
+    byClock: "day" as const,
+    atStart: true,
+    idle: true,
+    tapped: false,
+  };
+  it("only when it's by day, smart is on, and nobody's using it", () => {
+    expect(lowPowerNow(on)).toBe(true);
+    expect(lowPowerNow({ ...on, smart: false })).toBe(false);
+    expect(lowPowerNow({ ...on, byClock: "clock" })).toBe(false);
+    expect(lowPowerNow({ ...on, byClock: "night" })).toBe(false);
+    expect(lowPowerNow({ ...on, idle: false })).toBe(false);
+    expect(lowPowerNow({ ...on, atStart: false })).toBe(false);
+    expect(lowPowerNow({ ...on, shared: false })).toBe(false);
+  });
+  it("gives way to the night look from the sun or moon button", () => {
+    expect(lowPowerNow({ ...on, tapped: true })).toBe(false);
+  });
+  it("turns a light page dark, and leaves a dark one", () => {
+    expect(shouldInvert(255, 250, 240)).toBe(true);
+    expect(shouldInvert(20, 30, 25)).toBe(false);
+  });
+  it("keeps the look inside its limits", () => {
+    expect(dayLookFor(null)).toEqual({ brightness: 0.7, contrast: 1 });
+    expect(dayLookFor({ brightness: 5, contrast: 0 })).toEqual({ brightness: 1, contrast: 0.5 });
+    expect(dayLookFor({ brightness: "x" }).brightness).toBe(0.7);
   });
 });

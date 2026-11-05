@@ -365,3 +365,40 @@ export function arrangeClocks<C extends { home: boolean }>(
   if (o.qr && at >= 0) return { main: null, row: clocks.slice(Math.max(0, at - 1), at + 2) };
   return { main: null, row: clocks };
 }
+
+/* ---------- the low power look (Smart Screensaver, by day) ---------- */
+
+/** The usual kiosk screen, kept exactly as it is, in black and white: adjusted with the bands. */
+export const DAY_LOOK = {
+  brightness: { min: 0.2, max: 1, step: 0.05 },
+  contrast: { min: 0.5, max: 1.5, step: 0.05 },
+} as const;
+export type DayLook = { brightness: number; contrast: number };
+export const DEFAULT_DAY_LOOK: DayLook = { brightness: 0.7, contrast: 1 };
+
+export function dayLookFor(own: unknown): DayLook {
+  const o = (own && typeof own === "object" ? own : {}) as Record<string, unknown>;
+  const read = (v: unknown, d: number, r: { min: number; max: number }) =>
+    tidy(clamp(num(v) ?? d, r.min, r.max));
+  return {
+    brightness: read(o["brightness"], DEFAULT_DAY_LOOK.brightness, DAY_LOOK.brightness),
+    contrast: read(o["contrast"], DEFAULT_DAY_LOOK.contrast, DAY_LOOK.contrast),
+  };
+}
+
+/** A light page is turned dark, which is the low power part; a dark theme is only taken to black and white. */
+export function shouldInvert(r: number, g: number, b: number): boolean {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 110;
+}
+
+/** Low power rests the tablet when it's by day, Smart Screensaver is on and nobody's using it. */
+export function lowPowerNow(o: {
+  shared: boolean;
+  smart: boolean;
+  byClock: RestShowing;
+  atStart: boolean;
+  idle: boolean;
+  tapped: boolean;
+}): boolean {
+  return o.shared && o.smart && o.byClock === "day" && o.atStart && o.idle && !o.tapped;
+}

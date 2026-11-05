@@ -349,7 +349,7 @@ export const kioskSaverLook = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { admin, withLegacy } = await import("./checkin.server");
     const { lookFor } = await import("./kiosk-saver");
-    const { nightLookFor, normaliseRest } = await import("./kiosk-rest");
+    const { dayLookFor, nightLookFor, normaliseRest } = await import("./kiosk-rest");
     const db = (await admin()) as unknown as Loose;
     const defaults = await saverDefaults(db);
     const host = await hostByCode(db, data.code);
@@ -370,7 +370,20 @@ export const kioskSaverLook = createServerFn({ method: "GET" })
         )
       : { data: null, error: null };
     const row = error || !own ? null : own;
+    // Migration 0091: read on its own, so the rest works without it.
+    const { data: dayRow } = host
+      ? await db
+          .from("kiosk_looks")
+          .select("day_brightness, day_contrast")
+          .eq("host_id", host.hostId)
+          .maybeSingle()
+      : { data: null };
     return {
+      day: dayLookFor(
+        dayRow
+          ? { brightness: optional(dayRow.day_brightness), contrast: optional(dayRow.day_contrast) }
+          : null,
+      ),
       defaults,
       look: lookFor(
         defaults,
@@ -383,6 +396,40 @@ export const kioskSaverLook = createServerFn({ method: "GET" })
           : null,
       ),
     };
+  });
+
+/** Changed on the low power screen's bands: kept for every kiosk of this host, inside the limits. */
+export const saveKioskDayLook = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ code, brightness: z.number().finite(), contrast: z.number().finite() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { admin } = await import("./checkin.server");
+    const { dayLookFor } = await import("./kiosk-rest");
+    const db = (await admin()) as unknown as Loose;
+    const host = await hostByCode(db, data.code);
+    const day = dayLookFor(data);
+    // The shared demo and tour kiosks keep the starting look for every visitor.
+    if (!host || host.demo) return { ok: false, day };
+    const rest = (host.rest ?? {}) as { smart?: boolean };
+    if (rest.smart !== true) return { ok: false, day };
+    const { data: prev } = await db
+      .from("kiosk_looks")
+      .select("updated_at")
+      .eq("host_id", host.hostId)
+      .maybeSingle();
+    if (prev?.updated_at && Date.now() - new Date(prev.updated_at).getTime() < 3000)
+      return { ok: false, day };
+    const { error } = await db.from("kiosk_looks").upsert(
+      {
+        host_id: host.hostId,
+        day_brightness: day.brightness,
+        day_contrast: day.contrast,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "host_id" },
+    );
+    return { ok: !error, day };
   });
 
 /** Changed on the night light's bands: kept for every kiosk of this host, inside the limits. */

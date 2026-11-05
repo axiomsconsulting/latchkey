@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.129.0",
+    date: "2026-11-05",
+    title: "A low power screen by day",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Smart Screensaver now keeps your usual door tablet screen up by day, in black and white, to save power and protect the screen. Nothing moves or changes size. A touch, movement or sound brings the colours straight back. Slide the edges of the screen to change brightness and contrast.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Older tablets such as the iPad 2 now have a clear screensaver with three clocks, a big QR code and messages at the bottom, and can use Smart Screensaver too, waking by touch.",
+      },
+    ],
+  },
+  {
     version: "0.128.0",
     date: "2026-11-05",
     title: "The camera preview floats by the camera",
