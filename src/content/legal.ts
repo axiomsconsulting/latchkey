@@ -144,6 +144,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Door tablet camera: live video isn't stored. Pictures from older tablets: only the latest, deleted as soon as the host closes the camera view.",
           "Invoices: kept for the host's tax records. Direct enquiries: one year. Check-in attempts: 30 days. Team activity: one year.",
           "Returning guests' remembered ID checks: 12 months, then deleted.",
+          "A host's own test check-in: until they reset it, or a week after its check-out day.",
           "Loyalty vouchers: one year after the last date the code could be used.",
           "Stay terms accepted and licences signed (direct stays): six years after check-out, the time in which a claim about the stay can usually be brought in the UK, then deleted with their files.",
           "Host accounts: while the account is open. When a business closes its account, we delete or anonymise its data on request, except records we or the host must keep by law.",

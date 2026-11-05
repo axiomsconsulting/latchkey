@@ -275,6 +275,11 @@ function RegisterPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">
                       {r.full_name}
+                      {r.is_demo ? (
+                        <span className="ml-2 rounded-full bg-accent px-1.5 text-xs font-medium text-accent-foreground">
+                          {copy.testEntry}
+                        </span>
+                      ) : null}
                       {r.source === "host" ? (
                         <span className="block text-xs font-normal text-muted-foreground">
                           {copy.byHost}

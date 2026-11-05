@@ -441,7 +441,10 @@ export const findByPhotoId = createServerFn({ method: "POST" })
     const db = await admin();
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
-    const { data: all, held } = await arrivalsAround(p.id, today, 200);
+    const { data: arrivals, held } = await arrivalsAround(p.id, today, 200);
+    const all = arrivals.filter(
+      (a) => !tests.has(a.id) || compareNames(a.guest_full_name, idName) === "matched",
+    );
 
     // Read the ID: the tour's "ID" is its sample guest; demo mode reads nothing, so it finds by the usual questions.
     let read: IdRead;
@@ -484,6 +487,12 @@ export const findByPhotoId = createServerFn({ method: "POST" })
 
     const idName = read.fullName?.trim() ?? "";
     if (!idName) return { status: "find" as const };
+    // A host's test stay only ever takes the host: never someone placed there by a loose match.
+    const { testIds } = await import("./test-stay.server");
+    const tests = await testIds(
+      db,
+      arrivals.map((a) => a.id),
+    );
 
     const placed = allocateArrival(all, idName, today, hourIn(tz));
     const check = placed.kind === "held" ? placed.reason : placed.check;
@@ -1026,6 +1035,10 @@ async function sessionContext(
       ),
   );
   if (!b || !raw) throw new Error("This check-in has timed out. Please start again.");
+  // A host's test stay holds no room: its guest screens use the one they picked. Never written back.
+  const { testRoomOf } = await import("./test-stay.server");
+  const test = await testRoomOf(db, b.id);
+  if (test.isTest) b.room_id = test.roomId;
   // The check-in journey (Latchkey's rules applied) decides the switches read below.
   const { withFlow } = await import("./checkin-flow.server");
   const p = (await withFlow(raw)) as {
@@ -1090,6 +1103,7 @@ async function sessionContext(
     join,
     handoff,
     formalitiesDone,
+    isTestStay: test.isTest,
   };
 }
 
@@ -1108,13 +1122,15 @@ async function tellHostCheckedIn(ctx: Ctx, room: string | null) {
     .select("verified_method")
     .eq("id", ctx.session.id)
     .maybeSingle();
-  const message = checkedInMessage({
-    name: row?.guest_full_name ?? null,
-    room,
-    status: row?.id_check_status ?? null,
-    returning: fresh?.verified_method === "returning",
-  });
-  if (!message) return;
+  const message =
+    (ctx.isTestStay ? "Test: " : "") +
+    (checkedInMessage({
+      name: row?.guest_full_name ?? null,
+      room,
+      status: row?.id_check_status ?? null,
+      returning: fresh?.verified_method === "returning",
+    }) ?? "");
+  if (!message || message === "Test: ") return;
   await ctx.db
     .from("host_alerts")
     .insert({
@@ -1838,6 +1854,8 @@ async function writeRegister(ctx: Ctx, position: number, e: RegisterEntry) {
     next_address: e.nextAddress,
     source: "guest",
     keep_until: registerKeepUntil(arrival),
+    // A host's test: not part of the legal record, and removed with the test.
+    ...(ctx.isTestStay ? { is_demo: true } : {}),
   };
   const { data: prev } = await ctx.db
     .from("guest_register")
@@ -2316,6 +2334,10 @@ export const getStay = createServerFn({ method: "GET" })
       .eq("id", t.booking_id)
       .single();
     if (!b || b.status === "cancelled") return { found: false as const };
+    // A host's test stay: its guide shows the room they picked, in memory only.
+    const { testRoomOf } = await import("./test-stay.server");
+    const test = await testRoomOf(db, t.booking_id);
+    if (test.isTest) b.room_id = test.roomId as never;
     // Held for the host: registered, but nothing about getting in until they have a room.
     const { data: flagged } = await (db as unknown as Loose)
       .from("bookings")

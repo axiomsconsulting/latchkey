@@ -173,6 +173,7 @@ export const getGuestDetails = createServerFn({ method: "GET" })
       booking: {
         id: b.id,
         stayedBefore,
+        isTest: (b as unknown as { is_test?: boolean }).is_test === true,
         guestName: b.guest_full_name,
         closedReason: closed,
         status: b.status,
@@ -322,8 +323,16 @@ export const deleteBookings = createServerFn({ method: "POST" })
       .from("guest_ids")
       .select("id_photo_path, face_photo_path")
       .in("booking_id", data.ids);
+    // A host's test stay leaves nothing behind, however it's removed.
+    const { admin } = await import("./checkin.server");
+    const { testIds, wipeTestStay } = await import("./test-stay.server");
+    const db = await admin();
+    const tests = await testIds(db, data.ids);
+    for (const id of tests) await wipeTestStay(db, id);
+    const rest = data.ids.filter((id) => !tests.has(id));
+    if (!rest.length) return { count: tests.size };
     const { data: count, error } = await untyped(context.supabase).rpc("delete_bookings", {
-      _ids: data.ids,
+      _ids: rest,
     });
     if (error) throw new Error(error.message);
     const { removeGuestPhotos } = await import("./checkin.server");
@@ -332,7 +341,7 @@ export const deleteBookings = createServerFn({ method: "POST" })
         [p.id_photo_path, p.face_photo_path].filter((x): x is string => !!x),
       ),
     );
-    return { count: (count as number | null) ?? 0 };
+    return { count: ((count as number | null) ?? 0) + tests.size };
   });
 
 /** Re-reads every calendar link of a property; stays deleted by mistake come back. */

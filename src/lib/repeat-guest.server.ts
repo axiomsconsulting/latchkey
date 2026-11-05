@@ -49,9 +49,15 @@ export async function isRepeatStay(db: any, bookingId: string, idName?: string |
     }
     if (stay.guest_phone) queries.push(earlier().eq("guest_phone", stay.guest_phone));
     const found = await Promise.all(queries);
+    const earlierAll = found.flatMap((f) => (f.data ?? []) as GuestStay[]);
+    const { testIds } = await import("./test-stay.server");
+    const tests = await testIds(
+      db,
+      earlierAll.map((x) => x.id),
+    );
     return stayedBefore(
       stay,
-      found.flatMap((f) => (f.data ?? []) as GuestStay[]),
+      earlierAll.filter((x) => !tests.has(x.id)),
     );
   } catch {
     return false;

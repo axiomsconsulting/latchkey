@@ -367,6 +367,11 @@ export function BookingsTable({
     `${nights(b)} ${nights(b) === 1 ? bookingCopy.night : bookingCopy.nights}`;
   const guestCell = (b: ListBooking) => (
     <span className="flex min-w-0 items-center gap-1">
+      {b.is_test ? (
+        <span className="shrink-0 rounded-full bg-accent px-1.5 text-xs font-medium text-accent-foreground">
+          {copy.testBadge}
+        </span>
+      ) : null}
       {rowActions && !selecting ? (
         <span className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
           {rowActions(b)}
@@ -470,7 +475,7 @@ export function BookingsTable({
                     <CheckInBadge status={b.id_check_status} mark={marks.data?.marks[b.id]} />
                   </td>
                   <td className="px-3 py-2">
-                    {roomName(b.room_id)}
+                    {roomName(b.room_id ?? b.test_room_id ?? null)}
                     <StayCodes b={b} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-2">
@@ -544,8 +549,8 @@ export function BookingsTable({
                   className="block w-full truncate text-left text-sm text-muted-foreground"
                   aria-label={`${name(b)}: ${stayDates(b.check_in_date, b.check_out_date, today)}`}
                 >
-                  {roomName(b.room_id)} · {stayDates(b.check_in_date, b.check_out_date, today)} ·{" "}
-                  {nightsText(b)}
+                  {roomName(b.room_id ?? b.test_room_id ?? null)} ·{" "}
+                  {stayDates(b.check_in_date, b.check_out_date, today)} · {nightsText(b)}
                   <StayCodes b={b} />
                 </button>
               </div>

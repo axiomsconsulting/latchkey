@@ -93,13 +93,22 @@ export const getOperationsReport = createServerFn({ method: "GET" })
           .gte("day", data.from)
           .lt("day", data.to),
       ]);
+    // A host's test stay isn't business.
+    const { testIds } = await import("./test-stay.server");
+    const { admin } = await import("./checkin.server");
+    const testStays = await testIds(
+      await admin(),
+      ((stays ?? []) as Array<{ id: string }>).map((x) => x.id),
+    );
     const stayRows: ReportStay[] = (
       (stays ?? []) as Array<
         ReportStay & { channel: string; site_key: string | null; archived_at: string | null }
       >
     )
       // A guest held for a room (hidden, no room) isn't a stay yet.
-      .filter((s) => s.room_id || !s.archived_at)
+      .filter(
+        (s) => (s.room_id || !s.archived_at) && !testStays.has((s as unknown as { id: string }).id),
+      )
       .map((s) => ({
         id: s.id,
         room_id: s.room_id,
