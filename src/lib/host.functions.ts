@@ -134,6 +134,15 @@ export const getWorkspace = createServerFn({ method: "GET" })
           .eq("id", target)
           .maybeSingle();
         if (t) {
+          // The shared demo has no owner to ask: support stays open for as long as it's being viewed.
+          const closing =
+            !t.support_access_until || Date.parse(t.support_access_until) < Date.now() + 86_400_000;
+          if (closing) {
+            const { admin } = await import("./checkin.server");
+            const { openDemoToSupport } = await import("./demo-defaults.server");
+            t.support_access_until =
+              (await openDemoToSupport(await admin(), t.id)) ?? t.support_access_until;
+          }
           const { data: writable } = await rpc.rpc("support_can_write", { _host_id: t.id });
           support = {
             hostId: t.id,
@@ -1191,7 +1200,7 @@ export async function seedDemo(
   }
 
   const suffix = Math.random().toString(36).slice(2, 6);
-  const base = {
+  const standard = {
     ...DEMO_PROPERTY,
     check_in_pin: String(100000 + Math.floor(Math.random() * 899999)),
     ...(seed.property ?? {}),
@@ -1203,6 +1212,13 @@ export async function seedDemo(
     host_id: hostId,
     is_demo: true,
   } as Record<string, unknown>;
+  // What a Latchkey admin changed on this demo property stays through the rebuild (migration 0094).
+  const { savedDemoSettings } = await import("./demo-defaults.server");
+  const { withDemoDefaults } = await import("./demo-defaults");
+  const base = withDemoDefaults(
+    standard,
+    shortCode ? await savedDemoSettings(db, shortCode) : null,
+  );
   const { withLegacy } = await import("./checkin.server");
   // A property's own currency needs migration 0047; before it, the business's.
   const { currency: _currency, ...withoutCurrency } = base;

@@ -32,6 +32,7 @@ import { WhatsAppAdmin } from "@/components/host/WhatsAppAdmin";
 import { LegalAdmin } from "@/components/host/LegalAdmin";
 import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
+import { DemoDefaultsAdmin } from "@/components/host/DemoDefaultsAdmin";
 import { CheckinJourneyAdmin } from "@/components/host/CheckinJourney";
 import { ArrangedSections } from "@/components/host/ArrangedSections";
 import { BookingSitesAdmin } from "@/components/host/BookingSitesAdmin";
@@ -205,6 +206,7 @@ function AdminPage() {
                 node: <Flags flags={q.data?.flags ?? []} hosts={hosts} />,
               },
               { id: "tools", title: titles.tools, node: <AdminBusinessTools /> },
+              { id: "demoDefaults", title: titles.demoDefaults, node: <DemoDefaultsAdmin /> },
             ]}
           />
         </TabsContent>

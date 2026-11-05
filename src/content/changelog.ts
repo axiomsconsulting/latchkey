@@ -46,6 +46,19 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.131.0",
+    date: "2026-11-05",
+    title: "Demo properties keep their settings",
+    items: [
+      {
+        kind: "new",
+        area: "Demo",
+        admin: true,
+        text: "Latchkey admin can open the demo business and change its properties' settings straight away. Whatever is saved stays through every daily rebuild and becomes that property's new standard, with a way back on Latchkey admin → Businesses.",
+      },
+    ],
+  },
+  {
     version: "0.130.3",
     date: "2026-11-05",
     title: "Guides in the demo",

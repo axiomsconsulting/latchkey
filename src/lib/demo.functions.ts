@@ -370,3 +370,46 @@ export const seedRecordingAccount = createServerFn({ method: "POST" })
     });
     return { ok: true, propertyCode: property.short_code, stays: bookings.length };
   });
+
+/** Latchkey admin: the shared demo business, and which settings are being kept on each property. */
+export const listDemoDefaults = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { requireSuperAdmin } = await import("./roles");
+    await requireSuperAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
+    const { data: tour } = await db
+      .from("properties")
+      .select("host_id")
+      .eq("short_code", DEMO_CODE)
+      .eq("is_demo", true)
+      .maybeSingle();
+    const { data, error } = await db
+      .from("demo_property_defaults")
+      .select("short_code, settings")
+      .order("short_code");
+    return {
+      hostId: (tour?.host_id as string | undefined) ?? null,
+      available: !error,
+      rows: ((error ? [] : (data ?? [])) as Array<{ short_code: string; settings: object }>).map(
+        (r) => ({ shortCode: r.short_code, keys: Object.keys(r.settings ?? {}) }),
+      ),
+    };
+  });
+
+/** Back to the standard set-up, from the property's next rebuild. */
+export const clearDemoDefaults = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ shortCode: z.string().max(80) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { requireSuperAdmin } = await import("./roles");
+    await requireSuperAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any)
+      .from("demo_property_defaults")
+      .delete()
+      .eq("short_code", data.shortCode);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
