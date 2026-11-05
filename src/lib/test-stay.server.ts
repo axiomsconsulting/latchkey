@@ -3,7 +3,8 @@ import { addDays } from "./dates";
 import { TEST_KEEP_DAYS } from "./test-stay";
 
 /** Everything else that names a stay and outlives it (their booking_id only goes empty otherwise). */
-const KEEP_AFTER_STAY = [
+export const KEEP_AFTER_STAY = [
+  "guest_contacts",
   "guest_register",
   "invoices",
   "kiosk_messages",
@@ -40,6 +41,18 @@ export async function wipeTestStay(db: any, bookingId: string): Promise<boolean>
       .flatMap((p) => [p.id_photo_path, p.face_photo_path])
       .filter((x): x is string => !!x),
   );
+  // Anything signed during the test, with its files.
+  const { data: signed } = await db
+    .from("stay_agreements")
+    .select("signature_path, pdf_path")
+    .eq("booking_id", bookingId);
+  const files = (
+    (signed ?? []) as Array<{ signature_path: string | null; pdf_path: string | null }>
+  ).flatMap((r) => [r.signature_path, r.pdf_path]);
+  if (files.some(Boolean)) {
+    const { removePrivate } = await import("./private-store.server");
+    await removePrivate(files).catch(() => undefined);
+  }
   for (const table of KEEP_AFTER_STAY) {
     // A table missing on an older database has nothing to clear.
     await db
