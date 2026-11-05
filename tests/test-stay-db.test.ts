@@ -1,6 +1,7 @@
 /** Test stays (migration 0092): they can't hold a room, and there's one per property. */
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { KEEP_AFTER_STAY } from "../src/lib/test-stay.server";
 import { bootDb, USERS, type Db } from "./pg-harness";
 
 let db: Db;
@@ -48,6 +49,20 @@ describe("links between tables", () => {
     );
     expect(rows.map((r) => r.pair).filter((p) => p.includes("bookings"))).toEqual([]);
     expect(rows.map((r) => r.pair).sort()).toEqual(["trial_flags -> hosts", "user_prefs -> hosts"]);
+  });
+});
+
+describe("resetting a test stay", () => {
+  // Everything that outlives a stay has to be cleared by hand, or Reset leaves it behind.
+  it("clears every table that would otherwise keep a stay's details", async () => {
+    const rows = await db.system<{ tbl: string }>(
+      `select c.conrelid::regclass::text as tbl
+         from pg_constraint c
+        where c.contype = 'f' and c.confrelid = 'public.bookings'::regclass
+          and c.confdeltype <> 'c' and c.conrelid <> 'public.bookings'::regclass`,
+    );
+    const missing = rows.map((r) => r.tbl).filter((t) => !KEEP_AFTER_STAY.includes(t));
+    expect(missing).toEqual([]);
   });
 });
 
