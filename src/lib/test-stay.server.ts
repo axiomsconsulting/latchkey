@@ -85,5 +85,12 @@ export async function testRoomOf(
     .eq("id", bookingId)
     .maybeSingle();
   if (error || !data?.is_test) return { isTest: false, roomId: null };
-  return { isTest: true, roomId: data.test_room_id ?? null };
+  if (!data.test_room_id) return { isTest: true, roomId: null };
+  // A plain column, not a link (a second link would break every rooms(...) query): the room may have gone.
+  const { data: room } = await db
+    .from("rooms")
+    .select("id")
+    .eq("id", data.test_room_id)
+    .maybeSingle();
+  return { isTest: true, roomId: room?.id ?? null };
 }

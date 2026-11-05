@@ -36,6 +36,21 @@ beforeAll(async () => {
   )[0]!.id;
 }, 60_000);
 
+describe("links between tables", () => {
+  // Two links between the same tables break every embedded query between them ("more than one
+  // relationship was found"), which took down guest cards. Only add a pair here if nothing embeds it.
+  it("never gives a pair of tables a second link", async () => {
+    const rows = await db.system<{ pair: string }>(
+      `select conrelid::regclass::text || ' -> ' || confrelid::regclass::text as pair
+         from pg_constraint
+        where contype = 'f' and connamespace = 'public'::regnamespace
+        group by conrelid, confrelid having count(*) > 1 order by 1`,
+    );
+    expect(rows.map((r) => r.pair).filter((p) => p.includes("bookings"))).toEqual([]);
+    expect(rows.map((r) => r.pair).sort()).toEqual(["trial_flags -> hosts", "user_prefs -> hosts"]);
+  });
+});
+
 describe("test stays", () => {
   it("can never hold a real room", async () => {
     await expect(add("is_test, room_id", `true, '${roomId}'`)).rejects.toThrow(
@@ -56,12 +71,11 @@ describe("test stays", () => {
   it("leave real stays as they were", async () => {
     await expect(add("room_id", `'${roomId}'`)).resolves.toBeTruthy();
   });
-  it("lose the room to try if that room goes", async () => {
-    await db.system("update bookings set room_id = null where not is_test");
+  it("don't stop a room being removed", async () => {
+    await db.system("delete from bookings where not is_test");
     await db.system("delete from rooms where id = $1", [roomId]);
-    const rows = await db.system<{ test_room_id: string | null }>(
-      "select test_room_id from bookings where is_test",
+    expect(await db.system("select count(*)::int as n from rooms where id = $1", [roomId])).toEqual(
+      [{ n: 0 }],
     );
-    expect(rows[0]!.test_room_id).toBeNull();
   });
 });
