@@ -455,12 +455,21 @@ export const getRoomGuideCodes = createServerFn({ method: "POST" })
           context.supabase,
           await hostOfProperty(context.supabase, data.propertyId),
         );
+        // The shared demo account can't write to its rooms, so the server makes a demo property's
+        // codes: without them its guides have no preview. Only the code, and only on a demo property.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: prop } = await sb
+          .from("properties")
+          .select("is_demo")
+          .eq("id", data.propertyId)
+          .maybeSingle();
+        const writer = prop?.is_demo ? (supabaseAdmin as any) : sb;
         for (const r of missing) {
           // Words are unique across every room everywhere: try again on the rare clash.
           for (let tries = 0; tries < 6; tries++) {
             const code = hasWords ? await freshRoomWords() : newRoomCode();
             const col = hasWords ? "guide_words" : "guide_code";
-            const { error: e } = await sb
+            const { error: e } = await writer
               .from("rooms")
               .update({ [col]: code })
               .eq("id", r.id)
