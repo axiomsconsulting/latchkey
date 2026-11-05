@@ -65,7 +65,14 @@ export async function sendDueGuestMessages(): Promise<{ sent: number }> {
       .or(`check_in_date.eq.${local.date},check_out_date.eq.${local.date}`)
       .is("archived_at", null)
       .is("mirror_of", null);
+    // A host's test stay never sends a guest message.
+    const { testIds } = await import("./test-stay.server");
+    const tests = await testIds(
+      rows,
+      (stays ?? []).map((x: { id: string }) => x.id),
+    );
     for (const stay of stays ?? []) {
+      if (tests.has(stay.id)) continue;
       for (const kind of dueMessages(s, stay, local)) {
         const col = kind === "welcome" ? "welcome_message_at" : "goodbye_message_at";
         // Claimed first: a second run at the same moment finds it taken.

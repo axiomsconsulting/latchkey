@@ -260,7 +260,7 @@ export function GuestSheet({
             {canWrite ? (
               <div className="mt-4 space-y-2 px-4">
                 <div className="flex flex-wrap gap-2">
-                  {onEdit ? (
+                  {onEdit && !b.isTest ? (
                     <Button variant="outline" size="sm" onClick={() => onEdit(b.id)}>
                       <Pencil className="size-4" /> {common.edit}
                     </Button>
@@ -331,7 +331,7 @@ export function GuestSheet({
             <GuestDoorCode bookingId={b.id} />
 
             <Section title={copy.whoStaying} count={d.people.length}>
-              {canWrite && d.people.length ? <MoveCheckIn bookingId={b.id} /> : null}
+              {canWrite && d.people.length && !b.isTest ? <MoveCheckIn bookingId={b.id} /> : null}
               <GuestPeople
                 people={d.people}
                 arrivedAdults={b.arrivedAdults}

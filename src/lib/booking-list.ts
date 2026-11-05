@@ -20,6 +20,8 @@ export type ListBooking = {
   notes?: string | null;
   property_id?: string | null;
   id_check_status?: string | null;
+  is_test?: boolean | null;
+  test_room_id?: string | null;
 };
 
 /** Where a stay sits for the host, in the order they care about. */

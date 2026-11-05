@@ -1,3 +1,4 @@
+import { TestStayCard } from "@/components/host/TestStayCard";
 import { useEffect, useState, type ReactNode } from "react";
 import { trackEvent } from "@/lib/track";
 import { isDemoBrowser } from "@/lib/demo-session";
@@ -38,6 +39,7 @@ import {
   Users,
   Wallet,
   ShieldCheck,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -298,6 +300,17 @@ function TodayPage() {
             node: <GuideCard propertyId={selectedId} arriving={lists.arriving} rooms={rooms} />,
           },
           { id: "arrivalGuides", node: <ArrivalGuides arriving={lists.arriving} /> },
+          {
+            id: "testStay",
+            node: property ? (
+              <DashSection id="testStay" icon={UserCheck} title={copy.testStayTitle}>
+                <TestStayCard
+                  property={property as unknown as { id: string; short_code: string }}
+                  rooms={rooms as Array<{ id: string; display_name: string }>}
+                />
+              </DashSection>
+            ) : null,
+          },
           {
             id: "kiosk",
             node: property ? <KioskCard property={property} arriving={lists.arriving} /> : null,

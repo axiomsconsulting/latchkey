@@ -16,9 +16,10 @@ const uuid = z.string().uuid();
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const COLUMNS =
-  "id, property_id, property_name, booking_id, room_name, position, arrival_date, full_name, nationality, is_alien, document_number, place_of_issue, next_destination, next_address, source, keep_until, updated_at";
+  "id, property_id, property_name, booking_id, room_name, position, arrival_date, full_name, nationality, is_alien, document_number, place_of_issue, next_destination, next_address, source, keep_until, updated_at, is_demo";
 
 export type RegisterRow = {
+  is_demo?: boolean;
   id: string;
   property_id: string | null;
   property_name: string;
@@ -88,7 +89,9 @@ export const exportRegister = createServerFn({ method: "GET" })
       data.to,
       data.propertyId,
     );
-    return { csv: registerCsv([...rows].reverse()), count: rows.length };
+    // A host's test check-in isn't part of the record they hand over.
+    const real = rows.filter((r: { is_demo?: boolean }) => !r.is_demo);
+    return { csv: registerCsv([...real].reverse()), count: real.length };
   });
 
 const entryInput = z.object({

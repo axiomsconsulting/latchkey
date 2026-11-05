@@ -787,6 +787,7 @@ export const todayDash = branded({
   subtitle: "Everything at a glance. Tap anything to go straight to it.",
   hint: "Hover, or press and hold, for details.",
   guestsTitle: "Guests today",
+  testStayTitle: "Try the check-in yourself",
   arriving: "Arriving",
   staying: "Staying",
   leaving: "Leaving",
@@ -1097,6 +1098,27 @@ export const common = branded({
   errorBody: "We could not load this just now. Try again in a moment.",
   notFound: "We could not find that page.",
   retry: "Try again",
+});
+
+export const testStayCopy = branded({
+  body: "Check in as a guest under your own name, to see what they see. It shows on Bookings as a test, doesn't block any room or show on any calendar, and sends no guest messages. Reset removes it with its photos and every record it made.",
+  name: "Your name, as on your ID",
+  room: "Room to try",
+  noRoom: "No room",
+  start: "Start a test check-in",
+  started: "Your test check-in is ready. Open the kiosk.",
+  waiting: "Ready for you to check in.",
+  checkedIn: "You've checked in.",
+  howTo: (letter: string, day: string) =>
+    `On the kiosk, tap to check in and show your ID, or use surname "${letter}" and check-out ${day}.`,
+  open: "Open the kiosk",
+  see: "See it on Bookings",
+  save: "Save changes",
+  saved: "Saved",
+  reset: "Reset",
+  resetSure: "Yes, remove everything",
+  wasReset: "Removed, ready to start again.",
+  needsUpdate: "This needs the latest update (migration 0092).",
 });
 
 export const kioskRestCopy = branded({
@@ -3695,6 +3717,7 @@ export const registerPage = branded({
   colName: "Full name",
   colNationality: "Nationality",
   colDocument: "Passport or ID",
+  testEntry: "Test, not in exports",
   colNext: "Next destination",
   colWhere: "Where",
   issuedAt: (place: string) => `issued ${place}`,
@@ -4271,6 +4294,7 @@ export const bookingTable = branded({
     closed: "Closed nights",
   } as Record<string, string>,
   idColumn: "ID",
+  testBadge: "Test",
   idsChecked: (n: number) => `${n} IDs checked`,
   facePhotoTaken: "Face photo taken",
   cols: {

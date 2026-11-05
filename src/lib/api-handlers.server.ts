@@ -268,7 +268,11 @@ const HANDLERS: Record<string, Handler> = {
       .limit(Math.min(200, Number(i["limit"] ?? 50)));
     if (i["status"]) q = q.eq("status", i["status"]);
     const { data } = await q;
-    return { data: ((data ?? []) as any[]).filter((b) => !b.room_check?.held).map(bookingOut) };
+    return {
+      data: ((data ?? []) as any[])
+        .filter((b) => !b.room_check?.held && !b.is_test)
+        .map(bookingOut),
+    };
   },
 
   async get_booking(c, i) {

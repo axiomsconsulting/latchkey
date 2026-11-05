@@ -215,6 +215,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "doorCodes", label: "Door codes" },
       { id: "guide", label: "Stay guide" },
       { id: "arrivalGuides", label: "Today's arrivals: guide links" },
+      { id: "testStay", label: "Try the check-in yourself" },
       { id: "kiosk", label: "Kiosk" },
       { id: "welcome", label: "Guest welcome on the kiosk" },
       { id: "settings", label: "Useful settings" },
