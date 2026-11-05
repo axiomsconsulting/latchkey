@@ -1100,6 +1100,15 @@ export const common = branded({
   retry: "Try again",
 });
 
+export const demoDefaultsCopy = branded({
+  body: "Open the demo business to change its properties' settings, such as Express and Expanded buttons, then save as usual. They stay through every daily rebuild and become that property's new standard. Rooms, stays and guide text are still rebuilt.",
+  open: "Open the demo business",
+  none: "No settings changed yet.",
+  clear: "Back to standard",
+  cleared: "Goes back to standard at its next rebuild.",
+  needsUpdate: "This needs the latest update (migration 0094).",
+});
+
 export const testStayCopy = branded({
   body: "Check in as a guest under your own name, to see what they see. It shows on Bookings as a test, doesn't block any room or show on any calendar, and sends no guest messages. Reset removes it with its photos and every record it made.",
   name: "Your name, as on your ID",
@@ -6440,6 +6449,7 @@ export const adminArrangeTitles = branded({
   routines: "Routines",
   updates: "App updates",
   tools: "Tools for the business being viewed",
+  demoDefaults: "Demo properties' settings",
   hosts: "Businesses",
 });
 

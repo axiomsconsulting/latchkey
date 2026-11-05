@@ -661,9 +661,7 @@ export const setKioskAutoPair = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ propertyId: uuid, on: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
-    const { error } = await (
-      await admin()
-    )
+    const { error } = await (context.supabase as any)
       .from("properties")
       .update({ kiosk_auto_pair: data.on })
       .eq("id", data.propertyId);
@@ -677,9 +675,7 @@ export const setKioskCardPicker = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ propertyId: uuid, on: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
-    const { data: p, error } = await (
-      await admin()
-    )
+    const { data: p, error } = await (context.supabase as any)
       .from("properties")
       .update({ kiosk_card_picker: data.on })
       .eq("id", data.propertyId)

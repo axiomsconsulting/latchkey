@@ -160,6 +160,12 @@ export const viewAsHost = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ hostId: uuid.nullable() }).parse(d))
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
+    // The shared demo has no owner to ask, so opening it turns support access on.
+    if (data.hostId) {
+      const { admin } = await import("./checkin.server");
+      const { openDemoToSupport } = await import("./demo-defaults.server");
+      await openDemoToSupport(await admin(), data.hostId);
+    }
     const { error } = await loose(context.supabase).from("user_prefs").upsert({
       user_id: context.userId,
       support_host_id: data.hostId,
