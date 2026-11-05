@@ -846,6 +846,7 @@
   }
   function saverView() {
     var r = rest();
+    if (r && !restTapped && r.show === "low") return "saver";
     if (r && restTapped && r.restShow)
       return r.restShow === "night" ? "night" : r.restShow === "blank" ? "blank" : "saver";
     return r ? (r.show === "night" ? "night" : r.show === "blank" ? "blank" : "saver") : "saver";
@@ -869,26 +870,24 @@
       $("saverdim").style.opacity = String(1 - (r.nightBrightness || 1));
       clock.style.display = "none";
       clocks.style.display = "none";
-    } else if (view !== "blank" && LEVEL === "enhanced" && state && state.clock) {
-      // The world clocks, as the full kiosk's screensaver: home larger in the middle.
+    } else if (view !== "blank" && state && state.clock) {
+      // The world clocks, as the full kiosk's screensaver: three clocks, the QR beside them, messages below.
       box.style.backgroundColor = "#000";
       $("saverdim").style.opacity = "0";
       clock.style.display = "none";
       clocks.style.display = "";
       drawClocks(clocks, r, w, h);
+      drawSaverMsg(r);
     } else {
       box.style.backgroundColor = "#000";
       $("saverdim").style.opacity = "0";
       clocks.style.display = "none";
-      clock.style.display = view === "blank" ? "none" : "block";
-      var level = Math.round(60 + 140 * (r ? r.clockBrightness || 0.5 : 0.5));
-      clock.style.color = "rgb(" + level + "," + level + "," + level + ")";
-      clock.innerHTML = esc(clockText());
-      clock.style.left = Math.round(Math.random() * Math.max(0, w - 360)) + "px";
-      clock.style.top = Math.round(Math.random() * Math.max(0, h - 160)) + "px";
+      clock.style.display = "none";
+      $("savermsg").innerHTML = "";
     }
-    // The phone QR, when the host shows it at rest: in a corner that changes now and then.
-    if (r && r.qr) {
+    if (view === "night") $("savermsg").innerHTML = "";
+    // The night light and the dark screen show the QR on its own; the clocks already have theirs.
+    if (r && r.qr && view !== "saver") {
       qr.innerHTML = window.__LITE_QR || "";
       qr.style.display = "block";
       var spot = Math.floor(now() / (3 * 60 * 1000)) % 4;
@@ -898,6 +897,28 @@
       qr.style.bottom = spot < 2 ? "auto" : "24px";
       qr.style.opacity = view === "night" ? "0.9" : "0.35";
     } else qr.style.display = "none";
+  }
+
+  /** Under the clocks, as the full kiosk: name, date and time, quiet hours, how to wake it. */
+  function drawSaverMsg(r) {
+    var c = state && state.clock;
+    var q =
+      r && r.quietUntil
+        ? '<span style="display:block;margin-top:6px">' +
+          esc(W.saverQuiet.replace("{t}", r.quietUntil)) +
+          "</span>"
+        : "";
+    $("savermsg").innerHTML =
+      "<b>" +
+      esc(W.name || "") +
+      "</b>" +
+      esc((c && c.date) || "") +
+      " \u00b7 " +
+      esc(clockText()) +
+      q +
+      "<i>" +
+      esc(W.saverTouch) +
+      "</i>";
   }
 
   /** One analogue clock, drawn as the kiosk's Dial: ring, hour marks, two hands, city and time. */
@@ -911,9 +932,9 @@
         '<line x1="50" y1="' +
         (i % 3 === 0 ? 7 : 9) +
         '" x2="50" y2="12" stroke="currentColor" stroke-opacity="' +
-        (i % 3 === 0 ? 0.4 : 0.22) +
+        (i % 3 === 0 ? 0.9 : 0.55) +
         '" stroke-width="' +
-        (i % 3 === 0 ? 1.2 : 0.7) +
+        (i % 3 === 0 ? 2 : 1.2) +
         '" transform="rotate(' +
         i * 30 +
         ' 50 50)"/>';
@@ -924,13 +945,13 @@
       size +
       '" height="' +
       size +
-      '"><circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" stroke-opacity="0.22" stroke-width="0.8"/>' +
+      '"><circle cx="50" cy="50" r="47" fill="none" stroke="currentColor" stroke-opacity="0.6" stroke-width="0.8"/>' +
       marks +
-      '<line x1="50" y1="50" x2="50" y2="27" stroke="currentColor" stroke-opacity="0.55" stroke-width="2.2" stroke-linecap="round" transform="rotate(' +
+      '<line x1="50" y1="50" x2="50" y2="27" stroke="currentColor" stroke-opacity="1" stroke-width="3.2" stroke-linecap="round" transform="rotate(' +
       ((hh % 12) + mm / 60) * 30 +
-      ' 50 50)"/><line x1="50" y1="50" x2="50" y2="15" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.2" stroke-linecap="round" transform="rotate(' +
+      ' 50 50)"/><line x1="50" y1="50" x2="50" y2="15" stroke="currentColor" stroke-opacity="1" stroke-width="1.2" stroke-linecap="round" transform="rotate(' +
       mm * 6 +
-      ' 50 50)"/><circle cx="50" cy="50" r="1.6" fill="currentColor" fill-opacity="0.5"/></svg><span class="ct">' +
+      ' 50 50)"/><circle cx="50" cy="50" r="1.6" fill="currentColor" fill-opacity="1"/></svg><span class="ct">' +
       esc(c.city) +
       '</span><span class="tm">' +
       two(hh) +
@@ -946,31 +967,87 @@
     var all = state.clock.clocks || [];
     var home = 0;
     for (var i = 0; i < all.length; i++) if (all[i].home) home = i;
-    var keep = w < h ? 1 : 2;
-    var list = all.slice(Math.max(0, home - keep), home + keep + 1);
-    var big = Math.round(Math.min(w, h) * 0.27);
-    var small = Math.round(big * 0.62);
+    var list = all.slice(Math.max(0, home - 1), home + 2);
+    var withQr = r && r.qr && window.__LITE_QR;
+    var big = Math.round(Math.min(w * (withQr ? 0.24 : 0.3), h * 0.42));
+    var small = Math.round(big * 0.66);
     var html = "";
     for (var j = 0; j < list.length; j++) html += dial(list[j], list[j].home ? big : small);
+    if (withQr)
+      html +=
+        '<div class="qrbox" style="width:' +
+        big +
+        "px;height:" +
+        big +
+        'px">' +
+        window.__LITE_QR +
+        "</div>";
     box.innerHTML = html;
-    box.style.height = big + 70 + "px";
-    box.style.marginTop = -Math.round((big + 70) / 2) + "px";
-    var glow = 0.4 + 0.6 * (r ? r.clockBrightness || 0.5 : 0.5);
+    var tall = big + 76;
+    box.style.height = tall + "px";
+    // Above the messages, which take the bottom of the screen.
+    box.style.top = "0";
+    box.style.marginTop = Math.max(10, Math.round((h - tall - 170) / 2)) + "px";
+    // Never faint, whatever the host's slider says: this screen has to read across a hall.
+    var glow = 0.75 + 0.25 * (r ? r.clockBrightness || 0.5 : 0.5);
     box.style.color = "rgba(255,255,255," + glow.toFixed(2) + ")";
+    $("savermsg").style.color = box.style.color;
     if (now() - driftAt > 60000) {
       driftAt = now();
-      var x = Math.round((Math.random() - 0.5) * w * 0.12);
-      var y = Math.round((Math.random() - 0.5) * h * 0.2);
+      var x = Math.round((Math.random() - 0.5) * w * 0.03);
+      var y = Math.round((Math.random() - 0.5) * h * 0.03);
       box.style.webkitTransform = "translate(" + x + "px," + y + "px)";
       box.style.transform = "translate(" + x + "px," + y + "px)";
     }
   }
 
+  /** Smart Screensaver by day: the usual screen, in black and white, until the next touch. */
+  var lowOn = false;
+  var lowB = 0.7;
+  var lowC = 1;
+  function paintLow() {
+    var f =
+      "grayscale(1)" +
+      (L.lowInvert ? " invert(1)" : "") +
+      " brightness(" +
+      lowB +
+      ") contrast(" +
+      lowC +
+      ")";
+    var bd = $("bd");
+    bd.style.webkitFilter = lowOn ? f : "";
+    bd.style.filter = lowOn ? f : "";
+    $("lpl").firstChild.style.height = Math.round(((lowB - 0.2) / 0.8) * 80) + "%";
+    $("lpr").firstChild.style.height = Math.round(((lowC - 0.5) / 1) * 80) + "%";
+  }
+  function low(on) {
+    if (on === lowOn) return;
+    lowOn = on;
+    var r = rest();
+    if (on && r) {
+      lowB = r.lowBrightness || 0.7;
+      lowC = r.lowContrast || 1;
+    }
+    document.body.className =
+      document.body.className.replace(/\s*\blpi?\b/g, "") +
+      (on ? " lp" + (L.lowInvert ? " lpi" : "") : "");
+    paintLow();
+  }
+  function lowWanted(idle) {
+    var r = rest();
+    return !!r && r.show === "low" && !saverOn && !overlay && view0() && idle >= saverMs();
+  }
+  function view0() {
+    return !$("ov") || $("ov").style.display === "none" || !overlay;
+  }
+
   function tick() {
     header();
     var idle = new Date().getTime() - lastTouch;
+    low(lowWanted(idle));
     var busy = cards().length || (state && state.welcome) || overlay;
-    var awake = rest() && rest().show === "awake" && !restTapped;
+    var by = rest() && rest().show;
+    var awake = (by === "awake" || by === "low") && !restTapped;
     if (!saverOn && !busy && !awake && idle >= saverMs()) saver(true);
     if (saverOn && ((busy && !overlay) || awake)) saver(false);
     // Left open and walked away from: the panels close by themselves.
@@ -985,8 +1062,36 @@
 
   // ---- Touches -----------------------------------------------------------------------
 
-  function touched() {
+  /** The edge strips on the low power screen: brightness on the left, contrast on the right. Neither wakes it. */
+  var lowDrag = null;
+  function lowStrip(e) {
+    if (!lowOn) return false;
+    var t = (e.touches && e.touches[0]) || e;
+    var w = window.innerWidth;
+    if (t.clientX > 70 && t.clientX < w - 70) return false;
+    lowDrag = { left: t.clientX <= 70, y: t.clientY, b: lowB, c: lowC };
+    return true;
+  }
+  function lowMove(e) {
+    if (!lowDrag) return;
+    var t = (e.touches && e.touches[0]) || e;
+    var d = (lowDrag.y - t.clientY) / window.innerHeight;
+    if (lowDrag.left)
+      lowB = Math.max(0.2, Math.min(1, Math.round((lowDrag.b + d * 0.8) * 20) / 20));
+    else lowC = Math.max(0.5, Math.min(1.5, Math.round((lowDrag.c + d) * 20) / 20));
+    paintLow();
+    if (e.preventDefault) e.preventDefault();
+  }
+  function lowEnd() {
+    if (!lowDrag) return;
+    lowDrag = null;
+    call({ action: "dayLook", brightness: lowB, contrast: lowC }, function () {});
+  }
+
+  function touched(e) {
+    if (e && lowStrip(e)) return;
     lastTouch = new Date().getTime();
+    low(false);
     if (saverOn) saver(false);
     if (canFull) enterFull();
   }
@@ -1003,6 +1108,10 @@
   document.addEventListener("touchstart", touched, true);
   document.addEventListener("mousedown", touched, true);
   document.addEventListener("keydown", touched, true);
+  document.addEventListener("touchmove", lowMove, false);
+  document.addEventListener("mousemove", lowMove, false);
+  document.addEventListener("touchend", lowEnd, true);
+  document.addEventListener("mouseup", lowEnd, true);
 
   document.addEventListener(
     "click",

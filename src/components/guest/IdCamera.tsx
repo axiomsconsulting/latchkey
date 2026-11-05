@@ -6,7 +6,8 @@ import { guest as copy } from "@/content/copy";
 import { fromFile } from "@/lib/photo-file";
 import { photoFill, photoStage } from "@/lib/photo-progress";
 import { useAutoSnap, type SnapShape } from "@/hooks/use-auto-snap";
-import { CameraCalloutBox, useKioskStage } from "@/components/guest/KioskPhotoStage";
+import { CameraCalloutBox } from "@/components/guest/KioskPhotoStage";
+import { useKioskStage } from "@/hooks/use-kiosk-stage";
 import type { Spot } from "@/lib/kiosk-camera-spot";
 import { cn } from "@/lib/utils";
 

@@ -28,6 +28,11 @@ const body = z.discriminatedUnion("action", [
   }),
   // Every few seconds: did the host change the cards? (Cheap; the full state follows when it did.)
   z.object({ action: z.literal("stamp") }),
+  z.object({
+    action: z.literal("dayLook"),
+    brightness: z.number().finite(),
+    contrast: z.number().finite(),
+  }),
   z.object({ action: z.literal("express"), handle: z.string().max(300) }),
   // A photo of the guest's ID, taken with the tablet's camera: finds their booking.
   z.object({
@@ -80,6 +85,14 @@ export const Route = createFileRoute("/api/public/kiosk-lite/$code")({
           if (input.action === "state") {
             const { liteState } = await import("@/lib/kiosk-lite.server");
             return json(await liteState(code, input, request.headers.get("user-agent") ?? ""));
+          }
+          if (input.action === "dayLook") {
+            const { saveKioskDayLook } = await import("@/lib/kiosk.functions");
+            return json(
+              await saveKioskDayLook({
+                data: { code, brightness: input.brightness, contrast: input.contrast },
+              }),
+            );
           }
           if (input.action === "stamp") {
             const { kioskCardsStamp } = await import("@/lib/goodbye.functions");

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 import { PhoneQrIcon, useQrImage } from "@/components/guest/CheckInQr";
-import { useKioskStage } from "@/components/guest/KioskPhotoStage";
+import { useKioskStage } from "@/hooks/use-kiosk-stage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guest as copy } from "@/content/copy";

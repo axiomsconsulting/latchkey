@@ -247,7 +247,7 @@ export function TabletScreen({
             </p>
           </div>
         ) : view === "day" ? (
-          <div className="absolute inset-x-0 bottom-0 top-36 flex flex-col items-center justify-center gap-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-10 bg-background grayscale invert">
             <LogoMark theme={live.theme} name={live.name} className="size-72 text-8xl" />
             <p className="rounded-full bg-primary px-14 py-5 text-5xl font-bold text-primary-foreground">
               {copy.checkIn}

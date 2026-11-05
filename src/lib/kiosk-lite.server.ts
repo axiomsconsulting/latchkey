@@ -7,6 +7,7 @@
  * happens on the guest's own phone, by QR code (old tablets have no camera
  * access in the browser).
  */
+import { shouldInvert } from "./kiosk-rest";
 import { deviceSignature } from "./kiosk-devices";
 import { guest as guestCopy, kioskLite as copy } from "@/content/copy";
 import { brandName } from "@/lib/brand";
@@ -83,6 +84,9 @@ function words(name: string) {
     setup: copy.setup("{code}"),
     update: copy.update("{v}"),
     tapHint: copy.tapHint,
+    name,
+    saverTouch: guestCopy.saverTouch,
+    saverQuiet: guestCopy.quietTitle("{t}"),
     bellTitle: copy.bellTitle,
     bellHelp: copy.bellHelp,
     bellArriving: copy.bellArriving,
@@ -364,6 +368,8 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
   const boot = {
     code: p.code,
     version: APP_VERSION,
+    // A light page turns dark at rest; a dark theme only goes black and white.
+    lowInvert: lightColour(col.bg),
     phoneUrl,
     shortUrl: phoneUrl.replace(/^https?:\/\//, ""),
     offset: zoneOffsetMinutes(tz),
@@ -548,7 +554,17 @@ p{margin:0}
 .btns .sec{border:2px solid ${col.border}}
 .btns .pri{float:right;background-color:${btn};${btnImage}color:${btnFg};border:2px solid ${btnBorder}}
 #saver{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#000;z-index:70;overflow:hidden}
-#saver .one{position:absolute;color:#555;font-size:120px;font-weight:200}
+#saver .one{display:none}
+#savermsg{position:absolute;left:0;right:0;bottom:22px;text-align:center;color:#fff;font-size:20px;line-height:1.35}
+#savermsg b{display:block;font-size:30px;font-weight:bold}
+#savermsg i{display:block;font-style:normal;font-size:16px;letter-spacing:.2em;text-transform:uppercase;margin-top:8px}
+#clocks .qrbox{margin:0 22px;background:#fff;padding:10px;border-radius:12px}
+#clocks .qrbox svg{display:block;margin:0}
+body.lp,html.lp{background:#000}
+body.lpi #bd img,body.lpi #bd .qrsq{-webkit-filter:invert(1);filter:invert(1)}
+.lpbar{display:none;position:absolute;top:0;bottom:0;width:70px;z-index:90}
+.lpbar i{position:absolute;left:30px;width:10px;bottom:10%;background:#fff;border-radius:5px}
+body.lp .lpbar{display:block}
 #clocks{position:absolute;left:0;right:0;top:50%;margin-top:-140px;height:280px;${ROW_CENTER}${CENTER_JUSTIFY}color:#fff;-webkit-transition:-webkit-transform 19s ease-in-out;transition:transform 19s ease-in-out}
 #clocks figure{margin:0 22px;text-align:center}
 #clocks svg{display:block;margin:0 auto 14px}
@@ -559,7 +575,7 @@ p{margin:0}
 #saverqr svg{width:100%;height:100%;display:block}
 #camon{display:none;position:absolute;left:12px;top:12px;z-index:80;background:#000;color:#fff;border-radius:20px;padding:8px 14px;font-size:15px}
 #net{display:none;position:absolute;right:12px;bottom:8px;font-size:14px;color:#B33;z-index:55}
-.lv-lite #bd .art,.lv-lite .sn,.lv-lite #clocks{display:none}
+.lv-lite #bd .art,.lv-lite .sn{display:none}
 .lv-lite .big,.lv-lite .btns .pri{background-image:none}
 ${xlStyles}
 @media (max-width:900px){.wc h1{font-size:36px}.lead{font-size:19px}.hostwel h1{font-size:46px}.qrp{width:250px}.qrp .qr{width:180px;height:180px}#main{padding:0 20px}#hd{padding-left:20px;padding-right:20px}}
@@ -584,7 +600,7 @@ ${footer}
 <div id="corner"><button id="fs" style="display:none" aria-label="Full screen">${icons.full}</button><button id="ver"><span id="lbl"></span>v${esc(APP_VERSION)}<span id="dot"></span></button></div>
 <button id="upd" class="big"></button>
 <div id="ov"></div>
-<div id="saver"><div id="clocks"></div><div id="saverdim"></div><span class="one"></span><div id="saverqr"></div></div>
+<div class="lpbar" id="lpl" style="left:0"><i></i></div><div class="lpbar" id="lpr" style="right:0"><i></i></div><div id="saver"><div id="clocks"></div><div id="savermsg"></div><div id="saverdim"></div><span class="one"></span><div id="saverqr"></div></div>
 <div id="camon">${esc(copy.cameraOn)}</div>
 <div id="net"></div>
 <script>window.__LITE=${scriptJson(boot)};window.__LITE_QR=${scriptJson(qr)};</script>
@@ -727,18 +743,22 @@ export async function liteRest(code: string) {
       ),
   ]);
   const tz = prop?.timezone ?? "Europe/London";
-  const quiet = quietNow(
+  const quietInfo = quietNow(
     new Date(),
     tz,
     (prop?.quiet_hours_start ?? "22:00").slice(0, 5),
     (prop?.quiet_hours_end ?? "07:00").slice(0, 5),
-  ).active;
+  );
+  const quiet = quietInfo.active;
   const { nightFrom, nightTo } = await import("./kiosk-rest");
   const nightWindow = quietNow(new Date(), tz, nightFrom(look.rest), nightTo(look.rest)).active;
   const showing = restNow(look.rest, quiet, nightWindow);
   return {
-    // By day older tablets stay on their usual screen, which already has the clock and Check in.
-    show: showing === "day" ? "awake" : showing,
+    // By day with Smart Screensaver: the usual screen in black and white.
+    show: showing === "day" ? "low" : showing,
+    lowBrightness: look.day.brightness,
+    lowContrast: look.day.contrast,
+    quietUntil: quietInfo.active ? quietInfo.until : null,
     // What the sun or moon button shows, whatever the time.
     restShow: restNow(look.rest, true, true),
     nightColours: NIGHT_PALETTES[look.rest.palette].map((c) => deepen(c, look.night.depth)),
@@ -778,4 +798,10 @@ function liteSig(
 ) {
   const sig = hw ? deviceSignature(userAgent, hw) : null;
   return sig ? { sig } : {};
+}
+
+function lightColour(hex: string): boolean {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex);
+  if (!m) return true;
+  return shouldInvert(parseInt(m[1]!, 16), parseInt(m[2]!, 16), parseInt(m[3]!, 16));
 }

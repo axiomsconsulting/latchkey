@@ -15,9 +15,15 @@ import {
   worldClocksFor,
 } from "@/lib/kiosk-clock";
 import { zoneCity } from "@/lib/world";
-import { kioskSaverLook, saveKioskNightLook, saveKioskSaverLook } from "@/lib/kiosk.functions";
+import {
+  kioskSaverLook,
+  saveKioskDayLook,
+  saveKioskNightLook,
+  saveKioskSaverLook,
+} from "@/lib/kiosk.functions";
 import { onKioskPing } from "@/lib/kiosk-ping";
 import {
+  DEFAULT_DAY_LOOK,
   DEFAULT_NIGHT_LOOK,
   DEFAULT_REST,
   arrangeClocks,
@@ -25,6 +31,7 @@ import {
   normaliseRest,
   qrSpot,
   type KioskRest,
+  type DayLook,
   type NightLook,
 } from "@/lib/kiosk-rest";
 import { cn } from "@/lib/utils";
@@ -318,6 +325,7 @@ export function SaverBand({
 
   return (
     <div
+      data-saver-band
       role="slider"
       tabIndex={0}
       aria-label={label}
@@ -405,6 +413,10 @@ export function useSaverLook(code: string, live = true) {
   const fetchLook = useServerFn(kioskSaverLook);
   const saveLook = useServerFn(saveKioskSaverLook);
   const saveNight = useServerFn(saveKioskNightLook);
+  const saveDay = useServerFn(saveKioskDayLook);
+  const [day, setDayLook] = useState<DayLook>(DEFAULT_DAY_LOOK);
+  const currentDay = useRef(day);
+  currentDay.current = day;
   const [defaults, setDefaults] = useState<SaverDefaults>(DEFAULT_SAVER);
   const [look, setLook] = useState<SaverLook>({
     brightness: DEFAULT_SAVER.brightness,
@@ -457,6 +469,7 @@ export function useSaverLook(code: string, live = true) {
           if (!sliding.current) {
             setLook(r.look);
             setNightLook(r.night);
+            setDayLook(r.day);
           }
           keep(r);
         })
@@ -489,6 +502,19 @@ export function useSaverLook(code: string, live = true) {
       void saveNight({ data: { code, ...current.current.night } }).catch(() => {});
     }, 3200);
   }, [code, defaults, rest, keep, saveNight]);
+  const dayTimer = useRef<number | null>(null);
+  const commitDay = useCallback(() => {
+    sliding.current = false;
+    if (dayTimer.current) window.clearTimeout(dayTimer.current);
+    dayTimer.current = window.setTimeout(() => {
+      dayTimer.current = null;
+      void saveDay({ data: { code, ...currentDay.current } }).catch(() => {});
+    }, 3200);
+  }, [code, saveDay]);
+  const changeDay = useCallback((next: DayLook | ((l: DayLook) => DayLook)) => {
+    sliding.current = true;
+    setDayLook(next);
+  }, []);
   const change = useCallback((next: SaverLook | ((l: SaverLook) => SaverLook)) => {
     sliding.current = true;
     setLook(next);
@@ -507,6 +533,9 @@ export function useSaverLook(code: string, live = true) {
     setNight: changeNight,
     commitNight,
     nightOnAt,
+    day,
+    setDay: changeDay,
+    commitDay,
   };
 }
 
