@@ -1265,6 +1265,7 @@ function Kiosk() {
             "px-[max(var(--kiosk-header,16px),24px)] pb-[20px] sm:px-[max(calc(var(--kiosk-header,16px)*2),32px)]",
         )}
         onPointerDown={goFullscreen}
+        data-kiosk-root
         data-kiosk-xl={xl ? "" : undefined}
       >
         {xl ? <style>{xlStyle}</style> : null}
@@ -1370,13 +1371,15 @@ function Kiosk() {
               {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
             />
           )}
-          <ThemeFooter
-            theme={p.theme}
-            className={cn(
-              "mx-auto max-w-6xl",
-              expanded ? "mt-[0.5em] w-full pb-[0.5em]" : "mt-[1.5em] pb-[1em]",
-            )}
-          />
+          <div data-kiosk-footer>
+            <ThemeFooter
+              theme={p.theme}
+              className={cn(
+                "mx-auto max-w-6xl",
+                expanded ? "mt-[0.5em] w-full pb-[0.5em]" : "mt-[1.5em] pb-[1em]",
+              )}
+            />
+          </div>
         </div>
 
         {/* The public tour: the floating demo panel (says it's a demo, switch property, start a trial, leave). */}

@@ -1608,7 +1608,7 @@ export const doorTabletsCopy = branded({
     `${w} × ${h} px, ${o === "portrait" ? "upright" : "on its side"}`,
   camera: "Camera view for you",
   spotTitle: "Where's the front camera?",
-  spotHelp: "Drag the camera to where it is on this tablet. The photo preview opens beside it.",
+  spotHelp: "Drag the camera to where it is on this tablet, even inside the screen. The photo preview floats right by it, so guests hold their ID up to the camera.",
   spotDrag: "Camera position. Use the arrow keys to move it.",
   spotSide: "On its side",
   spotUpright: "Upright",
@@ -2110,6 +2110,7 @@ export const guest = branded({
   faceBody: "Look at the screen. It's only shared with your host and deleted after your stay.",
   faceTake: "Take photo",
   faceTimer: "Take photo in 3 seconds",
+  cameraIsHere: "The camera is here",
   autoSnap: {
     id: {
       look: "Show your whole ID",

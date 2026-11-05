@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { PhoneQrIcon, useQrImage } from "@/components/guest/CheckInQr";
+import { useKioskStage } from "@/components/guest/KioskPhotoStage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { guest as copy } from "@/content/copy";
@@ -130,6 +131,12 @@ function PhonePanel({ phone, big }: { phone: PhotoHandoff; big: boolean }) {
   );
 }
 
+/** Only a phone here: the screen still never scrolls. */
+function PhoneOnlyStage() {
+  useKioskStage(true, null);
+  return null;
+}
+
 /** Waiting for the phone. */
 function OnPhone({
   what,
@@ -231,6 +238,7 @@ export function PhotoChoice({
   if (!own)
     return (
       <div className="mx-auto max-w-2xl space-y-4">
+        <PhoneOnlyStage />
         {hasCamera && facing !== null && !failed ? null : (
           <p className="text-center text-muted-foreground">{copy.phonePhotos.noCamera}</p>
         )}

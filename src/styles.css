@@ -732,3 +732,32 @@ html[data-kiosk-touch="expanded"]:not([data-kiosk-measure]) [data-kx="screen"] [
 @media (prefers-reduced-motion: reduce) {
   .tour-point { animation: none; }
 }
+
+/* A door tablet's photo screen (KioskPhotoStage): nothing scrolls. The preview floats by the camera,
+   and the step's own card takes the space that's left. */
+html[data-kiosk-photo],
+html[data-kiosk-photo] body {
+  overflow: hidden;
+}
+html[data-kiosk-photo] [data-kiosk-footer] {
+  display: none;
+}
+html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] {
+  position: fixed;
+  left: calc(var(--photo-x) + 8px);
+  top: calc(var(--photo-y) + 4px);
+  width: calc(var(--photo-w) - 16px);
+  height: calc(var(--photo-h) - 12px);
+  padding: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+/* Centred when there's room, from the top when there isn't, so nothing is ever cut off above. */
+html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] > :first-child {
+  margin-top: auto;
+}
+html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] > :last-child {
+  margin-bottom: auto;
+}

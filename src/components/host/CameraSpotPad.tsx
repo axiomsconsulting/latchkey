@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { common, doorTabletsCopy as copy } from "@/content/copy";
-import { previewPlace, spotFor, type Spot, type WayUp } from "@/lib/kiosk-camera-spot";
+import { cameraCallout, spotFor, type Spot, type WayUp } from "@/lib/kiosk-camera-spot";
 import { setKioskCameraSpot, type KioskDevice } from "@/lib/kiosk-devices.functions";
 import { pingKiosk } from "@/lib/kiosk-ping";
 import { cn } from "@/lib/utils";
@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
 /**
- * A picture of the tablet with a camera icon to drag to where its front camera
- * is (the edge, a notch, or under the screen). Saved on letting go; the
- * shaded part shows where the photo preview will open.
+ * A picture of the tablet with a camera icon to drag to where its front camera is: any edge,
+ * a notch, or under the screen. Saved on letting go. It shows the floating preview where
+ * the tablet will really put it (cameraCallout, the same rule the kiosk uses).
  */
 export function CameraSpotPad({
   device,
@@ -47,9 +47,10 @@ export function CameraSpotPad({
     const r = frame.current!.getBoundingClientRect();
     return { x: clamp((e.clientX - r.left) / r.width), y: clamp((e.clientY - r.top) / r.height) };
   };
-  const long = Math.max(device.display?.w ?? 16, device.display?.h ?? 10);
-  const short = Math.max(1, Math.min(device.display?.w ?? 16, device.display?.h ?? 10));
-  const place = previewPlace(spot, way);
+  const long = Math.max(device.display?.w ?? 1280, device.display?.h ?? 800);
+  const short = Math.max(1, Math.min(device.display?.w ?? 1280, device.display?.h ?? 800));
+  const screen = way === "landscape" ? { w: long, h: short } : { w: short, h: long };
+  const { box } = cameraCallout(spot, screen, 96);
 
   return (
     <div className="space-y-2 rounded-xl border border-border p-3">
@@ -77,16 +78,17 @@ export function CameraSpotPad({
             "relative mx-auto rounded-lg border-[6px] border-neutral-800 bg-muted",
             way === "portrait" ? "w-2/3" : "w-full",
           )}
-          style={{ aspectRatio: way === "landscape" ? `${long} / ${short}` : `${short} / ${long}` }}
+          style={{ aspectRatio: `${screen.w} / ${screen.h}` }}
         >
-          {/* Where the preview opens. */}
+          {/* Where the preview floats. */}
           <div
-            className={cn(
-              "absolute grid place-items-center rounded bg-primary/20 text-[10px] text-foreground",
-              way === "landscape"
-                ? cn("bottom-1 top-1 w-[55%]", place.first ? "left-1" : "right-1")
-                : cn("inset-x-1 h-[45%]", place.first ? "top-1" : "bottom-1"),
-            )}
+            className="absolute grid place-items-center rounded bg-primary/25 text-[10px] text-foreground ring-1 ring-primary"
+            style={{
+              left: `${(box.x / screen.w) * 100}%`,
+              top: `${(box.y / screen.h) * 100}%`,
+              width: `${(box.w / screen.w) * 100}%`,
+              height: `${(box.h / screen.h) * 100}%`,
+            }}
           >
             {copy.spotPreview}
           </div>
