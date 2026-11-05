@@ -6,7 +6,8 @@ import { guest as copy } from "@/content/copy";
 import { fromFile } from "@/lib/photo-file";
 import { photoFill, photoStage } from "@/lib/photo-progress";
 import { useAutoSnap, type SnapShape } from "@/hooks/use-auto-snap";
-import type { PreviewPlace } from "@/lib/kiosk-camera-spot";
+import { CameraCalloutBox, useKioskStage } from "@/components/guest/KioskPhotoStage";
+import type { Spot } from "@/lib/kiosk-camera-spot";
 import { cn } from "@/lib/utils";
 
 /** Draws the frame no larger than `max` pixels on its longest side. */
@@ -237,12 +238,12 @@ export function IdCamera({
   extra,
   upload = false,
   auto = false,
-  place = null,
+  spot = null,
 }: {
   /** A door tablet: takes the photo by itself once it sees a whole ID or a face, and a selfie's button counts down. */
   auto?: boolean;
-  /** A door tablet: where to put the preview so it's beside the front camera. */
-  place?: PreviewPlace | null;
+  /** A door tablet: where its front camera is, so the preview floats right by it. */
+  spot?: Spot | null;
   /** A guest's own phone: a saved photo of the ID may be used instead (never for a face, which is live). */
   upload?: boolean;
   /** A door tablet on its side: the camera on the left, the help and buttons beside it, so nothing has to shrink. */
@@ -328,8 +329,9 @@ export function IdCamera({
     capture(),
   );
   // Beside the camera only for the front one: the back one is on the other side of the tablet.
-  const near = place && current === "user" ? place : null;
-  const last = !!near && !near.first;
+  const pointing = !!spot && current === "user";
+  const callout = useKioskStage(auto, auto ? (pointing ? spot : { x: 0, y: 0.5 }) : null);
+
   function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
@@ -341,143 +343,158 @@ export function IdCamera({
     onCapture(still(video, 1400, 0.8, keepMirror), smallShot);
   }
 
+  const preview = (
+    <>
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        // Stacked: never taller than about half the screen, so the button below stays in view.
+        // Beside the buttons: as tall as the screen allows once the heading and the rest (sized in rem) fit,
+        // so the text keeps its size and the camera takes what's left.
+        className={cn(
+          "aspect-[4/3] w-full object-cover",
+          !callout &&
+            (side
+              ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]"
+              : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]"),
+          mirrored && "-scale-x-100",
+        )}
+      />
+      {shot && busy ? (
+        <img
+          src={shot}
+          alt=""
+          // As kept: an ID the right way round, a face as the guest saw it.
+          className="absolute inset-0 size-full object-cover"
+        />
+      ) : null}
+      {ready && kind === "id" && !(shot && busy) && !snap.shape ? <IdHint /> : null}
+      {auto && ready && snap.shape && !shot ? (
+        <SnapOverlay video={videoRef.current} shape={snap.shape} mirrored={mirrored} />
+      ) : null}
+      {auto && ready && !shot && count === null ? (
+        <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit max-w-[90%] rounded-full bg-black px-4 py-1.5 text-center text-lg text-white">
+          {copy.autoSnap[kind][snap.say]}
+        </p>
+      ) : null}
+      {count !== null && count > 0 ? (
+        <div
+          className="pointer-events-none absolute inset-0 grid place-items-center"
+          role="status"
+          aria-live="assertive"
+        >
+          <span className="grid size-32 place-items-center rounded-full bg-black font-display text-7xl text-white">
+            {count}
+          </span>
+        </div>
+      ) : null}
+      {cameras > 1 ? (
+        <button
+          type="button"
+          onClick={() => setCurrent((c) => (c === "user" ? "environment" : "user"))}
+          disabled={busy}
+          aria-label={copy.cameraFlip}
+          title={copy.cameraFlip}
+          className="absolute right-3 top-3 grid size-14 place-items-center rounded-full bg-black text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        >
+          <SwitchCamera className="size-7" aria-hidden />
+        </button>
+      ) : null}
+      {!ready ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : null}
+    </>
+  );
+  const takeButton = (
+    <Button
+      size="touch-xl"
+      className="w-full"
+      onClick={() => (timed ? setCount(3) : capture())}
+      disabled={!ready || busy || count !== null}
+    >
+      {busy ? (
+        <Loader2 className="size-6 animate-spin" />
+      ) : timed ? (
+        <Timer className="size-6" aria-hidden />
+      ) : (
+        <Camera className="size-6" />
+      )}
+      {busy ? (busyLabel ?? copy.idChecking) : timed ? copy.faceTimer : (cta ?? copy.idTakePhoto)}
+    </Button>
+  );
+  const helpBits = (
+    <>
+      <p className={cn("text-center text-muted-foreground", side && "text-lg")}>
+        {help ?? copy.idCameraHelp}
+      </p>
+      {busy && shot ? <PhotoProgress kind={kind} /> : null}
+    </>
+  );
+  const moreBits = (
+    <>
+      {upload && kind === "id" ? (
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (!f) return;
+              void fromFile(f)
+                .then(({ full, small }) => {
+                  setShot(small);
+                  onCapture(full, small);
+                })
+                .catch(() => undefined);
+            }}
+          />
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full"
+            disabled={busy}
+            onClick={() => fileRef.current?.click()}
+          >
+            <ImageUp className="size-5" aria-hidden /> {copy.idUpload}
+          </Button>
+        </>
+      ) : null}
+      {extra}
+    </>
+  );
+
+  // A door tablet: floating by the camera, with its button; the rest stays in the step's own card.
+  if (callout)
+    return (
+      <>
+        <CameraCalloutBox callout={callout} pointing={pointing}>
+          <div className="relative overflow-hidden rounded-xl bg-muted">{preview}</div>
+          {takeButton}
+        </CameraCalloutBox>
+        <div className="space-y-3">
+          {helpBits}
+          {moreBits}
+        </div>
+      </>
+    );
+
   return (
     <div
       className={
-        side
-          ? cn(
-              "grid gap-8",
-              last
-                ? "grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]"
-                : "grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]",
-              near?.align === "start"
-                ? "items-start"
-                : near?.align === "end"
-                  ? "items-end"
-                  : "items-center",
-            )
-          : last
-            ? "flex flex-col gap-4"
-            : "space-y-4"
+        side ? "grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-center gap-8" : "space-y-4"
       }
     >
-      <div className={cn("relative overflow-hidden rounded-2xl bg-muted", last && "order-2")}>
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          // Stacked: never taller than about half the screen, so the button below stays in view.
-          // Beside the buttons: as tall as the screen allows once the heading and the rest (sized in rem) fit,
-          // so the text keeps its size and the camera takes what's left.
-          className={cn(
-            "aspect-[4/3] w-full object-cover",
-            side
-              ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]"
-              : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]",
-            mirrored && "-scale-x-100",
-          )}
-        />
-        {shot && busy ? (
-          <img
-            src={shot}
-            alt=""
-            // As kept: an ID the right way round, a face as the guest saw it.
-            className="absolute inset-0 size-full object-cover"
-          />
-        ) : null}
-        {ready && kind === "id" && !(shot && busy) && !snap.shape ? <IdHint /> : null}
-        {auto && ready && snap.shape && !shot ? (
-          <SnapOverlay video={videoRef.current} shape={snap.shape} mirrored={mirrored} />
-        ) : null}
-        {auto && ready && !shot && count === null ? (
-          <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit max-w-[90%] rounded-full bg-black px-4 py-1.5 text-center text-lg text-white">
-            {copy.autoSnap[kind][snap.say]}
-          </p>
-        ) : null}
-        {count !== null && count > 0 ? (
-          <div
-            className="pointer-events-none absolute inset-0 grid place-items-center"
-            role="status"
-            aria-live="assertive"
-          >
-            <span className="grid size-32 place-items-center rounded-full bg-black font-display text-7xl text-white">
-              {count}
-            </span>
-          </div>
-        ) : null}
-        {cameras > 1 ? (
-          <button
-            type="button"
-            onClick={() => setCurrent((c) => (c === "user" ? "environment" : "user"))}
-            disabled={busy}
-            aria-label={copy.cameraFlip}
-            title={copy.cameraFlip}
-            className="absolute right-3 top-3 grid size-14 place-items-center rounded-full bg-black text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-          >
-            <SwitchCamera className="size-7" aria-hidden />
-          </button>
-        ) : null}
-        {!ready ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : null}
-      </div>
+      <div className="relative overflow-hidden rounded-2xl bg-muted">{preview}</div>
       <div className="space-y-4">
-        <p className={cn("text-center text-muted-foreground", side && "text-lg")}>
-          {help ?? copy.idCameraHelp}
-        </p>
-        {busy && shot ? <PhotoProgress kind={kind} /> : null}
-        <Button
-          size="touch-xl"
-          className="w-full"
-          onClick={() => (timed ? setCount(3) : capture())}
-          disabled={!ready || busy || count !== null}
-        >
-          {busy ? (
-            <Loader2 className="size-6 animate-spin" />
-          ) : timed ? (
-            <Timer className="size-6" aria-hidden />
-          ) : (
-            <Camera className="size-6" />
-          )}
-          {busy
-            ? (busyLabel ?? copy.idChecking)
-            : timed
-              ? copy.faceTimer
-              : (cta ?? copy.idTakePhoto)}
-        </Button>
-        {upload && kind === "id" ? (
-          <>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (!f) return;
-                void fromFile(f)
-                  .then(({ full, small }) => {
-                    setShot(small);
-                    onCapture(full, small);
-                  })
-                  .catch(() => undefined);
-              }}
-            />
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full"
-              disabled={busy}
-              onClick={() => fileRef.current?.click()}
-            >
-              <ImageUp className="size-5" aria-hidden /> {copy.idUpload}
-            </Button>
-          </>
-        ) : null}
-        {extra}
+        {helpBits}
+        {takeButton}
+        {moreBits}
       </div>
     </div>
   );

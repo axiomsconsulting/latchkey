@@ -50,18 +50,81 @@ export function suggestedSpot(sig: string | null | undefined, way: WayUp): Spot 
 export const spotFor = (spots: CameraSpots, sig: string | null | undefined, way: WayUp): Spot =>
   spots[way] ?? suggestedSpot(sig, way);
 
-export type PreviewPlace = {
-  /** The preview comes before the buttons: left on its side, above when upright. */
-  first: boolean;
-  /** On its side, how high in the screen. */
-  align: "start" | "center" | "end";
+export type Rect = { x: number; y: number; w: number; h: number };
+export type Edge = "top" | "bottom" | "left" | "right";
+
+export type CameraCallout = {
+  /** The floating preview and its button, with the pointer outside it. */
+  box: Rect;
+  preview: { w: number; h: number };
+  /** Which side of the box the pointer leaves from, and how far along that side (px). */
+  pointer: { edge: Edge; at: number };
+  /** The space left for everything else on the screen. */
+  free: Rect;
 };
 
-/** Where the preview goes for a camera there. A camera in the middle leaves the usual layout. */
-export function previewPlace(s: Spot, way: WayUp): PreviewPlace {
-  if (way === "portrait") return { first: s.y <= 0.5, align: "center" };
-  return {
-    first: s.x <= 0.5,
-    align: s.y < 0.3 ? "start" : s.y > 0.7 ? "end" : "center",
-  };
+const MARGIN = 10;
+/** Room for the pointer and its camera badge between the box and the camera. */
+export const POINTER_SPACE = 44;
+
+/**
+ * Where the floating preview goes: right up against the camera's nearest edge, with its
+ * pointer on the camera, and slid along that edge so what's left of the screen is one good
+ * block for everything else. Never leaves the screen, whatever the numbers.
+ */
+export function cameraCallout(
+  s: Spot,
+  screen: { w: number; h: number },
+  buttonH: number,
+): CameraCallout {
+  const { w, h } = screen;
+  const wide = w >= h;
+  const pw = Math.round(
+    wide
+      ? Math.min(w * 0.46, ((h - buttonH) * 0.6 * 4) / 3)
+      : Math.min(w * 0.86, (h * 0.42 * 4) / 3),
+  );
+  const ph = Math.round((pw * 3) / 4);
+  const bw = pw;
+  const bh = ph + buttonH;
+  const cx = s.x * w;
+  const cy = s.y * h;
+  const edge = (
+    [
+      ["top", cy],
+      ["bottom", h - cy],
+      ["left", cx],
+      ["right", w - cx],
+    ] as Array<[Edge, number]>
+  ).sort((a, b) => a[1] - b[1])[0]![0];
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  let x: number;
+  let y: number;
+  if (edge === "top" || edge === "bottom") {
+    // On a wide screen, off to one side of the camera, leaving a tall block on the other.
+    const along = wide ? (s.x >= 0.5 ? 0.2 : 0.8) : 0.5;
+    x = cx - bw * along;
+    y = edge === "top" ? cy + POINTER_SPACE : cy - POINTER_SPACE - bh;
+  } else {
+    x = edge === "left" ? cx + POINTER_SPACE : cx - POINTER_SPACE - bw;
+    y = wide ? cy - bh / 2 : cy < h / 2 ? cy - bh * 0.2 : cy - bh * 0.8;
+  }
+  x = Math.round(clamp(x, MARGIN, Math.max(MARGIN, w - bw - MARGIN)));
+  y = Math.round(clamp(y, MARGIN, Math.max(MARGIN, h - bh - MARGIN)));
+  const box: Rect = { x, y, w: bw, h: bh };
+  const blocks: Rect[] = [
+    { x: 0, y: 0, w: x, h },
+    { x: x + bw, y: 0, w: w - x - bw, h },
+    { x: 0, y: 0, w, h: y },
+    { x: 0, y: y + bh, w, h: h - y - bh },
+  ];
+  // The block that suits a column of text and a QR code best.
+  const free = blocks.sort(
+    (a, b) =>
+      Math.min(b.w / 1.2, b.h) * Math.min(b.w, b.h * 1.2) -
+      Math.min(a.w / 1.2, a.h) * Math.min(a.w, a.h * 1.2),
+  )[0]!;
+  const at =
+    edge === "top" || edge === "bottom" ? clamp(cx - x, 16, bw - 16) : clamp(cy - y, 16, bh - 16);
+  return { box, preview: { w: pw, h: ph }, pointer: { edge, at: Math.round(at) }, free };
 }

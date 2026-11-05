@@ -34,7 +34,7 @@ import {
 import { guest as copy } from "@/content/copy";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { deviceSignature } from "@/lib/kiosk-devices";
-import { previewPlace, spotFor, type CameraSpots } from "@/lib/kiosk-camera-spot";
+import { spotFor, type CameraSpots } from "@/lib/kiosk-camera-spot";
 import { useLandscapeDisplay } from "@/hooks/use-display";
 import type { CheckinMethod } from "@/lib/checkin-logic";
 import {
@@ -1017,8 +1017,8 @@ export function CheckInFlow({
   // A door tablet on its side: the camera beside its buttons, the guide's QR beside its button,
   // so those steps use the width instead of shrinking the text to fit the height.
   const cameraSide = kiosk && landscape;
-  // The preview opens beside the tablet's front camera.
-  const cameraPlace = useMemo(() => {
+  // The preview floats right by the tablet's front camera.
+  const cameraSpot = useMemo(() => {
     if (!kiosk || typeof window === "undefined") return null;
     const way = landscape ? ("landscape" as const) : ("portrait" as const);
     const sig = deviceSignature(navigator.userAgent, {
@@ -1027,7 +1027,7 @@ export function CheckInFlow({
       dpr: window.devicePixelRatio,
       touch: navigator.maxTouchPoints,
     });
-    return previewPlace(spotFor(cameraSpots, sig, way), way);
+    return spotFor(cameraSpots, sig, way);
   }, [kiosk, landscape, cameraSpots]);
   const phoneUrl =
     typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
@@ -1419,7 +1419,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
-                        place={cameraPlace}
+                        spot={cameraSpot}
                         busy={busy}
                         side={cameraSide}
                         facing={facing}
@@ -1492,7 +1492,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
-                        place={cameraPlace}
+                        spot={cameraSpot}
                         busy={busy}
                         side={cameraSide}
                         facing={facing}
@@ -1625,7 +1625,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
-                        place={cameraPlace}
+                        spot={cameraSpot}
                         busy={busy}
                         side={cameraSide}
                         facing={facing}
@@ -1712,7 +1712,7 @@ export function CheckInFlow({
                   camera={({ facing, onFail, panel }) => (
                     <IdCamera
                       auto={kiosk}
-                      place={cameraPlace}
+                      spot={cameraSpot}
                       facing={facing}
                       kind="face"
                       busy={busy}
