@@ -1030,7 +1030,8 @@ export function CheckInFlow({
       dpr: window.devicePixelRatio,
       touch: navigator.maxTouchPoints,
     });
-    return spotFor(cameraSpots, sig, way);
+    // Only once the host has placed this tablet's camera: until then, the standard layout.
+    return cameraSpots[way] ? spotFor(cameraSpots, sig, way) : null;
   }, [kiosk, jumbo, landscape, cameraSpots]);
   const phoneUrl =
     typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
@@ -1403,7 +1404,7 @@ export function CheckInFlow({
                 <div className="mt-6">
                   <PhotoChoice
                     kiosk={kiosk}
-                    compact={jumbo}
+                    compact={jumbo || (kiosk && !cameraSpot)}
                     phone={phone}
                     kind="id"
                     task="find"
@@ -1478,7 +1479,7 @@ export function CheckInFlow({
                 <div className="mt-6">
                   <PhotoChoice
                     kiosk={kiosk}
-                    compact={jumbo}
+                    compact={jumbo || (kiosk && !cameraSpot)}
                     phone={phone}
                     kind="id"
                     task="lead"
@@ -1612,7 +1613,7 @@ export function CheckInFlow({
                   <PhotoChoice
                     key={`companion-${step.position}`}
                     kiosk={kiosk}
-                    compact={jumbo}
+                    compact={jumbo || (kiosk && !cameraSpot)}
                     phone={phone}
                     kind="id"
                     task="companion"
@@ -1700,7 +1701,7 @@ export function CheckInFlow({
                 <PhotoChoice
                   key={`face-${step.position}`}
                   kiosk={kiosk}
-                  compact={jumbo}
+                  compact={jumbo || (kiosk && !cameraSpot)}
                   phone={phone}
                   kind="face"
                   task="face"

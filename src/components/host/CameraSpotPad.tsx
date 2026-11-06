@@ -52,7 +52,17 @@ export function CameraSpotPad({
   const long = Math.max(device.display?.w ?? 1280, device.display?.h ?? 800);
   const short = Math.max(1, Math.min(device.display?.w ?? 1280, device.display?.h ?? 800));
   const screen = way === "landscape" ? { w: long, h: short } : { w: short, h: long };
-  const { box } = cameraCallout(spot, screen, 96);
+  // Nothing placed for this way up: the tablet uses the standard layout (preview on the right).
+  const placed = !!device.cameraSpot[way];
+  const { box: floating } = cameraCallout(spot, screen, 96);
+  const box = placed
+    ? floating
+    : {
+        x: screen.w * 0.44,
+        y: screen.h * 0.2,
+        w: screen.w * 0.53,
+        h: screen.h * 0.62,
+      };
   const nudge = (dx: number, dy: number) => {
     const next = {
       ...spot,
@@ -65,10 +75,25 @@ export function CameraSpotPad({
 
   return (
     <div className="space-y-2 rounded-xl border border-border p-3">
-      <p className="flex items-center gap-2 text-sm font-medium">
-        <Camera className="size-4" aria-hidden /> {copy.spotTitle}
-      </p>
-      <p className="text-xs text-muted-foreground">{copy.spotHelp}</p>
+      <div className="flex items-center gap-2">
+        <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
+          <Camera className="size-4" aria-hidden /> {copy.spotTitle}
+        </p>
+        {placed ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="size-8 shrink-0"
+            aria-label={copy.spotReset}
+            title={copy.spotReset}
+            onClick={() => void save(null)}
+          >
+            <RotateCcw className="size-4" aria-hidden />
+          </Button>
+        ) : null}
+      </div>
+      <p className="text-xs font-medium">{placed ? copy.spotPlaced : copy.spotStandard}</p>
       <div className="flex gap-1.5">
         {(["landscape", "portrait"] as const).map((w) => (
           <Button
@@ -98,6 +123,8 @@ export function CameraSpotPad({
             aria-label={copy.spotMovePreview}
             title={copy.spotMovePreview}
             onPointerDown={(e) => {
+              // The standard layout's box can't be moved: place the camera first.
+              if (!placed) return;
               e.currentTarget.setPointerCapture(e.pointerId);
               moving.current = { px: e.clientX, py: e.clientY, ox: spot.ox ?? 0, oy: spot.oy ?? 0 };
             }}
@@ -124,7 +151,7 @@ export function CameraSpotPad({
               height: `${(box.h / screen.h) * 100}%`,
             }}
           >
-            {copy.spotPreview}
+            {placed ? copy.spotPreview : copy.spotPreviewStandard}
           </div>
           <button
             type="button"
@@ -166,48 +193,45 @@ export function CameraSpotPad({
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-1">
-        <span className="mr-1 text-xs text-muted-foreground">{copy.spotNudge}</span>
-        {(
-          [
-            [ArrowLeft, -0.02, 0, copy.spotLeft],
-            [ArrowUp, 0, -0.02, copy.spotUp],
-            [ArrowDown, 0, 0.02, copy.spotDown],
-            [ArrowRight, 0.02, 0, copy.spotRight],
-          ] as const
-        ).map(([Icon, dx, dy, label]) => (
-          <Button
-            key={label}
-            type="button"
-            size="icon"
-            variant="outline"
-            className="size-8"
-            aria-label={label}
-            title={label}
-            onClick={() => nudge(dx, dy)}
-          >
-            <Icon className="size-4" aria-hidden />
-          </Button>
-        ))}
-        {spot.ox || spot.oy ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              const { ox: _ox, oy: _oy, ...rest } = spot;
-              setSpot(rest);
-              void save(rest);
-            }}
-          >
-            <RotateCcw className="size-4" aria-hidden /> {copy.spotCentre}
-          </Button>
-        ) : null}
-      </div>
-      {device.cameraSpot[way] ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => void save(null)}>
-          {copy.spotReset}
-        </Button>
+      {placed ? (
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          <span className="mr-1 text-xs text-muted-foreground">{copy.spotNudge}</span>
+          {(
+            [
+              [ArrowLeft, -0.02, 0, copy.spotLeft],
+              [ArrowUp, 0, -0.02, copy.spotUp],
+              [ArrowDown, 0, 0.02, copy.spotDown],
+              [ArrowRight, 0.02, 0, copy.spotRight],
+            ] as const
+          ).map(([Icon, dx, dy, label]) => (
+            <Button
+              key={label}
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-8"
+              aria-label={label}
+              title={label}
+              onClick={() => nudge(dx, dy)}
+            >
+              <Icon className="size-4" aria-hidden />
+            </Button>
+          ))}
+          {spot.ox || spot.oy ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const { ox: _ox, oy: _oy, ...rest } = spot;
+                setSpot(rest);
+                void save(rest);
+              }}
+            >
+              <RotateCcw className="size-4" aria-hidden /> {copy.spotCentre}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

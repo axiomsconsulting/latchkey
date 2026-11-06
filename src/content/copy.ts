@@ -1639,13 +1639,16 @@ export const doorTabletsCopy = branded({
     `${w} × ${h} px, ${o === "portrait" ? "upright" : "on its side"}`,
   camera: "Camera view for you",
   spotTitle: "Where's the front camera?",
-  spotHelp:
-    "Drag the camera to where it is on this tablet, even inside the screen. The photo preview floats right by it, so guests hold their ID up to the camera.",
   spotDrag: "Camera position. Use the arrow keys to move it.",
   spotSide: "On its side",
   spotUpright: "Upright",
   spotPreview: "Preview",
-  spotReset: "Use the suggestion",
+  spotPreviewStandard: "Preview + QR",
+  spotReset: "Back to the standard layout",
+  spotStandard:
+    "Standard layout: the preview on the right with a small QR code below. Drag the camera to where it is to float the preview beside it instead.",
+  spotPlaced:
+    "The preview floats beside the camera. Drag it or use the arrows to fine-tune; the reset button goes back to the standard layout.",
   spotMovePreview: "Drag to move the preview",
   spotNudge: "Move the preview",
   spotLeft: "Left",

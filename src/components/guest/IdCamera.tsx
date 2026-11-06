@@ -339,10 +339,10 @@ export function IdCamera({
   );
   // Beside the camera only for the front one: the back one is on the other side of the tablet.
   const pointing = !!spot && current === "user";
-  const callout = useKioskStage(
-    auto && !jumbo,
-    auto && !jumbo ? (pointing ? spot : { x: 0, y: 0.5 }) : null,
-  );
+  // The floating preview only where the host placed the front camera; otherwise the standard
+  // layout, with the screen still fitted so nothing scrolls.
+  const callout = useKioskStage(auto && !jumbo, auto && !jumbo && pointing ? spot : null);
+  const standard = auto && !jumbo && !callout;
   // Jumbo puts the step's own heading on the left half, so it reads it from the page.
   const own = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("");
@@ -377,9 +377,11 @@ export function IdCamera({
         className={cn(
           "aspect-[4/3] w-full object-cover",
           !callout &&
-            (side
-              ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]"
-              : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]"),
+            (standard
+              ? "max-h-[calc(var(--kiosk-h,100dvh)*0.5)]"
+              : side
+                ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]"
+                : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]"),
           mirrored && "-scale-x-100",
         )}
       />
@@ -519,6 +521,35 @@ export function IdCamera({
           </div>
           {takeButton}
         </div>
+      </div>
+    );
+
+  // The standard door tablet layout: the words on the left, the camera picture on the right with
+  // Take photo under it and a small QR code below that (stacked when upright).
+  if (standard)
+    return (
+      <div
+        className={
+          side ? "grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] items-center gap-8" : "space-y-4"
+        }
+      >
+        {side ? (
+          <div className="space-y-4">
+            {helpBits}
+            {moreBits}
+          </div>
+        ) : null}
+        <div className="space-y-3">
+          <div className="relative overflow-hidden rounded-2xl bg-muted">{preview}</div>
+          {takeButton}
+          {aside}
+        </div>
+        {side ? null : (
+          <div className="space-y-4">
+            {helpBits}
+            {moreBits}
+          </div>
+        )}
       </div>
     );
 

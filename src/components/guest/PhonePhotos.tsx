@@ -63,12 +63,15 @@ function PhonePanel({
   if (compact)
     return (
       <div className="flex items-center justify-center gap-[3%]" data-phone-photos>
-        <p className="flex items-center gap-2 font-bold" data-jumbo-phone>
+        <p className="flex items-center gap-2 text-lg font-bold" data-jumbo-phone>
           <PhoneQrIcon className="size-[1.2em] shrink-0" />
           {copy.jumboPhone}
           <ArrowRight className="size-[1em] shrink-0" aria-hidden />
         </p>
-        <div className="grid shrink-0 place-items-center rounded-xl bg-white p-1.5" data-jumbo-qr>
+        <div
+          className="grid size-[min(8rem,calc(var(--kiosk-h,100dvh)*0.16))] shrink-0 place-items-center rounded-xl bg-white p-1.5"
+          data-jumbo-qr
+        >
           {qr ? (
             <img src={qr} alt={copy.jumboPhone} className="size-full" />
           ) : (
