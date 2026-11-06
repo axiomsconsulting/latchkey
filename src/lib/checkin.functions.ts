@@ -452,9 +452,6 @@ export const findByPhotoId = createServerFn({ method: "POST" })
     const tz = p.timezone ?? "Europe/London";
     const today = todayInZone(tz);
     const { data: arrivals, held } = await arrivalsAround(p.id, today, 200);
-    const all = arrivals.filter(
-      (a) => !tests.has(a.id) || compareNames(a.guest_full_name, idName) === "matched",
-    );
 
     // Read the ID: the tour's "ID" is its sample guest; demo mode reads nothing, so it finds by the usual questions.
     let read: IdRead;
@@ -502,6 +499,10 @@ export const findByPhotoId = createServerFn({ method: "POST" })
     const tests = await testIds(
       db,
       arrivals.map((a) => a.id),
+    );
+    // Only now that the name has been read: a host's test stay takes the host and nobody else.
+    const all = arrivals.filter(
+      (a) => !tests.has(a.id) || compareNames(a.guest_full_name, idName) === "matched",
     );
 
     const placed = allocateArrival(all, idName, today, hourIn(tz));

@@ -786,60 +786,158 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
   filter: invert(1);
 }
 
-/*
- * Jumbo door tablets (kioskLook "jumbo"; the kiosk sets data-kiosk-jumbo on the page and <html>, and
- * --j-bg / --j-ink / --j-edge from the Jumbo welcome card's colour): the whole check-in looks like
- * that card, with very large words and controls sized from the screen's height (--kiosk-h), and the
- * longer help left out. useJumboFit stops any step from scrolling. Guests' own phones never get it.
- */
-[data-kiosk-root][data-kiosk-jumbo] {
-  background: var(--j-bg);
-  color: var(--j-ink);
+/* On a photo screen, "Check in with my host instead" sits straight under the step. */
+html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] > .border-t {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
 }
-[data-kiosk-jumbo] header,
-[data-kiosk-jumbo] header * {
-  color: var(--j-ink);
+
+/*
+ * Jumbo door tablets (kioskLook "jumbo"): every check-in screen is the welcome card screen. The page
+ * in the property's colour with a top bar (time and date left, the property in the middle, Back and
+ * the tablet's icons right), one card in the Jumbo welcome card's colours filling the middle, and a
+ * status bar along the bottom for Ask host and other ways (JumboSlot). Sizes come from the screen
+ * (cqmin of the kiosk root), so text grows with the buttons around it; --j-fit only ever shrinks a
+ * step that has more than fits (useJumboFit). Guests' own phones never get this.
+ */
+html[data-kiosk-jumbo],
+html[data-kiosk-jumbo] body {
+  overflow: hidden;
+}
+[data-kiosk-root][data-kiosk-jumbo] {
+  container-type: size;
+  height: var(--kiosk-h, 100vh);
+  min-height: 0;
+  overflow: hidden;
+  padding: 2vmin;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+[data-kiosk-jumbo] > [data-kx="screen"] {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5cqmin;
+  height: 100%;
+  min-height: 0 !important;
+}
+[data-kiosk-jumbo] [data-kiosk-footer] {
+  display: none;
+}
+/* The top bar. */
+[data-kiosk-jumbo] [data-jumbo-bar] {
+  font-size: clamp(1.25rem, 5cqmin, 4rem);
+  line-height: 1.1;
+}
+[data-kiosk-jumbo] [data-jumbo-clock] {
+  font-size: clamp(1.1rem, 4.2cqmin, 3.25rem);
+}
+#jumbo-back [data-slot="button"],
+[data-jumbo-status] [data-slot="button"] {
+  background: transparent !important;
+  color: inherit !important;
+  border: 3px solid currentColor !important;
+  border-radius: 9999px !important;
+  box-shadow: none !important;
+  font-weight: 700;
+  font-size: inherit !important;
+  width: auto !important;
+  min-height: 1.6em;
+  margin: 0 !important;
+  padding: 0.2em 0.9em !important;
+  text-decoration: none !important;
+}
+#jumbo-back [data-slot="button"] svg,
+[data-jumbo-status] [data-slot="button"] svg {
+  width: 1em !important;
+  height: 1em !important;
+}
+/* The status bar, as the welcome card screen's. */
+[data-kiosk-jumbo] [data-jumbo-status] {
+  font-size: clamp(1.1rem, 3cqmin, 2.2rem);
+  font-weight: 700;
+  min-height: 3.5rem;
+}
+[data-jumbo-status] > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+/* The card: the Jumbo welcome card, filling the middle. */
+[data-kiosk-jumbo] [data-kiosk-flow] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] > [data-kx="grow"] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 [data-kiosk-jumbo] [data-kiosk-flow] main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   background: var(--j-bg);
   color: var(--j-ink);
-  border: max(4px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.008)) solid var(--j-edge);
-  border-radius: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.03);
+  border: max(4px, 1.4cqmin) solid var(--j-edge);
+  border-radius: 3cqmin;
+  padding: 4cqmin;
   box-shadow: none;
 }
+[data-kiosk-jumbo] [data-kiosk-flow] main > section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
 [data-kiosk-jumbo] [data-kiosk-flow] main h1,
-[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-title] {
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.075);
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-para] {
+  font-family: var(--font-display);
+  font-size: calc(7cqmin * var(--j-fit, 1));
   line-height: 1.08;
   font-weight: 700;
   color: var(--j-ink);
 }
-[data-kiosk-jumbo] [data-kiosk-flow] main p,
-[data-kiosk-jumbo] [data-kiosk-flow] main label,
-[data-kiosk-jumbo] [data-kiosk-flow] main li {
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.036);
-  line-height: 1.25;
+[data-kiosk-jumbo] [data-kiosk-flow] main :is(p, label, li):not([data-jumbo-para]) {
+  font-size: calc(4.5cqmin * var(--j-fit, 1));
+  line-height: 1.2;
   color: var(--j-ink);
 }
-[data-kiosk-jumbo] [data-kiosk-flow] main .text-muted-foreground {
-  color: var(--j-ink);
-  opacity: 0.85;
-}
-/* As few words as possible: the "why we ask" notes and the grey help lines go. */
+/* As few words as possible: the help lines, notes and small print go; errors stay. */
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-wordy],
-[data-kiosk-jumbo] [data-kiosk-flow] main p.text-muted-foreground:not([data-jumbo-line]) {
+[data-kiosk-jumbo] [data-kiosk-flow] main p.text-muted-foreground,
+[data-kiosk-jumbo] [data-kiosk-flow] main :is(.text-xs, .text-sm, .text-base):not([role="alert"]):not([data-jumbo-preview] *) {
   display: none;
 }
+/* Buttons: the card's big black button, words in proportion to the button wherever they sit. */
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"] {
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.042);
-  min-height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.115);
+  font-size: calc(5.5cqmin * var(--j-fit, 1)) !important;
+  min-height: calc(13cqmin * var(--j-fit, 1));
+  height: auto;
   border-radius: 9999px;
   font-weight: 700;
-  padding-inline: 1em;
+  padding: 0.15em 0.8em;
+  line-height: 1.1;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"] * {
+  font-size: inherit !important;
 }
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"] svg {
-  width: 1.1em !important;
-  height: 1.1em !important;
+  width: 1.05em !important;
+  height: 1.05em !important;
 }
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"][data-variant="default"] {
   background: var(--j-ink);
@@ -849,7 +947,7 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
   background: transparent;
   color: var(--j-ink);
-  border: max(3px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.005)) solid var(--j-ink);
+  border: max(3px, 0.6cqmin) solid var(--j-ink);
 }
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"][data-variant="ghost"] {
   background: transparent;
@@ -857,74 +955,60 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
-/* Typing and picking: boxes as big as the buttons. */
+/* Typing and picking: as big as the buttons. */
 [data-kiosk-jumbo] [data-kiosk-flow] main :is(input, textarea, [role="combobox"]) {
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.04);
-  min-height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.1);
-  border: max(3px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.005)) solid var(--j-ink);
-  border-radius: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.02);
+  font-size: calc(4.5cqmin * var(--j-fit, 1)) !important;
+  min-height: calc(11cqmin * var(--j-fit, 1));
+  border: max(3px, 0.5cqmin) solid var(--j-ink);
+  border-radius: 2cqmin;
   background: #ffffff;
   color: #1b1b1b;
 }
 html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.035);
-  min-height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.08);
+  font-size: clamp(1.25rem, 4vmin, 2.5rem);
+  min-height: 3em;
 }
-/* The photo step: the left half for the words, the right for the preview and the phone. */
+/* Numbers people set (adults, children, ages). */
+[data-kiosk-jumbo] [data-kiosk-flow] main .tabular-nums {
+  font-size: calc(8cqmin * var(--j-fit, 1));
+  font-weight: 700;
+}
+/* The photo step: the words on the left; the picture and Take photo fill the right to the card's end. */
 [data-kiosk-jumbo] section:has([data-jumbo-photo]) > h1 {
   display: none;
 }
+[data-kiosk-jumbo] section:has([data-jumbo-photo]) > div:has([data-jumbo-photo]) {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+}
+[data-kiosk-jumbo] [data-jumbo-photo] [data-slot="button"][data-variant="default"] {
+  min-height: calc(15cqmin * var(--j-fit, 1));
+  font-size: calc(6.5cqmin * var(--j-fit, 1)) !important;
+}
 [data-kiosk-jumbo] [data-jumbo-preview] video,
 [data-kiosk-jumbo] [data-jumbo-preview] img {
-  aspect-ratio: auto;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   max-height: none;
+  aspect-ratio: auto;
+  object-fit: contain;
 }
-/* No small print anywhere: footers, small notes and links go; errors and the camera's words stay. */
-[data-kiosk-jumbo] [data-kiosk-footer] {
-  display: none;
-}
-[data-kiosk-jumbo] [data-kiosk-flow] main :is(.text-xs, .text-sm):not([role="alert"]):not([data-jumbo-preview] *) {
-  display: none;
-}
-/* Words on the camera picture keep their own look. */
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-preview] p {
   color: #ffffff;
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.028);
-  opacity: 1;
+  font-size: calc(3.5cqmin * var(--j-fit, 1));
 }
-/* Numbers people set (adults, children, ages) read as big as the buttons beside them. */
-[data-kiosk-jumbo] [data-kiosk-flow] main .tabular-nums {
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.065);
-  font-weight: 700;
-}
-/* Back, above the card, in the same style. */
-[data-kiosk-jumbo] [data-kiosk-flow] > [data-slot="button"] {
-  background: transparent;
-  color: var(--j-ink);
-  border: max(3px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.005)) solid var(--j-ink);
-  border-radius: 9999px;
-  font-weight: 700;
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.03);
-  box-shadow: none;
-}
-[data-kiosk-jumbo] [data-jumbo-phone] {
-  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.032);
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-phone] {
+  font-size: calc(4.5cqmin * var(--j-fit, 1));
 }
 [data-kiosk-jumbo] [data-jumbo-qr] {
-  width: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.15);
-  height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.15);
+  width: calc(18cqmin * var(--j-fit, 1)) !important;
+  height: calc(18cqmin * var(--j-fit, 1)) !important;
 }
-/* Ask host, straight under the step without a rule or a gap. */
-[data-kiosk-jumbo] [data-kiosk-flow] main > .border-t {
-  margin-top: 0.4em;
-  padding-top: 0;
-  border-top: 0;
-}
-
-/* On a photo screen, "Check in with my host instead" sits straight under the step. */
-html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] > .border-t {
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
+/* Choices in a grid (letters, check-out days, booking sites): the words fill the oval. */
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-kx="grid"] [data-slot="button"] {
+  font-size: calc(8cqmin * var(--j-fit, 1)) !important;
+  min-height: calc(15cqmin * var(--j-fit, 1));
 }

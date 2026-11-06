@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.134.1",
+    date: "2026-11-06",
+    title: "Finding a booking by ID works again; Jumbo screens match the welcome card",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Door tablets said no booking was found after every ID photo. They now find the stay, and when there really isn't one the guest carries on and you're told.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Jumbo check-in screens now look like the Jumbo welcome card: the clock and date on the left, your property's name in the middle, Back on the right, one big card, and Ask host, No ID and similar choices as buttons along the bottom. Letters and dates fill their buttons.",
+      },
+    ],
+  },
+  {
     version: "0.134.0",
     date: "2026-11-06",
     title: "Check-ins keep going, you're told at once",

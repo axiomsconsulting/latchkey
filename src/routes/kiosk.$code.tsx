@@ -29,6 +29,7 @@ import {
   KioskClock,
   KioskScreensaver,
   headerIconClass,
+  useNow,
   useSaverLook,
 } from "@/components/guest/KioskClocks";
 import { KioskGoodbyeScreen, useKioskGoodbyes } from "@/components/guest/KioskGoodbye";
@@ -85,7 +86,7 @@ import { enterFullscreen, fullscreenWanted } from "@/lib/kiosk-fullscreen";
 import { useAppUpdate } from "@/hooks/use-app-update";
 import { showPairCode, tabletName } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
-import { dayProgress } from "@/lib/kiosk-clock";
+import { dayProgress, kioskNow } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { deviceToken, keepDeviceToken, readFix } from "@/lib/kiosk-presence";
 import { kioskHere } from "@/lib/stay-access.functions";
@@ -831,6 +832,20 @@ const LEFT_MID_FLOW_MS = 45_000;
 /** Mirrors KIOSK_COMPAT_SCRIPT's test for a shared screen: no ?guest/?resume/?join, and not a phone. */
 const EXPANDED_FIRST_SCRIPT = `(function(){try{if(/[?&](guest|resume|join)=/.test(location.search))return;if(Math.min(screen.width,screen.height)<600)return;document.documentElement.setAttribute("data-kiosk-touch","expanded")}catch(e){}})();`;
 
+/** Jumbo's top bar: the time and the short date at one size, like the welcome card screen. */
+function JumboClock({ tz }: { tz: string }) {
+  const now = useNow(15_000);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <span />;
+  const { shortDate, time } = kioskNow(now, tz);
+  return (
+    <p className="font-display font-bold tabular-nums" data-jumbo-clock aria-live="off">
+      {time} {shortDate}
+    </p>
+  );
+}
+
 function Kiosk() {
   const p = Route.useLoaderData();
   const { guest, resume, join } = Route.useSearch();
@@ -1284,6 +1299,37 @@ function Kiosk() {
     await navigate({ to: "/app/today" });
   }
 
+  // The tablet's own icons (the bell, the day, the phone QR via a portal): one box, in whichever top bar shows.
+  const actionBox = (
+    <div
+      id="kiosk-header-action"
+      className={
+        shared
+          ? "relative flex h-[3.5em] w-[10em] shrink-0 items-center justify-end gap-[0.5em]"
+          : "hidden"
+      }
+    >
+      {/* The bell: put today's guest cards up from the tablet itself (the host can switch it off). */}
+      {shared && atWelcome && !saver && tablet?.cardPicker ? (
+        <KioskCardBell code={p.code} onApplied={showPicked} />
+      ) : null}
+      {shared && atWelcome && !saver ? (
+        <button
+          type="button"
+          onClick={() => {
+            setRestTapped(true);
+            setSaver(true);
+          }}
+          aria-label={`${copy.dayPhases[dayProgress(new Date(), p.timezone ?? "Europe/London").phase] ?? ""} · ${copy.saverStart}`}
+          title={copy.saverStart}
+          className={headerIconClass}
+        >
+          <DayIcon tz={p.timezone ?? "Europe/London"} className="size-[2.25em]" />
+        </button>
+      ) : null}
+    </div>
+  );
+
   return (
     <ThemeScope theme={p.theme} global full>
       {/* Inputs stay at 16px or more however small the page is fitted, so phones don't zoom in on them. */}
@@ -1323,7 +1369,33 @@ function Kiosk() {
         {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}
         <div ref={content} data-kx="screen" className="relative">
           {/* Sized once per display (--kiosk-header, in em below), so it never moves between screens. */}
+          {jumbo ? (
+            // Jumbo: the welcome card screen's top bar. The time and date, the property in the
+            // middle, Back (JumboSlot) and the tablet's icons on the right.
+            <header
+              data-jumbo-bar
+              className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-[2cqmin]"
+            >
+              <JumboClock tz={p.timezone ?? "Europe/London"} />
+              <p
+                className="flex min-w-0 items-center gap-[0.4em] font-display font-bold"
+                data-jumbo-name
+              >
+                <LogoMark
+                  theme={p.theme}
+                  name={p.name}
+                  className="size-[1.4em] shrink-0 rounded-[0.25em] bg-white p-[0.1em] text-[0.6em]"
+                />
+                <span className="truncate">{p.name}</span>
+              </p>
+              <div className="flex items-center justify-end gap-[1cqmin]">
+                <div id="jumbo-back" className="flex items-center" />
+                {actionBox}
+              </div>
+            </header>
+          ) : null}
           <header
+            hidden={jumbo}
             className={cn(
               "mx-auto flex items-center gap-[0.75em]",
               expanded ? "w-full max-w-none pt-[0.5em]" : "max-w-[56em] pt-[1.5em]",
@@ -1361,33 +1433,7 @@ function Kiosk() {
             <KioskClock tz={p.timezone ?? "Europe/London"} longName={p.name.length > 14} />
             {/* Beside the time: the day's progress on the welcome (tap to rest the screen); later, the phone QR (CheckInFlow puts it here). */}
             {/* Always the same box, whichever icon is in it (or none), so nothing beside it shifts. */}
-            <div
-              id="kiosk-header-action"
-              className={
-                shared
-                  ? "relative flex h-[3.5em] w-[10em] shrink-0 items-center justify-end gap-[0.5em]"
-                  : "hidden"
-              }
-            >
-              {/* The bell: put today's guest cards up from the tablet itself (the host can switch it off). */}
-              {shared && atWelcome && !saver && tablet?.cardPicker ? (
-                <KioskCardBell code={p.code} onApplied={showPicked} />
-              ) : null}
-              {shared && atWelcome && !saver ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRestTapped(true);
-                    setSaver(true);
-                  }}
-                  aria-label={`${copy.dayPhases[dayProgress(new Date(), p.timezone ?? "Europe/London").phase] ?? ""} · ${copy.saverStart}`}
-                  title={copy.saverStart}
-                  className={headerIconClass}
-                >
-                  <DayIcon tz={p.timezone ?? "Europe/London"} className="size-[2.25em]" />
-                </button>
-              ) : null}
-            </div>
+            {jumbo ? null : actionBox}
           </header>
           {join ? (
             <JoinCheckIn share={join} />
@@ -1416,11 +1462,19 @@ function Kiosk() {
                     }
                   : undefined
               }
-              qrPanel={saverLook.defaults.qrStyle === "panel"}
+              qrPanel={!jumbo && saverLook.defaults.qrStyle === "panel"}
               jumbo={jumbo}
               {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
             />
           )}
+          {jumbo ? (
+            // Jumbo: the welcome card screen's status bar. Steps put Ask host and other ways here.
+            <footer
+              id="jumbo-status"
+              data-jumbo-status
+              className="flex flex-wrap items-center justify-end gap-[2cqmin]"
+            />
+          ) : null}
           <div data-kiosk-footer>
             <ThemeFooter
               theme={p.theme}
