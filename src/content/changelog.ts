@@ -46,6 +46,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.132.2",
+    date: "2026-11-06",
+    title: "The standard photo screen is back",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The door tablet's ID and selfie screens are back to the standard layout by default: the words on the left, the camera picture on the right, Take photo under it and a small QR code below. The preview only floats beside the camera once you place the camera in Settings → Door tablets, and the reset button there brings the standard layout back.",
+      },
+    ],
+  },
+  {
     version: "0.132.1",
     date: "2026-11-06",
     title: "Jumbo, clearer",
