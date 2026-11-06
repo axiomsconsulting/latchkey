@@ -595,7 +595,7 @@ export function CheckInFlow({
               : null;
   const wantedKey = wanted ? `${wanted.kind}:${wanted.position}:${wanted.face}` : "";
   // On a door tablet's camera screens a message ("that isn't a photo ID") floats over the screen
-  // for 2 seconds, so the preview never shrinks and Take photo stays where it was.
+  // for 3 seconds, so the preview never shrinks and Take photo stays where it was.
   const cameraOn =
     kiosk &&
     ((step.name === "idFirst" && step.consented) ||
@@ -604,7 +604,7 @@ export function CheckInFlow({
       step.name === "face");
   useEffect(() => {
     if (!cameraOn || !message) return;
-    const t = setTimeout(() => setMessage(null), 2000);
+    const t = setTimeout(() => setMessage(null), 3000);
     return () => clearTimeout(t);
   }, [cameraOn, message]);
   const keepFace = facePendingAt !== null;
@@ -1884,7 +1884,75 @@ export function CheckInFlow({
             </section>
           ) : null}
 
-          {step.name === "done" ? (
+          {step.name === "done" && jumbo ? (
+            // Jumbo: the door codes (or, without codes, the welcome and the room) on the left, the guide's
+            // QR on the right; "Someone else" and "I'm done" in the bars below.
+            <section
+              data-jumbo-done
+              className="grid h-full min-h-0 grid-cols-[3fr_2fr] items-center gap-[4cqmin]"
+            >
+              <div className="flex min-h-0 flex-col justify-center gap-[2cqmin]">
+                {step.doors?.length ? (
+                  <>
+                    {step.roomName && !step.held ? (
+                      <p className="font-bold">{copy.roomLine(step.roomName, step.roomTitle)}</p>
+                    ) : null}
+                    {step.doors.map((d) => (
+                      <DoorCodeCard key={d.door} door={d} />
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <h1>
+                      {step.held
+                        ? copy.heldTitle(step.firstName)
+                        : stayedBefore
+                          ? copy.doneTitleAgain(step.firstName)
+                          : copy.doneTitle(step.firstName)}
+                    </h1>
+                    <p>
+                      {step.held
+                        ? copy.heldLine
+                        : step.roomName
+                          ? copy.roomLine(step.roomName, step.roomTitle)
+                          : copy.noRoom}
+                    </p>
+                  </>
+                )}
+              </div>
+              {typeof window !== "undefined" ? (
+                <CardQr
+                  url={
+                    step.shortCode
+                      ? `${window.location.origin}/g/${step.shortCode}`
+                      : `${window.location.origin}/stay/${step.stayToken}`
+                  }
+                  label={copy.jumboWords.guide}
+                />
+              ) : null}
+              {plan && !listFlow ? (
+                <JumboSlot on to="jumbo-back">
+                  <Button
+                    size="touch"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void onAddGuest()}
+                  >
+                    {copy.doneAddGuest}
+                  </Button>
+                </JumboSlot>
+              ) : null}
+              {onDone ? (
+                <JumboSlot on to="jumbo-status">
+                  <Button size="touch" onClick={onDone}>
+                    {copy.doneFinished}
+                  </Button>
+                </JumboSlot>
+              ) : null}
+            </section>
+          ) : null}
+
+          {step.name === "done" && !jumbo ? (
             <section
               data-kx={cameraSide ? undefined : "center"}
               className={cn(
@@ -1957,7 +2025,9 @@ export function CheckInFlow({
             <p
               role="alert"
               data-camera-note
-              className="pointer-events-none fixed left-1/2 top-1/2 z-[95] w-[min(90vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-foreground px-8 py-6 text-center text-2xl font-semibold text-background shadow-2xl"
+              // rgba, not a Tailwind /opacity colour: older tablet browsers draw those solid.
+              style={{ background: "rgba(0, 0, 0, 0.6)", color: "#ffffff" }}
+              className="pointer-events-none fixed left-1/2 top-1/2 z-[95] w-[min(90vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl px-8 py-6 text-center text-2xl font-semibold"
             >
               {message}
             </p>
