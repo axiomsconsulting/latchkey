@@ -1,3 +1,4 @@
+import { AddGuestPhotos } from "@/components/host/AddGuestPhotos";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -338,6 +339,13 @@ export function GuestSheet({
                 arrivedChildren={b.arrivedChildren}
                 bookedCount={b.guestCount ?? 1}
               />
+              {canWrite && !b.isTest ? (
+                <AddGuestPhotos
+                  bookingId={b.id}
+                  people={d.people}
+                  keepsPhotos={d.keepsPhotos !== false}
+                />
+              ) : null}
             </Section>
 
             <Section title={invoiceCopy.hostSection} count={0}>

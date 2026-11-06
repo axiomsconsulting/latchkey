@@ -46,6 +46,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.133.0",
+    date: "2026-11-06",
+    title: "Add guests' photos yourself",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Add a guest's ID or face photo yourself on their guest card, now or later: from a file, or on your phone straight from the camera or your photos. Useful when a guest couldn't check in at the door, or you check in without photos. They're kept and deleted like photos taken at the door.",
+      },
+    ],
+  },
+  {
     version: "0.132.3",
     date: "2026-11-06",
     title: "Photo screens fixed",

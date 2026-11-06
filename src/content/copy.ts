@@ -3557,6 +3557,17 @@ export const guestCard = branded({
   idSkipped: "No ID shown",
   idNone: "No ID check",
   noPeople: "Guests haven't said who's staying yet.",
+  addPhotos: "Add photos",
+  addPhotosHelp:
+    "If a guest couldn't check in at the door, or you check in without photos, add their ID or face photo here, now or later. On a phone you can take it or choose it from your photos.",
+  addFor: "For",
+  addIdPhoto: "ID photo",
+  addFacePhoto: "Face photo",
+  anotherAdult: "Another adult",
+  photoAdded: "Photo added",
+  photoNeedsRegistration:
+    "Photos are only kept once you've confirmed your data regulator registration.",
+  photoSettings: "Open the setting",
   viewId: (name: string) => `View ID for ${name}`,
   idDialogTitle: (name: string) => `${name}'s ID`,
   idPhoto: "ID photo",

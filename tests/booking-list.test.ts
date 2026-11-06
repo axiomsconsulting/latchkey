@@ -203,6 +203,7 @@ describe("how a check-in went", () => {
     expect(checkInMark("not_matched")?.tone).toBe("bad");
     expect(checkInMark("last4")?.tone).toBe("none");
     expect(checkInMark("self_declared")?.tone).toBe("none");
+    expect(checkInMark("host_added")?.tone).toBe("ok");
     expect(checkInMark(null)).toBeNull();
   });
   it("tells the host only about a passed ID", () => {

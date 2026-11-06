@@ -246,6 +246,8 @@ export function checkInMark(status: string | null | undefined): CheckInMark {
       return { tone: "ok", word: "ID checked" };
     case "partial":
       return { tone: "warn", word: "ID only partly matches the booking" };
+    case "host_added":
+      return { tone: "ok", word: "ID photo added by the host" };
     case "photo_only":
       return { tone: "warn", word: "ID photo kept, couldn't be read: please check it" };
     case "not_matched":
