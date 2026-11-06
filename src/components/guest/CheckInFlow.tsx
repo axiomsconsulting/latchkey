@@ -17,7 +17,7 @@ import {
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 
-import { CheckInQr, KioskQr, GuideLink } from "@/components/guest/CheckInQr";
+import { CardQr, CheckInQr, KioskQr, GuideLink } from "@/components/guest/CheckInQr";
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PhotoChoice } from "@/components/guest/PhonePhotos";
 import { usePhotoHandoff } from "@/hooks/use-photo-handoff";
@@ -594,6 +594,19 @@ export function CheckInFlow({
               ? { kind: "face", position: step.position, face: false }
               : null;
   const wantedKey = wanted ? `${wanted.kind}:${wanted.position}:${wanted.face}` : "";
+  // On a door tablet's camera screens a message ("that isn't a photo ID") floats over the screen
+  // for 2 seconds, so the preview never shrinks and Take photo stays where it was.
+  const cameraOn =
+    kiosk &&
+    ((step.name === "idFirst" && step.consented) ||
+      (step.name === "identity" && step.method === "photo_id" && step.consented) ||
+      (step.name === "companion" && step.ready) ||
+      step.name === "face");
+  useEffect(() => {
+    if (!cameraOn || !message) return;
+    const t = setTimeout(() => setMessage(null), 2000);
+    return () => clearTimeout(t);
+  }, [cameraOn, message]);
   const keepFace = facePendingAt !== null;
   useEffect(() => {
     if (!kiosk) return;
@@ -1119,42 +1132,59 @@ export function CheckInFlow({
             </p>
           ) : null}
           {step.name === "welcome" ? (
-            <div data-kx="center" className="py-6 text-center">
-              {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
-              {property.theme?.layout === "centred" ? (
-                <BrandBlock theme={property.theme} name={property.name} className="mb-6" />
-              ) : null}
-              {property.theme?.eyebrow ? (
-                <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-                  {property.theme.eyebrow}
+            <div
+              data-jumbo-welcome={jumbo ? "" : undefined}
+              className={
+                jumbo
+                  ? "grid h-full min-h-0 grid-cols-[3fr_1fr] items-center gap-[4cqmin]"
+                  : "contents"
+              }
+            >
+              <div data-kx="center" className="py-6 text-center">
+                {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
+                {property.theme?.layout === "centred" ? (
+                  <BrandBlock theme={property.theme} name={property.name} className="mb-6" />
+                ) : null}
+                {property.theme?.eyebrow ? (
+                  <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+                    {property.theme.eyebrow}
+                  </p>
+                ) : null}
+                <h1 className="text-3xl leading-tight sm:text-5xl">
+                  {property.theme
+                    ? welcomeTitle(property.theme, property.name, copy.welcomeTo(property.name))
+                    : copy.welcomeTo(property.name)}
+                </h1>
+                {property.theme?.layout === "centred" ? (
+                  <span
+                    aria-hidden
+                    className="mx-auto mt-4 flex w-48 items-center gap-2 text-accent"
+                  >
+                    <span className="h-px flex-1 bg-current opacity-60" />
+                    <span className="size-2 rotate-45 bg-current" />
+                    <span className="h-px flex-1 bg-current opacity-60" />
+                  </span>
+                ) : null}
+                <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">
+                  {property.theme?.welcomeBody || copy.letsCheckIn}
                 </p>
-              ) : null}
-              <h1 className="text-3xl leading-tight sm:text-5xl">
-                {property.theme
-                  ? welcomeTitle(property.theme, property.name, copy.welcomeTo(property.name))
-                  : copy.welcomeTo(property.name)}
-              </h1>
-              {property.theme?.layout === "centred" ? (
-                <span aria-hidden className="mx-auto mt-4 flex w-48 items-center gap-2 text-accent">
-                  <span className="h-px flex-1 bg-current opacity-60" />
-                  <span className="size-2 rotate-45 bg-current" />
-                  <span className="h-px flex-1 bg-current opacity-60" />
-                </span>
-              ) : null}
-              <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">
-                {property.theme?.welcomeBody || copy.letsCheckIn}
-              </p>
-              {property.theme?.features.length ? (
-                <ThemeFeatures theme={property.theme} className="mt-6 justify-center text-left" />
-              ) : null}
-              <Button size="touch-xl" className="mt-10 w-full max-w-md text-xl" onClick={startFind}>
-                {copy.startCta}
-              </Button>
-              {property.checkInFrom && property.checkOutBy ? (
-                <p className="mt-6 text-muted-foreground">
-                  {copy.stayWindow(property.checkInFrom, property.checkOutBy)}
-                </p>
-              ) : null}
+                {property.theme?.features.length && !jumbo ? (
+                  <ThemeFeatures theme={property.theme} className="mt-6 justify-center text-left" />
+                ) : null}
+                <Button
+                  size="touch-xl"
+                  className="mt-10 w-full max-w-md text-xl"
+                  onClick={startFind}
+                >
+                  {copy.startCta}
+                </Button>
+                {property.checkInFrom && property.checkOutBy ? (
+                  <p className="mt-6 text-muted-foreground">
+                    {copy.stayWindow(property.checkInFrom, property.checkOutBy)}
+                  </p>
+                ) : null}
+              </div>
+              {jumbo ? <CardQr url={phoneUrl} label={copy.jumboWords.phone} /> : null}
             </div>
           ) : null}
 
@@ -1923,7 +1953,15 @@ export function CheckInFlow({
             </section>
           ) : null}
 
-          {message ? (
+          {message && cameraOn ? (
+            <p
+              role="alert"
+              data-camera-note
+              className="pointer-events-none fixed left-1/2 top-1/2 z-[95] w-[min(90vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-foreground px-8 py-6 text-center text-2xl font-semibold text-background shadow-2xl"
+            >
+              {message}
+            </p>
+          ) : message ? (
             <p
               role="alert"
               className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground"
@@ -1951,7 +1989,7 @@ export function CheckInFlow({
         </main>
 
         {/* Front-door tablet: the phone square sits beside the welcome, then in the corner. */}
-        {kioskWide && step.name !== "done" ? (
+        {kioskWide && step.name !== "done" && !(jumbo && step.name === "welcome") ? (
           <KioskQr
             url={othersNow ? joinUrl! : (handoffUrl ?? phoneUrl)}
             large={step.name === "welcome" && qrPanel}

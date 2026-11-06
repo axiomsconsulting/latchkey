@@ -1370,13 +1370,12 @@ function Kiosk() {
         <div ref={content} data-kx="screen" className="relative">
           {/* Sized once per display (--kiosk-header, in em below), so it never moves between screens. */}
           {jumbo ? (
-            // Jumbo: the welcome card screen's top bar. The time and date, the property in the
-            // middle, Back (JumboSlot) and the tablet's icons on the right.
+            // Jumbo: the property at the left, the time and date in the middle, the tablet's icons
+            // on the right. Back goes in the status bar (JumboSlot).
             <header
               data-jumbo-bar
               className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-[2cqmin]"
             >
-              <JumboClock tz={p.timezone ?? "Europe/London"} />
               <p
                 className="flex min-w-0 items-center gap-[0.4em] font-display font-bold"
                 data-jumbo-name
@@ -1388,10 +1387,8 @@ function Kiosk() {
                 />
                 <span className="truncate">{p.name}</span>
               </p>
-              <div className="flex items-center justify-end gap-[1cqmin]">
-                <div id="jumbo-back" className="flex items-center" />
-                {actionBox}
-              </div>
+              <JumboClock tz={p.timezone ?? "Europe/London"} />
+              <div className="flex items-center justify-end gap-[1cqmin]">{actionBox}</div>
             </header>
           ) : null}
           <header
@@ -1473,7 +1470,10 @@ function Kiosk() {
               id="jumbo-status"
               data-jumbo-status
               className="flex flex-wrap items-center justify-end gap-[2cqmin]"
-            />
+            >
+              {/* Back always at the bottom left; the steps' other ways (JumboSlot) follow at the right. */}
+              <div id="jumbo-back" data-jumbo-back className="mr-auto flex items-center" />
+            </footer>
           ) : null}
           <div data-kiosk-footer>
             <ThemeFooter
@@ -1576,7 +1576,8 @@ function Kiosk() {
 
         {/* Which tablet this is and the app version, for the host and support; a waiting tablet's setup code.
             On a door tablet: the full screen switch and, when there's a newer version, Update (both tapped 3 times). */}
-        {shared && !tour ? (
+        {/* Jumbo: only on the first screen; the bottom bar belongs to Back and the step's other ways after that. */}
+        {jumbo && !atWelcome ? null : shared && !tour ? (
           <KioskCorner
             label={
               tablet?.status === "pending" && tablet.pairCode ? (

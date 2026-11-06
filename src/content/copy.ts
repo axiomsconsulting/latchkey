@@ -2168,6 +2168,7 @@ export const guest = branded({
     otherWay: "Other way",
     skip: "Skip",
     askHost: "Ask host",
+    phone: "Or use your phone",
   },
   autoSnap: {
     id: {
