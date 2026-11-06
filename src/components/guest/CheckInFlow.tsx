@@ -266,6 +266,8 @@ export function CheckInFlow({
   const faceFirst = useRef(false);
   const leadFaceDone = useRef(false);
   const idFirstTries = useRef(0);
+  // No booking found the usual way: the guest carries on with their ID; the host sorts out the room.
+  const forceFind = useRef(false);
   // The register from each guest's ID: saved, left for the host, or only a few things to ask.
   const registerFrom = useRef<Record<number, string>>({});
   const registerAsk = useRef<Record<number, RegisterAsk[]>>({});
@@ -508,7 +510,15 @@ export function CheckInFlow({
   async function onIdFirst(full: string, small: string) {
     await phone.clear();
     const res = await run(() =>
-      byPhoto({ data: { code: property.code, deviceId: deviceId(), image: full, small } }),
+      byPhoto({
+        data: {
+          code: property.code,
+          deviceId: deviceId(),
+          image: full,
+          small,
+          ...(forceFind.current ? { force: true } : {}),
+        },
+      }),
     );
     if (res) await afterIdFirst(res, { full, small });
   }
@@ -1298,6 +1308,18 @@ export function CheckInFlow({
               <div className="mt-8 flex flex-col items-center gap-3">
                 <Button
                   size="touch-xl"
+                  className="w-full max-w-md"
+                  onClick={() => {
+                    // Their ID and selfie are taken anyway, and the host is told at once.
+                    forceFind.current = true;
+                    setStep({ name: "idFirst", consented: true });
+                  }}
+                >
+                  {copy.continueWithId}
+                </Button>
+                <Button
+                  size="touch"
+                  variant="outline"
                   className="w-full max-w-md"
                   onClick={() => setStep({ name: "letter" })}
                 >

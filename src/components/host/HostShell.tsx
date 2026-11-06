@@ -1,3 +1,4 @@
+import { UrgentAlertToasts } from "@/components/host/UrgentAlertToasts";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getGroupBrand } from "@/lib/group-brand.functions";
 import { DEFAULT_GROUP_BRAND, effectiveLogo } from "@/lib/group-brand";
@@ -292,6 +293,7 @@ export function HostShell() {
 
       {/* Desktop: messages sit top right, away from the sidebar */}
       <div className="glass fixed right-6 top-6 z-30 hidden items-center gap-0.5 rounded-2xl p-1 md:flex print:hidden">
+        <UrgentAlertToasts />
         <OmniSearch pages={allPages} />
         <HostInbox propertyId={selectedId ?? null} />
       </div>

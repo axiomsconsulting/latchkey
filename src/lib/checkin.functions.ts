@@ -428,13 +428,23 @@ async function repeatStay(db: unknown, bookingId: string, idName?: string | null
  */
 export const findByPhotoId = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z.object({ code, deviceId, image: jpeg, small: smallJpeg.optional() }).parse(d),
+    z
+      .object({
+        code,
+        deviceId,
+        image: jpeg,
+        small: smallJpeg.optional(),
+        /** The guest couldn't find their booking the usual way: carry on with their ID regardless. */
+        force: z.boolean().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { admin, deviceHash, loadPropertyByCode, readIdDetails, hostModes } = await srv();
     const p = await loadPropertyByCode(data.code);
     if (!p) throw new Error("We could not find this property.");
-    if (!p.flow.steps.find_id || !p.flow.steps.lead_id) return { status: "find" as const };
+    if (!data.force && (!p.flow.steps.find_id || !p.flow.steps.lead_id))
+      return { status: "find" as const };
     const hash = deviceHash(p.id, data.deviceId);
     const locked = await deviceLock(p.id, hash, isTour(p));
     if (locked) return { status: "locked" as const, until: locked.toISOString() };

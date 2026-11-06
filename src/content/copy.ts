@@ -555,9 +555,14 @@ export const notifyCopy = branded({
     telegram: ["Telegram", "Free. Alerts from the Latchkey bot, with a button to open the stay."],
     email: ["Email", "To your business email address."],
     sms: ["Text messages (SMS)", "About 4p a text. Urgent alerts only, unless you choose all."],
+    whatsapp: [
+      "WhatsApp",
+      "To your business phone number from Latchkey's WhatsApp. Urgent alerts only, unless you choose all.",
+    ],
   } as Record<string, [string, string]>,
   smsUrgentOnly:
-    "Only urgent alerts by text (locked out, wants you to check them in, more guests than booked)",
+    "Only urgent alerts by text (locked out, wants you to check them in, more guests than booked, an ID that doesn't match, a guest with no booking found)",
+  whatsappUrgentOnly: "Only urgent alerts on WhatsApp",
   thisDevice: "This device",
   turnOn: "Turn on here",
   turnOff: "Turn off here",
@@ -1861,6 +1866,7 @@ export const guest = branded({
     other: "Somewhere else",
   } as Record<string, string>,
   noMatchTitle: "We couldn't find that booking",
+  continueWithId: "Carry on with your ID",
   noMatchBody:
     "Please check your answers and try again. If it still doesn't work, your host is happy to help.",
   welcomeBack: (name: string) => `Welcome back, ${name}`,
@@ -5986,6 +5992,7 @@ export const whatsAppAdminCopy = branded({
     welcome: "Welcome: {{1}} name, {{2}} property, {{3}} guide link",
     goodbye: "Goodbye: {{1}} name, {{2}} property, {{3}} book-direct link",
     photo_link: "Check-in photo link: {{1}} property, {{2}} link",
+    host_alert: "Alert to a host: {{1}} title, {{2}} message, {{3}} link",
   } as Record<string, string>,
   stepsTitle: "Setting it up (once, for every business)",
   steps: [

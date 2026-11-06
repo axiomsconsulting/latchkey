@@ -130,6 +130,14 @@ export const JOBS: Job[] = branded([
     runnable: false,
   },
   {
+    key: "whatsapp_alerts",
+    name: "WhatsApp alerts to hosts (paid per message)",
+    kind: "on_use",
+    what: "WhatsApp messages to hosts through Twilio and Latchkey's number, using the approved host alert template. Urgent alerts only unless a host asks for all. Each costs a few pence.",
+    metric: "whatsapp:alert",
+    runnable: false,
+  },
+  {
     key: "inbound_email",
     name: "Booking-site messages by email",
     kind: "on_use",

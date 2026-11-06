@@ -141,3 +141,26 @@ export async function sendGuestText(input: {
   if (ok) await bumpUsage(input.hostId, `${input.channel}:guest`).catch(() => undefined);
   return ok ? "sent" : "failed";
 }
+
+/** Latchkey's own WhatsApp number can send hosts alerts once the "host_alert" template is approved. */
+export async function hostWhatsAppReady(): Promise<boolean> {
+  const { twilio } = await import("./integrations.server");
+  const wa = await whatsAppSettings();
+  return !!twilio() && !!wa.sender && !!wa.templates.host_alert;
+}
+
+/** One alert to a host on WhatsApp: the approved template with the title, message and link. */
+export async function sendHostWhatsApp(to: string, vars: [string, string, string]) {
+  const wa = await whatsAppSettings();
+  const sid = wa.templates.host_alert;
+  if (!sid || !wa.sender) return false;
+  const form = new URLSearchParams();
+  form.set("To", `whatsapp:${to}`);
+  form.set("From", `whatsapp:${wa.sender}`);
+  form.set("ContentSid", sid);
+  form.set(
+    "ContentVariables",
+    JSON.stringify({ "1": vars[0], "2": vars[1].slice(0, 900), "3": vars[2] }),
+  );
+  return twilioSend(form);
+}
