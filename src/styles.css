@@ -747,7 +747,9 @@ html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] {
   left: calc(var(--photo-x) + 8px);
   top: calc(var(--photo-y) + 4px);
   width: calc(var(--photo-w) - 16px);
-  height: calc(var(--photo-h) - 12px);
+  /* Only as tall as what it holds, starting under the Back button; it shrinks only if it must. */
+  height: auto;
+  max-height: calc(var(--photo-h) - 12px);
   padding: 1rem;
   overflow: hidden;
   display: flex;

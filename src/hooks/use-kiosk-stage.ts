@@ -20,26 +20,28 @@ export function useKioskStage(on: boolean, spot: Spot | null): CameraCallout | n
       const h = Number.parseFloat(html.style.getPropertyValue("--kiosk-h")) || window.innerHeight;
       const w = r?.offsetWidth || window.innerWidth;
       const rem = Number.parseFloat(window.getComputedStyle(html).fontSize) || 16;
-      // The preview floats over the header, but never over the Back button.
-      const flowEl = document.querySelector<HTMLElement>("[data-kiosk-flow]");
-      const backEl = flowEl?.querySelector<HTMLElement>(":scope > button");
+      // Measured on screen, then turned into the page's own pixels: a calibrated tablet shows the
+      // whole page zoomed (0.74 on a Teclast), and the card is placed in unzoomed pixels.
       const rootBox = r?.getBoundingClientRect();
-      const b = backEl?.getBoundingClientRect();
-      const avoid =
-        b && rootBox
-          ? [{ x: b.left - rootBox.left, y: b.top - rootBox.top, w: b.width, h: b.height }]
-          : [];
-      const c = spot ? cameraCallout(spot, { w, h }, rem * 6.5, avoid) : null;
-      // Under the header and the back button, unless the free block starts lower.
+      const zoom = rootBox && r?.offsetWidth ? rootBox.width / r.offsetWidth || 1 : 1;
+      const inPage = (e: Element | null | undefined) => {
+        if (!e || !rootBox) return null;
+        const q = e.getBoundingClientRect();
+        return {
+          x: (q.left - rootBox.left) / zoom,
+          y: (q.top - rootBox.top) / zoom,
+          w: q.width / zoom,
+          h: q.height / zoom,
+        };
+      };
       const flow = document.querySelector<HTMLElement>("[data-kiosk-flow]");
-      const rootTop = r?.getBoundingClientRect().top ?? 0;
-      const back = flow?.querySelector<HTMLElement>(":scope > button");
-      const header = document.querySelector<HTMLElement>("[data-kiosk-root] header");
+      const back = inPage(flow?.querySelector<HTMLElement>(":scope > button"));
+      const header = inPage(document.querySelector<HTMLElement>("[data-kiosk-root] header"));
+      // The preview floats over the header, but never over the Back button.
+      const c = spot ? cameraCallout(spot, { w, h }, rem * 6.5, back ? [back] : []) : null;
+      // The card starts under the header and the Back button, unless its block starts lower.
       const under = Math.round(
-        Math.max(
-          (back?.getBoundingClientRect().bottom ?? 0) + 8,
-          header?.getBoundingClientRect().bottom ?? 0,
-        ) - rootTop,
+        Math.max(back ? back.y + back.h + 8 : 0, header ? header.y + header.h : 0),
       );
       // The spare space can't be up among the header and the Back button.
       setCallout(c && c.extra && c.extra.y < under ? { ...c, extra: null } : c);
