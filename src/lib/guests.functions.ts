@@ -169,7 +169,18 @@ export const getGuestDetails = createServerFn({ method: "GET" })
     };
     const { isRepeatStay } = await import("./repeat-guest.server");
     const stayedBefore = await isRepeatStay(sb, b.id);
+    // Whether the host can add photos here (AddGuestPhotos): only once they've confirmed registration.
+    const { data: recRow } = await sb
+      .from("properties")
+      .select("guest_records")
+      .eq("id", (b as unknown as { property_id: string }).property_id)
+      .maybeSingle();
+    const { normaliseRecords } = await import("./guest-records");
+    const keepsPhotos = normaliseRecords(
+      (recRow as { guest_records?: unknown } | null)?.guest_records,
+    ).regulatorConfirmed;
     return {
+      keepsPhotos,
       booking: {
         id: b.id,
         stayedBefore,
@@ -401,4 +412,86 @@ export const deleteJobs = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!rows?.length) throw new Error("Those jobs no longer exist. Refresh and try again.");
     return { count: rows.length };
+  });
+
+/**
+ * The host adds a guest's ID or face photo themselves (from a file, or their phone's camera or
+ * photo library), when the guest couldn't check in at the door or the host turned the photo steps
+ * off. Kept exactly like the kiosk's: only once the host has confirmed their data regulator
+ * registration, in the private store, and deleted with the property's keep days.
+ */
+export const addGuestPhoto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        bookingId: uuid,
+        position: z.number().int().min(0).max(29),
+        kind: z.enum(["id", "face"]),
+        image: z
+          .string()
+          .max(560_000)
+          .regex(/^data:image\/jpeg;base64,/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { assertNotSharedDemo } = await import("./demo-account");
+    assertNotSharedDemo(context.claims);
+    // RLS: only this business's team can see the stay.
+    const { data: b } = await context.supabase
+      .from("bookings")
+      .select("id, property_id, check_out_date, guest_full_name, id_check_status")
+      .eq("id", data.bookingId)
+      .maybeSingle();
+    if (!b) throw new Error("We couldn't find that stay.");
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, b.property_id));
+    const { admin, storeGuestPhoto, removeGuestPhotos } = await import("./checkin.server");
+    const db = (await admin()) as unknown as { from: (t: string) => any };
+    const { data: p } = await db
+      .from("properties")
+      .select("guest_records, is_demo")
+      .eq("id", b.property_id)
+      .single();
+    if (p?.is_demo) throw new Error("Photos aren't kept in the demo.");
+    const { normaliseRecords, deleteAfter } = await import("./guest-records");
+    const rec = normaliseRecords(p?.guest_records);
+    if (!rec.regulatorConfirmed)
+      throw new Error(
+        "Photos can only be kept once you've confirmed your data regulator registration in Settings → Check-in → Who's staying and ID records.",
+      );
+    const col = data.kind === "id" ? "id_photo_path" : "face_photo_path";
+    const { data: prev } = await db
+      .from("guest_ids")
+      .select(`id, ${col}`)
+      .eq("booking_id", b.id)
+      .eq("position", data.position)
+      .maybeSingle();
+    const path = await storeGuestPhoto(b.id, data.kind, data.image, b.property_id);
+    if (prev) {
+      const { error } = await db
+        .from("guest_ids")
+        .update({ [col]: path })
+        .eq("id", prev.id);
+      if (error) throw new Error(error.message);
+      if (prev[col]) await removeGuestPhotos([prev[col] as string]);
+    } else {
+      const { error } = await db.from("guest_ids").insert({
+        booking_id: b.id,
+        property_id: b.property_id,
+        position: data.position,
+        kind: "adult",
+        full_name: data.position === 0 ? b.guest_full_name : null,
+        id_checked: false,
+        skipped: false,
+        [col]: path,
+        delete_after: deleteAfter(b.check_out_date, rec.keepDays),
+      });
+      if (error) throw new Error(error.message);
+    }
+    // The lead guest's ID added by the host: say so on Bookings, unless a real check already passed.
+    const checked = ["matched", "id_read", "partial", "not_matched"];
+    if (data.kind === "id" && data.position === 0 && !checked.includes(b.id_check_status ?? ""))
+      await db.from("bookings").update({ id_check_status: "host_added" }).eq("id", b.id);
+    return { ok: true };
   });
