@@ -63,7 +63,7 @@ export const RELEASES: Release[] = branded([
       {
         kind: "fixed",
         area: "Check-in",
-        text: "The \"use your phone\" QR code that opens from the top right of a door tablet is smaller, so it always fits on the screen.",
+        text: 'The "use your phone" QR code that opens from the top right of a door tablet is smaller, so it always fits on the screen.',
       },
     ],
   },
