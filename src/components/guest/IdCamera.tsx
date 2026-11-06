@@ -296,6 +296,8 @@ export function IdCamera({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
+          const v = videoRef.current;
+          if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
           setReady(true);
         }
         // Device names and counts are only shown once a camera is allowed.
@@ -344,6 +346,8 @@ export function IdCamera({
   // Jumbo puts the step's own heading on the left half, so it reads it from the page.
   const own = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("");
+  // The camera's own shape (width over height), once it's running.
+  const [ratio, setRatio] = useState(4 / 3);
   useLayoutEffect(() => {
     if (!jumbo) return;
     const h = own.current?.closest("section")?.querySelector(":scope > h1");
@@ -492,20 +496,28 @@ export function IdCamera({
   if (jumbo)
     return (
       <div ref={own} data-jumbo-photo className="grid grid-cols-2 items-center gap-[4%]">
-        <div className="space-y-[1.2em]">
+        <div className="space-y-[1em]">
           <p className="font-display font-bold leading-[1.08]" data-jumbo-title>
             {title}
           </p>
           <p data-jumbo-line>{kind === "face" ? copy.jumboFace : copy.jumboId}</p>
           {busy && shot ? <PhotoProgress kind={kind} /> : null}
+          {aside}
           {moreBits}
         </div>
         <div className="space-y-[0.8em]">
-          <div className="relative overflow-hidden rounded-2xl bg-muted" data-jumbo-preview>
+          {/* The camera's whole picture at its own shape, as large as fits: nothing cropped or squeezed. */}
+          <div
+            className="relative mx-auto overflow-hidden rounded-2xl bg-black"
+            data-jumbo-preview
+            style={{
+              aspectRatio: ratio,
+              width: `min(100%, calc(var(--kiosk-h, 100vh) * 0.46 * ${ratio}))`,
+            }}
+          >
             {preview}
           </div>
           {takeButton}
-          {aside}
         </div>
       </div>
     );
