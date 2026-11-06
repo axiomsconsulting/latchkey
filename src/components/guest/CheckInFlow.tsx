@@ -1466,7 +1466,7 @@ export function CheckInFlow({
                 <div className="mt-6">
                   <PhotoChoice
                     kiosk={kiosk}
-                    compact={jumbo || (kiosk && !cameraSpot)}
+                    compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
                     phone={phone}
                     kind="id"
                     task="find"
@@ -1541,7 +1541,7 @@ export function CheckInFlow({
                 <div className="mt-6">
                   <PhotoChoice
                     kiosk={kiosk}
-                    compact={jumbo || (kiosk && !cameraSpot)}
+                    compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
                     phone={phone}
                     kind="id"
                     task="lead"
@@ -1675,7 +1675,7 @@ export function CheckInFlow({
                   <PhotoChoice
                     key={`companion-${step.position}`}
                     kiosk={kiosk}
-                    compact={jumbo || (kiosk && !cameraSpot)}
+                    compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
                     phone={phone}
                     kind="id"
                     task="companion"
@@ -1763,7 +1763,7 @@ export function CheckInFlow({
                 <PhotoChoice
                   key={`face-${step.position}`}
                   kiosk={kiosk}
-                  compact={jumbo || (kiosk && !cameraSpot)}
+                  compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
                   phone={phone}
                   kind="face"
                   task="face"
