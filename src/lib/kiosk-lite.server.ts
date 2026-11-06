@@ -124,7 +124,8 @@ type LiteProperty = {
   checkOutBy?: string | null | undefined;
   /** XL (bold full-screen cards in the card colours) or standard (kiosk-xl.ts). */
   kioskLook?:
-    { look: "standard" | "xl"; cardIn: string | null; cardOut: string | null } | undefined;
+    | { look: "standard" | "xl" | "jumbo"; cardIn: string | null; cardOut: string | null }
+    | undefined;
 };
 
 /** A hex colour with see-through (old browsers have rgba, not colour mixing). */

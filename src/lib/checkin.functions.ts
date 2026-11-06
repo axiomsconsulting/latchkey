@@ -221,7 +221,7 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
 async function kioskLookFor(
   srvMod: { admin: () => Promise<any> },
   propertyId: string,
-  choice: "auto" | "standard" | "xl",
+  choice: "auto" | "standard" | "xl" | "jumbo",
 ) {
   const { resolveLook } = await import("./kiosk-xl");
   const { normaliseDefaults } = await import("./kiosk-saver");

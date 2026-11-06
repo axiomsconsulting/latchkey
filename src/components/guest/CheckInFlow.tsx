@@ -208,6 +208,7 @@ export function CheckInFlow({
   onWelcome,
   onStep,
   qrPanel = true,
+  jumbo = false,
   cameraSpots = NO_SPOTS,
   resumeToken,
   welcomeStart = null,
@@ -223,6 +224,8 @@ export function CheckInFlow({
   welcomeStart?: { version: number | null; n: number; source?: "device" | "all" } | null;
   /** Door tablet welcome: the full phone panel on the right (Latchkey admin setting), else only the icon at the top. */
   qrPanel?: boolean;
+  /** Jumbo door tablet: very large words and buttons, no floating preview. */
+  jumbo?: boolean;
   /** Where this tablet's front camera is, as the host set it. */
   cameraSpots?: CameraSpots;
   /** Tells the kiosk whether the welcome (first) screen is showing. */
@@ -1019,7 +1022,7 @@ export function CheckInFlow({
   const cameraSide = kiosk && landscape;
   // The preview floats right by the tablet's front camera.
   const cameraSpot = useMemo(() => {
-    if (!kiosk || typeof window === "undefined") return null;
+    if (!kiosk || jumbo || typeof window === "undefined") return null;
     const way = landscape ? ("landscape" as const) : ("portrait" as const);
     const sig = deviceSignature(navigator.userAgent, {
       w: window.screen.width,
@@ -1028,7 +1031,7 @@ export function CheckInFlow({
       touch: navigator.maxTouchPoints,
     });
     return spotFor(cameraSpots, sig, way);
-  }, [kiosk, landscape, cameraSpots]);
+  }, [kiosk, jumbo, landscape, cameraSpots]);
   const phoneUrl =
     typeof window === "undefined" ? "" : `${window.location.origin}/kiosk/${property.code}?guest=1`;
   // While other guests are being filled in: the square lets each use their own phone at once.
@@ -1400,6 +1403,7 @@ export function CheckInFlow({
                 <div className="mt-6">
                   <PhotoChoice
                     kiosk={kiosk}
+                    compact={jumbo}
                     phone={phone}
                     kind="id"
                     task="find"
@@ -1419,6 +1423,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
+                        jumbo={jumbo}
                         aside={panel}
                         spot={cameraSpot}
                         busy={busy}
@@ -1473,6 +1478,7 @@ export function CheckInFlow({
                 <div className="mt-6">
                   <PhotoChoice
                     kiosk={kiosk}
+                    compact={jumbo}
                     phone={phone}
                     kind="id"
                     task="lead"
@@ -1492,6 +1498,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
+                        jumbo={jumbo}
                         aside={panel}
                         spot={cameraSpot}
                         busy={busy}
@@ -1605,6 +1612,7 @@ export function CheckInFlow({
                   <PhotoChoice
                     key={`companion-${step.position}`}
                     kiosk={kiosk}
+                    compact={jumbo}
                     phone={phone}
                     kind="id"
                     task="companion"
@@ -1625,6 +1633,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
+                        jumbo={jumbo}
                         aside={panel}
                         spot={cameraSpot}
                         busy={busy}
@@ -1691,6 +1700,7 @@ export function CheckInFlow({
                 <PhotoChoice
                   key={`face-${step.position}`}
                   kiosk={kiosk}
+                  compact={jumbo}
                   phone={phone}
                   kind="face"
                   task="face"
@@ -1712,6 +1722,7 @@ export function CheckInFlow({
                   camera={({ facing, onFail, panel }) => (
                     <IdCamera
                       auto={kiosk}
+                      jumbo={jumbo}
                       aside={panel}
                       spot={cameraSpot}
                       facing={facing}
@@ -2409,7 +2420,7 @@ function RegisterStep({
 function WhyAsk({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="mt-2">
+    <div className="mt-2" data-wordy>
       <button
         type="button"
         aria-expanded={open}

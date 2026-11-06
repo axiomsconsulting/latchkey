@@ -1,3 +1,5 @@
+import { DEFAULT_ARRIVALS, cardEdge, cardInk } from "@/lib/checkout-goodbye";
+import { useJumboFit } from "@/hooks/use-kiosk-stage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Mic } from "lucide-react";
 import { GuestDemoDock } from "@/components/DemoDock";
@@ -147,7 +149,9 @@ export const Route = createFileRoute("/kiosk/$code")({
       { children: KIOSK_FIT_SCRIPT },
       // Express or expanded buttons from the very first paint on a door tablet, so a screen never
       // draws at the standard size and then jumps (guests' own phones keep the standard size).
-      ...(loaderData?.theme?.kioskTouch === "expanded" || loaderData?.kioskLook?.look === "xl"
+      ...(loaderData?.theme?.kioskTouch === "expanded" ||
+      loaderData?.kioskLook?.look === "xl" ||
+      loaderData?.kioskLook?.look === "jumbo"
         ? [{ children: EXPANDED_FIRST_SCRIPT }]
         : []),
     ],
@@ -925,7 +929,25 @@ function Kiosk() {
     return { in: c.cardIn, out: c.cardOut };
   }, [xl, p.kioskLook, p.theme]);
   // Door tablets only: keys, pads and buttons grow to use the whole screen (Look and feel → Door tablet, and always in Express).
-  const expanded = shared && (p.theme.kioskTouch === "expanded" || xl);
+  // Jumbo: the whole check-in looks like the Jumbo welcome card (its colour, ink and outline).
+  const jumbo = shared && p.kioskLook?.look === "jumbo";
+  const jumboVars = useMemo(() => {
+    if (!jumbo) return undefined;
+    const bg = p.kioskLook?.cardIn ?? DEFAULT_ARRIVALS.colour;
+    return {
+      "--j-bg": bg,
+      "--j-ink": cardInk(bg),
+      "--j-edge": cardEdge(bg),
+    } as React.CSSProperties;
+  }, [jumbo, p.kioskLook?.cardIn]);
+  useEffect(() => {
+    if (!jumbo) return;
+    const html = document.documentElement;
+    html.setAttribute("data-kiosk-jumbo", "");
+    return () => html.removeAttribute("data-kiosk-jumbo");
+  }, [jumbo]);
+  useJumboFit(jumbo, stepKey);
+  const expanded = shared && (p.theme.kioskTouch === "expanded" || xl || jumbo);
   // On <html>, so dialogs (portalled outside this page) are sized to match.
   useEffect(() => {
     if (!expanded) return;
@@ -1268,16 +1290,17 @@ function Kiosk() {
       {/* Expanded: only a thin margin at the screen's edges. */}
       <div
         // The host's calibration: laid out for its area (unzoomed), then moved and zoomed into place.
-        style={
-          frame
+        style={{
+          ...jumboVars,
+          ...(frame
             ? {
                 width: `${frame.w / frame.zoom}px`,
                 minHeight: `${frame.h / frame.zoom}px`,
                 transform: `translate(${frame.x}px, ${frame.y}px) scale(${frame.zoom})`,
                 transformOrigin: "0 0",
               }
-            : undefined
-        }
+            : {}),
+        }}
         className={cn(
           "relative min-h-[var(--kiosk-h,100vh)] select-none bg-background [&_input]:text-[max(16px,1rem)] [&_textarea]:text-[max(16px,1rem)]",
           frame && "min-h-0 overflow-hidden",
@@ -1291,6 +1314,7 @@ function Kiosk() {
         )}
         onPointerDown={goFullscreen}
         data-kiosk-root
+        data-kiosk-jumbo={jumbo ? "" : undefined}
         data-kiosk-xl={xl ? "" : undefined}
       >
         {xl ? <style>{xlStyle}</style> : null}
@@ -1393,6 +1417,7 @@ function Kiosk() {
                   : undefined
               }
               qrPanel={saverLook.defaults.qrStyle === "panel"}
+              jumbo={jumbo}
               {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
             />
           )}

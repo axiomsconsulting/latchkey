@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.132.0",
+    date: "2026-11-06",
+    title: "Jumbo door tablets",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Jumbo: a new door tablet look where the whole check-in looks like your welcome card, in its colour, with very large words, buttons, boxes and pickers, and as few words as possible. The photo screen has the words on the left and the camera on the right, with your phone's QR code underneath. Choose it in Settings → Door tablets.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Check-in and check-out cards are now called Jumbo welcome cards and Jumbo goodbye cards.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The \"use your phone\" QR code that opens from the top right of a door tablet is smaller, so it always fits on the screen.",
+      },
+    ],
+  },
+  {
     version: "0.131.2",
     date: "2026-11-06",
     title: "Back is always clear",

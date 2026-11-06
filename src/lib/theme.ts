@@ -98,7 +98,7 @@ export type ThemeConfig = {
   /** Door tablets: buttons as designed, or expanded to fill the screen for big, easy-to-press targets. */
   kioskTouch: "standard" | "expanded";
   /** The door tablet's look: XL (bold cards, full screen), standard, or Latchkey's default (kiosk-xl.ts). */
-  kioskLook: "auto" | "standard" | "xl";
+  kioskLook: "auto" | "standard" | "xl" | "jumbo";
 };
 
 /** buttonRadius for fully round ("pill") buttons. */
@@ -529,7 +529,7 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     features,
     poweredBy: typeof r.poweredBy === "boolean" ? r.poweredBy : preset.poweredBy,
     kioskTouch: pick(r.kioskTouch, ["standard", "expanded"] as const, "standard"),
-    kioskLook: pick(r.kioskLook, ["auto", "standard", "xl"] as const, "auto"),
+    kioskLook: pick(r.kioskLook, ["auto", "standard", "xl", "jumbo"] as const, "auto"),
   };
 }
 

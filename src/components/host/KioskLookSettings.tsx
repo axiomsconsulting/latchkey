@@ -9,7 +9,10 @@ import { pingKiosk } from "@/lib/kiosk-ping";
 import { saveKioskLook } from "@/lib/services.functions";
 import { normaliseTheme } from "@/lib/theme";
 
-type Look = { kioskLook: "auto" | "standard" | "xl"; kioskTouch: "standard" | "expanded" };
+type Look = {
+  kioskLook: "auto" | "standard" | "xl" | "jumbo";
+  kioskTouch: "standard" | "expanded";
+};
 
 /**
  * Settings → Kiosk: how the door tablet looks (Standard, Express or
@@ -75,7 +78,7 @@ export function KioskLookSettings({
       </div>
       <p className="text-sm font-medium">{copy.kioskLook}</p>
       <div role="radiogroup" aria-label={copy.kioskLook} className="grid gap-2 sm:grid-cols-3">
-        {(["auto", "standard", "xl"] as const).map((v) =>
+        {(["auto", "standard", "xl", "jumbo"] as const).map((v) =>
           choice("kioskLook", v, copy.kioskLooks[v].label, copy.kioskLooks[v].help),
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Camera, ImageUp, Loader2, SwitchCamera, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -241,7 +241,10 @@ export function IdCamera({
   auto = false,
   spot = null,
   aside = null,
+  jumbo = false,
 }: {
+  /** Jumbo door tablet: a few big words on the left, the preview and the phone on the right. */
+  jumbo?: boolean;
   /** The phone's QR code: in the space left under or beside the floating preview when there is one. */
   aside?: ReactNode;
   /** A door tablet: takes the photo by itself once it sees a whole ID or a face, and a selfie's button counts down. */
@@ -334,7 +337,18 @@ export function IdCamera({
   );
   // Beside the camera only for the front one: the back one is on the other side of the tablet.
   const pointing = !!spot && current === "user";
-  const callout = useKioskStage(auto, auto ? (pointing ? spot : { x: 0, y: 0.5 }) : null);
+  const callout = useKioskStage(
+    auto && !jumbo,
+    auto && !jumbo ? (pointing ? spot : { x: 0, y: 0.5 }) : null,
+  );
+  // Jumbo puts the step's own heading on the left half, so it reads it from the page.
+  const own = useRef<HTMLDivElement>(null);
+  const [title, setTitle] = useState("");
+  useLayoutEffect(() => {
+    if (!jumbo) return;
+    const h = own.current?.closest("section")?.querySelector(":scope > h1");
+    setTitle(h?.textContent ?? "");
+  }, [jumbo]);
 
   function capture() {
     const video = videoRef.current;
@@ -472,6 +486,29 @@ export function IdCamera({
       {extra}
     </>
   );
+
+  // Jumbo: the step's heading and a short line on the left half; the preview, its button and the
+  // phone's square on the right. No floating, no help paragraphs.
+  if (jumbo)
+    return (
+      <div ref={own} data-jumbo-photo className="grid grid-cols-2 items-center gap-[4%]">
+        <div className="space-y-[1.2em]">
+          <p className="font-display font-bold leading-[1.08]" data-jumbo-title>
+            {title}
+          </p>
+          <p data-jumbo-line>{kind === "face" ? copy.jumboFace : copy.jumboId}</p>
+          {busy && shot ? <PhotoProgress kind={kind} /> : null}
+          {moreBits}
+        </div>
+        <div className="space-y-[0.8em]">
+          <div className="relative overflow-hidden rounded-2xl bg-muted" data-jumbo-preview>
+            {preview}
+          </div>
+          {takeButton}
+          {aside}
+        </div>
+      </div>
+    );
 
   // A door tablet: floating by the camera, with its button; the rest stays in the step's own card.
   if (callout)

@@ -315,7 +315,7 @@ export const saveKioskLook = createServerFn({ method: "POST" })
     z
       .object({
         propertyId: uuid,
-        kioskLook: z.enum(["auto", "standard", "xl"]),
+        kioskLook: z.enum(["auto", "standard", "xl", "jumbo"]),
         kioskTouch: z.enum(["standard", "expanded"]),
       })
       .parse(d),
