@@ -547,14 +547,16 @@ html[data-kiosk-touch="expanded"] #kiosk-header-action {
   width: 11.75em;
   gap: 0.75em;
 }
-html[data-kiosk-touch="expanded"] #kiosk-header-action > button {
+html[data-kiosk-touch="expanded"] #kiosk-header-action > button,
+html[data-kiosk-touch="expanded"] #kiosk-header-action > div > button {
   width: 5.5em;
   height: 5.5em;
   border: 1px solid var(--border);
   background-color: color-mix(in srgb, var(--muted) 55%, transparent);
   color: var(--foreground);
 }
-html[data-kiosk-touch="expanded"] #kiosk-header-action > button svg {
+html[data-kiosk-touch="expanded"] #kiosk-header-action > button svg,
+html[data-kiosk-touch="expanded"] #kiosk-header-action > div > button svg {
   width: 3.25em;
   height: 3.25em;
 }
@@ -851,13 +853,38 @@ html[data-kiosk-jumbo] body {
   width: 1em !important;
   height: 1em !important;
 }
+/* The tablet's own icons (bell, sun or moon, phone) in the top bar: small, so the bar stays thin. */
+[data-kiosk-jumbo] [data-jumbo-bar] #kiosk-header-action {
+  font-size: 0.4em;
+}
+/* The first screen: the welcome on the left three quarters, the phone square on the right quarter. */
+[data-kiosk-jumbo] [data-jumbo-welcome] [data-kx="center"] {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3cqmin;
+}
+[data-kiosk-jumbo] [data-jumbo-welcome] [data-kx="center"] > * {
+  margin: 0 !important;
+}
+[data-kiosk-jumbo] [data-jumbo-welcome] [data-kx="center"] img,
+[data-kiosk-jumbo] [data-jumbo-welcome] [data-kx="center"] svg {
+  max-height: 14cqmin;
+  width: auto;
+}
+[data-kiosk-jumbo] [data-jumbo-cardqr] p {
+  font-size: calc(4cqmin * var(--j-fit, 1)) !important;
+  font-weight: 700;
+}
 /* The status bar, as the welcome card screen's. */
 [data-kiosk-jumbo] [data-jumbo-status] {
   font-size: clamp(1.1rem, 3cqmin, 2.2rem);
   font-weight: 700;
   min-height: 3.5rem;
 }
-[data-jumbo-status] > div {
+[data-jumbo-status] > div:not([data-jumbo-back]) {
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
@@ -1011,4 +1038,14 @@ html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-kx="grid"] [data-slot="button"] {
   font-size: calc(8cqmin * var(--j-fit, 1)) !important;
   min-height: calc(15cqmin * var(--j-fit, 1));
+}
+/* A camera screen's message floats over it for 2 seconds (CheckInFlow), in the card's colours turned round. */
+[data-kiosk-jumbo] [data-kiosk-flow] main p[data-camera-note] {
+  background: var(--j-ink);
+  color: var(--j-bg) !important;
+  border: max(3px, 0.6cqmin) solid var(--j-edge);
+  font-size: 5cqmin !important;
+  line-height: 1.15;
+  padding: 3cqmin 4cqmin;
+  width: min(80cqw, 60cqmin * 1.6);
 }

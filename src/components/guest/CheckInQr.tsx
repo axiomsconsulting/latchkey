@@ -322,3 +322,23 @@ export function KioskQr({
     </>
   );
 }
+
+/** Jumbo's first screen: the phone square in the card itself, with a couple of words, never an icon. */
+export function CardQr({ url, label }: { url: string; label: string }) {
+  const src = useQrImage(url);
+  return (
+    <div
+      data-jumbo-cardqr
+      className="flex min-h-0 flex-col items-center justify-center gap-[2cqmin]"
+    >
+      <p className="text-center font-bold">{label}</p>
+      {src ? (
+        <img
+          src={src}
+          alt={copy.qrAlt}
+          className="aspect-square w-full rounded-[2cqmin] bg-white object-contain p-[1cqmin]"
+        />
+      ) : null}
+    </div>
+  );
+}
