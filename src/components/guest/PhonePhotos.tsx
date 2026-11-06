@@ -26,7 +26,16 @@ import { kioskHandoff, type PhotoKind } from "@/lib/photo-handoff";
 import { cn } from "@/lib/utils";
 
 /** The square and "Text me the link". */
-function PhonePanel({ phone, big }: { phone: PhotoHandoff; big: boolean }) {
+function PhonePanel({
+  phone,
+  big,
+  compact = false,
+}: {
+  phone: PhotoHandoff;
+  big: boolean;
+  /** Jumbo: just "Or use your phone" and the square, in a row. */
+  compact?: boolean;
+}) {
   const qr = useQrImage(phone.link?.phoneUrl ?? null, { dark: "#111111", light: "#ffffff" });
   const [via, setVia] = useState<"sms" | "whatsapp" | null>(null);
   const [number, setNumber] = useState("");
@@ -51,6 +60,23 @@ function PhonePanel({ phone, big }: { phone: PhotoHandoff; big: boolean }) {
     );
     if (status === "sent" || status === "demo") setVia(null);
   }
+  if (compact)
+    return (
+      <div className="flex items-center justify-center gap-[3%]" data-phone-photos>
+        <p className="flex items-center gap-2 font-bold" data-jumbo-phone>
+          <PhoneQrIcon className="size-[1.2em] shrink-0" />
+          {copy.jumboPhone}
+          <ArrowRight className="size-[1em] shrink-0" aria-hidden />
+        </p>
+        <div className="grid shrink-0 place-items-center rounded-xl bg-white p-1.5" data-jumbo-qr>
+          {qr ? (
+            <img src={qr} alt={copy.jumboPhone} className="size-full" />
+          ) : (
+            <Loader2 className="size-8 animate-spin text-neutral-400" />
+          )}
+        </div>
+      </div>
+    );
   return (
     <div
       className={cn(
@@ -177,7 +203,10 @@ export function PhotoChoice({
   onUseScreen,
   camera,
   extra,
+  compact = false,
 }: {
+  /** Jumbo door tablet: the phone option as one short line and the square. */
+  compact?: boolean;
   kiosk: boolean;
   phone: PhotoHandoff;
   facing: "user" | "environment" | null;
@@ -251,7 +280,7 @@ export function PhotoChoice({
       {camera({
         facing: facingNow,
         onFail: () => setFailed(true),
-        panel: <PhonePanel phone={phone} big={false} />,
+        panel: <PhonePanel phone={phone} big={false} compact={compact} />,
       })}
     </>
   );

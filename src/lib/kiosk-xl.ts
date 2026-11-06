@@ -14,7 +14,7 @@
 import { cardEdge, cardInk } from "@/lib/checkout-goodbye";
 import { PILL, luminance, mix, type ThemeConfig } from "@/lib/theme";
 
-export const KIOSK_LOOKS = ["standard", "xl"] as const;
+export const KIOSK_LOOKS = ["standard", "xl", "jumbo"] as const;
 export type KioskLook = (typeof KIOSK_LOOKS)[number];
 export type KioskLookChoice = "auto" | KioskLook;
 

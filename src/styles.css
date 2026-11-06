@@ -561,8 +561,9 @@ html[data-kiosk-touch="expanded"] #kiosk-header-action > button svg {
 
 /* The phone square opened from the corner icon, and every kiosk dialog's close button. */
 html[data-kiosk-touch="expanded"] .kiosk-qr-dialog {
-  max-width: min(94vw, 46rem);
-  padding: 2rem;
+  /* 70% of what it was, so it always stays on the screen. */
+  max-width: min(66vw, 32rem);
+  padding: 1.5rem;
 }
 html[data-kiosk-touch="expanded"] .kiosk-qr-dialog h2 {
   font-size: 1.75rem;
@@ -570,7 +571,12 @@ html[data-kiosk-touch="expanded"] .kiosk-qr-dialog h2 {
   padding-right: 5rem;
 }
 html[data-kiosk-touch="expanded"] .kiosk-qr-dialog img {
-  max-width: min(82vw, calc(var(--kiosk-h, 100vh) * 0.62));
+  max-width: min(57vw, calc(var(--kiosk-h, 100vh) * 0.43));
+}
+/* Never taller than the screen, at any size. */
+.kiosk-qr-dialog {
+  max-height: calc(var(--kiosk-h, 100vh) * 0.92);
+  overflow: auto;
 }
 html[data-kiosk-touch="expanded"] .kiosk-qr-dialog p {
   font-size: 1.25rem;
@@ -778,4 +784,125 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] {
 html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] img,
 html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
   filter: invert(1);
+}
+
+/*
+ * Jumbo door tablets (kioskLook "jumbo"; the kiosk sets data-kiosk-jumbo on the page and <html>, and
+ * --j-bg / --j-ink / --j-edge from the Jumbo welcome card's colour): the whole check-in looks like
+ * that card, with very large words and controls sized from the screen's height (--kiosk-h), and the
+ * longer help left out. useJumboFit stops any step from scrolling. Guests' own phones never get it.
+ */
+[data-kiosk-root][data-kiosk-jumbo] {
+  background: var(--j-bg);
+  color: var(--j-ink);
+}
+[data-kiosk-jumbo] header,
+[data-kiosk-jumbo] header * {
+  color: var(--j-ink);
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main {
+  background: var(--j-bg);
+  color: var(--j-ink);
+  border: max(4px, calc(var(--kiosk-h, 100vh) * 0.008)) solid var(--j-edge);
+  border-radius: calc(var(--kiosk-h, 100vh) * 0.03);
+  box-shadow: none;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main h1,
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-title] {
+  font-size: calc(var(--kiosk-h, 100vh) * 0.075);
+  line-height: 1.08;
+  font-weight: 700;
+  color: var(--j-ink);
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main p,
+[data-kiosk-jumbo] [data-kiosk-flow] main label,
+[data-kiosk-jumbo] [data-kiosk-flow] main li {
+  font-size: calc(var(--kiosk-h, 100vh) * 0.036);
+  line-height: 1.25;
+  color: var(--j-ink);
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main .text-muted-foreground {
+  color: var(--j-ink);
+  opacity: 0.85;
+}
+/* As few words as possible: the "why we ask" notes and the grey help lines go. */
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-wordy],
+[data-kiosk-jumbo] [data-kiosk-flow] main p.text-muted-foreground:not([data-jumbo-line]) {
+  display: none;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"] {
+  font-size: calc(var(--kiosk-h, 100vh) * 0.042);
+  min-height: calc(var(--kiosk-h, 100vh) * 0.115);
+  border-radius: 9999px;
+  font-weight: 700;
+  padding-inline: 1em;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"] svg {
+  width: 1.1em !important;
+  height: 1.1em !important;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"][data-variant="default"] {
+  background: var(--j-ink);
+  color: var(--j-bg);
+  border: none;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
+  background: transparent;
+  color: var(--j-ink);
+  border: max(3px, calc(var(--kiosk-h, 100vh) * 0.005)) solid var(--j-ink);
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"][data-variant="ghost"] {
+  background: transparent;
+  color: var(--j-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+/* Typing and picking: boxes as big as the buttons. */
+[data-kiosk-jumbo] [data-kiosk-flow] main :is(input, textarea, [role="combobox"]) {
+  font-size: calc(var(--kiosk-h, 100vh) * 0.04);
+  min-height: calc(var(--kiosk-h, 100vh) * 0.1);
+  border: max(3px, calc(var(--kiosk-h, 100vh) * 0.005)) solid var(--j-ink);
+  border-radius: calc(var(--kiosk-h, 100vh) * 0.02);
+  background: #ffffff;
+  color: #1b1b1b;
+}
+html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
+  font-size: calc(var(--kiosk-h, 100vh) * 0.035);
+  min-height: calc(var(--kiosk-h, 100vh) * 0.08);
+}
+/* The photo step: the left half for the words, the right for the preview and the phone. */
+[data-kiosk-jumbo] section:has([data-jumbo-photo]) > h1 {
+  display: none;
+}
+[data-kiosk-jumbo] [data-jumbo-preview] video,
+[data-kiosk-jumbo] [data-jumbo-preview] img {
+  max-height: calc(var(--kiosk-h, 100vh) * 0.34);
+}
+/* Words on the camera picture keep their own look. */
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-preview] p {
+  color: #ffffff;
+  font-size: calc(var(--kiosk-h, 100vh) * 0.028);
+  opacity: 1;
+}
+/* Numbers people set (adults, children, ages) read as big as the buttons beside them. */
+[data-kiosk-jumbo] [data-kiosk-flow] main .tabular-nums {
+  font-size: calc(var(--kiosk-h, 100vh) * 0.065);
+  font-weight: 700;
+}
+/* Back, above the card, in the same style. */
+[data-kiosk-jumbo] [data-kiosk-flow] > [data-slot="button"] {
+  background: transparent;
+  color: var(--j-ink);
+  border: max(3px, calc(var(--kiosk-h, 100vh) * 0.005)) solid var(--j-ink);
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: calc(var(--kiosk-h, 100vh) * 0.03);
+  box-shadow: none;
+}
+[data-kiosk-jumbo] [data-jumbo-phone] {
+  font-size: calc(var(--kiosk-h, 100vh) * 0.032);
+}
+[data-kiosk-jumbo] [data-jumbo-qr] {
+  width: calc(var(--kiosk-h, 100vh) * 0.15);
+  height: calc(var(--kiosk-h, 100vh) * 0.15);
 }

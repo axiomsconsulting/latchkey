@@ -1420,7 +1420,7 @@ export const checkinSettings = branded({
 });
 
 export const goodbyeCopy = branded({
-  title: "Check-out cards",
+  title: "Jumbo goodbye cards",
   body: "On check-out day the door tablet says goodbye to each guest leaving: a personal goodbye, safe travels and where the keys go. Their guest guide puts the check-out things first too.",
   unavailable: "The check-out goodbye needs the latest database update (migration 0068).",
   on: "Say goodbye on the door tablet on check-out day",
@@ -1483,8 +1483,8 @@ export const updateCopy = branded({
 });
 
 export const kioskCardsCopy = branded({
-  offIn: "Check-in cards are off.",
-  offOut: "Check-out cards are off.",
+  offIn: "Jumbo welcome cards are off.",
+  offOut: "Jumbo goodbye cards are off.",
   turnOn: "Turn on in Settings",
   title: "Door tablet: welcome and goodbye",
   body: "Each guest arriving or leaving today gets a card on the door tablet, on the timings in Settings → Door tablets. Show one now, or take it off.",
@@ -1510,7 +1510,7 @@ export const kioskCardsCopy = branded({
   custom: "Write a custom welcome",
   settingsIn: "Check-in card settings",
   settingsOut: "Check-out card settings",
-  settingsTitle: "Check-in cards",
+  settingsTitle: "Jumbo welcome cards",
   messageAgain: "For a guest who has stayed with you before",
   settingsBody:
     "On arrival day the door tablet welcomes each guest by name. Its Check in button starts with their photo ID, which finds their booking, so a card never skips the ID check.",
@@ -1525,7 +1525,7 @@ export const kioskCardsCopy = branded({
     "Each card comes on at the guest's check-in time, never earlier: the time on their booking when you've set one (an early check-in or a late arrival, free, agreed or paid offline, or an early check-in extra you accepted), otherwise your property's check-in time. To show one sooner, use Show now below, on Today or with the bell on the tablet.",
   howItEnds:
     "It shows until they check in or the day ends, and goes earlier when you take it off here or on Today. While any check-in or check-out card is up, the screensaver doesn't start. A custom welcome you write joins the cards: it replaces that guest's card (never a second one) or adds a card.",
-  saved: "Check-in cards saved",
+  saved: "Jumbo welcome cards saved",
   checkIn: "Check in",
   atSetTime: "At a set time of day",
   colour: "Card colour",
@@ -2150,6 +2150,9 @@ export const guest = branded({
   faceTake: "Take photo",
   faceTimer: "Take photo in 3 seconds",
   cameraIsHere: "The camera is here",
+  jumboId: "Hold your ID up to the camera",
+  jumboFace: "Look at the camera",
+  jumboPhone: "Or use your phone",
   autoSnap: {
     id: {
       look: "Show your whole ID",
@@ -2373,6 +2376,10 @@ export const themeStudio = branded({
   kioskLook: "Look on the door tablet",
   kioskLooks: {
     auto: { label: "Automatic", help: "Follows Latchkey's recommended look for door tablets." },
+    jumbo: {
+      label: "Jumbo",
+      help: "The whole check-in looks like your Jumbo welcome card: its colour, very large words and buttons, and as few words as possible. Guests' own phones keep the standard look.",
+    },
     standard: { label: "Standard", help: "Your theme's page, with a card for each step." },
     xl: {
       label: "Express",
@@ -4699,8 +4706,8 @@ export const settingsMenuCopy = branded({
     messages: ["Airbnb and Booking.com messages", "guests"],
     kioskTablets: ["Door tablets", "kiosk"],
     kioskRest: ["Screen saver", "kiosk"],
-    welcomeCards: ["Check-in cards", "kiosk"],
-    goodbye: ["Check-out cards", "kiosk"],
+    welcomeCards: ["Jumbo welcome cards", "kiosk"],
+    goodbye: ["Jumbo goodbye cards", "kiosk"],
     kioskLook: ["Door tablet look", "kiosk"],
     kioskScreen: ["Door tablet screen fit", "kiosk"],
     payments: ["Card payments", "money"],
@@ -4733,7 +4740,7 @@ export const settingsMenuCopy = branded({
     kioskRest: "Smart Screensaver, night light and clocks.",
     welcomeCards: "A card for each guest arriving today.",
     goodbye: "A card for each guest leaving today.",
-    kioskLook: "Standard or Express, and button size.",
+    kioskLook: "Standard, Express or Jumbo, and button size.",
     kioskScreen: "Line the screen up on a tablet that doesn't fit.",
     payments: "Connect Stripe to take card payments.",
     money: "Tax details, your bank account and away dates.",
