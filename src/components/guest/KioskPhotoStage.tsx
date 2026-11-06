@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Camera } from "lucide-react";
 
-import { guest as copy } from "@/content/copy";
-import { POINTER_SPACE, type CameraCallout, type Edge } from "@/lib/kiosk-camera-spot";
+import { type CameraCallout, type Edge, type Rect } from "@/lib/kiosk-camera-spot";
+import { useFitBox } from "@/hooks/use-kiosk-stage";
 import { cn } from "@/lib/utils";
 
 const root = () => document.querySelector<HTMLElement>("[data-kiosk-root]");
@@ -39,14 +38,6 @@ export function CameraCalloutBox({
     pointer.edge === "top" || pointer.edge === "bottom"
       ? { left: pointer.at }
       : { top: pointer.at };
-  const badge =
-    pointer.edge === "top"
-      ? { top: -POINTER_SPACE + 2, left: pointer.at - 16 }
-      : pointer.edge === "bottom"
-        ? { bottom: -POINTER_SPACE + 2, left: pointer.at - 16 }
-        : pointer.edge === "left"
-          ? { left: -POINTER_SPACE + 2, top: pointer.at - 16 }
-          : { right: -POINTER_SPACE + 2, top: pointer.at - 16 };
   return createPortal(
     <div
       data-kiosk-callout
@@ -54,24 +45,31 @@ export function CameraCalloutBox({
       style={{ left: box.x, top: box.y, width: box.w }}
     >
       {pointing ? (
-        <>
-          <span
-            aria-hidden
-            className={cn("absolute size-0", POINTER[pointer.edge])}
-            style={along}
-          />
-          <span
-            aria-label={copy.cameraIsHere}
-            title={copy.cameraIsHere}
-            className="absolute grid size-8 place-items-center rounded-full bg-primary text-primary-foreground shadow"
-            style={badge}
-          >
-            <Camera className="size-4" aria-hidden />
-          </span>
-        </>
+        <span aria-hidden className={cn("absolute size-0", POINTER[pointer.edge])} style={along} />
       ) : null}
       {children}
     </div>,
     host.current,
+  );
+}
+
+/** A second block the floating preview leaves (often under it): the phone's QR code goes here. */
+export function StageExtra({ rect, children }: { rect: Rect; children: ReactNode }) {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const box = useRef<HTMLDivElement | null>(null);
+  useEffect(() => setHost(root() ?? document.body), []);
+  // Once it's on the page (the portal waits a moment), and whenever its size changes.
+  useFitBox(box, host ? `${rect.w}x${rect.h}` : null);
+  if (!host) return null;
+  return createPortal(
+    <div
+      ref={box}
+      data-kiosk-extra
+      className="fixed z-[74] flex flex-col justify-center overflow-hidden p-2"
+      style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
+    >
+      {children}
+    </div>,
+    host,
   );
 }

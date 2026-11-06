@@ -8,20 +8,30 @@
  * that kind. Pure; tested in tests/kiosk-camera-spot.test.ts.
  */
 
-export type Spot = { x: number; y: number };
+/** Where the camera is (x, y across the screen) and the host's own nudge to the preview (ox, oy). */
+export type Spot = { x: number; y: number; ox?: number; oy?: number };
 export type WayUp = "landscape" | "portrait";
 export type CameraSpots = Partial<Record<WayUp, Spot>>;
 
 const unit = (v: unknown) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : null;
 
+const nudge = (v: unknown) =>
+  typeof v === "number" && Number.isFinite(v)
+    ? Math.round(Math.min(0.5, Math.max(-0.5, v)) * 1000) / 1000
+    : 0;
+
 function spot(raw: unknown): Spot | null {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const x = unit(r["x"]);
   const y = unit(r["y"]);
-  return x === null || y === null
-    ? null
-    : { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
+  if (x === null || y === null) return null;
+  const out: Spot = { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
+  const ox = nudge(r["ox"]);
+  const oy = nudge(r["oy"]);
+  if (ox) out.ox = ox;
+  if (oy) out.oy = oy;
+  return out;
 }
 
 export function normaliseSpots(raw: unknown): CameraSpots {
@@ -61,11 +71,15 @@ export type CameraCallout = {
   pointer: { edge: Edge; at: number };
   /** The space left for everything else on the screen. */
   free: Rect;
+  /** A second space that's left over (often under the preview), for the phone's QR code. */
+  extra: Rect | null;
 };
 
 const MARGIN = 10;
-/** Room for the pointer and its camera badge between the box and the camera. */
-export const POINTER_SPACE = 44;
+/** Room for the pointer between the box and the camera. */
+export const POINTER_SPACE = 18;
+/** The least a second space must offer to be worth using (px). */
+const EXTRA_MIN = { w: 240, h: 150 };
 
 /**
  * Where the floating preview goes: right up against the camera's nearest edge, with its
@@ -76,12 +90,14 @@ export function cameraCallout(
   s: Spot,
   screen: { w: number; h: number },
   buttonH: number,
+  /** What the preview must never cover, such as the Back button. */
+  avoid: Rect[] = [],
 ): CameraCallout {
   const { w, h } = screen;
   const wide = w >= h;
   const pw = Math.round(
     wide
-      ? Math.min(w * 0.46, ((h - buttonH) * 0.6 * 4) / 3)
+      ? Math.min(w * 0.42, ((h - buttonH) * 0.52 * 4) / 3)
       : Math.min(w * 0.86, (h * 0.34 * 4) / 3),
   );
   const ph = Math.round((pw * 3) / 4);
@@ -109,8 +125,24 @@ export function cameraCallout(
     x = edge === "left" ? cx + POINTER_SPACE : cx - POINTER_SPACE - bw;
     y = wide ? cy - bh / 2 : cy < h / 2 ? cy - bh * 0.2 : cy - bh * 0.8;
   }
+  // The host's own fine-tuning, in shares of the screen.
+  x += (s.ox ?? 0) * w;
+  y += (s.oy ?? 0) * h;
   x = Math.round(clamp(x, MARGIN, Math.max(MARGIN, w - bw - MARGIN)));
   y = Math.round(clamp(y, MARGIN, Math.max(MARGIN, h - bh - MARGIN)));
+  for (const a of avoid) {
+    const hits = (px: number, py: number) =>
+      px < a.x + a.w && a.x < px + bw && py < a.y + a.h && a.y < py + bh;
+    if (!hits(x, y)) continue;
+    // Stay against the camera's edge: step sideways for a top or bottom camera, down for a side one,
+    // and the other way if that doesn't clear it.
+    const beside = Math.round(clamp(a.x + a.w + MARGIN, MARGIN, Math.max(MARGIN, w - bw - MARGIN)));
+    const below = Math.round(a.y + a.h + MARGIN);
+    const along = edge === "top" || edge === "bottom";
+    if (along && !hits(beside, y)) x = beside;
+    else if (below + bh <= h - MARGIN && !hits(x, below)) y = below;
+    else x = beside;
+  }
   const box: Rect = { x, y, w: bw, h: bh };
   const blocks: Rect[] = [
     { x: 0, y: 0, w: x, h },
@@ -124,7 +156,38 @@ export function cameraCallout(
       Math.min(b.w / 1.2, b.h) * Math.min(b.w, b.h * 1.2) -
       Math.min(a.w / 1.2, a.h) * Math.min(a.w, a.h * 1.2),
   )[0]!;
+  // What's left beside the block above: trimmed so the two never overlap.
+  const column = free.h === h;
+  const extra =
+    blocks
+      .filter((b) => b !== free)
+      .map((b): Rect => {
+        if (column) {
+          const left = Math.max(
+            b.x,
+            free.x + free.w > b.x && free.x <= b.x ? free.x + free.w : b.x,
+          );
+          const right = Math.min(b.x + b.w, free.x >= b.x + 1 ? free.x : b.x + b.w);
+          return { x: left, y: b.y, w: Math.max(0, right - left), h: b.h };
+        }
+        const top = Math.max(b.y, free.y + free.h > b.y && free.y <= b.y ? free.y + free.h : b.y);
+        const bottom = Math.min(b.y + b.h, free.y >= b.y + 1 ? free.y : b.y + b.h);
+        return { x: b.x, y: top, w: b.w, h: Math.max(0, bottom - top) };
+      })
+      .filter(
+        (b) =>
+          b.w >= EXTRA_MIN.w &&
+          b.h >= EXTRA_MIN.h &&
+          !(
+            b.x < free.x + free.w &&
+            free.x < b.x + b.w &&
+            b.y < free.y + free.h &&
+            free.y < b.y + b.h
+          ) &&
+          !(b.x < x + bw && x < b.x + b.w && b.y < y + bh && y < b.y + b.h),
+      )
+      .sort((p, q) => q.w * q.h - p.w * p.h)[0] ?? null;
   const at =
     edge === "top" || edge === "bottom" ? clamp(cx - x, 16, bw - 16) : clamp(cy - y, 16, bh - 16);
-  return { box, preview: { w: pw, h: ph }, pointer: { edge, at: Math.round(at) }, free };
+  return { box, preview: { w: pw, h: ph }, pointer: { edge, at: Math.round(at) }, free, extra };
 }

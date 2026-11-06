@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Camera } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Camera, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ export function CameraSpotPad({
   useEffect(() => setSpot(saved), [saved.x, saved.y]); // eslint-disable-line react-hooks/exhaustive-deps
   const frame = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
+  // Dragging the preview itself: where it started, and where the pointer was.
+  const moving = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
 
   async function save(next: Spot | null) {
     try {
@@ -51,6 +53,15 @@ export function CameraSpotPad({
   const short = Math.max(1, Math.min(device.display?.w ?? 1280, device.display?.h ?? 800));
   const screen = way === "landscape" ? { w: long, h: short } : { w: short, h: long };
   const { box } = cameraCallout(spot, screen, 96);
+  const nudge = (dx: number, dy: number) => {
+    const next = {
+      ...spot,
+      ox: Math.max(-0.5, Math.min(0.5, (spot.ox ?? 0) + dx)),
+      oy: Math.max(-0.5, Math.min(0.5, (spot.oy ?? 0) + dy)),
+    };
+    setSpot(next);
+    void save(next);
+  };
 
   return (
     <div className="space-y-2 rounded-xl border border-border p-3">
@@ -80,9 +91,32 @@ export function CameraSpotPad({
           )}
           style={{ aspectRatio: `${screen.w} / ${screen.h}` }}
         >
-          {/* Where the preview floats. */}
+          {/* Where the preview floats: drag it to fine-tune. */}
           <div
-            className="absolute grid place-items-center rounded bg-primary/25 text-[10px] text-foreground ring-1 ring-primary"
+            role="button"
+            tabIndex={-1}
+            aria-label={copy.spotMovePreview}
+            title={copy.spotMovePreview}
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              moving.current = { px: e.clientX, py: e.clientY, ox: spot.ox ?? 0, oy: spot.oy ?? 0 };
+            }}
+            onPointerMove={(e) => {
+              const m = moving.current;
+              const r = frame.current?.getBoundingClientRect();
+              if (!m || !r) return;
+              setSpot((s) => ({
+                ...s,
+                ox: Math.max(-0.5, Math.min(0.5, m.ox + (e.clientX - m.px) / r.width)),
+                oy: Math.max(-0.5, Math.min(0.5, m.oy + (e.clientY - m.py) / r.height)),
+              }));
+            }}
+            onPointerUp={() => {
+              if (!moving.current) return;
+              moving.current = null;
+              void save(spot);
+            }}
+            className="absolute grid cursor-move touch-none select-none place-items-center rounded bg-primary/25 text-[10px] text-foreground ring-1 ring-primary"
             style={{
               left: `${(box.x / screen.w) * 100}%`,
               top: `${(box.y / screen.h) * 100}%`,
@@ -131,6 +165,44 @@ export function CameraSpotPad({
             <Camera className="size-4" aria-hidden />
           </button>
         </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-1">
+        <span className="mr-1 text-xs text-muted-foreground">{copy.spotNudge}</span>
+        {(
+          [
+            [ArrowLeft, -0.02, 0, copy.spotLeft],
+            [ArrowUp, 0, -0.02, copy.spotUp],
+            [ArrowDown, 0, 0.02, copy.spotDown],
+            [ArrowRight, 0.02, 0, copy.spotRight],
+          ] as const
+        ).map(([Icon, dx, dy, label]) => (
+          <Button
+            key={label}
+            type="button"
+            size="icon"
+            variant="outline"
+            className="size-8"
+            aria-label={label}
+            title={label}
+            onClick={() => nudge(dx, dy)}
+          >
+            <Icon className="size-4" aria-hidden />
+          </Button>
+        ))}
+        {spot.ox || spot.oy ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              const { ox: _ox, oy: _oy, ...rest } = spot;
+              setSpot(rest);
+              void save(rest);
+            }}
+          >
+            <RotateCcw className="size-4" aria-hidden /> {copy.spotCentre}
+          </Button>
+        ) : null}
       </div>
       {device.cameraSpot[way] ? (
         <Button type="button" variant="ghost" size="sm" onClick={() => void save(null)}>

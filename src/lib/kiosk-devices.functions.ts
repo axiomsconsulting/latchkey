@@ -839,7 +839,14 @@ export const setKioskCameraSpot = createServerFn({ method: "POST" })
       .object({
         deviceId: uuid,
         way: z.enum(["landscape", "portrait"]),
-        spot: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).nullable(),
+        spot: z
+          .object({
+            x: z.number().min(0).max(1),
+            y: z.number().min(0).max(1),
+            ox: z.number().min(-0.5).max(0.5).optional(),
+            oy: z.number().min(-0.5).max(0.5).optional(),
+          })
+          .nullable(),
       })
       .parse(d),
   )
@@ -854,7 +861,7 @@ export const setKioskCameraSpot = createServerFn({ method: "POST" })
       .maybeSingle();
     if (readErr) throw new Error("This needs the latest update (migration 0090).");
     const spots = normaliseSpots(row?.camera_spot);
-    if (data.spot) spots[data.way] = data.spot;
+    if (data.spot) spots[data.way] = normaliseSpots({ [data.way]: data.spot })[data.way]!;
     else delete spots[data.way];
     const next = Object.keys(spots).length ? spots : null;
     await db.from("kiosk_devices").update({ camera_spot: next }).eq("id", dev.id);

@@ -1646,6 +1646,13 @@ export const doorTabletsCopy = branded({
   spotUpright: "Upright",
   spotPreview: "Preview",
   spotReset: "Use the suggestion",
+  spotMovePreview: "Drag to move the preview",
+  spotNudge: "Move the preview",
+  spotLeft: "Left",
+  spotUp: "Up",
+  spotDown: "Down",
+  spotRight: "Right",
+  spotCentre: "Back by the camera",
   cameraTitle: "Let me view this tablet's camera",
   cameraBody:
     "You'll see a picture from the tablet's front camera every few seconds while you have the camera view open: nothing is recorded, and the tablet says \"Camera on: your host is viewing\" the whole time. It pauses while a guest is checking in. Cameras that see guests are CCTV: in the UK, put up a clear notice by the tablet saying it has a camera and who to contact, mention it in your privacy notice, and only use it for security.",
