@@ -3565,6 +3565,9 @@ export const guestCard = branded({
   addFacePhoto: "Face photo",
   anotherAdult: "Another adult",
   photoAdded: "Photo added",
+  registerFilled: "Guest register filled in",
+  registerToFinish: "Finish their entry in the guest register",
+  idExpired: "The ID has expired",
   photoNeedsRegistration:
     "Photos are only kept once you've confirmed your data regulator registration.",
   photoSettings: "Open the setting",
