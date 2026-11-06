@@ -1039,13 +1039,45 @@ html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
   font-size: calc(8cqmin * var(--j-fit, 1)) !important;
   min-height: calc(15cqmin * var(--j-fit, 1));
 }
-/* A camera screen's message floats over it for 2 seconds (CheckInFlow), in the card's colours turned round. */
+/* A camera screen's message floats over it for 3 seconds (CheckInFlow) on a see-through dark panel. */
 [data-kiosk-jumbo] [data-kiosk-flow] main p[data-camera-note] {
-  background: var(--j-ink);
-  color: var(--j-bg) !important;
-  border: max(3px, 0.6cqmin) solid var(--j-edge);
+  color: #ffffff !important;
   font-size: 5cqmin !important;
   line-height: 1.15;
   padding: 3cqmin 4cqmin;
   width: min(80cqw, 60cqmin * 1.6);
+}
+/* The last screen: door codes large on the left, the guide's QR on the right. */
+[data-kiosk-jumbo] [data-kiosk-flow] main > section[data-jumbo-done] {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  align-items: center;
+}
+[data-kiosk-jumbo] [data-jumbo-done] [data-jumbo-cardqr] {
+  height: 100%;
+}
+[data-kiosk-jumbo] [data-jumbo-done] .card-soft {
+  background: transparent;
+  border: max(3px, 0.6cqmin) solid var(--j-ink);
+  border-radius: 2cqmin;
+  box-shadow: none;
+  padding: 2.5cqmin 3cqmin;
+  margin: 0;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-done] .card-soft h2 {
+  font-size: calc(4.5cqmin * var(--j-fit, 1));
+  font-weight: 700;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-done] .card-soft p.font-mono {
+  font-size: calc(10cqmin * var(--j-fit, 1));
+  font-weight: 700;
+  line-height: 1.05;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-done] .card-soft :is(p, li):not(.font-mono) {
+  font-size: calc(3.5cqmin * var(--j-fit, 1));
+}
+[data-kiosk-jumbo] [data-jumbo-done] [data-jumbo-cardqr] img {
+  max-height: 48cqmin;
+  width: auto;
+  max-width: 100%;
 }

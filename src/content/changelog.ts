@@ -46,6 +46,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.134.3",
+    date: "2026-11-06",
+    title: "Jumbo's last screen: door codes and the guide",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Jumbo: the last screen shows the door codes on the left and the stay guide's QR code on the right, with Someone else at the bottom left and I'm done at the bottom right.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Messages on a door tablet's camera screen sit on a see-through panel and stay for 3 seconds.",
+      },
+    ],
+  },
+  {
     version: "0.134.2",
     date: "2026-11-06",
     title: "Jumbo door tablets, tidied",
