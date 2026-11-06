@@ -1395,7 +1395,7 @@ export function CheckInFlow({
                       variant="outline"
                       onClick={() => setStep({ name: "letter" })}
                     >
-                      {copy.idFirstOther}
+                      {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
                     </Button>
                   </div>
                 </>
@@ -1417,7 +1417,7 @@ export function CheckInFlow({
                         className="w-full"
                         onClick={() => setStep({ name: "letter" })}
                       >
-                        {copy.idFirstOther}
+                        {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
                       </Button>
                     }
                     camera={({ facing, onFail, panel }) => (
@@ -1440,7 +1440,7 @@ export function CheckInFlow({
                               className="w-full"
                               onClick={() => setStep({ name: "letter" })}
                             >
-                              {copy.idFirstOther}
+                              {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
                             </Button>
                           </>
                         }
@@ -1470,7 +1470,7 @@ export function CheckInFlow({
                       {copy.idConsentAgree}
                     </Button>
                     <Button size="touch" variant="outline" onClick={() => fallback("photo_id")}>
-                      {copy.idUseOther}
+                      {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
                     </Button>
                   </div>
                 </>
@@ -1492,7 +1492,7 @@ export function CheckInFlow({
                         className="w-full"
                         onClick={() => fallback("photo_id")}
                       >
-                        {copy.idUseOther}
+                        {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
                       </Button>
                     }
                     camera={({ facing, onFail, panel }) => (
@@ -1515,7 +1515,7 @@ export function CheckInFlow({
                               className="w-full"
                               onClick={() => fallback("photo_id")}
                             >
-                              {copy.idUseOther}
+                              {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
                             </Button>
                           </>
                         }
@@ -1603,7 +1603,7 @@ export function CheckInFlow({
                       disabled={busy}
                       onClick={() => void onSkipCompanion(step.position)}
                     >
-                      {copy.companionSkip}
+                      {jumbo ? copy.jumboWords.skip : copy.companionSkip}
                     </Button>
                   </div>
                 </>
@@ -1627,7 +1627,7 @@ export function CheckInFlow({
                         disabled={busy}
                         onClick={() => void onSkipCompanion(step.position)}
                       >
-                        {copy.companionSkip}
+                        {jumbo ? copy.jumboWords.skip : copy.companionSkip}
                       </Button>
                     }
                     camera={({ facing, onFail, panel }) => (
@@ -1651,7 +1651,7 @@ export function CheckInFlow({
                               disabled={busy}
                               onClick={() => void onSkipCompanion(step.position)}
                             >
-                              {copy.companionSkip}
+                              {jumbo ? copy.jumboWords.skip : copy.companionSkip}
                             </Button>
                           </>
                         }
@@ -1716,7 +1716,7 @@ export function CheckInFlow({
                       disabled={busy}
                       onClick={() => faceDone()}
                     >
-                      {copy.faceSkip}
+                      {jumbo ? copy.jumboWords.skip : copy.faceSkip}
                     </Button>
                   }
                   camera={({ facing, onFail, panel }) => (
@@ -1743,7 +1743,7 @@ export function CheckInFlow({
                             disabled={busy}
                             onClick={() => faceDone()}
                           >
-                            {copy.faceSkip}
+                            {jumbo ? copy.jumboWords.skip : copy.faceSkip}
                           </Button>
                         </>
                       }
@@ -1906,7 +1906,8 @@ export function CheckInFlow({
                 disabled={busy}
                 onClick={() => void handOver()}
               >
-                <HandHeart className="size-5" /> {copy.handoverCta}
+                <HandHeart className="size-5" />{" "}
+                {jumbo ? copy.jumboWords.askHost : copy.handoverCta}
               </Button>
             </div>
           ) : null}

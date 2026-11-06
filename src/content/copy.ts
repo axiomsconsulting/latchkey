@@ -2150,9 +2150,16 @@ export const guest = branded({
   faceTake: "Take photo",
   faceTimer: "Take photo in 3 seconds",
   cameraIsHere: "The camera is here",
-  jumboId: "Hold your ID up to the camera",
-  jumboFace: "Look at the camera",
-  jumboPhone: "Or use your phone",
+  jumboId: "Show your ID",
+  jumboFace: "Look here",
+  jumboPhone: "Or use phone",
+  // Jumbo door tablets: one or two words in place of the longer labels.
+  jumboWords: {
+    noId: "No ID?",
+    otherWay: "Other way",
+    skip: "Skip",
+    askHost: "Ask host",
+  },
   autoSnap: {
     id: {
       look: "Show your whole ID",

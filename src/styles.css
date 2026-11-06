@@ -876,7 +876,17 @@ html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
 }
 [data-kiosk-jumbo] [data-jumbo-preview] video,
 [data-kiosk-jumbo] [data-jumbo-preview] img {
-  max-height: calc(var(--kiosk-h, 100vh) * 0.34);
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+}
+/* No small print anywhere: footers, small notes and links go; errors and the camera's words stay. */
+[data-kiosk-jumbo] [data-kiosk-footer] {
+  display: none;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main :is(.text-xs, .text-sm):not([role="alert"]):not([data-jumbo-preview] *) {
+  display: none;
 }
 /* Words on the camera picture keep their own look. */
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-preview] p {
@@ -905,4 +915,10 @@ html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
 [data-kiosk-jumbo] [data-jumbo-qr] {
   width: calc(var(--kiosk-h, 100vh) * 0.15);
   height: calc(var(--kiosk-h, 100vh) * 0.15);
+}
+/* Ask host, straight under the step without a rule or a gap. */
+[data-kiosk-jumbo] [data-kiosk-flow] main > .border-t {
+  margin-top: 0.4em;
+  padding-top: 0;
+  border-top: 0;
 }
