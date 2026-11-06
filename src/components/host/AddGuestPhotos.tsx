@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { common, guestCard as copy } from "@/content/copy";
 import { addGuestPhoto } from "@/lib/guests.functions";
+import { checkInMark } from "@/lib/booking-list";
 import { fromFile } from "@/lib/photo-file";
 
 /**
@@ -62,11 +63,26 @@ export function AddGuestPhotos({
     if (!f) return;
     setBusy(true);
     try {
-      const { small } = await fromFile(f);
-      await send({ data: { bookingId, position: Number(who), kind, image: small } });
+      const { full, small } = await fromFile(f);
+      const res = await send({
+        data: { bookingId, position: Number(who), kind, image: small, full },
+      });
       await qc.invalidateQueries({ queryKey: ["guest", bookingId] });
       await qc.invalidateQueries({ queryKey: ["checkin-marks"] });
-      toast.success(copy.photoAdded);
+      const read = res.read;
+      if (!read) toast.success(copy.photoAdded);
+      else {
+        const verdict = checkInMark(read.result)?.word ?? copy.photoAdded;
+        const reg =
+          read.register === "saved"
+            ? copy.registerFilled
+            : read.register === "missing"
+              ? copy.registerToFinish
+              : "";
+        toast.success(
+          [verdict, reg, read.expired ? copy.idExpired : ""].filter(Boolean).join(". "),
+        );
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
     } finally {

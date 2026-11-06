@@ -432,6 +432,12 @@ export const addGuestPhoto = createServerFn({ method: "POST" })
           .string()
           .max(560_000)
           .regex(/^data:image\/jpeg;base64,/),
+        /** A larger copy for reading the ID; never kept. */
+        full: z
+          .string()
+          .max(3_000_000)
+          .regex(/^data:image\/jpeg;base64,/)
+          .optional(),
       })
       .parse(d),
   )
@@ -441,7 +447,9 @@ export const addGuestPhoto = createServerFn({ method: "POST" })
     // RLS: only this business's team can see the stay.
     const { data: b } = await context.supabase
       .from("bookings")
-      .select("id, property_id, check_out_date, guest_full_name, id_check_status")
+      .select(
+        "id, property_id, check_in_date, check_out_date, guest_full_name, id_check_status, room_id",
+      )
       .eq("id", data.bookingId)
       .maybeSingle();
     if (!b) throw new Error("We couldn't find that stay.");
@@ -450,7 +458,7 @@ export const addGuestPhoto = createServerFn({ method: "POST" })
     const db = (await admin()) as unknown as { from: (t: string) => any };
     const { data: p } = await db
       .from("properties")
-      .select("guest_records, is_demo")
+      .select("guest_records, is_demo, host_id, name, country_code, timezone")
       .eq("id", b.property_id)
       .single();
     if (p?.is_demo) throw new Error("Photos aren't kept in the demo.");
@@ -489,9 +497,174 @@ export const addGuestPhoto = createServerFn({ method: "POST" })
       });
       if (error) throw new Error(error.message);
     }
-    // The lead guest's ID added by the host: say so on Bookings, unless a real check already passed.
-    const checked = ["matched", "id_read", "partial", "not_matched"];
-    if (data.kind === "id" && data.position === 0 && !checked.includes(b.id_check_status ?? ""))
-      await db.from("bookings").update({ id_check_status: "host_added" }).eq("id", b.id);
-    return { ok: true };
+    if (data.kind === "face") return { ok: true as const, read: null };
+    const read = await readHostUpload(db, {
+      booking: b,
+      property: p,
+      position: data.position,
+      image: data.full ?? data.image,
+    });
+    return { ok: true as const, read };
   });
+
+/**
+ * The ID photo a host added is checked like one taken at the door: read (same reader, demo/live
+ * switch and usage count as the kiosk), judged, the person's details and check filled in, the stay's
+ * status set (hostReadOutcome), and the UK register entry written when everything it needs was on
+ * the ID. Anything missing (the next destination, say) is left for the register's own form.
+ */
+async function readHostUpload(
+  db: { from: (t: string) => any },
+  o: {
+    booking: {
+      id: string;
+      property_id: string;
+      check_in_date: string;
+      guest_full_name: string | null;
+      id_check_status: string | null;
+      room_id: string | null;
+    };
+    property: {
+      host_id: string;
+      name: string;
+      country_code: string | null;
+      timezone: string | null;
+    };
+    position: number;
+    image: string;
+  },
+): Promise<{ result: string; register: "saved" | "missing" | "none"; expired: boolean } | null> {
+  const { hostModes, readIdDetails } = await import("./checkin.server");
+  const { judgeId } = await import("./guest-records");
+  const { hostReadOutcome } = await import("./host-id-read");
+  const { todayInZone } = await import("./dates");
+  let read: import("./guest-records").IdRead;
+  if ((await hostModes(o.property.host_id)).id_check === "demo") {
+    // Demo mode: a sample read, as at the door.
+    read = {
+      isIdDocument: true,
+      hasHolderPhoto: true,
+      looksHomemade: false,
+      documentType: "passport",
+      fullName: o.position === 0 ? (o.booking.guest_full_name ?? "Sample Guest") : "Sample Guest",
+      dateOfBirth: null,
+      expiryDate: "2031-01-01",
+      issuingCountry: "United Kingdom",
+      numberLast4: "0000",
+      nationality: "GBR",
+      documentNumber: null,
+      placeOfIssue: null,
+    };
+  } else {
+    const { jobAllowed, bumpUsage } = await import("./usage.server");
+    // Reading switched off: the photo is kept as added by the host, for checking by eye.
+    if (!(await jobAllowed("ai_id_reading"))) {
+      const out = hostReadOutcome({
+        position: o.position,
+        readable: false,
+        idName: null,
+        bookingName: o.booking.guest_full_name,
+      });
+      if (out.status) await markStay(db, o.booking, out.status);
+      return null;
+    }
+    await bumpUsage(o.property.host_id, "ai:id_read");
+    try {
+      read = await readIdDetails(o.image);
+    } catch {
+      return null;
+    }
+  }
+  const verdict = judgeId(read, todayInZone(o.property.timezone ?? "Europe/London"));
+  const out = hostReadOutcome({
+    position: o.position,
+    readable: verdict.ok,
+    idName: read.fullName,
+    bookingName: o.booking.guest_full_name,
+  });
+  await db
+    .from("guest_ids")
+    .update({
+      ...(verdict.ok
+        ? {
+            full_name: read.fullName,
+            document_type: read.documentType,
+            issuing_country: read.issuingCountry,
+            date_of_birth: read.dateOfBirth,
+            document_expiry: read.expiryDate,
+            document_last4: read.numberLast4,
+          }
+        : {}),
+      name_match: out.nameMatch,
+      id_checked: out.idChecked,
+    })
+    .eq("booking_id", o.booking.id)
+    .eq("position", o.position);
+  if (out.status) await markStay(db, o.booking, out.status);
+  // A stay with no name yet takes the one on the lead guest's ID.
+  if (o.position === 0 && verdict.ok && !o.booking.guest_full_name?.trim() && read.fullName)
+    await db.from("bookings").update({ guest_full_name: read.fullName }).eq("id", o.booking.id);
+
+  // The UK register: written when the ID had everything it needs.
+  let register: "saved" | "missing" | "none" = "none";
+  const { registerApplies, registerFromRead, registerKeepUntil } = await import("./hotel-register");
+  if (verdict.ok && registerApplies(o.property.country_code)) {
+    const plan = registerFromRead(read);
+    register = "missing";
+    if (plan.kind === "saved") {
+      const { data: room } = o.booking.room_id
+        ? await db.from("rooms").select("display_name").eq("id", o.booking.room_id).maybeSingle()
+        : { data: null };
+      const { data: test } = await db
+        .from("bookings")
+        .select("is_test")
+        .eq("id", o.booking.id)
+        .maybeSingle();
+      const row = {
+        host_id: o.property.host_id,
+        property_id: o.booking.property_id,
+        property_name: o.property.name,
+        booking_id: o.booking.id,
+        room_name: room?.display_name ?? null,
+        position: o.position,
+        arrival_date: o.booking.check_in_date,
+        full_name: plan.entry.fullName,
+        nationality: plan.entry.nationality,
+        is_alien: plan.entry.alien,
+        document_number: plan.entry.documentNumber,
+        place_of_issue: plan.entry.placeOfIssue,
+        next_destination: plan.entry.nextDestination,
+        next_address: plan.entry.nextAddress,
+        source: "host",
+        keep_until: registerKeepUntil(o.booking.check_in_date),
+        ...(test?.is_test ? { is_demo: true } : {}),
+      };
+      const { data: prev } = await db
+        .from("guest_register")
+        .select("id")
+        .eq("booking_id", o.booking.id)
+        .eq("position", o.position)
+        .maybeSingle();
+      const { error } = prev
+        ? await db.from("guest_register").update(row).eq("id", prev.id)
+        : await db.from("guest_register").insert(row);
+      register = error ? "missing" : "saved";
+    }
+  }
+  return {
+    result: out.status ?? (out.idChecked ? "id_read" : "host_added"),
+    register,
+    expired: verdict.ok && verdict.expired,
+  };
+}
+
+/** The lead guest's ID: a real check that already passed at the door is never replaced by a weaker one. */
+async function markStay(
+  db: { from: (t: string) => any },
+  b: { id: string; id_check_status: string | null },
+  status: string,
+) {
+  const passed = ["matched", "id_read"];
+  if (passed.includes(b.id_check_status ?? "") && !passed.includes(status)) return;
+  await db.from("bookings").update({ id_check_status: status }).eq("id", b.id);
+}
