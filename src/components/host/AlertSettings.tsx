@@ -74,12 +74,14 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
     telegram: d.telegram.ready,
     email: !!d.email.address,
     sms: d.sms.ready && !!d.sms.phone,
+    whatsapp: !!d.whatsapp?.ready && !!d.whatsapp?.phone,
   };
   const why: Record<string, string | null> = {
     push: d.push.ready ? null : copy.notReady,
     telegram: d.telegram.ready ? null : copy.notReady,
     email: !d.email.address ? copy.noEmail : !d.email.live ? copy.emailDemo : null,
     sms: !d.sms.ready ? copy.notReady : !d.sms.phone ? copy.noPhone : null,
+    whatsapp: !d.whatsapp?.ready ? copy.notReady : !d.whatsapp?.phone ? copy.noPhone : null,
   };
 
   return (
@@ -100,7 +102,7 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
       </div>
 
       <ul className="divide-y divide-border rounded-2xl border border-border">
-        {(["push", "telegram", "email", "sms"] as const).map((ch) => {
+        {(["push", "telegram", "email", "sms", "whatsapp"] as const).map((ch) => {
           const [name, about] = copy.channels[ch]!;
           return (
             <li key={ch} className="space-y-2 p-3">
@@ -238,6 +240,17 @@ export function AlertSettings({ hostId, canWrite }: { hostId: string; canWrite: 
                     </span>
                   ))}
                 </div>
+              ) : null}
+
+              {ch === "whatsapp" && ready.whatsapp && prefs.whatsapp ? (
+                <label className="flex items-center gap-2 pl-1 text-sm">
+                  <Switch
+                    checked={prefs.whatsappUrgentOnly}
+                    disabled={!canWrite || busy !== null}
+                    onCheckedChange={(v) => void setPref({ whatsappUrgentOnly: v })}
+                  />
+                  {copy.whatsappUrgentOnly}
+                </label>
               ) : null}
 
               {ch === "sms" && ready.sms && prefs.sms ? (

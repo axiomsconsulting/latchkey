@@ -6,7 +6,7 @@
  */
 
 /** Templates Meta must approve before WhatsApp lets a business message a guest first. */
-export const WHATSAPP_TEMPLATES = ["photo_link", "welcome", "goodbye"] as const;
+export const WHATSAPP_TEMPLATES = ["photo_link", "welcome", "goodbye", "host_alert"] as const;
 export type WhatsAppTemplateKey = (typeof WHATSAPP_TEMPLATES)[number];
 
 export type WhatsAppSettings = {

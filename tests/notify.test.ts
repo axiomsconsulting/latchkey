@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_PREFS, alertPath, channelsFor, normalisePrefs, smsText } from "../src/lib/notify";
+import {
+  DEFAULT_PREFS,
+  alertPath,
+  channelsFor,
+  normalisePrefs,
+  smsText,
+  URGENT,
+} from "../src/lib/notify";
 import { fromB64url, newVapidKeys, vapidAuth } from "../src/lib/webpush";
 
 const all = { email: true, push: true, telegram: true, sms: true };
@@ -79,5 +86,29 @@ describe("web push signing", () => {
       new TextEncoder().encode(`${m[1]}.${m[2]}`),
     );
     expect(ok).toBe(true);
+  });
+});
+
+describe("WhatsApp alerts to hosts", () => {
+  const all = { email: true, push: true, telegram: true, sms: true, whatsapp: true };
+  const prefs = { ...DEFAULT_PREFS, whatsapp: true };
+  it("are off until the host turns them on", () => {
+    expect(channelsFor("id_mismatch", DEFAULT_PREFS, all)).not.toContain("whatsapp");
+  });
+  it("send urgent alerts only, unless the host asks for all", () => {
+    expect(channelsFor("id_mismatch", prefs, all)).toContain("whatsapp");
+    expect(channelsFor("room_needed", prefs, all)).toContain("whatsapp");
+    expect(channelsFor("service_request", prefs, all)).not.toContain("whatsapp");
+    expect(channelsFor("service_request", { ...prefs, whatsappUrgentOnly: false }, all)).toContain(
+      "whatsapp",
+    );
+  });
+  it("need Latchkey's WhatsApp set up", () => {
+    expect(channelsFor("id_mismatch", prefs, { ...all, whatsapp: false })).not.toContain(
+      "whatsapp",
+    );
+  });
+  it("treat an ID that doesn't match as urgent", () => {
+    expect(URGENT).toContain("id_mismatch");
   });
 });

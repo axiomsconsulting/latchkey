@@ -36,6 +36,7 @@ export function WhatsAppAdmin() {
         photo_link: q.data.templates.photo_link ?? "",
         welcome: q.data.templates.welcome ?? "",
         goodbye: q.data.templates.goodbye ?? "",
+        host_alert: q.data.templates.host_alert ?? "",
       },
     };
     setForm(f);

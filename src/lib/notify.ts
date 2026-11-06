@@ -5,8 +5,8 @@ import { rebrand } from "@/lib/brand";
  * which channels exist at all (keys set) and can switch each off. Pure.
  */
 
-export type Channel = "email" | "push" | "telegram" | "sms";
-export const CHANNELS: Channel[] = ["email", "push", "telegram", "sms"];
+export type Channel = "email" | "push" | "telegram" | "sms" | "whatsapp";
+export const CHANNELS: Channel[] = ["email", "push", "telegram", "sms", "whatsapp"];
 
 export type AlertKind =
   | "lockout"
@@ -26,7 +26,7 @@ export type AlertKind =
   | "test";
 
 /** Kinds that need the host now: the only ones sent by SMS unless the host asks for everything. */
-export const URGENT: AlertKind[] = ["lockout", "handover", "party", "room_needed"];
+export const URGENT: AlertKind[] = ["lockout", "handover", "party", "room_needed", "id_mismatch"];
 
 export type NotifyPrefs = {
   email: boolean;
@@ -35,6 +35,9 @@ export type NotifyPrefs = {
   sms: boolean;
   /** SMS costs money per message: by default only urgent alerts go by text. */
   smsUrgentOnly: boolean;
+  /** WhatsApp through Latchkey's number: off until the host turns it on, then urgent only. */
+  whatsapp: boolean;
+  whatsappUrgentOnly: boolean;
 };
 
 export const DEFAULT_PREFS: NotifyPrefs = {
@@ -43,6 +46,8 @@ export const DEFAULT_PREFS: NotifyPrefs = {
   telegram: true,
   sms: false,
   smsUrgentOnly: true,
+  whatsapp: false,
+  whatsappUrgentOnly: true,
 };
 
 export function normalisePrefs(raw: unknown): NotifyPrefs {
@@ -71,6 +76,12 @@ export function channelsFor(kind: AlertKind, prefs: NotifyPrefs, available: Avai
     (!prefs.smsUrgentOnly || URGENT.includes(kind) || kind === "test")
   )
     out.push("sms");
+  if (
+    prefs.whatsapp &&
+    available.whatsapp &&
+    (!prefs.whatsappUrgentOnly || URGENT.includes(kind) || kind === "test")
+  )
+    out.push("whatsapp");
   return out;
 }
 

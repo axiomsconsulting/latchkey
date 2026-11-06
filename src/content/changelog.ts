@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.134.0",
+    date: "2026-11-06",
+    title: "Check-ins keep going, you're told at once",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "A guest who can't find their booking can carry on with their ID and selfie, and you're told straight away to give them a room.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "An ID that doesn't match the booking is now an urgent alert: it pops up in your dashboard, and goes by email, text or WhatsApp as you choose.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Alerts on WhatsApp: turn it on in Settings → Alerts and apps once Latchkey has it set up.",
+      },
+    ],
+  },
+  {
     version: "0.133.1",
     date: "2026-11-06",
     title: "Host-added IDs are checked",

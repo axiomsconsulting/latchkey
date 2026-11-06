@@ -63,6 +63,10 @@ export async function notifyHost(input: {
       push: !!keys && (subs ?? []).length > 0 && (await allowed("push_alerts")),
       telegram: !!telegramToken() && (chats ?? []).length > 0 && (await allowed("telegram_alerts")),
       sms: !!twilio() && !!phone && (await allowed("sms_alerts")),
+      whatsapp:
+        !!phone &&
+        (await import("./guest-messaging.server").then((m) => m.hostWhatsAppReady())) &&
+        (await allowed("whatsapp_alerts")),
     };
     const send = channelsFor(input.kind, prefs, available).filter(
       (c) => !(input.skip ?? []).includes(c),
@@ -140,6 +144,12 @@ export async function notifyHost(input: {
       const ok = await sendSms(phone, smsText(input.kind, input.message, link));
       result.sms = ok ? "sent" : "failed";
       if (ok) await bumpUsage(input.hostId, "sms:sent");
+    }
+    if (send.includes("whatsapp") && phone) {
+      const { sendHostWhatsApp } = await import("./guest-messaging.server");
+      const ok = await sendHostWhatsApp(phone, [title, input.message, link]);
+      result.whatsapp = ok ? "sent" : "failed";
+      if (ok) await bumpUsage(input.hostId, "whatsapp:alert");
     }
   } catch (err) {
     console.error("Host notification failed", err instanceof Error ? err.message : err);

@@ -78,6 +78,10 @@ export const getNotifySettings = createServerFn({ method: "GET" })
       push: { ready: !!pushKeys(), publicKey: pushKeys()?.publicKey ?? null },
       telegram: { ready: !!botName, bot: botName },
       sms: { ready: !!twilio(), phone: phoneOk ? host!.contact_phone : null },
+      whatsapp: {
+        ready: await import("./guest-messaging.server").then((m) => m.hostWhatsAppReady()),
+        phone: phoneOk ? host!.contact_phone : null,
+      },
       devices: (devices ?? []) as Array<{
         id: string;
         device: string | null;
@@ -114,6 +118,8 @@ const prefsSchema = z.object({
   telegram: z.boolean(),
   sms: z.boolean(),
   smsUrgentOnly: z.boolean(),
+  whatsapp: z.boolean().optional(),
+  whatsappUrgentOnly: z.boolean().optional(),
 });
 
 export const saveNotifyPrefs = createServerFn({ method: "POST" })
