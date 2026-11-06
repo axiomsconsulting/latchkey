@@ -369,6 +369,16 @@ export function IdCamera({
     <>
       <video
         ref={videoRef}
+        // The standard door tablet layout: the picture takes what's left of the card once the words
+        // and buttons fit, so the text never has to shrink for it.
+        style={
+          standard
+            ? {
+                maxHeight:
+                  "max(9rem, min(calc(var(--kiosk-h, 100dvh) * 0.5), calc(var(--photo-h, 100dvh) - 17rem)))",
+              }
+            : undefined
+        }
         playsInline
         muted
         // Stacked: never taller than about half the screen, so the button below stays in view.
@@ -378,7 +388,7 @@ export function IdCamera({
           "aspect-[4/3] w-full object-cover",
           !callout &&
             (standard
-              ? "max-h-[calc(var(--kiosk-h,100dvh)*0.5)]"
+              ? ""
               : side
                 ? "max-h-[min(calc(var(--kiosk-h,100dvh)*0.58),calc(var(--kiosk-h,100dvh)-28rem))]"
                 : "max-h-[calc(var(--kiosk-h,100dvh)*0.46)]"),
@@ -514,7 +524,7 @@ export function IdCamera({
             data-jumbo-preview
             style={{
               aspectRatio: ratio,
-              width: `min(100%, calc(var(--kiosk-h, 100vh) * 0.46 * ${ratio}))`,
+              width: `min(100%, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.46 * ${ratio}))`,
             }}
           >
             {preview}
@@ -541,8 +551,11 @@ export function IdCamera({
         ) : null}
         <div className="space-y-3">
           <div className="relative overflow-hidden rounded-2xl bg-muted">{preview}</div>
-          {takeButton}
-          {aside}
+          {/* Take photo with the small phone square beside it, so the picture keeps the height. */}
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">{takeButton}</div>
+            {aside ? <div className="shrink-0">{aside}</div> : null}
+          </div>
         </div>
         {side ? null : (
           <div className="space-y-4">

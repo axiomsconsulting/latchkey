@@ -83,41 +83,49 @@ export function useKioskStage(on: boolean, spot: Spot | null): CameraCallout | n
 }
 
 /**
- * Keeps a block's content inside it: if it doesn't fit, its children are zoomed down step by step
- * until all of it shows, and back to full size when it fits again.
+ * Keeps a block's content inside it, without CSS zoom (older tablet browsers, Chrome before 128,
+ * draw zoomed text far too small inside a calibrated page and miss taps on zoomed buttons). If the
+ * block overflows, the page's text scale (the html font size every kiosk size is in rem) steps
+ * down, or on Jumbo its own scale (--j-fit); it never grows back within a screen, so nothing jumps.
+ * It checks when the screen opens and a moment later, not on every change inside: the camera's
+ * outline updates several times a second and must never move the buttons.
  */
-export function useFitBox(ref: { current: HTMLElement | null }, key: string | null) {
+export function useFitBox(
+  ref: { current: HTMLElement | null },
+  key: string | null,
+  mode: "rem" | "jumbo" = "rem",
+) {
   useEffect(() => {
     if (key === null) return;
-    let frame = 0;
-    let el: HTMLElement | null = null;
+    const html = document.documentElement;
+    // Text never goes below 85% of its size when this screen opened.
+    const floor = Math.max(
+      11,
+      (Number.parseFloat(window.getComputedStyle(html).fontSize) || 16) * 0.85,
+    );
     const fit = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        el = ref.current;
-        if (!el) return;
-        const box = el;
-        const kids = [...box.children] as HTMLElement[];
-        kids.forEach((k) => (k.style.zoom = ""));
-        let z = 1;
-        for (let i = 0; i < 12 && box.scrollHeight > box.clientHeight + 1 && z > 0.5; i++) {
-          z = z * (box.clientHeight / box.scrollHeight) * 0.99;
-          kids.forEach((k) => (k.style.zoom = String(Math.max(0.5, z))));
+      const box = ref.current;
+      if (!box) return;
+      for (let i = 0; i < 10 && box.scrollHeight > box.clientHeight + 1; i++) {
+        const share = Math.max(0.8, (box.clientHeight / box.scrollHeight) * 0.99);
+        if (mode === "jumbo") {
+          const now = Number.parseFloat(html.style.getPropertyValue("--j-fit")) || 1;
+          if (now <= 0.55) break;
+          html.style.setProperty("--j-fit", String(Math.max(0.55, now * share)));
+        } else {
+          const now = Number.parseFloat(window.getComputedStyle(html).fontSize) || 16;
+          if (now <= floor) break;
+          html.style.fontSize = `${Math.max(floor, now * share)}px`;
         }
-      });
+      }
     };
-    fit();
-    const target = ref.current;
-    const seen = new MutationObserver(fit);
-    if (target) seen.observe(target, { childList: true, subtree: true });
+    const timers = [0, 250, 900].map((ms) => window.setTimeout(fit, ms));
     window.addEventListener("resize", fit);
     return () => {
-      cancelAnimationFrame(frame);
-      seen.disconnect();
+      timers.forEach((t) => window.clearTimeout(t));
       window.removeEventListener("resize", fit);
-      if (el) ([...el.children] as HTMLElement[]).forEach((k) => (k.style.zoom = ""));
     };
-  }, [ref, key]);
+  }, [ref, key, mode]);
 }
 
 /**
@@ -157,5 +165,9 @@ export function useJumboFit(on: boolean, stepKey: string) {
       }
     };
   }, [on, stepKey]);
-  useFitBox(main, on && size ? size : null);
+  useEffect(() => {
+    // Each screen starts at full size again.
+    document.documentElement.style.removeProperty("--j-fit");
+  }, [stepKey]);
+  useFitBox(main, on && size ? size : null, "jumbo");
 }

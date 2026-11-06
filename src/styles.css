@@ -803,13 +803,13 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
 [data-kiosk-jumbo] [data-kiosk-flow] main {
   background: var(--j-bg);
   color: var(--j-ink);
-  border: max(4px, calc(var(--kiosk-h, 100vh) * 0.008)) solid var(--j-edge);
-  border-radius: calc(var(--kiosk-h, 100vh) * 0.03);
+  border: max(4px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.008)) solid var(--j-edge);
+  border-radius: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.03);
   box-shadow: none;
 }
 [data-kiosk-jumbo] [data-kiosk-flow] main h1,
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-title] {
-  font-size: calc(var(--kiosk-h, 100vh) * 0.075);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.075);
   line-height: 1.08;
   font-weight: 700;
   color: var(--j-ink);
@@ -817,7 +817,7 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
 [data-kiosk-jumbo] [data-kiosk-flow] main p,
 [data-kiosk-jumbo] [data-kiosk-flow] main label,
 [data-kiosk-jumbo] [data-kiosk-flow] main li {
-  font-size: calc(var(--kiosk-h, 100vh) * 0.036);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.036);
   line-height: 1.25;
   color: var(--j-ink);
 }
@@ -831,8 +831,8 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
   display: none;
 }
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"] {
-  font-size: calc(var(--kiosk-h, 100vh) * 0.042);
-  min-height: calc(var(--kiosk-h, 100vh) * 0.115);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.042);
+  min-height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.115);
   border-radius: 9999px;
   font-weight: 700;
   padding-inline: 1em;
@@ -849,7 +849,7 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"]:is([data-variant="outline"], [data-variant="secondary"]) {
   background: transparent;
   color: var(--j-ink);
-  border: max(3px, calc(var(--kiosk-h, 100vh) * 0.005)) solid var(--j-ink);
+  border: max(3px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.005)) solid var(--j-ink);
 }
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-slot="button"][data-variant="ghost"] {
   background: transparent;
@@ -859,16 +859,16 @@ html[data-kiosk-lowpower][data-lp-invert] [data-kiosk-root] video {
 }
 /* Typing and picking: boxes as big as the buttons. */
 [data-kiosk-jumbo] [data-kiosk-flow] main :is(input, textarea, [role="combobox"]) {
-  font-size: calc(var(--kiosk-h, 100vh) * 0.04);
-  min-height: calc(var(--kiosk-h, 100vh) * 0.1);
-  border: max(3px, calc(var(--kiosk-h, 100vh) * 0.005)) solid var(--j-ink);
-  border-radius: calc(var(--kiosk-h, 100vh) * 0.02);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.04);
+  min-height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.1);
+  border: max(3px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.005)) solid var(--j-ink);
+  border-radius: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.02);
   background: #ffffff;
   color: #1b1b1b;
 }
 html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
-  font-size: calc(var(--kiosk-h, 100vh) * 0.035);
-  min-height: calc(var(--kiosk-h, 100vh) * 0.08);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.035);
+  min-height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.08);
 }
 /* The photo step: the left half for the words, the right for the preview and the phone. */
 [data-kiosk-jumbo] section:has([data-jumbo-photo]) > h1 {
@@ -891,34 +891,40 @@ html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
 /* Words on the camera picture keep their own look. */
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-preview] p {
   color: #ffffff;
-  font-size: calc(var(--kiosk-h, 100vh) * 0.028);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.028);
   opacity: 1;
 }
 /* Numbers people set (adults, children, ages) read as big as the buttons beside them. */
 [data-kiosk-jumbo] [data-kiosk-flow] main .tabular-nums {
-  font-size: calc(var(--kiosk-h, 100vh) * 0.065);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.065);
   font-weight: 700;
 }
 /* Back, above the card, in the same style. */
 [data-kiosk-jumbo] [data-kiosk-flow] > [data-slot="button"] {
   background: transparent;
   color: var(--j-ink);
-  border: max(3px, calc(var(--kiosk-h, 100vh) * 0.005)) solid var(--j-ink);
+  border: max(3px, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.005)) solid var(--j-ink);
   border-radius: 9999px;
   font-weight: 700;
-  font-size: calc(var(--kiosk-h, 100vh) * 0.03);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.03);
   box-shadow: none;
 }
 [data-kiosk-jumbo] [data-jumbo-phone] {
-  font-size: calc(var(--kiosk-h, 100vh) * 0.032);
+  font-size: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.032);
 }
 [data-kiosk-jumbo] [data-jumbo-qr] {
-  width: calc(var(--kiosk-h, 100vh) * 0.15);
-  height: calc(var(--kiosk-h, 100vh) * 0.15);
+  width: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.15);
+  height: calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.15);
 }
 /* Ask host, straight under the step without a rule or a gap. */
 [data-kiosk-jumbo] [data-kiosk-flow] main > .border-t {
   margin-top: 0.4em;
   padding-top: 0;
   border-top: 0;
+}
+
+/* On a photo screen, "Check in with my host instead" sits straight under the step. */
+html[data-kiosk-photo] [data-kiosk-flow] main[data-kx] > .border-t {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
 }
