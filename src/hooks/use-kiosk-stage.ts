@@ -138,36 +138,10 @@ export function useJumboFit(on: boolean, stepKey: string) {
   const [size, setSize] = useState("");
   useEffect(() => {
     if (!on) return;
-    const html = document.documentElement;
-    const cap = () => {
-      const el = document.querySelector<HTMLElement>("[data-kiosk-flow] main");
-      main.current = el;
-      const r = document.querySelector<HTMLElement>("[data-kiosk-root]");
-      if (!el || !r) return;
-      const box = r.getBoundingClientRect();
-      const zoom = r.offsetWidth ? box.width / r.offsetWidth || 1 : 1;
-      const top = (el.getBoundingClientRect().top - box.top) / zoom;
-      const h = Number.parseFloat(html.style.getPropertyValue("--kiosk-h")) || window.innerHeight;
-      const max = Math.max(200, Math.floor(h - top - 12));
-      el.style.maxHeight = `${max}px`;
-      el.style.overflow = "hidden";
-      setSize(`${stepKey}:${max}`);
-    };
-    cap();
-    const again = requestAnimationFrame(cap);
-    window.addEventListener("resize", cap);
-    return () => {
-      cancelAnimationFrame(again);
-      window.removeEventListener("resize", cap);
-      if (main.current) {
-        main.current.style.maxHeight = "";
-        main.current.style.overflow = "";
-      }
-    };
-  }, [on, stepKey]);
-  useEffect(() => {
-    // Each screen starts at full size again.
+    // Each screen starts at full size again; the card's own height comes from the page (styles.css).
     document.documentElement.style.removeProperty("--j-fit");
-  }, [stepKey]);
+    main.current = document.querySelector<HTMLElement>("[data-kiosk-flow] main");
+    setSize(stepKey);
+  }, [on, stepKey]);
   useFitBox(main, on && size ? size : null, "jumbo");
 }

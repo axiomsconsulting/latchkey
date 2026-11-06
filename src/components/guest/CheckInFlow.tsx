@@ -1,3 +1,4 @@
+import { JumboSlot } from "@/components/guest/JumboSlot";
 import { DoorCodeCard, type GuestDoor } from "@/components/guest/DoorCodeCard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -533,6 +534,11 @@ export function CheckInFlow({
       idFirstTries.current += 1;
       if (idFirstTries.current < 2)
         return setMessage(res.reason === "not_photo_id" ? copy.idNotPhotoId : copy.idRetryPlain);
+    }
+    if ((res.status !== "matched" || !res.token) && forceFind.current) {
+      // They'd already tried the usual way: never send them back round. The host is told at once.
+      forceFind.current = false;
+      return void handOver();
     }
     if (res.status !== "matched" || !res.token) {
       // Found the usual way instead; the same photo is then their ID check.
@@ -1070,24 +1076,26 @@ export function CheckInFlow({
       className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}
     >
       {canGoBack ? (
-        <Button
-          variant="ghost"
-          size="lg"
-          className="mb-4"
-          onClick={() =>
-            setStep(
-              step.name === "letter" || step.name === "idFirst"
-                ? { name: "welcome" }
-                : step.name === "checkout" || step.name === "checkout3" || step.name === "pick"
-                  ? { name: "letter" }
-                  : flow.checkout === "three"
+        <JumboSlot on={jumbo} to="jumbo-back">
+          <Button
+            variant="ghost"
+            size="lg"
+            className="mb-4"
+            onClick={() =>
+              setStep(
+                step.name === "letter" || step.name === "idFirst"
+                  ? { name: "welcome" }
+                  : step.name === "checkout" || step.name === "checkout3" || step.name === "pick"
                     ? { name: "letter" }
-                    : { name: "checkout" },
-            )
-          }
-        >
-          <ArrowLeft className="size-5" /> {copy.back}
-        </Button>
+                    : flow.checkout === "three"
+                      ? { name: "letter" }
+                      : { name: "checkout" },
+              )
+            }
+          >
+            <ArrowLeft className="size-5" /> {copy.back}
+          </Button>
+        </JumboSlot>
       ) : null}
 
       <div
@@ -1317,14 +1325,16 @@ export function CheckInFlow({
                 >
                   {copy.continueWithId}
                 </Button>
-                <Button
-                  size="touch"
-                  variant="outline"
-                  className="w-full max-w-md"
-                  onClick={() => setStep({ name: "letter" })}
-                >
-                  {copy.startAgain}
-                </Button>
+                <JumboSlot on={jumbo} to="jumbo-status">
+                  <Button
+                    size="touch"
+                    variant="outline"
+                    className="w-full max-w-md"
+                    onClick={() => setStep({ name: "letter" })}
+                  >
+                    {copy.startAgain}
+                  </Button>
+                </JumboSlot>
                 <HostCall phone={hostPhone} />
               </div>
             </section>
@@ -1830,14 +1840,16 @@ export function CheckInFlow({
               </p>
               <div className="mt-8 flex flex-col items-center gap-3">
                 <HostCall phone={hostPhone} />
-                <Button
-                  size="touch"
-                  variant="ghost"
-                  className="w-full max-w-md"
-                  onClick={() => setStep(step.back)}
-                >
-                  {copy.handoverResume}
-                </Button>
+                <JumboSlot on={jumbo} to="jumbo-status">
+                  <Button
+                    size="touch"
+                    variant="ghost"
+                    className="w-full max-w-md"
+                    onClick={() => setStep(step.back)}
+                  >
+                    {copy.handoverResume}
+                  </Button>
+                </JumboSlot>
               </div>
             </section>
           ) : null}
@@ -1921,18 +1933,20 @@ export function CheckInFlow({
           ) : null}
 
           {canHandOver ? (
-            <div className="mt-8 border-t border-border pt-4 text-center">
-              <Button
-                variant="ghost"
-                size="lg"
-                className="text-muted-foreground"
-                disabled={busy}
-                onClick={() => void handOver()}
-              >
-                <HandHeart className="size-5" />{" "}
-                {jumbo ? copy.jumboWords.askHost : copy.handoverCta}
-              </Button>
-            </div>
+            <JumboSlot on={jumbo} to="jumbo-status">
+              <div className="mt-8 border-t border-border pt-4 text-center">
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className="text-muted-foreground"
+                  disabled={busy}
+                  onClick={() => void handOver()}
+                >
+                  <HandHeart className="size-5" />{" "}
+                  {jumbo ? copy.jumboWords.askHost : copy.handoverCta}
+                </Button>
+              </div>
+            </JumboSlot>
           ) : null}
         </main>
 

@@ -7,6 +7,7 @@ import { fromFile } from "@/lib/photo-file";
 import { photoFill, photoStage } from "@/lib/photo-progress";
 import { useAutoSnap, type SnapShape } from "@/hooks/use-auto-snap";
 import { CameraCalloutBox, StageExtra } from "@/components/guest/KioskPhotoStage";
+import { JumboSlot } from "@/components/guest/JumboSlot";
 import { useKioskStage } from "@/hooks/use-kiosk-stage";
 import type { Spot } from "@/lib/kiosk-camera-spot";
 import { cn } from "@/lib/utils";
@@ -171,10 +172,13 @@ function SnapOverlay({
   video,
   shape,
   mirrored,
+  whole = false,
 }: {
   video: HTMLVideoElement | null;
   shape: SnapShape;
   mirrored: boolean;
+  /** The picture is shown whole (Jumbo), not filling its box. */
+  whole?: boolean;
 }) {
   if (!video?.videoWidth) return null;
   const colour = shape.good ? "#22c55e" : "#ffffff";
@@ -188,7 +192,7 @@ function SnapOverlay({
   return (
     <svg
       viewBox={`0 0 ${video.videoWidth} ${video.videoHeight}`}
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio={whole ? "xMidYMid meet" : "xMidYMid slice"}
       className={cn("pointer-events-none absolute inset-0 size-full", mirrored && "-scale-x-100")}
       aria-hidden
     >
@@ -297,7 +301,6 @@ export function IdCamera({
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
           const v = videoRef.current;
-          if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
           setReady(true);
         }
         // Device names and counts are only shown once a camera is allowed.
@@ -347,7 +350,6 @@ export function IdCamera({
   const own = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState("");
   // The camera's own shape (width over height), once it's running.
-  const [ratio, setRatio] = useState(4 / 3);
   useLayoutEffect(() => {
     if (!jumbo) return;
     const h = own.current?.closest("section")?.querySelector(":scope > h1");
@@ -405,7 +407,12 @@ export function IdCamera({
       ) : null}
       {ready && kind === "id" && !(shot && busy) && !snap.shape ? <IdHint /> : null}
       {auto && ready && snap.shape && !shot ? (
-        <SnapOverlay video={videoRef.current} shape={snap.shape} mirrored={mirrored} />
+        <SnapOverlay
+          video={videoRef.current}
+          shape={snap.shape}
+          mirrored={mirrored}
+          whole={jumbo}
+        />
       ) : null}
       {auto && ready && !shot && count === null ? (
         <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit max-w-[90%] rounded-full bg-black px-4 py-1.5 text-center text-lg text-white">
@@ -507,30 +514,28 @@ export function IdCamera({
   // phone's square on the right. No floating, no help paragraphs.
   if (jumbo)
     return (
-      <div ref={own} data-jumbo-photo className="grid grid-cols-2 items-center gap-[4%]">
-        <div className="space-y-[1em]">
-          <p className="font-display font-bold leading-[1.08]" data-jumbo-title>
-            {title}
+      <div ref={own} data-jumbo-photo className="grid h-full min-h-0 grid-cols-2 gap-[3cqmin]">
+        <div className="flex min-h-0 flex-col justify-center gap-[2cqmin]">
+          {/* One paragraph, as big as the welcome card's words. */}
+          <p data-jumbo-para className="font-display font-bold">
+            {title.replace(/[.!?]$/, "")}. {kind === "face" ? copy.jumboFace : copy.jumboId}.
           </p>
-          <p data-jumbo-line>{kind === "face" ? copy.jumboFace : copy.jumboId}</p>
           {busy && shot ? <PhotoProgress kind={kind} /> : null}
           {aside}
-          {moreBits}
         </div>
-        <div className="space-y-[0.8em]">
-          {/* The camera's whole picture at its own shape, as large as fits: nothing cropped or squeezed. */}
+        {/* The camera picture and Take photo fill the rest of the card. */}
+        <div className="flex min-h-0 flex-col gap-[2cqmin]">
           <div
-            className="relative mx-auto overflow-hidden rounded-2xl bg-black"
+            className="relative min-h-0 flex-1 overflow-hidden rounded-[2cqmin] bg-black"
             data-jumbo-preview
-            style={{
-              aspectRatio: ratio,
-              width: `min(100%, calc(var(--kiosk-h, 100vh) * var(--j-fit, 1) * 0.46 * ${ratio}))`,
-            }}
           >
             {preview}
           </div>
           {takeButton}
         </div>
+        <JumboSlot on to="jumbo-status">
+          {moreBits}
+        </JumboSlot>
       </div>
     );
 
