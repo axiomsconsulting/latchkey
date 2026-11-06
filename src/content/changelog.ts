@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.131.1",
+    date: "2026-11-06",
+    title: "A tidier photo screen",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "On a door tablet's photo screen, the card no longer covers the Back button, and the QR code for using a phone fills the space under the camera preview.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Fine-tune where the camera preview sits on each door tablet: drag the preview itself, or nudge it with the arrows, in Settings → Door tablets.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Door tablets in Express or with expanded buttons no longer show each screen at the standard size for a moment first.",
+      },
+    ],
+  },
+  {
     version: "0.131.0",
     date: "2026-11-05",
     title: "Demo properties keep their settings",

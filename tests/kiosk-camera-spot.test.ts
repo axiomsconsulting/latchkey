@@ -83,3 +83,60 @@ describe("the floating preview", () => {
     expect(c.box.y).toBe(Math.round(0.1 * 768 + POINTER_SPACE));
   });
 });
+
+describe("fine-tuning and the space left over", () => {
+  const overlap = (a: Rect, b: Rect) =>
+    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  it("moves the preview by the host's nudge, never off the screen", () => {
+    const plain = cameraCallout({ x: 0.5, y: 0 }, { w: 1443, h: 902 }, 72);
+    const moved = cameraCallout({ x: 0.5, y: 0, ox: -0.1, oy: 0.05 }, { w: 1443, h: 902 }, 72);
+    expect(Math.abs(moved.box.x - (plain.box.x - 144.3))).toBeLessThanOrEqual(1);
+    expect(Math.abs(moved.box.y - (plain.box.y + 45.1))).toBeLessThanOrEqual(1);
+    const far = cameraCallout({ x: 0.5, y: 0, ox: 0.5, oy: 0.5 }, { w: 1443, h: 902 }, 72);
+    expect(far.box.x + far.box.w).toBeLessThanOrEqual(1443);
+    expect(far.box.y + far.box.h).toBeLessThanOrEqual(902);
+  });
+  it("keeps the nudge within reason when saved", () => {
+    expect(normaliseSpots({ landscape: { x: 0.5, y: 0, ox: 3, oy: -0.2 } })).toEqual({
+      landscape: { x: 0.5, y: 0, ox: 0.5, oy: -0.2 },
+    });
+  });
+  it("offers the space under a top-edge preview for the phone's QR code", () => {
+    // The Teclast on its side, camera top middle.
+    const c = cameraCallout({ x: 0.5, y: 0 }, { w: 1443, h: 902 }, 72);
+    expect(c.extra).not.toBeNull();
+    expect(c.extra!.y).toBeGreaterThanOrEqual(c.box.y + c.box.h);
+    expect(overlap(c.extra!, c.free)).toBe(false);
+    expect(overlap(c.extra!, c.box)).toBe(false);
+  });
+  it("never offers a space that clashes, whatever the camera", () => {
+    for (const s of [
+      { x: 0, y: 0.5 },
+      { x: 1, y: 1 },
+      { x: 0.2, y: 0 },
+      { x: 0.5, y: 1 },
+    ])
+      for (const screen of [
+        { w: 960, h: 600 },
+        { w: 768, h: 1024 },
+      ]) {
+        const c = cameraCallout(s, screen, 72);
+        if (!c.extra) continue;
+        expect(overlap(c.extra, c.free)).toBe(false);
+        expect(overlap(c.extra, c.box)).toBe(false);
+        expect(c.extra.x + c.extra.w).toBeLessThanOrEqual(screen.w);
+        expect(c.extra.y + c.extra.h).toBeLessThanOrEqual(screen.h);
+      }
+  });
+  it("never covers the Back button", () => {
+    const back = { x: 20, y: 89, w: 187, h: 95 };
+    const c = cameraCallout({ x: 0, y: 0.5 }, { w: 1024, h: 768 }, 130, [back]);
+    expect(overlap(c.box, back)).toBe(false);
+  });
+  it("keeps a top camera's preview at the top when stepping round it", () => {
+    const back = { x: 20, y: 89, w: 187, h: 95 };
+    const c = cameraCallout({ x: 0.5, y: 0 }, { w: 800, h: 1280 }, 130, [back]);
+    expect(overlap(c.box, back)).toBe(false);
+    expect(c.box.y).toBe(POINTER_SPACE);
+  });
+});

@@ -142,7 +142,15 @@ export const Route = createFileRoute("/kiosk/$code")({
     ],
     // Before anything is drawn: this tablet's remembered size and text scale, so nothing jumps.
     // First of all: an older tablet that can't run this page goes to the compatible kiosk (/lite/<code>).
-    scripts: [{ children: KIOSK_COMPAT_SCRIPT }, { children: KIOSK_FIT_SCRIPT }],
+    scripts: [
+      { children: KIOSK_COMPAT_SCRIPT },
+      { children: KIOSK_FIT_SCRIPT },
+      // Express or expanded buttons from the very first paint on a door tablet, so a screen never
+      // draws at the standard size and then jumps (guests' own phones keep the standard size).
+      ...(loaderData?.theme?.kioskTouch === "expanded" || loaderData?.kioskLook?.look === "xl"
+        ? [{ children: EXPANDED_FIRST_SCRIPT }]
+        : []),
+    ],
   }),
   notFoundComponent: ({ data }) => (
     <GuestFrame>
@@ -815,6 +823,9 @@ function useKioskIdle(o: {
 
 /** A check-in untouched this long counts as walked away from when the host puts a card up. */
 const LEFT_MID_FLOW_MS = 45_000;
+
+/** Mirrors KIOSK_COMPAT_SCRIPT's test for a shared screen: no ?guest/?resume/?join, and not a phone. */
+const EXPANDED_FIRST_SCRIPT = `(function(){try{if(/[?&](guest|resume|join)=/.test(location.search))return;if(Math.min(screen.width,screen.height)<600)return;document.documentElement.setAttribute("data-kiosk-touch","expanded")}catch(e){}})();`;
 
 function Kiosk() {
   const p = Route.useLoaderData();

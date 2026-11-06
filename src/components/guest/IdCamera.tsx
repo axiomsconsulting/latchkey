@@ -6,7 +6,7 @@ import { guest as copy } from "@/content/copy";
 import { fromFile } from "@/lib/photo-file";
 import { photoFill, photoStage } from "@/lib/photo-progress";
 import { useAutoSnap, type SnapShape } from "@/hooks/use-auto-snap";
-import { CameraCalloutBox } from "@/components/guest/KioskPhotoStage";
+import { CameraCalloutBox, StageExtra } from "@/components/guest/KioskPhotoStage";
 import { useKioskStage } from "@/hooks/use-kiosk-stage";
 import type { Spot } from "@/lib/kiosk-camera-spot";
 import { cn } from "@/lib/utils";
@@ -240,7 +240,10 @@ export function IdCamera({
   upload = false,
   auto = false,
   spot = null,
+  aside = null,
 }: {
+  /** The phone's QR code: in the space left under or beside the floating preview when there is one. */
+  aside?: ReactNode;
   /** A door tablet: takes the photo by itself once it sees a whole ID or a face, and a selfie's button counts down. */
   auto?: boolean;
   /** A door tablet: where its front camera is, so the preview floats right by it. */
@@ -481,7 +484,9 @@ export function IdCamera({
         <div className="space-y-3">
           {helpBits}
           {moreBits}
+          {callout.extra ? null : aside}
         </div>
+        {callout.extra ? <StageExtra rect={callout.extra}>{aside}</StageExtra> : null}
       </>
     );
 
@@ -496,6 +501,7 @@ export function IdCamera({
         {helpBits}
         {takeButton}
         {moreBits}
+        {aside}
       </div>
     </div>
   );

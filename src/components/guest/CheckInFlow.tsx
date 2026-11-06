@@ -1419,6 +1419,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
+                        aside={panel}
                         spot={cameraSpot}
                         busy={busy}
                         side={cameraSide}
@@ -1436,7 +1437,6 @@ export function CheckInFlow({
                             >
                               {copy.idFirstOther}
                             </Button>
-                            {panel}
                           </>
                         }
                       />
@@ -1492,6 +1492,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
+                        aside={panel}
                         spot={cameraSpot}
                         busy={busy}
                         side={cameraSide}
@@ -1509,7 +1510,6 @@ export function CheckInFlow({
                             >
                               {copy.idUseOther}
                             </Button>
-                            {panel}
                           </>
                         }
                       />
@@ -1625,6 +1625,7 @@ export function CheckInFlow({
                     camera={({ facing, onFail, panel }) => (
                       <IdCamera
                         auto={kiosk}
+                        aside={panel}
                         spot={cameraSpot}
                         busy={busy}
                         side={cameraSide}
@@ -1643,7 +1644,6 @@ export function CheckInFlow({
                             >
                               {copy.companionSkip}
                             </Button>
-                            {panel}
                           </>
                         }
                       />
@@ -1712,6 +1712,7 @@ export function CheckInFlow({
                   camera={({ facing, onFail, panel }) => (
                     <IdCamera
                       auto={kiosk}
+                      aside={panel}
                       spot={cameraSpot}
                       facing={facing}
                       kind="face"
@@ -1733,7 +1734,6 @@ export function CheckInFlow({
                           >
                             {copy.faceSkip}
                           </Button>
-                          {panel}
                         </>
                       }
                     />

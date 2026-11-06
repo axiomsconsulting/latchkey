@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { cameraCallout, type CameraCallout, type Spot } from "@/lib/kiosk-camera-spot";
 
@@ -11,7 +11,7 @@ const root = () => document.querySelector<HTMLElement>("[data-kiosk-root]");
  */
 export function useKioskStage(on: boolean, spot: Spot | null): CameraCallout | null {
   const [callout, setCallout] = useState<CameraCallout | null>(null);
-  const key = spot ? `${spot.x},${spot.y}` : "";
+  const key = spot ? `${spot.x},${spot.y},${spot.ox ?? 0},${spot.oy ?? 0}` : "";
   useLayoutEffect(() => {
     if (!on) return;
     const html = document.documentElement;
@@ -20,15 +20,29 @@ export function useKioskStage(on: boolean, spot: Spot | null): CameraCallout | n
       const h = Number.parseFloat(html.style.getPropertyValue("--kiosk-h")) || window.innerHeight;
       const w = r?.offsetWidth || window.innerWidth;
       const rem = Number.parseFloat(window.getComputedStyle(html).fontSize) || 16;
-      const c = spot ? cameraCallout(spot, { w, h }, rem * 6.5) : null;
-      setCallout(c);
+      // The preview floats over the header, but never over the Back button.
+      const flowEl = document.querySelector<HTMLElement>("[data-kiosk-flow]");
+      const backEl = flowEl?.querySelector<HTMLElement>(":scope > button");
+      const rootBox = r?.getBoundingClientRect();
+      const b = backEl?.getBoundingClientRect();
+      const avoid =
+        b && rootBox
+          ? [{ x: b.left - rootBox.left, y: b.top - rootBox.top, w: b.width, h: b.height }]
+          : [];
+      const c = spot ? cameraCallout(spot, { w, h }, rem * 6.5, avoid) : null;
       // Under the header and the back button, unless the free block starts lower.
       const flow = document.querySelector<HTMLElement>("[data-kiosk-flow]");
       const rootTop = r?.getBoundingClientRect().top ?? 0;
       const back = flow?.querySelector<HTMLElement>(":scope > button");
+      const header = document.querySelector<HTMLElement>("[data-kiosk-root] header");
       const under = Math.round(
-        (back?.getBoundingClientRect().bottom ?? flow?.getBoundingClientRect().top ?? 0) - rootTop,
+        Math.max(
+          (back?.getBoundingClientRect().bottom ?? 0) + 8,
+          header?.getBoundingClientRect().bottom ?? 0,
+        ) - rootTop,
       );
+      // The spare space can't be up among the header and the Back button.
+      setCallout(c && c.extra && c.extra.y < under ? { ...c, extra: null } : c);
       const free = c?.free ?? { x: 0, y: 0, w, h };
       const top = Math.max(free.y, under);
       html.style.setProperty("--photo-x", `${free.x}px`);
@@ -37,9 +51,20 @@ export function useKioskStage(on: boolean, spot: Spot | null): CameraCallout | n
       html.style.setProperty("--photo-h", `${Math.max(120, free.y + free.h - top)}px`);
       html.setAttribute("data-kiosk-photo", "");
     };
+    // The card leaves the page as soon as this is set, which can move the back button down:
+    // so it's measured again once that has happened, and whenever the header or button changes size.
+    html.setAttribute("data-kiosk-photo", "");
     lay();
+    const again = requestAnimationFrame(lay);
+    const seen = new ResizeObserver(() => lay());
+    const flow = document.querySelector<HTMLElement>("[data-kiosk-flow]");
+    const back = flow?.querySelector<HTMLElement>(":scope > button");
+    if (back) seen.observe(back);
+    if (flow) seen.observe(flow);
     window.addEventListener("resize", lay);
     return () => {
+      cancelAnimationFrame(again);
+      seen.disconnect();
       window.removeEventListener("resize", lay);
       html.removeAttribute("data-kiosk-photo");
     };
@@ -47,35 +72,48 @@ export function useKioskStage(on: boolean, spot: Spot | null): CameraCallout | n
   }, [on, key]);
 
   // Whatever the step holds (a message, the QR code, several buttons), it fits its block.
+  const main = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (!on) return;
-    const find = () => document.querySelector<HTMLElement>("[data-kiosk-flow] main");
-    const main = find();
-    if (!main) return;
+    main.current = on ? document.querySelector<HTMLElement>("[data-kiosk-flow] main") : null;
+  });
+  useFitBox(main, on ? `${callout?.free.w}x${callout?.free.h}` : null);
+  return callout;
+}
+
+/**
+ * Keeps a block's content inside it: if it doesn't fit, its children are zoomed down step by step
+ * until all of it shows, and back to full size when it fits again.
+ */
+export function useFitBox(ref: { current: HTMLElement | null }, key: string | null) {
+  useEffect(() => {
+    if (key === null) return;
     let frame = 0;
+    let el: HTMLElement | null = null;
     const fit = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const kids = [...main.children] as HTMLElement[];
+        el = ref.current;
+        if (!el) return;
+        const box = el;
+        const kids = [...box.children] as HTMLElement[];
         kids.forEach((k) => (k.style.zoom = ""));
-        // Stepping down until it all shows, since not everything scales in step.
         let z = 1;
-        for (let i = 0; i < 12 && main.scrollHeight > main.clientHeight + 1 && z > 0.5; i++) {
-          z = z * (main.clientHeight / main.scrollHeight) * 0.99;
+        for (let i = 0; i < 12 && box.scrollHeight > box.clientHeight + 1 && z > 0.5; i++) {
+          z = z * (box.clientHeight / box.scrollHeight) * 0.99;
           kids.forEach((k) => (k.style.zoom = String(Math.max(0.5, z))));
         }
       });
     };
     fit();
+    const target = ref.current;
     const seen = new MutationObserver(fit);
-    seen.observe(main, { childList: true, subtree: true });
+    if (target) seen.observe(target, { childList: true, subtree: true });
     window.addEventListener("resize", fit);
     return () => {
       cancelAnimationFrame(frame);
       seen.disconnect();
       window.removeEventListener("resize", fit);
-      ([...main.children] as HTMLElement[]).forEach((k) => (k.style.zoom = ""));
+      if (el) ([...el.children] as HTMLElement[]).forEach((k) => (k.style.zoom = ""));
     };
-  }, [on, callout?.free.w, callout?.free.h]);
-  return callout;
+  }, [ref, key]);
 }
