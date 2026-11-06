@@ -1081,3 +1081,19 @@ html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
   width: auto;
   max-width: 100%;
 }
+/* The phone square from the top bar: its heading in the card's heading font and size. */
+html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 6vmin, 4rem);
+  line-height: 1.08;
+  text-align: center;
+}
+/* Photo steps: the phone's square fills the left column under the words, on the card's own colour. */
+[data-kiosk-jumbo] [data-jumbo-photo] [data-jumbo-qrfill] img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left top;
+}

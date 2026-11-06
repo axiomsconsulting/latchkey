@@ -515,10 +515,11 @@ export function IdCamera({
   if (jumbo)
     return (
       <div ref={own} data-jumbo-photo className="grid h-full min-h-0 grid-cols-2 gap-[3cqmin]">
-        <div className="flex min-h-0 flex-col justify-center gap-[2cqmin]">
-          {/* One paragraph, as big as the welcome card's words. */}
+        <div className="flex min-h-0 flex-col gap-[2cqmin]">
+          {/* One paragraph, as big as the welcome card's words; the phone's square fills the rest below. */}
           <p data-jumbo-para className="font-display font-bold">
             {title.replace(/[.!?]$/, "")}. {kind === "face" ? copy.jumboFace : copy.jumboId}.
+            {aside ? ` ${copy.jumboWords.phone}.` : null}
           </p>
           {busy && shot ? <PhotoProgress kind={kind} /> : null}
           {aside}

@@ -33,10 +33,15 @@ function PhonePanel({
 }: {
   phone: PhotoHandoff;
   big: boolean;
-  /** Jumbo: just "Or use your phone" and the square, in a row. */
-  compact?: boolean;
+  /** "Or use phone" and the square, in a row; "jumbo": only the square, on the card's own colour. */
+  compact?: boolean | "jumbo";
 }) {
-  const qr = useQrImage(phone.link?.phoneUrl ?? null, { dark: "#111111", light: "#ffffff" });
+  const qr = useQrImage(
+    phone.link?.phoneUrl ?? null,
+    compact === "jumbo"
+      ? { dark: "#111111", light: "#00000000" }
+      : { dark: "#111111", light: "#ffffff" },
+  );
   const [via, setVia] = useState<"sms" | "whatsapp" | null>(null);
   const [number, setNumber] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,6 +65,16 @@ function PhonePanel({
     );
     if (status === "sent" || status === "demo") setVia(null);
   }
+  if (compact === "jumbo")
+    return (
+      <div className="flex min-h-0 flex-1 items-start" data-phone-photos data-jumbo-qrfill>
+        {qr ? (
+          <img src={qr} alt={copy.jumboWords.phone} className="aspect-square h-full max-w-full" />
+        ) : (
+          <Loader2 className="size-8 animate-spin opacity-50" />
+        )}
+      </div>
+    );
   if (compact)
     return (
       <div className="flex items-center justify-center gap-[3%]" data-phone-photos>
@@ -208,8 +223,8 @@ export function PhotoChoice({
   extra,
   compact = false,
 }: {
-  /** Jumbo door tablet: the phone option as one short line and the square. */
-  compact?: boolean;
+  /** A short line and the square; "jumbo": just the square, filling what's left (the words are in the step's own line). */
+  compact?: boolean | "jumbo";
   kiosk: boolean;
   phone: PhotoHandoff;
   facing: "user" | "environment" | null;

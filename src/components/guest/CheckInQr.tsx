@@ -309,14 +309,12 @@ export function KioskQr({
         {/* kiosk-qr-dialog / kiosk-close: a larger square and close button on expanded door tablets (styles.css). */}
         <DialogContent className="kiosk-qr-dialog max-w-sm" closeClassName="kiosk-close">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="font-display font-bold" data-kiosk-qr-title>
               {others ? copy.othersHeading : carryOn ? copy.qrHeading : copy.kioskQrTitle}
             </DialogTitle>
           </DialogHeader>
+          {/* Just the heading and the square: the heading already says what to do. */}
           <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[18rem] rounded-2xl" />
-          <p className="text-center text-sm text-muted-foreground">
-            {others ? copy.othersBlurb : carryOn ? copy.qrBlurb : copy.kioskQrBody}
-          </p>
         </DialogContent>
       </Dialog>
     </>
