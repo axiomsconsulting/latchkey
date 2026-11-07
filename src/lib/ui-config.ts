@@ -25,7 +25,6 @@ export type NavBuiltIn = {
 export const NAV_BUILT_INS: NavBuiltIn[] = [
   { id: "today", to: "/app/today", labelKey: "today", icon: "sun" },
   { id: "bookings", to: "/app/bookings", labelKey: "bookings", icon: "calendar-days" },
-  { id: "housekeeping", to: "/app/housekeeping", labelKey: "housekeeping", icon: "spray-can" },
   { id: "services", to: "/app/services", labelKey: "services", icon: "wrench" },
   { id: "guides", to: "/app/guides", labelKey: "guides", icon: "book-open" },
   { id: "properties", to: "/app/properties", labelKey: "properties", icon: "home" },

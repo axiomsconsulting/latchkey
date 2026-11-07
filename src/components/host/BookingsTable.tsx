@@ -308,9 +308,12 @@ export function BookingsTable({
   onToggle,
   onOpen,
   rowActions,
+  roomBadge,
 }: {
   /** Quick icons at the end of a row (e.g. add name, not a booking, hide). */
   rowActions?: (b: ListBooking) => React.ReactNode;
+  /** Beside the room's name: its housekeeping state today (and what to do). */
+  roomBadge?: (b: ListBooking) => React.ReactNode;
   rows: ListBooking[];
   /** Every stay, so a closed night can name the booking it mirrors. */
   allRows?: ListBooking[];
@@ -476,6 +479,7 @@ export function BookingsTable({
                   </td>
                   <td className="px-3 py-2">
                     {roomName(b.room_id ?? b.test_room_id ?? null)}
+                    {roomBadge ? roomBadge(b) : null}
                     <StayCodes b={b} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-2">
@@ -549,7 +553,8 @@ export function BookingsTable({
                   className="block w-full truncate text-left text-sm text-muted-foreground"
                   aria-label={`${name(b)}: ${stayDates(b.check_in_date, b.check_out_date, today)}`}
                 >
-                  {roomName(b.room_id ?? b.test_room_id ?? null)} ·{" "}
+                  {roomName(b.room_id ?? b.test_room_id ?? null)}
+                  {roomBadge ? roomBadge(b) : null} ·{" "}
                   {stayDates(b.check_in_date, b.check_out_date, today)} · {nightsText(b)}
                   <StayCodes b={b} />
                 </button>

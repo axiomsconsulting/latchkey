@@ -457,3 +457,48 @@ export function filterRooms<R extends { id: string }>(
     return filter === "arriving" ? !!c.arriving : c.status === filter;
   });
 }
+
+/* ------------------------------ three states ------------------------------ */
+
+/**
+ * What hosts see: three states, one word each. The stored statuses stay as they are
+ * (room_readiness), so older rows and reports still read: "to clean" and "cleaning" are
+ * Dirty, "clean" and "ready" are Ready, "out of service" is Unavailable.
+ */
+export type HkState = "dirty" | "ready" | "unavailable";
+export const HK_STATES: HkState[] = ["dirty", "ready", "unavailable"];
+/** What each state saves as. */
+export const HK_SAVES: Record<HkState, Readiness> = {
+  dirty: "to_clean",
+  ready: "ready",
+  unavailable: "out_of_service",
+};
+
+export function hkState(s: Readiness | null | undefined): HkState | null {
+  if (!s) return null;
+  if (s === "out_of_service") return "unavailable";
+  return s === "clean" || s === "ready" ? "ready" : "dirty";
+}
+
+/** Something a host should act on: a room someone arrives in that's dirty or unavailable. */
+export type RoomAction = {
+  state: "dirty" | "unavailable";
+  arrival: string;
+  minutes: number | null;
+};
+
+export function roomAction(card: BoardCard, minutesToArrival: number | null): RoomAction | null {
+  const s = hkState(card.status);
+  if (!card.arriving || !card.dueBy || (s !== "dirty" && s !== "unavailable")) return null;
+  return { state: s, arrival: card.dueBy, minutes: minutesToArrival };
+}
+
+/** Rooms shown for one of the three states (or all). */
+export function hkFilterRooms<R extends { id: string }>(
+  rooms: R[],
+  cards: BoardCard[],
+  filter: HkState | "all",
+): R[] {
+  if (filter === "all") return rooms;
+  return rooms.filter((r) => hkState(cards.find((c) => c.roomId === r.id)?.status) === filter);
+}

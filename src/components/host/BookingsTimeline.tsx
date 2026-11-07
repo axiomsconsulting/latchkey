@@ -3,14 +3,13 @@ import { Check, MessageCircle, Sparkles } from "lucide-react";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
 import type { Channel } from "@/components/ChannelBadge";
-import { RoomTimeline, type TimelineItem } from "@/components/host/RoomTimeline";
+import type { TimelineItem } from "@/components/host/RoomTimeline";
 import { bookings as copy, channels, stayCalendar as calCopy } from "@/content/copy";
 import { useBookingSites } from "@/hooks/use-host-data";
 import { platformKey } from "@/lib/booking-sites";
 import { roomHue, stayColours } from "@/lib/calendar-layout";
 import { formatUkDate, nightsBetween } from "@/lib/dates";
-import { windowsForDay, type ScheduleWindow } from "@/lib/housekeeping";
-import { at, daysIn, nowOn, stayTimes, viewFor, type View } from "@/lib/timeline";
+import { stayTimes, viewFor, type View } from "@/lib/timeline";
 
 export type TimelineStay = {
   id: string;
@@ -41,42 +40,26 @@ export function useStartView(today: string): [View, (v: View) => void] {
 }
 
 /**
- * Bookings as a timeline: each stay from its check-in time to its check-out
- * time in its room's colour (a different shade per guest), with the booking
- * site's icon, checked in, unread messages and open requests; closed nights
- * hatched, and the cleaning and unavailable windows striped behind.
+ * The stays for the Housekeeping view on Bookings: each stay from its check-in time to its
+ * check-out time in its room's colour (a different shade per guest), with the booking site's
+ * icon, checked in, unread messages and open requests; closed nights hatched.
  */
-export function BookingsTimeline({
+export function useStayItems({
   rooms,
   stays,
   allStays,
-  windows,
   times,
-  timezone,
-  today,
   activity,
   onOpen,
 }: {
   rooms: Array<{ id: string; display_name: string }>;
   stays: TimelineStay[];
   allStays: TimelineStay[];
-  windows: ScheduleWindow[];
   times: { checkIn: string; checkOut: string };
-  timezone: string;
-  today: string;
   activity: Activity;
   onOpen: (id: string) => void;
-}) {
+}): TimelineItem[] {
   const sites = useBookingSites();
-  const [view, setView] = useStartView(today);
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    const tick = () => setNow(nowOn(timezone));
-    tick();
-    const id = window.setInterval(tick, 60_000);
-    return () => window.clearInterval(id);
-  }, [timezone]);
-
   const items = useMemo(() => {
     const out: TimelineItem[] = [];
     rooms.forEach((room, roomIndex) => {
@@ -169,34 +152,7 @@ export function BookingsTimeline({
         });
       }
     });
-    // The windows on every day in view (weekly and one-off), behind the stays.
-    for (const d of daysIn(view)) {
-      for (const w of windowsForDay(windows, d, timezone)) {
-        for (const room of rooms) {
-          if (w.roomId && w.roomId !== room.id) continue;
-          out.push({
-            id: `${w.id}-${d}-${room.id}`,
-            roomId: room.id,
-            start: at(d, w.start),
-            end: at(d, w.end),
-            layer: "back",
-            title: `${w.reason ?? calCopy.cleaning} ${w.start}–${w.end}`,
-            style: { backgroundImage: WINDOW_STRIPES },
-          });
-        }
-      }
-    }
     return out;
-  }, [rooms, stays, allStays, windows, times, timezone, activity, sites, view, onOpen]);
-
-  return (
-    <RoomTimeline
-      rooms={rooms}
-      view={view}
-      onView={setView}
-      today={today}
-      now={now}
-      items={items}
-    />
-  );
+  }, [rooms, stays, allStays, times, activity, sites, onOpen]);
+  return items;
 }

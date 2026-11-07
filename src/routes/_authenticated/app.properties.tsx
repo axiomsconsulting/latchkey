@@ -725,7 +725,7 @@ function PropertiesPage() {
                   ["records", "/app/settings", { focus: "records" }],
                   ["stayAccess", "/app/settings", { focus: "stayAccess" }],
                   ["kioskRest", "/app/settings", { focus: "kioskRest" }],
-                  ["schedule", "/app/housekeeping", { focus: "schedule" }],
+                  ["schedule", "/app/bookings", { view: "housekeeping", focus: "schedule" }],
                   ["calendars", "/app/connections", {}],
                 ] as const
               ).map(([key, to, search]) => (

@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.135.0",
+    date: "2026-11-07",
+    title: "Housekeeping moves into Bookings",
+    items: [
+      {
+        kind: "improved",
+        area: "Housekeeping",
+        text: "Housekeeping is now a view on Bookings, beside the list: your stays, and the cleaning between them in see-through patterns, so it never looks like a booking. The separate Housekeeping page is gone, and old links open the new view.",
+      },
+      {
+        kind: "improved",
+        area: "Housekeeping",
+        text: "Rooms have three states, one word each: Dirty, Ready or Unavailable. An icon by each room's name shows it, in the Housekeeping view and in the bookings list.",
+      },
+      {
+        kind: "new",
+        area: "Housekeeping",
+        text: 'What needs doing is said by the room, for example "Needs cleaning · guest arrives in 3h".',
+      },
+    ],
+  },
+  {
     version: "0.134.5",
     date: "2026-11-07",
     title: "Door tablets: full size again, and a better goodbye",
