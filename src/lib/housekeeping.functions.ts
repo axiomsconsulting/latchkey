@@ -193,10 +193,17 @@ export const getHousekeepingRange = createServerFn({ method: "GET" })
         );
       })(),
       sb.from("trades").select("name, category").eq("host_id", p.host_id).limit(50),
-      sb
-        .from("unavailability_windows")
-        .select("id, room_id, day_of_week, start_time, end_time, starts_at, ends_at, reason")
-        .eq("property_id", p.id),
+      (async () => {
+        const { withLegacy } = await import("./checkin.server");
+        const cols =
+          "id, room_id, day_of_week, start_time, end_time, starts_at, ends_at, reason, created_at";
+        const q = (c: string) =>
+          sb.from("unavailability_windows").select(c).eq("property_id", p.id);
+        return withLegacy(
+          () => q(`${cols}, trade_id`),
+          () => q(cols),
+        );
+      })(),
     ]);
     const timelineJobs = (jobs ?? []) as unknown as TimelineJob[];
     const openJobs = openJobCounts(timelineJobs);

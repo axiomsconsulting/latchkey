@@ -18,7 +18,14 @@ type Pending = {
   window: "asap" | "evening" | "morning" | "door" | null;
 };
 
-export function ExtrasInbox({ propertyId }: { propertyId: string }) {
+/** Extras guests ordered. `hideEmpty`: nothing at all when there are none (in Services' Requests tab). */
+export function ExtrasInbox({
+  propertyId,
+  hideEmpty = false,
+}: {
+  propertyId: string;
+  hideEmpty?: boolean;
+}) {
   const qc = useQueryClient();
   const fn = useServerFn(listExtrasRequests);
   const decide = useServerFn(decideExtrasRequest);
@@ -56,6 +63,7 @@ export function ExtrasInbox({ propertyId }: { propertyId: string }) {
     return responseNotes.suggest;
   }
 
+  if (hideEmpty && !q.data?.length) return null;
   return (
     <section className="card-soft p-5">
       <h2 className="text-lg">{copy.inbox}</h2>

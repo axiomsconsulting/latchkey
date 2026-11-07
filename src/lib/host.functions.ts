@@ -552,6 +552,79 @@ export const saveUnavailability = createServerFn({ method: "POST" })
     return row;
   });
 
+/**
+ * Saves a repeating service (Bookings → Housekeeping → Maintenance): one weekly window per day
+ * and room (none = whole property), replacing the rows it was made of when it's being changed.
+ */
+export const saveRepeatingService = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        propertyId: uuid,
+        replaceIds: z.array(uuid).max(200).default([]),
+        reason: z.string().trim().min(1).max(80),
+        roomIds: z.array(uuid).max(100),
+        days: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+        start: z.string().regex(/^\d{2}:\d{2}$/),
+        end: z.string().regex(/^\d{2}:\d{2}$/),
+        tradeId: uuid.nullable().default(null),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    if (data.end <= data.start) throw new Error("The window must end after it starts.");
+    const sb = context.supabase as unknown as { from: (t: string) => any };
+    const rows = [...new Set(data.days)].flatMap((d) =>
+      (data.roomIds.length ? [...new Set(data.roomIds)] : [null]).map((room) => ({
+        property_id: data.propertyId,
+        room_id: room,
+        reason: data.reason,
+        day_of_week: d,
+        start_time: data.start,
+        end_time: data.end,
+        starts_at: null,
+        ends_at: null,
+        ...(data.tradeId ? { trade_id: data.tradeId } : {}),
+      })),
+    );
+    const { error } = await sb.from("unavailability_windows").insert(rows);
+    if (error) {
+      // Before migration 0096 there's no contact column: save without it.
+      if (data.tradeId && /trade_id/.test(error.message)) {
+        const { error: again } = await sb
+          .from("unavailability_windows")
+          .insert(rows.map(({ trade_id: _t, ...r }: Record<string, unknown>) => r));
+        if (again) throw new Error(again.message);
+      } else throw new Error(error.message);
+    }
+    if (data.replaceIds.length) {
+      const { error: del } = await sb
+        .from("unavailability_windows")
+        .delete()
+        .eq("property_id", data.propertyId)
+        .in("id", data.replaceIds);
+      if (del) throw new Error(del.message);
+    }
+    return { ok: true };
+  });
+
+/** Removes a repeating service: every row it's made of. */
+export const deleteRepeatingService = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ propertyId: uuid, ids: z.array(uuid).min(1).max(200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("unavailability_windows")
+      .delete()
+      .eq("property_id", data.propertyId)
+      .in("id", data.ids);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const deleteUnavailability = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: uuid }).parse(input))

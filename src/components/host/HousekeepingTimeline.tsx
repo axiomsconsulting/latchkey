@@ -5,8 +5,6 @@ import {
   AlertTriangle,
   Ban,
   BadgeCheck,
-  CalendarClock,
-  ChevronDown,
   Clock,
   LogIn,
   LogOut,
@@ -15,7 +13,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { WeekSchedule } from "@/components/host/HousekeepingSchedule";
 import { RoomTimeline, type TimelineItem } from "@/components/host/RoomTimeline";
 import { WINDOW_STRIPES, useStartView } from "@/components/host/BookingsTimeline";
 import { Button } from "@/components/ui/button";
@@ -38,7 +35,6 @@ import {
   buildBoard,
   hkFilterRooms,
   hkState,
-  nextOnWeekday,
   orderRooms,
   roomAction,
   turnsFor,
@@ -51,7 +47,15 @@ import { getHousekeepingRange, setRoomReadiness } from "@/lib/housekeeping.funct
 import { at, centreDay, daysIn, loadRange, nowOn, viewFor, type View } from "@/lib/timeline";
 import { cn } from "@/lib/utils";
 import { useHkWords } from "@/hooks/use-site";
-import { jobColours, jobLines, jobRooms, jobWhen } from "@/lib/job-lines";
+import {
+  jobLines,
+  jobRooms,
+  jobWhen,
+  serviceColours,
+  windowGroups,
+  type ServiceWindow,
+  type WindowGroup,
+} from "@/lib/job-lines";
 
 /** The extra row at the top for jobs that aren't in any one room. */
 const PROPERTY_ROW = "__property";
@@ -174,7 +178,8 @@ export function HkRoomBadge({
  * Bookings' Housekeeping view: the stays (as on the bookings timeline, tap to open the guest),
  * each day's cleaning between them in see-through patterns by state (Dirty, Ready, Unavailable),
  * the cleaning windows, and each room's state and next action by its name. A room's name or its
- * cleaning opens the room's panel; the weekly schedule folds away underneath. Open jobs with a
+ * cleaning opens the room's panel. Repeating services (the weekly cleaning and other visits) are
+ * listed under Maintenance below and drawn here as lines too. Open jobs with a
  * time are coloured lines under the rooms they cover (src/lib/job-lines.ts), with a "Whole
  * property" row for jobs without a room; tapping one lands on it in the services below.
  */
@@ -184,7 +189,6 @@ export function HousekeepingTimeline({
   today,
   day: dayParam,
   room: roomParam,
-  focusSchedule = false,
   onOpenJob,
 }: {
   propertyId: string;
@@ -193,7 +197,6 @@ export function HousekeepingTimeline({
   today: string;
   day?: string | undefined;
   room?: string | undefined;
-  focusSchedule?: boolean;
   /** A job's line was tapped. */
   onOpenJob?: (jobId: string) => void;
 }) {
@@ -212,8 +215,6 @@ export function HousekeepingTimeline({
   const [filter, setFilter] = useState<HkState | "all">("all");
   const [order, setOrder] = useState<"property" | "state">("property");
   const [panel, setPanel] = useState<{ roomId: string; day: string } | null>(null);
-  const [scheduleOpen, setScheduleOpen] = useState(focusSchedule);
-  useEffect(() => setScheduleOpen((o) => o || focusSchedule), [focusSchedule]);
 
   const range = loadRange(view);
   const q = useQuery({
@@ -257,14 +258,18 @@ export function HousekeepingTimeline({
   const jobs = useMemo(() => {
     if (!b) return null;
     const open = b.jobs ?? [];
-    const colours = jobColours(open);
+    const groups = windowGroups(b.windows as ServiceWindow[]);
+    const colours = serviceColours(open, groups);
     return {
       colours,
+      groups,
       ...jobLines(open, b.timezone, colours),
       byId: new Map(open.map((j) => [j.id, j])),
     };
   }, [b]);
-  const propertyRow = !!jobs?.lines.some((l) => l.roomId === null);
+  const propertyRow =
+    !!jobs?.lines.some((l) => l.roomId === null) ||
+    !!jobs?.groups.some((g) => g.rooms.length === 0);
   const rooms = b
     ? [
         ...(propertyRow ? [{ id: PROPERTY_ROW, display_name: copy.wholeProperty }] : []),
@@ -276,9 +281,25 @@ export function HousekeepingTimeline({
   const items = useMemo(() => {
     if (!b) return [] as TimelineItem[];
     const out: TimelineItem[] = [];
-    // Cleaning and unavailable windows, behind.
+    // Repeating services and closures: the room is closed behind (stripes), and the service is a
+    // line in its colour like any job (a whole-property one on the top row).
+    const groupOf = new Map<string, WindowGroup>();
+    for (const g of jobs?.groups ?? []) for (const id of g.ids) groupOf.set(id, g);
     for (const d of daysIn(view)) {
       for (const w of windowsForDay(b.windows, d, b.timezone)) {
+        const g = groupOf.get(w.id);
+        if (g)
+          out.push({
+            id: `wl-${w.id}-${d}`,
+            roomId: w.roomId ?? PROPERTY_ROW,
+            start: at(d, w.start),
+            end: at(d, w.end),
+            layer: "line",
+            title: `${w.reason ?? copy.windowDefault} · ${w.start}–${w.end}`,
+            style: { background: jobs!.colours[g.key] },
+            className: "before:absolute before:-inset-y-2 before:inset-x-0 before:content-['']",
+            ...(onOpenJob ? { onClick: () => onOpenJob(g.key) } : {}),
+          });
         for (const r of b.rooms) {
           if (w.roomId && w.roomId !== r.id) continue;
           out.push({
@@ -448,53 +469,6 @@ export function HousekeepingTimeline({
           );
         }}
       />
-
-      <section className="card-soft p-0" data-tour="housekeeping-schedule">
-        <button
-          type="button"
-          aria-expanded={scheduleOpen}
-          onClick={() => setScheduleOpen((o) => !o)}
-          className="flex w-full items-center gap-3 p-4 text-left"
-        >
-          <CalendarClock className="size-5 text-primary" />
-          <span className="min-w-0 flex-1">
-            <span className="block font-medium">{copy.schedule.title}</span>
-            <span className="block truncate text-sm text-muted-foreground">
-              {copy.schedule.summary(
-                b.defaultCheckOut,
-                b.defaultCheckIn,
-                b.windows.filter((w) => w.day_of_week !== null).length,
-              )}
-            </span>
-          </span>
-          <ChevronDown
-            className={cn("size-5 transition-transform", scheduleOpen && "rotate-180")}
-          />
-        </button>
-        {scheduleOpen ? (
-          <div className="border-t border-border">
-            <WeekSchedule
-              embedded
-              propertyId={propertyId}
-              rooms={b.rooms}
-              windows={b.windows}
-              times={{
-                checkOut: b.defaultCheckOut,
-                checkIn: b.defaultCheckIn,
-                quietStart: b.quietStart,
-                quietEnd: b.quietEnd,
-              }}
-              boardDay={day}
-              timezone={b.timezone}
-              canEdit={canWrite && role !== "cleaner"}
-              onGoTo={(dow) => {
-                setDayView(viewFor("day", nextOnWeekday(b.today, dow)));
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            />
-          </div>
-        ) : null}
-      </section>
 
       {panel ? (
         <RoomPanel

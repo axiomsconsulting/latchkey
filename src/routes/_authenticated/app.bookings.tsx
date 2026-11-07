@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Trash2,
   Upload,
+  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,7 +28,12 @@ import {
   HousekeepingTimeline,
   useHousekeepingToday,
 } from "@/components/host/HousekeepingTimeline";
-import { SERVICE_TABS, ServicesPanel, type ServiceTab } from "@/components/host/ServicesPanel";
+import {
+  SERVICE_TABS,
+  ServiceDialog,
+  ServicesPanel,
+  type ServiceTab,
+} from "@/components/host/ServicesPanel";
 import { BookingFilters, BookingsTable, Tip } from "@/components/host/BookingsTable";
 import {
   AlertDialog,
@@ -53,6 +59,7 @@ import {
   bookings as copy,
   channels,
   common,
+  services as servicesCopy,
   statuses,
 } from "@/content/copy";
 import {
@@ -198,6 +205,10 @@ function BookingsPage() {
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const propertyTz =
+    (properties?.find((p) => p.id === selectedId) as { timezone?: string | null } | undefined)
+      ?.timezone ?? "Europe/London";
   const [busy, setBusy] = useState<string | null>(null);
   // Kept in the address, so opening a guest and closing them again stays on the same view.
   const view: "list" | "housekeeping" = viewParam ?? "list";
@@ -532,6 +543,16 @@ function BookingsPage() {
               <Upload className="size-4" />
               {copy.importCsv}
             </Button>
+            {canWrite ? (
+              <Button
+                variant="outline"
+                onClick={() => setServiceOpen(true)}
+                data-tour="services-new"
+              >
+                <Wrench className="size-4" />
+                {servicesCopy.addService}
+              </Button>
+            ) : null}
             <Button onClick={openNew} data-tour="bookings-add">
               <Plus className="size-4" />
               {copy.addBooking}
@@ -775,7 +796,6 @@ function BookingsPage() {
               today={todayIso}
               day={day}
               room={room}
-              focusSchedule={hkFocus === "schedule"}
               onOpenJob={openJob}
             />
           ) : null}
@@ -784,13 +804,9 @@ function BookingsPage() {
               <ServicesPanel
                 propertyId={selectedId}
                 rooms={rooms}
-                timezone={
-                  (
-                    properties?.find((p) => p.id === selectedId) as
-                      { timezone?: string | null } | undefined
-                  )?.timezone ?? "Europe/London"
-                }
-                tab={serviceTab}
+                timezone={propertyTz}
+                // The old schedule's links (?focus=schedule) open Maintenance, where it lives now.
+                tab={serviceTab ?? (hkFocus === "schedule" ? "planned" : undefined)}
                 job={jobParam}
                 request={requestParam}
               />
@@ -798,6 +814,23 @@ function BookingsPage() {
           ) : null}
         </div>
       )}
+
+      {serviceOpen ? (
+        <ServiceDialog
+          propertyId={selectedId}
+          rooms={rooms}
+          timezone={propertyTz}
+          onClose={() => setServiceOpen(false)}
+          // Show where it went: the timeline and Maintenance.
+          onSaved={() =>
+            void navigate({
+              to: "/app/bookings",
+              search: { view: "housekeeping", tab: "planned" },
+              replace: true,
+            })
+          }
+        />
+      ) : null}
 
       <GuestSheet
         bookingId={guest ?? null}
