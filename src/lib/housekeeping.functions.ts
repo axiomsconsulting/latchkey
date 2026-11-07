@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { addDays } from "./dates";
+import { openJobCounts, type TimelineJob } from "./job-lines";
 import { READINESS, type BoardStay, type ReadinessRow, type ScheduleWindow } from "./housekeeping";
 
 type Loose = { from: (t: string) => any };
@@ -173,22 +174,32 @@ export const getHousekeepingRange = createServerFn({ method: "GET" })
         .eq("property_id", p.id)
         .gte("day", data.from)
         .lte("day", data.to),
-      sb
-        .from("service_jobs")
-        .select("room_id")
-        .eq("property_id", p.id)
-        .not("room_id", "is", null)
-        .not("status", "in", DONE)
-        .is("archived_at", null),
+      // Every open job (any room, or the whole property): counts by room and lines on the timeline.
+      (async () => {
+        const { withLegacy } = await import("./checkin.server");
+        const base =
+          "id, title, status, source, urgency, room_id, scheduled_at, eta_at, created_at";
+        const q = (cols: string) =>
+          sb
+            .from("service_jobs")
+            .select(cols)
+            .eq("property_id", p.id)
+            .not("status", "in", DONE)
+            .is("archived_at", null)
+            .limit(300);
+        return withLegacy(
+          () => q(`${base}, room_ids, window_end, all_day`),
+          () => q(base),
+        );
+      })(),
       sb.from("trades").select("name, category").eq("host_id", p.host_id).limit(50),
       sb
         .from("unavailability_windows")
         .select("id, room_id, day_of_week, start_time, end_time, starts_at, ends_at, reason")
         .eq("property_id", p.id),
     ]);
-    const openJobs: Record<string, number> = {};
-    for (const j of (jobs ?? []) as Array<{ room_id: string }>)
-      openJobs[j.room_id] = (openJobs[j.room_id] ?? 0) + 1;
+    const timelineJobs = (jobs ?? []) as unknown as TimelineJob[];
+    const openJobs = openJobCounts(timelineJobs);
     // People to assign: the team's names and the host's own tradespeople (cleaners first).
     let team: string[] = [];
     try {
@@ -229,6 +240,7 @@ export const getHousekeepingRange = createServerFn({ method: "GET" })
       >,
       windows: (windows ?? []) as ScheduleWindow[],
       openJobs,
+      jobs: timelineJobs,
       people: [...new Set(people)].slice(0, 40),
     };
   });

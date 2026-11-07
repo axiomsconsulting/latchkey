@@ -1,6 +1,7 @@
 import { useRouteContext } from "@tanstack/react-router";
 
 import type { SiteContext } from "@/lib/site.functions";
+import { hkWords, type HkWords } from "@/lib/housekeeping";
 import { normaliseUi, type UiConfig } from "@/lib/ui-config";
 
 const FALLBACK = normaliseUi(null);
@@ -14,4 +15,9 @@ export function useSite(): SiteContext | null {
 /** The super admin's menu and page layouts, for every host. */
 export function useUi(): UiConfig {
   return useSite()?.ui ?? FALLBACK;
+}
+
+/** Housekeeping's three words (Dirty, Ready, Unavailable), as the super admin set them. */
+export function useHkWords(): HkWords {
+  return hkWords(useUi().hkWords);
 }

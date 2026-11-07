@@ -112,7 +112,12 @@ export function SiteMenu() {
                   <Link to="/app/bookings" className={item} onClick={close}>
                     <CalendarDays aria-hidden /> {siteMenu.bookings}
                   </Link>
-                  <Link to="/app/services" className={item} onClick={close}>
+                  <Link
+                    to="/app/bookings"
+                    search={{ view: "housekeeping" }}
+                    className={item}
+                    onClick={close}
+                  >
                     <Wrench aria-hidden /> {siteMenu.services}
                   </Link>
                   <Link to="/app/settings" className={item} onClick={close}>

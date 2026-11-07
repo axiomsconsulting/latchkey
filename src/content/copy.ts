@@ -2259,6 +2259,19 @@ export const services = branded({
   noProviders:
     "Latchkey doesn't hold a list of trades. Open Local tradespeople to search the directories near this property.",
   bookMaintenance: "Book maintenance",
+  wholeProperty: "Whole property",
+  roomsLabel: "Rooms it affects",
+  dayLabel: "Day",
+  allDay: "All day",
+  windowFrom: "From",
+  windowTo: "Until",
+  windowHelp:
+    "Tradespeople usually give a window. It shows as a coloured line under the rooms on the housekeeping timeline.",
+  windowOrder: "The window must end after it starts.",
+  plan: "Change time and rooms",
+  planSaved: "Saved. The timeline shows the new time.",
+  added: "Added. Tap Find someone to choose who does it.",
+  lineColour: "Its line on the housekeeping timeline",
   demoBadge: "Demo",
   liveBadge: "Live",
   guestTold: "Guest has been told the arrival time.",
@@ -4896,15 +4909,25 @@ export const timelineCopy = branded({
   hint: "Swipe or drag sideways to move through time; pinch, or Ctrl/⌘ and scroll, to zoom.",
 });
 
+export const hkWordsAdminCopy = branded({
+  help: "The one word every host sees for each room state on Bookings → Housekeeping and beside rooms in the bookings list. Leave a box empty to keep the usual word.",
+  label: (usual: string) => `Instead of "${usual}"`,
+  saved: "Saved. Hosts see the new words next time a page loads.",
+});
+
 export const housekeepingCopy = branded({
   title: "Housekeeping",
-  // The three states hosts see, one word each (src/lib/housekeeping.ts hkState).
-  state: { dirty: "Dirty", ready: "Ready", unavailable: "Unavailable" } as Record<string, string>,
-  stateCount: (s: string, n: number) =>
-    `${n} ${({ dirty: "dirty", ready: "ready", unavailable: "unavailable" } as Record<string, string>)[s] ?? s}`,
+  wholeProperty: "Whole property",
+  // The three states' words come from useHkWords() (the super admin can change them).
+  stateCount: (word: string, n: number) => `${n} ${word.toLowerCase()}`,
   stateLabel: (room: string) => `State of ${room}`,
-  action: (state: "dirty" | "unavailable", time: string, minutes: number | null) =>
-    `${state === "dirty" ? "Needs cleaning" : "Unavailable"} · ${
+  action: (
+    state: "dirty" | "unavailable",
+    time: string,
+    minutes: number | null,
+    unavailableWord = "Unavailable",
+  ) =>
+    `${state === "dirty" ? "Needs cleaning" : unavailableWord} · ${
       minutes === null
         ? `guest arrives ${time}`
         : minutes <= 0
@@ -6514,6 +6537,7 @@ export const adminArrangeTitles = branded({
   admins: "Super admins",
   journey: "Check-in journey for new properties",
   saver: "Screen saver defaults",
+  hkWords: "Housekeeping words",
   health: "Test all connections",
   stripe: "Stripe",
   whatsapp: "WhatsApp",

@@ -86,7 +86,7 @@ export const AREA_PAGES: Record<string, string> = {
   Housekeeping: "/app/bookings?view=housekeeping",
   Reports: "/app/reports",
   Calendar: "/app/connections",
-  Services: "/app/services",
+  Services: "/app/bookings?view=housekeeping&tab=inbox",
   Team: "/app/settings?focus=team",
   Settings: "/app/settings",
   Invoices: "/app/settings?focus=invoices",

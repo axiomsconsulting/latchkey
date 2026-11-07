@@ -444,7 +444,8 @@ export function GuestSheet({
                 </ul>
               )}
               <Link
-                to="/app/services"
+                to="/app/bookings"
+                search={{ view: "housekeeping", tab: "inbox" }}
                 className="mt-2 inline-block text-sm underline underline-offset-4"
               >
                 {copy.openServices}

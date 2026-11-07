@@ -42,6 +42,7 @@ import { KioskSaverAdmin } from "@/components/host/KioskSaverAdmin";
 import { BrandAdmin, DomainsAdmin } from "@/components/host/BrandAdmin";
 import { DriveAdmin, StarterSectionsAdmin } from "@/components/host/GuideAdmin";
 import { MenuPagesAdmin } from "@/components/host/MenuPagesAdmin";
+import { HkWordsAdmin } from "@/components/host/HkWordsAdmin";
 import { PartnerAdmin } from "@/components/host/PartnerAdmin";
 import { Stars } from "@/components/host/ShellExtras";
 import { Badge } from "@/components/ui/badge";
@@ -261,6 +262,7 @@ function AdminPage() {
             items={[
               { id: "journey", title: titles.journey, node: <CheckinJourneyAdmin /> },
               { id: "saver", title: titles.saver, node: <KioskSaverAdmin /> },
+              { id: "hkWords", title: titles.hkWords, node: <HkWordsAdmin /> },
               { id: "starters", title: titles.starters, node: <StarterSectionsAdmin /> },
             ]}
           />

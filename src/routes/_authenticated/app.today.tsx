@@ -773,7 +773,11 @@ function WaitingOnYou({ propertyId }: { propertyId: string }) {
                 </div>
               }
             >
-              <Link to="/app/services" search={{ request: r.id }} className={rowClass}>
+              <Link
+                to="/app/bookings"
+                search={{ view: "housekeeping", request: r.id }}
+                className={rowClass}
+              >
                 <Badge variant="secondary">{copy.extrasLabel}</Badge>
                 <span className="min-w-0 flex-1 truncate text-sm">
                   {r.guest} · {r.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}
@@ -813,7 +817,11 @@ function WaitingOnYou({ propertyId }: { propertyId: string }) {
                 </div>
               }
             >
-              <Link to="/app/services" search={{ job: j.id }} className={rowClass}>
+              <Link
+                to="/app/bookings"
+                search={{ view: "housekeeping", job: j.id }}
+                className={rowClass}
+              >
                 <Badge variant={j.status === "new" ? "default" : "outline"}>
                   {label[j.status] ?? j.status}
                 </Badge>
@@ -960,7 +968,7 @@ function MaintenanceAhead({ propertyId }: { propertyId: string }) {
       title={copy.maintenanceTitle}
       quiet={!jobs.isLoading && ahead.length === 0 ? copy.maintenanceEmpty : null}
       action={
-        <CardLink to="/app/services" search={{ tab: "planned" }}>
+        <CardLink to="/app/bookings" search={{ view: "housekeeping", tab: "planned" }}>
           {copy.bookMaintenance}
         </CardLink>
       }
@@ -992,7 +1000,11 @@ function MaintenanceAhead({ propertyId }: { propertyId: string }) {
                 </div>
               }
             >
-              <Link to="/app/services" search={{ job: j.id }} className={rowClass}>
+              <Link
+                to="/app/bookings"
+                search={{ view: "housekeeping", job: j.id }}
+                className={rowClass}
+              >
                 <span className="w-32 shrink-0 text-sm tabular-nums">{clock(j.scheduled_at!)}</span>
                 <span className="min-w-0 flex-1 truncate text-sm">
                   {j.title}

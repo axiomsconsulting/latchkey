@@ -27,6 +27,7 @@ import {
   HousekeepingTimeline,
   useHousekeepingToday,
 } from "@/components/host/HousekeepingTimeline";
+import { SERVICE_TABS, ServicesPanel, type ServiceTab } from "@/components/host/ServicesPanel";
 import { BookingFilters, BookingsTable, Tip } from "@/components/host/BookingsTable";
 import {
   AlertDialog,
@@ -112,6 +113,9 @@ export const Route = createFileRoute("/_authenticated/app/bookings")({
     day?: string;
     room?: string;
     focus?: "schedule";
+    tab?: ServiceTab;
+    job?: string;
+    request?: string;
   } => ({
     ...(typeof search["guest"] === "string" ? { guest: search["guest"] } : {}),
     // The Housekeeping view (was its own page): ?day= opens a day, ?room= a room's panel,
@@ -122,6 +126,14 @@ export const Route = createFileRoute("/_authenticated/app/bookings")({
       : {}),
     ...(typeof search["room"] === "string" ? { room: search["room"] } : {}),
     ...(search["focus"] === "schedule" ? { focus: "schedule" as const } : {}),
+    // Services sit under the housekeeping timeline (was its own page): ?tab= opens a tab,
+    // ?job= lands on a job, ?request= on an extras request.
+    ...(typeof search["tab"] === "string" &&
+    (SERVICE_TABS as readonly string[]).includes(search["tab"])
+      ? { tab: search["tab"] as ServiceTab }
+      : {}),
+    ...(typeof search["job"] === "string" ? { job: search["job"] } : {}),
+    ...(typeof search["request"] === "string" ? { request: search["request"] } : {}),
     ...(search["edit"] === true || search["edit"] === "1" || search["edit"] === 1
       ? { edit: true }
       : {}),
@@ -162,7 +174,18 @@ function BookingsPage() {
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);
-  const { guest, edit, show, view: viewParam, day, room, focus: hkFocus } = Route.useSearch();
+  const {
+    guest,
+    edit,
+    show,
+    view: viewParam,
+    day,
+    room,
+    focus: hkFocus,
+    tab: serviceTab,
+    job: jobParam,
+    request: requestParam,
+  } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const { canWrite } = useRole();
   const qc = useQueryClient();
@@ -300,6 +323,16 @@ function BookingsPage() {
       });
     },
     [navigate, show, viewParam],
+  );
+  // A job's line on the timeline lands on that job in the services below.
+  const openJob = useCallback(
+    (id: string) =>
+      void navigate({
+        to: "/app/bookings",
+        search: { view: "housekeeping", job: id },
+        replace: true,
+      }),
+    [navigate],
   );
   const stayTimesFor = useMemo(
     () => ({
@@ -743,7 +776,25 @@ function BookingsPage() {
               day={day}
               room={room}
               focusSchedule={hkFocus === "schedule"}
+              onOpenJob={openJob}
             />
+          ) : null}
+          {selectedId ? (
+            <div className="mt-8">
+              <ServicesPanel
+                propertyId={selectedId}
+                rooms={rooms}
+                timezone={
+                  (
+                    properties?.find((p) => p.id === selectedId) as
+                      { timezone?: string | null } | undefined
+                  )?.timezone ?? "Europe/London"
+                }
+                tab={serviceTab}
+                job={jobParam}
+                request={requestParam}
+              />
+            </div>
           ) : null}
         </div>
       )}

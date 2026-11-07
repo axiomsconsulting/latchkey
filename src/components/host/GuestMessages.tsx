@@ -156,8 +156,8 @@ export function GuestMessages({ propertyId }: { propertyId: string }) {
                         {s.jobs.slice(0, 6).map((j) => (
                           <li key={j.id} className="flex justify-between gap-3">
                             <Link
-                              to="/app/services"
-                              search={{ job: j.id }}
+                              to="/app/bookings"
+                              search={{ view: "housekeeping", job: j.id }}
                               className="min-w-0 truncate hover:underline"
                             >
                               {j.title}

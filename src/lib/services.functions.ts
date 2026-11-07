@@ -276,10 +276,15 @@ export const createHostJob = createServerFn({ method: "POST" })
         hostId: uuid,
         propertyId: uuid,
         roomId: uuid.nullable().default(null),
+        /** Every room the job covers (none = the whole property); the first is also room_id. */
+        roomIds: z.array(uuid).max(100).default([]),
         category: z.string().min(1).max(40),
         title: z.string().trim().min(2).max(120),
         note: z.string().max(1000).nullable().default(null),
         scheduledAt: z.string().datetime().nullable().default(null),
+        /** The end of the tradesperson's window; none with a start means the whole day. */
+        windowEnd: z.string().datetime().nullable().default(null),
+        allDay: z.boolean().default(false),
         urgency: z.enum(["low", "normal", "urgent"]).default("low"),
       })
       .parse(d),
@@ -287,25 +292,98 @@ export const createHostJob = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const cat = categoryById(data.category);
     if (!cat) throw new Error("Unknown service.");
-    const { data: row, error } = await context.supabase
-      .from("service_jobs")
-      .insert({
-        host_id: data.hostId,
-        property_id: data.propertyId,
-        room_id: data.roomId,
-        source: cat.kind === "maintenance" ? "maintenance" : "host",
-        category: data.category,
-        title: data.title,
-        note: data.note,
-        scheduled_at: data.scheduledAt,
-        urgency: data.urgency,
-        status: "acknowledged",
-        acknowledged_at: new Date().toISOString(),
+    if (data.windowEnd && data.scheduledAt && data.windowEnd <= data.scheduledAt)
+      throw new Error("The window must end after it starts.");
+    const roomIds = [...new Set([...(data.roomId ? [data.roomId] : []), ...data.roomIds])];
+    if (roomIds.length) {
+      // Only this property's rooms.
+      const { data: own } = await context.supabase
+        .from("rooms")
+        .select("id")
+        .eq("property_id", data.propertyId)
+        .in("id", roomIds);
+      if ((own ?? []).length !== roomIds.length) throw new Error("Pick rooms in this property.");
+    }
+    const row = {
+      host_id: data.hostId,
+      property_id: data.propertyId,
+      room_id: roomIds[0] ?? null,
+      source: cat.kind === "maintenance" ? "maintenance" : "host",
+      category: data.category,
+      title: data.title,
+      note: data.note,
+      scheduled_at: data.scheduledAt,
+      urgency: data.urgency,
+      status: "acknowledged",
+      acknowledged_at: new Date().toISOString(),
+    };
+    const { withLegacy } = await import("./checkin.server");
+    const { data: made, error } = await withLegacy<{ id: string } | null>(
+      () =>
+        (context.supabase as any)
+          .from("service_jobs")
+          .insert({
+            ...row,
+            room_ids: roomIds.length > 1 ? roomIds : null,
+            window_end: data.allDay ? null : data.windowEnd,
+            all_day: data.allDay,
+          })
+          .select("id")
+          .single(),
+      () => (context.supabase as any).from("service_jobs").insert(row).select("id").single(),
+    );
+    if (error || !made) throw new Error(error?.message ?? "Couldn't add the job.");
+    return { id: made.id };
+  });
+
+/** Changes when a job happens and which rooms it covers (the timeline's lines follow). */
+export const updateJobPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        jobId: uuid,
+        roomIds: z.array(uuid).max(100),
+        scheduledAt: z.string().datetime().nullable(),
+        windowEnd: z.string().datetime().nullable(),
+        allDay: z.boolean(),
       })
-      .select("id")
-      .single();
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (data.windowEnd && data.scheduledAt && data.windowEnd <= data.scheduledAt)
+      throw new Error("The window must end after it starts.");
+    const sb = context.supabase as any;
+    const { data: job } = await sb
+      .from("service_jobs")
+      .select("id, property_id, eta_at")
+      .eq("id", data.jobId)
+      .maybeSingle();
+    if (!job) throw new Error("Job not found.");
+    const roomIds = [...new Set(data.roomIds)];
+    if (roomIds.length) {
+      const { data: own } = await sb
+        .from("rooms")
+        .select("id")
+        .eq("property_id", job.property_id)
+        .in("id", roomIds);
+      if ((own ?? []).length !== roomIds.length) throw new Error("Pick rooms in this property.");
+    }
+    const { error } = await sb
+      .from("service_jobs")
+      .update({
+        room_id: roomIds[0] ?? null,
+        room_ids: roomIds.length > 1 ? roomIds : null,
+        scheduled_at: data.scheduledAt,
+        // The agreed arrival is the start the timeline uses, so it moves with the plan.
+        eta_at: job.eta_at ? data.scheduledAt : null,
+        window_end: data.allDay ? null : data.windowEnd,
+        all_day: data.allDay,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.jobId);
     if (error) throw new Error(error.message);
-    return { id: row.id };
+    return { ok: true };
   });
 
 /** Settings → Kiosk: just the door tablet's look and button size, kept in the property's theme. */
