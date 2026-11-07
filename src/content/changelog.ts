@@ -46,6 +46,34 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.136.0",
+    date: "2026-11-07",
+    title: "Services join housekeeping",
+    items: [
+      {
+        kind: "improved",
+        area: "Services",
+        text: "Services now sit under the housekeeping timeline on Bookings: guest requests, maintenance, your tradespeople and the archive. The separate Services page is gone, and old links open it there.",
+      },
+      {
+        kind: "new",
+        area: "Services",
+        text: "Jobs can cover several rooms or the whole property, for a whole day or the tradesperson's window. Each job gets its own colour and shows as a line under the rooms it affects, with jobs that overlap on separate lines. Tap a line to go to the job.",
+      },
+      {
+        kind: "improved",
+        area: "Housekeeping",
+        text: "The cleaning between stays is now the same height as the stays on the timeline.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin → Defaults for hosts → Housekeeping words: change the words hosts see for Dirty, Ready and Unavailable.",
+      },
+    ],
+  },
+  {
     version: "0.135.0",
     date: "2026-11-07",
     title: "Housekeeping moves into Bookings",

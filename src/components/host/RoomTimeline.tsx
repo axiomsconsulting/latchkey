@@ -31,15 +31,17 @@ import { cn } from "@/lib/utils";
 
 /**
  * Something on a room's line: "back" things fill the line behind (cleaning
- * windows, the turnover between two guests), "front" things are the stays,
- * on their own lines where they overlap.
+ * windows), "band" things sit at a stay's height on the first line, behind the
+ * stays (the cleaning between two guests), "front" things are the stays, on
+ * their own lines where they overlap, and "line" things are thin coloured lines
+ * underneath them all (jobs), on their own lines where they overlap.
  */
 export type TimelineItem = {
   id: string;
   roomId: string;
   start: number;
   end: number;
-  layer: "back" | "front";
+  layer: "back" | "band" | "front" | "line";
   title: string;
   label?: ReactNode;
   className?: string;
@@ -50,6 +52,8 @@ export type TimelineItem = {
 };
 
 const LANE = { normal: 34, dense: 26 } as const;
+/** A job line: its thickness and the room each takes. */
+const LINE = { h: 5, step: 8 } as const;
 
 /**
  * Rooms down the side, time across: one day in hours up to a month in days.
@@ -323,7 +327,13 @@ export function RoomTimeline({
             const mine = items.filter((i) => i.roomId === room.id);
             const front = mine.filter((i) => i.layer === "front");
             const { lane: laneIx, count } = laneOf(front);
-            const height = count * lane + 8;
+            const lines = mine.filter((i) => i.layer === "line");
+            const { lane: lineIx, count: lineCount } = laneOf(lines);
+            const linesTop = 4 + count * lane;
+            const height = count * lane + 8 + (lines.length ? lineCount * LINE.step : 0);
+            // Behind first, then the cleaning, then the stays, then the job lines.
+            const order = { back: 0, band: 1, front: 2, line: 3 } as const;
+            mine.sort((a, b) => order[a.layer] - order[b.layer]);
             return (
               <div
                 key={room.id}
@@ -343,19 +353,30 @@ export function RoomTimeline({
                   {mine.map((it) => {
                     const p = place(view, it.start, it.end);
                     if (!p) return null;
-                    const wide = p.width * width > 34;
-                    const front = it.layer === "front";
+                    const isLine = it.layer === "line";
+                    const wide = !isLine && p.width * width > 34;
+                    const front = it.layer === "front" || it.layer === "band";
                     const style: CSSProperties = {
                       left: `${p.left * 100}%`,
                       width: `${p.width * 100}%`,
-                      ...(front ? { top: 4 + laneIx[it.id]! * lane, height: lane - 4 } : {}),
+                      ...(it.layer === "front"
+                        ? { top: 4 + laneIx[it.id]! * lane, height: lane - 4 }
+                        : it.layer === "band"
+                          ? { top: 4, height: lane - 4 }
+                          : isLine
+                            ? { top: linesTop + lineIx[it.id]! * LINE.step, height: LINE.h }
+                            : {}),
                       ...it.style,
                     };
                     const cls = cn(
                       "absolute flex min-w-0 items-center overflow-hidden text-left text-xs",
-                      front ? "gap-1 rounded-md px-1.5 font-medium" : "inset-y-0",
-                      front && p.cutStart && "rounded-l-none",
-                      front && p.cutEnd && "rounded-r-none",
+                      isLine
+                        ? "rounded-full"
+                        : front
+                          ? "gap-1 rounded-md px-1.5 font-medium"
+                          : "inset-y-0",
+                      (front || isLine) && p.cutStart && "rounded-l-none",
+                      (front || isLine) && p.cutEnd && "rounded-r-none",
                       it.onClick &&
                         "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       it.className,

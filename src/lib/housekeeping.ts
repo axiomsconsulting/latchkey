@@ -468,6 +468,32 @@ export function filterRooms<R extends { id: string }>(
 export type HkState = "dirty" | "ready" | "unavailable";
 export const HK_STATES: HkState[] = ["dirty", "ready", "unavailable"];
 /** What each state saves as. */
+export type HkWords = Record<HkState, string>;
+/** The words hosts see for the three states, unless the super admin has set their own. */
+export const HK_WORD_DEFAULTS: HkWords = {
+  dirty: "Dirty",
+  ready: "Ready",
+  unavailable: "Unavailable",
+};
+export const HK_WORD_MAX = 24;
+
+/** The super admin's words (Latchkey admin → Defaults for hosts), tidied; blanks keep the default. */
+export function normaliseHkWords(raw: unknown): Partial<HkWords> {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const out: Partial<HkWords> = {};
+  for (const k of HK_STATES) {
+    const v = typeof r[k] === "string" ? (r[k] as string).replace(/\s+/g, " ").trim() : "";
+    if (v) out[k] = v.slice(0, HK_WORD_MAX);
+  }
+  return out;
+}
+
+/** Every state's word: the super admin's, else the default. */
+export const hkWords = (set: Partial<HkWords> | null | undefined): HkWords => ({
+  ...HK_WORD_DEFAULTS,
+  ...normaliseHkWords(set),
+});
+
 export const HK_SAVES: Record<HkState, Readiness> = {
   dirty: "to_clean",
   ready: "ready",

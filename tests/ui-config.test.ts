@@ -6,6 +6,7 @@ import {
   NAV_BUILT_INS,
   normaliseLayouts,
   normaliseNav,
+  normaliseUi,
   resolveNav,
 } from "../src/lib/ui-config";
 
@@ -30,7 +31,6 @@ describe("menu", () => {
       "custom_help",
       "today",
       "bookings",
-      "services",
       "guides",
       "properties",
       "connections",
@@ -40,20 +40,30 @@ describe("menu", () => {
   });
 
   it("puts a menu item added in a later release next to its neighbour in a saved menu", () => {
-    const saved = [
-      "today",
-      "bookings",
-      "guides",
-      "properties",
-      "connections",
-      "settings",
-      "admin",
-    ].map((id) => ({ id }));
+    const saved = ["today", "bookings", "properties", "connections", "settings", "admin"].map(
+      (id) => ({ id }),
+    );
     expect(
       normaliseNav(saved)
         .map((e) => e.id)
         .slice(0, 4),
-    ).toEqual(["today", "bookings", "services", "guides"]);
+    ).toEqual(["today", "bookings", "guides", "properties"]);
+  });
+
+  it("drops menu items that became part of another page (Housekeeping and Services are on Bookings)", () => {
+    const nav = normaliseNav(
+      ["today", "bookings", "housekeeping", "services"].map((id) => ({ id })),
+    );
+    expect(nav.map((e) => e.id)).not.toContain("services");
+    expect(nav.map((e) => e.id)).not.toContain("housekeeping");
+  });
+
+  it("keeps housekeeping words the super admin set, and only those", () => {
+    expect(
+      normaliseUi({ hkWords: { dirty: "  To  clean ", ready: "", other: "x" } }).hkWords,
+    ).toEqual({
+      dirty: "To clean",
+    });
   });
 
   it("never hides Latchkey admin, and shows it only to super admins", () => {

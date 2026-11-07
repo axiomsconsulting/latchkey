@@ -1294,6 +1294,9 @@ export async function seedDemo(
       note: j.note,
       urgency: j.urgency,
       status: j.status,
+      // Planned work is booked for tomorrow (a whole day), so it shows as a line on the timeline.
+      scheduled_at:
+        j.source === "guest" ? null : new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
       is_demo: true,
     })),
   );

@@ -10,6 +10,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normaliseBrand, type Brand } from "@/lib/brand";
 import { normaliseUi, type UiConfig } from "@/lib/ui-config";
+import { HK_WORD_MAX, normaliseHkWords } from "@/lib/housekeeping";
 import {
   normaliseHomeArtConfig,
   type HomeArtItem,
@@ -154,15 +155,44 @@ export const saveUiConfig = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context.supabase);
-    const ui = normaliseUi(data);
-    const { error } = await (context.supabase as unknown as Loose)
-      .from("site_settings")
-      .update({ ui, updated_at: new Date().toISOString() })
-      .eq("id", 1);
-    if (error) throw new Error(error.message);
-    const { forgetBrand } = await import("./brand.server");
-    forgetBrand();
-    return { ok: true, ui };
+    return { ok: true, ui: await mergeUi(context.supabase, data) };
+  });
+
+/** Writes part of site_settings.ui, keeping the rest as stored. */
+async function mergeUi(supabase: unknown, patch: Record<string, unknown>): Promise<UiConfig> {
+  const sb = supabase as Loose;
+  const { data: row } = await sb.from("site_settings").select("ui").eq("id", 1).maybeSingle();
+  const stored = ((row as { ui?: Record<string, unknown> } | null)?.ui ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const ui = normaliseUi({ ...stored, ...patch });
+  const { error } = await sb
+    .from("site_settings")
+    .update({ ui, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) throw new Error(error.message);
+  const { forgetBrand } = await import("./brand.server");
+  forgetBrand();
+  return ui;
+}
+
+/** Super admin: the words hosts see for housekeeping's three states (blank = the usual word). */
+export const saveHkWords = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        dirty: z.string().max(HK_WORD_MAX),
+        ready: z.string().max(HK_WORD_MAX),
+        unavailable: z.string().max(HK_WORD_MAX),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const ui = await mergeUi(context.supabase, { hkWords: normaliseHkWords(data) });
+    return { ok: true, hkWords: ui.hkWords };
   });
 
 /* ---------------------------- starter sections ---------------------------- */

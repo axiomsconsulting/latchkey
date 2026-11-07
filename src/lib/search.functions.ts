@@ -264,7 +264,7 @@ export const omniSearch = createServerFn({ method: "GET" })
         id: j.id,
         title: j.title,
         subtitle: j.status.replace(/_/g, " "),
-        href: `/app/services?job=${j.id}`,
+        href: `/app/bookings?view=housekeeping&job=${j.id}`,
         ...(j.property_id ? { propertyId: j.property_id } : {}),
       });
     for (const t of trades)
@@ -273,7 +273,7 @@ export const omniSearch = createServerFn({ method: "GET" })
         id: t.id,
         title: t.name,
         subtitle: [t.company_name, t.category].filter(Boolean).join(" · "),
-        href: "/app/services?tab=trades",
+        href: "/app/bookings?view=housekeeping&tab=trades",
       });
     for (const l of links)
       hits.push({

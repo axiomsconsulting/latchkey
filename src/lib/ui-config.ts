@@ -8,6 +8,8 @@
  * menu and the pages all agree (tests/ui-config.test.ts).
  */
 
+import { normaliseHkWords, type HkWords } from "./housekeeping";
+
 /* ---------------------------------- menu ---------------------------------- */
 
 export type NavBuiltIn = {
@@ -25,7 +27,6 @@ export type NavBuiltIn = {
 export const NAV_BUILT_INS: NavBuiltIn[] = [
   { id: "today", to: "/app/today", labelKey: "today", icon: "sun" },
   { id: "bookings", to: "/app/bookings", labelKey: "bookings", icon: "calendar-days" },
-  { id: "services", to: "/app/services", labelKey: "services", icon: "wrench" },
   { id: "guides", to: "/app/guides", labelKey: "guides", icon: "book-open" },
   { id: "properties", to: "/app/properties", labelKey: "properties", icon: "home" },
   { id: "connections", to: "/app/connections", labelKey: "connections", icon: "plug" },
@@ -314,9 +315,14 @@ export function arrange(layout: PageLayout | undefined, ids: string[]): string[]
   return [...ordered, ...rest];
 }
 
-export type UiConfig = { nav: NavEntry[]; pages: PageLayouts };
+/** The menu, page layouts, and the words for housekeeping's three states (only those changed). */
+export type UiConfig = { nav: NavEntry[]; pages: PageLayouts; hkWords: Partial<HkWords> };
 
 export function normaliseUi(raw: unknown): UiConfig {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-  return { nav: normaliseNav(r["nav"]), pages: normaliseLayouts(r["pages"]) };
+  return {
+    nav: normaliseNav(r["nav"]),
+    pages: normaliseLayouts(r["pages"]),
+    hkWords: normaliseHkWords(r["hkWords"]),
+  };
 }
