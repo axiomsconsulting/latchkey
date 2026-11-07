@@ -3572,6 +3572,10 @@ export const guestCard = branded({
     "Opens your phone, or the app that makes calls on this computer (iPhone on a Mac, Phone Link on Windows).",
   kioskWelcome: "Kiosk welcome",
   kioskWelcomeHide: "Close the welcome",
+  /** Short labels for the guest card's one-line action row. */
+  kioskShort: "Kiosk",
+  guideShort: "Guide",
+  restoreShort: "Show",
   checkedIn: "Checked in",
   notes: "Notes",
   archive: "Hide",

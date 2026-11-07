@@ -1117,3 +1117,144 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
   height: 2em;
   border-width: 3px;
 }
+
+/*
+ * Host dashboard on phones and touch tablets (html[data-host], set by HostShell
+ * so dialogs and menus opened outside it are included): every control is at
+ * least a finger's size (44px) and text boxes use 16px text so phones don't
+ * zoom. min-height/min-width, never height, so a control a page sized larger
+ * keeps its size. Previews of guest screens ([data-themed]) and anything
+ * marked data-no-touch keep their own sizes.
+ */
+@media (max-width: 639px), (pointer: coarse) and (max-width: 1024px) {
+  html[data-host]
+    :is(
+      [data-slot="button"],
+      [data-slot="input"],
+      [data-slot="select-trigger"],
+      [data-slot="tabs-trigger"],
+      [data-slot="menu-item"]
+    ):not(:where([data-themed], [data-no-touch]) *) {
+    min-height: 44px;
+  }
+  html[data-host] [data-slot="button"][data-size="sm"]:not(:where([data-themed], [data-no-touch]) *) {
+    font-size: 0.8125rem;
+    border-radius: 0.75rem;
+  }
+  html[data-host] [data-slot="button"][data-size="icon"]:not(:where([data-themed], [data-no-touch]) *),
+  html[data-host] button[aria-label]:is([class~="size-6"], [class~="size-7"], [class~="size-8"], [class~="size-9"], [class~="h-8"], [class~="h-7"]):not([data-slot]):not(:where([data-themed], [data-no-touch]) *) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  html[data-host] :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):not(:where([data-themed], [data-no-touch]) *) {
+    font-size: 16px;
+  }
+  html[data-host] [data-slot="select-trigger"] > svg:last-child {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  /* Tabs: a taller strip with roomy tabs. */
+  html[data-host] [data-slot="tabs-list"]:not(:where([data-themed], [data-no-touch]) *) {
+    height: auto;
+    width: 100%;
+    min-height: 52px;
+    padding: 4px;
+    border-radius: 0.875rem;
+  }
+  html[data-host] [data-slot="tabs-trigger"]:not(:where([data-themed], [data-no-touch]) *) {
+    padding-inline: 0.875rem;
+    flex: 1 1 auto;
+    border-radius: 0.625rem;
+    font-size: 0.9375rem;
+  }
+  /* Hand-made choice groups (segmented buttons, swatches). */
+  html[data-host] [role="radiogroup"] > :is(button, [role="radio"]):not(:where([data-themed], [data-no-touch]) *) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Menu and list choices. */
+  html[data-host] [data-slot="menu-item"] {
+    font-size: 0.9375rem;
+    padding-block: 0.625rem;
+  }
+  /* Section folds. */
+  html[data-host] [data-slot="accordion-trigger"]:not(:where([data-themed], [data-no-touch]) *) {
+    min-height: 52px;
+    font-size: 0.9375rem;
+  }
+  html[data-host] [data-slot="accordion-trigger"]:not(:where([data-themed], [data-no-touch]) *) > svg {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+  /* The close cross on dialogs and side panels: a clear round button. */
+  html[data-host] :is([data-slot="dialog-close"], [data-slot="sheet-close"]):not(:where([data-themed], [data-no-touch]) *) {
+    top: 0.625rem;
+    right: 0.625rem;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    opacity: 1;
+    z-index: 1;
+  }
+  /* Titles stay clear of the cross. */
+  html[data-host] [data-slot="dialog-header"]:not(:where([data-themed], [data-no-touch]) *) {
+    padding-inline: 2.75rem;
+  }
+  html[data-host] :is([data-slot="dialog-close"], [data-slot="sheet-close"]) > svg {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+  /* Switches, ticks and radios: bigger to see, with a finger-sized area to press. */
+  html[data-host] [data-slot="switch"]:not(:where([data-themed], [data-no-touch]) *) {
+    position: relative;
+    width: 3rem;
+    height: 1.75rem;
+  }
+  html[data-host] [data-slot="switch"]:not(:where([data-themed], [data-no-touch]) *) > span {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  html[data-host] [data-slot="switch"][data-state="checked"]:not(:where([data-themed], [data-no-touch]) *) > span {
+    translate: 1.25rem 0;
+  }
+  html[data-host] :is([data-slot="checkbox"], [data-slot="radio"]):not(:where([data-themed], [data-no-touch]) *) {
+    position: relative;
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+  html[data-host] :is([data-slot="switch"], [data-slot="checkbox"], [data-slot="radio"]):not(:where([data-themed], [data-no-touch]) *)::after {
+    content: "";
+    position: absolute;
+    inset: -0.625rem;
+  }
+}
+
+/*
+ * Phones only: a row made only of buttons shares the width between them, so
+ * each one is as big as the space allows (icon buttons keep their square).
+ * Buttons for well-known actions (download, print, delete, edit, save) show
+ * only their icon; the words stay for screen readers and as the tooltip.
+ * data-keep-size on a row, or data-keep-label on a button, opts out.
+ */
+@media (max-width: 639px) {
+  html[data-host]
+    :is([class~="flex"], [class~="flex-wrap"]):not([class~="flex-col"], [data-keep-size], :where([data-themed], [data-no-touch]) *):not(:has(> :not([data-slot="button"], [data-slot="popover-trigger"])))
+    > [data-slot="button"]:not([data-size="icon"], [data-icon-only]) {
+    flex: 1 1 auto;
+  }
+  html[data-host] [data-slot="button"]:has(> svg:is(.lucide-download, .lucide-printer, .lucide-trash-2, .lucide-trash, .lucide-pencil, .lucide-square-pen, .lucide-pen, .lucide-save)):not([data-keep-label], :where([data-themed], [data-no-touch]) *) {
+    font-size: 0;
+    gap: 0;
+    padding-inline: 0;
+    min-width: 44px;
+    flex: 0 0 auto !important;
+  }
+  html[data-host] [data-slot="button"]:has(> svg:is(.lucide-download, .lucide-printer, .lucide-trash-2, .lucide-trash, .lucide-pencil, .lucide-square-pen, .lucide-pen, .lucide-save)):not([data-keep-label], :where([data-themed], [data-no-touch]) *) > svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}

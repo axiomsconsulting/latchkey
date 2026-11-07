@@ -85,7 +85,7 @@ export function ArrangedSections({
           <button
             type="button"
             disabled={allOpen}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50 disabled:hover:no-underline"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50 disabled:hover:no-underline sm:min-h-0 sm:px-0 sm:text-xs"
             onClick={() => save({ ...layout, open: [...new Set([...layout.open, ...ids])] })}
           >
             <ChevronsUpDown className="size-3.5" aria-hidden /> {copy.openAll}
@@ -93,7 +93,7 @@ export function ArrangedSections({
           <button
             type="button"
             disabled={!visible.some(opened)}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50 disabled:hover:no-underline"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50 disabled:hover:no-underline sm:min-h-0 sm:px-0 sm:text-xs"
             onClick={() => save({ ...layout, open: layout.open.filter((x) => !ids.includes(x)) })}
           >
             <ChevronsDownUp className="size-3.5" aria-hidden /> {copy.closeAll}
@@ -140,11 +140,11 @@ export function ArrangedSections({
                   type="button"
                   aria-expanded={open}
                   onClick={() => save({ ...layout, open: toggleOpen(layout.open, id) })}
-                  className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left"
+                  className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-lg px-1 text-left sm:min-h-10 sm:gap-2"
                 >
                   <ChevronDown
                     className={cn(
-                      "size-4 shrink-0 text-muted-foreground transition-transform",
+                      "size-5 shrink-0 sm:size-4 text-muted-foreground transition-transform",
                       open && "rotate-180",
                     )}
                     aria-hidden
@@ -161,18 +161,18 @@ export function ArrangedSections({
                   disabled={i === 0}
                   aria-label={copy.up(item.title)}
                   onClick={() => save({ ...layout, order: moveSection(order, id, -1, ids) })}
-                  className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary disabled:opacity-30"
+                  className="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-secondary disabled:opacity-30 sm:size-8 sm:rounded-lg"
                 >
-                  <ArrowUp className="size-4" />
+                  <ArrowUp className="size-5 sm:size-4" />
                 </button>
                 <button
                   type="button"
                   disabled={i === visible.length - 1}
                   aria-label={copy.down(item.title)}
                   onClick={() => save({ ...layout, order: moveSection(order, id, 1, ids) })}
-                  className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary disabled:opacity-30"
+                  className="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground hover:bg-secondary disabled:opacity-30 sm:size-8 sm:rounded-lg"
                 >
-                  <ArrowDown className="size-4" />
+                  <ArrowDown className="size-5 sm:size-4" />
                 </button>
               </div>
             ) : null}

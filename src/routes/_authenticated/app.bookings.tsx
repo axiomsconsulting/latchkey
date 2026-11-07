@@ -573,7 +573,7 @@ function BookingsPage() {
                 setPicked(new Set());
               }}
               className={cn(
-                "flex-1 rounded-lg px-3 py-2 text-sm font-medium sm:px-4",
+                "min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-medium sm:min-h-0 sm:px-4",
                 scope === v ? "bg-primary text-primary-foreground" : "text-muted-foreground",
               )}
             >
@@ -591,7 +591,7 @@ function BookingsPage() {
               type="button"
               onClick={() => setView(v)}
               className={cn(
-                "flex-1 rounded-lg px-3 py-2 text-sm font-medium sm:px-4",
+                "min-h-11 flex-1 rounded-lg px-3 py-2 text-sm font-medium sm:min-h-0 sm:px-4",
                 view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground",
               )}
             >

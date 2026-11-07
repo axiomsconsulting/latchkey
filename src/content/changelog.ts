@@ -20,6 +20,7 @@ export type ChangeItem = {
   /** Which part of Latchkey: shown as a tag and used to group features. */
   area:
     | "Check-in"
+    | "Dashboard"
     | "Guest guide"
     | "Bookings"
     | "Housekeeping"
@@ -45,6 +46,28 @@ export type Release = {
 
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
+  {
+    version: "0.138.0",
+    date: "2026-11-07",
+    title: "Easier to use with your fingers",
+    items: [
+      {
+        kind: "improved",
+        area: "Dashboard",
+        text: "On phones and touch tablets the dashboard's buttons, tabs, text boxes, lists, switches and ticks are bigger and easier to press, and the X that closes a window is a clear round button. The arrows that open, close and move section cards are larger too.",
+      },
+      {
+        kind: "improved",
+        area: "Dashboard",
+        text: "On phones, buttons in a row share the full width, and well-known actions (download, print, edit, delete, save) show just their icon.",
+      },
+      {
+        kind: "improved",
+        area: "Bookings",
+        text: "The guest card's Edit, Hide, guide link and Kiosk buttons now sit on one line, with Remove as a bin icon at the end.",
+      },
+    ],
+  },
   {
     version: "0.137.0",
     date: "2026-11-07",
