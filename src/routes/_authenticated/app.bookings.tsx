@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,8 +21,12 @@ import { ImportDialog } from "@/components/host/ImportDialog";
 import { PageHeader } from "@/components/host/PageHeader";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { GuestSheet } from "@/components/host/GuestSheet";
-import { BookingsTimeline, type Activity } from "@/components/host/BookingsTimeline";
-import type { ScheduleWindow } from "@/lib/housekeeping";
+import { useStayItems, type Activity } from "@/components/host/BookingsTimeline";
+import {
+  HkRoomBadge,
+  HousekeepingTimeline,
+  useHousekeepingToday,
+} from "@/components/host/HousekeepingTimeline";
 import { BookingFilters, BookingsTable, Tip } from "@/components/host/BookingsTable";
 import {
   AlertDialog,
@@ -100,8 +104,24 @@ export const Route = createFileRoute("/_authenticated/app/bookings")({
   // stays, worked out exactly as Today does, e.g. from a number on Today.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { guest?: string; edit?: boolean; show?: ShowKey } => ({
+  ): {
+    guest?: string;
+    edit?: boolean;
+    show?: ShowKey;
+    view?: "housekeeping";
+    day?: string;
+    room?: string;
+    focus?: "schedule";
+  } => ({
     ...(typeof search["guest"] === "string" ? { guest: search["guest"] } : {}),
+    // The Housekeeping view (was its own page): ?day= opens a day, ?room= a room's panel,
+    // ?focus=schedule the weekly schedule.
+    ...(search["view"] === "housekeeping" ? { view: "housekeeping" as const } : {}),
+    ...(typeof search["day"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search["day"])
+      ? { day: search["day"] }
+      : {}),
+    ...(typeof search["room"] === "string" ? { room: search["room"] } : {}),
+    ...(search["focus"] === "schedule" ? { focus: "schedule" as const } : {}),
     ...(search["edit"] === true || search["edit"] === "1" || search["edit"] === 1
       ? { edit: true }
       : {}),
@@ -142,7 +162,7 @@ function BookingsPage() {
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);
-  const { guest, edit, show } = Route.useSearch();
+  const { guest, edit, show, view: viewParam, day, room, focus: hkFocus } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const { canWrite } = useRole();
   const qc = useQueryClient();
@@ -156,7 +176,14 @@ function BookingsPage() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "timeline">("list");
+  // Kept in the address, so opening a guest and closing them again stays on the same view.
+  const view: "list" | "housekeeping" = viewParam ?? "list";
+  const setView = (v: "list" | "housekeeping") =>
+    void navigate({
+      to: "/app/bookings",
+      search: { ...(v === "housekeeping" ? { view: v } : {}), ...(show ? { show } : {}) },
+      replace: true,
+    });
   const sites = useBookingSites();
   // Filters are remembered in this browser; past stays start hidden.
   const [filters, setFiltersState] = useState<ListFilters>(DEFAULT_FILTERS);
@@ -209,14 +236,6 @@ function BookingsPage() {
     });
   }, [edit, guest, everything, navigate, show]);
   const todayIso = data?.today ?? new Date().toISOString().slice(0, 10);
-  const windows = (data?.windows ?? []) as Array<{
-    id: string;
-    room_id: string | null;
-    day_of_week: number | null;
-    start_time: string | null;
-    end_time: string | null;
-    reason: string | null;
-  }>;
 
   const platformOf = (b: ListBooking) => platformKey(b);
   // The same lists Today shows, so a number there opens exactly those stays here.
@@ -268,13 +287,43 @@ function BookingsPage() {
     setDialogOpen(true);
   }
 
-  function openGuest(id: string | null) {
-    void navigate({
-      to: "/app/bookings",
-      search: { ...(id ? { guest: id } : {}), ...(show ? { show } : {}) },
-      replace: true,
-    });
-  }
+  const openGuest = useCallback(
+    (id: string | null) => {
+      void navigate({
+        to: "/app/bookings",
+        search: {
+          ...(id ? { guest: id } : {}),
+          ...(show ? { show } : {}),
+          ...(viewParam ? { view: viewParam } : {}),
+        },
+        replace: true,
+      });
+    },
+    [navigate, show, viewParam],
+  );
+  const stayTimesFor = useMemo(
+    () => ({
+      checkIn: (
+        (data?.property as { default_check_in_time?: string } | null)?.default_check_in_time ??
+        "15:00"
+      ).slice(0, 5),
+      checkOut: (
+        (data?.property as { default_check_out_time?: string } | null)?.default_check_out_time ??
+        "11:00"
+      ).slice(0, 5),
+    }),
+    [data?.property],
+  );
+  const stayItems = useStayItems({
+    rooms,
+    stays: filtered,
+    allStays: all,
+    times: stayTimesFor,
+    activity,
+    onOpen: openGuest,
+  });
+  // Each room's state today, by its name in the list.
+  const hkToday = useHousekeepingToday(selectedId ?? null, data?.today ?? null);
   useLandOn(show ? "bookings-list" : guest ? `stay-${guest}` : null, everything.length > 0);
 
   function toggle(id: string) {
@@ -482,7 +531,7 @@ function BookingsPage() {
           className="flex flex-1 rounded-xl border border-border bg-surface p-1 sm:flex-none"
           data-tour="bookings-view"
         >
-          {(["list", "timeline"] as const).map((v) => (
+          {(["list", "housekeeping"] as const).map((v) => (
             <button
               key={v}
               type="button"
@@ -672,33 +721,30 @@ function BookingsPage() {
             onToggle={toggle}
             onOpen={(id) => openGuest(id)}
             rowActions={rowActions}
+            // Stays not over yet show the room's state; the arriving one also says what to do.
+            roomBadge={(b) =>
+              b.room_id && b.check_out_date >= todayIso ? (
+                <HkRoomBadge
+                  info={hkToday?.get(b.room_id)}
+                  arriving={b.check_in_date === todayIso}
+                />
+              ) : null
+            }
           />
         </div>
       ) : (
-        // One day in hours up to a month: swipe through time, pinch to zoom (the same timeline as Housekeeping).
+        // Housekeeping: the stays and each day's cleaning between them, one day in hours up to a month.
         <div data-tour="bookings-main">
-          <BookingsTimeline
-            rooms={rooms}
-            stays={filtered}
-            allStays={all}
-            windows={windows as unknown as ScheduleWindow[]}
-            times={{
-              checkIn: (
-                (data?.property as { default_check_in_time?: string } | null)
-                  ?.default_check_in_time ?? "15:00"
-              ).slice(0, 5),
-              checkOut: (
-                (data?.property as { default_check_out_time?: string } | null)
-                  ?.default_check_out_time ?? "11:00"
-              ).slice(0, 5),
-            }}
-            timezone={
-              (data?.property as { timezone?: string | null } | null)?.timezone ?? "Europe/London"
-            }
-            today={todayIso}
-            activity={activity}
-            onOpen={(id) => openGuest(id)}
-          />
+          {selectedId ? (
+            <HousekeepingTimeline
+              propertyId={selectedId}
+              stayItems={stayItems}
+              today={todayIso}
+              day={day}
+              room={room}
+              focusSchedule={hkFocus === "schedule"}
+            />
+          ) : null}
         </div>
       )}
 

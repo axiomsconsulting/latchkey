@@ -857,7 +857,11 @@ function CleaningToday({
       id="cleaning"
       icon={SprayCan}
       title={copy.cleaningTitle}
-      action={<CardLink to="/app/housekeeping">{copy.openBoard}</CardLink>}
+      action={
+        <CardLink to="/app/bookings" search={{ view: "housekeeping" }}>
+          {copy.openBoard}
+        </CardLink>
+      }
       quiet={today.length === 0 && tight.length === 0 ? copy.cleaningEmpty : null}
     >
       {today.length === 0 && tight.length === 0 ? (
@@ -908,7 +912,11 @@ function CleaningToday({
                 </p>
               }
             >
-              <Link to="/app/housekeeping" search={{ focus: "schedule" }} className={rowClass}>
+              <Link
+                to="/app/bookings"
+                search={{ view: "housekeeping", focus: "schedule" }}
+                className={rowClass}
+              >
                 <span className="w-28 shrink-0 text-sm tabular-nums">
                   {formatUkTime(w.start_time)}–{formatUkTime(w.end_time)}
                 </span>
@@ -1606,7 +1614,11 @@ function KeySettings({ isUk }: { isUk: boolean }) {
       links: [
         { key: "property", to: "/app/properties", search: { focus: "property" } },
         { key: "rooms", to: "/app/properties", search: { focus: "rooms" } },
-        { key: "cleaning", to: "/app/housekeeping", search: { focus: "schedule" } },
+        {
+          key: "cleaning",
+          to: "/app/bookings",
+          search: { view: "housekeeping", focus: "schedule" },
+        },
       ],
     },
     {

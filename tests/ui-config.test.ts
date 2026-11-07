@@ -30,7 +30,6 @@ describe("menu", () => {
       "custom_help",
       "today",
       "bookings",
-      "housekeeping",
       "services",
       "guides",
       "properties",
@@ -44,7 +43,6 @@ describe("menu", () => {
     const saved = [
       "today",
       "bookings",
-      "services",
       "guides",
       "properties",
       "connections",
@@ -55,7 +53,7 @@ describe("menu", () => {
       normaliseNav(saved)
         .map((e) => e.id)
         .slice(0, 4),
-    ).toEqual(["today", "bookings", "housekeeping", "services"]);
+    ).toEqual(["today", "bookings", "services", "guides"]);
   });
 
   it("never hides Latchkey admin, and shows it only to super admins", () => {

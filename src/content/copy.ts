@@ -951,7 +951,7 @@ export const bookings = branded({
   alsoClosedOn: "Also closed on",
   blockedCell: "Closed",
   listView: "List",
-  timelineView: "Timeline",
+  timelineView: "Housekeeping",
   addBooking: "Add booking",
   importCsv: "Import bookings",
   empty: "No bookings yet. Add one by hand, import a file, or connect a calendar.",
@@ -4898,6 +4898,22 @@ export const timelineCopy = branded({
 
 export const housekeepingCopy = branded({
   title: "Housekeeping",
+  // The three states hosts see, one word each (src/lib/housekeeping.ts hkState).
+  state: { dirty: "Dirty", ready: "Ready", unavailable: "Unavailable" } as Record<string, string>,
+  stateCount: (s: string, n: number) =>
+    `${n} ${({ dirty: "dirty", ready: "ready", unavailable: "unavailable" } as Record<string, string>)[s] ?? s}`,
+  stateLabel: (room: string) => `State of ${room}`,
+  action: (state: "dirty" | "unavailable", time: string, minutes: number | null) =>
+    `${state === "dirty" ? "Needs cleaning" : "Unavailable"} · ${
+      minutes === null
+        ? `guest arrives ${time}`
+        : minutes <= 0
+          ? `guest was due ${time}`
+          : minutes < 60
+            ? `guest arrives in ${minutes} min`
+            : `guest arrives in ${Math.round(minutes / 60)}h`
+    }`,
+  makeReady: "Back in use",
   subtitle:
     "Room by room: what the day means, where cleaning has got to, and which rooms are ready for guests.",
   noProperty: "Add a property first.",

@@ -319,3 +319,63 @@ describe("housekeeping on the timeline", () => {
     expect(filterRooms(rooms, cards, "out_of_service").map((r) => r.id)).toEqual(["r4"]);
   });
 });
+
+describe("housekeeping in three states", () => {
+  it("reads every stored status as Dirty, Ready or Unavailable, and saves each one", async () => {
+    const { hkState, HK_SAVES } = await import("../src/lib/housekeeping");
+    expect(hkState("to_clean")).toBe("dirty");
+    expect(hkState("cleaning")).toBe("dirty");
+    expect(hkState("clean")).toBe("ready");
+    expect(hkState("ready")).toBe("ready");
+    expect(hkState("out_of_service")).toBe("unavailable");
+    expect(hkState(null)).toBeNull();
+    for (const s of ["dirty", "ready", "unavailable"] as const)
+      expect(hkState(HK_SAVES[s])).toBe(s);
+  });
+
+  it("asks for action only when someone arrives in a dirty or unavailable room", async () => {
+    const { buildBoard, roomAction } = await import("../src/lib/housekeeping");
+    const rooms = [{ id: "r1", display_name: "One" }];
+    const arriving = {
+      id: "b1",
+      room_id: "r1",
+      guest_full_name: "A B",
+      check_in_date: "2026-11-07",
+      check_out_date: "2026-11-09",
+      status: "upcoming",
+    };
+    const leaving = {
+      ...arriving,
+      id: "b0",
+      check_in_date: "2026-11-05",
+      check_out_date: "2026-11-07",
+    };
+    const card = (stays: (typeof arriving)[], status?: "ready" | "out_of_service") =>
+      buildBoard({
+        day: "2026-11-07",
+        rooms,
+        stays,
+        readiness: status
+          ? [
+              {
+                room_id: "r1",
+                status,
+                assignee: null,
+                due_time: null,
+                note: null,
+                updated_at: null,
+              },
+            ]
+          : [],
+        defaultCheckIn: "15:00",
+      })[0]!;
+    expect(roomAction(card([leaving, arriving]), 180)).toEqual({
+      state: "dirty",
+      arrival: "15:00",
+      minutes: 180,
+    });
+    expect(roomAction(card([leaving, arriving], "ready"), 180)).toBeNull();
+    expect(roomAction(card([leaving]), null)).toBeNull();
+    expect(roomAction(card([arriving], "out_of_service"), 30)?.state).toBe("unavailable");
+  });
+});
