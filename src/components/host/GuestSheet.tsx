@@ -260,15 +260,25 @@ export function GuestSheet({
 
             {canWrite ? (
               <div className="mt-4 space-y-2 px-4">
-                <div className="flex flex-wrap gap-2">
+                {/* One line: edit, hide, the guide link, the kiosk welcome, and remove as a bin icon
+                    (the three words lose their icons on the narrowest phones). */}
+                <div data-keep-size className="flex items-center gap-1.5">
                   {onEdit && !b.isTest ? (
-                    <Button variant="outline" size="sm" onClick={() => onEdit(b.id)}>
-                      <Pencil className="size-4" /> {common.edit}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      aria-label={common.edit}
+                      title={common.edit}
+                      onClick={() => onEdit(b.id)}
+                    >
+                      <Pencil className="size-4" />
                     </Button>
                   ) : null}
                   <Button
                     variant="outline"
                     size="sm"
+                    className="min-w-0 flex-1 gap-1 px-2"
                     disabled={busy !== null}
                     onClick={() =>
                       void act(
@@ -280,39 +290,47 @@ export function GuestSheet({
                     }
                   >
                     {b.archived ? (
-                      <ArchiveRestore className="size-4" />
+                      <ArchiveRestore className="size-4 max-[400px]:hidden" />
                     ) : (
-                      <Archive className="size-4" />
+                      <Archive className="size-4 max-[400px]:hidden" />
                     )}
-                    {b.archived ? copy.restore : copy.archive}
+                    <span className="truncate">
+                      {b.archived ? copy.restoreShort : copy.archive}
+                    </span>
                   </Button>
-                  <Button
-                    variant="ghost"
+                  <GuideLinkButton
+                    bookingId={b.id}
                     size="sm"
-                    className="text-destructive"
-                    disabled={busy !== null}
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    <Trash2 className="size-4" /> {common.remove}
-                  </Button>
-                </div>
-                {/* Reaching the guest: their guide link, and a welcome on the kiosk written for them. */}
-                <div className="flex flex-wrap gap-2">
-                  <span data-tour="guest-guide-link" className="inline-flex">
-                    <GuideLinkButton bookingId={b.id} size="sm" />
-                  </span>
+                    className="min-w-0 flex-1 gap-1 px-2"
+                    iconClassName="max-[400px]:hidden"
+                    label={copy.guideShort}
+                    tourName="guest-guide-link"
+                  />
                   {shortCode ? (
                     <Button
                       variant={welcomeOpen ? "secondary" : "outline"}
                       size="sm"
+                      className="min-w-0 flex-1 gap-1 px-2"
                       aria-expanded={welcomeOpen}
+                      title={welcomeOpen ? copy.kioskWelcomeHide : copy.kioskWelcome}
                       onClick={() => setWelcomeOpen((o) => !o)}
                       data-tour="guest-kiosk-welcome"
                     >
-                      <MonitorUp className="size-4" />{" "}
-                      {welcomeOpen ? copy.kioskWelcomeHide : copy.kioskWelcome}
+                      <MonitorUp className="size-4 max-[400px]:hidden" />
+                      <span className="truncate">{copy.kioskShort}</span>
                     </Button>
                   ) : null}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-destructive"
+                    aria-label={common.remove}
+                    title={common.remove}
+                    disabled={busy !== null}
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
                 {welcomeOpen && shortCode ? (
                   <div className="rounded-2xl border border-border p-3">

@@ -4,6 +4,7 @@ import { Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { common, guideCopy as copy } from "@/content/copy";
 import { createGuideLink } from "@/lib/guide.functions";
 
@@ -12,10 +13,18 @@ export function GuideLinkButton({
   bookingId,
   className,
   size,
+  label,
+  tourName,
+  iconClassName,
 }: {
   bookingId: string;
   className?: string;
   size?: "sm";
+  /** A shorter label where space is tight; the full wording stays as the tooltip. */
+  label?: string;
+  /** The guided tour's marker (data-tour). */
+  tourName?: string;
+  iconClassName?: string;
 }) {
   const make = useServerFn(createGuideLink);
   const [busy, setBusy] = useState(false);
@@ -42,9 +51,15 @@ export function GuideLinkButton({
       onClick={run}
       disabled={busy}
       className={className}
+      title={label ? copy.guideLink : undefined}
+      data-tour={tourName}
     >
-      {busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
-      {copy.guideLink}
+      {busy ? (
+        <Loader2 className={cn("size-4 animate-spin", iconClassName)} />
+      ) : (
+        <Link2 className={cn("size-4", iconClassName)} />
+      )}
+      <span className="truncate">{label ?? copy.guideLink}</span>
     </Button>
   );
 }

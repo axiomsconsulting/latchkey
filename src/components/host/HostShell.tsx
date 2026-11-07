@@ -174,6 +174,14 @@ export function HostShell() {
   const alertCount = useAlerts().data?.alerts.length ?? 0;
   const { data } = useWorkspace();
   const { canWrite, isOwner } = useRole();
+  // Marks the page as the host dashboard, so phone-sized touch controls (styles.css html[data-host])
+  // reach dialogs and menus too, which open outside this shell.
+  useEffect(() => {
+    document.documentElement.dataset["host"] = "";
+    return () => {
+      delete document.documentElement.dataset["host"];
+    };
+  }, []);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   // The phone dock: the same menu, without Latchkey admin (reached from Settings there).
   const allPages = useMenu(data?.isSuperAdmin === true);

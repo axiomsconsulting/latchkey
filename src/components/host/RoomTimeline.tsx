@@ -209,7 +209,7 @@ export function RoomTimeline({
                 onView(viewFor(z.key as ZoomKey, days[Math.floor(days.length / 2)] ?? today))
               }
               className={cn(
-                "flex-1 rounded-lg px-2 py-1.5 text-xs font-medium sm:flex-none sm:px-2.5",
+                "min-h-11 flex-1 rounded-lg px-2 py-1.5 text-sm font-medium sm:min-h-0 sm:flex-none sm:px-2.5 sm:text-xs",
                 zoom === z.key
                   ? "bg-background shadow-sm"
                   : "text-muted-foreground hover:text-foreground",

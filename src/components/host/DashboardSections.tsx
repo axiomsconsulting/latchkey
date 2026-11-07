@@ -290,7 +290,7 @@ export function DashSection({
       {ctx ? (
         <button
           {...ctx.grabProps(id, title)}
-          className="group absolute -top-2 left-1/2 grid h-4 w-20 -translate-x-1/2 cursor-grab touch-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+          className="group absolute -top-3 left-1/2 grid h-6 w-24 -translate-x-1/2 sm:-top-2 sm:h-4 sm:w-20 cursor-grab touch-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
         >
           <span className="h-1 w-12 rounded-full bg-border transition-colors group-hover:bg-primary group-focus-visible:bg-primary" />
         </button>
@@ -316,9 +316,11 @@ export function DashSection({
             onClick={() => ctx.toggle(id, isQuiet)}
             aria-expanded={!folded}
             aria-label={folded ? copy.unfold(title) : copy.fold(title)}
-            className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
+            className="grid size-11 place-items-center rounded-xl border border-border text-muted-foreground hover:bg-muted sm:size-8 sm:rounded-lg sm:border-0"
           >
-            <ChevronDown className={cn("size-4 transition-transform", folded && "-rotate-90")} />
+            <ChevronDown
+              className={cn("size-5 transition-transform sm:size-4", folded && "-rotate-90")}
+            />
           </button>
         ) : null}
       </div>
