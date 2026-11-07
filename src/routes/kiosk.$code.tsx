@@ -331,7 +331,11 @@ function useScreenFit(
   onReport?: (r: FitReport) => void,
   /** A door tablet: a fixed screen, so the browser's bars and keyboard never change its size. */
   fixedScreen = false,
+  /** Jumbo lays its screens out in cqmin, so nothing there sets the size: it comes from the screen's height. */
+  jumbo = false,
 ) {
+  const jumboNow = useRef(jumbo);
+  jumboNow.current = jumbo;
   const welcome = useRef(atWelcome);
   welcome.current = atWelcome;
   const cals = useRef(calibrations);
@@ -428,6 +432,14 @@ function useScreenFit(
     const check = () => {
       const el = content.current;
       if (!el) return;
+      if (jumboNow.current) {
+        // What the landscape welcome used to grow to, so everything in rem (the screensaver,
+        // the bell's list, dialogs) keeps its size on Jumbo.
+        const v = Math.round(Math.min(FIT.max, Math.max(FIT.base, display.h / 36)) * 10) / 10;
+        if (Math.abs(px() - v) > 0.05) set(v);
+        header(v);
+        return;
+      }
       const h = display.h;
       const landscape = wide();
       const current = px();
@@ -558,7 +570,7 @@ function useScreenFit(
   // A new screen (or a change of button size) starts from the scale again.
   useEffect(() => {
     refit.current.reset();
-  }, [atWelcome, stepKey, expanded]);
+  }, [atWelcome, stepKey, expanded, jumbo]);
   // The host changed the calibration: lay out for the new area at once.
   useEffect(() => {
     refit.current.recalibrate();
@@ -978,6 +990,7 @@ function Kiosk() {
     calibration.calibrations,
     calibration.onReport,
     shared && !tour,
+    jumbo,
   );
   // The host is calibrating from the dashboard: the area's outline shows for a while after each change.
   const [outline, setOutline] = useState(false);

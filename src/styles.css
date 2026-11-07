@@ -882,7 +882,7 @@ html[data-kiosk-jumbo] body {
 [data-kiosk-jumbo] [data-jumbo-status] {
   font-size: clamp(1.1rem, 3cqmin, 2.2rem);
   font-weight: 700;
-  min-height: 3.5rem;
+  min-height: 7cqmin;
 }
 [data-jumbo-status] > div:not([data-jumbo-back]) {
   margin: 0 !important;
@@ -1096,4 +1096,24 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
   max-width: 100%;
   object-fit: contain;
   object-position: left top;
+}
+/* The bell's list on a Jumbo tablet: the bars' size of words, a wide box, big ticks and pill buttons.
+   (Everything inside is in em, so it all grows with the box's own size.) */
+[data-kiosk-jumbo] [data-bell-panel] {
+  font-size: clamp(1.1rem, 3.4cqmin, 2.4rem) !important;
+  width: min(62cqw, 30em) !important;
+  max-height: 80cqh !important;
+  border-radius: 2cqmin !important;
+  padding: 1.1em !important;
+}
+[data-kiosk-jumbo] [data-bell-panel] [data-bell-btn] {
+  border-radius: 9999px !important;
+  border: 3px solid currentColor !important;
+  font-weight: 700;
+  min-height: 2.6em;
+}
+[data-kiosk-jumbo] [data-bell-panel] [role="checkbox"] > span:first-child {
+  width: 2em;
+  height: 2em;
+  border-width: 3px;
 }

@@ -68,7 +68,10 @@ export const openShortLink = createServerFn({ method: "GET" })
       token_hash: t.hash,
       booking_id: b.id,
       valid_from: win.validFrom.toISOString(),
-      expires_at: win.expiresAt.toISOString(),
+      // A link kept open after check-out (Express check-out's review) lets the guide open until it ends.
+      expires_at: new Date(
+        Math.max(win.expiresAt.getTime(), Date.parse(link.expires_at)),
+      ).toISOString(),
     });
     return { token: t.token };
   });

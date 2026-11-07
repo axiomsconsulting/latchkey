@@ -1431,6 +1431,9 @@ export const goodbyeCopy = branded({
   on: "Say goodbye on the door tablet on check-out day",
   message: "Goodbye message",
   messageHelp: "{name} becomes the guest's first name.",
+  thanks: "After Express check-out",
+  thanksHelp:
+    "The big line on the door tablet once they've checked out. {name} becomes their first name.",
   keyDrop: "Where the keys go",
   lockDoor: "Remind them to lock the front door",
   lockLine: "Please make sure the front door is locked behind you.",
@@ -1786,6 +1789,13 @@ export const guest = branded({
   expressReview: "Enjoyed your stay? A quick review means a lot. Scan to leave one:",
   expressDone: "Done",
   expressCloses: "This screen closes by itself in a few minutes.",
+  expressMarked: "You're checked out",
+  expressReviewOn: (site: string) =>
+    site
+      ? `Loved your stay? We'd be so grateful for a review on ${site}.`
+      : "Loved your stay? We'd be so grateful for a review.",
+  expressReviewDirect: "Loved your stay? We'd be so grateful for a quick review.",
+  expressTouch: "Touch the screen to close",
   guideLeavingTitle: "Checking out today",
   guideLeavingBy: (t: string) => `Check-out is by ${t}.`,
   guideKeys: "Where the keys go",

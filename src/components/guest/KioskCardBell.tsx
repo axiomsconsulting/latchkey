@@ -172,6 +172,7 @@ export function KioskCardBell({
           <div
             role="dialog"
             aria-label={copy.bellTitle}
+            data-bell-panel
             className="absolute right-0 top-full z-[91] mt-[0.5em] flex max-h-[calc(var(--kiosk-h,100vh)*0.75)] w-[min(26em,90vw)] flex-col rounded-2xl border border-border bg-card p-[1em] text-left text-[1rem] font-normal text-card-foreground shadow-2xl"
           >
             <p className="text-[1.15em] font-semibold">{copy.bellTitle}</p>
@@ -195,6 +196,7 @@ export function KioskCardBell({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
+                data-bell-btn
                 className="min-h-[3em] rounded-xl border border-border bg-background font-medium"
               >
                 {copy.bellClose}
@@ -203,6 +205,7 @@ export function KioskCardBell({
                 type="button"
                 disabled={busy || !items?.length}
                 onClick={() => void apply()}
+                data-bell-btn
                 className="min-h-[3em] rounded-xl bg-primary font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {copy.bellApply}

@@ -5,6 +5,7 @@ import { DoorClosed, KeyRound, Plane } from "lucide-react";
 import { toast } from "sonner";
 
 import { SaveButton, changed } from "@/components/host/SaveButton";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -97,6 +98,16 @@ export function GoodbyeSettings({ property }: { property: { id: string; short_co
               onChange={(e) => set("message", e.target.value)}
             />
             <p className="text-xs text-muted-foreground">{copy.messageHelp}</p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="gb-thanks">{copy.thanks}</Label>
+            <Input
+              id="gb-thanks"
+              maxLength={200}
+              value={form.thanks}
+              onChange={(e) => set("thanks", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">{copy.thanksHelp}</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="gb-keys">{copy.keyDrop}</Label>
