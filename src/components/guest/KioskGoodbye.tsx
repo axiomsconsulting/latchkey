@@ -1,7 +1,8 @@
 import { DigitalClockBar } from "@/components/guest/KioskDayScreen";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, DoorClosed, KeyRound, LogIn, Plane } from "lucide-react";
+import { ArrowRight, CheckCircle2, DoorClosed, KeyRound, LogIn, Plane } from "lucide-react";
+import { ChannelIcon } from "@/components/ChannelIcon";
 
 import { useQrImage } from "@/components/guest/CheckInQr";
 import { useNow } from "@/components/guest/KioskClocks";
@@ -339,53 +340,79 @@ export function KioskGoodbyeScreen({
   );
 }
 
-/** After Express check-out: the keys, the door and a review, then back to the usual screen after 10 minutes. */
+/**
+ * After Express check-out: that it's done, the host's thank-you, the keys and the door, and a review
+ * on the site they booked with. Any touch closes it, and it closes by itself after a few minutes.
+ */
 function ExpressReminder({
   result,
   onClose,
 }: {
-  result: { firstName: string; keyDrop: string; lockDoor: boolean; reviewCode: string | null };
+  result: Awaited<ReturnType<typeof kioskExpressCheckout>>;
   onClose: () => void;
 }) {
   const reviewUrl =
     result.reviewCode && typeof window !== "undefined"
       ? `${window.location.origin}/g/${result.reviewCode}`
       : null;
-  const qr = useQrImage(reviewUrl);
+  const qr = useQrImage(reviewUrl, { dark: "#111111", light: "#ffffff" });
   useEffect(() => {
     const id = window.setTimeout(onClose, EXPRESS_CLOSE_MINUTES * 60_000);
     return () => window.clearTimeout(id);
   }, [onClose]);
+  const site = result.site;
   return (
-    <div className="fixed inset-0 z-[94] flex select-none items-center justify-center bg-primary p-8 text-primary-foreground">
-      <div className="grid w-full max-w-5xl items-center gap-10 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="space-y-6">
-          <h1 className="font-display text-4xl leading-tight sm:text-6xl">
-            {copy.expressTitle(result.firstName)}
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={copy.expressTouch}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      className="fixed inset-0 z-[94] flex cursor-pointer select-none bg-primary p-[4cqmin] text-primary-foreground"
+      style={{ containerType: "size" }}
+    >
+      <div className="grid min-h-0 w-full items-center gap-[5cqmin] [grid-template-columns:minmax(0,1fr)_auto]">
+        <div className="min-w-0 space-y-[3cqmin]">
+          <p className="flex items-center gap-[0.4em] text-[clamp(1.25rem,5cqmin,3.5rem)] font-bold">
+            <CheckCircle2 className="size-[1.1em] shrink-0" aria-hidden /> {copy.expressMarked}
+          </p>
+          <h1 className="font-display text-[clamp(2rem,9cqmin,6rem)] font-bold leading-[1.05]">
+            {result.thanks ?? copy.expressTitle(result.firstName)}
           </h1>
           {result.keyDrop ? (
-            <p className="flex items-start gap-3 text-2xl">
-              <KeyRound className="mt-1 size-7 shrink-0" aria-hidden /> {result.keyDrop}
+            <p className="flex items-start gap-[0.5em] text-[clamp(1.1rem,4.2cqmin,3rem)] leading-snug">
+              <KeyRound className="mt-[0.15em] size-[1em] shrink-0" aria-hidden /> {result.keyDrop}
             </p>
           ) : null}
           {result.lockDoor ? (
-            <p className="flex items-start gap-3 text-2xl">
-              <DoorClosed className="mt-1 size-7 shrink-0" aria-hidden /> {copy.expressDoor}
+            <p className="flex items-start gap-[0.5em] text-[clamp(1.1rem,4.2cqmin,3rem)] leading-snug">
+              <DoorClosed className="mt-[0.15em] size-[1em] shrink-0" aria-hidden />{" "}
+              {copy.expressDoor}
             </p>
           ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex min-h-14 items-center rounded-full bg-primary-foreground px-10 text-xl font-semibold text-primary"
-          >
-            {copy.expressDone}
-          </button>
-          <p className="text-sm opacity-80">{copy.expressCloses}</p>
         </div>
         {qr ? (
-          <figure className="mx-auto max-w-[16rem] rounded-2xl bg-white p-4 text-center text-black">
-            <img src={qr} alt={copy.qrAlt} className="mx-auto w-full" />
-            <figcaption className="mt-2 text-sm">{copy.expressReview}</figcaption>
+          <figure className="flex w-[min(42cqw,62cqh)] flex-col items-center gap-[2cqmin] text-center">
+            <img
+              src={qr}
+              alt={copy.qrAlt}
+              className="w-full rounded-[3cqmin] bg-white p-[2cqmin]"
+            />
+            <figcaption className="flex items-center justify-center gap-[0.5em] text-[clamp(1.1rem,3.6cqmin,2.6rem)] font-semibold leading-snug">
+              {site && !site.direct && site.label ? (
+                <ChannelIcon
+                  channel={site.key}
+                  iconUrl={site.iconUrl}
+                  label={site.label}
+                  size="1.6em"
+                />
+              ) : null}
+              <span>
+                {site?.direct ? copy.expressReviewDirect : copy.expressReviewOn(site?.label ?? "")}
+              </span>
+            </figcaption>
           </figure>
         ) : null}
       </div>

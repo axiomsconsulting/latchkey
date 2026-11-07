@@ -291,7 +291,8 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
     `</div></div><div class="qrp"><span class="pi">${icons.phone}</span><h2>${esc(guestCopy.kioskQrTitle)}</h2><div class="qr">${qr}</div><p>${esc(guestCopy.kioskQrBody)}</p></div></div>`;
 
   // Express ("xl"): the deepened main colour, the welcome and phone panel as bold cards, shapes from the theme (kiosk-xl.ts).
-  const xl = p.kioskLook?.look === "xl" ? p.kioskLook : null;
+  // Jumbo looks the same here: a lite tablet can't draw Jumbo's screens, but keeps its colours.
+  const xl = p.kioskLook?.look === "xl" || p.kioskLook?.look === "jumbo" ? p.kioskLook : null;
   const xlCard = (bg: string) => {
     const ink = cardInk(bg);
     return { bg, ink, edge: cardEdge(bg), muted: mix(ink, bg, 0.25) };

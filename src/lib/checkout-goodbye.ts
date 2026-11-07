@@ -16,6 +16,8 @@ export type Goodbye = {
   on: boolean;
   /** The goodbye in the host's words; {name} is the guest's first name. */
   message: string;
+  /** After Express check-out, the big line on the tablet; {name} is the guest's first name. */
+  thanks: string;
   /** Where the keys go. */
   keyDrop: string;
   /** Remind them to lock the front door behind them. */
@@ -30,6 +32,7 @@ export const DEFAULT_GOODBYE: Goodbye = {
   // Nothing appears on a guest's screen until the host has chosen it.
   on: false,
   message: "Thank you for staying with us, {name}. Safe travels, and we hope to see you again.",
+  thanks: "Thank you, {name}. Safe travels!",
   keyDrop: "Please leave your keys on the table in your room, and close the door behind you.",
   lockDoor: true,
   startBeforeMinutes: 120,
@@ -93,6 +96,7 @@ export function normaliseGoodbye(raw: unknown): Goodbye {
   return {
     on: typeof r["on"] === "boolean" ? r["on"] : DEFAULT_GOODBYE.on,
     message: text(r["message"], DEFAULT_GOODBYE.message, 300) || DEFAULT_GOODBYE.message,
+    thanks: text(r["thanks"], DEFAULT_GOODBYE.thanks, 200) || DEFAULT_GOODBYE.thanks,
     keyDrop: text(r["keyDrop"], DEFAULT_GOODBYE.keyDrop, 300),
     lockDoor: typeof r["lockDoor"] === "boolean" ? r["lockDoor"] : DEFAULT_GOODBYE.lockDoor,
     startBeforeMinutes: pick(
@@ -104,6 +108,17 @@ export function normaliseGoodbye(raw: unknown): Goodbye {
     colour: cardColour(r["colour"], DEFAULT_GOODBYE.colour),
   };
 }
+
+/** Express check-out's thank-you in the host's words; without a name, "Thank you, ." loses its comma. */
+export const thanksText = (g: Goodbye, firstName: string) =>
+  g.thanks
+    .replace(/\{name\}/g, firstName || "")
+    .replace(/,\s*([.!?])/g, "$1")
+    .replace(/\s+([,.!?])/g, "$1")
+    .trim();
+
+/** How long an Express check-out's review link keeps working after check-out day. */
+export const REVIEW_LINK_DAYS = 3;
 
 /** The goodbye in the host's words, with the guest's first name. */
 export const goodbyeText = (g: Goodbye, firstName: string) =>

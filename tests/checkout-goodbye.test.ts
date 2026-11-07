@@ -185,3 +185,14 @@ describe("card colours", () => {
     expect(cardEdge("#000000")).toBe("#595959");
   });
 });
+
+describe("Express check-out thank-you", () => {
+  it("uses the host's words with the first name, and tidies a missing name", async () => {
+    const { normaliseGoodbye, thanksText } = await import("../src/lib/checkout-goodbye");
+    const g = normaliseGoodbye({});
+    expect(thanksText(g, "Priya")).toBe("Thank you, Priya. Safe travels!");
+    expect(thanksText(g, "")).toBe("Thank you. Safe travels!");
+    expect(thanksText(normaliseGoodbye({ thanks: "Bye {name}!" }), "Sam")).toBe("Bye Sam!");
+    expect(normaliseGoodbye({ thanks: "   " }).thanks).toBe(g.thanks);
+  });
+});

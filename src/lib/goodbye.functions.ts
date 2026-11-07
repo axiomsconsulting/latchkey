@@ -17,6 +17,8 @@ import {
   goodbyeWindow,
   normaliseArrivals,
   normaliseGoodbye,
+  thanksText,
+  REVIEW_LINK_DAYS,
   showsArrival,
   showsGoodbyeNow,
 } from "@/lib/checkout-goodbye";
@@ -138,7 +140,7 @@ async function propertyFor(shortCode: string) {
   const { data: p, error } = await db
     .from("properties")
     .select(
-      "id, timezone, default_check_in_time, default_check_out_time, checkout_goodbye, checkin_welcome",
+      "id, host_id, timezone, default_check_in_time, default_check_out_time, checkout_goodbye, checkin_welcome",
     )
     .eq("short_code", shortCode.toLowerCase())
     .maybeSingle();
@@ -502,7 +504,7 @@ export const kioskExpressCheckout = createServerFn({ method: "POST" })
     if (!id) throw new Error("We couldn't do that. Please tell your host you've left.");
     const { data: b } = await db
       .from("bookings")
-      .select("id, guest_full_name, check_out_date, check_out_time")
+      .select("id, guest_full_name, check_out_date, check_out_time, channel, site_key")
       .eq("id", id)
       .eq("property_id", p.id)
       .maybeSingle();
@@ -518,13 +520,43 @@ export const kioskExpressCheckout = createServerFn({ method: "POST" })
       tz,
     );
     const { shortLinkFor } = await import("./stay-links.server");
-    const short = await shortLinkFor(b.id, win.expiresAt).catch(() => null);
+    // For the review: their guide keeps opening for a few days after check-out, whenever they get to it.
+    const reviewUntil = new Date(
+      Math.max(win.expiresAt.getTime(), Date.now()) + REVIEW_LINK_DAYS * 86_400_000,
+    );
+    const short = await shortLinkFor(b.id, reviewUntil, true).catch(() => null);
     const g = normaliseGoodbye(p.checkout_goodbye);
+    // The site they booked with, so the review invitation names it (and shows its logo).
+    const site = await (async () => {
+      const { resolveSites, platformKey } = await import("./booking-sites");
+      const { channels } = await import("@/content/copy");
+      const { platformSites } = await import("./booking-sites.server");
+      const { data: h } = await db
+        .from("hosts")
+        .select("booking_sites")
+        .eq("id", (p as { host_id?: string }).host_id ?? "")
+        .maybeSingle();
+      const key = platformKey(b as { channel: string; site_key?: string | null });
+      const s = resolveSites(
+        (h as { booking_sites?: unknown } | null)?.booking_sites,
+        await platformSites(),
+        channels as Record<string, string>,
+      ).find((x) => x.key === key);
+      return {
+        key: b.channel as string,
+        direct: b.channel === "direct",
+        label: s?.label ?? (channels as Record<string, string>)[b.channel] ?? "",
+        iconUrl: s?.iconUrl ?? null,
+      };
+    })().catch(() => null);
+    const name = firstName(b.guest_full_name);
     return {
-      firstName: firstName(b.guest_full_name),
+      firstName: name,
+      thanks: thanksText(g, name),
       keyDrop: g.keyDrop,
       lockDoor: g.lockDoor,
       reviewCode: short,
+      site,
     };
   });
 

@@ -17,7 +17,12 @@ const secureRandom = () => {
  * The stay's short link words: the one already made (still valid) or a new
  * one. Null if the database hasn't the table yet.
  */
-export async function shortLinkFor(bookingId: string, expiresAt: Date): Promise<string | null> {
+export async function shortLinkFor(
+  bookingId: string,
+  expiresAt: Date,
+  /** Keep a link already made working at least this long (Express check-out's review link). */
+  extend = false,
+): Promise<string | null> {
   const db = await admin();
   const { data: have, error } = await db
     .from("stay_short_links")
@@ -27,7 +32,14 @@ export async function shortLinkFor(bookingId: string, expiresAt: Date): Promise<
     .order("created_at", { ascending: false })
     .limit(1);
   if (error) return null;
-  if (have?.[0]) return have[0].code as string;
+  if (have?.[0]) {
+    if (extend && Date.parse(have[0].expires_at as string) < expiresAt.getTime())
+      await db
+        .from("stay_short_links")
+        .update({ expires_at: expiresAt.toISOString() })
+        .eq("code", have[0].code as string);
+    return have[0].code as string;
+  }
   for (let i = 0; i < 6; i++) {
     const code = newRoomWords(secureRandom);
     const { error: e } = await db
