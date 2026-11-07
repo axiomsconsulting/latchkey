@@ -47,6 +47,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.139.0",
+    date: "2026-11-07",
+    title: "QR codes in your colours",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "QR codes on door tablets and guest screens no longer sit on a white square: they're see-through and drawn in the screen's own text colour, so they match your look. A QR code that pops up keeps a soft backing so it still scans. Printed room cards stay black on white.",
+      },
+    ],
+  },
+  {
     version: "0.138.0",
     date: "2026-11-07",
     title: "Easier to use with your fingers",

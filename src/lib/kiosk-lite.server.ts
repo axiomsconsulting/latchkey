@@ -17,6 +17,7 @@ import { browserLabel, modeKey } from "@/lib/kiosk-compat";
 import { expressCards, expressPage } from "@/lib/kiosk-xl";
 import { PILL, googleFontLinks, mix, readableOn, themeVars, welcomeTitle } from "@/lib/theme";
 import { zonedParts } from "@/lib/dates";
+import { qrSvgText, type QrModules } from "@/lib/qr";
 
 /** Escapes text for HTML. */
 export const esc = (s: string) =>
@@ -41,21 +42,18 @@ export function zoneOffsetMinutes(tz: string, now = new Date()): number {
 /** A QR code as inline SVG (old browsers draw inline SVG; no canvas or script needed). */
 export async function qrSvg(text: string): Promise<string> {
   try {
-    // Only the QR maths and the SVG drawing: the package's main entry also loads its PNG
+    // Only the QR maths: the package's main entry also loads its PNG
     // writer, which needs the file system the live (Workers) server doesn't have.
     type Core = { create: (t: string, o: { errorCorrectionLevel: string }) => unknown };
-    type Svg = { render: (qr: unknown, o: { margin: number }) => string };
     const core = (await import(
       // @ts-expect-error -- a plain JS file inside qrcode, without its own types
       "qrcode/lib/core/qrcode"
     )) as Core | { default: Core };
-    const svg = (await import(
-      // @ts-expect-error -- as above
-      "qrcode/lib/renderer/svg-tag"
-    )) as Svg | { default: Svg };
     const C = "create" in core ? core : core.default;
-    const S = "render" in svg ? svg : svg.default;
-    return S.render(C.create(text, { errorCorrectionLevel: "M" }), { margin: 1 });
+    // See-through, in the text colour around it (src/lib/qr.ts).
+    return qrSvgText(
+      (C.create(text, { errorCorrectionLevel: "M" }) as { modules: QrModules }).modules,
+    );
   } catch {
     return "";
   }
@@ -347,7 +345,7 @@ export async function liteHtml(p: LiteProperty, origin: string): Promise<string>
 .qrp .pi{color:${co.ink}}
 .qrp h2{font-weight:${headW};${headCase}}
 .qrp p{color:${co.muted}}
-.qrp .qr{border-radius:${t.radius <= 0 ? 0 : Math.max(px(t.radius), 10)}px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.qrp .qr{padding:0}
 .panel .big,.btns .pri{border-radius:${btnR}px;font-weight:700;${xBtnCase}}
 .btns .sec{border-radius:${btnR}px;${xBtnCase}}
 .cards{background:${page};color:${pageInk};border-radius:0;box-shadow:none}
@@ -497,7 +495,7 @@ p{margin:0}
 .qrp h2{margin:0;font-size:22px;font-weight:normal;${heading}}
 .qrp .qr{width:220px;height:220px;margin:12px auto}
 .qrp p{font-size:15px;line-height:1.4;color:${col.muted}}
-.qr{width:300px;height:300px;background:#fff;padding:8px;border-radius:${radius};${NOSHRINK}}
+.qr{width:300px;height:300px;${NOSHRINK}}
 .qr svg{width:100%;height:100%;display:block}
 #ft{position:absolute;left:32px;right:32px;bottom:44px;max-width:1100px;margin:0 auto;padding-top:10px;border-top:1px solid ${col.border};${ROW_CENTER}-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;font-size:12px;color:${col.muted}}
 #ft .tg{text-transform:uppercase;letter-spacing:.25em}
@@ -560,7 +558,7 @@ p{margin:0}
 #savermsg{position:absolute;left:0;right:0;bottom:22px;text-align:center;color:#fff;font-size:20px;line-height:1.35}
 #savermsg b{display:block;font-size:30px;font-weight:bold}
 #savermsg i{display:block;font-style:normal;font-size:16px;letter-spacing:.2em;text-transform:uppercase;margin-top:8px}
-#clocks .qrbox{margin:0 22px;background:#fff;padding:10px;border-radius:12px}
+#clocks .qrbox{margin:0 22px}
 #clocks .qrbox svg{display:block;margin:0}
 body.lp,html.lp{background:#000}
 body.lpi #bd img,body.lpi #bd .qrsq{-webkit-filter:invert(1);filter:invert(1)}
@@ -573,7 +571,7 @@ body.lp .lpbar{display:block}
 #clocks .ct{display:block;font-size:13px;letter-spacing:.3em;text-transform:uppercase}
 #clocks .tm{display:block;font-size:22px;margin-top:4px;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:200}
 #saverdim{position:absolute;top:0;left:0;right:0;bottom:0;background:#000;opacity:0}
-#saverqr{display:none;position:absolute;width:180px;height:180px;background:#fff;padding:8px;border-radius:12px}
+#saverqr{display:none;position:absolute;width:180px;height:180px}
 #saverqr svg{width:100%;height:100%;display:block}
 #camon{display:none;position:absolute;left:12px;top:12px;z-index:80;background:#000;color:#fff;border-radius:20px;padding:8px 14px;font-size:15px}
 #net{display:none;position:absolute;right:12px;bottom:8px;font-size:14px;color:#B33;z-index:55}

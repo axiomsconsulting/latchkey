@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CheckCircle2, DoorClosed, KeyRound, LogIn, Plane } from "lucide-react";
 import { ChannelIcon } from "@/components/ChannelIcon";
 
-import { useQrImage } from "@/components/guest/CheckInQr";
+import { QrSquare } from "@/components/guest/CheckInQr";
 import { useNow } from "@/components/guest/KioskClocks";
 import { guest as copy } from "@/content/copy";
 import {
@@ -355,7 +355,7 @@ function ExpressReminder({
     result.reviewCode && typeof window !== "undefined"
       ? `${window.location.origin}/g/${result.reviewCode}`
       : null;
-  const qr = useQrImage(reviewUrl, { dark: "#111111", light: "#ffffff" });
+  const qr = reviewUrl;
   useEffect(() => {
     const id = window.setTimeout(onClose, EXPRESS_CLOSE_MINUTES * 60_000);
     return () => window.clearTimeout(id);
@@ -395,11 +395,7 @@ function ExpressReminder({
         </div>
         {qr ? (
           <figure className="flex w-[min(42cqw,62cqh)] flex-col items-center gap-[2cqmin] text-center">
-            <img
-              src={qr}
-              alt={copy.qrAlt}
-              className="w-full rounded-[3cqmin] bg-white p-[2cqmin]"
-            />
+            <QrSquare value={qr} className="w-full" />
             <figcaption className="flex items-center justify-center gap-[0.5em] text-[clamp(1.1rem,3.6cqmin,2.6rem)] font-semibold leading-snug">
               {site && !site.direct && site.label ? (
                 <ChannelIcon

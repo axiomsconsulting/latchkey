@@ -427,12 +427,6 @@
 [data-kiosk-xl] [data-kiosk-flow] aside {
   padding: max(1rem, 2.5vmin);
 }
-[data-kiosk-xl] [data-kiosk-flow] aside img {
-  background-color: #fff;
-  padding: max(0.5rem, 1vmin);
-  border-radius: var(--x-qr-radius);
-  box-shadow: 0 0.4vmin 1.2vmin rgb(0 0 0 / 0.18);
-}
 /* The Back button sits on the page, outside the card. */
 [data-kiosk-xl] [data-kiosk-flow] > [data-slot="button"] {
   color: var(--foreground);
@@ -572,7 +566,7 @@ html[data-kiosk-touch="expanded"] .kiosk-qr-dialog h2 {
   line-height: 1.2;
   padding-right: 5rem;
 }
-html[data-kiosk-touch="expanded"] .kiosk-qr-dialog img {
+html[data-kiosk-touch="expanded"] .kiosk-qr-dialog [data-qr-backed] {
   max-width: min(57vw, calc(var(--kiosk-h, 100vh) * 0.43));
 }
 /* Never taller than the screen, at any size. */
@@ -1076,7 +1070,7 @@ html[data-kiosk-jumbo] [role="listbox"] [role="option"] {
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-done] .card-soft :is(p, li):not(.font-mono) {
   font-size: calc(3.5cqmin * var(--j-fit, 1));
 }
-[data-kiosk-jumbo] [data-jumbo-done] [data-jumbo-cardqr] img {
+[data-kiosk-jumbo] [data-jumbo-done] [data-jumbo-cardqr] [data-qr] {
   max-height: 48cqmin;
   width: auto;
   max-width: 100%;
@@ -1090,12 +1084,10 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
   text-align: center;
 }
 /* Photo steps: the phone's square fills the left column under the words, on the card's own colour. */
-[data-kiosk-jumbo] [data-jumbo-photo] [data-jumbo-qrfill] img {
+[data-kiosk-jumbo] [data-jumbo-photo] [data-jumbo-qrfill] [data-qr] {
   height: 100%;
   width: auto;
   max-width: 100%;
-  object-fit: contain;
-  object-position: left top;
 }
 /* The bell's list on a Jumbo tablet: the bars' size of words, a wide box, big ticks and pill buttons.
    (Everything inside is in em, so it all grows with the box's own size.) */

@@ -15,7 +15,7 @@ import {
   Smartphone,
 } from "lucide-react";
 
-import { PhoneQrIcon, useQrImage } from "@/components/guest/CheckInQr";
+import { PhoneQrIcon, QrSquare } from "@/components/guest/CheckInQr";
 import { useKioskStage } from "@/hooks/use-kiosk-stage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,12 +36,7 @@ function PhonePanel({
   /** "Or use phone" and the square, in a row; "jumbo": only the square, on the card's own colour. */
   compact?: boolean | "jumbo";
 }) {
-  const qr = useQrImage(
-    phone.link?.phoneUrl ?? null,
-    compact === "jumbo"
-      ? { dark: "#111111", light: "#00000000" }
-      : { dark: "#111111", light: "#ffffff" },
-  );
+  const qr = phone.link?.phoneUrl ?? null;
   const [via, setVia] = useState<"sms" | "whatsapp" | null>(null);
   const [number, setNumber] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,7 +64,7 @@ function PhonePanel({
     return (
       <div className="flex min-h-0 flex-1 items-start" data-phone-photos data-jumbo-qrfill>
         {qr ? (
-          <img src={qr} alt={copy.jumboWords.phone} className="aspect-square h-full max-w-full" />
+          <QrSquare value={qr} label={copy.jumboWords.phone} className="h-full max-w-full" />
         ) : (
           <Loader2 className="size-8 animate-spin opacity-50" />
         )}
@@ -84,13 +79,13 @@ function PhonePanel({
           <ArrowRight className="size-[1em] shrink-0" aria-hidden />
         </p>
         <div
-          className="grid size-[min(8rem,calc(var(--kiosk-h,100dvh)*0.16))] shrink-0 place-items-center rounded-xl bg-white p-1.5"
+          className="grid size-[min(8rem,calc(var(--kiosk-h,100dvh)*0.16))] shrink-0 place-items-center"
           data-jumbo-qr
         >
           {qr ? (
-            <img src={qr} alt={copy.jumboPhone} className="size-full" />
+            <QrSquare value={qr} label={copy.jumboPhone} className="size-full" />
           ) : (
-            <Loader2 className="size-8 animate-spin text-neutral-400" />
+            <Loader2 className="size-8 animate-spin opacity-50" />
           )}
         </div>
       </div>
@@ -115,14 +110,14 @@ function PhonePanel({
         <ArrowRight className="hidden size-9 shrink-0 text-primary @lg:block" aria-hidden />
         <div
           className={cn(
-            "grid shrink-0 place-items-center rounded-xl bg-white p-2",
+            "grid shrink-0 place-items-center",
             big ? "size-[min(24rem,48vmin)]" : "size-[min(17rem,calc(var(--kiosk-h,100dvh)*0.3))]",
           )}
         >
           {qr ? (
-            <img src={qr} alt={copy.phonePhotos.scan} className="size-full" />
+            <QrSquare value={qr} label={copy.phonePhotos.scan} className="size-full" />
           ) : (
-            <Loader2 className="size-8 animate-spin text-neutral-400" />
+            <Loader2 className="size-8 animate-spin opacity-50" />
           )}
         </div>
       </div>

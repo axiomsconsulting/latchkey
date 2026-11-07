@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
+import { QrSquare } from "@/components/guest/CheckInQr";
 import { Copy, KeyRound, Lock, Wifi } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,17 +29,11 @@ export function WifiCard({
 }) {
   const [kind, setKind] = useState<JoinKind>("other");
   const [inApp, setInApp] = useState(false);
-  const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
     setKind(joinKind(navigator.userAgent));
     setInApp(inAppBrowser(navigator.userAgent));
   }, []);
-  useEffect(() => {
-    if (wifi.locked || kind !== "other") return;
-    void QRCode.toDataURL(wifiQrText(wifi.name, wifi.password), { margin: 1, width: 220 })
-      .then(setQr)
-      .catch(() => setQr(null));
-  }, [wifi, kind]);
+  const qr = wifi.locked || kind !== "other" ? null : wifiQrText(wifi.name, wifi.password);
 
   const copyPassword = async () => {
     if (!wifi.password) return;
@@ -115,7 +109,7 @@ export function WifiCard({
         </div>
       ) : qr ? (
         <div className="flex flex-wrap items-center gap-4">
-          <img src={qr} alt={copy.qrAlt(wifi.name)} className="size-36 rounded-xl bg-white p-1" />
+          <QrSquare value={qr} label={copy.qrAlt(wifi.name)} className="size-36 shrink-0" />
           <p className="max-w-xs text-sm text-muted-foreground">{copy.qrHelp}</p>
         </div>
       ) : null}
