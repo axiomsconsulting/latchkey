@@ -7,7 +7,11 @@ import {
   jobRooms,
   jobSpan,
   jobWhen,
+  nextVisit,
   openJobCounts,
+  serviceColours,
+  windowGroups,
+  type ServiceWindow,
   type TimelineJob,
 } from "../src/lib/job-lines";
 import { hkWords, normaliseHkWords } from "../src/lib/housekeeping";
@@ -162,5 +166,69 @@ describe("housekeeping words", () => {
     });
     expect(hkWords(null).dirty).toBe("Dirty");
     expect(normaliseHkWords({ dirty: "x".repeat(40) }).dirty).toHaveLength(24);
+  });
+});
+
+describe("repeating services", () => {
+  const w = (over: Partial<ServiceWindow> & { id: string }): ServiceWindow => ({
+    room_id: null,
+    day_of_week: 1,
+    start_time: "10:00:00",
+    end_time: "14:00:00",
+    reason: "Cleaning",
+    trade_id: "t1",
+    created_at: "2026-11-01T00:00:00Z",
+    ...over,
+  });
+
+  it("joins a service's days and rooms into one, Monday first", () => {
+    const groups = windowGroups([
+      w({ id: "a", day_of_week: 4, room_id: "r1" }),
+      w({ id: "b", day_of_week: 1, room_id: "r1" }),
+      w({ id: "c", day_of_week: 4, room_id: "r2" }),
+      w({ id: "d", day_of_week: 1, room_id: "r2" }),
+      w({ id: "e", day_of_week: 0, room_id: "r1", reason: "Laundry" }),
+    ]);
+    const cleaning = groups.find((g) => g.reason === "Cleaning")!;
+    expect(cleaning.ids.sort()).toEqual(["a", "b", "c", "d"]);
+    expect(cleaning.days).toEqual([1, 4]);
+    expect(cleaning.rooms.sort()).toEqual(["r1", "r2"]);
+    expect(cleaning.start).toBe("10:00");
+    expect(groups.find((g) => g.reason === "Laundry")!.days).toEqual([0]);
+  });
+
+  it("keeps different contacts or times apart, and one-off closures on their own", () => {
+    const groups = windowGroups([
+      w({ id: "a" }),
+      w({ id: "b", trade_id: "t2" }),
+      w({ id: "c", start_time: "09:00" }),
+      w({
+        id: "d",
+        day_of_week: null,
+        start_time: null,
+        end_time: null,
+        starts_at: "2026-11-10T09:00:00Z",
+        ends_at: "2026-11-10T12:00:00Z",
+      }),
+    ]);
+    expect(groups).toHaveLength(4);
+    expect(groups.find((g) => g.ids[0] === "d")!.weekly).toBe(false);
+  });
+
+  it("finds the next visit, today only until its window ends", () => {
+    // 2026-11-09 is a Monday.
+    expect(nextVisit({ days: [1, 4], end: "14:00" }, "2026-11-09", "11:00")).toBe("2026-11-09");
+    expect(nextVisit({ days: [1, 4], end: "14:00" }, "2026-11-09", "15:00")).toBe("2026-11-12");
+    expect(nextVisit({ days: [1], end: "14:00" }, "2026-11-09", "15:00")).toBe("2026-11-16");
+    expect(nextVisit({ days: [], end: "14:00" }, "2026-11-09", "15:00")).toBeNull();
+  });
+
+  it("colours jobs and services together without repeats", () => {
+    const c = serviceColours(
+      [{ id: "j", created_at: "2026-11-02T00:00:00Z" }],
+      [{ key: "w:a", created_at: "2026-11-01T00:00:00Z" }],
+    );
+    expect(c["w:a"]).toBe(JOB_COLOURS[0]);
+    expect(c["j"]).toBe(JOB_COLOURS[1]);
   });
 });

@@ -170,3 +170,145 @@ export function openJobCounts(jobs: TimelineJob[]): Record<string, number> {
   }
   return out;
 }
+
+/* ---------------------------- repeating services ---------------------------- */
+
+/** A cleaning or other window from the schedule (unavailability_windows). */
+export type ServiceWindow = {
+  id: string;
+  room_id: string | null;
+  day_of_week: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  reason: string | null;
+  trade_id?: string | null;
+  created_at?: string | null;
+};
+
+/**
+ * One service made of schedule rows: a weekly one is every row with the same name, times and
+ * contact, across its days and rooms (saved one row per day and room); a one-off window is its
+ * own. Rooms empty = the whole property.
+ */
+export type WindowGroup = {
+  key: string;
+  ids: string[];
+  weekly: boolean;
+  /** 0 = Sunday, Monday first. */
+  days: number[];
+  rooms: string[];
+  start: string;
+  end: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  reason: string | null;
+  tradeId: string | null;
+  created_at: string;
+};
+
+const hm = (t: string | null) => (t ?? "").slice(0, 5);
+const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
+
+export function windowGroups(windows: ServiceWindow[]): WindowGroup[] {
+  const weekly = new Map<string, WindowGroup>();
+  const out: WindowGroup[] = [];
+  for (const w of windows) {
+    const created = w.created_at ?? "1970-01-01T00:00:00Z";
+    if (w.day_of_week !== null && w.start_time && w.end_time) {
+      const k = [
+        w.reason ?? "",
+        hm(w.start_time),
+        hm(w.end_time),
+        w.trade_id ?? "",
+        w.room_id ?? "",
+      ].join("|");
+      const g = weekly.get(k);
+      if (g) {
+        g.ids.push(w.id);
+        if (!g.days.includes(w.day_of_week)) g.days.push(w.day_of_week);
+        if (created < g.created_at) g.created_at = created;
+      } else
+        weekly.set(k, {
+          key: `w:${w.id}`,
+          ids: [w.id],
+          weekly: true,
+          days: [w.day_of_week],
+          rooms: w.room_id ? [w.room_id] : [],
+          start: hm(w.start_time),
+          end: hm(w.end_time),
+          startsAt: null,
+          endsAt: null,
+          reason: w.reason,
+          tradeId: w.trade_id ?? null,
+          created_at: created,
+        });
+    } else if (w.starts_at && w.ends_at) {
+      out.push({
+        key: `w:${w.id}`,
+        ids: [w.id],
+        weekly: false,
+        days: [],
+        rooms: w.room_id ? [w.room_id] : [],
+        start: "",
+        end: "",
+        startsAt: w.starts_at,
+        endsAt: w.ends_at,
+        reason: w.reason,
+        tradeId: w.trade_id ?? null,
+        created_at: created,
+      });
+    }
+  }
+  // Rows for different rooms on the same days are one service covering those rooms.
+  const merged = new Map<string, WindowGroup>();
+  for (const g of weekly.values()) {
+    g.days.sort((a, b) => MON_FIRST.indexOf(a) - MON_FIRST.indexOf(b));
+    const k = [
+      g.reason ?? "",
+      g.start,
+      g.end,
+      g.tradeId ?? "",
+      g.days.join(","),
+      g.rooms.length ? "r" : "all",
+    ].join("|");
+    const m = merged.get(k);
+    if (m) {
+      m.ids.push(...g.ids);
+      m.rooms.push(...g.rooms);
+      if (g.created_at < m.created_at) m.created_at = g.created_at;
+    } else merged.set(k, { ...g, ids: [...g.ids], rooms: [...g.rooms] });
+  }
+  return [...merged.values(), ...out];
+}
+
+/** The next time a weekly service comes, from `today` ("YYYY-MM-DD") and the time now ("HH:MM"). */
+export function nextVisit(
+  g: Pick<WindowGroup, "days" | "end">,
+  today: string,
+  nowTime: string,
+): string | null {
+  if (!g.days.length) return null;
+  const base = new Date(`${today}T12:00:00Z`);
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(base);
+    d.setUTCDate(base.getUTCDate() + i);
+    if (!g.days.includes(d.getUTCDay())) continue;
+    // Today counts until its window is over.
+    if (i === 0 && g.end && g.end <= nowTime) continue;
+    return d.toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+/**
+ * Colours for every open job and every scheduled service together, in the order they were
+ * made, so no two share one until there are more than the colours. Keyed by job id or group key.
+ */
+export function serviceColours(
+  jobs: Array<Pick<TimelineJob, "id" | "created_at">>,
+  groups: Array<Pick<WindowGroup, "key" | "created_at">>,
+): Record<string, string> {
+  return jobColours([...jobs, ...groups.map((g) => ({ id: g.key, created_at: g.created_at }))]);
+}

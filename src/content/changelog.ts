@@ -46,6 +46,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.137.0",
+    date: "2026-11-07",
+    title: "Cleaning schedule and maintenance in one place",
+    items: [
+      {
+        kind: "improved",
+        area: "Services",
+        text: "The cleaning schedule is now part of Maintenance: weekly cleaning and other regular visits sit beside one-off jobs. A repeating one shows its days and the next visit; a one-off visit its day and time. Each shows who's coming, with call, text and WhatsApp buttons.",
+      },
+      {
+        kind: "new",
+        area: "Services",
+        text: "Add service, beside Add booking: a single visit or every week on the days you pick, the rooms it affects and who comes from your contacts. Repeating services show as coloured lines on the housekeeping timeline too.",
+      },
+      {
+        kind: "improved",
+        area: "Services",
+        text: "Tabs are now Requests, Maintenance and Contacts (was Local tradespeople), each with a badge when something new has arrived since you last looked. Extras guests order show inside Requests, only when there are some. Finished work folds away at the end of each tab instead of a separate Archive.",
+      },
+    ],
+  },
+  {
     version: "0.136.0",
     date: "2026-11-07",
     title: "Services join housekeeping",

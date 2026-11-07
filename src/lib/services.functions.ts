@@ -13,6 +13,7 @@ import { assertNotSharedDemo } from "@/lib/demo-account";
 import { requireSuperAdmin, requireOwner, requireWrite } from "@/lib/roles";
 import { INTEGRATION_KEYS, normaliseModes } from "./integration-modes";
 import { categoryById } from "./services";
+import type { ServiceWindow } from "./job-lines";
 import { normaliseTheme, RESERVED_SLUGS } from "./theme";
 
 const uuid = z.string().uuid();
@@ -175,14 +176,32 @@ export const listJobs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: jobs, error } = await context.supabase
-      .from("service_jobs")
-      .select("*, rooms(display_name), bookings(guest_full_name)")
-      .eq("property_id", data.propertyId)
-      .order("created_at", { ascending: false })
-      .limit(200);
+    const { withLegacy } = await import("./checkin.server");
+    const winCols =
+      "id, room_id, day_of_week, start_time, end_time, starts_at, ends_at, reason, created_at";
+    const [{ data: jobs, error }, { data: windows }] = await Promise.all([
+      context.supabase
+        .from("service_jobs")
+        .select("*, rooms(display_name), bookings(guest_full_name)")
+        .eq("property_id", data.propertyId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      // The schedule's windows are the repeating services (and one-off closures).
+      withLegacy(
+        () =>
+          (context.supabase as any)
+            .from("unavailability_windows")
+            .select(`${winCols}, trade_id`)
+            .eq("property_id", data.propertyId),
+        () =>
+          (context.supabase as any)
+            .from("unavailability_windows")
+            .select(winCols)
+            .eq("property_id", data.propertyId),
+      ),
+    ]);
     if (error) throw new Error(error.message);
-    return { jobs: jobs ?? [] };
+    return { jobs: jobs ?? [], windows: (windows ?? []) as ServiceWindow[] };
   });
 
 async function messageGuest(supabase: any, jobId: string, bookingId: string | null, body: string) {
@@ -286,6 +305,8 @@ export const createHostJob = createServerFn({ method: "POST" })
         windowEnd: z.string().datetime().nullable().default(null),
         allDay: z.boolean().default(false),
         urgency: z.enum(["low", "normal", "urgent"]).default("low"),
+        /** One of the host's own contacts who's coming (booked at once). */
+        tradeId: uuid.nullable().default(null),
       })
       .parse(d),
   )
@@ -333,6 +354,29 @@ export const createHostJob = createServerFn({ method: "POST" })
       () => (context.supabase as any).from("service_jobs").insert(row).select("id").single(),
     );
     if (error || !made) throw new Error(error?.message ?? "Couldn't add the job.");
+    if (data.tradeId) {
+      const { data: trade } = await context.supabase
+        .from("trades")
+        .select("id, name, company_name, phone")
+        .eq("id", data.tradeId)
+        .maybeSingle();
+      if (trade)
+        await context.supabase
+          .from("service_jobs")
+          .update({
+            provider: {
+              id: trade.id,
+              name: trade.company_name || trade.name,
+              contact: trade.phone,
+              source: "own_contacts",
+            },
+            provider_mode: "own",
+            provider_ref: trade.id,
+            status: "booked",
+            eta_at: data.scheduledAt,
+          })
+          .eq("id", made.id);
+    }
     return { id: made.id };
   });
 

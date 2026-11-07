@@ -1,24 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Archive,
-  ArchiveRestore,
   BadgeCheck,
   CalendarClock,
-  CalendarPlus,
+  ChevronDown,
   Loader2,
   Mail,
   MessageCircle,
+  MessageSquare,
+  Pencil,
   Phone,
+  Repeat,
   Trash2,
-  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import { TradeContacts } from "@/components/host/TradeContacts";
 import { TradeDirectory } from "@/components/host/TradeDirectory";
-import { ExtrasInbox } from "@/components/host/ExtrasInbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   common,
+  housekeepingCopy,
   jobTools,
   services as copy,
   trades as tradesDir,
@@ -55,9 +56,20 @@ import {
 import { useLandOn } from "@/hooks/use-land-on";
 import { useRole, useWorkspace } from "@/hooks/use-host-data";
 import { zonedParts } from "@/lib/dates";
-import { archiveJobs, deleteJobs } from "@/lib/guests.functions";
+import { listExtrasRequests } from "@/lib/extras.functions";
+import { deleteJobs } from "@/lib/guests.functions";
 import { zonedToUtc } from "@/lib/guide";
-import { CLOSED_JOB, jobColours, jobRooms, jobWhen } from "@/lib/job-lines";
+import { deleteRepeatingService, saveRepeatingService } from "@/lib/host.functions";
+import {
+  CLOSED_JOB,
+  jobRooms,
+  jobSpan,
+  nextVisit,
+  serviceColours,
+  windowGroups,
+  type WindowGroup,
+} from "@/lib/job-lines";
+import { markSeen, readSeen, unseen, type SeenStore } from "@/lib/seen";
 import { SERVICE_CATEGORIES, categoryById, formatPence } from "@/lib/services";
 import { contactLinks, tradeCategoryLabel } from "@/lib/trade-contacts";
 import { listTrades, assignTradeToJob } from "@/lib/trades.functions";
@@ -70,7 +82,7 @@ import {
 } from "@/lib/services.functions";
 import { cn } from "@/lib/utils";
 
-export const SERVICE_TABS = ["inbox", "planned", "trades", "archive"] as const;
+export const SERVICE_TABS = ["inbox", "planned", "trades"] as const;
 export type ServiceTab = (typeof SERVICE_TABS)[number];
 
 type Room = { id: string; display_name: string };
@@ -91,7 +103,7 @@ type Job = {
   all_day?: boolean | null;
   guest_price_pence: number | null;
   quoted_pence: number | null;
-  provider: { name: string; rating: number; contraUrl: string } | null;
+  provider: { id?: string; name: string; contact?: string | null } | null;
   provider_mode: string | null;
   provider_ref: string | null;
   created_at: string;
@@ -100,22 +112,190 @@ type Job = {
   bookings: { guest_full_name: string | null } | null;
 };
 
-function when(iso: string, tz: string) {
+type Trade = {
+  id: string;
+  name: string;
+  company_name: string | null;
+  category: string;
+  phone: string | null;
+  whatsapp_phone: string | null;
+  email: string | null;
+  area: string | null;
+  is_preferred: boolean;
+};
+
+const closed = (j: Job) => !!j.archived_at || (CLOSED_JOB as readonly string[]).includes(j.status);
+const SEEN_KEY = (propertyId: string) => `latchkey.servicesSeen.${propertyId}`;
+
+/** The day and time on the property's clock: "Thu 6 Nov" and "10:00". */
+function dayLabel(iso: string, tz: string) {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: tz,
     weekday: "short",
     day: "numeric",
     month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
   }).format(new Date(iso));
+}
+const dateLabel = (day: string) =>
+  new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(`${day}T12:00:00Z`));
+const timeLabel = (iso: string, tz: string) => zonedParts(new Date(iso), tz).time;
+
+/** A job's "when" column: the day, then the window, all day, or not booked yet. */
+function jobWhenColumn(j: Job, tz: string): { top: string; bottom: string | null } {
+  const from = j.eta_at ?? j.scheduled_at;
+  if (!from || !jobSpan(j, tz)) return { top: copy.notBooked, bottom: null };
+  const allDay = jobSpan(j, tz)!.allDay;
+  return {
+    top: dayLabel(from, tz),
+    bottom: allDay ? copy.allDay : `${timeLabel(from, tz)}–${timeLabel(j.window_end!, tz)}`,
+  };
+}
+
+/** A repeating service's "when": its days, then the next visit; a one-off closure's day and times. */
+function groupWhenColumn(g: WindowGroup, tz: string): { top: string; bottom: string | null } {
+  if (!g.weekly)
+    return {
+      top: dayLabel(g.startsAt!, tz),
+      bottom: `${timeLabel(g.startsAt!, tz)}–${timeLabel(g.endsAt!, tz)}`,
+    };
+  const now = zonedParts(new Date(), tz);
+  const next = nextVisit(g, now.date, now.time);
+  return {
+    top: copy.everyDays(g.days.map((d) => housekeepingCopy.schedule.short[d]!)),
+    bottom: next ? copy.nextVisit(`${dateLabel(next)}, ${g.start}–${g.end}`) : null,
+  };
+}
+
+/** Who's coming, with call, text and WhatsApp (and email) links. */
+function ContactLine({
+  name,
+  trade,
+  phone,
+  countryCode,
+}: {
+  name: string;
+  trade: Trade | undefined;
+  phone?: string | null | undefined;
+  countryCode: string;
+}) {
+  const links = contactLinks(trade ?? { phone: phone ?? null }, countryCode);
+  const icon =
+    "grid size-9 place-items-center rounded-full border border-border hover:bg-secondary";
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+      <BadgeCheck className="size-4 text-primary" />
+      <span className="font-medium">{name}</span>
+      {trade ? (
+        <span className="text-muted-foreground">· {tradeCategoryLabel(trade.category)}</span>
+      ) : null}
+      <span className="flex gap-1.5">
+        {links.tel ? (
+          <a href={links.tel} className={icon} aria-label={tradesCopy.call} title={tradesCopy.call}>
+            <Phone className="size-4" />
+          </a>
+        ) : null}
+        {links.sms ? (
+          <a href={links.sms} className={icon} aria-label={copy.text} title={copy.text}>
+            <MessageSquare className="size-4" />
+          </a>
+        ) : null}
+        {links.whatsapp ? (
+          <a
+            href={links.whatsapp}
+            target="_blank"
+            rel="noreferrer"
+            className={icon}
+            aria-label={tradesCopy.whatsapp}
+            title={tradesCopy.whatsapp}
+          >
+            <MessageCircle className="size-4" />
+          </a>
+        ) : null}
+        {links.email ? (
+          <a
+            href={links.email}
+            className={icon}
+            aria-label={tradesCopy.email}
+            title={tradesCopy.email}
+          >
+            <Mail className="size-4" />
+          </a>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+/** One service: when on the left, what and who on the right. */
+function ServiceRow({
+  id,
+  when,
+  colour,
+  repeating = false,
+  children,
+}: {
+  id: string;
+  when: { top: string; bottom: string | null };
+  colour: string | undefined;
+  repeating?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <article
+      id={id}
+      className="card-soft grid scroll-mt-24 gap-3 p-4 sm:grid-cols-[12.5rem_minmax(0,1fr)] sm:p-5"
+    >
+      <div className="flex items-start gap-2 sm:flex-col sm:gap-1">
+        <span
+          aria-hidden
+          title={copy.lineColour}
+          className={cn("mt-2 h-1.5 w-6 shrink-0 rounded-full sm:mt-0", !colour && "bg-border")}
+          style={colour ? { background: colour } : undefined}
+        />
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 font-medium">
+            {repeating ? <Repeat className="size-4 shrink-0 text-muted-foreground" /> : null}
+            {when.top}
+          </p>
+          {when.bottom ? <p className="text-sm text-muted-foreground">{when.bottom}</p> : null}
+        </div>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </article>
+  );
+}
+
+/** Finished work, folded at the end of a tab. */
+function Finished({ count, children }: { count: number; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  if (!count) return null;
+  return (
+    <div className="pt-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
+        <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
+        {copy.finished(count)}
+      </button>
+      {open ? <div className="mt-3 space-y-3">{children}</div> : null}
+    </div>
+  );
 }
 
 /**
- * Services, under the housekeeping timeline on Bookings (it was its own page): guest requests,
- * maintenance and cleaning jobs, the host's own tradespeople and the local directory. Each open
- * job with a time is a coloured line on the timeline above; the same colour marks it here.
- * ?tab= opens a tab, ?job= lands on a job, ?request= on an extras request.
+ * Services, under the housekeeping timeline on Bookings: Requests (guests' requests and extras
+ * orders), Maintenance (one-off jobs and repeating services such as the weekly cleaning, which
+ * are the schedule's windows) and Contacts (the host's own people and the local directory).
+ * Each open job and service has a colour, matching its line on the timeline. A tab shows how
+ * many items arrived since this browser last looked at it. Finished work folds away at the end.
  */
 export function ServicesPanel({
   propertyId,
@@ -133,163 +313,234 @@ export function ServicesPanel({
   request?: string | undefined;
 }) {
   const ws = useWorkspace();
+  const hostId = ws.data!.hostId;
   const properties = (ws.data?.properties ?? []) as Array<{
     id: string;
     postcode?: string | null;
     address?: string | null;
     country_code?: string | null;
   }>;
+  const selectedProperty = properties.find((p) => p.id === propertyId);
+  const countryCode = selectedProperty?.country_code ?? "GB";
   const jobsFn = useServerFn(listJobs);
   const jobs = useQuery({
     queryKey: ["jobs", propertyId],
     queryFn: () => jobsFn({ data: { propertyId } }),
     refetchInterval: 30_000,
   });
+  const extrasFn = useServerFn(listExtrasRequests);
+  const extras = useQuery({
+    queryKey: ["extras-inbox", propertyId],
+    queryFn: () => extrasFn({ data: { propertyId } }),
+    refetchInterval: 20_000,
+  });
+  const tradesFn = useServerFn(listTrades);
+  const trades = useQuery({
+    queryKey: ["trades", hostId, propertyId],
+    queryFn: () => tradesFn({ data: { hostId, propertyId } }),
+  });
+  const tradeById = useMemo(
+    () => new Map(((trades.data ?? []) as Trade[]).map((t) => [t.id, t])),
+    [trades.data],
+  );
+
   const [recFor, setRecFor] = useState<Job | null>(null);
   const [planFor, setPlanFor] = useState<Job | null>(null);
+  const [groupFor, setGroupFor] = useState<WindowGroup | null>(null);
   const [tab, setTab] = useState<string>(tabParam ?? "inbox");
   useEffect(() => {
     if (tabParam) setTab(tabParam);
   }, [tabParam]);
+
+  const everything = useMemo(() => (jobs.data?.jobs ?? []) as unknown as Job[], [jobs.data]);
+  const groups = useMemo(() => windowGroups(jobs.data?.windows ?? []), [jobs.data]);
+  const colours = useMemo(
+    () =>
+      serviceColours(
+        everything.filter((j) => !closed(j)),
+        groups,
+      ),
+    [everything, groups],
+  );
+  const inbox = everything.filter((j) => j.source === "guest");
+  const planned = everything.filter((j) => j.source !== "guest");
+  // Weekly services and one-off closures still to come.
+  const services = groups.filter(
+    (g) => g.weekly || (g.endsAt && Date.parse(g.endsAt) > Date.now()),
+  );
+  const extraIds = ((extras.data ?? []) as Array<{ id: string }>).map((r) => `x:${r.id}`);
+
   // A job link (or a line on the timeline) opens whichever tab holds that job.
   useEffect(() => {
     if (!jobParam || !jobs.data) return;
-    const j = (jobs.data.jobs as unknown as Job[]).find((x) => x.id === jobParam);
-    if (j) setTab(j.archived_at ? "archive" : j.source === "guest" ? "inbox" : "planned");
-  }, [jobParam, jobs.data]);
+    if (jobParam.startsWith("w:")) return setTab("planned");
+    const j = everything.find((x) => x.id === jobParam);
+    if (j) setTab(j.source === "guest" ? "inbox" : "planned");
+  }, [jobParam, jobs.data, everything]);
+  useEffect(() => {
+    if (requestParam) setTab("inbox");
+  }, [requestParam]);
   useLandOn(
     jobParam ? `job-${jobParam}` : requestParam ? `request-${requestParam}` : null,
     !!jobs.data,
   );
-  const [newOpen, setNewOpen] = useState(false);
 
-  const everything = useMemo(() => (jobs.data?.jobs ?? []) as unknown as Job[], [jobs.data]);
-  const colours = useMemo(
-    () =>
-      jobColours(
-        everything.filter(
-          (j) => !j.archived_at && !(CLOSED_JOB as readonly string[]).includes(j.status),
-        ),
-      ),
-    [everything],
-  );
-  const all = everything.filter((j) => !j.archived_at);
-  const archived = everything.filter((j) => j.archived_at);
-  const inbox = all.filter((j) => j.source === "guest");
-  const planned = all.filter((j) => j.source !== "guest");
-  const selectedProperty = properties.find((p) => p.id === propertyId);
-  const card = (j: Job, isArchived = false) => (
-    <JobCard
+  // "New" badges: what this browser hasn't seen on each tab yet.
+  const ids: Record<"inbox" | "planned", string[]> = {
+    inbox: [...inbox.filter((j) => !closed(j)).map((j) => j.id), ...extraIds],
+    planned: [...planned.filter((j) => !closed(j)).map((j) => j.id), ...services.map((g) => g.key)],
+  };
+  const ready = !!jobs.data && !!extras.data;
+  const [seen, setSeen] = useState<SeenStore | null>(null);
+  useEffect(() => {
+    try {
+      setSeen(readSeen(window.localStorage.getItem(SEEN_KEY(propertyId))));
+    } catch {
+      setSeen({});
+    }
+  }, [propertyId]);
+  const idsKey = JSON.stringify(ids);
+  useEffect(() => {
+    if (!seen || !ready) return;
+    let next = seen;
+    for (const k of ["inbox", "planned"] as const) {
+      // The first visit, and the open tab, count as seen.
+      if (!next[k] || k === tab) {
+        const merged = markSeen(next[k], ids[k]);
+        if (merged.length !== (next[k] ?? []).length || !next[k]) next = { ...next, [k]: merged };
+      }
+    }
+    if (next !== seen) {
+      setSeen(next);
+      try {
+        window.localStorage.setItem(SEEN_KEY(propertyId), JSON.stringify(next));
+      } catch {
+        // Private browsing: badges just won't remember.
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seen, ready, tab, idsKey, propertyId]);
+  const fresh = (k: "inbox" | "planned") => (seen && ready ? unseen(ids[k], seen[k]).length : 0);
+  const badge = (k: "inbox" | "planned") =>
+    fresh(k) && tab !== k ? (
+      <Badge className="ml-2" aria-label={copy.newBadge(fresh(k))}>
+        {copy.newShort(fresh(k))}
+      </Badge>
+    ) : null;
+
+  const jobRow = (j: Job) => (
+    <JobRow
       key={j.id}
       job={j}
-      archived={isArchived}
-      colour={colours[j.id]}
+      colour={closed(j) ? undefined : colours[j.id]}
       rooms={rooms}
       timezone={timezone}
+      trade={j.provider?.id ? tradeById.get(j.provider.id) : undefined}
+      countryCode={countryCode}
       onRecommend={() => setRecFor(j)}
       onPlan={() => setPlanFor(j)}
     />
   );
+  const openRequests = inbox.filter((j) => !closed(j));
+  const openPlanned = planned.filter((j) => !closed(j));
 
   return (
-    <section id="services" className="scroll-mt-24 space-y-4" data-tour="services">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-2xl">{copy.title}</h2>
-          <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
-        </div>
-        <Button onClick={() => setNewOpen(true)} data-tour="services-new">
-          <CalendarPlus className="size-4" /> {copy.bookMaintenance}
-        </Button>
-      </div>
-
-      <ExtrasInbox propertyId={propertyId} />
-
+    <section id="services" className="scroll-mt-24" data-tour="services">
       <Tabs value={tab} onValueChange={setTab}>
-        {/* Phones: two rows of two, so no tab runs off the screen. */}
         <TabsList
-          className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl p-1 sm:inline-flex sm:h-12 sm:w-auto"
+          className="grid h-auto w-full grid-cols-3 gap-1 rounded-2xl p-1 sm:inline-flex sm:h-12 sm:w-auto"
           data-tour="services-tabs"
         >
-          <TabsTrigger value="inbox" className="h-10 rounded-xl px-4">
-            {copy.tabInbox}{" "}
-            {inbox.filter((j) => j.status === "new").length ? (
-              <Badge className="ml-2">{inbox.filter((j) => j.status === "new").length}</Badge>
-            ) : null}
+          <TabsTrigger value="inbox" className="h-10 rounded-xl px-2 sm:px-4">
+            {copy.tabInbox}
+            {badge("inbox")}
           </TabsTrigger>
-          <TabsTrigger value="planned" className="h-10 rounded-xl px-4">
+          <TabsTrigger value="planned" className="h-10 rounded-xl px-2 sm:px-4">
             {copy.tabScheduled}
+            {badge("planned")}
           </TabsTrigger>
-          <TabsTrigger value="trades" className="h-10 rounded-xl px-4">
+          <TabsTrigger value="trades" className="h-10 rounded-xl px-2 sm:px-4">
             {tradesDir.tabLabel}
-          </TabsTrigger>
-          <TabsTrigger value="archive" className="h-10 rounded-xl px-4">
-            {jobTools.archiveTab}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="inbox" className="mt-4 space-y-3">
+          {/* Extras guests ordered: only when there are some. */}
+          <ExtrasInbox propertyId={propertyId} hideEmpty />
           {jobs.isLoading ? (
             <Skeleton className="h-32 rounded-2xl" />
-          ) : inbox.length === 0 ? (
+          ) : openRequests.length === 0 && extraIds.length === 0 ? (
             <div className="card-soft p-8 text-center text-muted-foreground">{copy.emptyInbox}</div>
           ) : (
-            inbox.map((j) => card(j))
+            openRequests.map(jobRow)
           )}
+          <Finished count={inbox.length - openRequests.length}>
+            {inbox.filter(closed).map(jobRow)}
+          </Finished>
         </TabsContent>
 
         <TabsContent value="planned" className="mt-4 space-y-3">
-          {planned.length === 0 ? (
+          {jobs.isLoading ? (
+            <Skeleton className="h-32 rounded-2xl" />
+          ) : openPlanned.length === 0 && services.length === 0 ? (
             <div className="card-soft p-8 text-center text-muted-foreground">
               {copy.emptyScheduled}
             </div>
           ) : (
-            planned.map((j) => card(j))
+            <>
+              {services.map((g) => (
+                <GroupRow
+                  key={g.key}
+                  group={g}
+                  colour={colours[g.key]}
+                  rooms={rooms}
+                  timezone={timezone}
+                  propertyId={propertyId}
+                  trade={g.tradeId ? tradeById.get(g.tradeId) : undefined}
+                  countryCode={countryCode}
+                  onEdit={() => setGroupFor(g)}
+                />
+              ))}
+              {openPlanned.map(jobRow)}
+            </>
           )}
+          <Finished count={planned.length - openPlanned.length}>
+            {planned.filter(closed).map(jobRow)}
+          </Finished>
         </TabsContent>
 
         <TabsContent value="trades" className="mt-4 space-y-6">
           <TradeContacts
-            hostId={ws.data!.hostId}
+            hostId={hostId}
             propertyId={propertyId}
             postcode={selectedProperty?.postcode ?? ""}
-            countryCode={selectedProperty?.country_code ?? "GB"}
+            countryCode={countryCode}
           />
           <TradeDirectory
             postcode={selectedProperty?.postcode ?? ""}
             address={selectedProperty?.address ?? null}
-            countryCode={selectedProperty?.country_code ?? "GB"}
+            countryCode={countryCode}
           />
-        </TabsContent>
-
-        <TabsContent value="archive" className="mt-4 space-y-3">
-          {archived.length === 0 ? (
-            <div className="card-soft p-8 text-center text-muted-foreground">
-              {jobTools.archiveEmpty}
-            </div>
-          ) : (
-            archived.map((j) => card(j, true))
-          )}
         </TabsContent>
       </Tabs>
 
       {recFor ? (
         <RecommendDialog
           job={recFor}
-          hostId={ws.data!.hostId}
+          hostId={hostId}
           propertyId={propertyId}
-          countryCode={selectedProperty?.country_code ?? "GB"}
+          countryCode={countryCode}
           onClose={() => setRecFor(null)}
         />
       ) : null}
-      {newOpen || planFor ? (
-        <JobDialog
+      {planFor || groupFor ? (
+        <ServiceDialog
           job={planFor}
+          group={groupFor}
           onClose={() => {
-            setNewOpen(false);
             setPlanFor(null);
+            setGroupFor(null);
           }}
-          hostId={ws.data!.hostId}
           propertyId={propertyId}
           rooms={rooms}
           timezone={timezone}
@@ -299,14 +550,125 @@ export function ServicesPanel({
   );
 }
 
-function JobCard({
+const roomsText = (ids: string[], rooms: Room[]) =>
+  ids.length
+    ? ids
+        .map((id) => rooms.find((r) => r.id === id)?.display_name)
+        .filter(Boolean)
+        .join(", ")
+    : copy.wholeProperty;
+
+/** A repeating service (or a one-off closure) from the schedule. */
+function GroupRow({
+  group,
+  colour,
+  rooms,
+  timezone,
+  propertyId,
+  trade,
+  countryCode,
+  onEdit,
+}: {
+  group: WindowGroup;
+  colour: string | undefined;
+  rooms: Room[];
+  timezone: string;
+  propertyId: string;
+  trade: Trade | undefined;
+  countryCode: string;
+  onEdit: () => void;
+}) {
+  const qc = useQueryClient();
+  const remove = useServerFn(deleteRepeatingService);
+  const { canWrite } = useRole();
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const title = group.reason ?? housekeepingCopy.windowDefault;
+  async function drop() {
+    setBusy(true);
+    try {
+      await remove({ data: { propertyId, ids: group.ids } });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["jobs"] }),
+        qc.invalidateQueries({ queryKey: ["housekeeping-range"] }),
+        qc.invalidateQueries({ queryKey: ["board"] }),
+      ]);
+      toast.success(copy.removed);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : common.errorBody);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <ServiceRow
+      id={`job-${group.key}`}
+      when={groupWhenColumn(group, timezone)}
+      colour={colour}
+      repeating={group.weekly}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-lg">{title}</h3>
+        <Badge variant="secondary">{group.weekly ? copy.repeating : copy.closure}</Badge>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">{roomsText(group.rooms, rooms)}</p>
+      {trade ? (
+        <ContactLine
+          name={trade.company_name || trade.name}
+          trade={trade}
+          countryCode={countryCode}
+        />
+      ) : group.weekly ? (
+        <p className="mt-2 text-sm text-muted-foreground">{copy.noContact}</p>
+      ) : null}
+      {canWrite ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {group.weekly ? (
+            <Button variant="outline" onClick={onEdit} disabled={busy}>
+              <Pencil className="size-4" /> {copy.change}
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            className="text-destructive"
+            onClick={() => setConfirm(true)}
+            disabled={busy}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}{" "}
+            {common.remove}
+          </Button>
+        </div>
+      ) : null}
+      <AlertDialog open={confirm} onOpenChange={setConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{jobTools.deleteTitle(title)}</AlertDialogTitle>
+            <AlertDialogDescription>{copy.removeRepeating}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => void drop()}
+            >
+              {common.remove}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ServiceRow>
+  );
+}
+
+function JobRow({
   job,
   onRecommend,
   onPlan,
   colour,
   rooms,
   timezone,
-  archived = false,
+  trade,
+  countryCode,
 }: {
   job: Job;
   onRecommend: () => void;
@@ -315,12 +677,12 @@ function JobCard({
   colour: string | undefined;
   rooms: Room[];
   timezone: string;
-  archived?: boolean;
+  trade: Trade | undefined;
+  countryCode: string;
 }) {
   const qc = useQueryClient();
   const ack = useServerFn(acknowledgeJob);
   const setStatus = useServerFn(setJobStatus);
-  const archiveFn = useServerFn(archiveJobs);
   const deleteFn = useServerFn(deleteJobs);
   const { canWrite } = useRole();
   const [busy, setBusy] = useState<string | null>(null);
@@ -330,7 +692,10 @@ function JobCard({
     setBusy(name);
     try {
       await fn();
-      await qc.invalidateQueries({ queryKey: ["jobs"] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["jobs"] }),
+        qc.invalidateQueries({ queryKey: ["housekeeping-range"] }),
+      ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : common.errorBody);
     } finally {
@@ -338,90 +703,63 @@ function JobCard({
     }
   }
 
-  const open = !archived && !["done", "declined", "cancelled"].includes(job.status);
-  const roomNames = jobRooms(job)
-    .map((id) => rooms.find((r) => r.id === id)?.display_name)
-    .filter(Boolean);
-  const plan = jobWhen(job, timezone);
+  const open = !closed(job);
   return (
-    <article id={`job-${job.id}`} className="card-soft scroll-mt-24 p-4 sm:p-5">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {open && colour ? (
-              <span
-                aria-hidden
-                title={copy.lineColour}
-                className="h-1.5 w-6 shrink-0 rounded-full"
-                style={{ background: colour }}
-              />
-            ) : null}
-            <h3 className="text-lg">{job.title}</h3>
-            <Badge variant={job.status === "new" ? "default" : "secondary"}>
-              {copy.statuses[job.status] ?? job.status}
-            </Badge>
-            {job.urgency === "urgent" ? <Badge variant="destructive">Urgent</Badge> : null}
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {[
-              roomNames.length ? roomNames.join(", ") : copy.wholeProperty,
-              job.bookings?.guest_full_name,
-              when(job.created_at, timezone),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            {job.guest_price_pence ? ` · guest pays ${formatPence(job.guest_price_pence)}` : ""}
-          </p>
-          {job.note ? <p className="mt-2 text-sm">"{job.note}"</p> : null}
-          {plan ? (
-            <p className="mt-1 flex items-center gap-1.5 text-sm">
-              <CalendarClock className="size-4 text-muted-foreground" /> {plan}
-            </p>
-          ) : null}
-          {job.provider ? (
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-              <BadgeCheck className="size-4 text-primary" />
-              <span className="font-medium">{job.provider.name}</span>
-              {job.eta_at ? <span>· arrives {when(job.eta_at, timezone)}</span> : null}
-              {job.quoted_pence ? <span>· {formatPence(job.quoted_pence)}</span> : null}
-              <Badge variant="outline">
-                {job.provider_mode === "live" ? copy.liveBadge : copy.demoBadge} {job.provider_ref}
-              </Badge>
-            </p>
-          ) : null}
-        </div>
+    <ServiceRow id={`job-${job.id}`} when={jobWhenColumn(job, timezone)} colour={colour}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-lg">{job.title}</h3>
+        <Badge variant={job.status === "new" ? "default" : "secondary"}>
+          {copy.statuses[job.status] ?? job.status}
+        </Badge>
+        {job.urgency === "urgent" ? <Badge variant="destructive">Urgent</Badge> : null}
       </div>
-      {open ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {job.status === "new" ? (
-            <Button
-              variant="outline"
-              disabled={busy !== null}
-              onClick={() => run("ack", () => ack({ data: { jobId: job.id } }))}
-            >
-              {busy === "ack" ? <Loader2 className="size-4 animate-spin" /> : null}
-              {copy.acknowledge}
-            </Button>
-          ) : null}
-          {!job.provider ? <Button onClick={onRecommend}>{copy.recommend}</Button> : null}
-          {canWrite ? (
-            <Button variant="outline" disabled={busy !== null} onClick={onPlan}>
-              <CalendarClock className="size-4" /> {copy.plan}
-            </Button>
-          ) : null}
-          {job.status === "booked" ? (
-            <Button
-              variant="outline"
-              disabled={busy !== null}
-              onClick={() =>
-                run("prog", () =>
-                  setStatus({ data: { jobId: job.id, status: "in_progress", note: null } }),
-                )
-              }
-            >
-              {copy.inProgress}
-            </Button>
-          ) : null}
+      <p className="mt-1 text-sm text-muted-foreground">
+        {[roomsText(jobRooms(job), rooms), job.bookings?.guest_full_name]
+          .filter(Boolean)
+          .join(" · ")}
+        {job.guest_price_pence ? ` · guest pays ${formatPence(job.guest_price_pence)}` : ""}
+        {job.quoted_pence ? ` · ${formatPence(job.quoted_pence)}` : ""}
+      </p>
+      {job.note ? <p className="mt-2 text-sm">"{job.note}"</p> : null}
+      {job.provider ? (
+        <ContactLine
+          name={job.provider.name}
+          trade={trade}
+          phone={job.provider.contact}
+          countryCode={countryCode}
+        />
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {open && job.status === "new" ? (
+          <Button
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => run("ack", () => ack({ data: { jobId: job.id } }))}
+          >
+            {busy === "ack" ? <Loader2 className="size-4 animate-spin" /> : null}
+            {copy.acknowledge}
+          </Button>
+        ) : null}
+        {open && !job.provider ? <Button onClick={onRecommend}>{copy.recommend}</Button> : null}
+        {open && canWrite ? (
+          <Button variant="outline" disabled={busy !== null} onClick={onPlan}>
+            <CalendarClock className="size-4" /> {copy.plan}
+          </Button>
+        ) : null}
+        {open && job.status === "booked" ? (
+          <Button
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() =>
+              run("prog", () =>
+                setStatus({ data: { jobId: job.id, status: "in_progress", note: null } }),
+              )
+            }
+          >
+            {copy.inProgress}
+          </Button>
+        ) : null}
+        {open ? (
           <Button
             variant="outline"
             disabled={busy !== null}
@@ -432,48 +770,31 @@ function JobCard({
             {busy === "done" ? <Loader2 className="size-4 animate-spin" /> : null}
             {copy.markDone}
           </Button>
-          {!job.provider ? (
-            <Button
-              variant="ghost"
-              disabled={busy !== null}
-              onClick={() =>
-                run("dec", () =>
-                  setStatus({ data: { jobId: job.id, status: "declined", note: null } }),
-                )
-              }
-            >
-              {copy.decline}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      {canWrite ? (
-        <div className="mt-3 flex flex-wrap justify-end gap-1 border-t border-border pt-3">
+        ) : null}
+        {open && !job.provider ? (
           <Button
             variant="ghost"
-            size="sm"
             disabled={busy !== null}
             onClick={() =>
-              run("archive", async () => {
-                await archiveFn({ data: { ids: [job.id], archived: !archived } });
-                toast.success(archived ? jobTools.restored : jobTools.archived);
-              })
+              run("dec", () =>
+                setStatus({ data: { jobId: job.id, status: "declined", note: null } }),
+              )
             }
           >
-            {archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-            {archived ? jobTools.restore : jobTools.archive}
+            {copy.decline}
           </Button>
+        ) : null}
+        {canWrite ? (
           <Button
             variant="ghost"
-            size="sm"
-            className="text-destructive"
+            className="ml-auto text-destructive"
             disabled={busy !== null}
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 className="size-4" /> {common.remove}
           </Button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -496,7 +817,7 @@ function JobCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </article>
+    </ServiceRow>
   );
 }
 
@@ -629,7 +950,7 @@ function RecommendDialog({
   );
 }
 
-/** What a job covers on the property's clock, as the dialog's fields. */
+/** A job's day and window on the property's clock, as the dialog's fields. */
 function planFields(job: Job | null, timezone: string) {
   const from = job?.eta_at ?? job?.scheduled_at ?? null;
   const parts = (iso: string) => zonedParts(new Date(iso), timezone);
@@ -643,81 +964,127 @@ function planFields(job: Job | null, timezone: string) {
   };
 }
 
+const chipClass = (on: boolean) =>
+  cn(
+    "rounded-full border px-3 py-1.5 text-sm",
+    on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary",
+  );
+
 /**
- * Adding a job, or changing when it happens and where: the rooms it covers (none = the whole
- * property), and the day, as a whole day or the tradesperson's window. Times are the property's.
+ * Adding a service (Bookings' Add service button), or changing one: a single visit (a job, on a
+ * day, all day or in the tradesperson's window) or a repeating one (every week on chosen days
+ * between two times, saved as the schedule's windows), the rooms it affects (none = the whole
+ * property) and who comes, from the host's own contacts. Times are the property's.
  */
-function JobDialog({
-  job,
+export function ServiceDialog({
+  job = null,
+  group = null,
   onClose,
-  hostId,
+  onSaved,
   propertyId,
   rooms,
   timezone,
 }: {
-  /** Null to add a new job. */
-  job: Job | null;
+  /** Changing a job's time and rooms. */
+  job?: Job | null;
+  /** Changing a repeating service. */
+  group?: WindowGroup | null;
   onClose: () => void;
-  hostId: string;
+  onSaved?: (kind: "once" | "weekly") => void;
   propertyId: string;
   rooms: Room[];
   timezone: string;
 }) {
   const qc = useQueryClient();
+  const ws = useWorkspace();
+  const hostId = ws.data?.hostId ?? "";
   const create = useServerFn(createHostJob);
   const update = useServerFn(updateJobPlan);
+  const saveWeekly = useServerFn(saveRepeatingService);
+  const tradesFn = useServerFn(listTrades);
+  const trades = useQuery({
+    queryKey: ["trades", hostId, propertyId],
+    enabled: !!hostId,
+    queryFn: () => tradesFn({ data: { hostId, propertyId } }),
+  });
+  const s = housekeepingCopy.schedule;
   const start = planFields(job, timezone);
+  const [kind, setKind] = useState<"once" | "weekly">(group ? "weekly" : "once");
   const [category, setCategory] = useState("boiler_service");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(group?.reason ?? "");
+  const [what, setWhat] = useState(group?.reason ?? s.reasons[0]!);
   const [note, setNote] = useState("");
-  const [picked, setPicked] = useState<string[]>(job ? jobRooms(job) : []);
+  const [picked, setPicked] = useState<string[]>(job ? jobRooms(job) : (group?.rooms ?? []));
   const [date, setDate] = useState(start.date);
   const [allDay, setAllDay] = useState(start.allDay);
-  const [from, setFrom] = useState(start.from);
-  const [to, setTo] = useState(start.to);
+  const [days, setDays] = useState<number[]>(group?.days ?? []);
+  const [from, setFrom] = useState(group?.start ?? start.from);
+  const [to, setTo] = useState(group?.end ?? start.to);
+  const [tradeId, setTradeId] = useState<string>(group?.tradeId ?? "none");
   const [busy, setBusy] = useState(false);
 
-  const toggle = (id: string) =>
+  const toggleRoom = (id: string) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const toggleDay = (d: number) =>
+    setDays((p) => (p.includes(d) ? p.filter((x) => x !== d) : [...p, d]));
+  const editing = !!job || !!group;
+  const timed = kind === "weekly" || (!!date && !allDay);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (date && !allDay && to <= from) {
-      toast.error(copy.windowOrder);
-      return;
-    }
+    if (timed && to <= from) return void toast.error(copy.windowOrder);
+    if (kind === "weekly" && !days.length) return void toast.error(copy.pickDays);
+    if (kind === "weekly" && !what.trim()) return void toast.error(copy.nameIt);
     setBusy(true);
-    const scheduledAt = date
-      ? zonedToUtc(date, allDay ? "00:00" : from, timezone).toISOString()
-      : null;
-    const windowEnd = date && !allDay ? zonedToUtc(date, to, timezone).toISOString() : null;
+    const contact = tradeId === "none" ? null : tradeId;
     try {
-      if (job) {
-        await update({
-          data: { jobId: job.id, roomIds: picked, scheduledAt, windowEnd, allDay: allDay },
-        });
-      } else {
-        await create({
+      if (kind === "weekly") {
+        await saveWeekly({
           data: {
-            hostId,
             propertyId,
-            roomId: null,
+            replaceIds: group?.ids ?? [],
+            reason: what.trim(),
             roomIds: picked,
-            category,
-            title: title.trim() || categoryById(category)!.label,
-            note: note.trim() || null,
-            scheduledAt,
-            windowEnd,
-            allDay,
-            urgency: "low",
+            days,
+            start: from,
+            end: to,
+            tradeId: contact,
           },
         });
+      } else {
+        const scheduledAt = date
+          ? zonedToUtc(date, allDay ? "00:00" : from, timezone).toISOString()
+          : null;
+        const windowEnd = date && !allDay ? zonedToUtc(date, to, timezone).toISOString() : null;
+        if (job)
+          await update({
+            data: { jobId: job.id, roomIds: picked, scheduledAt, windowEnd, allDay },
+          });
+        else
+          await create({
+            data: {
+              hostId,
+              propertyId,
+              roomId: null,
+              roomIds: picked,
+              category,
+              title: title.trim() || categoryById(category)!.label,
+              note: note.trim() || null,
+              scheduledAt,
+              windowEnd,
+              allDay,
+              urgency: "low",
+              tradeId: contact,
+            },
+          });
       }
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["jobs"] }),
-        qc.invalidateQueries({ queryKey: ["housekeeping-range", propertyId] }),
+        qc.invalidateQueries({ queryKey: ["housekeeping-range"] }),
+        qc.invalidateQueries({ queryKey: ["board"] }),
       ]);
-      toast.success(job ? copy.planSaved : copy.added);
+      toast.success(editing ? copy.planSaved : copy.added);
+      onSaved?.(kind);
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -726,17 +1093,44 @@ function JobDialog({
     }
   }
 
+  const people = (trades.data ?? []) as Trade[];
   return (
     <Dialog open onOpenChange={(o) => (o ? null : onClose())}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-3xl">
         <DialogHeader>
-          <DialogTitle>{job ? job.title : copy.bookMaintenance}</DialogTitle>
+          <DialogTitle>
+            {job ? job.title : group ? copy.changeService : copy.addService}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          {job ? null : (
+          {editing ? null : (
+            <div role="radiogroup" className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1">
+              {(["once", "weekly"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="radio"
+                  aria-checked={kind === k}
+                  onClick={() => setKind(k)}
+                  className={cn(
+                    "flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-medium",
+                    kind === k ? "bg-background shadow-soft" : "text-muted-foreground",
+                  )}
+                >
+                  {k === "weekly" ? (
+                    <Repeat className="size-4" />
+                  ) : (
+                    <CalendarClock className="size-4" />
+                  )}
+                  {k === "weekly" ? copy.kindWeekly : copy.kindOnce}
+                </button>
+              ))}
+            </div>
+          )}
+          {kind === "once" && !job ? (
             <>
               <div className="space-y-2">
-                <Label>Service</Label>
+                <Label>{copy.serviceLabel}</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="h-12">
                     <SelectValue />
@@ -751,7 +1145,7 @@ function JobDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="jt">Title (optional)</Label>
+                <Label htmlFor="jt">{copy.titleLabel}</Label>
                 <Input
                   id="jt"
                   className="h-12"
@@ -761,7 +1155,31 @@ function JobDialog({
                 />
               </div>
             </>
-          )}
+          ) : null}
+          {kind === "weekly" ? (
+            <div className="space-y-2">
+              <Label htmlFor="jw">{copy.whatLabel}</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {s.reasons.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setWhat(r)}
+                    className={chipClass(what === r)}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              <Input
+                id="jw"
+                className="h-11"
+                maxLength={80}
+                value={what}
+                onChange={(e) => setWhat(e.target.value)}
+              />
+            </div>
+          ) : null}
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">{copy.roomsLabel}</legend>
             <div className="flex flex-wrap gap-1.5">
@@ -769,12 +1187,7 @@ function JobDialog({
                 type="button"
                 aria-pressed={picked.length === 0}
                 onClick={() => setPicked([])}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-sm",
-                  picked.length === 0
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border hover:bg-secondary",
-                )}
+                className={chipClass(picked.length === 0)}
               >
                 {copy.wholeProperty}
               </button>
@@ -783,36 +1196,52 @@ function JobDialog({
                   key={r.id}
                   type="button"
                   aria-pressed={picked.includes(r.id)}
-                  onClick={() => toggle(r.id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-sm",
-                    picked.includes(r.id)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border hover:bg-secondary",
-                  )}
+                  onClick={() => toggleRoom(r.id)}
+                  className={chipClass(picked.includes(r.id))}
                 >
                   {r.display_name}
                 </button>
               ))}
             </div>
           </fieldset>
-          <div className="space-y-2">
-            <Label htmlFor="jd">{copy.dayLabel}</Label>
-            <Input
-              id="jd"
-              type="date"
-              className="h-12"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-          {date ? (
+          {kind === "weekly" ? (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">{copy.daysLabel}</legend>
+              <div className="flex flex-wrap gap-1.5">
+                {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={days.includes(d)}
+                    onClick={() => toggleDay(d)}
+                    className={chipClass(days.includes(d))}
+                  >
+                    {s.short[d]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="jd">{copy.dayLabel}</Label>
+              <Input
+                id="jd"
+                type="date"
+                className="h-12"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+          )}
+          {kind === "weekly" || date ? (
             <div className="space-y-3 rounded-2xl border border-border p-3">
-              <label className="flex items-center justify-between gap-3 text-sm font-medium">
-                {copy.allDay}
-                <Switch checked={allDay} onCheckedChange={setAllDay} />
-              </label>
-              {allDay ? null : (
+              {kind === "once" ? (
+                <label className="flex items-center justify-between gap-3 text-sm font-medium">
+                  {copy.allDay}
+                  <Switch checked={allDay} onCheckedChange={setAllDay} />
+                </label>
+              ) : null}
+              {timed ? (
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label htmlFor="jf" className="text-xs">
@@ -839,19 +1268,42 @@ function JobDialog({
                     />
                   </div>
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground">{copy.windowHelp}</p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                {kind === "weekly" ? copy.weeklyHelp : copy.windowHelp}
+              </p>
             </div>
           ) : null}
           {job ? null : (
             <div className="space-y-2">
-              <Label htmlFor="jn">Notes, or guest feedback that prompted this</Label>
-              <Textarea id="jn" value={note} onChange={(e) => setNote(e.target.value)} />
+              <Label>{copy.contactLabel}</Label>
+              <Select value={tradeId} onValueChange={setTradeId}>
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{copy.noOneYet}</SelectItem>
+                  {people.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.company_name || t.name} · {tradeCategoryLabel(t.category)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {people.length ? null : (
+                <p className="text-xs text-muted-foreground">{copy.contactsHint}</p>
+              )}
             </div>
           )}
+          {kind === "once" && !job ? (
+            <div className="space-y-2">
+              <Label htmlFor="jn">{copy.noteLabel}</Label>
+              <Textarea id="jn" value={note} onChange={(e) => setNote(e.target.value)} />
+            </div>
+          ) : null}
           <Button type="submit" disabled={busy} className="w-full">
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-            {job ? common.save : "Add"}
+            {editing ? common.save : copy.addCta}
           </Button>
         </form>
       </DialogContent>
