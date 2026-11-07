@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import { Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { guest as copy } from "@/content/copy";
 import { cn } from "@/lib/utils";
+import { qrPath } from "@/lib/qr";
 import { headerIconClass } from "@/components/guest/KioskClocks";
 
 /** A phone outline with a small QR square on its screen. */
@@ -32,7 +33,55 @@ export function PhoneQrIcon({ className }: { className?: string }) {
   );
 }
 
-/** Draws the QR once per URL; the image is small enough to keep in state. */
+/**
+ * A QR code on a screen: see-through, its squares in the text colour around it
+ * (currentColor), so it sits on the screen's own background. `backed` (pop-ups)
+ * puts a translucent panel of the page's background behind it, so it still scans
+ * over whatever shows through.
+ */
+export function QrSquare({
+  value,
+  className,
+  backed = false,
+  label = copy.qrAlt,
+}: {
+  value: string | null;
+  className?: string;
+  backed?: boolean;
+  label?: string;
+}) {
+  const path = useMemo(() => {
+    if (!value) return null;
+    try {
+      return qrPath(QRCode.create(value, { errorCorrectionLevel: "M" }).modules);
+    } catch {
+      return null;
+    }
+  }, [value]);
+  if (!path) return null;
+  const svg = (
+    <svg
+      viewBox={`0 0 ${path.size} ${path.size}`}
+      shapeRendering="crispEdges"
+      role="img"
+      aria-label={label}
+      data-qr
+      className={cn("block aspect-square", backed ? "relative h-full w-full" : className)}
+    >
+      <path fill="currentColor" d={path.d} />
+    </svg>
+  );
+  if (!backed) return svg;
+  // A separate layer with opacity (not a /opacity colour), which older tablet browsers draw solid.
+  return (
+    <span data-qr-backed className={cn("relative block aspect-square p-[3%]", className)}>
+      <span aria-hidden className="absolute inset-0 rounded-[inherit] bg-background opacity-85" />
+      {svg}
+    </span>
+  );
+}
+
+/** Draws the QR once per URL as a PNG (screensaver looks with their own fixed colours). */
 export function useQrImage(
   url: string | null,
   colours: { dark: string; light: string } = { dark: "#1f3d2b", light: "#fdfaf4" },
@@ -70,9 +119,8 @@ export function CheckInQr({
   /** True on phones: show a small corner button instead of a whole card. */
   compact: boolean;
 }) {
-  const src = useQrImage(url);
   const [open, setOpen] = useState(false);
-  if (!src) return null;
+  if (!url) return null;
 
   if (compact) {
     return (
@@ -92,7 +140,11 @@ export function CheckInQr({
             <DialogHeader>
               <DialogTitle>{heading}</DialogTitle>
             </DialogHeader>
-            <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[18rem] rounded-2xl" />
+            <QrSquare
+              value={url}
+              backed
+              className="mx-auto w-full max-w-[18rem] rounded-2xl text-foreground"
+            />
             <p className="text-center text-sm text-muted-foreground">{blurb}</p>
           </DialogContent>
         </Dialog>
@@ -104,7 +156,7 @@ export function CheckInQr({
     <aside className={cn("rounded-2xl border bg-card p-5 text-center shadow-soft")}>
       <Smartphone className="mx-auto mb-2 size-6 text-primary" aria-hidden />
       <h2 className="font-serif text-lg">{heading}</h2>
-      <img src={src} alt={copy.qrAlt} className="mx-auto my-3 w-full max-w-[13rem] rounded-xl" />
+      <QrSquare value={url} className="mx-auto my-3 w-full max-w-[13rem]" />
       <p className="text-sm text-muted-foreground">{blurb}</p>
     </aside>
   );
@@ -130,7 +182,6 @@ export function GuideLink({
 }) {
   const [qrOpen, setQrOpen] = useState(kiosk);
   const [copied, setCopied] = useState(false);
-  const src = useQrImage(qrOpen ? url : null);
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
   const mac =
     typeof navigator !== "undefined" &&
@@ -210,23 +261,13 @@ export function GuideLink({
       {qrOpen ? (
         <div className="mt-2 text-center animate-in fade-in slide-in-from-top-1">
           {/* On the kiosk the square is as big as the screen allows, never squeezed by the text. */}
-          {src ? (
-            <img
-              src={src}
-              alt={copy.qrAlt}
-              className={cn(
-                "mx-auto aspect-square w-full rounded-xl",
-                kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]",
-              )}
-            />
-          ) : (
-            <div
-              className={cn(
-                "mx-auto aspect-square w-full rounded-xl bg-muted",
-                kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]",
-              )}
-            />
-          )}
+          <QrSquare
+            value={url}
+            className={cn(
+              "mx-auto w-full",
+              kiosk ? "max-w-[min(20rem,calc(var(--kiosk-h,100dvh)-27rem))]" : "max-w-[15rem]",
+            )}
+          />
           {kiosk && shortText ? (
             <p className="mt-3 break-all font-mono text-xl font-semibold tracking-wide sm:text-2xl">
               {shortText}
@@ -259,14 +300,13 @@ export function KioskQr({
   /** Other guests are being filled in: the square lets them use their own phones. */
   others?: boolean;
 }) {
-  const src = useQrImage(url);
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<HTMLElement | null>(null);
   useEffect(() => {
     if (large) setOpen(false);
     setTarget(document.getElementById("kiosk-header-action"));
   }, [large]);
-  if (!src) return null;
+  if (!url) return null;
   if (large) {
     return (
       <aside className="rounded-3xl border bg-card p-4 text-center shadow-soft sm:p-6">
@@ -276,10 +316,9 @@ export function KioskQr({
         />
         <h2 className="font-display text-xl sm:text-2xl">{copy.kioskQrTitle}</h2>
         {/* Sized by the screen's height too, so it fits a small tablet on its side. */}
-        <img
-          src={src}
-          alt={copy.qrAlt}
-          className="mx-auto my-3 aspect-square w-full max-h-[calc(var(--kiosk-h,100vh)*0.42)] max-w-[15rem] rounded-2xl object-contain"
+        <QrSquare
+          value={url}
+          className="mx-auto my-3 w-full max-h-[calc(var(--kiosk-h,100vh)*0.42)] max-w-[15rem]"
         />
         <p className="text-sm text-muted-foreground sm:text-base">{copy.kioskQrBody}</p>
       </aside>
@@ -314,7 +353,11 @@ export function KioskQr({
             </DialogTitle>
           </DialogHeader>
           {/* Just the heading and the square: the heading already says what to do. */}
-          <img src={src} alt={copy.qrAlt} className="mx-auto w-full max-w-[18rem] rounded-2xl" />
+          <QrSquare
+            value={url}
+            backed
+            className="mx-auto w-full max-w-[18rem] rounded-2xl text-foreground"
+          />
         </DialogContent>
       </Dialog>
     </>
@@ -323,20 +366,13 @@ export function KioskQr({
 
 /** Jumbo's first screen: the phone square in the card itself, with a couple of words, never an icon. */
 export function CardQr({ url, label }: { url: string; label: string }) {
-  const src = useQrImage(url);
   return (
     <div
       data-jumbo-cardqr
       className="flex min-h-0 flex-col items-center justify-center gap-[2cqmin]"
     >
       <p className="text-center font-bold">{label}</p>
-      {src ? (
-        <img
-          src={src}
-          alt={copy.qrAlt}
-          className="aspect-square w-full rounded-[2cqmin] bg-white object-contain p-[1cqmin]"
-        />
-      ) : null}
+      <QrSquare value={url} className="w-full" />
     </div>
   );
 }

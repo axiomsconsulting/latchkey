@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import QRCode from "qrcode";
+import { QrSquare } from "@/components/guest/CheckInQr";
 import {
   Check,
   CheckCircle2,
@@ -205,11 +205,7 @@ function Account({ data: d }: { data: any }) {
 }
 
 function ShareLink({ link, code }: { link: string; code: string }) {
-  const [qr, setQr] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  useEffect(() => {
-    void QRCode.toDataURL(link, { width: 320, margin: 1 }).then(setQr);
-  }, [link]);
   const copyIt = (v: string) => void navigator.clipboard.writeText(v).then(() => setCopied(v));
   return (
     <section className="card-soft grid gap-4 p-5 sm:grid-cols-[1fr_auto]">
@@ -236,7 +232,7 @@ function ShareLink({ link, code }: { link: string; code: string }) {
           </div>
         </div>
       </div>
-      {qr ? <img src={qr} alt="" className="size-32 rounded-lg bg-white p-1" /> : null}
+      <QrSquare value={link} label="" className="size-32" />
     </section>
   );
 }
