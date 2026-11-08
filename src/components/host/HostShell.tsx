@@ -6,6 +6,7 @@ import { Link, Navigate, Outlet, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  Building2,
   Eye,
   History,
   Loader2,
@@ -70,10 +71,12 @@ import {
   hostNav,
   tourCopy,
   invite as inviteCopy,
+  partnerSetupCopy,
   siteMenu,
   team as teamCopy,
 } from "@/content/copy";
 import { useAlerts, useRole, useSelectedProperty, useWorkspace } from "@/hooks/use-host-data";
+import { clearPartnerIntent } from "@/lib/partner-intent";
 import { getWorkspace } from "@/lib/host.functions";
 import { DEMO_EMAIL, signOut } from "@/lib/demo-session";
 import {
@@ -271,8 +274,9 @@ export function HostShell() {
   }
 
   if (data?.pendingInvite) return <PendingInvite onSignOut={() => void leave()} />;
-  // A Commission Partner has no rooms to run: their own account instead of an empty "My rooms".
-  if (data && "partnerOnly" in data) return <Navigate to="/partners" replace />;
+  // A Commission Partner with no host business yet: never an empty "My rooms" made for them
+  // without asking, but they may open one (agreement v1.3 3.2(b)), or go to their partner account.
+  if (data && "partnerOnly" in data) return <PartnerNoBusiness onSignOut={() => void leave()} />;
 
   const readOnly =
     data && !canWrite ? (
@@ -932,6 +936,53 @@ function DesktopNav({
         />
       </button>
     </aside>
+  );
+}
+
+/** A Commission Partner (current or former) with no host business: open one, or go to the partner account. */
+function PartnerNoBusiness({ onSignOut }: { onSignOut: () => void }) {
+  const fetchWorkspace = useServerFn(getWorkspace);
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  return (
+    <main className="grid min-h-screen place-items-center px-4">
+      <div className="card-soft max-w-md space-y-4 p-8 text-center">
+        <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-secondary text-primary">
+          <Building2 className="size-7" />
+        </span>
+        <h1 className="text-2xl">{partnerSetupCopy.noBusinessTitle}</h1>
+        <p className="text-muted-foreground">{partnerSetupCopy.noBusinessBody}</p>
+        <Button
+          className="w-full"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              clearPartnerIntent();
+              const ws = await fetchWorkspace({ data: { create: true } });
+              qc.setQueryData(["workspace"], ws);
+              await navigate({ to: "/app/setup" });
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+          {partnerSetupCopy.ownStart}
+        </Button>
+        <Button asChild variant="outline" className="w-full">
+          <Link to="/partners">{partnerSetupCopy.noBusinessPartner}</Link>
+        </Button>
+        <button
+          type="button"
+          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          onClick={onSignOut}
+        >
+          {auth.signOut}
+        </button>
+      </div>
+    </main>
   );
 }
 

@@ -4008,6 +4008,10 @@ export const partnerSetupCopy = branded({
   ownTitle: "Your own host business",
   ownNone: "You don't run a host business of your own on Latchkey.",
   ownStart: "Start your own host business",
+  noBusinessTitle: "You don't run a host business here yet",
+  noBusinessBody:
+    "You can open a host business of your own alongside your Commission Partner account. A business you own never earns you commission.",
+  noBusinessPartner: "Go to your Commission Partner account",
   ownName: "Business name",
   open: "Open dashboard",
   setupTitle: "Set up a business for a host",
