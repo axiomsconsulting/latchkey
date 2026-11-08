@@ -16,6 +16,7 @@ import {
   fakeHost,
   priorHost,
   referralOutcome,
+  ownBusiness,
   selfReferral,
   trialCycling,
   type Flag,
@@ -335,8 +336,15 @@ export async function runReferralChecks(
     .select("sign_up_at")
     .eq("partner_id", r.partner_id)
     .gte("sign_up_at", new Date(now - config.fraudBurstHours * 3_600_000).toISOString());
+  const { data: partnerRow } = await db
+    .from("partners")
+    .select("user_id")
+    .eq("id", r.partner_id)
+    .maybeSingle();
   const flags = [
-    selfReferral(keys, partnerKeys),
+    // The partner owning the business outranks a details match: both are self-referral.
+    ownBusiness(f.ownerIds, (partnerRow as { user_id?: string } | null)?.user_id ?? null) ??
+      selfReferral(keys, partnerKeys),
     priorHost(keys, earlier, (trialFlags ?? 0) > 0),
     bonusDedupe(
       keys,

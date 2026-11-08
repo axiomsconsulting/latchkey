@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireSuperAdmin } from "@/lib/roles";
+import { rebrand } from "@/lib/brand";
 import {
   applyFraudOutcome,
   newTermsProblem,
@@ -90,10 +91,26 @@ export const applyAsPartner = createServerFn({ method: "POST" })
     if (input.kind === "business" && !input.businessName)
       throw new Error("Add your business's name.");
     const existing = check(
-      await db.from("partners").select("id").eq("user_id", userId).maybeSingle(),
-    );
-    if (existing)
+      await db
+        .from("partners")
+        .select("id, terminated_at, termination_for_breach")
+        .eq("user_id", userId)
+        .maybeSingle(),
+    ) as {
+      id: string;
+      terminated_at: string | null;
+      termination_for_breach: boolean | null;
+    } | null;
+    const { canRejoin } = await import("./partner-activation");
+    if (existing && !canRejoin(existing, Date.now())) {
+      if (existing.terminated_at && existing.termination_for_breach)
+        throw new Error(
+          rebrand(
+            "Latchkey ended your earlier Commission Partner agreement, so you can't apply again here. Contact Latchkey support if you'd like to talk about it.",
+          ),
+        );
       throw new Error("You've already applied. Your Commission Partner account is at /partners.");
+    }
     if (!config.hostCanBePartner) {
       const { count } = await db
         .from("host_members")
@@ -106,6 +123,61 @@ export const applyAsPartner = createServerFn({ method: "POST" })
     const elig = eligibilityFor(input.country, config);
     if (!elig.ok) throw new Error(elig.message);
     const now = new Date().toISOString();
+    const details = {
+      kind: input.kind,
+      legal_name: input.legalName,
+      business_name: input.businessName || null,
+      business_type: input.businessType || null,
+      company_number: input.companyNumber || null,
+      country: input.country.toUpperCase(),
+      email: input.email.toLowerCase(),
+      phone_e164: phone.e164,
+      vat_number: input.vatNumber || null,
+      tax_ack_at: now,
+      independent_ack_at: now,
+      status: elig.status,
+      payout_route: elig.route,
+    };
+    if (existing) {
+      // Joining again (agreement v1.3, 20.8): the same record, so earlier referrals,
+      // statements and the ledger stay; the stop is lifted and a new signature and
+      // OMS approval are needed (acceptanceSince). The referral code is kept.
+      check(
+        await db
+          .from("partners")
+          .update({
+            ...details,
+            status: elig.status,
+            terminated_at: null,
+            terminated_by: null,
+            termination_reason: null,
+            termination_for_breach: false,
+            stop_source: null,
+            rejoined_at: now,
+            updated_at: now,
+          })
+          .eq("id", existing.id),
+      );
+      await savePartnerKeys(db, existing.id, {
+        email: input.email,
+        phone: phone.e164,
+        legalName: input.legalName,
+        businessName: input.businessName ?? null,
+        companyNumber: input.companyNumber ?? null,
+        ipHash: await requestHash("ip"),
+        deviceHash: await requestHash("device", input.deviceId),
+      });
+      await logPartnerEvent(db, {
+        partner_id: existing.id,
+        actor: userId,
+        action: "partner_rejoined",
+        details: { country: input.country.toUpperCase(), route: elig.route },
+      });
+      return {
+        status: elig.status,
+        message: elig.ok && elig.status === "waitlisted" ? elig.message : null,
+      };
+    }
     const row = check(
       await db
         .from("partners")

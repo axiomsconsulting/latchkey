@@ -23,12 +23,19 @@ import {
   splitSigning,
   ukDate,
 } from "../src/lib/partner-agreement";
-import { activationBlockers, activationMissing, canRefer } from "../src/lib/partner-activation";
+import {
+  acceptanceSince,
+  activationBlockers,
+  activationMissing,
+  canRefer,
+  canRejoin,
+} from "../src/lib/partner-activation";
 import { judgePartnerId, partnerIdStatus } from "../src/lib/partner-id";
 import { DEFAULT_CAMPAIGNS } from "../src/lib/rate-campaigns";
 import type { IdRead } from "../src/lib/guest-records";
 
 const TEXT = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.2.md"), "utf8");
+const TEXT_1_3 = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.3.md"), "utf8");
 const TEXT_1_1 = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.1.md"), "utf8");
 const TEXT_1_0 = readFileSync(join(__dirname, "../docs/legal/partner-agreement-v1.0.md"), "utf8");
 const NO_BONUS = {
@@ -55,6 +62,34 @@ const values = (terms = NO_BONUS, noticeEmail: string | null = "partners@example
   });
 
 describe("agreement text", () => {
+  it("v1.3 lets partners be hosts, set up a business for a host, and join again", () => {
+    const out = fillAgreement(TEXT_1_3, { ...values(), "agreement.version": "1.3" });
+    expect(out).toContain("**Version 1.3**");
+    expect(out).toContain("you may also run or own Latchkey host accounts of your own");
+    expect(out).toMatch(/6\.9 \*\*Setting up an account for a host\.\*\*/);
+    expect(out).toMatch(/20\.8 \*\*Joining again\.\*\*/);
+    expect(out).not.toContain("you are not, and do not run or own, a Latchkey host account");
+    // Same ticks as before, naming the new version.
+    expect(out).toContain("Agreement version 1.3 and agree to it.");
+  });
+
+  it("only counts a signature made after rejoining (20.8), and never rejoins after a breach stop", () => {
+    const acc = { signed_at: "2026-11-01T10:00:00Z" };
+    expect(acceptanceSince(acc, null)).toBe(acc);
+    expect(acceptanceSince(acc, "2026-11-05T10:00:00Z")).toBeNull();
+    expect(acceptanceSince({ signed_at: "2026-11-06T10:00:00Z" }, "2026-11-05T10:00:00Z")).toEqual({
+      signed_at: "2026-11-06T10:00:00Z",
+    });
+    const now = Date.parse("2026-11-08T00:00:00Z");
+    expect(canRejoin({ terminated_at: "2026-11-01T00:00:00Z" }, now)).toBe(true);
+    expect(
+      canRejoin({ terminated_at: "2026-11-01T00:00:00Z", termination_for_breach: true }, now),
+    ).toBe(false);
+    // Still active (a later Stop Date) or never stopped: nothing to rejoin.
+    expect(canRejoin({ terminated_at: "2026-12-01T00:00:00Z" }, now)).toBe(false);
+    expect(canRejoin({ terminated_at: null }, now)).toBe(false);
+  });
+
   it("v1.2 shows the Launch Bonus campaign and calls the one-off bonus the Sign-up Bonus", () => {
     const out = fillAgreement(TEXT, values());
     expect(out).toContain(

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Eye, Lock, Megaphone, MessageSquareHeart, Star } from "lucide-react";
 import { toast } from "sonner";
 
+import { AccountControls } from "@/components/host/AccountControls";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { billingCopy, common, feedbackCopy, supportCopy } from "@/content/copy";
+import { billingCopy, common, feedbackCopy, partnerSetupCopy, supportCopy } from "@/content/copy";
 import { useWorkspace } from "@/hooks/use-host-data";
 import {
   dismissAnnouncement,
@@ -45,11 +46,23 @@ export function AccessGate({ children }: { children: ReactNode }) {
       <Lock className="mx-auto size-12 text-primary" />
       <h1 className="mt-4 text-3xl">{billingCopy.lockedTitle}</h1>
       <p className="mt-3 text-lg text-muted-foreground">
-        {d.billingPhase === "canceled" ? billingCopy.lockedCanceled : billingCopy.lockedTrial}
+        {d.billingPhase === "suspended"
+          ? billingCopy.lockedPaused
+          : d.billingPhase === "closed"
+            ? billingCopy.lockedClosed
+            : d.billingPhase === "canceled"
+              ? billingCopy.lockedCanceled
+              : billingCopy.lockedTrial}
       </p>
-      <Button asChild size="lg" variant="accent" className="mt-8">
-        <Link to="/app/billing">{billingCopy.lockedCta}</Link>
-      </Button>
+      {d.billingPhase === "suspended" || d.billingPhase === "closed" ? (
+        <div className="mt-8 flex justify-center">
+          <AccountControls hostId={d.hostId} bare />
+        </div>
+      ) : (
+        <Button asChild size="lg" variant="accent" className="mt-8">
+          <Link to="/app/billing">{billingCopy.lockedCta}</Link>
+        </Button>
+      )}
       <p className="mt-4 text-sm">
         <Link to="/app/register" className="underline underline-offset-4">
           {billingCopy.lockedRegister}
@@ -106,6 +119,14 @@ export function ShellBanners() {
         <div className={cn(banner, "bg-secondary")}>
           <Megaphone className="size-4 shrink-0" />{" "}
           <span className="flex-1">{site.data.notice}</span>
+        </div>
+      ) : null}
+      {"partnerSetup" in d && d.partnerSetup ? (
+        <div className={cn(banner, "bg-secondary")}>
+          <span className="flex-1">{partnerSetupCopy.banner(d.partnerSetup.ownerName)}</span>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/partners">{partnerSetupCopy.bannerCta}</Link>
+          </Button>
         </div>
       ) : null}
       {!d.support && d.billingPhase === "past_due" ? (

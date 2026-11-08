@@ -91,6 +91,8 @@ export interface PartnerStore {
   partnerByAccount(account: string): Promise<Partner | null>;
   hostBilling(hostId: string): Promise<HostBilling>;
   hasOpenFlag(referralId: string): Promise<boolean>;
+  /** Whether the partner is an owner of this business on Latchkey (6.4(c)): their own, earning nothing. */
+  partnerOwnsHost(partnerId: string, hostId: string): Promise<boolean>;
   fetchCharge(id: string): Promise<(StripeCharge & StripeObj) | null>;
   fetchInvoice(id: string): Promise<(StripeInvoice & StripeObj) | null>;
   chargeRecord(chargeId: string): Promise<ChargeRecord | null>;
@@ -253,6 +255,17 @@ async function onInvoicePaid(
       rate_locked_at: isoOf(firstAt),
     });
     r = { ...r, commission_rate_bps: lock.rate_bps };
+  }
+  // A business the partner owns (or has since become an owner of) is their own:
+  // nothing is earned on it from then on (agreement v1.3 6.4(c)). Raised as a flag for review.
+  if (await s.partnerOwnsHost(r.partner_id, hostId)) {
+    await s.recheck(r.id);
+    await s.updateReferral(r.id, {
+      ...patch,
+      status_detail: "own_business",
+      updated_at: new Date().toISOString(),
+    });
+    return "handled";
   }
   const result = commissionFor({
     invoice: inv,

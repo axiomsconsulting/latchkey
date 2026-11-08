@@ -12,6 +12,7 @@ import {
   disputeRate,
   fakeHost,
   lateCodeAllowed,
+  ownBusiness,
   priorHost,
   referralOutcome,
   selfReferral,
@@ -226,5 +227,17 @@ describe("outcomes and late codes", () => {
     expect(
       lateCodeAllowed({ ...C, lateCodeEntry: "window_only" }, created, at(24 * 61), false, true),
     ).toBe(false);
+  });
+});
+
+describe("own business (agreement v1.3 6.4(c))", () => {
+  it("is self-referral when the partner is an owner, never for other team roles", () => {
+    expect(ownBusiness(["u1", "u2"], "u2")).toEqual({
+      kind: "self_referral",
+      strength: "strong",
+      details: { own_business: true },
+    });
+    expect(ownBusiness(["u1"], "u2")).toBeNull();
+    expect(ownBusiness(["u1"], null)).toBeNull();
   });
 });

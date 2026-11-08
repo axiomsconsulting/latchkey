@@ -103,6 +103,22 @@ function store(db: AnyDb): PartnerStore {
       }
       return null;
     },
+    async partnerOwnsHost(partnerId, hostId) {
+      const { data: p } = await db
+        .from("partners")
+        .select("user_id")
+        .eq("id", partnerId)
+        .maybeSingle();
+      if (!p?.user_id) return false;
+      const { data: m } = await db
+        .from("host_members")
+        .select("id")
+        .eq("host_id", hostId)
+        .eq("user_id", p.user_id)
+        .eq("role", "owner")
+        .maybeSingle();
+      return !!m;
+    },
     async referralForHost(hostId) {
       const { data, error } = await db
         .from("referrals")

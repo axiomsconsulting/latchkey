@@ -183,8 +183,9 @@ export const PARTNER_DEFAULTS: PartnerConfig = {
   fraudBurstHours: 24,
   fraudDisputeRateBps: 1000,
   fraudWindowDays: 90,
-  // TODO(D13): Swapnil to decide.
-  hostCanBePartner: false,
+  // D13 (decided 8 Nov 2026, agreement v1.3 3.2(b)): partners may also own host
+  // businesses; a business they own never earns them anything (6.4(c)).
+  hostCanBePartner: true,
   // Every referral starts in review (8.5 allows holding it while checked).
   reviewRequired: true,
   // Agreement 6.5: increases reach existing referrals only by a terms row with a written-notice reference.

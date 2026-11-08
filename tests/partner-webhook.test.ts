@@ -184,7 +184,15 @@ class Mem implements PartnerStore {
   async addHostCard(_h: string, fp: string) {
     this.cards.push(fp);
   }
-  async recheck() {}
+  /** Partner user ids that own each host (6.4(c)). */
+  owners: Record<string, string[]> = {};
+  async partnerOwnsHost(partnerId: string, hostId: string) {
+    return (this.owners[hostId] ?? []).includes(partnerId);
+  }
+  rechecked: string[] = [];
+  async recheck(referralId: string) {
+    this.rechecked.push(referralId);
+  }
   async checkDisputeRate() {}
   async flag(
     referralId: string | null,
@@ -333,6 +341,19 @@ describe("partner webhook", () => {
       paid_month_from: 1,
     });
     expect(s.cards).toEqual(["fp1"]);
+  });
+
+  it("earns nothing on a business the partner owns, even one they became an owner of later (v1.3 6.4(c))", async () => {
+    const s = setup();
+    charge(s, "ch_2026-11");
+    await processPartnerEvent(invoicePaid("2026-11"), s);
+    expect(s.lines.filter((l) => l.kind === "commission")).toHaveLength(1);
+    s.owners["h"] = ["p"];
+    charge(s, "ch_2026-12");
+    expect(await processPartnerEvent(invoicePaid("2026-12"), s)).toBe("handled");
+    expect(s.lines.filter((l) => l.kind === "commission")).toHaveLength(1);
+    expect(s.referrals[0]).toMatchObject({ status_detail: "own_business", paid_months_used: 1 });
+    expect(s.rechecked).toContain("r");
   });
 
   it("leaves businesses without a Commission Partner to the rest of the webhook", async () => {

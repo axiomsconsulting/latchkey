@@ -39,6 +39,28 @@ export function activationMissing(p: ActivationInput, now: number): Missing[] {
   return out;
 }
 
+/**
+ * After an ordinary stop the partner may apply again (agreement v1.3 clause
+ * 20.8): a signature from before they rejoined no longer counts, so they sign
+ * the version in force and OMS confirms it again.
+ */
+export function acceptanceSince<T extends { signed_at: string }>(
+  acceptance: T | null,
+  rejoinedAt: string | null | undefined,
+): T | null {
+  if (!acceptance || !rejoinedAt) return acceptance;
+  return Date.parse(acceptance.signed_at) >= Date.parse(rejoinedAt) ? acceptance : null;
+}
+
+/** Whether a stopped partner may apply again (20.8): an ordinary stop that has taken effect, never one for breach. */
+export function canRejoin(
+  p: { terminated_at: string | null; termination_for_breach?: boolean | null },
+  now: number,
+): boolean {
+  if (!p.terminated_at || Date.parse(p.terminated_at) > now) return false;
+  return !p.termination_for_breach;
+}
+
 /** The code and link work only with nothing missing. */
 export function canRefer(p: ActivationInput, now: number): boolean {
   return activationMissing(p, now).length === 0;

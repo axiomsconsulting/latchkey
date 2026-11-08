@@ -214,7 +214,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
             supabase
               .from("hosts")
               .select(
-                `${HOST_COLUMNS}, booking_sites, subscription_status, trial_ends_at, stripe_subscription_id, support_access_until`,
+                `${HOST_COLUMNS}, booking_sites, subscription_status, trial_ends_at, stripe_subscription_id, support_access_until, suspended_at, suspend_source, suspend_reason, closed_at, close_reason`,
               )
               .eq("id", hostId)
               .single(),
@@ -223,10 +223,21 @@ export const getWorkspace = createServerFn({ method: "GET" })
               () =>
                 supabase
                   .from("hosts")
-                  .select(`${HOST_COLUMNS}, booking_sites`)
+                  .select(
+                    `${HOST_COLUMNS}, booking_sites, subscription_status, trial_ends_at, stripe_subscription_id, support_access_until`,
+                  )
                   .eq("id", hostId)
                   .single(),
-              () => supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
+              () =>
+                withLegacy(
+                  () =>
+                    supabase
+                      .from("hosts")
+                      .select(`${HOST_COLUMNS}, booking_sites`)
+                      .eq("id", hostId)
+                      .single(),
+                  () => supabase.from("hosts").select(HOST_COLUMNS).eq("id", hostId).single(),
+                ),
             ),
         );
       })(),
@@ -238,7 +249,15 @@ export const getWorkspace = createServerFn({ method: "GET" })
     ]);
     if (hostErr) throw new Error(hostErr.message);
 
-    const billing = host as { subscription_status?: string; trial_ends_at?: string | null } | null;
+    const billing = host as {
+      subscription_status?: string;
+      trial_ends_at?: string | null;
+      suspended_at?: string | null;
+      suspend_source?: string | null;
+      suspend_reason?: string | null;
+      closed_at?: string | null;
+      close_reason?: string | null;
+    } | null;
     const { hasAccess, billingPhase, trialDaysLeft } = await import("./billing");
     const known = !!billing?.subscription_status;
     return {
@@ -255,6 +274,16 @@ export const getWorkspace = createServerFn({ method: "GET" })
       access: known ? hasAccess(billing as never) : true,
       billingPhase: known ? billingPhase(billing as never) : "trial",
       trialDaysLeft: known ? trialDaysLeft(billing as never) : null,
+      // Being set up by a Commission Partner for someone else (agreement v1.3 6.9).
+      partnerSetup: await (await import("./partner-setup.server")).setupPending(hostId),
+      // Paused or closed (migration 0097): who paused it and the reason Latchkey gave.
+      account: {
+        suspendedAt: billing?.suspended_at ?? null,
+        suspendSource: billing?.suspend_source ?? null,
+        suspendReason: billing?.suspend_reason ?? null,
+        closedAt: billing?.closed_at ?? null,
+        closeReason: billing?.close_reason ?? null,
+      },
       host,
       properties: properties ?? [],
       hasDemo: (properties ?? []).some((p) => p.is_demo),

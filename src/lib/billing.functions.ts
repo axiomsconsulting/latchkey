@@ -211,13 +211,31 @@ export const getBilling = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    // RLS: members (and the super admin) can read the business.
-    const { data: h, error } = await context.supabase
-      .from("hosts")
-      .select(BILLING_COLUMNS)
-      .eq("id", data.hostId)
-      .maybeSingle();
-    if (error || !h) return { available: false as const };
+    // RLS: members (and the super admin) can read the business. Paused/closed since migration 0097.
+    const { withLegacy } = await import("./checkin.server");
+    const res = await withLegacy(
+      () =>
+        context.supabase
+          .from("hosts")
+          .select(`${BILLING_COLUMNS}, suspended_at, closed_at`)
+          .eq("id", data.hostId)
+          .maybeSingle() as unknown as PromiseLike<{
+          data: unknown;
+          error: { code?: string; message: string } | null;
+        }>,
+      () =>
+        context.supabase.from("hosts").select(BILLING_COLUMNS).eq("id", data.hostId).maybeSingle(),
+    );
+    const h = res.data as {
+      subscription_status: string;
+      trial_ends_at: string | null;
+      current_period_end: string | null;
+      canceled_at: string | null;
+      stripe_subscription_id: string | null;
+      suspended_at?: string | null;
+      closed_at?: string | null;
+    } | null;
+    if (res.error || !h) return { available: false as const };
     const { stripeReady } = await import("./stripe.server");
     const price = await priceFor(data.hostId);
     return {
@@ -249,6 +267,12 @@ export const startSubscription = createServerFn({ method: "POST" })
       .eq("id", data.hostId)
       .single();
     if (!h) throw new Error("Business not found.");
+    // A business a Commission Partner is setting up: only the host adds a card, after taking it over (6.9(c)).
+    const { setupPending } = await import("./partner-setup.server");
+    if (await setupPending(data.hostId))
+      throw new Error(
+        "The host adds their own card once they've taken this business over. Hand it over from your Commission Partner account.",
+      );
     if (h.stripe_subscription_id && ["active", "past_due"].includes(h.subscription_status)) {
       throw new Error("You already have a subscription. Use Update card to change how you pay.");
     }
