@@ -100,6 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "google-site-verification", content: "asXV4eRjR1BlrPk6rG-TSsDj2hSk6SE6N8bS-jOSyv8" },
       { title: rebrand("Latchkey — guest operations for independent accommodation") },
       {
         name: "description",
