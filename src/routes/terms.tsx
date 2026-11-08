@@ -12,6 +12,10 @@ export const Route = createFileRoute("/terms")({
     meta: [
       { title: rebrand("Terms of service — Latchkey") },
       { name: "description", content: rebrand("The terms for businesses using Latchkey.") },
+      { property: "og:title", content: rebrand("Terms of service — Latchkey") },
+      { property: "og:description", content: rebrand("The terms for businesses using Latchkey.") },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: TermsPage,

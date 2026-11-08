@@ -22,6 +22,10 @@ export const Route = createFileRoute("/privacy")({
     meta: [
       { title: rebrand("Privacy policy — Latchkey") },
       { name: "description", content: copy.intro },
+      { property: "og:title", content: rebrand("Privacy policy — Latchkey") },
+      { property: "og:description", content: copy.intro },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: PrivacyPage,
