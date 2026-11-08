@@ -370,7 +370,8 @@ export const getPropertyBoard = createServerFn({ method: "GET" })
 
 /* ------------------------------- properties ------------------------------ */
 
-const propertyInput = z.object({
+/** What saveProperty accepts (exported for tests). */
+export const propertyInput = z.object({
   id: uuid.optional(),
   hostId: uuid,
   name: z.string().min(1),
