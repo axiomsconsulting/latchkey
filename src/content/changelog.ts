@@ -47,6 +47,30 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.140.0",
+    date: "2026-11-08",
+    title: "Pause or close your business",
+    items: [
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Pause your business from the Subscription page: nothing is charged and Latchkey stops until you resume, with everything you set up kept. You can also close a business for good; your guest register and invoices stay readable.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin can pause, resume, close or reopen any business from Businesses, with a reason the owner sees.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Team",
+        text: "Commission Partner agreement v1.3: partners can run their own host business (it never earns them commission), be on other hosts' teams, set up a business for a host and hand it over (it counts as their referral once the host takes it over and pays with their own card), and apply again after stopping.",
+      },
+    ],
+  },
+  {
     version: "0.139.0",
     date: "2026-11-07",
     title: "QR codes in your colours",

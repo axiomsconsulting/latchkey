@@ -78,6 +78,31 @@ describe("trial and subscription", () => {
   });
 });
 
+describe("paused and closed businesses (migration 0097)", () => {
+  it("stops changes while paused or closed, and owners can't lift it themselves", async () => {
+    await db.system(
+      "update hosts set suspended_at = now(), suspend_source = 'owner' where id = $1",
+      [hostId],
+    );
+    await expect(room("owner")).rejects.toThrow(/trial or subscription has ended/);
+    await db.as("owner", "update hosts set suspended_at = null where id = $1", [hostId]);
+    const [h] = await db.system<{ paused: boolean }>(
+      "select suspended_at is not null as paused from hosts where id = $1",
+      [hostId],
+    );
+    expect(h).toEqual({ paused: true });
+    await db.system("update hosts set suspended_at = null, suspend_source = null where id = $1", [
+      hostId,
+    ]);
+    expect(await room("owner")).toHaveLength(1);
+    await db.system("update hosts set closed_at = now() where id = $1", [hostId]);
+    expect(await db.as("owner", "select host_has_access($1) as a", [hostId])).toEqual([
+      { a: false },
+    ]);
+    await db.system("update hosts set closed_at = null where id = $1", [hostId]);
+  });
+});
+
 describe("super admin and support access", () => {
   it("only counts a confirmed super-admin email", async () => {
     expect(await db.as("admin", "select is_super_admin() as a")).toEqual([{ a: true }]);

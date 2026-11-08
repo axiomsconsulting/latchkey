@@ -23,6 +23,16 @@ describe("billing", () => {
       false,
     );
   });
+  it("ends access while paused or closed, whatever the subscription says", () => {
+    const paying = { subscription_status: "active", trial_ends_at: inDays(-90) };
+    expect(billingPhase({ ...paying, suspended_at: inDays(-1) }, now)).toBe("suspended");
+    expect(hasAccess({ ...paying, suspended_at: inDays(-1) }, now)).toBe(false);
+    expect(billingPhase({ ...paying, suspended_at: inDays(-1), closed_at: inDays(0) }, now)).toBe(
+      "closed",
+    );
+    expect(hasAccess({ ...paying, closed_at: inDays(0) }, now)).toBe(false);
+    expect(hasAccess({ ...paying, suspended_at: null, closed_at: null }, now)).toBe(true);
+  });
   it("ends access when cancelled, keeps it while paying", () => {
     expect(hasAccess({ subscription_status: "canceled", trial_ends_at: inDays(20) }, now)).toBe(
       false,

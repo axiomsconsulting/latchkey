@@ -16,10 +16,11 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+import { PartnerHosts } from "@/components/partners/PartnerHosts";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { partnerCopy as copy } from "@/content/copy";
+import { partnerCopy as copy, partnerSetupCopy as setupCopy } from "@/content/copy";
 import { rebrand } from "@/lib/brand";
 import { reasonText } from "@/lib/commission";
 import {
@@ -80,6 +81,7 @@ function PartnerAccount() {
           <>
             <Steps />
             <Account data={d as Extract<typeof d, { partner: object }>} />
+            <PartnerHosts canRefer={!!(d as { canRefer?: boolean }).canRefer} />
             <StatementDetails />
             <Stop />
           </>
@@ -99,6 +101,19 @@ function Account({ data: d }: { data: any }) {
       {p.status === "waitlisted" ? <p className="card-soft p-5">{copy.statusWaitlisted}</p> : null}
       {p.status === "suspended" ? <p className="card-soft p-5">{copy.statusSuspended}</p> : null}
       {p.status === "terminated" ? <p className="card-soft p-5">{copy.statusTerminated}</p> : null}
+      {/* 20.8: an ordinary stop can be followed by a new application. */}
+      {p.status === "terminated" &&
+      p.terminated_at &&
+      Date.parse(p.terminated_at) <= Date.now() &&
+      !p.termination_for_breach ? (
+        <section className="card-soft space-y-2 p-5">
+          <h2 className="text-xl">{setupCopy.rejoinTitle}</h2>
+          <p className="text-sm text-muted-foreground">{setupCopy.rejoinBody}</p>
+          <Button asChild variant="outline">
+            <Link to="/partners/join">{setupCopy.rejoinCta}</Link>
+          </Button>
+        </section>
+      ) : null}
       {p.status === "active" && d.link && d.canRefer ? (
         <ShareLink link={d.link} code={p.referral_code} />
       ) : null}

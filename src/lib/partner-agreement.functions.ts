@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireSuperAdmin } from "@/lib/roles";
-import { activationMissing, type ActivationInput } from "./partner-activation";
+import { acceptanceSince, activationMissing, type ActivationInput } from "./partner-activation";
 import {
   agreementValues,
   fillAgreement,
@@ -206,7 +206,9 @@ export async function activationFor(
   db: import("./partner-data.server").AnyDb,
   p: Record<string, any>,
 ): Promise<ActivationInput> {
-  const [acc, cur] = await Promise.all([latestAcceptance(db, p["id"]), currentVersion(db)]);
+  const [latest, cur] = await Promise.all([latestAcceptance(db, p["id"]), currentVersion(db)]);
+  // 20.8: after rejoining, only a new signature counts.
+  const acc = acceptanceSince(latest, p["rejoined_at"] as string | null | undefined);
   return {
     status: p["status"],
     terminated_at: p["terminated_at"] ?? null,
@@ -222,7 +224,10 @@ export const myPartnerSteps = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { db, p } = await ownPartner((context as Ctx).userId);
     if (!p) return { partner: false as const };
-    const acc = await latestAcceptance(db, p["id"]);
+    const acc = acceptanceSince(
+      await latestAcceptance(db, p["id"]),
+      p["rejoined_at"] as string | null | undefined,
+    );
     const input = await activationFor(db, p);
     const missing = activationMissing(input, Date.now());
     let pdfUrl: string | null = null;

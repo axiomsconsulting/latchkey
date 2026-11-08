@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AccountControls } from "@/components/host/AccountControls";
 import { PageHeader } from "@/components/host/PageHeader";
 import { ErrorReport } from "@/components/host/ErrorReport";
 import { readAppError, type AppError } from "@/lib/app-error";
@@ -192,6 +193,8 @@ function BillingPage() {
           canChange={isOwner}
         />
       ) : null}
+
+      <AccountControls hostId={hostId} />
 
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>

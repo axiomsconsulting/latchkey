@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Building2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
+import { AccountControls } from "@/components/host/AccountControls";
 import { IntegrationSwitches } from "@/components/host/IntegrationSwitches";
 import { HostWhatsAppAdmin } from "@/components/host/WhatsAppAdmin";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { loadDemoData, removeDemoData } from "@/lib/host.functions";
 /**
  * Latchkey admin → Businesses: the switches that are Latchkey's to decide for
  * the business being viewed (yours, or the one opened with "view as host"):
- * each integration in demo or live, and its sample data.
+ * pausing or closing it, each integration in demo or live, and its sample data.
  */
 export function AdminBusinessTools() {
   const ws = useWorkspace();
@@ -52,6 +53,8 @@ export function AdminBusinessTools() {
           <p className="text-sm text-muted-foreground">{copy.viewingBody}</p>
         </div>
       </div>
+      {/* Pause, resume, close or reopen this business, with a reason the owner sees. */}
+      <AccountControls hostId={hostId} />
       <IntegrationSwitches hostId={hostId} />
       <HostWhatsAppAdmin hostId={hostId} />
       <div className="card-soft p-5">

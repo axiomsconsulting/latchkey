@@ -3946,6 +3946,8 @@ export const billingCopy = branded({
     past_due: "Payment failed: Stripe will try your card again",
     canceled: "Subscription cancelled",
     comped: "Free plan",
+    suspended: "Paused",
+    closed: "Closed",
   } as Record<string, string | ((days: number) => string)>,
   price: (amount: string, properties: number, rooms: number) =>
     `${amount} a month for ${properties} ${properties === 1 ? "property" : "properties"} and ${rooms} ${rooms === 1 ? "room" : "rooms"}.`,
@@ -3985,11 +3987,84 @@ export const billingCopy = branded({
     "Your free trial has finished. Subscribe to carry on where you left off: everything you set up is still here.",
   lockedCanceled:
     "Your subscription was cancelled. Subscribe again to carry on: everything you set up is still here.",
+  lockedPaused:
+    "This business is paused. Resume it to carry on: everything you set up is still here.",
+  lockedClosed: "This business is closed. Your guest register and invoices stay readable.",
   lockedCta: "Go to Billing",
   lockedRegister: "You can still open your guest register.",
   bannerTrial: (days: number) => `${days} ${days === 1 ? "day" : "days"} left of your free trial.`,
   bannerPastDue: "Your last payment didn't go through. Update your card to keep Latchkey running.",
   bannerCta: "Billing",
+});
+
+/** Commission Partners' own host businesses and businesses they set up for hosts (agreement v1.3). */
+export const partnerSetupCopy = branded({
+  banner: (owner: string) =>
+    `You're setting this business up for ${owner}. When it's ready, hand it over from your Commission Partner account: they add their own card after taking it over.`,
+  bannerCta: "Hand it over",
+  title: "Hosts and your own business",
+  intro:
+    "You can set up a Latchkey business for a host and hand it over: once they accept with their own sign-in, it's theirs, their free trial starts, and it counts as your referral. You can also run a host business of your own; a business you own never earns you commission.",
+  ownTitle: "Your own host business",
+  ownNone: "You don't run a host business of your own on Latchkey.",
+  ownStart: "Start your own host business",
+  ownName: "Business name",
+  open: "Open dashboard",
+  setupTitle: "Set up a business for a host",
+  setupNeedsActive: "Your Commission Partner account needs to be active first.",
+  businessName: "The host's business name",
+  ownerName: "Host's full name",
+  ownerEmail: "Host's own email address",
+  ownerEmailHint: "They take the business over with this address, using their own sign-in.",
+  start: "Start setting it up",
+  setupsTitle: "Businesses you're setting up",
+  status: {
+    setting_up: "Setting up",
+    invited: "Invitation sent",
+    handed_over: "Handed over",
+    cancelled: "Cancelled",
+  } as Record<string, string>,
+  handOver: "Hand over",
+  sendAgain: "Send again",
+  cancel: "Cancel set-up",
+  cancelConfirm: "Cancel this set-up? The business is closed and earns nothing.",
+  sent: (email: string) => `Invitation sent to ${email}.`,
+  notSent: "The invitation is made, but the email didn't go. Try Send again in a moment.",
+  rejoinTitle: "Join again",
+  rejoinBody:
+    "Your earlier agreement has ended. You can apply again: you'll sign the agreement in force and Latchkey approves your application before your code works again.",
+  rejoinCta: "Apply again",
+});
+
+/** Pausing, resuming and closing a business (Billing, the lock screen, Latchkey admin). */
+export const accountCopy = branded({
+  title: "Pause or close this business",
+  intro:
+    "Pausing stops Latchkey and your bill until you resume: guests can't check themselves in meanwhile, and nothing you set up is lost. Closing cancels your subscription and ends access for good; your guest register and invoices stay readable.",
+  paused: (when: string) => `Paused on ${when}.`,
+  pausedByLatchkey: (when: string) => `Latchkey paused this business on ${when}.`,
+  closed: (when: string) => `Closed on ${when}.`,
+  reason: (r: string) => `Reason: ${r}`,
+  pause: "Pause",
+  resume: "Resume",
+  close: "Close business",
+  reopen: "Reopen",
+  pauseTitle: "Pause this business?",
+  pauseBody:
+    "Latchkey stops for this business and nothing is charged until you resume. Guests can't check themselves in while it's paused.",
+  closeTitle: "Close this business?",
+  closeBody:
+    "Your subscription is cancelled now and the business is locked for good. Only Latchkey support can reopen it. Type CLOSE to confirm.",
+  reasonLabel: "Reason (the owner sees it)",
+  reasonOptional: "Reason (optional)",
+  confirmPause: "Pause now",
+  confirmClose: "Close now",
+  done: {
+    pause: "Paused.",
+    resume: "Resumed. Welcome back.",
+    close: "The business is closed.",
+    reopen: "Reopened. The owner subscribes again to carry on.",
+  } as Record<string, string>,
 });
 
 /** Letting Latchkey support help, and what support sees. */

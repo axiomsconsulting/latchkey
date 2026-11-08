@@ -41,6 +41,16 @@ export function selfReferral(host: HashedKey[], partner: HashedKey[]): Flag | nu
   };
 }
 
+/**
+ * The partner is (or has become) an owner of the business on Latchkey
+ * (agreement v1.3 6.4(c)): always their own business, so it earns nothing.
+ * Being on the team in another role doesn't count.
+ */
+export function ownBusiness(ownerUserIds: string[], partnerUserId: string | null): Flag | null {
+  if (!partnerUserId || !ownerUserIds.includes(partnerUserId)) return null;
+  return { kind: "self_referral", strength: "strong", details: { own_business: true } };
+}
+
 export type PriorHost = {
   host_id: string;
   keys: HashedKey[];

@@ -9,11 +9,19 @@ export type BillingHost = {
   subscription_status: string;
   trial_ends_at: string | null;
   stripe_subscription_id?: string | null;
+  /** Paused by the owner or Latchkey admin (migration 0097): no access until resumed. */
+  suspended_at?: string | null;
+  /** Closed by the owner or Latchkey admin: no access. */
+  closed_at?: string | null;
 };
 
-export type Phase = "trial" | "trial_ended" | "active" | "past_due" | "canceled" | "comped";
+export type Phase =
+  "trial" | "trial_ended" | "active" | "past_due" | "canceled" | "comped" | "suspended" | "closed";
 
 export function billingPhase(h: BillingHost, now: Date = new Date()): Phase {
+  // Closing or pausing the account wins over whatever the subscription says.
+  if (h.closed_at) return "closed";
+  if (h.suspended_at) return "suspended";
   switch (h.subscription_status) {
     case "active":
       return "active";

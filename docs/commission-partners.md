@@ -83,7 +83,7 @@ Tests: `tests/partner-guards`, `partner-db` (PGlite + RLS), `commission`, `partn
 | D10 | Hold Period | 45 days |
 | D11 | Clawback method / write-off | offset only / never |
 | D12 | Fraud thresholds | 5 in 24 h; 10% over 90 days |
-| D13 | Hosts as partners | no |
+| D13 | Hosts as partners | yes (v1.3): own businesses never earn; partners can set up a business for a host and hand it over (6.9) |
 | D14 / D15 / D16 | Bonus amount / tiers / end date | blank, so no bonus |
 | D18 | Partial refund of first payment | bonus reversed in full |
 | D20 | Strong identity match | auto-reject, admin can override |

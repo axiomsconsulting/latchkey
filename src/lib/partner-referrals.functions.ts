@@ -6,7 +6,6 @@
  * here on the server; whatever the browser sends is only a claim.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -14,15 +13,6 @@ import { requireOwner, requireSuperAdmin } from "@/lib/roles";
 import { cleanRefCode } from "./attribution";
 
 const DAY = 86_400_000;
-
-async function requestHashes(deviceId: string | null | undefined) {
-  const { requestIp } = await import("./ip-hash.server");
-  const { stableHash } = await import("./partner-identity.server");
-  return {
-    ipHash: stableHash("ip", requestIp(getRequest().headers)),
-    deviceHash: stableHash("device", deviceId ?? null),
-  };
-}
 
 /** A visit through a partner's link: recorded once per new cookie, for an active partner only, rate-limited. */
 export const recordReferralClick = createServerFn({ method: "POST" })
@@ -45,7 +35,9 @@ export const recordReferralClick = createServerFn({ method: "POST" })
         await db.from("partners").select("*").ilike("referral_code", code).maybeSingle(),
       ) as ({ id: string } & Record<string, any>) | null;
       if (!partner || !(await partnerCanRefer(db, partner))) return { ok: false };
-      const { ipHash, deviceHash } = await requestHashes(data.deviceId);
+      const { ipHash, deviceHash } = await (
+        await import("./partner-referrals.server")
+      ).requestHashes(data.deviceId);
       if (ipHash) {
         const { count } = await db
           .from("referral_clicks")
@@ -122,18 +114,8 @@ export const attachReferral = createServerFn({ method: "POST" })
     await requireOwner(context.supabase, data.hostId);
     const code = cleanRefCode(data.code);
     if (!code) return { ok: false, reason: "unknown_code" };
-    const {
-      adminDb,
-      check,
-      hostFacts,
-      labelFor,
-      loadPartnerConfig,
-      logPartnerEvent,
-      PartnersNotSetUp,
-      runReferralChecks,
-      saveHostKeys,
-      snapshotFor,
-    } = await import("./partner-data.server");
+    const { adminDb, check, hostFacts, loadPartnerConfig, PartnersNotSetUp } =
+      await import("./partner-data.server");
     const db = await adminDb();
     try {
       const config = await loadPartnerConfig(db);
@@ -169,11 +151,10 @@ export const attachReferral = createServerFn({ method: "POST" })
         if (mine) return { ok: false, reason: "partner_is_owner" };
       }
 
-      const snapshot = await snapshotFor(db, facts.createdAt, partner.id, config);
-      if (!snapshot) return { ok: false, reason: "no_terms" };
-
+      const { ipHash, deviceHash } = await (
+        await import("./partner-referrals.server")
+      ).requestHashes(data.deviceId);
       // A link or cookie only counts with a recorded click from this device inside the window; otherwise it's a typed code.
-      const { ipHash, deviceHash } = await requestHashes(data.deviceId);
       let source: "link" | "cookie" | "typed" = data.source;
       let clickedAt: string | null = null;
       if (source !== "typed") {
@@ -195,44 +176,19 @@ export const attachReferral = createServerFn({ method: "POST" })
         else source = "typed";
       }
 
-      await saveHostKeys(db, data.hostId, facts, { ipHash, deviceHash });
-      const inserted = check(
-        await db
-          .from("referrals")
-          .insert({
-            host_id: data.hostId,
-            partner_id: partner.id,
-            owner_user_id: userId,
-            source,
-            clicked_at: clickedAt,
-            sign_up_at: facts.createdAt,
-            terms_id: snapshot.terms_id,
-            terms_snapshot: snapshot,
-            status: "pending_review",
-            host_label: labelFor(facts),
-          })
-          .select("id")
-          .single(),
-      ) as { id: string };
-      const flags = await runReferralChecks(db, inserted.id, config);
-      await logPartnerEvent(db, {
-        partner_id: partner.id,
-        referral_id: inserted.id,
-        actor: userId,
-        action: "referral_attached",
-        details: {
-          source,
-          terms: snapshot.label,
-          flags: flags.map((f) => `${f.kind}:${f.strength}`),
-        },
-        ip_hash: ipHash,
+      const { recordReferral } = await import("./partner-referrals.server");
+      const recorded = await recordReferral(db, config, {
+        hostId: data.hostId,
+        partnerId: partner.id,
+        ownerUserId: userId,
+        source,
+        clickedAt,
+        signUpAt: facts.createdAt,
+        ipHash,
+        deviceHash,
       });
-      const { data: after } = await db
-        .from("referrals")
-        .select("status")
-        .eq("id", inserted.id)
-        .single();
-      return { ok: true, status: after?.status ?? "pending_review" };
+      if (!recorded) return { ok: false, reason: "no_terms" };
+      return { ok: true, status: recorded.status };
     } catch (e) {
       if (e instanceof PartnersNotSetUp) return { ok: false, reason: "not_set_up" };
       // A second attach racing this one hits the one-partner-per-business rule.

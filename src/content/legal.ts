@@ -200,6 +200,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Where it's held: your application, the details read from your ID and your signing record are in our database (Lovable Cloud). Your ID photos, selfie, drawn signature and signed PDF are in restricted folders in our Google Drive, never shared, seen only by OMS's authorised administrators through links that expire after 10 minutes, and every view of your ID photos is logged. If Google Drive can't be reached, they wait in our private storage and are moved to Google Drive, then removed, as soon as it's back. Stripe collects its own identity and bank details from you as an independent controller when you set up payouts; we never see your bank details.",
           "International transfers: some of these services process data outside the UK, under UK adequacy regulations, the UK International Data Transfer Agreement or the UK Addendum.",
           "How long we keep it: ID and selfie photos are deleted 30 days after we approve or reject your identity check. The details read from your ID and the result, your application, and your signing records and signed PDF are kept while you're a Commission Partner and for 6 years after the agreement ends. Scrambled IP addresses and device codes: 180 days. Other scrambled fraud-check details: while you're a partner and up to 6 years after, reviewed at least once a year. Statements, payouts and tax records: 6 years after the end of the financial year they relate to.",
+          "Setting up a business for a host (agreement clause 6.9): the host's name and email address you enter are kept with the set-up so we can send them the invitation and credit you once they take it over. The host can see and change their details in their own account after that.",
           "Your rights are the same as everyone's (below), and you can complain to the ICO.",
         ],
       },
@@ -273,6 +274,8 @@ export function termsOfService(d: LegalDetails): LegalDoc {
         title: "Cancelling",
         points: [
           "You can cancel at any time on the Subscription page. Your subscription ends straight away and the account becomes read-only. We don't refund part months, except where the law requires it.",
+          "You can also pause your business on the Subscription page: nothing is charged and the account is read-only until you resume it. Closing your business cancels the subscription and locks the account for good; only we can reopen it.",
+          "We may pause or close a business, telling the owner why, if the account is used against these terms or the law, or a payment is in dispute.",
           "Your records stay available to read and export. To have your business's data deleted, ask us as described in the Privacy policy.",
         ],
       },

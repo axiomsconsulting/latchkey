@@ -6,7 +6,6 @@
  * these functions add clear errors, rate limits and the invitation email.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -16,8 +15,6 @@ import { OWNER_ONLY, displayRole, normaliseEmail, requireOwner } from "@/lib/rol
 const uuid = z.string().uuid();
 const inviteRole = z.enum(["owner", "manager", "viewer"]);
 const inviteToken = z.string().min(20).max(100);
-const SITE_URL = "https://latchkey.omsestates.uk";
-const INVITES_PER_DAY = 20;
 
 /** Tables and functions from migration 0017, before the generated types know them. */
 type Untyped = {
@@ -28,52 +25,6 @@ type Untyped = {
   ) => PromiseLike<{ data: any; error: { code?: string; message: string } | null }>;
 };
 const untyped = (client: unknown) => client as Untyped;
-
-/** The role, in words, for the invitation email. */
-const ROLE_LINES: Record<z.infer<typeof inviteRole>, string> = {
-  owner: "As an owner you can do everything, including billing and managing the team.",
-  manager: "As a manager you can run rooms, calendars, bookings, guides and requests.",
-  viewer: "As a viewer you can see everything but not change anything.",
-};
-
-function siteOrigin(): string {
-  try {
-    return new URL(getRequest()?.url ?? SITE_URL).origin;
-  } catch {
-    return SITE_URL;
-  }
-}
-
-async function newInviteToken() {
-  const { createHash, randomBytes } = await import("crypto");
-  const token = randomBytes(32).toString("base64url");
-  // Must match public.invitation_hash(): sha256 of the token, hex.
-  return { token, hash: createHash("sha256").update(token, "utf8").digest("hex") };
-}
-
-async function sendInvite(args: {
-  to: string;
-  hostName: string;
-  inviter: string;
-  role: z.infer<typeof inviteRole>;
-  token: string;
-}) {
-  const { sendTemplateEmail } = await import("./email-templates/send-email");
-  try {
-    const res = await sendTemplateEmail("team-invite", args.to, {
-      templateData: {
-        hostName: args.hostName,
-        inviter: args.inviter,
-        roleLine: ROLE_LINES[args.role],
-        url: `${siteOrigin()}/invite/${args.token}`,
-      },
-    });
-    return res.sent;
-  } catch (err) {
-    console.error("Invite email failed", err instanceof Error ? err.message : err);
-    return false;
-  }
-}
 
 /** Members (with emails) and, for owners, open invitations. */
 export const listTeam = createServerFn({ method: "GET" })
@@ -189,77 +140,15 @@ export const inviteMember = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     assertNotSharedDemo(context.claims);
     await requireOwner(context.supabase, data.hostId);
-    const db = untyped(context.supabase);
-    const email = normaliseEmail(data.email);
-
-    const { count } = await db
-      .from("host_invitations")
-      .select("id", { count: "exact", head: true })
-      .eq("host_id", data.hostId)
-      .gt("created_at", new Date(Date.now() - 86_400_000).toISOString());
-    if ((count ?? 0) >= INVITES_PER_DAY)
-      throw new Error("That's a lot of invitations for one day. Please try again tomorrow.");
-
-    const { count: toAddress } = await db
-      .from("host_invitations")
-      .select("id", { count: "exact", head: true })
-      .eq("host_id", data.hostId)
-      .eq("email", email)
-      .gt("created_at", new Date(Date.now() - 86_400_000).toISOString());
-    if ((toAddress ?? 0) >= 3)
-      throw new Error("That address has had several invitations today. Please try again tomorrow.");
-
-    const { data: team } = await db.rpc("host_team", { _host_id: data.hostId });
-    if (
-      ((team ?? []) as Array<{ email: string }>).some(
-        (m) => normaliseEmail(m.email ?? "") === email,
-      )
-    ) {
-      throw new Error("That person is already on your team.");
-    }
-
-    // One open invitation per address: a new one replaces the old.
-    await db
-      .from("host_invitations")
-      .update({ revoked_at: new Date().toISOString() })
-      .eq("host_id", data.hostId)
-      .eq("email", email)
-      .is("accepted_at", null)
-      .is("revoked_at", null);
-
-    const t = await newInviteToken();
-    const row = {
-      host_id: data.hostId,
-      email,
+    const { createInvitation } = await import("./team-invite.server");
+    return createInvitation(context.supabase, {
+      hostId: data.hostId,
+      email: data.email,
       role: data.role,
-      token_hash: t.hash,
-      invited_by: context.userId,
-    };
-    // Only some properties (a property's own manager): owners always cover everything.
-    const ids =
-      data.role !== "owner" && data.propertyIds?.length
-        ? await ownPropertyIds(context.supabase, data.hostId, data.propertyIds)
-        : null;
-    const { withLegacy } = await import("./checkin.server");
-    const { error } = await withLegacy(
-      () => db.from("host_invitations").insert({ ...row, property_ids: ids }),
-      () => db.from("host_invitations").insert(row),
-    );
-    if (error) throw new Error(error.message);
-
-    const { data: host } = await context.supabase
-      .from("hosts")
-      .select("business_name")
-      .eq("id", data.hostId)
-      .single();
-    const emailed = await sendInvite({
-      to: email,
-      hostName: host?.business_name ?? "a host",
-      inviter: (context.claims?.email as string | undefined) ?? "The owner",
-      role: data.role,
-      token: t.token,
+      propertyIds: data.propertyIds ?? null,
+      invitedBy: context.userId,
+      inviterEmail: (context.claims?.email as string | undefined) ?? null,
     });
-    return { ok: true, emailed };
   });
 
 /** Sends a fresh link (the old one stops working) and restarts the 7 days. */
@@ -278,6 +167,7 @@ export const resendInvite = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!inv) throw new Error("That invitation is no longer open.");
     await requireOwner(context.supabase, inv.host_id);
+    const { newInviteToken, sendInvite } = await import("./team-invite.server");
     const t = await newInviteToken();
     const { error } = await db
       .from("host_invitations")
@@ -439,6 +329,13 @@ export const acceptInvite = createServerFn({ method: "POST" })
     const db = untyped(context.supabase);
     const { data: hostId, error } = await db.rpc("accept_host_invitation", { _token: data.token });
     if (error) throw new Error(error.message);
+    // A business a Commission Partner set up for this host: they own it now (agreement v1.3 6.9).
+    const { completeSetupHandover } = await import("./partner-setup.server");
+    await completeSetupHandover(
+      hostId as string,
+      context.userId,
+      (context.claims?.email as string | undefined) ?? null,
+    );
     await rememberHost(db, context.userId, hostId as string);
     return { hostId: hostId as string };
   });
