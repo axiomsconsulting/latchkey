@@ -21,7 +21,10 @@ export const Route = createFileRoute("/about")({
         content: rebrand("Every change to Latchkey, and every feature it has."),
       },
       { property: "og:title", content: rebrand("About and what's new — Latchkey") },
-      { property: "og:description", content: rebrand("Every change to Latchkey, and every feature it has.") },
+      {
+        property: "og:description",
+        content: rebrand("Every change to Latchkey, and every feature it has."),
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

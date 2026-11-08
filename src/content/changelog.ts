@@ -47,6 +47,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.140.2",
+    date: "2026-11-08",
+    title: "Set-up finishes again",
+    items: [
+      {
+        kind: "fixed",
+        area: "Settings",
+        text: "Finishing set-up failed with a country error. Set-up now asks which country your property is in (as the property form does), and trying again after an error never makes a second property or room.",
+      },
+    ],
+  },
+  {
     version: "0.140.1",
     date: "2026-11-08",
     title: "Commission Partners can open the host dashboard",

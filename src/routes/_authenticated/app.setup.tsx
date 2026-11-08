@@ -11,11 +11,20 @@ import { SaveTrial } from "@/components/host/SaveTrial";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { authExtraCopy as extraCopy, common, onboarding as copy } from "@/content/copy";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/use-host-data";
 import { recordSignupSource, loadDemoData, saveProperty, saveRoom } from "@/lib/host.functions";
 import { cn } from "@/lib/utils";
+import { COUNTRY_CHOICES, region } from "@/lib/regions";
+import { DEFAULT_SETUP_COUNTRY, setupPropertyPayload } from "@/lib/setup-property";
 import { DoorPinField, GuestLinkField } from "@/components/host/PropertyCodeFields";
 import { ReferralCodeField } from "@/components/host/ReferralCodeField";
 import { rebrand } from "@/lib/brand";
@@ -64,7 +73,12 @@ function SetupPage() {
     address: "",
     postcode: "",
     short_code: "",
+    // Same choices and starting value as the property form on Properties.
+    country_code: DEFAULT_SETUP_COUNTRY,
   });
+  // What an earlier try already saved, so trying again never makes a second property or room.
+  const [savedPropertyId, setSavedPropertyId] = useState<string | null>(null);
+  const [savedRooms, setSavedRooms] = useState<Record<number, string>>({});
   const [rooms, setRooms] = useState<string[]>(["", "", ""]);
   const [sleeps, setSleeps] = useState<number[]>([2, 2, 2]);
   const [times, setTimes] = useState({
@@ -88,28 +102,20 @@ function SetupPage() {
     setBusy(true);
     try {
       const created = await saveProp({
-        data: {
-          hostId: workspace.data.hostId,
-          name: property.name.trim(),
-          address: property.address.trim() || null,
-          postcode: property.postcode.trim() || null,
-          // Empty: the server makes a free one from the name.
-          short_code: property.short_code.trim().toLowerCase(),
-          check_in_pin: /^\d{6}$/.test(times.pin) ? times.pin : null,
-          timezone: "Europe/London",
-          default_check_in_time: times.check_in,
-          default_check_out_time: times.check_out,
-          quiet_hours_start: times.quiet_start,
-          quiet_hours_end: times.quiet_end,
-        },
+        data: setupPropertyPayload(workspace.data.hostId, property, times, savedPropertyId),
       });
+      setSavedPropertyId(created.id);
+      // Keep the link and PIN the server filled in, so a retry sends the same ones.
+      setProperty((p) => ({ ...p, short_code: created.short_code ?? p.short_code }));
+      setTimes((t) => ({ ...t, pin: created.check_in_pin ?? t.pin }));
 
       const named = rooms
         .map((r, i) => ({ name: r.trim(), sleeps: sleeps[i] ?? 2 }))
         .filter((r) => r.name);
       for (const [i, { name, sleeps: maxGuests }] of named.entries()) {
-        await addRoom({
+        const room = await addRoom({
           data: {
+            ...(savedRooms[i] ? { id: savedRooms[i] } : {}),
             property_id: created.id,
             display_name: name,
             room_number: null,
@@ -122,6 +128,7 @@ function SetupPage() {
             active: true,
           },
         });
+        setSavedRooms((r) => ({ ...r, [i]: room.id }));
       }
 
       await qc.invalidateQueries();
@@ -209,9 +216,27 @@ function SetupPage() {
                 placeholder="The Hill Suites"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <Select
+                value={property.country_code}
+                onValueChange={(v) => setProperty((p) => ({ ...p, country_code: v }))}
+              >
+                <SelectTrigger id="country" className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_CHOICES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="addr">Address</Label>
+                <Label htmlFor="addr">{region(property.country_code).addressLabel}</Label>
                 <Input
                   id="addr"
                   className="h-12"
@@ -220,7 +245,7 @@ function SetupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="post">Postcode</Label>
+                <Label htmlFor="post">{region(property.country_code).postcodeLabel}</Label>
                 <Input
                   id="post"
                   className="h-12"
