@@ -12,8 +12,11 @@ import { formatUkDate } from "@/lib/dates";
 import {
   forgetSmartThingsApp,
   getSmartThingsApp,
+  setRoomLightsProvider,
   setupSmartThingsApp,
 } from "@/lib/room-devices.functions";
+import { PROVIDERS, type Provider } from "@/lib/room-devices";
+import { cn } from "@/lib/utils";
 
 /**
  * Latchkey admin → System → SmartThings: makes Latchkey's one SmartThings
@@ -25,6 +28,7 @@ export function SmartThingsAdmin() {
   const getFn = useServerFn(getSmartThingsApp);
   const setupFn = useServerFn(setupSmartThingsApp);
   const forgetFn = useServerFn(forgetSmartThingsApp);
+  const providerFn = useServerFn(setRoomLightsProvider);
   const q = useQuery({ queryKey: ["smartthings-app"], queryFn: () => getFn() });
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,7 +55,9 @@ export function SmartThingsAdmin() {
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
-  const { app, callback } = q.data;
+  const { app, callback, provider } = q.data;
+  const choose = (p: Provider) =>
+    void run(() => providerFn({ data: { provider: p } }), copy.switched);
   const moved = !!app && app.redirectUri !== callback;
   return (
     <section className="card-soft space-y-4 p-5">
@@ -62,7 +68,29 @@ export function SmartThingsAdmin() {
         <p className="text-sm text-muted-foreground">{copy.intro}</p>
       </div>
 
-      {app ? (
+      <div role="radiogroup" aria-label={copy.title} className="grid gap-2 sm:grid-cols-2">
+        {PROVIDERS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            role="radio"
+            aria-checked={provider === p}
+            disabled={busy}
+            onClick={() => (provider === p ? null : choose(p))}
+            className={cn(
+              "rounded-xl border p-3 text-left text-sm",
+              provider === p
+                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                : "border-border hover:bg-secondary",
+            )}
+          >
+            <span className="block font-medium">{copy.providers[p]?.name}</span>
+            <span className="text-muted-foreground">{copy.providers[p]?.body}</span>
+          </button>
+        ))}
+      </div>
+
+      {provider !== "smartthings" ? null : app ? (
         <div className="space-y-2 rounded-xl border border-border p-3 text-sm">
           <p>{copy.ready(formatUkDate(app.createdAt.slice(0, 10)))}</p>
           <p className="break-all text-muted-foreground">{app.redirectUri}</p>
@@ -83,7 +111,7 @@ export function SmartThingsAdmin() {
         </div>
       ) : null}
 
-      {!app || again ? (
+      {provider === "smartthings" && (!app || again) ? (
         <div className="space-y-3">
           <ol className="list-decimal space-y-1 pl-5 text-sm">
             <li>

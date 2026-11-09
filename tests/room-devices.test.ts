@@ -11,6 +11,13 @@ import {
   knownCapabilities,
   presetsFor,
   stateFromStatus,
+  decodeAlias,
+  isTapoDevice,
+  stateFromTapo,
+  suggestRoom,
+  tapoCapabilities,
+  tapoCapabilitiesFrom,
+  tapoParams,
   type AccessInput,
 } from "../src/lib/room-devices";
 
@@ -172,5 +179,81 @@ describe("the Lights tile", () => {
     expect(
       shownTiles(null, { ...ctx, page: "room", lights: true }).some((t) => t.id === "auto-lights"),
     ).toBe(false);
+  });
+});
+
+describe("TP-Link Tapo", () => {
+  it("keeps Tapo lights and plugs from the account's list, not Kasa devices", () => {
+    expect(isTapoDevice("SMART.TAPOBULB")).toBe(true);
+    expect(isTapoDevice("SMART.TAPOPLUG")).toBe(true);
+    expect(isTapoDevice("IOT.SMARTBULB")).toBe(false);
+    expect(isTapoDevice(undefined)).toBe(false);
+  });
+
+  it("reads names whether TP-Link sends them base64 or plain", () => {
+    expect(decodeAlias(btoa("Guest Room 4"))).toBe("Guest Room 4");
+    expect(decodeAlias("Kitchen")).toBe("Kitchen");
+    expect(decodeAlias("Room")).toBe("Room");
+    expect(decodeAlias(null)).toBe("");
+  });
+
+  it("guesses from the model, then believes the device itself", () => {
+    expect(tapoCapabilities("SMART.TAPOBULB", "L530E")).toEqual(ALL);
+    expect(tapoCapabilities("SMART.TAPOBULB", "L510E")).toEqual(["switch", "switchLevel"]);
+    expect(tapoCapabilities("SMART.TAPOPLUG", "P110")).toEqual(["switch"]);
+    expect(
+      tapoCapabilitiesFrom({
+        device_on: true,
+        brightness: 50,
+        color_temp: 2700,
+        hue: 0,
+        saturation: 100,
+      }),
+    ).toEqual(ALL);
+    expect(tapoCapabilitiesFrom({ device_on: true, brightness: 50 })).toEqual([
+      "switch",
+      "switchLevel",
+    ]);
+    expect(tapoCapabilitiesFrom({ device_on: false })).toEqual(["switch"]);
+  });
+
+  it("reads a bulb's state: color_temp 0 means it's showing a colour", () => {
+    expect(
+      stateFromTapo({ device_on: true, brightness: 40, color_temp: 0, hue: 200, saturation: 70 }),
+    ).toEqual({ on: true, level: 40, kelvin: null, hue: 200, saturation: 70, online: true });
+    expect(
+      stateFromTapo({ device_on: false, brightness: 80, color_temp: 2700, hue: 0, saturation: 0 }),
+    ).toMatchObject({ on: false, kelvin: 2700, hue: null });
+  });
+
+  it("turns commands into set_device_info params", () => {
+    expect(tapoParams({ power: false, level: 20 })).toEqual({ device_on: false });
+    expect(tapoParams({ level: 30, kelvin: 2200 })).toEqual({
+      device_on: true,
+      brightness: 30,
+      color_temp: 2500,
+    });
+    expect(tapoParams({ hue: 120, saturation: 55 })).toEqual({
+      device_on: true,
+      hue: 120,
+      saturation: 55,
+      color_temp: 0,
+    });
+  });
+});
+
+describe("picking the room from a light's name", () => {
+  const rooms = [
+    { id: "1", name: "Room 1" },
+    { id: "4", name: "Room 4" },
+    { id: "14", name: "Room 14" },
+    { id: "g", name: "Garden Suite" },
+  ];
+  it("matches one clear room, and nothing when it's unclear", () => {
+    expect(suggestRoom("Guest Room 4", rooms)?.id).toBe("4");
+    expect(suggestRoom("Room 14 lamp", rooms)?.id).toBe("14");
+    expect(suggestRoom("Garden Suite bulb", rooms)?.id).toBe("g");
+    expect(suggestRoom("Hallway", rooms)).toBeNull();
+    expect(suggestRoom("Guest Room", rooms)).toBeNull();
   });
 });

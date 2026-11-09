@@ -275,18 +275,36 @@ export async function finishConnect(hostId: string, userId: string, code: string
   if (error) throw new Error(error.message);
 }
 
-export type LinkInfo = { connectedAt: string; lastError: string | null };
+export type LinkInfo = {
+  provider: "smartthings" | "tapo";
+  connectedAt: string;
+  lastError: string | null;
+  /** Tapo: the TP-Link account signed in. */
+  account: string | null;
+};
 
 export async function linkInfo(hostId: string): Promise<LinkInfo | null> {
-  const { data, error } = await (
-    await db()
-  )
+  const sb = await db();
+  let res = await sb
     .from("smart_home_links")
-    .select("connected_at, last_error")
+    .select("provider, connected_at, last_error, account_email")
     .eq("host_id", hostId)
     .maybeSingle();
-  if (error || !data) return null;
-  return { connectedAt: data.connected_at, lastError: data.last_error ?? null };
+  // Before migration 0099 there's no account column.
+  if (res.error)
+    res = await sb
+      .from("smart_home_links")
+      .select("provider, connected_at, last_error")
+      .eq("host_id", hostId)
+      .maybeSingle();
+  const data = res.data;
+  if (res.error || !data) return null;
+  return {
+    provider: data.provider === "tapo" ? "tapo" : "smartthings",
+    connectedAt: data.connected_at,
+    lastError: data.last_error ?? null,
+    account: data.account_email ?? null,
+  };
 }
 
 export async function disconnect(hostId: string): Promise<void> {

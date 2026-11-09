@@ -6,11 +6,21 @@ export const Route = createFileRoute("/api/public/smartthings/callback")({
     handlers: {
       GET: async ({ request }) => {
         const url = new URL(request.url);
-        const back = (result: string) =>
-          new Response(null, {
-            status: 302,
-            headers: { location: `/app/settings?focus=roomDevices&smartthings=${result}` },
+        // Opened in a popup from Settings: tell the page and close; opened directly: go back to Settings.
+        const back = (result: string) => {
+          const to = `/app/settings?focus=roomDevices&smartthings=${result}`;
+          const html = `<!doctype html><meta charset="utf-8"><title>SmartThings</title><script>
+try { if (window.opener && window.opener.location.origin === location.origin) {
+  window.opener.postMessage({ latchkeySmartThings: ${JSON.stringify(result)} }, location.origin);
+  window.close();
+} } catch (e) {}
+setTimeout(function () { location.replace(${JSON.stringify(to)}); }, 300);
+</script>`;
+          return new Response(html, {
+            status: 200,
+            headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
           });
+        };
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state") ?? "";
         if (!code) return back("cancelled");

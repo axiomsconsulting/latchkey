@@ -152,8 +152,10 @@ export const testConnections = createServerFn({ method: "POST" })
       // SmartThings (room lights): Latchkey's app keys, and businesses signed out.
       (async () => {
         const { smartThingsConfigured } = await import("./smartthings.server");
-        if (!(await smartThingsConfigured()))
-          return line("smartthings", "SmartThings (room lights)", {
+        const { activeProvider } = await import("./room-devices.server");
+        const tapo = (await activeProvider()) === "tapo";
+        if (!tapo && !(await smartThingsConfigured()))
+          return line("smartthings", "Room lights (SmartThings)", {
             configured: false,
             optional: true,
             fix: "Latchkey admin → System → SmartThings: paste a SmartThings token once to set it up.",
@@ -169,17 +171,21 @@ export const testConnections = createServerFn({ method: "POST" })
           .select("host_id, last_error");
         const rows = (data ?? []) as Array<{ last_error: string | null }>;
         const out = rows.filter((r) => r.last_error).length;
-        return line("smartthings", "SmartThings (room lights)", {
-          configured: true,
-          ok: !error,
-          warn: out > 0,
-          detail: error
-            ? "Room lights' tables aren't in the database yet"
-            : `${rows.length} business(es) connected${out ? `, ${out} signed out` : ""}`,
-          fix: error
-            ? "Wait for Lovable to apply migration 0098."
-            : "A signed-out business connects again from Settings → Room lights.",
-        });
+        return line(
+          "smartthings",
+          tapo ? "Room lights (TP-Link Tapo)" : "Room lights (SmartThings)",
+          {
+            configured: true,
+            ok: !error,
+            warn: out > 0,
+            detail: error
+              ? "Room lights' tables aren't in the database yet"
+              : `${rows.length} business(es) connected${out ? `, ${out} signed out` : ""}`,
+            fix: error
+              ? "Wait for Lovable to apply migration 0098."
+              : "A signed-out business connects again from Settings → Room lights (TP-Link password changed, or SmartThings dropped it).",
+          },
+        );
       })(),
       // Email: the managed sender's settings (no email is sent).
       (async () =>

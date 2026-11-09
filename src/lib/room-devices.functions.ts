@@ -20,7 +20,10 @@ import {
   isEmpty,
   isLight,
   knownCapabilities,
+  normaliseProvider,
+  tapoCapabilitiesFrom,
   type DeviceState,
+  type Provider,
 } from "./room-devices";
 
 const uuid = z.string().uuid();
@@ -38,17 +41,23 @@ async function admin(): Promise<any> {
   return supabaseAdmin;
 }
 
-/** Plain words for SmartThings trouble; never the raw error. */
+/** Plain words for SmartThings or TP-Link trouble; never the raw error. */
 function friendly(e: unknown): Error {
   const reason =
     e instanceof Error && e.message.startsWith("smart_home:") ? e.message.slice(11) : "";
   const words: Record<string, string> = {
-    not_connected: "Connect SmartThings first.",
+    not_connected: "Connect your lights' account first.",
     signed_out: "SmartThings signed Latchkey out. Connect SmartThings again.",
     busy: "SmartThings is busy. Try again in a moment.",
-    offline: "SmartThings didn't answer. The light may be offline; try again in a moment.",
-    refused: "SmartThings didn't accept that.",
-    not_found: "That device isn't in the SmartThings account any more.",
+    offline: "The light didn't answer. Check it's switched on at the wall, then try again.",
+    refused: "The lights' service didn't accept that. Try again in a moment.",
+    not_found: "That device isn't in the account any more.",
+    wrong_login: "TP-Link didn't recognise that email and password.",
+    locked: "TP-Link has locked that account for a while after too many tries. Try again later.",
+    two_step:
+      "That TP-Link account asks for a code by email at every sign-in, which Latchkey can't answer. Use a second TP-Link account without two-step verification and share the room's lights to it from the Tapo app.",
+    unsupported:
+      "TP-Link's cloud won't let Latchkey control this device. Latchkey admin can switch room lights to SmartThings instead.",
   };
   return new Error(words[reason] ?? (e instanceof Error ? e.message : "Something went wrong."));
 }
@@ -80,16 +89,17 @@ export const getRoomDevices = createServerFn({ method: "GET" })
         .order("sort_order"),
       sb
         .from("room_devices")
-        .select("id, room_id, label, capabilities, guest_on")
+        .select("id, room_id, label, capabilities, guest_on, provider")
         .eq("property_id", data.propertyId)
         .order("created_at"),
       context.supabase.rpc("is_host_staff", { _host_id: hostId }),
     ]);
     const { linkInfo, smartThingsConfigured } = await import("./smartthings.server");
-    const { smartHomeMode } = await import("./room-devices.server");
+    const { activeProvider, smartHomeMode } = await import("./room-devices.server");
     return {
       hostId,
       mode: await smartHomeMode(hostId),
+      provider: await activeProvider(),
       configured: await smartThingsConfigured(),
       link: await linkInfo(hostId),
       canWrite: staff === true,
@@ -133,17 +143,83 @@ export const disconnectSmartThings = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** The devices in the business's SmartThings account (demo: one sample bulb). */
+type AccountDevice = {
+  deviceId: string;
+  label: string;
+  capabilities: string[];
+  provider: Provider;
+  serverUrl: string | null;
+  model: string | null;
+};
+
+/** The devices in the business's connected account (demo: one sample bulb). */
+async function accountDevices(hostId: string): Promise<AccountDevice[]> {
+  const { smartHomeMode } = await import("./room-devices.server");
+  const { demoDevices, linkInfo, listDevices } = await import("./smartthings.server");
+  if ((await smartHomeMode(hostId)) === "demo")
+    return demoDevices().map((d) => ({
+      ...d,
+      provider: "smartthings",
+      serverUrl: null,
+      model: null,
+    }));
+  const link = await linkInfo(hostId);
+  if (!link) throw new Error("smart_home:not_connected");
+  if (link.provider === "tapo") {
+    const { listTapoDevices } = await import("./tapo.server");
+    return (await listTapoDevices(hostId)).map((d) => ({ ...d, provider: "tapo" }));
+  }
+  return (await listDevices(hostId)).map((d) => ({
+    ...d,
+    provider: "smartthings",
+    serverUrl: null,
+    model: null,
+  }));
+}
+
 export const findSmartDevices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ hostId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, data.hostId);
-    const { smartHomeMode } = await import("./room-devices.server");
-    const { demoDevices, listDevices } = await import("./smartthings.server");
-    if ((await smartHomeMode(data.hostId)) === "demo") return { devices: demoDevices() };
     try {
-      return { devices: await listDevices(data.hostId) };
+      return {
+        devices: (await accountDevices(data.hostId)).map((d) => ({
+          deviceId: d.deviceId,
+          label: d.label,
+          model: d.model,
+        })),
+      };
+    } catch (e) {
+      throw friendly(e);
+    }
+  });
+
+/** Signs the business in to TP-Link (Tapo) inside Latchkey; the password stays on the server, sealed. */
+export const connectTapoAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        hostId: uuid,
+        email: z.string().trim().email().max(200),
+        password: z.string().min(1).max(200),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireWrite(context.supabase, data.hostId);
+    assertNotSharedDemo(context.claims as { email?: unknown });
+    const { connectTapo } = await import("./tapo.server");
+    try {
+      return {
+        devices: await connectTapo(
+          data.hostId,
+          context.userId as string,
+          data.email,
+          data.password,
+        ),
+      };
     } catch (e) {
       throw friendly(e);
     }
@@ -163,33 +239,39 @@ export const linkRoomDevice = createServerFn({ method: "POST" })
     if (!room) throw new Error("Room not found.");
     const hostId = await hostOfProperty(context.supabase, room.property_id);
     await requireWrite(context.supabase, hostId);
-    // What it can do comes from the account, never from the page.
+    // What it can do comes from the account (and for Tapo the device itself), never from the page.
     const { smartHomeMode } = await import("./room-devices.server");
-    const { demoDevices, listDevices } = await import("./smartthings.server");
     const mode = await smartHomeMode(hostId);
-    let found;
+    let found: AccountDevice | undefined;
+    let caps: string[] = [];
     try {
-      found = (mode === "demo" ? demoDevices() : await listDevices(hostId)).find(
-        (d) => d.deviceId === data.deviceId,
-      );
+      found = (await accountDevices(hostId)).find((d) => d.deviceId === data.deviceId);
+      if (!found) throw new Error("That device isn't in the account.");
+      caps = found.capabilities;
+      if (found.provider === "tapo" && mode === "live") {
+        // Asks the device once: proves TP-Link lets Latchkey reach it, and what it can really do.
+        const { tapoInfo } = await import("./tapo.server");
+        caps = tapoCapabilitiesFrom(await tapoInfo(hostId, found.serverUrl ?? "", found.deviceId));
+      }
     } catch (e) {
       throw friendly(e);
     }
-    if (!found) throw new Error("That device isn't in the SmartThings account.");
     const { error } = await (await admin()).from("room_devices").upsert(
       {
         host_id: hostId,
         property_id: room.property_id,
         room_id: room.id,
-        provider: "smartthings",
+        provider: found.provider,
+        server_url: found.serverUrl,
+        model: found.model,
         device_id: found.deviceId,
         label: found.label,
-        capabilities: knownCapabilities(found.capabilities),
+        capabilities: knownCapabilities(caps),
       },
       { onConflict: "room_id,device_id" },
     );
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, controls: controlsFor(knownCapabilities(caps)) };
   });
 
 async function hostDevice(context: { supabase: any }, id: string) {
@@ -338,7 +420,12 @@ export const getSmartThingsApp = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await requireSuperAdmin(context.supabase);
     const { appStatus, callbackFor } = await import("./smartthings.server");
-    return { app: await appStatus(), callback: callbackFor(origin()) };
+    const { activeProvider } = await import("./room-devices.server");
+    return {
+      app: await appStatus(),
+      callback: callbackFor(origin()),
+      provider: await activeProvider(),
+    };
   });
 
 /** Makes Latchkey's SmartThings app with a token pasted once; the token itself isn't kept. */
@@ -360,5 +447,16 @@ export const forgetSmartThingsApp = createServerFn({ method: "POST" })
     await requireSuperAdmin(context.supabase);
     const { forgetApp } = await import("./smartthings.server");
     await forgetApp();
+    return { ok: true };
+  });
+
+/** Latchkey admin: which service hosts connect their lights with. Connected businesses keep theirs. */
+export const setRoomLightsProvider = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ provider: z.enum(["smartthings", "tapo"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { setActiveProvider } = await import("./room-devices.server");
+    await setActiveProvider(normaliseProvider(data.provider));
     return { ok: true };
   });

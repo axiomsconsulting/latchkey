@@ -41,7 +41,10 @@ export const getIntegrations = createServerFn({ method: "GET" })
         id_check: Boolean(process.env["LOVABLE_API_KEY"]),
         host_email: false, // needs a sender email domain
         guest_messages: true, // stay page always works; email copy needs a sender domain
-        smart_home: await (await import("./smartthings.server")).smartThingsConfigured(),
+        // Tapo needs nothing from Latchkey; SmartThings needs Latchkey's app.
+        smart_home:
+          (await (await import("./room-devices.server")).activeProvider()) === "tapo" ||
+          (await (await import("./smartthings.server")).smartThingsConfigured()),
       },
     };
   });

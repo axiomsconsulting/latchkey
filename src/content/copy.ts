@@ -6664,7 +6664,7 @@ export const adminArrangeTitles = branded({
   whatsapp: "WhatsApp",
   integrations: "Alerts and other connections",
   drive: "Google Drive",
-  smartthings: "SmartThings",
+  smartthings: "Room lights",
   routines: "Routines",
   updates: "App updates",
   tools: "Tools for the business being viewed",
@@ -6724,21 +6724,27 @@ export const roomLightsCopy = branded({
   // Host side
   hostTitle: "Room lights",
   hostIntro:
-    "Link the smart lights in a room, and the guest staying there controls them from their stay guide, from check-in until check-out. Latchkey uses your SmartThings account, so any light that works in SmartThings works here (Tapo, Hue, Kasa and more: link the maker's app to SmartThings first).",
+    "Link the smart lights in a room, and the guest staying there controls them from their stay guide, from check-in until check-out. Sign in to your lights' account here (it never leaves Latchkey), then add each light; its room is picked from its name.",
+  services: { tapo: "TP-Link Tapo", smartthings: "SmartThings" } as Record<string, string>,
   demoNote:
     "Demo mode: a pretend bulb, nothing real switches. Latchkey's admins switch this business live.",
   notConfigured: "SmartThings isn't set up on Latchkey yet. Ask Latchkey support.",
-  connect: "Connect SmartThings",
-  notConnected: "SmartThings isn't connected yet.",
+  connect: (service: string) => `Connect ${service}`,
+  notConnected: (service: string) => `${service} isn't connected yet.`,
   reconnect: "Connect again",
   disconnect: "Disconnect",
-  connected: (when: string) => `SmartThings connected ${when}.`,
-  signedOut: "SmartThings signed Latchkey out. Connect again to keep guests' lights working.",
-  addDevice: "Add a light",
-  chooseDevice: "Choose a device",
+  connected: (service: string, account: string, when: string) =>
+    `${service} connected${account ? ` (${account})` : ""} ${when}.`,
+  signedOut: (service: string) =>
+    `${service} signed Latchkey out. Connect again to keep guests' lights working.`,
+  addDevice: "Add lights",
+  addBody: "Each light's room is picked from its name. Check it and press Add.",
   chooseRoom: "Room",
+  add: "Add",
+  added: "Added",
+  done: "Done",
   noDevices:
-    "No lights or switches in that SmartThings account yet. Add them in the SmartThings app, then look again.",
+    "No lights or plugs in that account yet. Add them in the maker's app, then look again.",
   guestsUse: "Guests can use it",
   remove: "Remove",
   tryIt: "Try it",
@@ -6749,16 +6755,37 @@ export const roomLightsCopy = branded({
     expired: "That took too long. Try connecting again.",
     failed: "SmartThings didn't connect. Try again.",
   } as Record<string, string>,
+  tapoTitle: "Sign in to TP-Link",
+  tapoBody:
+    "The email and password you use in the Tapo app. Latchkey keeps them locked on its server, only to switch your lights.",
+  tapoEmail: "TP-Link email",
+  tapoPassword: "TP-Link password",
+  tapoTip:
+    "Safer: make a second TP-Link account just for guests and share only the room lights to it from the Tapo app (Device → Share). Two-step verification must be off on that account.",
+  tapoSignIn: "Sign in",
+  tapoConnected: (n: number) =>
+    n === 1 ? "TP-Link connected: 1 device found." : `TP-Link connected: ${n} devices found.`,
   readOnly: "An owner or manager sets up room lights.",
   migration: "Room lights arrive once the latest update reaches your database.",
 });
 
 /** Latchkey admin → System → SmartThings (SmartThingsAdmin). */
 export const smartThingsAdminCopy = branded({
-  title: "SmartThings (room lights)",
+  title: "Room lights",
   intro:
-    "One app for every business: set it up once here, and hosts only press Connect SmartThings in their own settings and sign in to their own account.",
-  ready: (when: string) => `Ready since ${when}. SmartThings sends hosts back to:`,
+    "Which service hosts connect their room lights with. Businesses already connected keep theirs; new connections use the one chosen here.",
+  providers: {
+    tapo: {
+      name: "TP-Link Tapo (free, unofficial)",
+      body: "Hosts sign in with their TP-Link account. Free, nothing to set up here, but TP-Link publishes no API for it and could stop it working at any time.",
+    },
+    smartthings: {
+      name: "SmartThings (official, paid plan)",
+      body: "Works with Tapo, Hue, Kasa and more through SmartThings. Needs a SmartThings Developer or Business plan on the Samsung account that owns Latchkey's app, set up below.",
+    },
+  } as Record<string, { name: string; body: string }>,
+  switched: "Saved. New connections use this service.",
+  ready: (when: string) => `SmartThings app ready since ${when}. SmartThings sends hosts back to:`,
   moved: (now: string) =>
     `This page is on a different address (${now}). Make the app again from the address hosts use, or set PUBLIC_SITE_URL.`,
   step1: "Sign in to SmartThings with the Samsung account that should own the app, and open",

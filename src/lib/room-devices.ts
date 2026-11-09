@@ -282,3 +282,110 @@ export function demoState(raw: unknown): DeviceState {
     online: true,
   };
 }
+
+/* ------------------------------ TP-Link Tapo ------------------------------ */
+
+export type Provider = "smartthings" | "tapo";
+export const PROVIDERS: Provider[] = ["smartthings", "tapo"];
+
+export function normaliseProvider(v: unknown): Provider {
+  return v === "tapo" ? "tapo" : "smartthings";
+}
+
+/** Tapo lights and plugs in a getDeviceList answer (Kasa devices are "IOT.…"). */
+export function isTapoDevice(deviceType: unknown): boolean {
+  return typeof deviceType === "string" && /^SMART\.TAPO(BULB|PLUG|SWITCH)/.test(deviceType);
+}
+
+/** Tapo sends names base64-encoded; older lists send them plain. */
+export function decodeAlias(alias: unknown): string {
+  if (typeof alias !== "string" || !alias) return "";
+  if (/^[A-Za-z0-9+/]+={0,2}$/.test(alias) && alias.length % 4 === 0) {
+    try {
+      const bytes = Uint8Array.from(atob(alias), (c) => c.charCodeAt(0));
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      if (text && ![...text].some((ch) => ch.charCodeAt(0) < 32)) return text;
+    } catch {
+      // Not base64 after all.
+    }
+  }
+  return alias;
+}
+
+/** What a Tapo model can do, before Latchkey has asked the device itself. */
+export function tapoCapabilities(deviceType: string, model: string): Capability[] {
+  if (!/BULB/.test(deviceType)) return ["switch"];
+  const m = model.toUpperCase();
+  if (/^L(5[3-9]|6[3-9]|9\d)/.test(m)) return [...CAPABILITIES];
+  return ["switch", "switchLevel"];
+}
+
+/** What the device says it can do (its get_device_info answer). */
+export function tapoCapabilitiesFrom(info: Record<string, unknown>): Capability[] {
+  const out: Capability[] = ["switch"];
+  if (typeof info["brightness"] === "number") out.push("switchLevel");
+  if (typeof info["color_temp"] === "number" && info["color_temp_range"] !== undefined)
+    out.push("colorTemperature");
+  else if (typeof info["color_temp"] === "number" && typeof info["hue"] === "number")
+    out.push("colorTemperature");
+  if (typeof info["hue"] === "number" && typeof info["saturation"] === "number")
+    out.push("colorControl");
+  return out;
+}
+
+export function stateFromTapo(info: Record<string, unknown>): DeviceState {
+  const n = (k: string) => (typeof info[k] === "number" ? (info[k] as number) : null);
+  const kelvin = n("color_temp");
+  const colour = kelvin === 0;
+  return {
+    on: typeof info["device_on"] === "boolean" ? (info["device_on"] as boolean) : null,
+    level: n("brightness"),
+    kelvin: colour ? null : kelvin,
+    hue: colour ? n("hue") : null,
+    saturation: colour ? n("saturation") : null,
+    online: true,
+  };
+}
+
+/** Tapo's set_device_info params for a command. Colour needs color_temp 0. */
+export function tapoParams(c: Command): Record<string, number | boolean> {
+  if (c.power === false) return { device_on: false };
+  const p: Record<string, number | boolean> = { device_on: true };
+  if (c.level !== undefined) p["brightness"] = c.level;
+  if (c.hue !== undefined && c.saturation !== undefined) {
+    p["hue"] = c.hue;
+    p["saturation"] = c.saturation;
+    p["color_temp"] = 0;
+  } else if (c.kelvin !== undefined) {
+    p["color_temp"] = Math.max(2500, c.kelvin);
+  }
+  return p;
+}
+
+const words = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter((w) => w && !["guest", "the", "light", "lamp", "bulb", "room"].includes(w));
+
+/**
+ * The room a device's name points to ("Guest Room 4" → "Room 4"), so the
+ * host only confirms. Only a single clear match counts.
+ */
+export function suggestRoom<T extends { id: string; name: string }>(
+  label: string,
+  rooms: T[],
+): T | null {
+  const said = words(label);
+  if (!said.length) return null;
+  const hits = rooms.filter((r) => {
+    const own = words(r.name);
+    return own.length > 0 && own.every((w) => said.includes(w));
+  });
+  if (hits.length === 1) return hits[0]!;
+  // "Room 4" and "Room 14": prefer the one whose words are all the device's distinctive words.
+  const exact = hits.filter((r) => words(r.name).length === said.length);
+  return exact.length === 1 ? exact[0]! : null;
+}

@@ -11,10 +11,14 @@ import {
   controlsFor,
   deviceAccess,
   demoState,
+  normaliseProvider,
+  stateFromTapo,
+  tapoParams,
   USES_PER_MINUTE,
   type Access,
   type Command,
   type DeviceState,
+  type Provider,
 } from "./room-devices";
 
 type Loose = { from: (t: string) => any };
@@ -26,6 +30,9 @@ async function db(): Promise<Loose> {
 export type DeviceRow = {
   id: string;
   host_id: string;
+  provider: Provider;
+  server_url: string | null;
+  model: string | null;
   property_id: string;
   room_id: string;
   device_id: string;
@@ -36,7 +43,33 @@ export type DeviceRow = {
 };
 
 export const DEVICE_COLUMNS =
-  "id, host_id, property_id, room_id, device_id, label, capabilities, guest_on, demo_state";
+  "id, host_id, provider, server_url, model, property_id, room_id, device_id, label, capabilities, guest_on, demo_state";
+
+const PROVIDER_KEY = "room_lights";
+
+/** Which service hosts connect with (Latchkey admin → System → Room lights). */
+export async function activeProvider(): Promise<Provider> {
+  const { data } = await (
+    await db()
+  )
+    .from("platform_secrets")
+    .select("value")
+    .eq("key", PROVIDER_KEY)
+    .maybeSingle();
+  return normaliseProvider((data?.value as { provider?: unknown } | undefined)?.provider);
+}
+
+export async function setActiveProvider(provider: Provider): Promise<void> {
+  const { error } = await (
+    await db()
+  )
+    .from("platform_secrets")
+    .upsert(
+      { key: PROVIDER_KEY, value: { provider }, updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+  if (error) throw new Error(error.message);
+}
 
 export async function smartHomeMode(hostId: string): Promise<Mode> {
   const { data } = await (
@@ -51,6 +84,10 @@ export async function smartHomeMode(hostId: string): Promise<Mode> {
 
 export async function readDevice(mode: Mode, row: DeviceRow): Promise<DeviceState> {
   if (mode === "demo") return demoState(row.demo_state);
+  if (row.provider === "tapo") {
+    const { tapoInfo } = await import("./tapo.server");
+    return stateFromTapo(await tapoInfo(row.host_id, row.server_url ?? "", row.device_id));
+  }
   const { deviceState } = await import("./smartthings.server");
   return deviceState(row.host_id, row.device_id);
 }
@@ -65,6 +102,11 @@ export async function commandDevice(
   const after = applyCommand(mode === "demo" ? demoState(row.demo_state) : before, cmd);
   if (mode === "demo") {
     await (await db()).from("room_devices").update({ demo_state: after }).eq("id", row.id);
+    return after;
+  }
+  if (row.provider === "tapo") {
+    const { tapoSet } = await import("./tapo.server");
+    await tapoSet(row.host_id, row.server_url ?? "", row.device_id, tapoParams(cmd));
     return after;
   }
   const { sendCommands } = await import("./smartthings.server");

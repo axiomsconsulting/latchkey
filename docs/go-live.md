@@ -161,15 +161,18 @@ Hosts attach photos and documents to stay guide sections. They're kept in a Goog
 4. Lovable Cloud → Secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Optional: `ATTACHMENT_SIGNING_SECRET` (any long random string; otherwise the service key signs links).
 5. Latchkey admin → Integrations → **Connect Google Drive**, sign in with the account whose Drive should hold the files.
 
-## Room lights (SmartThings)
+## Room lights (TP-Link Tapo or SmartThings)
 
-Guests control their room's smart lights from their stay guide, from check-in until check-out. Latchkey talks only to SmartThings, so any light the host has in SmartThings works (Tapo, Hue, Kasa…: the host links the maker's app to SmartThings first). Needs migration 0098. Free. Nothing goes in Secrets.
+Guests control their room's smart lights from their stay guide, from check-in until check-out. Needs migrations 0098 and 0099. Everything is done in the app; nothing on a computer or in Secrets.
 
-Once for all hosts (Latchkey admin → System → SmartThings). SmartThings' API Access is paid since November 2026: the Samsung account that owns Latchkey's app needs a Developer plan (personal use, up to 10 installs) or a Business plan (needed for many hosts; price from Samsung). Then sign in at account.smartthings.com/tokens, generate a token with everything under Apps ticked, paste it and press **Set up**. Latchkey makes its SmartThings app through SmartThings' API and keeps only the app's own keys on the server; the token is thrown away. Do this from the address hosts use (or set `PUBLIC_SITE_URL`), since SmartThings only sends hosts back to that address.
+Latchkey admin → System → Room lights picks the service new connections use (businesses already connected keep theirs):
 
-Each host: Settings → Alerts and apps → Room lights → **Connect SmartThings**, sign in to their own SmartThings account, then **Add a light** and pick the room. **Try it** switches the light from the dashboard. Latchkey admin → Businesses switches the business's "Room lights (SmartThings)" from demo to live.
+- **TP-Link Tapo (free, unofficial).** Nothing to set up here. Each host signs in with their TP-Link email and password in a dialog in Settings → Alerts and apps → Room lights. Latchkey uses TP-Link's own cloud (wap.tplinkcloud.com, the protocol the Tapo and Kasa apps use; TP-Link publishes no API, so it can stop working without notice). The password is kept sealed on the server so Latchkey can sign in again; disconnecting deletes it. Accounts with two-step verification can't be used: hosts make a second TP-Link account and share the room lights to it from the Tapo app. Adding a light asks the device once, so a light TP-Link won't let Latchkey control is refused there, with a plain message.
+- **SmartThings (official).** Works with any light in SmartThings. Since November 2026 SmartThings' API needs a paid Developer or Business plan on the Samsung account that owns Latchkey's app. Then: sign in at account.smartthings.com/tokens, generate a token with everything under Apps ticked, paste it in the same card and press **Set up** (do this from the address hosts use, or set `PUBLIC_SITE_URL`). Hosts press **Connect SmartThings**, sign in in a small window that closes itself, and are back in Latchkey.
 
-Sign-ins last while they're used: the daily clean-up refreshes any connection not used for a week, since SmartThings drops one left alone for 30 days. Test all connections shows how many businesses are connected and any signed out.
+Latchkey admin → Businesses switches each business's "Room lights" from demo (a pretend bulb) to live. After signing in, the host sees every light in the account with its room picked from its name ("Guest Room 4" → Room 4) and presses Add; **Try it** switches it from the dashboard.
+
+SmartThings sign-ins are refreshed weekly by the daily clean-up (SmartThings drops one unused for 30 days); a TP-Link sign-in is renewed whenever TP-Link ends it. Test all connections shows how many businesses are connected and any signed out.
 
 ## Recording account (for demo videos)
 

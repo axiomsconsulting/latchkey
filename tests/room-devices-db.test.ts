@@ -80,6 +80,21 @@ describe("room lights", () => {
     ]);
   });
 
+  it("Tapo connections and devices fit (0099); the sealed password is server only", async () => {
+    await db.system(
+      "update smart_home_links set provider = 'tapo', refresh_token = null, account_email = 'lights@example.com', secret_sealed = 'sealed', terminal_id = 'term' where host_id = $1",
+      [hostId],
+    );
+    await db.system(
+      "update room_devices set provider = 'tapo', server_url = 'https://eu-wap.tplinkcloud.com', model = 'L530' where id = $1",
+      [deviceId],
+    );
+    expect(await refused(db.as("owner", "select secret_sealed from smart_home_links"))).toBe(true);
+    await expect(
+      db.system("update room_devices set provider = 'hue' where id = $1", [deviceId]),
+    ).rejects.toThrow();
+  });
+
   it("removing the room removes its lights", async () => {
     await db.system(
       "delete from rooms where id = (select room_id from room_devices where id = $1)",
