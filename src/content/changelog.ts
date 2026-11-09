@@ -47,6 +47,19 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.141.1",
+    date: "2026-11-09",
+    title: "SmartThings set up from inside Latchkey",
+    items: [
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "SmartThings for room lights is set up once from Latchkey admin → System by pasting a SmartThings token: Latchkey makes its app and keeps the keys itself, with nothing to add to Secrets. Hosts still only press Connect SmartThings.",
+        admin: true,
+      },
+    ],
+  },
+  {
     version: "0.141.0",
     date: "2026-11-09",
     title: "Room lights for guests",

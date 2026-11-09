@@ -29,6 +29,7 @@ import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { PlatformStripeAdmin } from "@/components/host/PlatformStripeAdmin";
 import { ConnectionHealth } from "@/components/host/ConnectionHealth";
 import { WhatsAppAdmin } from "@/components/host/WhatsAppAdmin";
+import { SmartThingsAdmin } from "@/components/host/SmartThingsAdmin";
 import { LegalAdmin } from "@/components/host/LegalAdmin";
 import { HomeArtAdmin } from "@/components/host/HomeArtAdmin";
 import { AdminBusinessTools } from "@/components/host/AdminBusinessTools";
@@ -276,6 +277,7 @@ function AdminPage() {
               { id: "stripe", title: titles.stripe, node: <PlatformStripeAdmin /> },
               { id: "whatsapp", title: titles.whatsapp, node: <WhatsAppAdmin /> },
               { id: "drive", title: titles.drive, node: <DriveAdmin /> },
+              { id: "smartthings", title: titles.smartthings, node: <SmartThingsAdmin /> },
               { id: "integrations", title: titles.integrations, node: <IntegrationsAdmin /> },
               { id: "routines", title: titles.routines, node: <RoutinesAdmin /> },
               { id: "updates", title: titles.updates, node: <AppUpdatesAdmin /> },
