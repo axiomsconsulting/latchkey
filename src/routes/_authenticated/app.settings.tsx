@@ -69,6 +69,7 @@ import { KioskCalibration } from "@/components/host/KioskCalibration";
 import { DoorTablets } from "@/components/host/DoorTablets";
 import { KioskLookSettings } from "@/components/host/KioskLookSettings";
 import { KioskRestSettings } from "@/components/host/KioskRestSettings";
+import { RoomDevicesSettings } from "@/components/host/RoomDevicesSettings";
 import { PropertyPicker } from "@/components/host/PropertyPicker";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { rebrand } from "@/lib/brand";
@@ -76,6 +77,7 @@ import { rebrand } from "@/lib/brand";
 // Any section can be landed on (search, Today's links); those with their own card id glow there, the rest on their block.
 const FOCUS = [
   "business",
+  "roomDevices",
   "group",
   "alerts",
   "messages",
@@ -136,6 +138,7 @@ const ADVANCED_KEY = "latchkey.settingsAdvanced";
 // Latchkey-wide and per-business admin switches (demo / live, sample data) live in Latchkey admin → Businesses.
 const OWN_CARD = new Set([
   "business",
+  "roomDevices",
   "alerts",
   "messages",
   "team",
@@ -735,6 +738,13 @@ function SettingsPage() {
           {themedProperty ? (
             <div id="settings-doorCodes" className="scroll-mt-24 rounded-2xl">
               <DoorCodesSettings propertyId={(themedProperty as { id: string }).id} />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="roomDevices">
+          {themedProperty ? (
+            <div id="settings-roomDevices" className="scroll-mt-24 rounded-2xl">
+              <RoomDevicesSettings propertyId={(themedProperty as { id: string }).id} />
             </div>
           ) : null}
         </Section>

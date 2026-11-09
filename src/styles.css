@@ -1250,3 +1250,39 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
     height: 1.25rem;
   }
 }
+
+/* Room lights (RoomLights): finger-sized sliders on the stay guide. */
+.lk-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  padding: 0 0.25rem;
+}
+.lk-range-level {
+  background: linear-gradient(90deg, #3a3a3a, #fff6dc);
+}
+.lk-range-warmth {
+  background: linear-gradient(90deg, #ffb35c, #fff3e2 55%, #dfeeff);
+}
+.lk-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+}
+.lk-range::-moz-range-thumb {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+}

@@ -149,6 +149,38 @@ export const testConnections = createServerFn({ method: "POST" })
           });
         }
       })(),
+      // SmartThings (room lights): Latchkey's app keys, and businesses signed out.
+      (async () => {
+        const { smartThingsConfigured } = await import("./smartthings.server");
+        if (!smartThingsConfigured())
+          return line("smartthings", "SmartThings (room lights)", {
+            configured: false,
+            optional: true,
+            fix: "Register Latchkey's SmartThings app and add SMARTTHINGS_CLIENT_ID and SMARTTHINGS_CLIENT_SECRET in Secrets (docs/go-live.md).",
+          });
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        type Rows = { data: unknown[] | null; error: unknown };
+        const { data, error } = await (
+          supabaseAdmin as unknown as {
+            from: (t: string) => { select: (c: string) => PromiseLike<Rows> };
+          }
+        )
+          .from("smart_home_links")
+          .select("host_id, last_error");
+        const rows = (data ?? []) as Array<{ last_error: string | null }>;
+        const out = rows.filter((r) => r.last_error).length;
+        return line("smartthings", "SmartThings (room lights)", {
+          configured: true,
+          ok: !error,
+          warn: out > 0,
+          detail: error
+            ? "Room lights' tables aren't in the database yet"
+            : `${rows.length} business(es) connected${out ? `, ${out} signed out` : ""}`,
+          fix: error
+            ? "Wait for Lovable to apply migration 0098."
+            : "A signed-out business connects again from Settings → Room lights.",
+        });
+      })(),
       // Email: the managed sender's settings (no email is sent).
       (async () =>
         env("LOVABLE_API_KEY")

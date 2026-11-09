@@ -42,11 +42,18 @@ import { StayAgain } from "@/components/guest/StayAgain";
 import { StayServices } from "@/components/guest/StayServices";
 
 import { sectionIcon } from "@/components/guest/guide-icons";
-import { guideCopy as gcopy, guest as copy, stayHeldCopy, stayHeroCopy } from "@/content/copy";
+import {
+  guideCopy as gcopy,
+  guest as copy,
+  roomLightsCopy,
+  stayHeldCopy,
+  stayHeroCopy,
+} from "@/content/copy";
 import { getStay, startCheckInFromStay } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
 import { ThemeIcon } from "@/components/theme/ThemeDecor";
 import { WifiCard } from "@/components/guest/WifiCard";
+import { RoomLights } from "@/components/guest/RoomLights";
 import { ReviewNudge } from "@/components/guest/ReviewNudge";
 import { reviewDay } from "@/lib/stay-access";
 import { Button } from "@/components/ui/button";
@@ -170,12 +177,14 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
       sections: [...s.guide, ...s.pinnedSections].map((g) => ({ key: g.key, title: g.title })),
       hasWifi: !!s.wifi,
       canOrder: !s.readOnly,
+      lights: !!s.roomDevices,
     },
     {
       wifi: copy.stayNetwork,
       extras: gcopy.quickExtras,
       messages: stayHeroCopy.messageTile,
       times: stayHeroCopy.tileTimes,
+      lights: roomLightsCopy.tile,
     },
   );
   return (
@@ -220,6 +229,11 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         {s.doors.map((d) => (
           <DoorCodeCard key={d.door} door={d} />
         ))}
+
+        {/* The room's own lights, theirs from check-in until check-out. */}
+        {s.roomDevices ? (
+          <RoomLights token={token} timeZone={p?.timezone ?? "Europe/London"} />
+        ) : null}
 
         {/* Check-out day: what to do, where the keys go, the door, and "I've checked out", first. */}
         {s.goodbye ? (
