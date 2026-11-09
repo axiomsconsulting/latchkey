@@ -47,6 +47,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.142.1",
+    date: "2026-11-09",
+    title: "Clearer message for Tapo lights",
+    items: [
+      {
+        kind: "fixed",
+        area: "Settings",
+        text: "Adding a Tapo light that TP-Link won't pass commands to now says so, instead of asking you to check the light is switched on.",
+      },
+    ],
+  },
+  {
     version: "0.142.0",
     date: "2026-11-09",
     title: "Room lights with your Tapo account",

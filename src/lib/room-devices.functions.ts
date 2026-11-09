@@ -57,7 +57,7 @@ function friendly(e: unknown): Error {
     two_step:
       "That TP-Link account asks for a code by email at every sign-in, which Latchkey can't answer. Use a second TP-Link account without two-step verification and share the room's lights to it from the Tapo app.",
     unsupported:
-      "TP-Link's cloud won't let Latchkey control this device. Latchkey admin can switch room lights to SmartThings instead.",
+      "TP-Link won't let Latchkey control this light: its cloud reports Tapo lights as offline to anything but the Tapo app, even when they're on. Latchkey admin can switch room lights to SmartThings instead.",
   };
   return new Error(words[reason] ?? (e instanceof Error ? e.message : "Something went wrong."));
 }

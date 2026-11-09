@@ -103,7 +103,11 @@ async function post(url: string, body: unknown, token?: string): Promise<Answer>
 const WRONG = -20601;
 const LOCKED = -20675;
 const TWO_STEP = -20677;
-/** "Device is offline" (and its sibling): no point signing in again. */
+/**
+ * "Device is offline": this older cloud says it for every Tapo device, on or
+ * off (Tapo devices only talk to TP-Link's newer cloud, which Latchkey's
+ * server can't reach), so it means "TP-Link won't pass commands this way".
+ */
 const OFFLINE = [-20571, -20572];
 
 async function login(email: string, password: string, terminalId: string) {
@@ -207,7 +211,7 @@ async function signed(hostId: string, url: string, body: unknown): Promise<Answe
     const a = await post(url, body, token);
     if (a.error_code === 0) return a;
     if (a.error_code !== undefined && OFFLINE.includes(a.error_code))
-      throw new TapoError("offline");
+      throw new TapoError("unsupported");
     // Anything else first time round is usually an ended sign-in (-20651 and friends).
     if (attempt === 0) {
       token = await signInAgain(hostId);
