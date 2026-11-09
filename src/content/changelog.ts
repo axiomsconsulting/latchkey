@@ -47,6 +47,24 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.142.0",
+    date: "2026-11-09",
+    title: "Room lights with your Tapo account",
+    items: [
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Room lights can connect straight to your TP-Link Tapo account: sign in inside Latchkey, and every light in the account is listed with its room already picked from its name. SmartThings now signs in in a small window, so you never leave Latchkey.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin chooses whether hosts connect room lights with TP-Link Tapo (free, unofficial) or SmartThings (official, paid plan).",
+        admin: true,
+      },
+    ],
+  },
+  {
     version: "0.141.2",
     date: "2026-11-09",
     title: "SmartThings set-up says what's wrong",
