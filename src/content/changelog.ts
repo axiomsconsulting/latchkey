@@ -47,6 +47,19 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.141.2",
+    date: "2026-11-09",
+    title: "SmartThings set-up says what's wrong",
+    items: [
+      {
+        kind: "fixed",
+        area: "Settings",
+        text: "Setting up SmartThings uses SmartThings' current way of making apps, and says when the Samsung account needs a paid SmartThings plan instead of blaming the token.",
+        admin: true,
+      },
+    ],
+  },
+  {
     version: "0.141.1",
     date: "2026-11-09",
     title: "SmartThings set up from inside Latchkey",
