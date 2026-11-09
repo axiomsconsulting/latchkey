@@ -163,16 +163,13 @@ Hosts attach photos and documents to stay guide sections. They're kept in a Goog
 
 ## Room lights (SmartThings)
 
-Guests control their room's smart lights from their stay guide, from check-in until check-out. Latchkey talks only to SmartThings, so any light the host has in SmartThings works (Tapo, Hue, Kasa…: the host links the maker's app to SmartThings first). Needs migration 0098. Free.
+Guests control their room's smart lights from their stay guide, from check-in until check-out. Latchkey talks only to SmartThings, so any light the host has in SmartThings works (Tapo, Hue, Kasa…: the host links the maker's app to SmartThings first). Needs migration 0098. Free. Nothing goes in Secrets.
 
-1. Install the SmartThings CLI (`npm i -g @smartthings/cli`) and sign in with the Samsung account that will own Latchkey's app.
-2. `smartthings apps:create` → **OAuth-In App**. Name it after the product, scopes `r:devices:*`, `x:devices:*` and `r:locations:*`, redirect URI `https://<your app address>/api/public/smartthings/callback` (set `PUBLIC_SITE_URL` in Secrets if hosts sign in from more than one address, so the redirect is always the same).
-3. Copy the **OAuth Client Id** and **OAuth Client Secret** it prints (shown once) into Lovable Cloud → Secrets as `SMARTTHINGS_CLIENT_ID` and `SMARTTHINGS_CLIENT_SECRET`.
-4. Latchkey admin → Businesses → the business → switch **Room lights (SmartThings)** to live.
-5. The host: Settings → Alerts and apps → Room lights → **Connect SmartThings**, allow Latchkey, then **Add a light** and pick the room. **Try it** switches the light from the dashboard.
-6. Latchkey admin → Integrations → Test all connections shows how many businesses are connected and any that SmartThings signed out (they connect again from the same card).
+Once for all hosts (Latchkey admin → System → SmartThings): sign in at account.smartthings.com/tokens, generate a token with everything under Apps ticked, paste it and press **Set up**. Latchkey makes its SmartThings app through SmartThings' API and keeps only the app's own keys on the server; the token is thrown away. Do this from the address hosts use (or set `PUBLIC_SITE_URL`), since SmartThings only sends hosts back to that address.
 
-Sign-ins last while they're used: the daily clean-up refreshes any connection not used for a week, since SmartThings drops one left alone for 30 days.
+Each host: Settings → Alerts and apps → Room lights → **Connect SmartThings**, sign in to their own SmartThings account, then **Add a light** and pick the room. **Try it** switches the light from the dashboard. Latchkey admin → Businesses switches the business's "Room lights (SmartThings)" from demo to live.
+
+Sign-ins last while they're used: the daily clean-up refreshes any connection not used for a week, since SmartThings drops one left alone for 30 days. Test all connections shows how many businesses are connected and any signed out.
 
 ## Recording account (for demo videos)
 

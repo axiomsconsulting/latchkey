@@ -41,8 +41,7 @@ export const getIntegrations = createServerFn({ method: "GET" })
         id_check: Boolean(process.env["LOVABLE_API_KEY"]),
         host_email: false, // needs a sender email domain
         guest_messages: true, // stay page always works; email copy needs a sender domain
-        smart_home:
-          !!process.env["SMARTTHINGS_CLIENT_ID"] && !!process.env["SMARTTHINGS_CLIENT_SECRET"],
+        smart_home: await (await import("./smartthings.server")).smartThingsConfigured(),
       },
     };
   });

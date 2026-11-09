@@ -6664,6 +6664,7 @@ export const adminArrangeTitles = branded({
   whatsapp: "WhatsApp",
   integrations: "Alerts and other connections",
   drive: "Google Drive",
+  smartthings: "SmartThings",
   routines: "Routines",
   updates: "App updates",
   tools: "Tools for the business being viewed",
@@ -6750,4 +6751,25 @@ export const roomLightsCopy = branded({
   } as Record<string, string>,
   readOnly: "An owner or manager sets up room lights.",
   migration: "Room lights arrive once the latest update reaches your database.",
+});
+
+/** Latchkey admin → System → SmartThings (SmartThingsAdmin). */
+export const smartThingsAdminCopy = branded({
+  title: "SmartThings (room lights)",
+  intro:
+    "One app for every business: set it up once here, and hosts only press Connect SmartThings in their own settings and sign in to their own account.",
+  ready: (when: string) => `Ready since ${when}. SmartThings sends hosts back to:`,
+  moved: (now: string) =>
+    `This page is on a different address (${now}). Make the app again from the address hosts use, or set PUBLIC_SITE_URL.`,
+  step1: "Sign in to SmartThings with the Samsung account that should own the app, and open",
+  step2: "Generate new token: any name, tick everything under Apps, then Generate.",
+  step3: "Copy the token, paste it below and press Set up.",
+  tokenLabel: "SmartThings token",
+  tokenNote:
+    "Used once to make the app, then thrown away (it stops working by itself within a day). Only the app's own keys are kept, on the server.",
+  setUp: "Set up",
+  done: "SmartThings is set up. Hosts can connect now.",
+  makeAgain: "Make it again",
+  forget: "Forget",
+  forgotten: "SmartThings app forgotten. Hosts will need to connect again after a new one is made.",
 });

@@ -152,11 +152,11 @@ export const testConnections = createServerFn({ method: "POST" })
       // SmartThings (room lights): Latchkey's app keys, and businesses signed out.
       (async () => {
         const { smartThingsConfigured } = await import("./smartthings.server");
-        if (!smartThingsConfigured())
+        if (!(await smartThingsConfigured()))
           return line("smartthings", "SmartThings (room lights)", {
             configured: false,
             optional: true,
-            fix: "Register Latchkey's SmartThings app and add SMARTTHINGS_CLIENT_ID and SMARTTHINGS_CLIENT_SECRET in Secrets (docs/go-live.md).",
+            fix: "Latchkey admin → System → SmartThings: paste a SmartThings token once to set it up.",
           });
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         type Rows = { data: unknown[] | null; error: unknown };

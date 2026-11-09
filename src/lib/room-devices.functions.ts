@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
-import { hostOfProperty, requireWrite } from "@/lib/roles";
+import { hostOfProperty, requireSuperAdmin, requireWrite } from "@/lib/roles";
 import {
   UNKNOWN_STATE,
   cleanCommand,
@@ -90,7 +90,7 @@ export const getRoomDevices = createServerFn({ method: "GET" })
     return {
       hostId,
       mode: await smartHomeMode(hostId),
-      configured: smartThingsConfigured(),
+      configured: await smartThingsConfigured(),
       link: await linkInfo(hostId),
       canWrite: staff === true,
       // Before migration 0098 there's nothing to show.
@@ -117,16 +117,10 @@ export const smartThingsConnectUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireWrite(context.supabase, data.hostId);
     assertNotSharedDemo(context.claims as { email?: unknown });
-    const { consentUrl, makeState, smartThingsCallback, smartThingsConfigured } =
-      await import("./smartthings.server");
-    if (!smartThingsConfigured())
+    const { consentUrl, makeState, smartThingsConfigured } = await import("./smartthings.server");
+    if (!(await smartThingsConfigured()))
       throw new Error("SmartThings isn't set up on Latchkey yet. Ask Latchkey support.");
-    return {
-      url: consentUrl(
-        smartThingsCallback(origin()),
-        await makeState(data.hostId, context.userId as string),
-      ),
-    };
+    return { url: await consentUrl(await makeState(data.hostId, context.userId as string)) };
   });
 
 export const disconnectSmartThings = createServerFn({ method: "POST" })
@@ -334,4 +328,37 @@ export const controlStayDevice = createServerFn({ method: "POST" })
     } catch (e) {
       throw friendly(e);
     }
+  });
+
+/* --------------------------- Latchkey's SmartThings app --------------------------- */
+
+/** Latchkey admin → System → SmartThings: whether Latchkey's app exists, and its return address. */
+export const getSmartThingsApp = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { appStatus, callbackFor } = await import("./smartthings.server");
+    return { app: await appStatus(), callback: callbackFor(origin()) };
+  });
+
+/** Makes Latchkey's SmartThings app with a token pasted once; the token itself isn't kept. */
+export const setupSmartThingsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ token: z.string().trim().min(20).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { callbackFor, createApp } = await import("./smartthings.server");
+    const { brandName } = await import("./brand");
+    const site = origin();
+    await createApp(data.token, callbackFor(site), brandName(), `${site}/privacy`);
+    return { ok: true };
+  });
+
+export const forgetSmartThingsApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { forgetApp } = await import("./smartthings.server");
+    await forgetApp();
+    return { ok: true };
   });

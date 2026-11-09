@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- smart_home_links is from migration 0098, newer than the generated types */
 /**
  * Server only: each business's SmartThings connection (room-devices.ts).
- * Latchkey has one SmartThings API app (OAuth-In, registered by Latchkey's
- * admin with the SmartThings CLI); each host signs in to their own
- * SmartThings account and allows "see and control devices". Access tokens
- * last about 24 hours; refresh tokens are single use, so only one refresh
- * runs at a time per business (refreshing_until). Tokens never leave the
- * server. Secrets: SMARTTHINGS_CLIENT_ID, SMARTTHINGS_CLIENT_SECRET.
+ * Latchkey has one SmartThings API app (OAuth-In), made from inside the app:
+ * a super admin pastes a short-lived SmartThings token once (Latchkey admin
+ * → System → SmartThings) and createApp() registers it through SmartThings'
+ * Apps API, keeping its client id and secret in platform_secrets
+ * "smartthings_app" (server only, never sent to the browser). Each host then
+ * signs in to their own SmartThings account and allows "see and control
+ * devices". Access tokens last about 24 hours; refresh tokens are single
+ * use, so only one refresh runs at a time per business (refreshing_until).
  */
 import { DEMO_DEVICE, knownCapabilities, stateFromStatus, type Capability } from "./room-devices";
 
@@ -20,14 +22,132 @@ async function db(): Promise<Loose> {
   return supabaseAdmin as unknown as Loose;
 }
 
-export function smartThingsConfigured(): boolean {
-  return !!env("SMARTTHINGS_CLIENT_ID") && !!env("SMARTTHINGS_CLIENT_SECRET");
+const APP_KEY = "smartthings_app";
+
+type AppCredentials = {
+  clientId: string;
+  clientSecret: string;
+  appId: string | null;
+  redirectUri: string;
+  createdAt: string;
+};
+
+async function appCredentials(): Promise<AppCredentials | null> {
+  const { data } = await (
+    await db()
+  )
+    .from("platform_secrets")
+    .select("value")
+    .eq("key", APP_KEY)
+    .maybeSingle();
+  const v = data?.value as Partial<AppCredentials> | undefined;
+  return v?.clientId && v.clientSecret && v.redirectUri
+    ? {
+        clientId: v.clientId,
+        clientSecret: v.clientSecret,
+        appId: v.appId ?? null,
+        redirectUri: v.redirectUri,
+        createdAt: v.createdAt ?? "",
+      }
+    : null;
+}
+
+export async function smartThingsConfigured(): Promise<boolean> {
+  return !!(await appCredentials());
+}
+
+/** What the admin card shows: never the secret. */
+export async function appStatus(): Promise<{ redirectUri: string; createdAt: string } | null> {
+  const c = await appCredentials();
+  return c ? { redirectUri: c.redirectUri, createdAt: c.createdAt } : null;
 }
 
 /** The address SmartThings sends the host back to; it must be registered on the app exactly. */
-export function smartThingsCallback(requestOrigin: string): string {
+export function callbackFor(requestOrigin: string): string {
   const site = env("PUBLIC_SITE_URL").replace(/\/+$/, "");
   return `${site || requestOrigin}/api/public/smartthings/callback`;
+}
+
+/** The registered address (the one the app was made with). */
+export async function smartThingsCallback(): Promise<string> {
+  const c = await appCredentials();
+  if (!c) throw new SmartHomeError("not_connected");
+  return c.redirectUri;
+}
+
+/**
+ * Registers Latchkey's SmartThings app with SmartThings' Apps API, using a
+ * token the super admin made at account.smartthings.com/tokens (it only
+ * needs to work for this one call and isn't kept). Replaces any earlier one.
+ */
+export async function createApp(
+  token: string,
+  redirectUri: string,
+  displayName: string,
+  privacyUrl: string,
+): Promise<void> {
+  const slug = displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const res = await fetch(`${API}/apps`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token.trim()}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      appName: `${/^[a-z0-9]/.test(slug) ? slug : `a${slug}`}-room-lights-${crypto.randomUUID()}`,
+      displayName: `${displayName} room lights`.slice(0, 75),
+      description: "Lets guests switch the lights in their room from their stay guide.",
+      appType: "API_ONLY",
+      classifications: ["CONNECTED_SERVICE"],
+      singleInstance: true,
+      principalType: "LOCATION",
+      apiOnly: { privacyPolicyUrl: privacyUrl },
+      oauth: {
+        clientName: `${displayName} room lights`.slice(0, 75),
+        scope: SMARTTHINGS_SCOPES,
+        redirectUris: [redirectUri],
+      },
+    }),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    oauthClientId?: string;
+    oauthClientSecret?: string;
+    app?: { appId?: string };
+    message?: string;
+    error?: { message?: string };
+  };
+  if (res.status === 401 || res.status === 403)
+    throw new Error(
+      "SmartThings didn't accept that token. Make a new one with the Apps permissions ticked and paste it straight away.",
+    );
+  if (!res.ok || !json.oauthClientId || !json.oauthClientSecret)
+    throw new Error(
+      json.error?.message ?? json.message ?? `SmartThings didn't make the app (${res.status}).`,
+    );
+  const { error } = await (await db()).from("platform_secrets").upsert(
+    {
+      key: APP_KEY,
+      value: {
+        clientId: json.oauthClientId,
+        clientSecret: json.oauthClientSecret,
+        appId: json.app?.appId ?? null,
+        redirectUri,
+        createdAt: new Date().toISOString(),
+      },
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "key" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+/** Forgets Latchkey's app. Hosts' connections stop working until a new one is made and they connect again. */
+export async function forgetApp(): Promise<void> {
+  await (await db()).from("platform_secrets").delete().eq("key", APP_KEY);
 }
 
 /* ---------------------------------- state ---------------------------------- */
@@ -63,9 +183,12 @@ export async function readState(state: string): Promise<{ hostId: string; userId
   return { hostId, userId };
 }
 
-export function consentUrl(redirectUri: string, state: string): string {
+export async function consentUrl(state: string): Promise<string> {
+  const c = await appCredentials();
+  if (!c) throw new SmartHomeError("not_connected");
+  const redirectUri = c.redirectUri;
   const q = new URLSearchParams({
-    client_id: env("SMARTTHINGS_CLIENT_ID"),
+    client_id: c.clientId,
     response_type: "code",
     redirect_uri: redirectUri,
     scope: SMARTTHINGS_SCOPES.join(" "),
@@ -87,7 +210,9 @@ type TokenAnswer = {
 };
 
 async function tokenCall(body: Record<string, string>): Promise<TokenAnswer & { ok: boolean }> {
-  const basic = btoa(`${env("SMARTTHINGS_CLIENT_ID")}:${env("SMARTTHINGS_CLIENT_SECRET")}`);
+  const c = await appCredentials();
+  if (!c) return { ok: false, error: "not_set_up" };
+  const basic = btoa(`${c.clientId}:${c.clientSecret}`);
   const res = await fetch(`${API}/oauth/token`, {
     method: "POST",
     headers: {
@@ -95,7 +220,7 @@ async function tokenCall(body: Record<string, string>): Promise<TokenAnswer & { 
       "content-type": "application/x-www-form-urlencoded",
       accept: "application/json",
     },
-    body: new URLSearchParams({ ...body, client_id: env("SMARTTHINGS_CLIENT_ID") }),
+    body: new URLSearchParams({ ...body, client_id: c.clientId }),
   });
   const json = (await res.json().catch(() => ({}))) as TokenAnswer;
   return { ...json, ok: res.ok && !!json.access_token && !!json.refresh_token };
@@ -105,12 +230,8 @@ const expiry = (seconds: number | undefined) =>
   new Date(Date.now() + Math.max(60, (seconds ?? 86_000) - 120) * 1000).toISOString();
 
 /** Swaps SmartThings' code for the business's connection. */
-export async function finishConnect(
-  hostId: string,
-  userId: string,
-  code: string,
-  redirectUri: string,
-): Promise<void> {
+export async function finishConnect(hostId: string, userId: string, code: string): Promise<void> {
+  const redirectUri = await smartThingsCallback();
   const t = await tokenCall({ grant_type: "authorization_code", code, redirect_uri: redirectUri });
   if (!t.ok) throw new Error(t.error_description ?? t.error ?? "SmartThings refused the sign-in.");
   const now = new Date().toISOString();
@@ -303,8 +424,12 @@ export const demoDevices = (): FoundDevice[] => [DEMO_DEVICE];
  * working, so the daily clean-up refreshes any not refreshed for a week.
  */
 export async function keepSmartHomeAlive(): Promise<void> {
-  if (!smartThingsConfigured()) return;
   const sb = await db();
+  await sb
+    .from("room_device_uses")
+    .delete()
+    .lt("at", new Date(Date.now() - 7 * 86_400_000).toISOString());
+  if (!(await smartThingsConfigured())) return;
   const { data, error } = await sb
     .from("smart_home_links")
     .select("host_id")
@@ -312,8 +437,4 @@ export async function keepSmartHomeAlive(): Promise<void> {
   if (error) return;
   for (const r of (data ?? []) as Array<{ host_id: string }>)
     await accessToken(r.host_id, true).catch(() => undefined);
-  await sb
-    .from("room_device_uses")
-    .delete()
-    .lt("at", new Date(Date.now() - 7 * 86_400_000).toISOString());
 }
