@@ -90,12 +90,27 @@ export async function createApp(
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  const res = await fetch(`${API}/apps`, {
+  const auth = { authorization: `Bearer ${token.trim()}`, accept: "application/json" };
+  // Apps belong to an organisation since SmartThings' smartapps endpoints (CLI 3.0): the account's own one.
+  const orgs = await fetch("https://api.smartthings.com/organizations", { headers: auth });
+  if (orgs.status === 401)
+    throw new Error(
+      "SmartThings didn't accept that token. Make a new one and paste it straight away (it only works for a day).",
+    );
+  const list =
+    (
+      (await orgs.json().catch(() => ({}))) as {
+        items?: Array<{ organizationId?: string; isDefaultUserOrg?: boolean }>;
+      }
+    ).items ?? [];
+  const org = (list.find((o) => o.isDefaultUserOrg) ?? list[0])?.organizationId;
+  const q = org ? `?accountId=${encodeURIComponent(org)}` : "";
+  const res = await fetch(`https://api.smartthings.com/smartapps${q}`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${token.trim()}`,
+      ...auth,
       "content-type": "application/json",
-      accept: "application/json",
+      ...(org ? { "X-ST-Organization": org } : {}),
     },
     body: JSON.stringify({
       appName: `${/^[a-z0-9]/.test(slug) ? slug : `a${slug}`}-room-lights-${crypto.randomUUID()}`,
@@ -120,9 +135,14 @@ export async function createApp(
     message?: string;
     error?: { message?: string };
   };
-  if (res.status === 401 || res.status === 403)
+  if (res.status === 401)
     throw new Error(
       "SmartThings didn't accept that token. Make a new one with the Apps permissions ticked and paste it straight away.",
+    );
+  // SmartThings' own tool reads a 403 here as "needs a paid plan" (API Access is paid since November 2026).
+  if (res.status === 403)
+    throw new Error(
+      "SmartThings only lets accounts on a paid Developer or Business plan make this app. Choose a plan at developer.smartthings.com/console/service-integrations/manage-plans with the same Samsung account, then make a new token and try again.",
     );
   if (!res.ok || !json.oauthClientId || !json.oauthClientSecret)
     throw new Error(
