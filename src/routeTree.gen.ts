@@ -79,6 +79,7 @@ import { Route as ApiPublicManifestAppRouteImport } from './routes/api/public/ma
 import { Route as ApiPublicMcpKeyRouteImport } from './routes/api/public/mcp.$key'
 import { Route as ApiPublicPrivateFileRefRouteImport } from './routes/api/public/private-file.$ref'
 import { Route as ApiPublicPushLatestRouteImport } from './routes/api/public/push/latest'
+import { Route as ApiPublicSmartthingsCallbackRouteImport } from './routes/api/public/smartthings/callback'
 import { Route as ApiPublicTelegramSecretRouteImport } from './routes/api/public/telegram.$secret'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -451,6 +452,12 @@ const ApiPublicPushLatestRoute = ApiPublicPushLatestRouteImport.update({
   path: '/api/public/push/latest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSmartthingsCallbackRoute =
+  ApiPublicSmartthingsCallbackRouteImport.update({
+    id: '/api/public/smartthings/callback',
+    path: '/api/public/smartthings/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTelegramSecretRoute = ApiPublicTelegramSecretRouteImport.update({
   id: '/api/public/telegram/$secret',
   path: '/api/public/telegram/$secret',
@@ -559,6 +566,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
+  '/api/public/smartthings/callback': typeof ApiPublicSmartthingsCallbackRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -636,6 +644,7 @@ export interface FileRoutesByTo {
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
+  '/api/public/smartthings/callback': typeof ApiPublicSmartthingsCallbackRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -716,6 +725,7 @@ export interface FileRoutesById {
   '/api/public/mcp/$key': typeof ApiPublicMcpKeyRoute
   '/api/public/private-file/$ref': typeof ApiPublicPrivateFileRefRoute
   '/api/public/push/latest': typeof ApiPublicPushLatestRoute
+  '/api/public/smartthings/callback': typeof ApiPublicSmartthingsCallbackRoute
   '/api/public/telegram/$secret': typeof ApiPublicTelegramSecretRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -796,6 +806,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp/$key'
     | '/api/public/private-file/$ref'
     | '/api/public/push/latest'
+    | '/api/public/smartthings/callback'
     | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
@@ -873,6 +884,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp/$key'
     | '/api/public/private-file/$ref'
     | '/api/public/push/latest'
+    | '/api/public/smartthings/callback'
     | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
@@ -952,6 +964,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp/$key'
     | '/api/public/private-file/$ref'
     | '/api/public/push/latest'
+    | '/api/public/smartthings/callback'
     | '/api/public/telegram/$secret'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
@@ -1009,6 +1022,7 @@ export interface RootRouteChildren {
   ApiPublicManifestAppRoute: typeof ApiPublicManifestAppRoute
   ApiPublicPrivateFileRefRoute: typeof ApiPublicPrivateFileRefRoute
   ApiPublicPushLatestRoute: typeof ApiPublicPushLatestRoute
+  ApiPublicSmartthingsCallbackRoute: typeof ApiPublicSmartthingsCallbackRoute
   ApiPublicTelegramSecretRoute: typeof ApiPublicTelegramSecretRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -1510,6 +1524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPushLatestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/smartthings/callback': {
+      id: '/api/public/smartthings/callback'
+      path: '/api/public/smartthings/callback'
+      fullPath: '/api/public/smartthings/callback'
+      preLoaderRoute: typeof ApiPublicSmartthingsCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/telegram/$secret': {
       id: '/api/public/telegram/$secret'
       path: '/api/public/telegram/$secret'
@@ -1684,6 +1705,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicManifestAppRoute: ApiPublicManifestAppRoute,
   ApiPublicPrivateFileRefRoute: ApiPublicPrivateFileRefRoute,
   ApiPublicPushLatestRoute: ApiPublicPushLatestRoute,
+  ApiPublicSmartthingsCallbackRoute: ApiPublicSmartthingsCallbackRoute,
   ApiPublicTelegramSecretRoute: ApiPublicTelegramSecretRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,

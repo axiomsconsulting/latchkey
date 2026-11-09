@@ -123,6 +123,7 @@ describe("formatting and theme", () => {
       id_check: "live",
       host_email: "demo",
       guest_messages: "demo",
+      smart_home: "demo",
     });
   });
 });

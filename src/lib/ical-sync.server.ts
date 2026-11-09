@@ -349,6 +349,9 @@ export async function runRetentionSweep(): Promise<number> {
   // Hosts' test stays nobody reset.
   const { sweepTestStays } = await import("./test-stay.server");
   await sweepTestStays(db, today).catch(() => {});
+  // SmartThings connections stay signed in; guests' light taps go after a week (migration 0098).
+  const { keepSmartHomeAlive } = await import("./smartthings.server");
+  await keepSmartHomeAlive().catch(() => {});
   // Remembered ID checks for returning guests: 12 months. Before migration 0088 this just does nothing.
   await db.from("guest_id_passes").delete().lt("keep_until", today);
   // Before migration 0041 there is no privacy column: everyone gets the defaults.

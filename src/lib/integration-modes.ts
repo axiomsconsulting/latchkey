@@ -4,16 +4,23 @@
  */
 
 export type Mode = "demo" | "live";
-export type IntegrationKey = "id_check" | "host_email" | "guest_messages";
+export type IntegrationKey = "id_check" | "host_email" | "guest_messages" | "smart_home";
 
 export type IntegrationModes = Record<IntegrationKey, Mode>;
 
-export const INTEGRATION_KEYS: IntegrationKey[] = ["id_check", "host_email", "guest_messages"];
+export const INTEGRATION_KEYS: IntegrationKey[] = [
+  "id_check",
+  "host_email",
+  "guest_messages",
+  "smart_home",
+];
 
 export const DEFAULT_MODES: IntegrationModes = {
   id_check: "live",
   host_email: "demo",
   guest_messages: "demo",
+  // Room lights through SmartThings (room-devices.ts): demo = a pretend bulb.
+  smart_home: "demo",
 };
 
 export function normaliseModes(raw: unknown): IntegrationModes {

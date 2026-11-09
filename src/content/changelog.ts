@@ -47,6 +47,24 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.141.0",
+    date: "2026-11-09",
+    title: "Room lights for guests",
+    items: [
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Guests control their room's smart lights from their stay guide: on and off, brightness, warmth, colour and one-tap moods, from check-in until check-out. Connect SmartThings in Settings → Alerts and apps → Room lights, then link each light to its room. Tapo, Hue, Kasa and any light that works in SmartThings can be used.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "SmartThings connection for room lights, with a demo / live switch per business.",
+        admin: true,
+      },
+    ],
+  },
+  {
     version: "0.140.2",
     date: "2026-11-08",
     title: "Set-up finishes again",

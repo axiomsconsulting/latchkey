@@ -2492,11 +2492,13 @@ export const getStay = createServerFn({ method: "GET" })
     const { startersOffForProperty } = await import("./guide-starters.server");
     const { attachmentsFor } = await import("./attachments.server");
     const { tilesForGuest, roomPhoto } = await import("./guide-tiles.server");
-    const [off, files, tiles, photo] = await Promise.all([
+    const { roomHasDevices } = await import("./room-devices.server");
+    const [off, files, tiles, photo, lights] = await Promise.all([
       startersOffForProperty(b.property_id),
       attachmentsFor(b.property_id).catch(() => ({}) as Record<string, never>),
       tilesForGuest(b.property_id),
       roomPhoto(b.room_id),
+      roomHasDevices(b.room_id).catch(() => false),
     ]);
     const sections = buildGuide(stored, b.room_id, mode, facts, off, Object.keys(files)).map(
       (sec) =>
@@ -2611,6 +2613,8 @@ export const getStay = createServerFn({ method: "GET" })
       forget,
       tiles,
       roomPhoto: photo,
+      /** The room has lights the guest controls (room-devices.ts); the panel itself checks the times. */
+      roomDevices: lights && !readOnly,
     };
   });
 

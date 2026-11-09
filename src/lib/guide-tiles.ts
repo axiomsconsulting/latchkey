@@ -151,7 +151,12 @@ export type TilePage = {
   hasWifi: boolean;
   /** Extras and messages: only on a guest's own stay (not read-only). */
   canOrder: boolean;
+  /** The room has lights the guest controls (room-devices.ts): a "Lights" tile comes first. */
+  lights?: boolean;
 };
+
+/** The automatic tile for the room's lights, always first on a stay with them. */
+export const LIGHTS_TILE = "auto-lights";
 
 export type ShownTile = {
   id: string;
@@ -211,10 +216,17 @@ export function autoTiles(ctx: TilePage): GuideTile[] {
 export function shownTiles(
   stored: GuideTile[] | null,
   ctx: TilePage,
-  labels: Partial<Record<TileKind, string>> = {},
+  labels: Partial<Record<TileKind | "lights", string>> = {},
 ): ShownTile[] {
   const titles = new Map(ctx.sections.map((s) => [s.key, s.title]));
   const out: ShownTile[] = [];
+  if (ctx.lights && ctx.page === "stay")
+    out.push({
+      id: LIGHTS_TILE,
+      icon: "lightbulb",
+      label: labels.lights ?? "Lights",
+      action: { kind: "jump", target: "stay-lights" },
+    });
   for (const t of stored ?? autoTiles(ctx)) {
     const icon = t.icon ?? DEFAULT_ICONS[t.kind];
     const fallback =

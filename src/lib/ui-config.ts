@@ -251,6 +251,7 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "kioskLook", label: "Door tablet look" },
       { id: "kioskScreen", label: "Door tablet screen" },
       { id: "alerts", label: "Alerts" },
+      { id: "roomDevices", label: "Room lights" },
       { id: "api", label: "API & MCP" },
       { id: "shortcuts", label: "Subscription shortcut (phones)" },
       { id: "shortcuts2", label: "Register and activity shortcuts (phones)" },
