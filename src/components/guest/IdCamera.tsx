@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { kioskFlash, kioskSound } from "@/lib/kiosk-sound";
 import { sampleLook, samplePhase } from "@/lib/test-sample-motion";
 import { useTestSample } from "@/components/guest/TestSamples";
+import { ReviewTicker, useHasKioskReviews } from "@/components/guest/KioskReviews";
 
 /** Draws the frame no larger than `max` pixels on its longest side. */
 function still(video: HTMLVideoElement, max: number, quality: number, mirror: boolean): string {
@@ -319,6 +320,7 @@ export function IdCamera({
   const videoRef = useRef<HTMLVideoElement>(null);
   // A host's test with sample photos: the picture stands in for the camera (TestSamples.tsx).
   const sample = useTestSample(kind);
+  const hasReviews = useHasKioskReviews();
   const sampleRef = useRef<HTMLImageElement>(null);
   const [sampleSize, setSampleSize] = useState<{ w: number; h: number } | null>(null);
   const [flashing, setFlashing] = useState(false);
@@ -634,12 +636,17 @@ export function IdCamera({
       {busy ? (busyLabel ?? copy.idChecking) : timed ? copy.faceTimer : (cta ?? copy.idTakePhoto)}
     </Button>
   );
+  // While it's checked, the property's reviews take the help line's place (host's choice).
+  const reviewsNow = busy && !!shot && hasReviews;
   const helpBits = (
     <>
-      <p className={cn("text-center text-muted-foreground", side && "text-lg")}>
-        {help ?? copy.idCameraHelp}
-      </p>
+      {reviewsNow ? null : (
+        <p className={cn("text-center text-muted-foreground", side && "text-lg")}>
+          {help ?? copy.idCameraHelp}
+        </p>
+      )}
       {busy && shot ? <PhotoProgress kind={kind} /> : null}
+      {reviewsNow ? <ReviewTicker /> : null}
     </>
   );
   const moreBits = (
@@ -690,7 +697,7 @@ export function IdCamera({
             {aside ? ` ${copy.jumboWords.phone}.` : null}
           </p>
           {busy && shot ? <PhotoProgress kind={kind} /> : null}
-          {aside}
+          {reviewsNow ? <ReviewTicker /> : aside}
         </div>
         {/* The camera picture and Take photo fill the rest of the card. */}
         <div className="flex min-h-0 flex-col gap-[2cqmin]">

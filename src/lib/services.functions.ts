@@ -445,6 +445,7 @@ export const saveKioskLook = createServerFn({ method: "POST" })
         kioskTouch: z.enum(["standard", "expanded"]),
         kioskFlash: z.boolean().optional(),
         kioskSounds: z.boolean().optional(),
+        kioskReviews: z.boolean().optional(),
       })
       .parse(d),
   )
@@ -461,6 +462,7 @@ export const saveKioskLook = createServerFn({ method: "POST" })
       kioskTouch: data.kioskTouch,
       ...(data.kioskFlash === undefined ? {} : { kioskFlash: data.kioskFlash }),
       ...(data.kioskSounds === undefined ? {} : { kioskSounds: data.kioskSounds }),
+      ...(data.kioskReviews === undefined ? {} : { kioskReviews: data.kioskReviews }),
     });
     const { error } = await context.supabase
       .from("properties")

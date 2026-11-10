@@ -170,6 +170,15 @@ export const JOBS: Job[] = branded([
     runnable: false,
     startsOff: true,
   },
+  {
+    key: "review_import",
+    name: "Reviews for door tablets with Firecrawl",
+    kind: "on_use",
+    what: "Reads the reviews on hosts' own listing pages through Firecrawl (FIRECRAWL_API_KEY, paid per page) when a host taps Fetch reviews, so the door tablet can show their best ones while an ID is checked. Off: the button says reviews can't be fetched yet.",
+    metric: "firecrawl:reviews",
+    runnable: false,
+    startsOff: true,
+  },
 ]);
 
 export type JobSetting = {

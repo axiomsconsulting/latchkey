@@ -89,6 +89,9 @@ import { onKioskPing } from "@/lib/kiosk-ping";
 import { dayProgress, kioskNow } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { getTestSamples } from "@/lib/test-stay.functions";
+import { kioskReviews } from "@/lib/kiosk-reviews.functions";
+import { KioskReviewsContext } from "@/components/guest/KioskReviews";
+import type { KioskReview } from "@/lib/kiosk-reviews";
 import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
 import { listenForKioskSounds, setKioskFlash, setKioskSounds } from "@/lib/kiosk-sound";
 import { deviceToken, keepDeviceToken, readFix } from "@/lib/kiosk-presence";
@@ -915,6 +918,25 @@ function Kiosk() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [test, p.code]);
+  // The property's best reviews, shown while an ID is checked (host's setting; shared tablets only).
+  const reviewsFn = useServerFn(kioskReviews);
+  const [reviews, setReviews] = useState<KioskReview[]>([]);
+  const reviewsOn = !personal && p.theme.kioskReviews;
+  useEffect(() => {
+    if (!reviewsOn) return setReviews([]);
+    let live = true;
+    const load = () =>
+      reviewsFn({ data: { code: p.code } })
+        .then((r) => live && setReviews(r.reviews))
+        .catch(() => undefined);
+    void load();
+    const id = window.setInterval(() => void load(), 30 * 60_000);
+    return () => {
+      live = false;
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewsOn, p.code]);
   const firstSession = useRef(session);
   useEffect(() => {
     if (session === firstSession.current || !test) return;
@@ -1506,36 +1528,38 @@ function Kiosk() {
           {join ? (
             <JoinCheckIn share={join} />
           ) : (
-            <TestSamplesContext.Provider value={samples}>
-              <CheckInFlow
-                key={session}
-                property={p}
-                hostPhone={p.hostPhone}
-                kiosk={shared}
-                resumeToken={personal ? (resume ?? null) : null}
-                onWelcome={setAtWelcome}
-                onStep={(k: string) => {
-                  setStepKey(k);
-                  // …and got all the way to "you're checked in".
-                  if (tour && k.startsWith("done:")) trackEvent("tour_complete");
-                  // Checked in: the welcome for them comes off.
-                  if (k.startsWith("done:")) reloadWelcome();
-                }}
-                welcomeStart={shared ? welcomeStart : null}
-                onDone={
-                  shared
-                    ? () => {
-                        setWelcomeStart(null);
-                        setSession((n) => n + 1);
-                        bump();
-                      }
-                    : undefined
-                }
-                qrPanel={!jumbo && saverLook.defaults.qrStyle === "panel"}
-                jumbo={jumbo}
-                {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
-              />
-            </TestSamplesContext.Provider>
+            <KioskReviewsContext.Provider value={reviews}>
+              <TestSamplesContext.Provider value={samples}>
+                <CheckInFlow
+                  key={session}
+                  property={p}
+                  hostPhone={p.hostPhone}
+                  kiosk={shared}
+                  resumeToken={personal ? (resume ?? null) : null}
+                  onWelcome={setAtWelcome}
+                  onStep={(k: string) => {
+                    setStepKey(k);
+                    // …and got all the way to "you're checked in".
+                    if (tour && k.startsWith("done:")) trackEvent("tour_complete");
+                    // Checked in: the welcome for them comes off.
+                    if (k.startsWith("done:")) reloadWelcome();
+                  }}
+                  welcomeStart={shared ? welcomeStart : null}
+                  onDone={
+                    shared
+                      ? () => {
+                          setWelcomeStart(null);
+                          setSession((n) => n + 1);
+                          bump();
+                        }
+                      : undefined
+                  }
+                  qrPanel={!jumbo && saverLook.defaults.qrStyle === "panel"}
+                  jumbo={jumbo}
+                  {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
+                />
+              </TestSamplesContext.Provider>
+            </KioskReviewsContext.Provider>
           )}
           {jumbo ? (
             // Jumbo: the welcome card screen's status bar. Steps put Ask host and other ways here.

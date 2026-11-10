@@ -1,3 +1,4 @@
+import { ReviewRefreshAdmin } from "@/components/host/ReviewRefreshAdmin";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -278,6 +279,11 @@ function AdminPage() {
               { id: "whatsapp", title: titles.whatsapp, node: <WhatsAppAdmin /> },
               { id: "drive", title: titles.drive, node: <DriveAdmin /> },
               { id: "smartthings", title: titles.smartthings, node: <SmartThingsAdmin /> },
+              {
+                id: "reviewRefresh",
+                title: titles.reviewRefresh,
+                node: <ReviewRefreshAdmin />,
+              },
               { id: "integrations", title: titles.integrations, node: <IntegrationsAdmin /> },
               { id: "routines", title: titles.routines, node: <RoutinesAdmin /> },
               { id: "updates", title: titles.updates, node: <AppUpdatesAdmin /> },

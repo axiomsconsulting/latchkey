@@ -110,11 +110,8 @@ function RoutineCard({
             key: job.key,
             enabled: next.enabled ?? enabled,
             everyMinutes:
-              next.everyMinutes !== undefined
-                ? next.everyMinutes
-                : job.kind === "scheduled"
-                  ? every
-                  : null,
+              // Kept as it was (an on-use routine may hold its own gap, like reviews' days).
+              next.everyMinutes !== undefined ? next.everyMinutes : every,
           },
         }),
       () => copy.saved,

@@ -47,6 +47,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.147.0",
+    date: "2026-11-10",
+    title: "Your best reviews while an ID is checked",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "While a guest's ID or selfie is checked, the door tablet can show your best reviews under the progress bar, one after another: quick when there are plenty, slower when there are a few. Turn it on and fetch them in Settings → Door tablets → Reviews on the door tablet.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Reviews are read from the listing links on your property and its rooms. Only 5-star (or 9+ out of 10) reviews are kept, and only a positive part of each is shown, word for word, with the guest's first name, their rating and the date. Hide any you'd rather not show.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin → System → Reviews for door tablets: how often reviews are read again (every 7 days unless changed) and Fetch now for chosen properties or all of them.",
+      },
+    ],
+  },
+  {
     version: "0.146.0",
     date: "2026-11-10",
     title: "Next destination in one tap",

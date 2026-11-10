@@ -474,6 +474,13 @@ export async function runRetentionSweep(): Promise<number> {
   // Phone links for check-in photos (photo-handoff.ts) end after 30 minutes.
   const { purgeHandoffs } = await import("./photo-handoff.server");
   await purgeHandoffs().catch(() => 0);
+  // Door tablet reviews: read again every N days (Latchkey admin) for properties showing them.
+  try {
+    const { refreshReviews } = await import("./kiosk-reviews.server");
+    await refreshReviews({ only: null, dueOnly: true, limit: 10 });
+  } catch (e) {
+    console.error("Review refresh failed", e instanceof Error ? e.message : e);
+  }
   // Check-ins moving between tablet and phone (migration 0100): a day after their last change.
   await db
     .from("checkin_handoffs")
