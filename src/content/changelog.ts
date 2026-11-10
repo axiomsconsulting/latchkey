@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.148.0",
+    date: "2026-11-10",
+    title: "Tidier settings, screen fit on each tablet, start-up screen",
+    items: [
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Settings sections no longer repeat their header inside: the title and one line say what each is for. Sections have more space between them and an even border, and cards within a section are joined by a line.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Each door tablet's \"Where's the front camera?\" card flips over to its screen fit: move, size, zoom, fine tuning and reset in the same card. The separate screen fit section is gone.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: 'When a door tablet starts, it shows your logo and name with "Auto calibrating…" while it lines up its screen, then "Ready". It never makes the tablet slower to use.',
+      },
+    ],
+  },
+  {
     version: "0.147.0",
     date: "2026-11-10",
     title: "Your best reviews while an ID is checked",

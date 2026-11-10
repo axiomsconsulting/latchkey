@@ -86,7 +86,7 @@ export function ArrangedSections({
   const allOpen = visible.every(opened);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-5">
       {visible.length > 1 ? (
         <div className="flex justify-end gap-3">
           <button
@@ -120,7 +120,7 @@ export function ArrangedSections({
               "scroll-mt-24",
               // One piece: the header on top, its section joined underneath in the same outline.
               ids.length > 1 &&
-                "overflow-hidden rounded-2xl border border-border border-l-4 border-l-primary bg-card shadow-soft",
+                "overflow-hidden rounded-2xl border border-border bg-card shadow-soft",
             )}
             draggable={handle === id}
             onDragStart={() => {
@@ -196,9 +196,9 @@ export function ArrangedSections({
               </div>
             ) : null}
             {seen.current.has(id) ? (
-              <div hidden={!open} data-arranged-body={ids.length > 1 ? "" : undefined}>
+              <SectionBody hidden={!open} joined={ids.length > 1}>
                 {item.node}
-              </div>
+              </SectionBody>
             ) : null}
           </div>
         );
@@ -219,5 +219,51 @@ function SectionIcon({
     <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-card text-primary sm:size-8">
       <Icon className="size-[18px]" aria-hidden />
     </span>
+  );
+}
+
+/**
+ * A section's contents under its joined header. The header already names the section and
+ * says what it's for, so the card's own first heading, the line under it and its icon box
+ * are marked as repeats (styles.css hides them; an (i) or buttons in the heading row stay).
+ * Cards that load later are marked when their heading appears.
+ */
+function SectionBody({
+  hidden,
+  joined,
+  children,
+}: {
+  hidden: boolean;
+  joined: boolean;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !joined) return;
+    const mark = () => {
+      const h = el.querySelector("h2");
+      if (!h || h.hasAttribute("data-dup-title")) return !!h;
+      h.setAttribute("data-dup-title", "");
+      const next = h.nextElementSibling;
+      if (next?.tagName === "P") next.setAttribute("data-dup-intro", "");
+      // The card's icon box in the heading row: the first thing beside the heading's block.
+      const row = h.parentElement?.parentElement;
+      const icon = row?.firstElementChild;
+      if (icon && icon !== h.parentElement && icon.tagName === "SPAN" && icon.querySelector("svg"))
+        icon.setAttribute("data-dup-icon", "");
+      return true;
+    };
+    if (mark()) return;
+    const mo = new MutationObserver(() => {
+      if (mark()) mo.disconnect();
+    });
+    mo.observe(el, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, [joined]);
+  return (
+    <div ref={ref} hidden={hidden} data-arranged-body={joined ? "" : undefined}>
+      {children}
+    </div>
   );
 }

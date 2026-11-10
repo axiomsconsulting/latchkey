@@ -66,7 +66,6 @@ import { DoorCodesSettings } from "@/components/host/DoorCodesSettings";
 import { StayAccessSettings } from "@/components/host/StayAccessSettings";
 import { ReviewSettings } from "@/components/host/ReviewSettings";
 import { CheckinJourney } from "@/components/host/CheckinJourney";
-import { KioskCalibration } from "@/components/host/KioskCalibration";
 import { DoorTablets } from "@/components/host/DoorTablets";
 import { KioskLookSettings } from "@/components/host/KioskLookSettings";
 import { KioskRestSettings } from "@/components/host/KioskRestSettings";
@@ -99,6 +98,7 @@ const FOCUS = [
   "kioskTablets",
   "kioskLook",
   "kioskReviews",
+  // Old links: redirected to kioskTablets (screen fit is on each tablet's card).
   "kioskScreen",
   "goodbye",
   "welcomeCards",
@@ -131,7 +131,6 @@ const ADVANCED = new Set([
   "privacy",
   "messages",
   "kioskLook",
-  "kioskScreen",
   "api",
   "shortcuts",
   "shortcuts2",
@@ -161,7 +160,6 @@ const OWN_CARD = new Set([
   "kioskLook",
   "kioskLook",
   "kioskReviews",
-  "kioskScreen",
   "goodbye",
   "welcomeCards",
   "money",
@@ -235,6 +233,9 @@ function SettingsPage() {
     // Booking sites' names and icons live with the calendar links now.
     if (focus === "labels")
       void navigate({ to: "/app/connections", search: { focus: "sites" }, replace: true });
+    // Screen fit is on the back of each tablet's camera card now.
+    if (focus === "kioskScreen")
+      void navigate({ to: "/app/settings", search: { focus: "kioskTablets" }, replace: true });
   }, [focus, navigate]);
   const { isOwner, canWrite: canWriteHost } = useRole();
   const save = useServerFn(saveHost);
@@ -818,15 +819,6 @@ function SettingsPage() {
                     theme_config?: unknown;
                   }
                 }
-              />
-            </div>
-          ) : null}
-        </Section>
-        <Section id="kioskScreen">
-          {themedProperty ? (
-            <div id="settings-kioskScreen" className="scroll-mt-24 rounded-2xl">
-              <KioskCalibration
-                property={themedProperty as unknown as { id: string; short_code: string }}
               />
             </div>
           ) : null}

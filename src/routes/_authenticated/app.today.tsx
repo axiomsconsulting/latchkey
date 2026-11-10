@@ -1564,7 +1564,7 @@ function KioskCard({
         </Peek>
         {canWrite ? (
           <Peek content={<p>{checkinSettings.calibration.body}</p>}>
-            <Link to="/app/settings" search={{ focus: "kioskScreen" }} className={tile}>
+            <Link to="/app/settings" search={{ focus: "kioskTablets" }} className={tile}>
               <Maximize2 className="size-4 text-primary" /> {checkinSettings.calibration.open}
             </Link>
           </Peek>

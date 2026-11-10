@@ -138,16 +138,22 @@ export function KioskCalibration({ property }: { property: { id: string; short_c
   );
 }
 
-function DeviceCalibration({
+export function DeviceCalibration({
   device,
   index,
   code,
   onSaved,
+  compact = false,
 }: {
   device: KioskDevice;
   index: number;
   code: string;
   onSaved: () => void;
+  /**
+   * The back of a tablet's camera card (DoorTablets): the screen pad and every control in the
+   * card's own width, icon buttons in rows, no renaming (done on the card's front).
+   */
+  compact?: boolean;
 }) {
   const saveFn = useServerFn(saveKioskCalibration);
   const renameFn = useServerFn(renameKioskDevice);
@@ -220,6 +226,66 @@ function DeviceCalibration({
     return <p className="mt-4 rounded-xl bg-muted p-3 text-sm">{copy.noDisplay}</p>;
 
   const step = fine ? 1 : 10;
+  if (compact) {
+    const icon = (label: string, Icon: typeof ArrowUp, f: (a: Area, b: Base) => Area) => (
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="size-9"
+        aria-label={label}
+        title={label}
+        onClick={() => change(f)}
+      >
+        <Icon className="size-4" />
+      </Button>
+    );
+    return (
+      <div className="space-y-2">
+        <ScreenPad base={base} area={area} step={step} onChange={change} />
+        <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-xs">
+          <span className="font-medium">{copy.move}</span>
+          <div className="flex flex-wrap gap-1">
+            {icon(copy.left, ArrowLeft, (a, b) => shift(a, b, -step, 0))}
+            {icon(copy.up, ArrowUp, (a, b) => shift(a, b, 0, -step))}
+            {icon(copy.down, ArrowDown, (a, b) => shift(a, b, 0, step))}
+            {icon(copy.right, ArrowRight, (a, b) => shift(a, b, step, 0))}
+          </div>
+          <span className="font-medium">{copy.size}</span>
+          <div className="flex flex-wrap gap-1">
+            {icon(copy.smaller, Minimize2, (a, b) => scaleArea(a, b, fine ? 0.995 : 0.98))}
+            {icon(copy.larger, Maximize2, (a, b) => scaleArea(a, b, fine ? 1.005 : 1.02))}
+          </div>
+          <span className="font-medium">{copy.zoom}</span>
+          <div className="flex flex-wrap gap-1">
+            {icon(copy.zoomOut, ZoomOut, (a, b) => zoomBy(a, b, fine ? 0.99 : 0.95))}
+            {icon(copy.zoomIn, ZoomIn, (a, b) => zoomBy(a, b, fine ? 1.01 : 1.05))}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+          <label className="flex items-center gap-2 text-xs">
+            <Switch checked={fine} onCheckedChange={setFine} /> {copy.fine}
+          </label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setArea(startArea(base));
+              save(null);
+              toast.success(copy.resetDone);
+            }}
+          >
+            <RotateCcw className="size-4" /> {copy.reset}
+          </Button>
+        </div>
+        <p className="text-xs tabular-nums text-muted-foreground">
+          {copy.wayUp[orientation]} · {calibrated ? copy.calibrated : copy.learned}
+          {state !== "idle" ? ` · ${state === "saving" ? copy.saving : copy.savedAuto}` : ""}
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="mt-4 space-y-4">
       <div className="flex flex-wrap items-end gap-3">
