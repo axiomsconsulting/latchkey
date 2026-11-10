@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { InfoTip } from "@/components/host/InfoTip";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Clock3, KeyRound, Moon, MonitorOff, QrCode, Sparkles } from "lucide-react";
@@ -119,10 +120,16 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
           <div className="space-y-3 rounded-xl border border-border p-3">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <Label htmlFor="kr-smart" className="flex items-center gap-2 text-base">
-                  <Sparkles className="size-4 text-primary" /> {copy.smart}
-                </Label>
-                <p className="text-sm text-muted-foreground">{copy.smartHelp}</p>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="kr-smart" className="flex items-center gap-2 text-base">
+                    <Sparkles className="size-4 text-primary" /> {copy.smart}
+                  </Label>
+                  <InfoTip label={copy.smart}>
+                    <p>{copy.smartHelp}</p>
+                    <p className="mt-2">{copy.wakeHelp}</p>
+                    <p className="mt-2">{copy.wakeAllow}</p>
+                  </InfoTip>
+                </div>
               </div>
               <Switch
                 id="kr-smart"
@@ -130,13 +137,7 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
                 onCheckedChange={(v) => set({ smart: v })}
               />
             </div>
-            {rest.smart ? (
-              <div className="space-y-1.5">
-                <p className="text-sm font-medium">{copy.wakeTitle}</p>
-                <p className="text-xs text-muted-foreground">{copy.wakeHelp}</p>
-                <p className="text-xs text-muted-foreground">{copy.wakeAllow}</p>
-              </div>
-            ) : null}
+            {rest.smart ? <p className="text-sm">{copy.wakeTitle}</p> : null}
           </div>
 
           <div className="space-y-3 rounded-xl border border-border p-3">
@@ -347,10 +348,12 @@ export function KioskRestSettings({ property }: { property: RestProperty }) {
 
           <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-3">
             <div>
-              <Label htmlFor="kr-qr" className="flex items-center gap-2 text-base">
-                <QrCode className="size-4 text-primary" /> {copy.clockQr}
-              </Label>
-              <p className="text-sm text-muted-foreground">{copy.clockQrHelp}</p>
+              <div className="flex items-center gap-1">
+                <Label htmlFor="kr-qr" className="flex items-center gap-2 text-base">
+                  <QrCode className="size-4 text-primary" /> {copy.clockQr}
+                </Label>
+                <InfoTip label={copy.clockQr}>{copy.clockQrHelp}</InfoTip>
+              </div>
             </div>
             <Switch
               id="kr-qr"

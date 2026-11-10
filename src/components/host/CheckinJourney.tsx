@@ -308,8 +308,10 @@ function Cameras({
   ];
   return (
     <div className="rounded-2xl border border-border p-3">
-      <p className="font-medium">{copy.cameras}</p>
-      <p className="text-xs text-muted-foreground">{copy.camerasHelp}</p>
+      <p className="flex items-center gap-1 font-medium">
+        {copy.cameras}
+        <InfoTip label={copy.cameras}>{copy.camerasHelp}</InfoTip>
+      </p>
       <div className="mt-3 flex flex-wrap gap-6">
         {(["idCamera", "selfieCamera"] as const).map((k) => (
           <div key={k} className="space-y-1">
@@ -441,6 +443,11 @@ export function CheckinJourney({ property }: { property: { id: string; short_cod
             <a href={`/kiosk/${property.short_code}`} target="_blank" rel="noopener noreferrer">
               <MonitorSmartphone className="size-4" /> {checkinSettings.openKiosk}
             </a>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/app/today" search={{ card: "testStay" }}>
+              <UserCheck className="size-4" /> {checkinSettings.tryIt}
+            </Link>
           </Button>
           <SaveButton dirty={dirty} busy={busy} onClick={() => void onSave()} />
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { InfoTip } from "@/components/host/InfoTip";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, ShieldCheck } from "lucide-react";
@@ -118,8 +119,9 @@ export function GuestRecordsSettings({
         </Select>
       </div>
 
-      <p className="mt-4 rounded-xl bg-muted p-3 text-sm">
-        {uk ? copy.lawNoteUk : copy.lawNoteElsewhere}
+      <p className="mt-4 flex items-center gap-1 text-sm font-medium">
+        {copy.lawTitle}
+        <InfoTip label={copy.lawTitle}>{uk ? copy.lawNoteUk : copy.lawNoteElsewhere}</InfoTip>
       </p>
     </section>
   );

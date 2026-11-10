@@ -1,3 +1,4 @@
+import { useLandOn } from "@/hooks/use-land-on";
 import { TestStayCard } from "@/components/host/TestStayCard";
 import { useEffect, useState, type ReactNode } from "react";
 import { trackEvent } from "@/lib/track";
@@ -120,6 +121,9 @@ export const Route = createFileRoute("/_authenticated/app/today")({
       },
     ],
   }),
+  // ?card=<id>: lands on that Today card (Settings → Check-in links to "Try the check-in yourself").
+  validateSearch: (s: Record<string, unknown>): { card?: string } =>
+    typeof s["card"] === "string" ? { card: s["card"] } : {},
   component: TodayPage,
 });
 
@@ -149,6 +153,8 @@ function TodayPage() {
   const properties = workspace.data?.properties as Array<{ id: string; name: string }> | undefined;
   const { selectedId, select } = useSelectedProperty(properties);
   const board = usePropertyBoard(selectedId);
+  const { card } = Route.useSearch();
+  useLandOn(card ? `today-${card}` : null, !board.isLoading);
 
   if (workspace.isLoading || board.isLoading) {
     return (

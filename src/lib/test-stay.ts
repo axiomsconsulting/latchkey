@@ -32,3 +32,42 @@ export function surnameLetter(name: string): string {
   const parts = name.trim().split(/\s+/);
   return (parts[parts.length - 1] ?? "").charAt(0).toUpperCase();
 }
+
+/* ----------------------------- sample photos ----------------------------- */
+
+/** How long the kiosk link with the host's sample photos works. */
+export const TEST_LINK_HOURS = 12;
+
+const enc = new TextEncoder();
+async function hmac(secret: string, text: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(`test-samples:${secret}`),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(text)));
+  return btoa(String.fromCharCode(...sig))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+/** The kiosk link's ?test= value: this property's samples, until `expires` (ms). */
+export async function testToken(secret: string, propertyId: string, expires: number) {
+  return `${expires.toString(36)}.${await hmac(secret, `${propertyId}.${expires}`)}`;
+}
+
+/** Whether a ?test= value is this property's and still in time. */
+export async function testTokenValid(
+  secret: string,
+  propertyId: string,
+  token: string,
+  now = Date.now(),
+): Promise<boolean> {
+  const [exp, sig] = token.split(".");
+  const expires = parseInt(exp ?? "", 36);
+  if (!sig || !Number.isFinite(expires) || expires < now) return false;
+  return (await hmac(secret, `${propertyId}.${expires}`)) === sig;
+}

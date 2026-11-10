@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { InfoTip } from "@/components/host/InfoTip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { DoorClosed, KeyRound, Plane } from "lucide-react";
@@ -161,7 +162,10 @@ export function GoodbyeSettings({ property }: { property: { id: string; short_co
               </Select>
             </div>
           </div>
-          <p className="rounded-xl bg-muted p-3 text-sm">{copy.howItEnds}</p>
+          <p className="flex items-center gap-1 text-sm font-medium">
+            {kioskCardsCopy.whenTitle}
+            <InfoTip label={kioskCardsCopy.whenTitle}>{copy.howItEnds}</InfoTip>
+          </p>
           <div className="space-y-2 rounded-xl border border-border p-3">
             <p className="text-sm font-medium">{kioskCardsCopy.todayListOut}</p>
             <TodayCardList property={property} kind="out" />

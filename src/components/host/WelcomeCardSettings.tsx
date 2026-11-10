@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { InfoTip } from "@/components/host/InfoTip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Hand } from "lucide-react";
@@ -101,8 +102,13 @@ export function WelcomeCardSettings({
             />
           </div>
           {/* From the check-in time, never earlier; a booked early check-in starts it at that time. */}
-          <p className="rounded-xl border border-border p-3 text-sm">{copy.whenItStarts}</p>
-          <p className="rounded-xl bg-muted p-3 text-sm">{copy.howItEnds}</p>
+          <p className="flex items-center gap-1 text-sm font-medium">
+            {copy.whenTitle}
+            <InfoTip label={copy.whenTitle}>
+              <p>{copy.whenItStarts}</p>
+              <p className="mt-2">{copy.howItEnds}</p>
+            </InfoTip>
+          </p>
           <div className="space-y-2 rounded-xl border border-border p-3">
             <p className="text-sm font-medium">{copy.todayList}</p>
             <TodayCardList property={property} kind="in" />

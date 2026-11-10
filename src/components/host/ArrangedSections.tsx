@@ -8,6 +8,7 @@ import {
   GripVertical,
 } from "lucide-react";
 
+import { DEFAULT_SECTION_ICON, SECTION_ICONS } from "@/components/host/section-icons";
 import { arrangeCopy as copy } from "@/content/copy";
 import {
   arrangeSections,
@@ -19,7 +20,13 @@ import {
 } from "@/lib/section-layout";
 import { cn } from "@/lib/utils";
 
-export type ArrangedItem = { id: string; title: string; hint?: string; node: ReactNode };
+export type ArrangedItem = {
+  id: string;
+  title: string;
+  hint?: string;
+  node: ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
+};
 
 /**
  * A page of settings as a short list: one line per section, opened by a tap, and
@@ -108,7 +115,13 @@ export function ArrangedSections({
           <div
             key={id}
             id={`section-${id}`}
-            className="scroll-mt-24 space-y-2"
+            data-arranged={ids.length > 1 ? (open ? "open" : "closed") : undefined}
+            className={cn(
+              "scroll-mt-24",
+              // One piece: the header on top, its section joined underneath in the same outline.
+              ids.length > 1 &&
+                "overflow-hidden rounded-2xl border border-border border-l-4 border-l-primary bg-card shadow-soft",
+            )}
             draggable={handle === id}
             onDragStart={() => {
               dragging.current = id;
@@ -127,7 +140,12 @@ export function ArrangedSections({
             }}
           >
             {ids.length > 1 ? (
-              <div className="card-soft flex items-center gap-1 px-2 py-1.5">
+              <div
+                className={cn(
+                  "flex items-center gap-1 bg-secondary px-2 py-1.5",
+                  open && "border-b border-border",
+                )}
+              >
                 <span
                   className="hidden cursor-grab touch-none text-muted-foreground sm:block"
                   aria-hidden
@@ -142,19 +160,20 @@ export function ArrangedSections({
                   onClick={() => save({ ...layout, open: toggleOpen(layout.open, id) })}
                   className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-lg px-1 text-left sm:min-h-10 sm:gap-2"
                 >
-                  <ChevronDown
-                    className={cn(
-                      "size-5 shrink-0 sm:size-4 text-muted-foreground transition-transform",
-                      open && "rotate-180",
-                    )}
-                    aria-hidden
-                  />
-                  <span className="min-w-0">
+                  <SectionIcon id={id} icon={item.icon} />
+                  <span className="min-w-0 flex-1">
                     <span className="block font-medium leading-tight">{item.title}</span>
                     {item.hint ? (
                       <span className="block text-xs text-muted-foreground">{item.hint}</span>
                     ) : null}
                   </span>
+                  <ChevronDown
+                    className={cn(
+                      "size-5 shrink-0 text-muted-foreground transition-transform sm:size-4",
+                      open && "rotate-180",
+                    )}
+                    aria-hidden
+                  />
                 </button>
                 <button
                   type="button"
@@ -176,10 +195,29 @@ export function ArrangedSections({
                 </button>
               </div>
             ) : null}
-            {seen.current.has(id) ? <div hidden={!open}>{item.node}</div> : null}
+            {seen.current.has(id) ? (
+              <div hidden={!open} data-arranged-body={ids.length > 1 ? "" : undefined}>
+                {item.node}
+              </div>
+            ) : null}
           </div>
         );
       })}
     </div>
+  );
+}
+
+function SectionIcon({
+  id,
+  icon,
+}: {
+  id: string;
+  icon?: React.ComponentType<{ className?: string }> | undefined;
+}) {
+  const Icon = icon ?? SECTION_ICONS[id] ?? DEFAULT_SECTION_ICON;
+  return (
+    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-card text-primary sm:size-8">
+      <Icon className="size-[18px]" aria-hidden />
+    </span>
   );
 }

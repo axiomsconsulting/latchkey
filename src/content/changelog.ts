@@ -47,6 +47,38 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.144.0",
+    date: "2026-11-10",
+    title: "Test check-in with sample photos, flash and sounds",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: 'Try the check-in with sample photos: add a photo of your own ID and a selfie on Today\'s "Try the check-in yourself" card, open the kiosk from it, and each photo lines up, comes into focus and is taken by itself, just as with a guest. Settings → Check-in links to the card.',
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Door tablets light the screen white for a moment as each photo is taken, so guests in a dim hallway come out clearly. On by default; switch it off under Settings → Door tablets.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Door tablets give a soft click for buttons, a keyboard tap for letters and dates, a tick for sliders and a shutter sound for photos. On by default; switch it off under Settings → Door tablets.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "When the tablet recognises a face, it draws a head-and-shoulders outline around it, turning green just before the photo is taken.",
+      },
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Each settings section's heading is now joined to its contents, with its own icon and a coloured edge, and longer explanations sit behind an (i) so the choices stay to one line.",
+      },
+    ],
+  },
+  {
     version: "0.143.0",
     date: "2026-11-09",
     title: "Register questions one at a time, and moving between tablet and phone",

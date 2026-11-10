@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Camera, ImageUp, Loader2, SwitchCamera, Timer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,9 @@ import { JumboSlot } from "@/components/guest/JumboSlot";
 import { useKioskStage } from "@/hooks/use-kiosk-stage";
 import type { Spot } from "@/lib/kiosk-camera-spot";
 import { cn } from "@/lib/utils";
+import { kioskFlash, kioskSound } from "@/lib/kiosk-sound";
+import { sampleLook, samplePhase } from "@/lib/test-sample-motion";
+import { useTestSample } from "@/components/guest/TestSamples";
 
 /** Draws the frame no larger than `max` pixels on its longest side. */
 function still(video: HTMLVideoElement, max: number, quality: number, mirror: boolean): string {
@@ -24,6 +28,18 @@ function still(video: HTMLVideoElement, max: number, quality: number, mirror: bo
     ctx.scale(-1, 1);
   }
   ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const url = canvas.toDataURL("image/jpeg", quality);
+  canvas.width = 0;
+  return url;
+}
+
+/** The same, from a picture (a host's sample photo standing in for the camera). */
+function stillOf(img: HTMLImageElement, max: number, quality: number): string {
+  const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.naturalWidth * scale);
+  canvas.height = Math.round(img.naturalHeight * scale);
+  canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
   const url = canvas.toDataURL("image/jpeg", quality);
   canvas.width = 0;
   return url;
@@ -167,20 +183,20 @@ function PhotoProgress({ kind }: { kind: "id" | "face" }) {
   );
 }
 
-/** The ID's edges or the face, drawn over the preview in the video's own pixels (which line up with object-cover). */
+/** The ID's edges or the face, drawn over the preview in the picture's own pixels (which line up with object-cover). */
 function SnapOverlay({
-  video,
+  size,
   shape,
   mirrored,
   whole = false,
 }: {
-  video: HTMLVideoElement | null;
+  size: { w: number; h: number } | null;
   shape: SnapShape;
   mirrored: boolean;
   /** The picture is shown whole (Jumbo), not filling its box. */
   whole?: boolean;
 }) {
-  if (!video?.videoWidth) return null;
+  if (!size?.w) return null;
   const colour = shape.good ? "#22c55e" : "#ffffff";
   const xs = shape.points.map((p) => p.x);
   const ys = shape.points.map((p) => p.y);
@@ -188,10 +204,10 @@ function SnapOverlay({
   const right = Math.max(...xs);
   const top = Math.min(...ys);
   const bottom = Math.max(...ys);
-  const line = Math.max(video.videoWidth / 160, 3);
+  const line = Math.max(size.w / (shape.good ? 110 : 160), 3);
   return (
     <svg
-      viewBox={`0 0 ${video.videoWidth} ${video.videoHeight}`}
+      viewBox={`0 0 ${size.w} ${size.h}`}
       preserveAspectRatio={whole ? "xMidYMid meet" : "xMidYMid slice"}
       className={cn("pointer-events-none absolute inset-0 size-full", mirrored && "-scale-x-100")}
       aria-hidden
@@ -205,18 +221,46 @@ function SnapOverlay({
           strokeLinejoin="round"
         />
       ) : (
-        <ellipse
-          cx={(left + right) / 2}
-          cy={(top + bottom) / 2}
-          rx={((right - left) / 2) * 1.15}
-          ry={((bottom - top) / 2) * 1.35}
+        <path
+          d={faceOutline(left, top, right - left, bottom - top)}
           fill="none"
           stroke={colour}
           strokeWidth={line}
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       )}
     </svg>
   );
+}
+
+/**
+ * A head-and-shoulders outline around a face the detector found, so the guest sees they've
+ * been recognised and the photo is about to be taken: the head (a little taller than the box,
+ * narrowing to the chin), the neck and the tops of the shoulders.
+ */
+function faceOutline(x: number, y: number, w: number, h: number): string {
+  const cx = x + w / 2;
+  const top = y - h * 0.32;
+  const chin = y + h * 1.08;
+  const half = w * 0.62;
+  const cheek = y + h * 0.55;
+  const neck = w * 0.24;
+  const shoulderY = chin + h * 0.32;
+  const shoulder = w * 1.25;
+  return [
+    // Head: crown, temples, cheeks, round chin.
+    `M ${cx} ${top}`,
+    `C ${cx + half * 1.05} ${top}, ${cx + half} ${cheek - h * 0.35}, ${cx + half} ${cheek}`,
+    `C ${cx + half} ${chin - h * 0.12}, ${cx + w * 0.22} ${chin}, ${cx} ${chin}`,
+    `C ${cx - w * 0.22} ${chin}, ${cx - half} ${chin - h * 0.12}, ${cx - half} ${cheek}`,
+    `C ${cx - half} ${cheek - h * 0.35}, ${cx - half * 1.05} ${top}, ${cx} ${top}`,
+    // Neck and shoulders.
+    `M ${cx - neck} ${chin - h * 0.04} L ${cx - neck} ${chin + h * 0.14}`,
+    `Q ${cx - neck} ${shoulderY - h * 0.08}, ${cx - shoulder} ${shoulderY + h * 0.12}`,
+    `M ${cx + neck} ${chin - h * 0.04} L ${cx + neck} ${chin + h * 0.14}`,
+    `Q ${cx + neck} ${shoulderY - h * 0.08}, ${cx + shoulder} ${shoulderY + h * 0.12}`,
+  ].join(" ");
 }
 
 /** Small copies the host keeps: an ID stays readable at 1024px, a face needs far less. */
@@ -273,6 +317,11 @@ export function IdCamera({
   busyLabel?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  // A host's test with sample photos: the picture stands in for the camera (TestSamples.tsx).
+  const sample = useTestSample(kind);
+  const sampleRef = useRef<HTMLImageElement>(null);
+  const [sampleSize, setSampleSize] = useState<{ w: number; h: number } | null>(null);
+  const [flashing, setFlashing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
@@ -288,6 +337,10 @@ export function IdCamera({
   useEffect(() => {
     let cancelled = false;
     setReady(false);
+    if (sample) {
+      setReady(true);
+      return;
+    }
     async function start() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("no camera");
@@ -318,7 +371,7 @@ export function IdCamera({
     };
     // Opens again only when the guest switches camera.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current]);
+  }, [current, sample]);
 
   // The front camera shows like a mirror, so moving feels natural; an ID is always kept the right way round.
   const mirrored = current === "user";
@@ -330,16 +383,74 @@ export function IdCamera({
     if (busy) return setCount(null);
     if (count === 0) {
       setCount(null);
-      capture();
+      take();
       return;
     }
     const t = window.setTimeout(() => setCount(count - 1), 1000);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count, busy]);
-  const snap = useAutoSnap(videoRef, kind, auto && ready && !busy && !shot && count === null, () =>
-    capture(),
+  const snap = useAutoSnap(
+    videoRef,
+    kind,
+    !sample && auto && ready && !busy && !shot && count === null,
+    () => take(),
   );
+  // The sample photo plays a real guest's moment: it comes in tilted and blurred, lines up, sharpens,
+  // gets its outline, holds, and is taken by itself. Once per screen; after that, Take photo replays it.
+  const [sampleRun, setSampleRun] = useState(0);
+  const [sampleMs, setSampleMs] = useState<number | null>(null);
+  const autoPlayed = useRef(false);
+  useEffect(() => {
+    if (!sample || !ready || busy || shot || !sampleSize) return;
+    if (sampleRun === 0 && autoPlayed.current) return;
+    autoPlayed.current = true;
+    const startAt = Date.now();
+    setSampleMs(0);
+    const id = window.setInterval(() => {
+      const ms = Date.now() - startAt;
+      setSampleMs(ms);
+      if (samplePhase(ms) === "take") {
+        window.clearInterval(id);
+        setSampleMs(null);
+        take();
+      }
+    }, 80);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sample, ready, busy, shot, sampleSize, sampleRun]);
+  const phase = sampleMs === null ? null : samplePhase(sampleMs);
+  const sampleShape: SnapShape | null =
+    sample && sampleSize && (phase === "outline" || phase === "hold")
+      ? {
+          kind,
+          good: phase === "hold",
+          points:
+            kind === "id"
+              ? [
+                  { x: sampleSize.w * 0.04, y: sampleSize.h * 0.05 },
+                  { x: sampleSize.w * 0.96, y: sampleSize.h * 0.05 },
+                  { x: sampleSize.w * 0.96, y: sampleSize.h * 0.95 },
+                  { x: sampleSize.w * 0.04, y: sampleSize.h * 0.95 },
+                ]
+              : [
+                  { x: sampleSize.w * 0.36, y: sampleSize.h * 0.24 },
+                  { x: sampleSize.w * 0.64, y: sampleSize.h * 0.24 },
+                  { x: sampleSize.w * 0.64, y: sampleSize.h * 0.58 },
+                  { x: sampleSize.w * 0.36, y: sampleSize.h * 0.58 },
+                ],
+        }
+      : null;
+  const shown = sample ? sampleShape : snap.shape;
+  const say: keyof (typeof copy.autoSnap)["id"] = sample
+    ? phase === "hold"
+      ? "hold"
+      : phase === "outline"
+        ? "look"
+        : kind === "id"
+          ? "small"
+          : "cut_off"
+    : snap.say;
   // Beside the camera only for the front one: the back one is on the other side of the tablet.
   const pointing = !!spot && current === "user";
   // The floating preview only where the host placed the front camera; otherwise the standard
@@ -357,18 +468,67 @@ export function IdCamera({
   }, [jumbo]);
 
   function capture() {
+    const small = SMALL[kind];
+    const img = sampleRef.current;
+    if (sample) {
+      if (!img?.naturalWidth) return;
+      const smallShot = stillOf(img, small.max, small.quality);
+      setShot(smallShot);
+      return onCapture(stillOf(img, 1400, 0.8), smallShot);
+    }
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
     const keepMirror = mirrored && kind === "face";
-    const small = SMALL[kind];
     const smallShot = still(video, small.max, small.quality, keepMirror);
     setShot(smallShot);
     // 1400px is plenty for the reader and quicker to send than a full camera frame.
     onCapture(still(video, 1400, 0.8, keepMirror), smallShot);
   }
 
+  /**
+   * Takes the photo with the shutter sound and, on a door tablet with the flash on, the screen
+   * white at full strength for a moment first, lighting the face or ID in front of it.
+   */
+  function take() {
+    const lit = kioskFlash() && (mirrored || !!sample);
+    if (!lit) {
+      kioskSound("shutter");
+      return capture();
+    }
+    setFlashing(true);
+    window.setTimeout(() => {
+      kioskSound("shutter");
+      capture();
+    }, 180);
+    window.setTimeout(() => setFlashing(false), 480);
+  }
+
   const preview = (
     <>
+      {sample ? (
+        <img
+          ref={sampleRef}
+          src={sample}
+          alt=""
+          onLoad={(e) =>
+            setSampleSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
+          }
+          className={cn(
+            "absolute inset-0 z-[1] size-full bg-black transition-[transform,filter] duration-700 ease-out",
+            jumbo ? "object-contain" : "object-cover",
+          )}
+          style={sampleLook(phase)}
+        />
+      ) : null}
+      {flashing
+        ? createPortal(
+            <div
+              className="pointer-events-none fixed inset-0 z-[2147483647] bg-white"
+              aria-hidden
+            />,
+            document.body,
+          )
+        : null}
       <video
         ref={videoRef}
         // The standard door tablet layout: the picture takes what's left of the card once the words
@@ -402,21 +562,29 @@ export function IdCamera({
           src={shot}
           alt=""
           // As kept: an ID the right way round, a face as the guest saw it.
-          className="absolute inset-0 size-full object-cover"
+          className="absolute inset-0 z-[4] size-full object-cover"
         />
       ) : null}
-      {ready && kind === "id" && !(shot && busy) && !snap.shape ? <IdHint /> : null}
-      {auto && ready && snap.shape && !shot ? (
-        <SnapOverlay
-          video={videoRef.current}
-          shape={snap.shape}
-          mirrored={mirrored}
-          whole={jumbo}
-        />
+      {ready && kind === "id" && !(shot && busy) && !shown && !sample ? <IdHint /> : null}
+      {(auto || sample) && ready && shown && !shot ? (
+        <div className="pointer-events-none absolute inset-0 z-[2]">
+          <SnapOverlay
+            size={
+              sample
+                ? sampleSize
+                : videoRef.current
+                  ? { w: videoRef.current.videoWidth, h: videoRef.current.videoHeight }
+                  : null
+            }
+            shape={shown}
+            mirrored={!sample && mirrored}
+            whole={jumbo}
+          />
+        </div>
       ) : null}
-      {auto && ready && !shot && count === null ? (
-        <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit max-w-[90%] rounded-full bg-black px-4 py-1.5 text-center text-lg text-white">
-          {copy.autoSnap[kind][snap.say]}
+      {(auto || (sample && phase !== null)) && ready && !shot && count === null ? (
+        <p className="pointer-events-none absolute inset-x-0 bottom-3 z-[3] mx-auto w-fit max-w-[90%] rounded-full bg-black px-4 py-1.5 text-center text-lg text-white">
+          {copy.autoSnap[kind][say]}
         </p>
       ) : null}
       {count !== null && count > 0 ? (
@@ -453,8 +621,8 @@ export function IdCamera({
     <Button
       size="touch-xl"
       className="w-full"
-      onClick={() => (timed ? setCount(3) : capture())}
-      disabled={!ready || busy || count !== null}
+      onClick={() => (sample ? setSampleRun((n) => n + 1) : timed ? setCount(3) : take())}
+      disabled={!ready || busy || count !== null || phase !== null}
     >
       {busy ? (
         <Loader2 className="size-6 animate-spin" />

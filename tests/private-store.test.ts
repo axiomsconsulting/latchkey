@@ -35,10 +35,10 @@ describe("private files", () => {
     expect(readRef("booking/id-1.jpg")).toEqual({ where: "legacy", path: "booking/id-1.jpg" });
   });
 
-  it("keep guests, partner IDs, partner agreements and stay agreements in separate folders", () => {
+  it("keep guests, partner IDs, partner agreements, stay agreements and hosts' test samples in separate folders", () => {
     expect(STORE_GROUPS.guest_id.key).toBe(STORE_GROUPS.guest_face.key);
     expect(STORE_GROUPS.stay_signature.key).toBe(STORE_GROUPS.stay_agreement.key);
-    expect(new Set(Object.values(STORE_GROUPS).map((g) => g.key)).size).toBe(4);
+    expect(new Set(Object.values(STORE_GROUPS).map((g) => g.key)).size).toBe(5);
     expect(ownerFolderName("host-1", "The Hill/Suites")).toBe("host-1 · The Hill-Suites");
   });
 
@@ -46,9 +46,10 @@ describe("private files", () => {
     expect(refAllowed("guest_ids", "id_photo_path")).toBe(true);
     expect(refAllowed("partner_agreement_acceptances", "pdf_path")).toBe(true);
     expect(refAllowed("stay_agreements", "signature_path")).toBe(true);
+    expect(refAllowed("test_check_in_samples", "id_ref")).toBe(true);
     expect(refAllowed("stay_agreements", "rendered_text")).toBe(false);
     expect(refAllowed("bookings", "guest_full_name")).toBe(false);
-    expect(Object.keys(REF_COLUMNS)).toHaveLength(4);
+    expect(Object.keys(REF_COLUMNS)).toHaveLength(5);
   });
 
   it("make safe file names", () => {
