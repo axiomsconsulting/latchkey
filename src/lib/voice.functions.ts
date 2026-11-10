@@ -78,6 +78,41 @@ export const voiceIntent = createServerFn({ method: "POST" })
     return { intent: await aiIntent(data.transcript, data.expected, p.host_id) };
   });
 
+/**
+ * Cloud listening: a door tablet whose browser can't listen sends one short recording of the
+ * guest's reply; it comes back as text. Only while the host has voice check-in on.
+ */
+export const voiceTranscribe = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        code: z.string().min(1).max(80),
+        audio: z.string().max(1_500_000),
+        mime: z
+          .string()
+          .regex(/^audio\/[a-z0-9.+-]+(;[a-z0-9=.,+ -]*)?$/i)
+          .max(60),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: p } = await (supabaseAdmin as any)
+      .from("properties")
+      .select("host_id, theme_config")
+      .eq("short_code", data.code.toLowerCase())
+      .maybeSingle();
+    if (!p || (p.theme_config as { kioskVoice?: unknown } | null)?.kioskVoice !== true)
+      return { text: null };
+    const { jobAllowed, bumpUsage } = await import("./usage.server");
+    if (!(await jobAllowed("voice_ai"))) return { text: null };
+    const bytes = Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0));
+    const { transcribeReply } = await import("./studio-voices.server");
+    const text = await transcribeReply(bytes, data.mime.split(";")[0]!);
+    await bumpUsage(p.host_id, "ai:voice_listen");
+    return { text };
+  });
+
 /* ------------------------- Latchkey admin: studio voices ------------------------- */
 
 async function superAdmin(supabase: unknown) {

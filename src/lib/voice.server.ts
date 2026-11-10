@@ -29,13 +29,22 @@ export async function voicePlanAllowed(hostId: string): Promise<boolean> {
 export async function voiceFor(
   hostId: string,
   theme: ThemeConfig,
-): Promise<{ gender: "female" | "male"; clips: Record<string, string> } | null> {
+): Promise<{
+  gender: "female" | "male";
+  clips: Record<string, string>;
+  /** Cloud listening is available for tablets that can't listen themselves. */
+  cloudEar: boolean;
+} | null> {
   if (!theme.kioskVoice) return null;
   try {
     if (!(await voicePlanAllowed(hostId))) return null;
     // The studio recordings for that voice, where Latchkey admin has made them.
-    const { clipsFor } = await import("./studio-voices.server");
-    return { gender: theme.kioskVoiceGender, clips: await clipsFor(theme.kioskVoiceGender) };
+    const { clipsFor, hasStudioKey } = await import("./studio-voices.server");
+    return {
+      gender: theme.kioskVoiceGender,
+      clips: await clipsFor(theme.kioskVoiceGender),
+      cloudEar: await hasStudioKey(),
+    };
   } catch {
     return null;
   }

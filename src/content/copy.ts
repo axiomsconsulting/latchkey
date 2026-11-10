@@ -2289,6 +2289,10 @@ export const guest = branded({
   voiceStop: "Stop the voice concierge",
   voiceListening: "Listening",
   voiceNoMic: "I can't hear you: please tap the screen instead.",
+  voiceTrouble: (why: string, cloud: boolean) =>
+    cloud
+      ? `This tablet can't listen by itself (${why}), so I'm listening another way.`
+      : `This tablet can't listen by itself (${why}). Please tap the screen.`,
   splashCalibrating: "Auto calibrating…",
   splashReady: "Ready",
   jumboId: "Show your ID",
