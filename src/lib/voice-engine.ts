@@ -62,20 +62,57 @@ const BROKEN = new Set([
   "audio-capture",
 ]);
 
+/* ------------------------------ shared audio ------------------------------ */
+
+let shared: AudioContext | null = null;
+
 /**
- * Listening without the browser's speech recognition: watches the microphone's level, records
- * from when someone starts speaking until a short pause, and has it turned into text.
+ * Must run inside a tap (the voice bubble): Android Chrome only lets sound be measured once a
+ * tap has started the page's audio, otherwise every level reads as silence.
+ */
+export function unlockAudio(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return null;
+    shared ??= new Ctor();
+    if (shared.state === "suspended") void shared.resume();
+    return shared;
+  } catch {
+    return null;
+  }
+}
+
+/** The plain microphone (echo cancellation on Android picks the silent "voice call" input). */
+const MIC: MediaStreamConstraints = {
+  audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
+  video: false,
+};
+
+const RECORD_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+
+/**
+ * Listening without the browser's speech recognition. The microphone is only open while
+ * listening (never while the concierge speaks: an open microphone puts Android's sound into
+ * "call" mode, which crackles). Hands free, a level clearly above the room's starts a recording
+ * that stops after a short pause; held (push to talk), it records exactly while the orb is held.
  */
 class CloudEar {
   private stream: MediaStream | null = null;
-  private ctx: AudioContext | null = null;
+  private source: MediaStreamAudioSourceNode | null = null;
   private timer = 0;
   private rec: MediaRecorder | null = null;
   private chunks: Blob[] = [];
-  private paused = true;
+  private listening = false;
+  private holding = false;
   private loudSince = 0;
   private quietSince = 0;
   private startedAt = 0;
+  private silentSince = 0;
+  private warned = false;
+  private opening: Promise<boolean> | null = null;
   constructor(
     private transcribe: (audio: Blob) => Promise<string | null>,
     private heard: (text: string) => void,
@@ -83,88 +120,108 @@ class CloudEar {
     private level: (level: number) => void = () => {},
   ) {}
 
-  async open(): Promise<boolean> {
-    try {
-      // The plain microphone: on Android, echo cancellation picks the "voice call" input, which
-      // many tablets leave silent (a recorder app uses the plain one). It never listens while
-      // speaking, so there's no echo to cancel.
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
-      });
-    } catch {
-      this.trouble("microphone");
-      return false;
-    }
-    const Ctor =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor || typeof MediaRecorder === "undefined") {
-      this.trouble("recorder");
-      return false;
-    }
-    this.ctx = new Ctor();
-    const analyser = this.ctx.createAnalyser();
-    analyser.fftSize = 1024;
-    this.ctx.createMediaStreamSource(this.stream).connect(analyser);
-    void this.ctx.resume().catch(() => undefined);
-    const buf = new Float32Array(analyser.fftSize);
-    let baseline = 0;
-    this.timer = window.setInterval(() => {
-      analyser.getFloatTimeDomainData(buf);
-      const level = loudness(buf);
-      this.level(level);
-      if (this.paused) {
-        baseline = nextBaseline(baseline, level);
-        return;
+  /** Can it work here at all? */
+  static possible(): boolean {
+    return typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+  }
+
+  private async openMic(): Promise<boolean> {
+    if (this.stream) return true;
+    this.opening ??= (async () => {
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia(MIC);
+      } catch {
+        this.trouble("microphone");
+        return false;
       }
-      const now = Date.now();
-      // Louder than the room's own level (a fan, a fridge), however loud the room is.
-      const loud = baseline > 0 && isLoud(level, baseline);
-      if (!this.rec) baseline = nextBaseline(baseline, level);
-      if (!this.rec) {
-        if (loud) {
-          this.loudSince ||= now;
-          if (now - this.loudSince > 150) this.begin();
-        } else this.loudSince = 0;
-        return;
+      const ctx = unlockAudio();
+      if (ctx) {
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 1024;
+        this.source = ctx.createMediaStreamSource(this.stream);
+        this.source.connect(analyser);
+        const buf = new Float32Array(analyser.fftSize);
+        let baseline = 0;
+        window.clearInterval(this.timer);
+        this.timer = window.setInterval(() => {
+          analyser.getFloatTimeDomainData(buf);
+          const level = loudness(buf);
+          this.level(level);
+          this.watch(level, baseline);
+          if (!this.rec) baseline = nextBaseline(baseline, level);
+        }, 60);
       }
-      if (loud) this.quietSince = 0;
-      else this.quietSince ||= now;
-      if ((this.quietSince && now - this.quietSince > 900) || now - this.startedAt > 7000)
-        this.finish();
-    }, 60);
-    return true;
+      return true;
+    })();
+    const ok = await this.opening;
+    this.opening = null;
+    return ok;
+  }
+
+  private closeMic() {
+    window.clearInterval(this.timer);
+    this.source?.disconnect();
+    this.source = null;
+    this.stream?.getTracks().forEach((t) => t.stop());
+    this.stream = null;
+    this.level(0);
+  }
+
+  /** Hands free: start at speech, stop at a pause; and notice a microphone that hears nothing. */
+  private watch(level: number, baseline: number) {
+    if (!this.listening || this.holding) return;
+    const now = Date.now();
+    if (level < 0.002) {
+      this.silentSince ||= now;
+      if (!this.warned && now - this.silentSince > 6000) {
+        this.warned = true;
+        this.trouble("silent");
+      }
+    } else this.silentSince = 0;
+    const loud = baseline > 0 && isLoud(level, baseline);
+    if (!this.rec) {
+      if (loud) {
+        this.loudSince ||= now;
+        if (now - this.loudSince > 150) this.begin();
+      } else this.loudSince = 0;
+      return;
+    }
+    if (loud) this.quietSince = 0;
+    else this.quietSince ||= now;
+    if ((this.quietSince && now - this.quietSince > 900) || now - this.startedAt > 7000)
+      this.finish();
   }
 
   private begin() {
-    if (!this.stream) return;
+    if (!this.stream || this.rec) return;
     this.chunks = [];
-    const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find((t) =>
-      MediaRecorder.isTypeSupported?.(t),
-    );
+    const type = RECORD_TYPES.find((t) => MediaRecorder.isTypeSupported?.(t));
+    let rec: MediaRecorder;
     try {
-      this.rec = new MediaRecorder(this.stream, type ? { mimeType: type } : undefined);
+      rec = new MediaRecorder(this.stream, type ? { mimeType: type } : undefined);
     } catch {
-      this.rec = null;
+      this.trouble("recorder");
       return;
     }
-    this.rec.ondataavailable = (e) => {
+    rec.ondataavailable = (e) => {
       if (e.data.size) this.chunks.push(e.data);
     };
-    this.rec.onstop = () => {
-      const blob = new Blob(this.chunks, { type: this.rec?.mimeType || type || "audio/webm" });
+    rec.onstop = () => {
+      const blob = new Blob(this.chunks, { type: rec.mimeType || type || "audio/webm" });
       this.rec = null;
       this.loudSince = 0;
       this.quietSince = 0;
       // Too short to be words: a cough or a door.
-      if (blob.size < 3000 || this.paused) return;
+      if (blob.size < 2000) return;
       void this.transcribe(blob).then((text) => {
-        if (text?.trim() && !this.paused) this.heard(text);
+        if (text?.trim()) this.heard(text);
+        else if (this.holding === false) this.trouble("no-words");
       });
     };
+    this.rec = rec;
     this.startedAt = Date.now();
     this.quietSince = 0;
-    this.rec.start();
+    rec.start(250);
   }
 
   private finish() {
@@ -175,22 +232,53 @@ class CloudEar {
     }
   }
 
+  async resume() {
+    this.listening = true;
+    this.silentSince = 0;
+    await this.openMic();
+  }
+
+  /** The concierge is about to speak: stop listening and close the microphone. */
   pause() {
-    this.paused = true;
+    this.listening = false;
     if (this.rec) {
-      this.chunks = [];
+      // Dropped: a half-said reply cut off by the concierge isn't worth sending.
+      this.rec.onstop = () => {
+        this.rec = null;
+      };
       this.finish();
     }
+    if (!this.holding) this.closeMic();
   }
-  resume() {
-    this.paused = false;
-    this.loudSince = 0;
+
+  /** Push to talk: records exactly while held. */
+  async holdStart() {
+    this.holding = true;
+    if (!(await this.openMic()) || !this.holding) return;
+    if (this.rec) {
+      this.rec.onstop = () => {
+        this.rec = null;
+      };
+      this.finish();
+    }
+    this.begin();
   }
+
+  holdEnd() {
+    if (!this.holding) return;
+    this.holding = false;
+    // A moment more, so the last word isn't clipped.
+    window.setTimeout(() => {
+      this.finish();
+      if (!this.listening) window.setTimeout(() => this.closeMic(), 300);
+    }, 250);
+  }
+
   close() {
-    this.pause();
-    window.clearInterval(this.timer);
-    this.stream?.getTracks().forEach((t) => t.stop());
-    void this.ctx?.close().catch(() => undefined);
+    this.listening = false;
+    this.holding = false;
+    this.finish();
+    this.closeMic();
   }
 }
 
@@ -352,7 +440,7 @@ export class VoiceEngine {
 
   /** The tablet's own listening doesn't work here: listen through the cloud instead, if we can. */
   private async useCloud(reason: string) {
-    if (reason !== "android") this.ev.onTrouble?.(reason);
+    if (reason !== "android" && reason !== "held") this.ev.onTrouble?.(reason);
     if (this.ear || this.earOpening || !this.ev.transcribe) {
       if (!this.ev.transcribe) this.ev.onNoMic();
       return;
@@ -364,7 +452,7 @@ export class VoiceEngine {
       (why) => this.ev.onTrouble?.(why),
       (level) => this.ev.onLevel?.(level),
     );
-    if (await ear.open()) this.ear = ear;
+    if (CloudEar.possible()) this.ear = ear;
     else this.ev.onNoMic();
     this.earOpening = false;
     this.resumeListening();
@@ -373,7 +461,7 @@ export class VoiceEngine {
   private resumeListening() {
     if (!this.want || this.stopped || this.speaking) return;
     if (this.ear) {
-      this.ear.resume();
+      void this.ear.resume();
       this.ev.onListening(true);
       return;
     }
@@ -439,6 +527,31 @@ export class VoiceEngine {
       this.rec = null;
       void this.useCloud("start");
     }
+  }
+
+  /** Push to talk (the orb held): records exactly while held, through Latchkey's own listening. */
+  async holdStart() {
+    if (this.stopped) return;
+    unlockAudio();
+    this.hush();
+    if (!this.ear && this.ev.transcribe) await this.useCloud("held");
+    try {
+      this.rec?.abort();
+    } catch {
+      /* fine */
+    }
+    this.rec = null;
+    await this.ear?.holdStart();
+    this.ev.onListening(true);
+  }
+
+  holdEnd() {
+    this.ear?.holdEnd();
+  }
+
+  /** Whether push to talk can work here. */
+  get canHold(): boolean {
+    return !!this.ev.transcribe && CloudEar.possible();
   }
 
   stop() {

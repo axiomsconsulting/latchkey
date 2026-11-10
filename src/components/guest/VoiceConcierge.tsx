@@ -13,7 +13,7 @@ import {
   type PhraseKey,
   type VoiceGender,
 } from "@/lib/voice-concierge";
-import { VoiceEngine, voiceSupported } from "@/lib/voice-engine";
+import { VoiceEngine, unlockAudio, voiceSupported } from "@/lib/voice-engine";
 import { voiceIntent, voiceTranscribe } from "@/lib/voice.functions";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,11 @@ export function VoiceStartBubble({ onStart }: { onStart: () => void }) {
   return (
     <button
       type="button"
-      onClick={onStart}
+      onClick={() => {
+        // This tap is what lets an Android tablet measure and record sound later.
+        unlockAudio();
+        onStart();
+      }}
       aria-label={copy.voiceStart}
       title={copy.voiceStart}
       className="group relative grid size-[4.5rem] shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
@@ -78,6 +82,7 @@ export function VoiceConcierge({
   const [beat, setBeat] = useState<"idle" | "speaking" | "listening">("idle");
   // The microphone's level, as a ring round the orb (set directly, many times a second).
   const ring = useRef<HTMLSpanElement>(null);
+  const [holding, setHolding] = useState(false);
   // What it just heard, shown by the orb for a moment, so the guest sees it understood them.
   const [heardText, setHeardText] = useState<string | null>(null);
   useEffect(() => {
@@ -220,25 +225,60 @@ export function VoiceConcierge({
       {heardText ? (
         <p
           role="status"
-          className="fixed bottom-[10.5rem] right-4 z-[60] max-w-[min(22rem,80vw)] rounded-2xl bg-black px-4 py-2 text-base text-white shadow-lg"
+          className="fixed bottom-[13rem] right-4 z-[60] max-w-[min(22rem,80vw)] rounded-2xl bg-black px-4 py-2 text-base text-white shadow-lg"
         >
           {heardText}
         </p>
       ) : null}
+      {/* Hold the orb to talk (it records exactly while held); the × beside it ends voice mode. */}
       <button
         type="button"
         data-voice-corner
+        data-no-sound
+        aria-label={copy.voiceHold}
+        title={copy.voiceHold}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+          setHolding(true);
+          void engine.current?.holdStart();
+        }}
+        onPointerUp={() => {
+          setHolding(false);
+          engine.current?.holdEnd();
+        }}
+        onPointerCancel={() => {
+          setHolding(false);
+          engine.current?.holdEnd();
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-[4.5rem] right-4 z-[60] grid size-20 touch-none select-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+      >
+        <span
+          ref={ring}
+          aria-hidden
+          className="absolute inset-0 rounded-full border-4 border-white transition-transform duration-75"
+        />
+        <Orb className="absolute inset-0" beat={holding ? "listening" : beat} />
+        <Mic className="relative size-7 text-white drop-shadow" aria-hidden />
+        <span className="sr-only" aria-live="polite">
+          {beat === "listening" || holding ? copy.voiceListening : ""}
+        </span>
+      </button>
+      <button
+        type="button"
         onClick={() => end.current()}
         aria-label={copy.voiceStop}
         title={copy.voiceStop}
-        className="fixed bottom-[4.5rem] right-4 z-[60] grid size-20 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+        className="fixed bottom-[10rem] right-3 z-[61] grid size-10 place-items-center rounded-full bg-black text-lg font-bold text-white shadow-lg"
       >
-        <Orb className="absolute inset-0" beat={beat} />
-        <Mic className="relative size-7 text-white drop-shadow" aria-hidden />
-        <span className="sr-only" aria-live="polite">
-          {beat === "listening" ? copy.voiceListening : ""}
-        </span>
+        ×
       </button>
+      {holding ? (
+        <p className="fixed bottom-[4.5rem] right-28 z-[60] rounded-full bg-black px-4 py-2 text-base text-white">
+          {copy.voiceHolding}
+        </p>
+      ) : null}
     </>
   );
 }
