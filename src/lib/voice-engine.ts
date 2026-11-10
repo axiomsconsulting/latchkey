@@ -45,15 +45,74 @@ export class VoiceEngine {
   private speaking = 0;
   private gender: VoiceGender;
   private stopped = false;
+  private clips: Partial<Record<PhraseKey, HTMLAudioElement>> = {};
+  private playing: HTMLAudioElement | null = null;
   constructor(
     gender: VoiceGender,
     private ev: VoiceEvents,
+    /** Studio recordings by phrase (Latchkey admin made them once); the tablet's voice otherwise. */
+    clipUrls: Partial<Record<string, string>> = {},
   ) {
     this.gender = gender;
+    for (const [k, url] of Object.entries(clipUrls)) {
+      if (!url) continue;
+      const a = new Audio(url);
+      a.preload = "auto";
+      this.clips[k as PhraseKey] = a;
+    }
+  }
+
+  /** One studio recording, start to end (or a few seconds' grace if it never says it ended). */
+  private play(a: HTMLAudioElement): Promise<void> {
+    return new Promise((resolve) => {
+      let ended = false;
+      const once = () => {
+        if (ended) return;
+        ended = true;
+        window.clearTimeout(guard);
+        a.onended = null;
+        a.onerror = null;
+        if (this.playing === a) this.playing = null;
+        resolve();
+      };
+      const guard = window.setTimeout(once, 15_000);
+      a.onended = once;
+      a.onerror = once;
+      this.playing = a;
+      try {
+        a.currentTime = 0;
+      } catch {
+        /* not loaded yet */
+      }
+      void a.play().catch(once);
+    });
   }
 
   /** Says phrases one after another (or plain text); resolves when finished or cut short. */
-  say(keys: Array<PhraseKey | { text: string }>): Promise<void> {
+  async say(keys: Array<PhraseKey | { text: string }>): Promise<void> {
+    if (this.stopped || !keys.length) return;
+    // Studio recordings where there are any; the tablet's own voice for the rest.
+    const recorded = keys.every((k) => typeof k === "string" && this.clips[k]);
+    if (recorded) {
+      this.hush();
+      this.pauseListening();
+      this.speaking++;
+      this.ev.onSpeaking(true);
+      for (const k of keys) {
+        if (this.stopped) break;
+        await this.play(this.clips[k as PhraseKey]!);
+      }
+      this.speaking = Math.max(0, this.speaking - 1);
+      if (!this.speaking) {
+        this.ev.onSpeaking(false);
+        this.resumeListening();
+      }
+      return;
+    }
+    return this.speakTts(keys);
+  }
+
+  private speakTts(keys: Array<PhraseKey | { text: string }>): Promise<void> {
     if (this.stopped || !voiceSupported().speak || !keys.length) return Promise.resolve();
     const synth = window.speechSynthesis;
     synth.cancel();
@@ -79,8 +138,24 @@ export class VoiceEngine {
         u.rate = 1;
         // Without a named voice of that kind, a touch higher or lower.
         u.pitch = voice ? 1 : this.gender === "female" ? 1.15 : 0.85;
-        u.onend = finish;
-        u.onerror = finish;
+        // Some tablets never say when a phrase ends (or fail to fetch a voice): it's ended after
+        // about as long as it takes to say, so listening always comes back.
+        let ended = false;
+        const once = () => {
+          if (ended) return;
+          ended = true;
+          window.clearTimeout(guard);
+          finish();
+        };
+        const guard = window.setTimeout(
+          () => {
+            synth.cancel();
+            once();
+          },
+          2500 + u.text.length * 90,
+        );
+        u.onend = once;
+        u.onerror = once;
         synth.speak(u);
       }
     });
@@ -89,6 +164,10 @@ export class VoiceEngine {
   /** Stops talking at once (a new screen, or the guest spoke over it). */
   hush() {
     if (voiceSupported().speak) window.speechSynthesis.cancel();
+    if (this.playing) {
+      this.playing.pause();
+      this.playing.dispatchEvent(new Event("ended"));
+    }
   }
 
   listen() {

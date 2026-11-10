@@ -33,7 +33,11 @@ function Orb({ className, beat }: { className?: string; beat: "idle" | "speaking
 
 /** Beside Check in on the welcome: starts the voice concierge. */
 export function VoiceStartBubble({ onStart }: { onStart: () => void }) {
-  if (!voiceSupported().speak) return null;
+  // Known only in the browser: drawn after the first paint, so the very first welcome has it
+  // too (the server's copy of the page can't tell whether the tablet can speak).
+  const [can, setCan] = useState(false);
+  useEffect(() => setCan(voiceSupported().speak), []);
+  if (!can) return null;
   return (
     <button
       type="button"
@@ -57,15 +61,25 @@ export function VoiceStartBubble({ onStart }: { onStart: () => void }) {
 export function VoiceConcierge({
   code,
   gender,
+  clips,
   stepKey,
   onEnd,
 }: {
   code: string;
   gender: VoiceGender;
+  /** Studio recordings by phrase, when Latchkey admin has made them. */
+  clips?: Record<string, string> | undefined;
   stepKey: string;
   onEnd: () => void;
 }) {
   const [beat, setBeat] = useState<"idle" | "speaking" | "listening">("idle");
+  // What it just heard, shown by the orb for a moment, so the guest sees it understood them.
+  const [heardText, setHeardText] = useState<string | null>(null);
+  useEffect(() => {
+    if (!heardText) return;
+    const t = window.setTimeout(() => setHeardText(null), 3500);
+    return () => window.clearTimeout(t);
+  }, [heardText]);
   const engine = useRef<VoiceEngine | null>(null);
   const listen = useRef<Intent[]>([]);
   const script = useRef<PhraseKey[]>([]);
@@ -85,12 +99,16 @@ export function VoiceConcierge({
 
   // One engine while the concierge is on.
   useEffect(() => {
-    const e = new VoiceEngine(gender, {
-      onSpeaking: (on) => setBeat(on ? "speaking" : "listening"),
-      onListening: (on) => setBeat((b) => (b === "speaking" ? b : on ? "listening" : "idle")),
-      onHeard: (text) => void heard(text),
-      onNoMic: () => undefined,
-    });
+    const e = new VoiceEngine(
+      gender,
+      {
+        onSpeaking: (on) => setBeat(on ? "speaking" : "listening"),
+        onListening: (on) => setBeat((b) => (b === "speaking" ? b : on ? "listening" : "idle")),
+        onHeard: (text) => void heard(text),
+        onNoMic: () => setHeardText(copy.voiceNoMic),
+      },
+      clips ?? {},
+    );
     engine.current = e;
     e.listen();
     // The guest pressed the bubble on the welcome: greet them and start.
@@ -105,6 +123,7 @@ export function VoiceConcierge({
   async function heard(text: string) {
     const e = engine.current;
     if (!e) return;
+    setHeardText(`“${text.trim()}”`);
     // Speaking to the tablet is using it: the kiosk's idle timer (useKioskIdle) counts key presses.
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Unidentified" }));
     const allowed = listen.current;
@@ -182,20 +201,30 @@ export function VoiceConcierge({
   }, []);
 
   return (
-    <button
-      type="button"
-      data-voice-corner
-      onClick={() => end.current()}
-      aria-label={copy.voiceStop}
-      title={copy.voiceStop}
-      className="fixed bottom-[4.5rem] right-4 z-[60] grid size-20 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
-    >
-      <Orb className="absolute inset-0" beat={beat} />
-      <Mic className="relative size-7 text-white drop-shadow" aria-hidden />
-      <span className="sr-only" aria-live="polite">
-        {beat === "listening" ? copy.voiceListening : ""}
-      </span>
-    </button>
+    <>
+      {heardText ? (
+        <p
+          role="status"
+          className="fixed bottom-[10.5rem] right-4 z-[60] max-w-[min(22rem,80vw)] rounded-2xl bg-black px-4 py-2 text-base text-white shadow-lg"
+        >
+          {heardText}
+        </p>
+      ) : null}
+      <button
+        type="button"
+        data-voice-corner
+        onClick={() => end.current()}
+        aria-label={copy.voiceStop}
+        title={copy.voiceStop}
+        className="fixed bottom-[4.5rem] right-4 z-[60] grid size-20 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+      >
+        <Orb className="absolute inset-0" beat={beat} />
+        <Mic className="relative size-7 text-white drop-shadow" aria-hidden />
+        <span className="sr-only" aria-live="polite">
+          {beat === "listening" ? copy.voiceListening : ""}
+        </span>
+      </button>
+    </>
   );
 }
 

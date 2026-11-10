@@ -77,3 +77,65 @@ export const voiceIntent = createServerFn({ method: "POST" })
     const { aiIntent } = await import("./voice.server");
     return { intent: await aiIntent(data.transcript, data.expected, p.host_id) };
   });
+
+/* ------------------------- Latchkey admin: studio voices ------------------------- */
+
+async function superAdmin(supabase: unknown) {
+  const { requireSuperAdmin } = await import("./roles");
+  await requireSuperAdmin(supabase);
+}
+
+export const getStudioVoices = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await superAdmin(context.supabase);
+    const { studioStatus } = await import("./studio-voices.server");
+    return studioStatus();
+  });
+
+export const saveStudioVoiceKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ apiKey: z.string().trim().min(10).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await superAdmin(context.supabase);
+    const { saveStudioKey } = await import("./studio-voices.server");
+    await saveStudioKey(data.apiKey);
+    return { ok: true };
+  });
+
+export const pickStudioVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        gender: z.enum(["female", "male"]),
+        voiceId: z.string().min(1).max(80),
+        name: z.string().min(1).max(80),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await superAdmin(context.supabase);
+    const { chooseStudioVoice } = await import("./studio-voices.server");
+    await chooseStudioVoice(data.gender, data.voiceId, data.name);
+    return { ok: true };
+  });
+
+/** Records the next few phrases for one voice; the admin card calls it until nothing is left. */
+export const recordStudioVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ gender: z.enum(["female", "male"]) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await superAdmin(context.supabase);
+    const { recordSome } = await import("./studio-voices.server");
+    return recordSome(data.gender);
+  });
+
+export const removeStudioVoices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await superAdmin(context.supabase);
+    const { forgetStudioVoices } = await import("./studio-voices.server");
+    await forgetStudioVoices();
+    return { ok: true };
+  });

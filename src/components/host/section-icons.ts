@@ -69,6 +69,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   adminLink: Settings2,
   photos: Camera,
   reviewRefresh: Star,
+  studioVoices: Mic,
 };
 
 export const DEFAULT_SECTION_ICON: LucideIcon = Settings2;

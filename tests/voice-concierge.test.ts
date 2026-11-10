@@ -101,4 +101,12 @@ describe("the tablet's own voices", () => {
     expect(pickVoice(voices, "male")?.name).toBe("Google UK English Male");
     expect(pickVoice([], "male")).toBeNull();
   });
+  it("never a voice the tablet would have to download first", () => {
+    const online = [
+      { name: "Google UK English Female", lang: "en-GB", localService: false },
+      { name: "English United Kingdom", lang: "en-GB", localService: true },
+    ];
+    expect(pickVoice(online, "female")?.name).toBe("English United Kingdom");
+    expect(pickVoice([online[0]!], "female")).toBeNull();
+  });
 });
