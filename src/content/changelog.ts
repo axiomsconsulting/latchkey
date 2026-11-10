@@ -47,6 +47,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.149.0",
+    date: "2026-11-10",
+    title: "Four views on each door tablet's card",
+    items: [
+      {
+        kind: "improved",
+        area: "Settings",
+        text: "Each door tablet's card has four views in one spot: Screen fit, Camera position, Screen preview and Camera view. The camera view switch sits with the camera position, and the screen fit's controls are in one compact box.",
+      },
+    ],
+  },
+  {
     version: "0.148.0",
     date: "2026-11-10",
     title: "Tidier settings, screen fit on each tablet, start-up screen",

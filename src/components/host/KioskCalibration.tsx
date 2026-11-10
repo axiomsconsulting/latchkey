@@ -243,41 +243,41 @@ export function DeviceCalibration({
     return (
       <div className="space-y-2">
         <ScreenPad base={base} area={area} step={step} onChange={change} />
-        <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-xs">
-          <span className="font-medium">{copy.move}</span>
-          <div className="flex flex-wrap gap-1">
-            {icon(copy.left, ArrowLeft, (a, b) => shift(a, b, -step, 0))}
-            {icon(copy.up, ArrowUp, (a, b) => shift(a, b, 0, -step))}
-            {icon(copy.down, ArrowDown, (a, b) => shift(a, b, 0, step))}
-            {icon(copy.right, ArrowRight, (a, b) => shift(a, b, step, 0))}
+        {/* Every control in one box: move; size with zoom beside it; fine steps and reset. */}
+        <div className="space-y-2 rounded-xl border border-border bg-secondary/40 p-2.5">
+          <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-xs">
+            <span className="font-medium">{copy.move}</span>
+            <div className="flex flex-wrap gap-1">
+              {icon(copy.left, ArrowLeft, (a, b) => shift(a, b, -step, 0))}
+              {icon(copy.up, ArrowUp, (a, b) => shift(a, b, 0, -step))}
+              {icon(copy.down, ArrowDown, (a, b) => shift(a, b, 0, step))}
+              {icon(copy.right, ArrowRight, (a, b) => shift(a, b, step, 0))}
+            </div>
+            <span className="font-medium">{copy.size}</span>
+            <div className="flex flex-wrap gap-1">
+              {icon(copy.smaller, Minimize2, (a, b) => scaleArea(a, b, fine ? 0.995 : 0.98))}
+              {icon(copy.larger, Maximize2, (a, b) => scaleArea(a, b, fine ? 1.005 : 1.02))}
+              {icon(copy.zoomOut, ZoomOut, (a, b) => zoomBy(a, b, fine ? 0.99 : 0.95))}
+              {icon(copy.zoomIn, ZoomIn, (a, b) => zoomBy(a, b, fine ? 1.01 : 1.05))}
+            </div>
           </div>
-          <span className="font-medium">{copy.size}</span>
-          <div className="flex flex-wrap gap-1">
-            {icon(copy.smaller, Minimize2, (a, b) => scaleArea(a, b, fine ? 0.995 : 0.98))}
-            {icon(copy.larger, Maximize2, (a, b) => scaleArea(a, b, fine ? 1.005 : 1.02))}
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
+            <label className="flex items-center gap-2 text-xs">
+              <Switch checked={fine} onCheckedChange={setFine} /> {copy.fine}
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setArea(startArea(base));
+                save(null);
+                toast.success(copy.resetDone);
+              }}
+            >
+              <RotateCcw className="size-4" /> {copy.reset}
+            </Button>
           </div>
-          <span className="font-medium">{copy.zoom}</span>
-          <div className="flex flex-wrap gap-1">
-            {icon(copy.zoomOut, ZoomOut, (a, b) => zoomBy(a, b, fine ? 0.99 : 0.95))}
-            {icon(copy.zoomIn, ZoomIn, (a, b) => zoomBy(a, b, fine ? 1.01 : 1.05))}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
-          <label className="flex items-center gap-2 text-xs">
-            <Switch checked={fine} onCheckedChange={setFine} /> {copy.fine}
-          </label>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setArea(startArea(base));
-              save(null);
-              toast.success(copy.resetDone);
-            }}
-          >
-            <RotateCcw className="size-4" /> {copy.reset}
-          </Button>
         </div>
         <p className="text-xs tabular-nums text-muted-foreground">
           {copy.wayUp[orientation]} · {calibrated ? copy.calibrated : copy.learned}
@@ -625,14 +625,13 @@ function ScreenPad({
           </>
         ) : null}
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">{active ? copy.drag : copy.lockedHint}</p>
-        {active ? (
+      {active ? (
+        <div className="flex justify-end">
           <Button size="sm" variant="outline" onClick={() => setActive(false)}>
             {copy.doneAdjusting}
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
