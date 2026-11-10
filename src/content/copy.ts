@@ -1114,6 +1114,47 @@ export const demoDefaultsCopy = branded({
   needsUpdate: "This needs the latest update (migration 0094).",
 });
 
+export const reviewRefreshCopy = branded({
+  title: "Reviews for door tablets",
+  info: "Properties that show reviews on their door tablet have them read again from their listing links once this many days have passed since the last read, during the daily clean-up (up to 10 properties a day). Each read uses up to 8 Firecrawl pages per property, so a longer gap means less Firecrawl use. Fetch now reads the chosen properties straight away, whether or not they show reviews yet.",
+  every: "Read reviews again every",
+  days: "days",
+  saved: "Saved",
+  off: 'Off: switch on "Reviews for door tablets with Firecrawl" in Routines (and check the Firecrawl key).',
+  all: (n: number) => `All properties with listing links (${n})`,
+  now: (n: number) => (n ? `Fetch now (${n})` : "Fetch now"),
+  done: (done: number, failed: number, skipped: number) =>
+    [
+      `${done} read`,
+      failed ? `${failed} couldn't be read` : "",
+      skipped ? `${skipped} left for later (20 at a time)` : "",
+    ]
+      .filter(Boolean)
+      .join(", "),
+  showing: "Showing",
+  notShowing: "Not showing",
+  last: (date: string, kept: number) => `read ${date}, ${kept} kept`,
+  never: "never read",
+  none: "No property has listing links yet.",
+});
+
+export const kioskReviewsCopy = branded({
+  title: "Reviews on the door tablet",
+  info: "While a guest's ID or selfie is being checked (a few seconds), the door tablet shows your best reviews under the progress bar, one after another: quick when there are plenty, slower when there are only a few. They're read from the listing links on your property and its rooms, only 5-star (or 9 and up out of 10) reviews are kept, and only a positive part of each is shown, word for word, with the guest's first name, their rating and the date. Hide any you'd rather not show.",
+  show: "Show reviews while photos are checked",
+  fetch: "Fetch reviews",
+  fetched: (n: number, pages: number) =>
+    n
+      ? `${n} top reviews from ${pages} page${pages === 1 ? "" : "s"}`
+      : `No top reviews found on ${pages} page${pages === 1 ? "" : "s"}`,
+  count: (shown: number, all: number) => `${shown} of ${all} shown`,
+  none: "No reviews yet: fetch them from your listing links.",
+  notReady: "Fetching reviews isn't switched on yet.",
+  hide: "Hide",
+  showIt: "Show",
+  needsUpdate: "This needs the latest update (migration 0102).",
+});
+
 export const testStayCopy = branded({
   body: "Check in as a guest under your own name, to see what they see. It shows on Bookings as a test, doesn't block any room or show on any calendar, and sends no guest messages. Reset removes it with its photos and every record it made.",
   name: "Your name, as on your ID",
@@ -4929,6 +4970,7 @@ export const settingsMenuCopy = branded({
     welcomeCards: ["Jumbo welcome cards", "kiosk"],
     goodbye: ["Jumbo goodbye cards", "kiosk"],
     kioskLook: ["Door tablet look", "kiosk"],
+    kioskReviews: ["Reviews on the door tablet", "kiosk"],
     kioskScreen: ["Door tablet screen fit", "kiosk"],
     payments: ["Card payments", "money"],
     money: ["Tax, bank details and away", "money"],
@@ -4962,6 +5004,7 @@ export const settingsMenuCopy = branded({
     welcomeCards: "A card for each guest arriving today.",
     goodbye: "A card for each guest leaving today.",
     kioskLook: "Look, button size, flash and sounds.",
+    kioskReviews: "Your best reviews while an ID is checked.",
     kioskScreen: "Line the screen up on a tablet that doesn't fit.",
     payments: "Connect Stripe to take card payments.",
     money: "Tax details, your bank account and away dates.",
@@ -6712,6 +6755,7 @@ export const adminArrangeTitles = branded({
   integrations: "Alerts and other connections",
   drive: "Google Drive",
   smartthings: "Room lights",
+  reviewRefresh: "Reviews for door tablets",
   routines: "Routines",
   updates: "App updates",
   tools: "Tools for the business being viewed",

@@ -1,3 +1,4 @@
+import { KioskReviewsSettings } from "@/components/host/KioskReviewsSettings";
 import { useEffect, useState } from "react";
 import { PageSections, Section } from "@/components/PageSections";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -97,6 +98,7 @@ const FOCUS = [
   "kioskRest",
   "kioskTablets",
   "kioskLook",
+  "kioskReviews",
   "kioskScreen",
   "goodbye",
   "welcomeCards",
@@ -158,6 +160,7 @@ const OWN_CARD = new Set([
   "kioskTablets",
   "kioskLook",
   "kioskLook",
+  "kioskReviews",
   "kioskScreen",
   "goodbye",
   "welcomeCards",
@@ -785,6 +788,21 @@ function SettingsPage() {
             <div id="settings-kioskTablets" className="scroll-mt-24 rounded-2xl">
               <DoorTablets
                 property={themedProperty as unknown as { id: string; short_code: string }}
+              />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="kioskReviews">
+          {themedProperty ? (
+            <div id="settings-kioskReviews" className="scroll-mt-24 rounded-2xl">
+              <KioskReviewsSettings
+                property={
+                  themedProperty as unknown as {
+                    id: string;
+                    short_code: string;
+                    theme_config?: unknown;
+                  }
+                }
               />
             </div>
           ) : null}

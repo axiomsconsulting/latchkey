@@ -101,6 +101,8 @@ export type ThemeConfig = {
   kioskFlash: boolean;
   /** Door tablets: a soft click for buttons, keys, sliders and the camera (on by default; kiosk-sound.ts). */
   kioskSounds: boolean;
+  /** Door tablets: the property's best reviews scroll by while an ID or selfie is checked (off by default; kiosk-reviews.ts). */
+  kioskReviews: boolean;
   /** The door tablet's look: XL (bold cards, full screen), standard, or Latchkey's default (kiosk-xl.ts). */
   kioskLook: "auto" | "standard" | "xl" | "jumbo";
 };
@@ -143,6 +145,7 @@ const base = {
   kioskTouch: "standard",
   kioskFlash: true,
   kioskSounds: true,
+  kioskReviews: false,
   kioskLook: "auto",
 } as const satisfies Partial<ThemeConfig>;
 
@@ -537,6 +540,7 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     kioskTouch: pick(r.kioskTouch, ["standard", "expanded"] as const, "standard"),
     kioskFlash: typeof r.kioskFlash === "boolean" ? r.kioskFlash : true,
     kioskSounds: typeof r.kioskSounds === "boolean" ? r.kioskSounds : true,
+    kioskReviews: r.kioskReviews === true,
     kioskLook: pick(r.kioskLook, ["auto", "standard", "xl", "jumbo"] as const, "auto"),
   };
 }

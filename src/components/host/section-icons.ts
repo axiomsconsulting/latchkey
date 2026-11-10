@@ -53,6 +53,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   welcomeCards: Hand,
   goodbye: DoorOpen,
   kioskLook: LayoutTemplate,
+  kioskReviews: Star,
   kioskScreen: ScanFace,
   payments: CreditCard,
   money: Landmark,
@@ -65,6 +66,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   shortcuts2: Smartphone,
   adminLink: Settings2,
   photos: Camera,
+  reviewRefresh: Star,
 };
 
 export const DEFAULT_SECTION_ICON: LucideIcon = Settings2;

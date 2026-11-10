@@ -1352,3 +1352,13 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
   gap: 0.75rem;
   padding: 0.75rem;
 }
+
+/* Reviews while an ID is checked (ReviewTicker), on Jumbo cards: sized like the card's words. */
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-review-ticker] [data-review-quote] {
+  font-size: calc(3.8cqmin * var(--j-fit, 1));
+  color: var(--j-ink);
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-review-ticker] [data-review-by] {
+  font-size: calc(3cqmin * var(--j-fit, 1));
+  color: var(--j-ink);
+}
