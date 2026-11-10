@@ -47,6 +47,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.151.4",
+    date: "2026-11-10",
+    title: "Hold to talk, and clear sound",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Guests can hold the concierge's orb while they talk, and it hears exactly that: the surest way on any tablet. The × beside it ends voice check-in.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The concierge's voice no longer crackles on Android tablets (the microphone is closed while it speaks), and the tap that starts it lets the tablet hear the guest straight away.",
+      },
+    ],
+  },
+  {
     version: "0.151.3",
     date: "2026-11-10",
     title: "Voice check-in hears on Android tablets",

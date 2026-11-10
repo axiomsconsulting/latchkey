@@ -141,7 +141,8 @@ export function listenForKioskSounds(): () => void {
     const el = target?.closest?.(
       'button, a[href], [role="button"], [role="radio"], [role="checkbox"], [role="option"], [role="gridcell"]',
     ) as HTMLElement | null;
-    if (!el) return;
+    // The voice orb records while held: a click would land in the recording.
+    if (!el || el.closest("[data-no-sound]")) return;
     const kind = soundFor({
       tag: el.tagName,
       type: el.getAttribute("type"),

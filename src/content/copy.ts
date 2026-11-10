@@ -2288,6 +2288,9 @@ export const guest = branded({
   voiceStart: "Check in by voice",
   voiceStop: "Stop the voice concierge",
   voiceListening: "Listening",
+  voiceHold: "Hold while you talk",
+  voiceHolding: "Listening… let go when you've finished",
+  voiceHoldHint: "I can't hear you yet: hold the bubble while you talk.",
   voiceNoMic: "I can't hear you: please tap the screen instead.",
   voiceTrouble: (why: string, cloud: boolean) =>
     cloud
