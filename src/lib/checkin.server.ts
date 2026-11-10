@@ -237,6 +237,9 @@ export async function readIdDetails(
                 "Also give nationality_code: the ISO 3166-1 alpha-2 code of the nationality the document prints " +
                 "(as a code, a word or a demonym, for example British citizen is GB), or null when it prints no nationality; " +
                 "and issuing_country_code: the ISO 3166-1 alpha-2 code of the issuing country. " +
+                "If the document prints the holder's home address (driving licences and some ID cards do), give it as " +
+                "home_address on one line, and home_town as its town or city and country in English (for example Lyon, France); " +
+                "otherwise null for both. " +
                 "Use null for anything you cannot read clearly. Do not guess and do not return any other details.",
             },
             { type: "input_image", image_url: imageDataUrl },
@@ -276,6 +279,8 @@ export async function readIdDetails(
               issuing_country_code: { type: ["string", "null"] },
               document_number: { type: ["string", "null"] },
               place_of_issue: { type: ["string", "null"] },
+              home_address: { type: ["string", "null"] },
+              home_town: { type: ["string", "null"] },
             },
             required: [
               "is_id_document",
@@ -292,6 +297,8 @@ export async function readIdDetails(
               "issuing_country_code",
               "document_number",
               "place_of_issue",
+              "home_address",
+              "home_town",
             ],
           },
         },
@@ -373,6 +380,8 @@ export async function readIdDetails(
       issuingCountryCode: code2(p["issuing_country_code"]),
       documentNumber: str(p["document_number"], 40),
       placeOfIssue: str(p["place_of_issue"], 80),
+      homeAddress: str(p["home_address"], 300),
+      homeTown: str(p["home_town"], 120),
     };
   } catch {
     return {

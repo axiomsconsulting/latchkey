@@ -12,6 +12,8 @@ type Problem = "name" | "nationality" | "document" | "place" | "destination";
 export function registerPages(
   show: (k: "name" | "nationality" | "document" | "place" | "destination") => boolean,
   alien: boolean,
+  /** Going home (or not chosen yet): the address comes with home, so there's no page for it. */
+  noAddress = false,
 ): RegisterPage[] {
   const pages: RegisterPage[] = [];
   if (show("name")) pages.push("name");
@@ -19,7 +21,10 @@ export function registerPages(
   if (alien) {
     if (show("document")) pages.push("document");
     if (show("place")) pages.push("place");
-    if (show("destination")) pages.push("destination", "address");
+    if (show("destination"))
+      pages.push(
+        ...(noAddress ? ["destination" as const] : ["destination" as const, "address" as const]),
+      );
   }
   return pages;
 }

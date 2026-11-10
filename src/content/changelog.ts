@@ -47,6 +47,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.146.0",
+    date: "2026-11-10",
+    title: "Next destination in one tap",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest register",
+        text: 'Guests who need to give their next destination answer with one tap: "Going home" uses the home address printed on their driving licence or ID card (shown on the button), or their home country from a passport. Only "Somewhere else" asks them to type, just a town and country.',
+      },
+    ],
+  },
+  {
     version: "0.145.1",
     date: "2026-11-10",
     title: "Passports fill in the register by themselves",

@@ -23,6 +23,14 @@ describe("the register a page at a time", () => {
       "destination",
       "address",
     ]);
+    // Going home: the address comes with it, so there's no address page.
+    expect(registerPages(all, true, true)).toEqual([
+      "name",
+      "nationality",
+      "document",
+      "place",
+      "destination",
+    ]);
     // Read from the ID: only the missing destination is asked.
     expect(registerPages((k) => k === "destination", true)).toEqual(["destination", "address"]);
   });
@@ -87,6 +95,8 @@ describe("one check-in on the tablet and a phone", () => {
           nationality: "BR",
           documentNumber: "X123",
           placeOfIssue: "Rio",
+          homeAddress: null,
+          homeTown: null,
         },
       },
     });

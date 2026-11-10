@@ -118,6 +118,9 @@ type Prefill = {
   nationality: string | null;
   documentNumber: string | null;
   placeOfIssue: string | null;
+  /** Their home address and its town, as printed on a driving licence or ID card. */
+  homeAddress?: string | null;
+  homeTown?: string | null;
   /** From their last stay, for them to confirm. */
   fromLastStay?: boolean;
 };
@@ -2566,6 +2569,7 @@ function RegisterStep({
   const [placeOfIssue, setPlaceOfIssue] = useState(prefill?.placeOfIssue ?? "");
   const [nextDestination, setNextDestination] = useState("");
   const [nextAddress, setNextAddress] = useState("");
+  const [where, setWhere] = useState<"home" | "elsewhere" | null>(null);
   const options = nationalityOptions();
   const alien = !!nationality && isAlien(nationality);
   const entry: RegisterForm = {
@@ -2608,34 +2612,61 @@ function RegisterStep({
       </SelectContent>
     </Select>
   );
+  // Next destination in one tap: home (the address on their licence or ID card when it shows one),
+  // or somewhere else, which is the only time anything is typed.
+  const homeTown = prefill?.homeTown ?? null;
+  const homeAddress = prefill?.homeAddress ?? null;
+  const goHome = () => {
+    setWhere("home");
+    setNextDestination(homeTown ?? homeDestination(nationality));
+    setNextAddress(homeAddress ?? "");
+  };
+  const goElsewhere = () => {
+    setWhere("elsewhere");
+    setNextDestination("");
+    setNextAddress("");
+    window.setTimeout(() => document.getElementById("reg-next")?.focus(), 0);
+  };
   const destinationChoice = (
     <div data-kx="grid" className="grid gap-2 sm:grid-cols-2">
       <Button
         type="button"
         size="touch"
-        variant={nextDestination === homeDestination(nationality) ? "default" : "outline"}
-        onClick={() => setNextDestination(homeDestination(nationality))}
+        className="h-auto min-h-14 flex-col gap-0.5 whitespace-normal py-2"
+        variant={where === "home" ? "default" : "outline"}
+        onClick={goHome}
       >
-        {copy.registerGoingHome}
+        <span>{copy.registerGoingHome}</span>
+        {homeTown || homeAddress ? (
+          <span className="text-sm font-normal opacity-80">{homeTown ?? homeAddress}</span>
+        ) : null}
       </Button>
       <Button
         type="button"
         size="touch"
-        variant="outline"
-        onClick={() => {
-          setNextDestination("");
-          document.getElementById("reg-next")?.focus();
-        }}
+        variant={where === "elsewhere" ? "default" : "outline"}
+        onClick={goElsewhere}
       >
         {copy.registerGoingElsewhere}
       </Button>
     </div>
   );
+  const elsewhereField = (cls?: string) =>
+    where === "elsewhere" ? (
+      <Input
+        id="reg-next"
+        className={cls}
+        placeholder={copy.registerNextHint}
+        value={nextDestination}
+        onChange={(e) => setNextDestination(e.target.value)}
+      />
+    ) : null;
 
   if (jumbo) {
     const pages = registerPages(
       (k) => (k === "name" || k === "nationality" ? show(k) : showAlien(k)),
       alien,
+      where !== "elsewhere",
     );
     return (
       <RegisterPager
@@ -2679,11 +2710,7 @@ function RegisterStep({
           ) : page === "destination" ? (
             <JumboField id="reg-next" label={copy.registerNext}>
               {destinationChoice}
-              <Input
-                id="reg-next"
-                value={nextDestination}
-                onChange={(e) => setNextDestination(e.target.value)}
-              />
+              {elsewhereField()}
             </JumboField>
           ) : (
             <JumboField id="reg-address" label={copy.registerAddress}>
@@ -2774,15 +2801,14 @@ function RegisterStep({
                 {copy.registerNext}
               </label>
               {destinationChoice}
-              <Input
-                id="reg-next"
-                className="h-14 text-xl"
-                value={nextDestination}
-                onChange={(e) => setNextDestination(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">{copy.registerNextHint}</p>
+              {elsewhereField("h-14 text-xl")}
             </div>
-            <div className={cn("space-y-1", !showAlien("destination") && "hidden")}>
+            <div
+              className={cn(
+                "space-y-1",
+                (!showAlien("destination") || where !== "elsewhere") && "hidden",
+              )}
+            >
               <label htmlFor="reg-address" className="text-lg">
                 {copy.registerAddress}
               </label>
