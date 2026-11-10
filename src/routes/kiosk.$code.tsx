@@ -88,7 +88,7 @@ import { showPairCode, tabletName } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
 import { dayProgress, kioskNow } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
-import { getTestSamples } from "@/lib/test-stay.functions";
+import { claimArmedSamples, getTestSamples } from "@/lib/test-stay.functions";
 import { kioskReviews } from "@/lib/kiosk-reviews.functions";
 import { KioskReviewsContext } from "@/components/guest/KioskReviews";
 import type { KioskReview } from "@/lib/kiosk-reviews";
@@ -1007,16 +1007,43 @@ function Kiosk() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reviewsOn, p.code]);
+  // Armed from the test card (claimArmedSamples): the next check-in here uses the sample photos.
+  const claimFn = useServerFn(claimArmedSamples);
+  useEffect(() => {
+    if (personal || tour) return;
+    const look = () =>
+      void claimFn({ data: { code: p.code } })
+        .then((r) => {
+          if (r.ok && (r.id || r.face)) setSamples({ id: r.id, face: r.face });
+        })
+        .catch(() => undefined);
+    look();
+    return onKioskPing(p.code, look);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.code, personal, tour]);
+  // Once a check-in has started with them, the samples go with it (done or reset): the next
+  // person at the tablet is a real guest. Unused, they go after 15 minutes.
+  const samplesInUse = useRef(false);
+  useEffect(() => {
+    if (!samples) return;
+    const t = window.setTimeout(() => {
+      if (!samplesInUse.current) setSamples(null);
+    }, 15 * 60_000);
+    return () => window.clearTimeout(t);
+  }, [samples]);
   const firstSession = useRef(session);
   useEffect(() => {
-    if (session === firstSession.current || !test) return;
-    // Done or reset: the next person at the tablet is a real guest.
+    if (session === firstSession.current) return;
+    firstSession.current = session;
+    if (!samplesInUse.current && !test) return;
+    samplesInUse.current = false;
     setSamples(null);
-    void navigate({
-      to: ".",
-      search: (s: Record<string, unknown>) => ({ ...s, test: undefined }),
-      replace: true,
-    } as never);
+    if (test)
+      void navigate({
+        to: ".",
+        search: (s: Record<string, unknown>) => ({ ...s, test: undefined }),
+        replace: true,
+      } as never);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
   const [exitOpen, setExitOpen] = useState(false);
@@ -1065,6 +1092,9 @@ function Kiosk() {
   const camPermission = useCameraPermission(shared && !tour);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
+  useEffect(() => {
+    if (samples && !stepKey.startsWith("welcome")) samplesInUse.current = true;
+  }, [samples, stepKey]);
   // Door tablets only: Express ("xl"), the bold full-screen cards made from the theme (the host's choice, else Latchkey's default).
   const xl = shared && p.kioskLook?.look === "xl";
   const xlStyle = useMemo(

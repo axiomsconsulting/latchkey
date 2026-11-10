@@ -46,7 +46,7 @@ export const getTestStay = createServerFn({ method: "GET" })
     const db = await admin();
     const { data: samples } = await db
       .from("test_check_in_samples")
-      .select("id_ref, face_ref")
+      .select("*")
       .eq("property_id", data.propertyId)
       .maybeSingle()
       .then(
@@ -59,9 +59,17 @@ export const getTestStay = createServerFn({ method: "GET" })
       data.propertyId,
       Date.now() + TEST_LINK_HOURS * 3_600_000,
     ).catch(() => null);
-    const s = samples as { id_ref: string | null; face_ref: string | null } | null;
+    const s = samples as {
+      id_ref: string | null;
+      face_ref: string | null;
+      armed_until?: string | null;
+    } | null;
     return {
-      samples: { id: !!s?.id_ref, face: !!s?.face_ref },
+      samples: {
+        id: !!s?.id_ref,
+        face: !!s?.face_ref,
+        armedUntil: s?.armed_until && Date.parse(s.armed_until) > Date.now() ? s.armed_until : null,
+      },
       testToken: link,
       available: !error,
       stay: (error ? null : stay) as {
@@ -231,6 +239,55 @@ export const removeTestSamples = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Arms the sample photos for the next check-in on this property's door tablets (10 minutes). */
+export const armTestSamples = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const db = await admin();
+    const { data: row, error } = await db
+      .from("test_check_in_samples")
+      .update({ armed_until: new Date(Date.now() + 10 * 60_000).toISOString() })
+      .eq("property_id", data.propertyId)
+      .select("property_id")
+      .maybeSingle();
+    if (error) throw new Error("This needs the latest update (migration 0103).");
+    if (!row) throw new Error("Add your sample photos first.");
+    const { data: p } = await db
+      .from("properties")
+      .select("short_code")
+      .eq("id", data.propertyId)
+      .single();
+    return { code: p?.short_code as string };
+  });
+
+/**
+ * A door tablet picking up armed sample photos: the first one to ask takes them (and the arm
+ * is cleared), so only one check-in uses them.
+ */
+export const claimArmedSamples = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ code: z.string().min(1).max(80) }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: p } = await db
+      .from("properties")
+      .select("id")
+      .eq("short_code", data.code.toLowerCase())
+      .maybeSingle();
+    if (!p) return { ok: false as const };
+    const { data: row, error } = await db
+      .from("test_check_in_samples")
+      .update({ armed_until: null })
+      .eq("property_id", p.id)
+      .gt("armed_until", new Date().toISOString())
+      .select("id_ref, face_ref")
+      .maybeSingle();
+    if (error || !row) return { ok: false as const };
+    const { samplesAsUrls } = await import("./test-stay.server");
+    return { ok: true as const, ...(await samplesAsUrls(row)) };
+  });
+
 /**
  * The kiosk opened from the test card's link: the host's sample photos, to show in place of the
  * camera. Only with a valid link for this property; never otherwise.
@@ -247,7 +304,7 @@ export const getTestSamples = createServerFn({ method: "POST" })
       .eq("short_code", data.code.toLowerCase())
       .maybeSingle();
     if (!p) return { ok: false as const };
-    const { signingSecret, readPrivate } = await import("./private-store.server");
+    const { signingSecret } = await import("./private-store.server");
     if (!(await testTokenValid(signingSecret(), p.id, data.token))) return { ok: false as const };
     const { data: row } = await db
       .from("test_check_in_samples")
@@ -259,15 +316,7 @@ export const getTestSamples = createServerFn({ method: "POST" })
         () => ({ data: null }),
       );
     const r = row as { id_ref: string | null; face_ref: string | null } | null;
-    const asUrl = async (ref: string | null) => {
-      if (!ref) return null;
-      const file = await readPrivate(ref).catch(() => null);
-      if (!file) return null;
-      let bin = "";
-      for (let i = 0; i < file.bytes.length; i += 0x8000)
-        bin += String.fromCharCode(...file.bytes.subarray(i, i + 0x8000));
-      return `data:image/jpeg;base64,${btoa(bin)}`;
-    };
-    const [id, face] = await Promise.all([asUrl(r?.id_ref ?? null), asUrl(r?.face_ref ?? null)]);
+    const { samplesAsUrls } = await import("./test-stay.server");
+    const { id, face } = await samplesAsUrls(r);
     return { ok: true as const, id, face };
   });
