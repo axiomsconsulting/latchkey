@@ -24,7 +24,7 @@ export function CameraSpotPad({
 }: {
   device: KioskDevice;
   onChanged: () => void;
-  /** Beside the title: the flip to the screen side (CameraScreenCard). */
+  /** Anything to show beside the title. */
   action?: React.ReactNode;
 }) {
   const saveFn = useServerFn(setKioskCameraSpot);
@@ -77,7 +77,7 @@ export function CameraSpotPad({
   };
 
   return (
-    <div className="space-y-2 rounded-xl border border-border p-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-2">
         <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
           <Camera className="size-4" aria-hidden /> {copy.spotTitle}

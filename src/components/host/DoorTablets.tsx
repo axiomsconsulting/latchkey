@@ -1,10 +1,12 @@
-import { CameraScreenCard } from "@/components/host/CameraScreenCard";
+import { CameraSpotPad } from "@/components/host/CameraSpotPad";
+import { DeviceCalibration } from "@/components/host/KioskCalibration";
 import { InfoTip } from "@/components/host/InfoTip";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  Crosshair,
   ArrowLeft,
   Bell,
   Camera,
@@ -288,6 +290,7 @@ export function DoorTablets({ property }: { property: Property }) {
 }
 
 type Face = "details" | "screen" | "camera";
+type View = "fit" | "position" | "preview" | "camera";
 
 /**
  * One tablet: its details on the front; its live view or camera on the back
@@ -323,9 +326,19 @@ function TabletCard({
   const [expanded, setExpanded] = useState(false);
   const online = isOnline(d.lastSeenAt, Date.now());
   const pending = d.status === "pending";
-  const flipped = face !== "details" && !pending;
-  // Live video while the camera side is showing (older tablets send pictures instead).
-  const cam = useCameraLive(property, d.id, face === "camera" && !pending && !d.screen?.lite);
+  // One panel, four views: screen fit and camera position (set up), screen preview and camera
+  // view (watch). Live View All drives the watching ones through `face`.
+  const [tool, setTool] = useState<"fit" | "position">("fit");
+  const view: View = face === "screen" ? "preview" : face === "camera" ? "camera" : tool;
+  const watching = !pending && (view === "preview" || view === "camera");
+  const pick = (v: View) => {
+    if (v === "preview") return onFace("screen");
+    if (v === "camera") return onFace("camera");
+    setTool(v);
+    onFace("details");
+  };
+  // Live video while the camera view is showing (older tablets send pictures instead).
+  const cam = useCameraLive(property, d.id, view === "camera" && !pending && !d.screen?.lite);
 
   async function camera(allowed: boolean) {
     try {
@@ -368,56 +381,22 @@ function TabletCard({
           <p className="text-xs text-accent">{updateCopy.outOfDate(latest)}</p>
         ) : null}
       </div>
-      {flipped ? (
-        <div className="flex shrink-0 gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label={liveCopy.expand}
-            title={liveCopy.expand}
-            onClick={() => setExpanded(true)}
-          >
-            <Maximize2 className="size-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            aria-label={liveCopy.back}
-            title={liveCopy.back}
-            onClick={() => onFace("details")}
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-        </div>
-      ) : !pending ? (
-        <div className="flex shrink-0 gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label={liveCopy.liveView}
-            title={liveCopy.liveView}
-            onClick={() => onFace("screen")}
-          >
-            <Eye className="size-4" />
-          </Button>
-          {d.cameraAllowed ? (
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label={liveCopy.cameraView}
-              title={liveCopy.cameraView}
-              onClick={() => onFace("camera")}
-            >
-              <Video className="size-4" />
-            </Button>
-          ) : null}
-        </div>
+      {watching ? (
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label={liveCopy.expand}
+          title={liveCopy.expand}
+          onClick={() => setExpanded(true)}
+        >
+          <Maximize2 className="size-4" />
+        </Button>
       ) : null}
     </div>
   );
 
   const back =
-    face === "camera" ? (
+    view === "camera" ? (
       d.screen?.lite ? (
         <CameraShot device={d} shot={shot} />
       ) : (
@@ -430,123 +409,152 @@ function TabletCard({
       </div>
     );
 
+  const cameraSwitch = (
+    <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+      <span className="flex items-center gap-2">
+        {d.cameraAllowed ? <Camera className="size-4" /> : <CameraOff className="size-4" />}
+        {copy.camera}
+      </span>
+      <Switch
+        checked={d.cameraAllowed}
+        // An older tablet whose browser can't share its camera: nothing to switch on.
+        disabled={d.screen?.camera === false && !d.cameraAllowed}
+        onCheckedChange={(on) => (on ? setAskCamera(true) : void camera(false))}
+      />
+    </label>
+  );
+  const cameraOk = d.screen?.camera !== false;
+  const views: Array<{ id: View; icon: typeof Eye; label: string; off?: boolean }> = [
+    { id: "fit", icon: Maximize2, label: copy.viewFit },
+    { id: "position", icon: Crosshair, label: copy.viewPosition },
+    { id: "preview", icon: Eye, label: copy.viewPreview },
+    { id: "camera", icon: Video, label: copy.viewCamera, off: !d.cameraAllowed },
+  ];
+  const panel =
+    view === "fit" ? (
+      <DeviceCalibration
+        device={d}
+        index={(d.number ?? 1) - 1}
+        code={property.short_code}
+        onSaved={onChanged}
+        compact
+      />
+    ) : view === "position" ? (
+      <div className="space-y-2">
+        {cameraSwitch}
+        {cameraOk ? (
+          <CameraSpotPad device={d} onChanged={onChanged} />
+        ) : (
+          <p className="text-xs text-muted-foreground">{copy.cameraUnsupported}</p>
+        )}
+      </div>
+    ) : view === "camera" && !d.cameraAllowed ? (
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground">{copy.cameraOffNote}</p>
+        {cameraSwitch}
+      </div>
+    ) : (
+      back
+    );
+
   return (
-    // Both sides share one grid cell, so the card is as tall as the taller side while it turns.
-    <div className="[perspective:1600px]">
+    <div>
       <div
         className={cn(
-          "grid transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none",
-          flipped && "[transform:rotateY(180deg)]",
+          "space-y-3 rounded-2xl border-2 bg-card p-4",
+          pending ? "border-dashed border-accent" : "border-border",
         )}
       >
-        <div
-          aria-hidden={flipped}
-          className={cn(
-            "space-y-3 rounded-2xl border-2 bg-card p-4 [backface-visibility:hidden] [grid-area:1/1]",
-            pending ? "border-dashed border-accent" : "border-border",
-            flipped && "pointer-events-none",
-          )}
-        >
-          {title}
-          {pending ? (
-            <p className="text-sm">{copy.waitingHelp}</p>
-          ) : (
-            <>
-              <Input
-                className="h-10"
-                value={label}
-                maxLength={40}
-                placeholder={copy.namePlaceholder}
-                aria-label={copy.name}
-                onChange={(e) => setLabel(e.target.value)}
-                onBlur={() => {
-                  if (label === (d.label ?? "")) return;
-                  void renameFn({ data: { deviceId: d.id, label } })
-                    .then(async () => {
-                      await pingKiosk(property.short_code);
-                      onChanged();
-                    })
-                    .catch(() => toast.error(common.errorBody));
-                }}
-              />
-              {d.display ? (
-                <p className="text-xs text-muted-foreground">
-                  {copy.screen(
-                    d.display.usedW || d.display.w,
-                    d.display.usedH || d.display.h,
-                    d.display.orientation,
-                  )}
-                </p>
-              ) : null}
-              <label className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex items-center gap-2">
-                  {d.cameraAllowed ? (
-                    <Camera className="size-4" />
-                  ) : (
-                    <CameraOff className="size-4" />
-                  )}
-                  {copy.camera}
-                </span>
-                <Switch
-                  checked={d.cameraAllowed}
-                  // An older tablet whose browser can't share its camera: nothing to switch on.
-                  disabled={d.screen?.camera === false && !d.cameraAllowed}
-                  onCheckedChange={(on) => (on ? setAskCamera(true) : void camera(false))}
-                />
-              </label>
-              {d.screen?.camera === false ? (
-                <p className="text-xs text-muted-foreground">{copy.cameraUnsupported}</p>
-              ) : null}
-              <CameraScreenCard
-                device={d}
-                index={(d.number ?? 1) - 1}
-                code={property.short_code}
-                onChanged={onChanged}
-                cameraOk={d.screen?.camera !== false}
-              />
-            </>
-          )}
-          {/* Lite, enhanced or full: what the tablet detected is marked; what each level means is in the info button, once. */}
-          <LevelSlider device={d} onPick={(m) => void level(m)} />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive"
-              onClick={() => {
-                if (!window.confirm(copy.removeConfirm(tabletName(d)))) return;
-                void removeFn({ data: { deviceId: d.id } })
-                  .then(async (res) => {
-                    await pingKiosk(res.code);
+        {title}
+        {pending ? (
+          <p className="text-sm">{copy.waitingHelp}</p>
+        ) : (
+          <>
+            <Input
+              className="h-10"
+              value={label}
+              maxLength={40}
+              placeholder={copy.namePlaceholder}
+              aria-label={copy.name}
+              onChange={(e) => setLabel(e.target.value)}
+              onBlur={() => {
+                if (label === (d.label ?? "")) return;
+                void renameFn({ data: { deviceId: d.id, label } })
+                  .then(async () => {
+                    await pingKiosk(property.short_code);
                     onChanged();
                   })
                   .catch(() => toast.error(common.errorBody));
               }}
-            >
-              <Trash2 className="size-4" /> {copy.remove}
-            </Button>
-          </div>
-        </div>
-
-        {/* The back: live view or camera, until the back arrow. */}
-        <div
-          aria-hidden={!flipped}
-          className={cn(
-            "space-y-3 rounded-2xl border-2 border-primary bg-card p-4 [backface-visibility:hidden] [grid-area:1/1] [transform:rotateY(180deg)]",
-            !flipped && "pointer-events-none",
-          )}
-        >
-          {title}
-          {flipped ? back : null}
+            />
+            {d.display ? (
+              <p className="text-xs text-muted-foreground">
+                {copy.screen(
+                  d.display.usedW || d.display.w,
+                  d.display.usedH || d.display.h,
+                  d.display.orientation,
+                )}
+              </p>
+            ) : null}
+            {/* Four views in one spot: two to set the tablet up, two to watch it. */}
+            <div className="overflow-hidden rounded-xl border border-border">
+              <div
+                role="tablist"
+                aria-label={copy.viewsLabel}
+                className="grid grid-cols-4 bg-secondary"
+              >
+                {views.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={view === v.id}
+                    onClick={() => pick(v.id)}
+                    className={cn(
+                      "flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] leading-tight transition-colors",
+                      view === v.id
+                        ? "bg-card font-semibold text-primary"
+                        : "text-muted-foreground hover:text-foreground",
+                      v.off && view !== v.id && "opacity-60",
+                    )}
+                  >
+                    <v.icon className="size-4" aria-hidden />
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+              <div className="p-3">{panel}</div>
+            </div>
+          </>
+        )}
+        {/* Lite, enhanced or full: what the tablet detected is marked; what each level means is in the info button, once. */}
+        <LevelSlider device={d} onPick={(m) => void level(m)} />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={() => {
+              if (!window.confirm(copy.removeConfirm(tabletName(d)))) return;
+              void removeFn({ data: { deviceId: d.id } })
+                .then(async (res) => {
+                  await pingKiosk(res.code);
+                  onChanged();
+                })
+                .catch(() => toast.error(common.errorBody));
+            }}
+          >
+            <Trash2 className="size-4" /> {copy.remove}
+          </Button>
         </div>
       </div>
 
-      <Dialog open={expanded && flipped} onOpenChange={setExpanded}>
+      <Dialog open={expanded && watching} onOpenChange={setExpanded}>
         <DialogContent className="max-h-[94dvh] w-[min(96vw,72rem)] max-w-none overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {d.number}. {tabletName(d)} ·{" "}
-              {face === "camera" ? liveCopy.cameraView : liveCopy.liveView}
+              {view === "camera" ? liveCopy.cameraView : liveCopy.liveView}
             </DialogTitle>
             <DialogDescription>{liveCopy.body}</DialogDescription>
           </DialogHeader>
