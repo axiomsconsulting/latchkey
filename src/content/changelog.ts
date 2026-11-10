@@ -47,6 +47,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.145.1",
+    date: "2026-11-10",
+    title: "Passports fill in the register by themselves",
+    items: [
+      {
+        kind: "fixed",
+        area: "Guest register",
+        text: "A guest who shows a passport is only asked where they're going next: the nationality, passport number and place of issue come from the passport, using the issuing country when no nationality can be read. Details read from an ID are never asked again, even when the nationality has to be.",
+      },
+    ],
+  },
+  {
     version: "0.145.0",
     date: "2026-11-10",
     title: "Guide in list or gallery, attachments in a large viewer",

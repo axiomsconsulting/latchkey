@@ -1986,8 +1986,8 @@ async function autoRegister(
     await writeRegister(ctx, position, plan.entry);
     return { kind: "saved" };
   } catch {
-    // Not saved: the guest fills it in as before.
-    return { kind: "ask", missing: ["nationality"] };
+    // Not saved: the guest checks it all, starting from what was read.
+    return { kind: "ask", missing: ["nationality", "document", "place", "destination"] };
   }
 }
 

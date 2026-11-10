@@ -188,7 +188,27 @@ describe("the register from a guest's ID", () => {
         documentNumber: "JONES801234SJ9AB",
         placeOfIssue: "DVLA",
       }),
-    ).toMatchObject({ kind: "ask", missing: ["nationality"] });
+    ).toMatchObject({ kind: "ask", missing: ["nationality", "destination"] });
+  });
+
+  it("takes a passport's issuing country as the nationality when none is readable", () => {
+    const passport = {
+      fullName: "Ana Silva",
+      nationality: null,
+      documentNumber: "FX123456",
+      placeOfIssue: null,
+      issuingCountry: "Brazil",
+      issuingCountryCode: "BR",
+    };
+    expect(registerFromRead({ ...passport, documentType: "passport" })).toMatchObject({
+      kind: "ask",
+      missing: ["destination"],
+      input: { nationality: "BR", documentNumber: "FX123456", placeOfIssue: "Brazil" },
+    });
+    // Any other document: the nationality is asked, and the passport number too, since none was read.
+    expect(
+      registerFromRead({ ...passport, documentType: "residence_permit", documentNumber: null }),
+    ).toMatchObject({ kind: "ask", missing: ["nationality", "document", "destination"] });
   });
 
   it("asks a guest from outside the Commonwealth only where they go next", () => {

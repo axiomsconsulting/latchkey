@@ -383,6 +383,8 @@ export type RegisterRead = {
   documentNumber: string | null;
   placeOfIssue: string | null;
   issuingCountry?: string | null;
+  issuingCountryCode?: string | null;
+  documentType?: string | null;
 };
 
 export type RegisterPlan =
@@ -401,18 +403,31 @@ export type RegisterPlan =
  */
 export function registerFromRead(read: RegisterRead | null): RegisterPlan {
   if (!read?.fullName) return { kind: "later" };
+  // A passport is issued by the holder's own country: when it prints no readable nationality,
+  // the issuing country is it (never for other documents, which residents of anywhere hold).
+  const passport = read.documentType === "passport";
+  const nationality =
+    nationalityFromId(read.nationality) ??
+    (passport
+      ? (nationalityFromId(read.issuingCountryCode) ?? nationalityFromId(read.issuingCountry))
+      : null);
   const input: RegisterInput = {
     fullName: read.fullName,
-    nationality: nationalityFromId(read.nationality) ?? "",
+    nationality: nationality ?? "",
     documentNumber: read.documentNumber,
     placeOfIssue: read.placeOfIssue ?? read.issuingCountry ?? null,
   };
   const clean = cleanRegisterEntry(input);
   if (clean.ok) return { kind: "saved", entry: clean.entry };
   if (clean.missing.includes("name")) return { kind: "later" };
-  return {
-    kind: "ask",
-    missing: clean.missing.filter((m): m is Exclude<RegisterProblem, "name"> => m !== "name"),
-    input,
-  };
+  const missing = clean.missing.filter((m): m is Exclude<RegisterProblem, "name"> => m !== "name");
+  // Nationality unknown: whether the rest is needed depends on the answer, so everything an
+  // alien would need that the ID didn't give is listed too, and only shown if it turns out to be.
+  if (missing.includes("nationality")) {
+    const alienCheck = cleanRegisterEntry({ ...input, nationality: "FR" });
+    if (!alienCheck.ok)
+      for (const m of alienCheck.missing)
+        if (m !== "name" && m !== "nationality" && !missing.includes(m)) missing.push(m);
+  }
+  return { kind: "ask", missing, input };
 }
