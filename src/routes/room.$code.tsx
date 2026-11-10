@@ -18,7 +18,6 @@ import { stayProgressCopy as pcopy } from "@/content/copy";
 import { readFix } from "@/lib/kiosk-presence";
 import { openRoomStay, roomEntry } from "@/lib/stay-access.functions";
 import { GuideSections } from "@/components/guest/GuideSections";
-import { useScrollOpen } from "@/hooks/use-scroll-open";
 import { rebrand } from "@/lib/brand";
 
 /**
@@ -67,9 +66,8 @@ function RoomGuide() {
   const { code } = Route.useParams();
   const { preview } = Route.useSearch();
   const [stay, setStay] = useState<string | null>(null);
-  const [open, setOpen] = useState<string[]>(() => (g.found && g.guide[0] ? [g.guide[0].key] : []));
-  // The section in the middle of the screen is open and highlighted, either way the guest scrolls.
-  const { onOpenChange, active } = useScrollOpen(open, setOpen);
+  // Sections show their top line until tapped.
+  const [open, setOpen] = useState<string[]>([]);
   // Opening the guest's own guide from here (when the host allows it): trying, offering the location check, or not here.
   const [own, setOwn] = useState<"idle" | "trying" | "locate" | "locating" | "notHere">("idle");
   const tryOpen = useServerFn(openRoomStay);
@@ -252,12 +250,7 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        <GuideSections
-          sections={g.guide as never}
-          open={open}
-          onOpenChange={onOpenChange}
-          active={active}
-        />
+        <GuideSections sections={g.guide as never} open={open} onOpenChange={setOpen} />
         <p className="text-center text-sm text-muted-foreground">{rcopy.footer}</p>
       </main>
     </GuestFrame>

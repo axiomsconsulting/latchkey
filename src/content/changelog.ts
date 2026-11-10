@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.145.0",
+    date: "2026-11-10",
+    title: "Guide in list or gallery, attachments in a large viewer",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: 'Guide sections no longer open and close by themselves as guests scroll: each card shows its top line and "…", and opens or closes with a tap.',
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Guests can switch the guide between List and Gallery. Gallery shows each section as a whole card to swipe through, with its photos and documents as large thumbnails at the end.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "A clip on each section with attachments opens them in a large viewer inside the guide, where guests swipe or tap through them.",
+      },
+    ],
+  },
+  {
     version: "0.144.0",
     date: "2026-11-10",
     title: "Test check-in with sample photos, flash and sounds",

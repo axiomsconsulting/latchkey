@@ -60,7 +60,6 @@ import { Button } from "@/components/ui/button";
 import { guideCheckout } from "@/lib/goodbye.functions";
 import { stayProgressCopy as pcopy } from "@/content/copy";
 import { formatUkDate } from "@/lib/dates";
-import { useScrollOpen } from "@/hooks/use-scroll-open";
 
 export const Route = createFileRoute("/stay/$token")({
   loader: ({ params }) => getStay({ data: { token: params.token } }),
@@ -164,11 +163,8 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   // Check-out day: the check-out section starts open.
   const leaving = !!s.goodbye;
   const hasCheckout = s.guide.some((g) => g.key === "checkout");
-  const [open, setOpen] = useState<string[]>(
-    leaving && hasCheckout ? ["checkout"] : [s.guide[0]?.key ?? ""],
-  );
-  // The section in the middle of the screen is open and highlighted, either way the guest scrolls.
-  const { onOpenChange, active } = useScrollOpen(open, setOpen);
+  // Sections show their top line until tapped (on check-out day, check-out starts open).
+  const [open, setOpen] = useState<string[]>(leaving && hasCheckout ? ["checkout"] : []);
   // Quick ways in, in the theme's icon style: the host's chosen tiles, or Wi-Fi, the first guide sections, extras and messages.
   const tiles = shownTiles(
     s.tiles.tiles,
@@ -338,8 +334,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         <GuideSections
           sections={s.guide as never}
           open={open}
-          onOpenChange={onOpenChange}
-          active={active}
+          onOpenChange={setOpen}
           lockedText={gcopy.doorLocked(
             new Intl.DateTimeFormat("en-GB", {
               timeZone: p?.timezone ?? "Europe/London",
