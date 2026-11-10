@@ -1337,20 +1337,22 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
   color: var(--j-ink);
 }
 
-/* A folded settings section (ArrangedSections) is one piece with its header: the section's own
-   card inside loses its outline, shadow and corners, so the two read as joined. */
+/* A folded settings section (ArrangedSections) is one piece with its header: the cards inside lose
+   their own outline, shadow and corners, so the section reads as one card. Several cards in one
+   section sit edge to edge with just a line between them, no gaps. */
 [data-arranged-body] > .card-soft,
-[data-arranged-body] > :only-child > .card-soft:only-child,
-[data-arranged-body] > section:only-child {
+[data-arranged-body] > section,
+[data-arranged-body] > :only-child > .card-soft,
+[data-arranged-body] > :only-child > section {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  margin: 0;
 }
-/* A section made of several cards: a little room inside the joined outline. */
-[data-arranged-body]:has(> :nth-child(2)) {
-  display: grid;
-  gap: 0.75rem;
-  padding: 0.75rem;
+[data-arranged-body] > * + *,
+[data-arranged-body] > :only-child > :is(.card-soft, section) + :is(.card-soft, section) {
+  margin-top: 0 !important;
+  border-top: 1px solid var(--color-border) !important;
 }
 
 /* Reviews while an ID is checked (ReviewTicker), on Jumbo cards: sized like the card's words. */
@@ -1361,4 +1363,19 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-review-ticker] [data-review-by] {
   font-size: calc(3cqmin * var(--j-fit, 1));
   color: var(--j-ink);
+}
+
+/* Inside a joined settings section, the card's own title, intro and icon repeat the header above
+   (ArrangedSections marks them): hidden. The title's (i) stays, as the heading's text goes. */
+[data-arranged-body] [data-dup-title] {
+  font-size: 0;
+  line-height: 0;
+  min-height: 0;
+}
+[data-arranged-body] [data-dup-title]:not(:has(button)) {
+  display: none;
+}
+[data-arranged-body] [data-dup-intro],
+[data-arranged-body] [data-dup-icon] {
+  display: none;
 }

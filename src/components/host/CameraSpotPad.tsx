@@ -20,9 +20,12 @@ const clamp = (v: number) => Math.min(1, Math.max(0, v));
 export function CameraSpotPad({
   device,
   onChanged,
+  action,
 }: {
   device: KioskDevice;
   onChanged: () => void;
+  /** Beside the title: the flip to the screen side (CameraScreenCard). */
+  action?: React.ReactNode;
 }) {
   const saveFn = useServerFn(setKioskCameraSpot);
   const [way, setWay] = useState<WayUp>(
@@ -79,6 +82,7 @@ export function CameraSpotPad({
         <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
           <Camera className="size-4" aria-hidden /> {copy.spotTitle}
         </p>
+        {action}
         {placed ? (
           <Button
             type="button"

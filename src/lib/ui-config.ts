@@ -250,7 +250,6 @@ export const PAGES: Record<string, { label: string; sections: PageSection[] }> =
       { id: "kioskTablets", label: "Door tablets" },
       { id: "kioskLook", label: "Door tablet look" },
       { id: "kioskReviews", label: "Reviews on the door tablet" },
-      { id: "kioskScreen", label: "Door tablet screen" },
       { id: "alerts", label: "Alerts" },
       { id: "roomDevices", label: "Room lights" },
       { id: "api", label: "API & MCP" },

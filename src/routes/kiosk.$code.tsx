@@ -191,6 +191,76 @@ export const Route = createFileRoute("/kiosk/$code")({
 const tileLogo = (size: string) =>
   cn(size, "shrink-0 rounded-[0.2em] bg-white p-[0.1em] text-primary ring-0 ring-offset-0");
 
+/**
+ * A door tablet starting up: the property's logo and name while the screen is lined up (the
+ * tablet's calibration arrives with its first report, and fonts load), saying exactly that,
+ * then "Ready" as it fades. It adds no wait: it goes as soon as the tablet is ready, and
+ * taps pass through while it fades.
+ */
+function KioskSplash({
+  theme,
+  name,
+  settled,
+}: {
+  theme: Parameters<typeof LogoMark>[0]["theme"];
+  name: string;
+  settled: boolean;
+}) {
+  const [fonts, setFonts] = useState(false);
+  const [late, setLate] = useState(false);
+  const [phase, setPhase] = useState<"calibrating" | "ready" | "gone">("calibrating");
+  useEffect(() => {
+    let live = true;
+    const ready = document.fonts?.ready ?? Promise.resolve();
+    void ready.then(() => live && setFonts(true));
+    // Never longer than this, whatever the network does.
+    const t = window.setTimeout(() => setLate(true), 2500);
+    return () => {
+      live = false;
+      window.clearTimeout(t);
+    };
+  }, []);
+  const done = (fonts && settled) || late;
+  useEffect(() => {
+    if (!done || phase !== "calibrating") return;
+    // Two frames so the fitted layout has been drawn underneath.
+    let a = 0;
+    let b = 0;
+    a = requestAnimationFrame(() => {
+      b = requestAnimationFrame(() => setPhase("ready"));
+    });
+    return () => {
+      cancelAnimationFrame(a);
+      cancelAnimationFrame(b);
+    };
+  }, [done, phase]);
+  useEffect(() => {
+    if (phase !== "ready") return;
+    const t = window.setTimeout(() => setPhase("gone"), 700);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+  if (phase === "gone") return null;
+  return (
+    <div
+      data-kiosk-splash
+      role="status"
+      aria-live="polite"
+      className={cn(
+        "fixed inset-0 z-[70] grid place-items-center bg-background transition-opacity duration-700",
+        phase === "ready" ? "pointer-events-none opacity-0" : "opacity-100",
+      )}
+    >
+      <div className="flex flex-col items-center gap-[2vmin] px-6 text-center">
+        <LogoMark theme={theme} name={name} className="size-[18vmin] text-[7vmin]" />
+        <p className="font-display text-[6vmin] leading-tight">{name}</p>
+        <p className="text-[3vmin] text-muted-foreground">
+          {phase === "ready" ? copy.splashReady : copy.splashCalibrating}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function usePortraitPhone() {
   const [phone, setPhone] = useState(false);
   useEffect(() => {
@@ -1449,6 +1519,13 @@ function Kiosk() {
         data-kiosk-xl={xl ? "" : undefined}
       >
         {xl ? <style>{xlStyle}</style> : null}
+        {shared ? (
+          <KioskSplash
+            theme={p.theme}
+            name={p.name}
+            settled={tour || calibration.tablet !== null}
+          />
+        ) : null}
         <ThemeBackdrop theme={p.theme} />
         {atWelcome ? <ThemeSideNotes theme={p.theme} /> : null}
         {/* Measured for the landscape fit: the page's own content, without the screen-high minimum. */}

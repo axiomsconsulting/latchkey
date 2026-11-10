@@ -1,4 +1,4 @@
-import { CameraSpotPad } from "@/components/host/CameraSpotPad";
+import { CameraScreenCard } from "@/components/host/CameraScreenCard";
 import { InfoTip } from "@/components/host/InfoTip";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -496,21 +496,19 @@ function TabletCard({
               </label>
               {d.screen?.camera === false ? (
                 <p className="text-xs text-muted-foreground">{copy.cameraUnsupported}</p>
-              ) : (
-                <CameraSpotPad device={d} onChanged={onChanged} />
-              )}
+              ) : null}
+              <CameraScreenCard
+                device={d}
+                index={(d.number ?? 1) - 1}
+                code={property.short_code}
+                onChanged={onChanged}
+                cameraOk={d.screen?.camera !== false}
+              />
             </>
           )}
           {/* Lite, enhanced or full: what the tablet detected is marked; what each level means is in the info button, once. */}
           <LevelSlider device={d} onPick={(m) => void level(m)} />
           <div className="flex flex-wrap gap-2">
-            {!pending ? (
-              <Button asChild variant="outline" size="sm">
-                <Link to="/app/settings" search={{ focus: "kioskScreen" }}>
-                  <Maximize2 className="size-4" /> {copy.calibrate}
-                </Link>
-              </Button>
-            ) : null}
             <Button
               variant="ghost"
               size="sm"
