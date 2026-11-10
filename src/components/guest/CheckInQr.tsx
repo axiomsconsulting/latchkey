@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { Check, ChevronDown, Copy, QrCode, Share2, Smartphone } from "lucide-react";
+import { Check, ChevronDown, Copy, QrCode, Share2, Smartphone, Tablet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -293,12 +293,15 @@ export function KioskQr({
   large,
   carryOn,
   others = false,
+  onTakeBack,
 }: {
   url: string;
   large: boolean;
   carryOn: boolean;
   /** Other guests are being filled in: the square lets them use their own phones. */
   others?: boolean;
+  /** The check-in is on a phone now: bring it back to this screen. */
+  onTakeBack?: (() => void) | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<HTMLElement | null>(null);
@@ -358,6 +361,18 @@ export function KioskQr({
             backed
             className="mx-auto w-full max-w-[18rem] rounded-2xl text-foreground"
           />
+          {onTakeBack ? (
+            <Button
+              size="touch"
+              className="w-full"
+              onClick={() => {
+                setOpen(false);
+                onTakeBack();
+              }}
+            >
+              <Tablet className="size-5" /> {copy.handoffTakeBack}
+            </Button>
+          ) : null}
         </DialogContent>
       </Dialog>
     </>

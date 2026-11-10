@@ -2155,6 +2155,18 @@ export const guest = branded({
   registerFromLastStay: "From your last stay with us. Please check it's still right.",
   registerAddress: "Address there, if you know it (optional)",
   registerSave: "Save and continue",
+  // Jumbo door tablets: the register one question at a time.
+  registerNext2: "Next",
+  registerBack: "Back",
+  registerPage: (n: number, of: number) => `Question ${n} of ${of}`,
+  // The letter picker for nationality on door tablets.
+  countryHome: "Usual answers",
+  countryLetters: "Or tap the first letters",
+  countryTyped: (t: string) => `Starts with “${t}”`,
+  countryClear: "Start again",
+  countryDelete: "Delete letter",
+  countrySpace: "Space",
+  countryMore: (n: number) => `${n} more: tap the next letter`,
   registerMissing: {
     name: "Please type a first name and surname.",
     nationality: "Please choose a nationality.",
@@ -2223,6 +2235,13 @@ export const guest = branded({
   qrDoneBlurb: "Scan this to keep your door code, Wi-Fi and house notes on your phone.",
   qrSwitch: "Use another phone",
   qrOpen: "Show a square to scan with another phone",
+  // One check-in on the door tablet and a phone (checkin-handoff.ts): whichever has it, the other waits.
+  handoffOnPhone: "Carrying on on your phone",
+  handoffOnPhoneBody: "Finish on your phone, or carry on here instead.",
+  handoffOnKiosk: "Carrying on at the door tablet",
+  handoffOnKioskBody: "Finish at the tablet, or carry on on this phone instead.",
+  handoffTakeBack: "Carry on here instead",
+  handoffTakePhone: "Carry on on this phone",
   qrAlt: "Square code to scan with a phone camera",
   qrResuming: "Picking up where you left off…",
   // Messages and past requests

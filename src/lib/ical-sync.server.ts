@@ -474,6 +474,15 @@ export async function runRetentionSweep(): Promise<number> {
   // Phone links for check-in photos (photo-handoff.ts) end after 30 minutes.
   const { purgeHandoffs } = await import("./photo-handoff.server");
   await purgeHandoffs().catch(() => 0);
+  // Check-ins moving between tablet and phone (migration 0100): a day after their last change.
+  await db
+    .from("checkin_handoffs")
+    .delete()
+    .lt("updated_at", new Date(Date.now() - 86_400_000).toISOString())
+    .then(
+      () => undefined,
+      () => undefined,
+    );
   // Demo rate-limit rows are only needed for an hour; keep a day at most.
   await db
     .from("demo_starts")

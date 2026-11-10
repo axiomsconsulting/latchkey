@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
+  ArrowRight,
   BookOpen,
   CheckCircle2,
   CircleHelp,
@@ -13,6 +14,8 @@ import {
   Minus,
   Phone,
   Plus,
+  Smartphone,
+  Tablet,
 } from "lucide-react";
 
 import { ChannelIcon } from "@/components/ChannelIcon";
@@ -45,6 +48,7 @@ import {
   checkInProgress,
   checkoutOptions,
   findByPhotoId,
+  handoffState,
   joinCheckIn,
   joinDone,
   joinInfo,
@@ -56,16 +60,19 @@ import {
   matchBooking,
   pickArrival,
   resumeSession,
+  saveHandoff,
   selfDeclare,
   setGuestName,
   saveRegister,
   setParty,
   skipCompanionId,
   startFromWelcome,
+  takeHandoff,
   verifyLast4,
   verifyPhotoId,
 } from "@/lib/checkin.functions";
 import { cameraFor, type GuestFlow } from "@/lib/checkin-flow";
+import { handoffView, type HandoffState, type HandoffStep } from "@/lib/checkin-handoff";
 import { nightsBetween } from "@/lib/checkin-logic";
 import { addDays } from "@/lib/dates";
 import { deviceToken } from "@/lib/kiosk-presence";
@@ -78,7 +85,10 @@ import {
   homeDestination,
   isAlien,
   nationalityOptions,
+  type RegisterProblem as RegisterMissing,
 } from "@/lib/hotel-register";
+import { flagEmoji, pageReady, registerPages, type RegisterPage } from "@/lib/kiosk-register";
+import { CountryPicker } from "@/components/guest/CountryPicker";
 import { cn } from "@/lib/utils";
 import { BrandBlock, ThemeFeatures } from "@/components/theme/ThemeDecor";
 import { welcomeTitle, type ThemeConfig } from "@/lib/theme";
@@ -321,6 +331,15 @@ export function CheckInFlow({
   const handover = useServerFn(askHostToCheckIn);
   const shareFn = useServerFn(shareCheckIn);
   const progressFn = useServerFn(checkInProgress);
+  // One check-in on the door tablet and a phone (checkin-handoff.ts): only one has it at a time.
+  const handoffSide = kiosk ? ("kiosk" as const) : ("phone" as const);
+  const saveHandoffFn = useServerFn(saveHandoff);
+  const takeHandoffFn = useServerFn(takeHandoff);
+  const handoffStateFn = useServerFn(handoffState);
+  // The tablet always keeps its place; a phone only once it has picked a check-in up.
+  const handoffLive = useRef(kiosk);
+  // The other device has the check-in: this screen waits, offering to carry on here.
+  const [away, setAway] = useState(false);
   const [fullName, setFullName] = useState("");
   // Other guests filling in on their own phones: the square they scan, and who's where.
   const [share, setShare] = useState<string | null>(null);
@@ -342,6 +361,56 @@ export function CheckInFlow({
     onStep?.(`${step.name}:${"position" in step ? step.position : ""}`);
   }, [step, onActivity, onWelcome, onStep]);
 
+  // The device in control saves where it is, so the other can open exactly this screen.
+  useEffect(() => {
+    if (!token || !handoffLive.current || away) return;
+    if (step.name !== "face" && step.name !== "companion" && step.name !== "register") return;
+    const current: HandoffStep =
+      step.name === "register"
+        ? { kind: "register", position: step.position, child: step.child, only: step.only }
+        : { kind: step.name, position: step.position };
+    const rest: HandoffStep[] = queue
+      .filter(
+        (x) =>
+          !(
+            x.kind === "register" &&
+            ["saved", "later"].includes(registerFrom.current[x.position] ?? "")
+          ),
+      )
+      .map((x) => (x.kind === "register" ? { ...x, only: registerAsk.current[x.position] } : x));
+    const steps = [current, ...rest];
+    const wanted = new Set(steps.filter((x) => x.kind === "register").map((x) => x.position));
+    const kept = Object.fromEntries(Object.entries(prefill).filter(([k]) => wanted.has(Number(k))));
+    void saveHandoffFn({
+      data: { token, side: handoffSide, state: { steps, prefill: kept } },
+    }).catch(() => undefined);
+    // Saved once per screen; prefill changes alongside the step that uses it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, queue, token, away]);
+
+  // Watch for the other device taking over, or finishing.
+  useEffect(() => {
+    if (!token || step.name === "welcome" || step.name === "done") return;
+    let live = true;
+    const tick = async () => {
+      if (!handoffLive.current) return;
+      const h = await handoffStateFn({ data: { token } }).catch(() => null);
+      if (!live || !h) return;
+      const view = handoffView(handoffSide, h);
+      if (view === "done") {
+        setAway(false);
+        const done = await complete({ data: { token } }).catch(() => null);
+        if (live && done) setStep({ name: "done", ...done });
+      } else setAway(view === "elsewhere");
+    };
+    const id = window.setInterval(() => void tick(), 3000);
+    return () => {
+      live = false;
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, step.name]);
+
   // Scanned square: rejoin the same check-in rather than starting over.
   useEffect(() => {
     if (!resumeToken || kiosk) return;
@@ -357,6 +426,13 @@ export function CheckInFlow({
         setPlan(res.party);
         setListFlow(res.listFlow);
         if (res.adults) setAdults(res.adults);
+        // The tablet saved the screen it was on: open exactly that one here.
+        const took = await takeHandoffFn({
+          data: { token: resumeToken, side: "phone" },
+        }).catch(() => null);
+        handoffLive.current = true;
+        if (!live) return;
+        if (took?.state && res.verified && !res.completed) return void pickUp(took.state);
         if (res.verified && !res.completed) {
           // Identity is done: carry on with only the steps still missing.
           childAges.current = res.childAges;
@@ -395,6 +471,40 @@ export function CheckInFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeToken, kiosk]);
 
+  /** Carries on from the place the other device saved: the same screen, then the same ones after it. */
+  function pickUp(state: HandoffState) {
+    for (const x of state.steps) {
+      if (x.kind !== "register") continue;
+      delete registerFrom.current[x.position];
+      if (x.only) registerAsk.current[x.position] = x.only;
+      else delete registerAsk.current[x.position];
+    }
+    setPrefill((p) => {
+      const next = { ...p };
+      for (const [k, v] of Object.entries(state.prefill)) next[Number(k)] = v;
+      return next;
+    });
+    void advance(
+      state.steps.map((x): After =>
+        x.kind === "register"
+          ? { kind: "register", position: x.position, child: x.child }
+          : { kind: x.kind, position: x.position },
+      ),
+    );
+  }
+
+  /** The guest chose to carry on on this device: take the check-in back from the other one. */
+  async function takeBack() {
+    const res = await run(() =>
+      takeHandoffFn({ data: { token: tokenRef.current, side: handoffSide } }),
+    );
+    if (!res) return;
+    handoffLive.current = true;
+    setAway(false);
+    if (res.completed) return void finish();
+    if (res.state) pickUp(res.state);
+  }
+
   async function run<T>(fn: () => Promise<T>): Promise<T | null> {
     setBusy(true);
     try {
@@ -409,6 +519,8 @@ export function CheckInFlow({
 
   function restart() {
     phone.end();
+    setAway(false);
+    handoffLive.current = kiosk;
     setStayedBefore(false);
     trustedLead.current = false;
     handled.current.clear();
@@ -1125,7 +1237,10 @@ export function CheckInFlow({
               : "",
         )}
       >
-        <main data-kx="col" className="card-soft p-6 sm:p-10" aria-live="polite">
+        <main data-kx="col" className="card-soft relative p-6 sm:p-10" aria-live="polite">
+          {away ? (
+            <HandoffAway kiosk={kiosk} busy={busy} onTakeBack={() => void takeBack()} />
+          ) : null}
           {demoHint ? (
             <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">
               {demoHint}
@@ -1750,6 +1865,8 @@ export function CheckInFlow({
               only={step.only}
               prefill={prefill[step.position] ?? null}
               busy={busy}
+              kiosk={kiosk}
+              jumbo={jumbo}
               onSubmit={(entry) => void onRegister(step.position, entry)}
             />
           ) : null}
@@ -2065,6 +2182,7 @@ export function CheckInFlow({
             large={step.name === "welcome" && qrPanel}
             carryOn={!othersNow && !!handoffUrl}
             others={othersNow}
+            onTakeBack={away ? () => void takeBack() : undefined}
           />
         ) : null}
         {/* On a phone, only while others are filled in: they can use their own phones instead of this one. */}
@@ -2077,6 +2195,42 @@ export function CheckInFlow({
           />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Covers the step while the other device has the check-in: the guest can
+ * finish there, or carry on here, which picks up exactly where they got to.
+ */
+function HandoffAway({
+  kiosk,
+  busy,
+  onTakeBack,
+}: {
+  kiosk: boolean;
+  busy: boolean;
+  onTakeBack: () => void;
+}) {
+  return (
+    <div
+      data-handoff-away
+      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 rounded-[inherit] p-6 text-center"
+      style={{ background: "inherit" }}
+    >
+      {kiosk ? (
+        <Smartphone className="size-16 text-primary" aria-hidden />
+      ) : (
+        <Tablet className="size-16 text-primary" aria-hidden />
+      )}
+      <h1 className="text-2xl sm:text-4xl">{kiosk ? copy.handoffOnPhone : copy.handoffOnKiosk}</h1>
+      <p className="text-lg text-muted-foreground">
+        {kiosk ? copy.handoffOnPhoneBody : copy.handoffOnKioskBody}
+      </p>
+      <Button size="touch-xl" disabled={busy} onClick={onTakeBack}>
+        {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+        {kiosk ? copy.handoffTakeBack : copy.handoffTakePhone}
+      </Button>
     </div>
   );
 }
@@ -2391,6 +2545,8 @@ function RegisterStep({
   busy,
   onSubmit,
   only,
+  kiosk = false,
+  jumbo = false,
 }: {
   title: string;
   lead: string;
@@ -2399,6 +2555,10 @@ function RegisterStep({
   only?: RegisterAsk[] | undefined;
   busy: boolean;
   onSubmit: (entry: RegisterForm) => void;
+  /** A door tablet: nationality by letter keys instead of a long list. */
+  kiosk?: boolean;
+  /** Jumbo: one question per page, so nothing needs scrolling. */
+  jumbo?: boolean;
 }) {
   const [fullName, setFullName] = useState(prefill?.fullName ?? "");
   const [nationality, setNationality] = useState(prefill?.nationality ?? "");
@@ -2416,10 +2576,127 @@ function RegisterStep({
     nextDestination: alien ? nextDestination : null,
     nextAddress: alien ? nextAddress : null,
   };
-  const ready = cleanRegisterEntry(entry).ok;
+  const checked = cleanRegisterEntry(entry);
+  const ready = checked.ok;
   // Read from their ID already: only what's missing shows (all of an alien's details if nationality was missing).
   const show = (k: RegisterAsk | "name") => !only || (k !== "name" && only.includes(k));
   const showAlien = (k: RegisterAsk) => alien && (show(k) || show("nationality"));
+  const usual = ["GB", "IE", prefill?.nationality ?? ""].filter(Boolean);
+  const nationalityField = kiosk ? (
+    <CountryPicker
+      options={options}
+      usual={usual}
+      value={nationality}
+      onChange={setNationality}
+      jumbo={jumbo}
+    />
+  ) : (
+    <Select value={nationality} onValueChange={setNationality}>
+      <SelectTrigger id="reg-nationality" className="h-14 text-xl">
+        <SelectValue placeholder={copy.registerPick} />
+      </SelectTrigger>
+      <SelectContent className="max-h-80">
+        {options.map((o) => (
+          <SelectItem key={o.code} value={o.code} className="py-3 text-xl">
+            <span aria-hidden className="mr-2">
+              {flagEmoji(o.code)}
+            </span>
+            {o.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+  const destinationChoice = (
+    <div data-kx="grid" className="grid gap-2 sm:grid-cols-2">
+      <Button
+        type="button"
+        size="touch"
+        variant={nextDestination === homeDestination(nationality) ? "default" : "outline"}
+        onClick={() => setNextDestination(homeDestination(nationality))}
+      >
+        {copy.registerGoingHome}
+      </Button>
+      <Button
+        type="button"
+        size="touch"
+        variant="outline"
+        onClick={() => {
+          setNextDestination("");
+          document.getElementById("reg-next")?.focus();
+        }}
+      >
+        {copy.registerGoingElsewhere}
+      </Button>
+    </div>
+  );
+
+  if (jumbo) {
+    const pages = registerPages(
+      (k) => (k === "name" || k === "nationality" ? show(k) : showAlien(k)),
+      alien,
+    );
+    return (
+      <RegisterPager
+        title={title}
+        pages={pages}
+        missing={checked.ok ? [] : checked.missing}
+        busy={busy}
+        onSave={() => onSubmit(entry)}
+        render={(page) =>
+          page === "name" ? (
+            <JumboField id="reg-name" label={copy.registerName}>
+              <Input
+                id="reg-name"
+                autoComplete="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </JumboField>
+          ) : page === "nationality" ? (
+            <JumboField id="reg-nationality" label={copy.registerNationality}>
+              {nationalityField}
+            </JumboField>
+          ) : page === "document" ? (
+            <JumboField id="reg-doc" label={copy.registerDocNumber}>
+              <Input
+                id="reg-doc"
+                className="uppercase"
+                autoComplete="off"
+                value={documentNumber}
+                onChange={(e) => setDocumentNumber(e.target.value)}
+              />
+            </JumboField>
+          ) : page === "place" ? (
+            <JumboField id="reg-place" label={copy.registerPlace}>
+              <Input
+                id="reg-place"
+                value={placeOfIssue}
+                onChange={(e) => setPlaceOfIssue(e.target.value)}
+              />
+            </JumboField>
+          ) : page === "destination" ? (
+            <JumboField id="reg-next" label={copy.registerNext}>
+              {destinationChoice}
+              <Input
+                id="reg-next"
+                value={nextDestination}
+                onChange={(e) => setNextDestination(e.target.value)}
+              />
+            </JumboField>
+          ) : (
+            <JumboField id="reg-address" label={copy.registerAddress}>
+              <Input
+                id="reg-address"
+                value={nextAddress}
+                onChange={(e) => setNextAddress(e.target.value)}
+              />
+            </JumboField>
+          )
+        }
+      />
+    );
+  }
 
   return (
     <section className="mx-auto max-w-xl">
@@ -2455,18 +2732,7 @@ function RegisterStep({
           <label htmlFor="reg-nationality" className="text-lg">
             {copy.registerNationality}
           </label>
-          <Select value={nationality} onValueChange={setNationality}>
-            <SelectTrigger id="reg-nationality" className="h-14 text-xl">
-              <SelectValue placeholder={copy.registerPick} />
-            </SelectTrigger>
-            <SelectContent className="max-h-80">
-              {options.map((o) => (
-                <SelectItem key={o.code} value={o.code} className="text-lg">
-                  {o.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {nationalityField}
           {only?.includes("nationality") && prefill?.nationality ? (
             <p className="text-base text-muted-foreground">{copy.registerNationalityGuess}</p>
           ) : null}
@@ -2506,27 +2772,7 @@ function RegisterStep({
               <label htmlFor="reg-next" className="text-lg">
                 {copy.registerNext}
               </label>
-              <div data-kx="grid" className="grid gap-2 sm:grid-cols-2">
-                <Button
-                  type="button"
-                  size="touch"
-                  variant={nextDestination === homeDestination(nationality) ? "default" : "outline"}
-                  onClick={() => setNextDestination(homeDestination(nationality))}
-                >
-                  {copy.registerGoingHome}
-                </Button>
-                <Button
-                  type="button"
-                  size="touch"
-                  variant="outline"
-                  onClick={() => {
-                    setNextDestination("");
-                    document.getElementById("reg-next")?.focus();
-                  }}
-                >
-                  {copy.registerGoingElsewhere}
-                </Button>
-              </div>
+              {destinationChoice}
               <Input
                 id="reg-next"
                 className="h-14 text-xl"
@@ -2553,6 +2799,101 @@ function RegisterStep({
           {busy ? <Loader2 className="size-6 animate-spin" /> : null}
           {copy.registerSave}
         </Button>
+      </form>
+    </section>
+  );
+}
+
+/** One register question on a Jumbo card: a big label and its answer. */
+function JumboField({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div data-jumbo-field className="flex min-h-0 flex-col gap-[2.5cqmin]">
+      <label htmlFor={id} className="font-display font-bold">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Jumbo door tablets: the register one question at a time, with Back and
+ * Next and a dot per question, so the card never needs scrolling and the
+ * button to carry on is always on screen.
+ */
+function RegisterPager({
+  title,
+  pages,
+  missing,
+  busy,
+  onSave,
+  render,
+}: {
+  title: string;
+  pages: RegisterPage[];
+  missing: readonly RegisterMissing[];
+  busy: boolean;
+  onSave: () => void;
+  render: (page: RegisterPage) => React.ReactNode;
+}) {
+  const [at, setAt] = useState(0);
+  const i = Math.min(at, Math.max(pages.length - 1, 0));
+  const page = pages[i];
+  const last = i >= pages.length - 1;
+  const ok = page ? pageReady(page, missing) : missing.length === 0;
+  const forward = () => (last ? onSave() : setAt(i + 1));
+  return (
+    <section data-register-pager className="flex h-full min-h-0 flex-col gap-[3cqmin]">
+      <h1>{title}</h1>
+      <form
+        className="flex min-h-0 flex-1 flex-col gap-[3cqmin]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ok && !busy) forward();
+        }}
+      >
+        <div className="min-h-0 flex-1">{page ? render(page) : null}</div>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-[3cqmin]">
+          <div>
+            {i > 0 ? (
+              <Button type="button" variant="outline" onClick={() => setAt(i - 1)}>
+                <ArrowLeft className="size-[1em]" /> {copy.registerBack}
+              </Button>
+            ) : null}
+          </div>
+          {pages.length > 1 ? (
+            <div
+              className="flex items-center gap-[1.6cqmin]"
+              role="img"
+              aria-label={copy.registerPage(i + 1, pages.length)}
+            >
+              {pages.map((p, n) => (
+                <span
+                  key={p}
+                  data-dot={n === i ? "on" : n < i ? "done" : "next"}
+                  className="block size-[2.2cqmin] rounded-full border-[0.35cqmin] border-current"
+                />
+              ))}
+            </div>
+          ) : (
+            <span />
+          )}
+          <div className="flex justify-end">
+            <Button type="submit" disabled={busy || !ok}>
+              {busy ? <Loader2 className="size-[1em] animate-spin" /> : null}
+              {last ? copy.registerSave : copy.registerNext2}
+              {last ? null : <ArrowRight className="size-[1em]" />}
+            </Button>
+          </div>
+        </div>
       </form>
     </section>
   );

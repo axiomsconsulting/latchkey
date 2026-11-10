@@ -1311,6 +1311,88 @@ export const resumeSession = createServerFn({ method: "POST" })
     };
   });
 
+/* ------------------- one check-in on tablet and phone ------------------- */
+
+const handoffSide = z.enum(["kiosk", "phone"]);
+type LooseDb = { from: (t: string) => any };
+
+async function readHandoff(db: unknown, sessionId: string) {
+  const { data, error } = await (db as LooseDb)
+    .from("checkin_handoffs")
+    .select("at, rev, state")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+  // Before migration 0100 there's nothing to hand off: each device keeps its own place.
+  if (error) return null;
+  return (data ?? { at: null, rev: 0, state: null }) as {
+    at: "kiosk" | "phone" | null;
+    rev: number;
+    state: unknown;
+  };
+}
+
+/** Which device has this check-in now (checkin-handoff.ts), for the other to follow. */
+export const handoffState = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, session } = await sessionContext(data.token);
+    const h = await readHandoff(db, session.id);
+    return {
+      at: h?.at ?? null,
+      rev: h?.rev ?? 0,
+      completed: session.completed_at !== null,
+    };
+  });
+
+/** The device in control saves the screen it shows and the ones still to come. */
+export const saveHandoff = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token, side: handoffSide, state: z.unknown() }).parse(d))
+  .handler(async ({ data }) => {
+    const { normaliseHandoff, maySave } = await import("./checkin-handoff");
+    const { db, session } = await sessionContext(data.token);
+    const h = await readHandoff(db, session.id);
+    if (!h || !maySave(h.at, data.side)) return { ok: false };
+    const state = normaliseHandoff(data.state);
+    if (!state) return { ok: false };
+    await (db as LooseDb).from("checkin_handoffs").upsert(
+      {
+        session_id: session.id,
+        at: h.at,
+        rev: h.rev,
+        state,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "session_id" },
+    );
+    return { ok: true };
+  });
+
+/** This device takes the check-in over; it gets the other's place to carry on from. */
+export const takeHandoff = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token, side: handoffSide }).parse(d))
+  .handler(async ({ data }) => {
+    const { normaliseHandoff } = await import("./checkin-handoff");
+    const { db, session } = await sessionContext(data.token);
+    const h = await readHandoff(db, session.id);
+    if (!h) return { rev: 0, state: null, completed: session.completed_at !== null };
+    const rev = h.rev + 1;
+    await (db as LooseDb).from("checkin_handoffs").upsert(
+      {
+        session_id: session.id,
+        at: data.side,
+        rev,
+        state: h.state,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "session_id" },
+    );
+    return {
+      rev,
+      state: normaliseHandoff(h.state),
+      completed: session.completed_at !== null,
+    };
+  });
+
 async function recordResult(
   ctx: Ctx,
   method: string,
@@ -2274,6 +2356,15 @@ export const completeCheckIn = createServerFn({ method: "POST" })
         .from("presence_log")
         .insert({ booking_id: booking.id, event: "arrived", source: "self_check_in" });
       await db.from("checkin_sessions").update({ completed_at: now }).eq("id", session.id);
+      // Nothing left to hand over: the register details it may hold go too.
+      await (db as LooseDb)
+        .from("checkin_handoffs")
+        .update({ state: null, updated_at: now })
+        .eq("session_id", session.id)
+        .then(
+          () => undefined,
+          () => undefined,
+        );
       await tellHostCheckedIn(ctx, room?.display_name ?? null);
     }
 
