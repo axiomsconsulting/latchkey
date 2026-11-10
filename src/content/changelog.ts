@@ -47,6 +47,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.151.0",
+    date: "2026-11-10",
+    title: "Studio voices for voice check-in",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The voice check-in bubble shows on the door tablet's first welcome screen, and the concierge always goes back to listening: it only uses voices already on the tablet, so it never gets stuck trying to download one.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The concierge shows what it heard beside its orb, so guests know it understood them, and says so if it can't hear them.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin → System → Studio voices: record every concierge phrase once with ElevenLabs in a female and a male voice; door tablets play the recordings instead of their own voices.",
+      },
+    ],
+  },
+  {
     version: "0.150.0",
     date: "2026-11-10",
     title: "Voice check-in concierge",

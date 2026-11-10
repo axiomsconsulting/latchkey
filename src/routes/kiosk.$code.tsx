@@ -1558,6 +1558,7 @@ function Kiosk() {
           <VoiceConcierge
             code={p.code}
             gender={voice.gender}
+            clips={voice.clips}
             stepKey={stepKey}
             onEnd={() => setVoiceOn(false)}
           />

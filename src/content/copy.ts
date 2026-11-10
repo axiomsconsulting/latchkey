@@ -1114,11 +1114,31 @@ export const demoDefaultsCopy = branded({
   needsUpdate: "This needs the latest update (migration 0094).",
 });
 
+export const studioVoicesCopy = branded({
+  title: "Studio voices",
+  info: "The voice concierge sounds natural when it plays studio recordings instead of the tablet's own voice. Latchkey records every phrase once with ElevenLabs in the female and male voices you pick here, keeps the recordings, and door tablets play them: nothing is recorded per check-in, so it costs a few ElevenLabs credits once (and again only when the words change). The API key stays on Latchkey's server. Phrases not recorded yet use the tablet's own voice.",
+  key: "ElevenLabs API key",
+  keySaved: "ElevenLabs API key (saved; paste a new one to replace it)",
+  keyPlaceholder: "Paste the key from elevenlabs.io → Developers → API keys",
+  saveKey: "Save key",
+  keyOk: "Key saved",
+  genders: { female: "Female voice", male: "Male voice" } as Record<"female" | "male", string>,
+  pick: "Pick a voice",
+  count: (done: number, total: number) => `${done} of ${total} phrases recorded`,
+  record: "Record the phrases",
+  recording: (done: number, total: number) => `Recording ${done} of ${total}…`,
+  recorded: "Recorded",
+  allRecorded: "All recorded",
+  remove: "Remove studio voices",
+  removeConfirm:
+    "Remove the key and stop using the studio voices? Tablets go back to their own voices.",
+});
+
 export const kioskVoiceCopy = branded({
   title: "Voice check-in",
   info: [
     "A colourful bubble beside Check in starts a concierge that talks guests through checking in. They answer out loud, so nothing needs pressing: it guides their ID into place (left a bit, closer, hold still), takes the photos by itself, asks them to check their details on the screen, and finishes the check-in.",
-    "It speaks with the tablet's own built-in voices, so talking costs nothing; AI is only used when it can't tell what a guest said. Guests can tap the screen at any time, or tap the bubble in the corner to stop it.",
+    "It plays studio-recorded phrases (made once by Latchkey), or the tablet's own voice where there's no recording, so talking costs nothing; AI is only used when it can't tell what a guest said. Guests can tap the screen at any time, or tap the bubble in the corner to stop it.",
     "Allow the microphone on the tablet when it first asks. The tablet's browser turns speech into text (on Android through Google, on an iPad through Apple); no recording is kept.",
   ],
   proOnly: "Voice check-in comes with the Pro plan.",
@@ -2268,6 +2288,7 @@ export const guest = branded({
   voiceStart: "Check in by voice",
   voiceStop: "Stop the voice concierge",
   voiceListening: "Listening",
+  voiceNoMic: "I can't hear you: please tap the screen instead.",
   splashCalibrating: "Auto calibrating…",
   splashReady: "Ready",
   jumboId: "Show your ID",
@@ -6788,6 +6809,7 @@ export const adminArrangeTitles = branded({
   drive: "Google Drive",
   smartthings: "Room lights",
   reviewRefresh: "Reviews for door tablets",
+  studioVoices: "Studio voices",
   routines: "Routines",
   updates: "App updates",
   tools: "Tools for the business being viewed",

@@ -352,10 +352,13 @@ export function pickVoice<V extends { name: string; lang: string; localService?:
   if (!english.length) return voices[0] ?? null;
   const want = gender === "female" ? FEMALE : MALE;
   const avoid = gender === "female" ? MALE : FEMALE;
+  // Only voices already on the tablet: a network voice has to be downloaded first, and when that
+  // fails (Android: "failed to install downloaded voice") nothing is said at all.
+  const local = english.filter((v) => v.localService !== false);
+  if (!local.length) return null;
   const score = (v: V) =>
     (want.test(v.name) ? 4 : 0) +
     (avoid.test(v.name) && !want.test(v.name) ? -4 : 0) +
-    (/en[-_]GB/i.test(v.lang) ? 2 : 0) +
-    (v.localService ? 1 : 0);
-  return [...english].sort((a, b) => score(b) - score(a))[0] ?? null;
+    (/en[-_]GB/i.test(v.lang) ? 2 : 0);
+  return [...local].sort((a, b) => score(b) - score(a))[0] ?? null;
 }

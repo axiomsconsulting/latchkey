@@ -1,3 +1,4 @@
+import { StudioVoicesAdmin } from "@/components/host/StudioVoicesAdmin";
 import { ReviewRefreshAdmin } from "@/components/host/ReviewRefreshAdmin";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
@@ -279,6 +280,7 @@ function AdminPage() {
               { id: "whatsapp", title: titles.whatsapp, node: <WhatsAppAdmin /> },
               { id: "drive", title: titles.drive, node: <DriveAdmin /> },
               { id: "smartthings", title: titles.smartthings, node: <SmartThingsAdmin /> },
+              { id: "studioVoices", title: titles.studioVoices, node: <StudioVoicesAdmin /> },
               {
                 id: "reviewRefresh",
                 title: titles.reviewRefresh,
