@@ -1,3 +1,4 @@
+import { kioskSound } from "@/lib/kiosk-sound";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -316,6 +317,7 @@ export function SaverBand({
   );
   const nudge = (dir: 1 | -1) => {
     keep();
+    kioskSound("tick");
     onChange(bandValue(bandFraction(latest.current + dir * step, lo, hi), lo, hi, step));
     onCommit();
   };
@@ -349,7 +351,10 @@ export function SaverBand({
         keep();
         const height = track.current.getBoundingClientRect().height || 1;
         const at = bandFraction(start.current.v, lo, hi) + (start.current.y - e.clientY) / height;
-        onChange(bandValue(at, lo, hi, step));
+        const next = bandValue(at, lo, hi, step);
+        // A scroll-wheel tick for each step the strip moves (kiosk-sound.ts; silent when sounds are off).
+        if (next !== latest.current) kioskSound("tick");
+        onChange(next);
       }}
       onPointerUp={(e) => {
         e.stopPropagation();

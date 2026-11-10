@@ -88,6 +88,9 @@ import { showPairCode, tabletName } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
 import { dayProgress, kioskNow } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
+import { getTestSamples } from "@/lib/test-stay.functions";
+import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
+import { listenForKioskSounds, setKioskFlash, setKioskSounds } from "@/lib/kiosk-sound";
 import { deviceToken, keepDeviceToken, readFix } from "@/lib/kiosk-presence";
 import { kioskHere } from "@/lib/stay-access.functions";
 import { rebrand } from "@/lib/brand";
@@ -108,7 +111,7 @@ export const Route = createFileRoute("/kiosk/$code")({
   // ?join=<share>: another guest on the same booking fills in their own details.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { guest?: boolean; resume?: string; join?: string } & Utm => ({
+  ): { guest?: boolean; resume?: string; join?: string; test?: string } & Utm => ({
     // A shared link's source stays on the URL (the tour from /tour or a post).
     ...pickUtm(search),
     ...(typeof search["join"] === "string" ? { join: search["join"] } : {}),
@@ -116,6 +119,8 @@ export const Route = createFileRoute("/kiosk/$code")({
       ? { guest: true }
       : {}),
     ...(typeof search["resume"] === "string" ? { resume: search["resume"] } : {}),
+    // ?test=<signed link>: the host's own test check-in with their sample photos (TestStayCard).
+    ...(typeof search["test"] === "string" ? { test: search["test"] } : {}),
   }),
   loader: async ({ params }) => {
     const p = await getCheckinProperty({ data: { code: params.code } });
@@ -860,7 +865,7 @@ function JumboClock({ tz }: { tz: string }) {
 
 function Kiosk() {
   const p = Route.useLoaderData();
-  const { guest, resume, join } = Route.useSearch();
+  const { guest, resume, join, test } = Route.useSearch();
   // On a guest's own phone: the same screen, without the shared-tablet extras
   // (idle reset, screensaver, welcome overlay, hidden exit, kiosk install).
   // Always called, so hooks keep the same order whatever the address says.
@@ -894,6 +899,34 @@ function Kiosk() {
   const unlock = useServerFn(kioskUnlock);
   const sayHere = useServerFn(kioskHere);
   const [session, setSession] = useState(0);
+  // The host's sample photos (?test=): for one check-in only, then gone with the link.
+  const samplesFn = useServerFn(getTestSamples);
+  const [samples, setSamples] = useState<TestSamples | null>(null);
+  useEffect(() => {
+    if (!test) return;
+    let live = true;
+    samplesFn({ data: { code: p.code, token: test } })
+      .then((r) => {
+        if (live && r.ok && (r.id || r.face)) setSamples({ id: r.id, face: r.face });
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [test, p.code]);
+  const firstSession = useRef(session);
+  useEffect(() => {
+    if (session === firstSession.current || !test) return;
+    // Done or reset: the next person at the tablet is a real guest.
+    setSamples(null);
+    void navigate({
+      to: ".",
+      search: (s: Record<string, unknown>) => ({ ...s, test: undefined }),
+      replace: true,
+    } as never);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
   const [exitOpen, setExitOpen] = useState(false);
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
@@ -975,6 +1008,23 @@ function Kiosk() {
   }, [jumbo]);
   useJumboFit(jumbo, stepKey);
   const expanded = shared && (p.theme.kioskTouch === "expanded" || xl || jumbo);
+  // Clicks for taps, keys, sliders and photos on the shared tablet (theme.kioskSounds, kiosk-sound.ts).
+  const sounds = shared && p.theme.kioskSounds;
+  // The screen lights up white as each photo is taken (theme.kioskFlash, IdCamera).
+  const flash = shared && p.theme.kioskFlash;
+  useEffect(() => {
+    setKioskFlash(flash);
+    return () => setKioskFlash(false);
+  }, [flash]);
+  useEffect(() => {
+    setKioskSounds(sounds);
+    if (!sounds) return;
+    const stop = listenForKioskSounds();
+    return () => {
+      stop();
+      setKioskSounds(false);
+    };
+  }, [sounds]);
   // On <html>, so dialogs (portalled outside this page) are sized to match.
   useEffect(() => {
     if (!expanded) return;
@@ -1445,37 +1495,47 @@ function Kiosk() {
             {/* Always the same box, whichever icon is in it (or none), so nothing beside it shifts. */}
             {jumbo ? null : actionBox}
           </header>
+          {samples ? (
+            <p
+              role="status"
+              className="pointer-events-none fixed left-1/2 top-2 z-50 -translate-x-1/2 rounded-full bg-amber-300 px-4 py-1 text-sm font-semibold text-black"
+            >
+              {copy.testSamplesBadge}
+            </p>
+          ) : null}
           {join ? (
             <JoinCheckIn share={join} />
           ) : (
-            <CheckInFlow
-              key={session}
-              property={p}
-              hostPhone={p.hostPhone}
-              kiosk={shared}
-              resumeToken={personal ? (resume ?? null) : null}
-              onWelcome={setAtWelcome}
-              onStep={(k: string) => {
-                setStepKey(k);
-                // …and got all the way to "you're checked in".
-                if (tour && k.startsWith("done:")) trackEvent("tour_complete");
-                // Checked in: the welcome for them comes off.
-                if (k.startsWith("done:")) reloadWelcome();
-              }}
-              welcomeStart={shared ? welcomeStart : null}
-              onDone={
-                shared
-                  ? () => {
-                      setWelcomeStart(null);
-                      setSession((n) => n + 1);
-                      bump();
-                    }
-                  : undefined
-              }
-              qrPanel={!jumbo && saverLook.defaults.qrStyle === "panel"}
-              jumbo={jumbo}
-              {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
-            />
+            <TestSamplesContext.Provider value={samples}>
+              <CheckInFlow
+                key={session}
+                property={p}
+                hostPhone={p.hostPhone}
+                kiosk={shared}
+                resumeToken={personal ? (resume ?? null) : null}
+                onWelcome={setAtWelcome}
+                onStep={(k: string) => {
+                  setStepKey(k);
+                  // …and got all the way to "you're checked in".
+                  if (tour && k.startsWith("done:")) trackEvent("tour_complete");
+                  // Checked in: the welcome for them comes off.
+                  if (k.startsWith("done:")) reloadWelcome();
+                }}
+                welcomeStart={shared ? welcomeStart : null}
+                onDone={
+                  shared
+                    ? () => {
+                        setWelcomeStart(null);
+                        setSession((n) => n + 1);
+                        bump();
+                      }
+                    : undefined
+                }
+                qrPanel={!jumbo && saverLook.defaults.qrStyle === "panel"}
+                jumbo={jumbo}
+                {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
+              />
+            </TestSamplesContext.Provider>
           )}
           {jumbo ? (
             // Jumbo: the welcome card screen's status bar. Steps put Ask host and other ways here.

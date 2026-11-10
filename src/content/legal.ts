@@ -147,6 +147,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Returning guests' remembered ID checks: 12 months, then deleted.",
           "Room lights: each tap a guest makes (which light, which stay, when) is kept for 7 days to stop misuse, then deleted.",
           "A host's own test check-in: until they reset it, or a week after its check-out day.",
+          "A host's own sample ID and selfie for trying the check-in: in a restricted Google Drive folder until the host removes them.",
           "Loyalty vouchers: one year after the last date the code could be used.",
           "Stay terms accepted and licences signed (direct stays): six years after check-out, the time in which a claim about the stay can usually be brought in the UK, then deleted with their files.",
           "Host accounts: while the account is open. When a business closes its account, we delete or anonymise its data on request, except records we or the host must keep by law.",

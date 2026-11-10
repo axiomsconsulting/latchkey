@@ -1,4 +1,5 @@
 import { CameraSpotPad } from "@/components/host/CameraSpotPad";
+import { InfoTip } from "@/components/host/InfoTip";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -158,8 +159,11 @@ export function DoorTablets({ property }: { property: Property }) {
           <MonitorSmartphone className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-xl">{copy.title}</h2>
-          <p className="text-sm text-muted-foreground">{copy.body}</p>
+          <h2 className="flex items-center gap-1 text-xl">
+            {copy.title}
+            <InfoTip label={copy.title}>{copy.body}</InfoTip>
+          </h2>
+          <p className="text-sm text-muted-foreground">{copy.lead}</p>
         </div>
         {confirmed.length ? (
           <div className="flex flex-wrap gap-2">
@@ -220,9 +224,9 @@ export function DoorTablets({ property }: { property: Property }) {
                   .catch(() => toast.error(common.errorBody))
               }
             />
-            <span>
-              <span className="block font-medium">{copy.autoPair}</span>
-              <span className="text-muted-foreground">{copy.autoPairHelp}</span>
+            <span className="flex items-center gap-1 font-medium">
+              {copy.autoPair}
+              <InfoTip label={copy.autoPair}>{copy.autoPairHelp}</InfoTip>
             </span>
           </label>
 
@@ -244,8 +248,8 @@ export function DoorTablets({ property }: { property: Property }) {
             <span>
               <span className="flex items-center gap-1.5 font-medium">
                 <Bell className="size-4" aria-hidden /> {copy.cardPicker}
+                <InfoTip label={copy.cardPicker}>{copy.cardPickerHelp}</InfoTip>
               </span>
-              <span className="text-muted-foreground">{copy.cardPickerHelp}</span>
             </span>
           </label>
 

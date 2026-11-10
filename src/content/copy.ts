@@ -1133,6 +1133,17 @@ export const testStayCopy = branded({
   resetSure: "Yes, remove everything",
   wasReset: "Removed, ready to start again.",
   needsUpdate: "This needs the latest update (migration 0092).",
+  samples: "Sample photos (optional)",
+  samplesInfo:
+    "Add a photo of your own ID and a selfie in advance. The kiosk opened from this card shows them in place of the camera: each one lines up, comes into focus and is taken by itself, just as with a real guest, then read and checked as usual. Use your own ID with the name above so it matches. They're kept privately (like guests' ID photos) until you remove them, and only that link uses them; it works for 12 hours and stops after one check-in.",
+  sampleId: "ID",
+  sampleFace: "Selfie",
+  sampleAdd: "Add",
+  sampleReplace: "Replace",
+  sampleSaved: "Sample photo saved",
+  samplesRemove: "Remove sample photos",
+  samplesRemoved: "Sample photos removed",
+  openWithSamples: "Open the kiosk with sample photos",
 });
 
 export const kioskRestCopy = branded({
@@ -1225,6 +1236,7 @@ export const checkinSettings = branded({
   body: "Choose how guests confirm who they are when they check themselves in.",
   printQr: "Print QR card",
   openKiosk: "Open front-door kiosk",
+  tryIt: "Try it yourself",
   methods: {
     photo_id: "Photo ID check",
     last4: "Booking details check",
@@ -1284,6 +1296,7 @@ export const checkinSettings = branded({
     stepsInJourney:
       "Which steps ask for these (who's staying, every adult's ID, keeping the ID photo, the face photo) is set in the Check-in journey above. Photos are only kept once you tick the box above.",
     askRequiredUk: "Always on in the UK: the guest register needs to know who's staying.",
+    lawTitle: "What the law asks",
     lawNoteUk:
       "UK guest register: everyone aged 16 or over gives their full name and nationality at check-in, and guests who aren't British, Irish or Commonwealth citizens also give their passport or ID number, where it was issued and where they're going next (Immigration (Hotel Records) Order 1972). This is always on, kept for 12 months from arrival whatever you choose above, and found under Guest register.",
     lawNoteElsewhere:
@@ -1529,6 +1542,7 @@ export const kioskCardsCopy = branded({
   earlyLead: "With an early check-in, start",
   earlyLeadOption: (m: number) =>
     m === 0 ? "At their early check-in time" : `${m} min before their early check-in`,
+  whenTitle: "When it shows",
   whenItStarts:
     "Each card comes on at the guest's check-in time, never earlier: the time on their booking when you've set one (an early check-in or a late arrival, free, agreed or paid offline, or an early check-in extra you accepted), otherwise your property's check-in time. To show one sooner, use Show now below, on Today or with the bell on the tablet.",
   howItEnds:
@@ -1622,6 +1636,7 @@ export const doorTabletsCopy = branded({
   cardPicker: "Bell on the tablet",
   cardPickerHelp:
     "A bell beside the screensaver button lists today's arriving and leaving guests (first name and initial), so whoever is at the tablet can put their cards up now, with the time each comes on by itself. Switch off if guests shouldn't see who else is arriving or leaving today.",
+  lead: "Each tablet at this property, by number.",
   body: "Every tablet at this property, by number. A tablet joins when it opens the kiosk: by itself on this property's Wi-Fi (if allowed below), or with the six-digit code it shows. Give each a name, line its screen up, and send a welcome to one tablet or all of them.",
   pairTitle: "Code shown on the tablet",
   pair: "Pair tablet",
@@ -2181,6 +2196,7 @@ export const guest = branded({
   faceTake: "Take photo",
   faceTimer: "Take photo in 3 seconds",
   cameraIsHere: "The camera is here",
+  testSamplesBadge: "Test check-in: using your sample photos",
   jumboId: "Show your ID",
   jumboFace: "Look here",
   jumboPhone: "Or use phone",
@@ -2459,30 +2475,36 @@ export const themeStudio = branded({
   poweredBy: "Show “Powered by Latchkey”",
   kioskGroup: "Door tablet",
   kioskTouch: "Button size on the door tablet",
-  kioskTouchHelp: "Guests' own phones always keep the standard size.",
   kioskSaved: "Door tablet look saved",
   kioskMoved:
     "The door tablet's look (Standard or Express) and button size are in Settings → Door tablets, with the rest of the door tablet.",
   kioskLook: "Look on the door tablet",
   kioskLooks: {
-    auto: { label: "Automatic", help: "Follows Latchkey's recommended look for door tablets." },
-    jumbo: {
-      label: "Jumbo",
-      help: "The whole check-in looks like your Jumbo welcome card: its colour, very large words and buttons, and as few words as possible. Guests' own phones keep the standard look.",
-    },
-    standard: { label: "Standard", help: "Your theme's page, with a card for each step." },
-    xl: {
-      label: "Express",
-      help: "Bold and full screen, like your check-in and check-out cards, made from your theme: a deeper shade of your main colour behind, each step on a big card in your check-in card colour (the phone square in your check-out card colour, on a white tile), big text, heavier icons, and your theme's corners, borders, fonts and lettering made bolder. Card colours you haven't picked are tints of your theme's colours. Always uses the whole screen.",
-    },
+    auto: { label: "Automatic", help: "Latchkey's recommended look." },
+    jumbo: { label: "Jumbo", help: "Very large words and buttons." },
+    standard: { label: "Standard", help: "Your theme, a card per step." },
+    xl: { label: "Express", help: "Bold, full screen, in your colours." },
   },
+  // The details behind the (i): said once for every choice.
+  kioskLookInfo: [
+    "Standard: your theme's page, with a card for each step.",
+    "Express: bold and full screen like your check-in and check-out cards, made from your theme: a deeper shade of your main colour behind, each step on a big card in your check-in card colour, bigger text and heavier icons. Card colours you haven't picked are tints of your theme's colours.",
+    "Jumbo: the whole check-in looks like your Jumbo welcome card, with very large words and buttons and as few words as possible.",
+    "Automatic follows Latchkey's recommendation. Guests' own phones always keep the standard look and button size.",
+  ],
   kioskTouches: {
-    standard: { label: "Standard", help: "Buttons as designed, centred on the screen." },
-    expanded: {
-      label: "Expanded",
-      help: "Uses the whole screen with a thin margin: bigger letters, dates, number pads, buttons and corner icons, easy to press with any finger.",
-    },
+    standard: { label: "Standard", help: "Buttons as designed." },
+    expanded: { label: "Expanded", help: "Bigger, fills the screen." },
   },
+  kioskTouchInfo:
+    "Expanded uses the whole screen with a thin margin: bigger letters, dates, number pads, buttons and corner icons, easy to press with any finger.",
+  kioskExtras: "Flash and sounds",
+  kioskFlash: "Flash for photos",
+  kioskFlashHelp: "The screen lights up white as each photo is taken.",
+  kioskSounds: "Sounds",
+  kioskSoundsHelp: "Soft clicks for buttons, keys, sliders and the camera.",
+  kioskExtrasInfo:
+    "A web page can't change a tablet's own brightness setting, so the flash turns the whole screen white at full strength for a moment, lighting the guest's face or ID in a dim hallway. Turn the tablet's brightness up for the strongest flash. Sounds play through the tablet's speaker at its own volume.",
   sharedBadge: "Shared",
   yoursBadge: "Yours",
   templateName: "Name this look to save it as a template",
@@ -4933,7 +4955,7 @@ export const settingsMenuCopy = branded({
     kioskRest: "Smart Screensaver, night light and clocks.",
     welcomeCards: "A card for each guest arriving today.",
     goodbye: "A card for each guest leaving today.",
-    kioskLook: "Standard, Express or Jumbo, and button size.",
+    kioskLook: "Look, button size, flash and sounds.",
     kioskScreen: "Line the screen up on a tablet that doesn't fit.",
     payments: "Connect Stripe to take card payments.",
     money: "Tax details, your bank account and away dates.",

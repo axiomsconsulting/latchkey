@@ -1,10 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, Loader2, RotateCcw, UserCheck } from "lucide-react";
+import {
+  Check,
+  ExternalLink,
+  IdCard,
+  ImageUp,
+  Loader2,
+  RotateCcw,
+  Smile,
+  Trash2,
+  UserCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoTip } from "@/components/host/InfoTip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,10 +28,13 @@ import {
 } from "@/components/ui/select";
 import { common, testStayCopy as copy } from "@/content/copy";
 import { checkInMark } from "@/lib/booking-list";
+import { fromFile } from "@/lib/photo-file";
 import { surnameLetter } from "@/lib/test-stay";
 import {
   getTestStay,
+  removeTestSamples,
   resetTestStay,
+  saveTestSample,
   startTestStay,
   updateTestStay,
 } from "@/lib/test-stay.functions";
@@ -42,6 +56,8 @@ export function TestStayCard({
   const startFn = useServerFn(startTestStay);
   const updateFn = useServerFn(updateTestStay);
   const resetFn = useServerFn(resetTestStay);
+  const sampleFn = useServerFn(saveTestSample);
+  const removeSamplesFn = useServerFn(removeTestSamples);
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["test-stay", property.id],
@@ -86,6 +102,59 @@ export function TestStayCard({
 
   if (q.data && !q.data.available) return <p className="text-sm">{copy.needsUpdate}</p>;
   const verdict = checkInMark(stay?.id_check_status);
+  const samples = q.data?.samples ?? { id: false, face: false };
+  const hasSamples = samples.id || samples.face;
+  const kioskHref =
+    hasSamples && q.data?.testToken
+      ? `/kiosk/${property.short_code}?test=${encodeURIComponent(q.data.testToken)}`
+      : `/kiosk/${property.short_code}`;
+  const sampleBox = (
+    <div className="space-y-2 rounded-xl border border-border p-3">
+      <p className="flex items-center gap-1 text-sm font-medium">
+        {copy.samples}
+        <InfoTip label={copy.samples}>{copy.samplesInfo}</InfoTip>
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <SampleButton
+          kind="id"
+          has={samples.id}
+          busy={busy}
+          onFile={(img) =>
+            act(
+              () => sampleFn({ data: { propertyId: property.id, kind: "id", image: img } }),
+              copy.sampleSaved,
+            )
+          }
+        />
+        <SampleButton
+          kind="face"
+          has={samples.face}
+          busy={busy}
+          onFile={(img) =>
+            act(
+              () => sampleFn({ data: { propertyId: property.id, kind: "face", image: img } }),
+              copy.sampleSaved,
+            )
+          }
+        />
+        {hasSamples ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              void act(
+                () => removeSamplesFn({ data: { propertyId: property.id } }),
+                copy.samplesRemoved,
+              )
+            }
+          >
+            <Trash2 className="size-4" /> {copy.samplesRemove}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-3">
@@ -119,6 +188,8 @@ export function TestStayCard({
         </div>
       </div>
 
+      {sampleBox}
+
       {!stay ? (
         <Button
           disabled={busy || name.trim().length < 3}
@@ -142,8 +213,8 @@ export function TestStayCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
-              <a href={`/kiosk/${property.short_code}`} target="_blank" rel="noreferrer">
-                <ExternalLink className="size-4" /> {copy.open}
+              <a href={kioskHref} target="_blank" rel="noreferrer">
+                <ExternalLink className="size-4" /> {hasSamples ? copy.openWithSamples : copy.open}
               </a>
             </Button>
             <Button variant="outline" asChild>
@@ -180,5 +251,44 @@ export function TestStayCard({
         </>
       )}
     </div>
+  );
+}
+
+/** One sample photo: add or replace it from the device's photos or camera. */
+function SampleButton({
+  kind,
+  has,
+  busy,
+  onFile,
+}: {
+  kind: "id" | "face";
+  has: boolean;
+  busy: boolean;
+  onFile: (image: string) => Promise<unknown>;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const Icon = kind === "id" ? IdCard : Smile;
+  return (
+    <>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void fromFile(f).then(({ full }) => onFile(full));
+        }}
+      />
+      <Button variant="outline" disabled={busy} onClick={() => ref.current?.click()}>
+        <Icon className="size-4" /> {kind === "id" ? copy.sampleId : copy.sampleFace}
+        {has ? (
+          <Check className="size-4 text-primary" aria-label={copy.sampleReplace} />
+        ) : (
+          <ImageUp className="size-4" aria-label={copy.sampleAdd} />
+        )}
+      </Button>
+    </>
   );
 }

@@ -97,6 +97,10 @@ export type ThemeConfig = {
   poweredBy: boolean;
   /** Door tablets: buttons as designed, or expanded to fill the screen for big, easy-to-press targets. */
   kioskTouch: "standard" | "expanded";
+  /** Door tablets: the screen turns white for a moment as each photo is taken, lighting the guest (on by default). */
+  kioskFlash: boolean;
+  /** Door tablets: a soft click for buttons, keys, sliders and the camera (on by default; kiosk-sound.ts). */
+  kioskSounds: boolean;
   /** The door tablet's look: XL (bold cards, full screen), standard, or Latchkey's default (kiosk-xl.ts). */
   kioskLook: "auto" | "standard" | "xl" | "jumbo";
 };
@@ -137,6 +141,8 @@ const base = {
   features: [],
   poweredBy: false,
   kioskTouch: "standard",
+  kioskFlash: true,
+  kioskSounds: true,
   kioskLook: "auto",
 } as const satisfies Partial<ThemeConfig>;
 
@@ -529,6 +535,8 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     features,
     poweredBy: typeof r.poweredBy === "boolean" ? r.poweredBy : preset.poweredBy,
     kioskTouch: pick(r.kioskTouch, ["standard", "expanded"] as const, "standard"),
+    kioskFlash: typeof r.kioskFlash === "boolean" ? r.kioskFlash : true,
+    kioskSounds: typeof r.kioskSounds === "boolean" ? r.kioskSounds : true,
     kioskLook: pick(r.kioskLook, ["auto", "standard", "xl", "jumbo"] as const, "auto"),
   };
 }

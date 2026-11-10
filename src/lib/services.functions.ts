@@ -443,6 +443,8 @@ export const saveKioskLook = createServerFn({ method: "POST" })
         propertyId: uuid,
         kioskLook: z.enum(["auto", "standard", "xl", "jumbo"]),
         kioskTouch: z.enum(["standard", "expanded"]),
+        kioskFlash: z.boolean().optional(),
+        kioskSounds: z.boolean().optional(),
       })
       .parse(d),
   )
@@ -457,6 +459,8 @@ export const saveKioskLook = createServerFn({ method: "POST" })
       ...((p.theme_config as Record<string, unknown> | null) ?? {}),
       kioskLook: data.kioskLook,
       kioskTouch: data.kioskTouch,
+      ...(data.kioskFlash === undefined ? {} : { kioskFlash: data.kioskFlash }),
+      ...(data.kioskSounds === undefined ? {} : { kioskSounds: data.kioskSounds }),
     });
     const { error } = await context.supabase
       .from("properties")

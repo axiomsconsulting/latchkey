@@ -1336,3 +1336,19 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
   background: var(--j-bg) !important;
   color: var(--j-ink);
 }
+
+/* A folded settings section (ArrangedSections) is one piece with its header: the section's own
+   card inside loses its outline, shadow and corners, so the two read as joined. */
+[data-arranged-body] > .card-soft,
+[data-arranged-body] > :only-child > .card-soft:only-child,
+[data-arranged-body] > section:only-child {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* A section made of several cards: a little room inside the joined outline. */
+[data-arranged-body]:has(> :nth-child(2)) {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
