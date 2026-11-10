@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
-import { Mic } from "lucide-react";
+import { Mic, Volume2 } from "lucide-react";
 
 import { guest as copy } from "@/content/copy";
 import {
+  guideScript,
   guidanceFor,
   intentFor,
   scriptFor,
@@ -67,9 +69,15 @@ export function VoiceConcierge({
   gender,
   clips,
   cloudEar = false,
+  listens = true,
   stepKey,
   onEnd,
 }: {
+  /**
+   * The host lets this tablet listen (kiosk_devices.voice_listen). Off: guide only. It talks the
+   * guest through each screen they tap and never opens the microphone.
+   */
+  listens?: boolean;
   /** Cloud listening is available, for tablets that can't listen themselves. */
   cloudEar?: boolean;
   code: string;
@@ -112,28 +120,56 @@ export function VoiceConcierge({
     return true;
   };
 
+  const greeted = useRef(false);
   // One engine while the concierge is on.
   useEffect(() => {
+    const android = /android/i.test(navigator.userAgent);
     const e = new VoiceEngine(
       gender,
       {
-        onSpeaking: (on) => setBeat(on ? "speaking" : "listening"),
+        onSpeaking: (on) => setBeat(on ? "speaking" : listens ? "listening" : "idle"),
         onListening: (on) => setBeat((b) => (b === "speaking" ? b : on ? "listening" : "idle")),
         onHeard: (text) => void heard(text),
         onNoMic: () => setHeardText(copy.voiceNoMic),
+        onTrouble: (why) =>
+          setHeardText(why === "silent" ? copy.voiceHoldHint : copy.voiceTrouble(why, cloudEar)),
+        // Cloud listening: one short recording at a time, turned into words on the server.
+        transcribe: cloudEar
+          ? async (audio) => {
+              const b64 = await blobBase64(audio);
+              if (!b64) return null;
+              const mime = (audio.type || "audio/webm").slice(0, 60);
+              const res = await transcribeFn({ data: { code, audio: b64, mime } }).catch(
+                () => null,
+              );
+              const text = res?.text?.trim() ?? "";
+              if (!text) setHeardText(copy.voiceHoldHint);
+              return text || null;
+            }
+          : null,
+        // The ring round the orb follows the microphone, so the guest sees it hears them.
+        onLevel: (level) => {
+          const el = ring.current;
+          if (el) el.style.transform = `scale(${1 + Math.min(level * 6, 0.35)})`;
+        },
+        preferCloud: android && cloudEar,
       },
       clips ?? {},
     );
     engine.current = e;
-    e.listen();
-    // The guest pressed the bubble on the welcome: greet them and start.
-    void e.say(["hello"]).then(() => press("yes"));
+    if (listens) e.listen();
+    // The guest pressed the bubble on the welcome: greet them and start (once: the host
+    // switching listening on or off mid check-in only changes how it carries on).
+    if (!greeted.current) {
+      greeted.current = true;
+      void e.say([listens ? "hello" : "helloGuide"]).then(() => press("yes"));
+    }
     return () => {
       e.stop();
       engine.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gender]);
+  }, [gender, listens]);
 
   async function heard(text: string) {
     const e = engine.current;
@@ -171,7 +207,8 @@ export function VoiceConcierge({
   useEffect(() => {
     const e = engine.current;
     if (!e) return;
-    const s = scriptFor(stepKey, { registerPage });
+    const full = scriptFor(stepKey, { registerPage });
+    const s = listens ? full : guideScript(full);
     currentScript.current = s;
     listen.current = s.listen;
     script.current = s.say;
@@ -180,7 +217,7 @@ export function VoiceConcierge({
     if (name === "welcome") return;
     e.hush();
     void e.say(s.say);
-  }, [stepKey, registerPage]);
+  }, [stepKey, registerPage, listens]);
 
   // Back at the welcome after a check-in (done, or reset): the concierge's work is over.
   const started = useRef(false);
@@ -220,67 +257,113 @@ export function VoiceConcierge({
     };
   }, []);
 
-  return (
+  // The orb and its × sit in the tablet's own top bar (#kiosk-voice-slot, beside the phone
+  // QR icon), so they never cover anything on the screen, a QR code included.
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const find = () => setSlot(document.getElementById("kiosk-voice-slot"));
+    find();
+    // The bar is drawn again when the screen changes way up or look.
+    const mo = new MutationObserver(find);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
+
+  const controls = (
     <>
-      {heardText ? (
-        <p
-          role="status"
-          className="fixed bottom-[13rem] right-4 z-[60] max-w-[min(22rem,80vw)] rounded-2xl bg-black px-4 py-2 text-base text-white shadow-lg"
-        >
-          {heardText}
-        </p>
-      ) : null}
-      {/* Hold the orb to talk (it records exactly while held); the × beside it ends voice mode. */}
-      <button
-        type="button"
-        data-voice-corner
-        data-no-sound
-        aria-label={copy.voiceHold}
-        title={copy.voiceHold}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-          setHolding(true);
-          void engine.current?.holdStart();
-        }}
-        onPointerUp={() => {
-          setHolding(false);
-          engine.current?.holdEnd();
-        }}
-        onPointerCancel={() => {
-          setHolding(false);
-          engine.current?.holdEnd();
-        }}
-        onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-[4.5rem] right-4 z-[60] grid size-20 touch-none select-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
-      >
-        <span
-          ref={ring}
-          aria-hidden
-          className="absolute inset-0 rounded-full border-4 border-white transition-transform duration-75"
-        />
-        <Orb className="absolute inset-0" beat={holding ? "listening" : beat} />
-        <Mic className="relative size-7 text-white drop-shadow" aria-hidden />
-        <span className="sr-only" aria-live="polite">
-          {beat === "listening" || holding ? copy.voiceListening : ""}
-        </span>
-      </button>
       <button
         type="button"
         onClick={() => end.current()}
         aria-label={copy.voiceStop}
         title={copy.voiceStop}
-        className="fixed bottom-[10rem] right-3 z-[61] grid size-10 place-items-center rounded-full bg-black text-lg font-bold text-white shadow-lg"
+        className="grid size-[1.9em] shrink-0 place-items-center rounded-full bg-black text-[1.1em] font-bold leading-none text-white shadow"
       >
         ×
       </button>
+      {listens ? (
+        // Hold the orb to talk (it records exactly while held).
+        <button
+          type="button"
+          data-voice-corner
+          data-no-sound
+          aria-label={copy.voiceHold}
+          title={copy.voiceHold}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+            setHolding(true);
+            void engine.current?.holdStart();
+          }}
+          onPointerUp={() => {
+            setHolding(false);
+            engine.current?.holdEnd();
+          }}
+          onPointerCancel={() => {
+            setHolding(false);
+            engine.current?.holdEnd();
+          }}
+          onContextMenu={(e) => e.preventDefault()}
+          className="relative grid size-[3em] shrink-0 touch-none select-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+        >
+          <span
+            ref={ring}
+            aria-hidden
+            className="absolute inset-0 rounded-full border-[0.2em] border-white transition-transform duration-75"
+          />
+          <Orb className="absolute inset-0" beat={holding ? "listening" : beat} />
+          <Mic className="relative size-[1.3em] text-white drop-shadow" aria-hidden />
+          <span className="sr-only" aria-live="polite">
+            {beat === "listening" || holding ? copy.voiceListening : ""}
+          </span>
+        </button>
+      ) : (
+        // Guide only: the orb beats while it talks; a tap says the instruction again.
+        <button
+          type="button"
+          data-voice-corner
+          aria-label={copy.voiceAgain}
+          title={copy.voiceAgain}
+          onClick={() => {
+            engine.current?.hush();
+            void engine.current?.say(script.current);
+          }}
+          className="relative grid size-[3em] shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+        >
+          <Orb className="absolute inset-0" beat={beat} />
+          <Volume2 className="relative size-[1.3em] text-white drop-shadow" aria-hidden />
+        </button>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {heardText ? (
+        <p
+          role="status"
+          className="pointer-events-none fixed right-4 top-[7rem] z-[60] max-w-[min(22rem,80vw)] rounded-2xl bg-black px-4 py-2 text-base text-white shadow-lg"
+        >
+          {heardText}
+        </p>
+      ) : null}
       {holding ? (
-        <p className="fixed bottom-[4.5rem] right-28 z-[60] rounded-full bg-black px-4 py-2 text-base text-white">
+        <p className="pointer-events-none fixed right-4 top-[7rem] z-[60] rounded-full bg-black px-4 py-2 text-base text-white">
           {copy.voiceHolding}
         </p>
       ) : null}
+      {slot ? createPortal(controls, slot) : null}
     </>
   );
+}
+
+/** A recording as base64, for the server (voiceTranscribe). */
+function blobBase64(b: Blob): Promise<string | null> {
+  return new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result ?? "").split(",")[1] ?? null);
+    r.onerror = () => resolve(null);
+    r.readAsDataURL(b);
+  });
 }
 
 /** The register's page on Jumbo (RegisterPager's data-register-page), as it changes. */

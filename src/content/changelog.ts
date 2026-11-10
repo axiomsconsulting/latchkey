@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.152.0",
+    date: "2026-11-10",
+    title: "Voice that guides only",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Each door tablet can have its voice concierge guide only: it talks guests through each screen as they tap, never listens and never uses the microphone. Switch it per tablet in Settings → Door tablets.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The concierge's orb and its × now sit in the tablet's top bar, so they never cover a QR code or a button.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Listening on Android tablets now really goes through Latchkey's own listening (and the ring round the orb follows the microphone); before, the tablet's built-in listening was the only way.",
+      },
+    ],
+  },
+  {
     version: "0.151.4",
     date: "2026-11-10",
     title: "Hold to talk, and clear sound",

@@ -59,6 +59,21 @@ export const PHRASES = {
   perfect: "That's perfect. Stay still.",
   faceCloser: "Come a little closer.",
   faceIn: "Move so I can see your whole face.",
+  // Guide only (the tablet doesn't listen): the same help, asking for taps instead of answers.
+  helloGuide: "Hello! I'm your check-in concierge. I'll talk you through each step on the screen.",
+  idConsentGuide:
+    "First, I'll take a photo of your passport or ID card to find your booking. Tap start when you're ready.",
+  letterGuide: "Please tap the first letter of your surname.",
+  confirmGuide: "Is this your booking? Tap yes or no.",
+  registerNameGuide: "Please check your full name on the screen, then tap next.",
+  registerTypedGuide: "Please type that on the screen, then tap next.",
+  registerDestinationGuide:
+    "Where are you going after your stay? Tap going home, or somewhere else.",
+  registerAddressGuide: "If you know the address there, type it. Then tap next.",
+  registerCheckGuide: "Please check your details on the screen, then tap save.",
+  noMatchGuide: "I couldn't find your booking. Let's try another way on the screen.",
+  doneGuide:
+    "You're all checked in. If someone else is staying with you, tap to add them. Otherwise, tap I'm done.",
 } as const;
 
 export type PhraseKey = keyof typeof PHRASES;
@@ -289,6 +304,32 @@ export function scriptFor(stepKey: string, extra: { registerPage?: string | null
     default:
       return { say: ["tapInstead"], listen: ALWAYS };
   }
+}
+
+/** Guide only: what's said instead, where the usual words ask for a spoken answer. */
+const GUIDE_WORDS: Partial<Record<PhraseKey, PhraseKey>> = {
+  hello: "helloGuide",
+  idConsent: "idConsentGuide",
+  letter: "letterGuide",
+  confirm: "confirmGuide",
+  registerName: "registerNameGuide",
+  registerTyped: "registerTypedGuide",
+  registerDestination: "registerDestinationGuide",
+  registerAddress: "registerAddressGuide",
+  registerCheck: "registerCheckGuide",
+  noMatch: "noMatchGuide",
+  done: "doneGuide",
+};
+
+/**
+ * The same screen's script when the tablet only talks (the host switched listening off for it):
+ * nothing listened for, never "say yes", and no "you can also tap" (tapping is the way).
+ */
+export function guideScript(s: Script): Script {
+  return {
+    say: s.say.filter((k) => k !== "tapInstead").map((k) => GUIDE_WORDS[k] ?? k),
+    listen: [],
+  };
 }
 
 /* --------------------------------- guidance ---------------------------------- */

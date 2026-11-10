@@ -127,6 +127,8 @@ export type TabletState = {
   cardPicker: boolean;
   /** Where the front camera is, as the host set it (kiosk-camera-spot.ts). */
   cameraSpot: CameraSpots;
+  /** Voice check-in also listens on this tablet (false: it only talks the guest through). */
+  voiceListen: boolean;
 };
 
 const notPaired: TabletState = {
@@ -147,6 +149,7 @@ const notPaired: TabletState = {
   fullFailedAt: null,
   cardPicker: false,
   cameraSpot: {},
+  voiceListen: true,
 };
 
 /**
@@ -291,6 +294,8 @@ export const kioskTablet = createServerFn({ method: "POST" })
       fullFailedAt: data.compat?.fullFailed ? now.toISOString() : (r.full_failed_at ?? null),
       cardPicker: cardPicker && r.status !== "pending",
       cameraSpot: normaliseSpots(r.camera_spot),
+      // Migration 0104; before it every tablet listens.
+      voiceListen: r.voice_listen !== false,
     });
 
     if (data.device) {
@@ -507,6 +512,8 @@ export const kioskSnapshotUpload = createServerFn({ method: "POST" })
 
 export type KioskDevice = {
   deviceSig: string | null;
+  /** Voice check-in also listens on this tablet (false: it only talks). */
+  voiceListen: boolean;
   cameraSpot: CameraSpots;
   id: string;
   label: string | null;
@@ -553,10 +560,11 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         autoPair: true,
         cardPicker: true,
         compatAvailable: false,
+        voiceOn: false,
       };
     const { data: prop } = await sb
       .from("properties")
-      .select("kiosk_auto_pair")
+      .select("kiosk_auto_pair, theme_config")
       .eq("id", data.propertyId)
       .maybeSingle();
     // Migration 0072: the bell and compatibility mode.
@@ -570,6 +578,8 @@ export const listKioskDevices = createServerFn({ method: "GET" })
       autoPair: prop?.kiosk_auto_pair !== false,
       cardPicker: !pickErr && pick?.kiosk_card_picker !== false,
       compatAvailable: !pickErr,
+      // The host's voice check-in switch: each tablet then chooses whether it listens too.
+      voiceOn: (prop?.theme_config as { kioskVoice?: unknown } | null)?.kioskVoice === true,
       devices: (rows ?? []).map((r: any): KioskDevice => ({
         id: r.id,
         label: r.label ?? null,
@@ -590,6 +600,7 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         calibration: normaliseCalibrations(r.calibration),
         deviceSig: r.device_sig ?? null,
         cameraSpot: normaliseSpots(r.camera_spot),
+        voiceListen: r.voice_listen !== false,
       })),
     };
   });
@@ -872,6 +883,22 @@ export const setKioskCameraSpot = createServerFn({ method: "POST" })
         .eq("property_id", row.property_id)
         .eq("device_sig", row.device_sig)
         .is("camera_spot", null);
+    return { code: dev.properties.short_code };
+  });
+
+/** Voice check-in on this tablet: talks and listens (true), or only talks the guest through. */
+export const setKioskVoiceListen = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ deviceId: uuid, listen: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    const dev = await deviceProperty(db, data.deviceId);
+    await requireWrite(context.supabase, dev.properties.host_id);
+    const { error } = await db
+      .from("kiosk_devices")
+      .update({ voice_listen: data.listen })
+      .eq("id", dev.id);
+    if (error) throw new Error("This needs the latest database update. Please try again later.");
     return { code: dev.properties.short_code };
   });
 
