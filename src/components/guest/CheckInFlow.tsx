@@ -2578,9 +2578,10 @@ function RegisterStep({
   };
   const checked = cleanRegisterEntry(entry);
   const ready = checked.ok;
-  // Read from their ID already: only what's missing shows (all of an alien's details if nationality was missing).
+  // Read from their ID already: only what's missing shows. An alien's passport details read from
+  // their ID are never asked again, even when the nationality itself had to be asked.
   const show = (k: RegisterAsk | "name") => !only || (k !== "name" && only.includes(k));
-  const showAlien = (k: RegisterAsk) => alien && (show(k) || show("nationality"));
+  const showAlien = (k: RegisterAsk) => alien && show(k);
   const usual = ["GB", "IE", prefill?.nationality ?? ""].filter(Boolean);
   const nationalityField = kiosk ? (
     <CountryPicker
