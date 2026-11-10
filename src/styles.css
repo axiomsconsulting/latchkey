@@ -1286,3 +1286,53 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
   border: 2px solid var(--color-primary);
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
 }
+
+/* Jumbo register: one question per page (RegisterPager), Back / dots / Next always on screen. */
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-register-pager] > h1 {
+  font-size: calc(5cqmin * var(--j-fit, 1));
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-field] > label {
+  font-family: var(--font-display);
+  font-size: calc(6cqmin * var(--j-fit, 1));
+  font-weight: 700;
+}
+[data-kiosk-jumbo] [data-register-pager] [data-dot] {
+  color: var(--j-ink);
+}
+[data-kiosk-jumbo] [data-register-pager] [data-dot]:is([data-dot="on"], [data-dot="done"]) {
+  background: var(--j-ink);
+}
+[data-kiosk-jumbo] [data-register-pager] [data-dot="done"] {
+  opacity: 0.5;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-jumbo-field] [data-kx="grid"] [data-slot="button"] {
+  font-size: calc(5cqmin * var(--j-fit, 1)) !important;
+  min-height: calc(11cqmin * var(--j-fit, 1));
+}
+/* Nationality by letters: keys and countries large, yet all on the card at once. */
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-country-picker] [data-slot="button"][data-letter] {
+  font-size: calc(5cqmin * var(--j-fit, 1)) !important;
+  min-height: calc(9.5cqmin * var(--j-fit, 1));
+  border-radius: 2cqmin;
+  padding: 0;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-country-picker] [data-slot="button"][data-country] {
+  font-size: calc(4.6cqmin * var(--j-fit, 1)) !important;
+  min-height: calc(10cqmin * var(--j-fit, 1));
+  justify-content: flex-start;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-country-picker] [data-slot="button"][data-country] > span:first-child {
+  font-size: 1.4em !important;
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-country-picker] p.text-lg {
+  font-size: calc(4.5cqmin * var(--j-fit, 1));
+}
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-country-picker] [data-letter-keys] {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 1.4cqmin;
+}
+/* The other device has the check-in: the cover takes the card's own colours. */
+[data-kiosk-jumbo] [data-kiosk-flow] main [data-handoff-away] {
+  background: var(--j-bg) !important;
+  color: var(--j-ink);
+}

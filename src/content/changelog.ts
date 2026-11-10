@@ -47,6 +47,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.143.0",
+    date: "2026-11-09",
+    title: "Register questions one at a time, and moving between tablet and phone",
+    items: [
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "On Jumbo door tablets the guest register asks one question per page, with Back and Next always on screen and dots showing how many are left, so nothing needs scrolling.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "On door tablets guests pick their nationality by tapping its first letters: the list narrows with each letter and shows each country with its flag, in large text.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Scanning the tablet's square to carry on by phone now opens exactly the screen the guest was on, instead of sometimes skipping the register and finishing the check-in.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: 'While a guest carries on by phone, the door tablet says so and offers "Carry on here instead" (also in its phone square), and either device picks up where the other left off.',
+      },
+    ],
+  },
+  {
     version: "0.142.1",
     date: "2026-11-09",
     title: "Clearer message for Tapo lights",
