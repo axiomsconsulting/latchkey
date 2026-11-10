@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PHRASES,
+  guideScript,
   guidanceFor,
   intentFor,
   pickVoice,
@@ -116,5 +118,38 @@ describe("the tablet's own voices", () => {
     ];
     expect(pickVoice(online, "female")?.name).toBe("English United Kingdom");
     expect(pickVoice([online[0]!], "female")).toBeNull();
+  });
+});
+
+describe("guide only (the tablet doesn't listen)", () => {
+  const steps = [
+    "welcome:0",
+    "idFirst:0",
+    "identity:0",
+    "letter:0",
+    "checkout:0",
+    "confirm:0",
+    "party:0",
+    "register:0",
+    "no_match:0",
+    "done:0",
+    "something_new:0",
+  ];
+  const pages = [null, "name", "nationality", "document", "destination", "address"];
+  it("listens for nothing and never asks for a spoken answer", () => {
+    for (const step of steps)
+      for (const registerPage of pages) {
+        const s = guideScript(scriptFor(step, { registerPage }));
+        expect(s.listen).toEqual([]);
+        for (const k of s.say) {
+          expect(PHRASES[k]).not.toMatch(/\bsay\b/i);
+          expect(k).not.toBe("tapInstead");
+        }
+      }
+  });
+  it("still talks the guest through each screen", () => {
+    expect(guideScript(scriptFor("idFirst:0")).say).toEqual(["idConsentGuide"]);
+    expect(guideScript(scriptFor("done:0")).say).toEqual(["doneGuide"]);
+    expect(guideScript(scriptFor("checkout:0")).say).toEqual(["checkout"]);
   });
 });

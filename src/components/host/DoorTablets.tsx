@@ -16,6 +16,8 @@ import {
   KeyRound,
   Loader2,
   Maximize2,
+  Mic,
+  MicOff,
   MonitorSmartphone,
   RefreshCw,
   Trash2,
@@ -70,6 +72,7 @@ import {
   setKioskCamera,
   setKioskCardPicker,
   setKioskMode,
+  setKioskVoiceListen,
   type KioskDevice,
 } from "@/lib/kiosk-devices.functions";
 import { pingKiosk } from "@/lib/kiosk-ping";
@@ -277,6 +280,7 @@ export function DoorTablets({ property }: { property: Property }) {
                   onFace={(f) => setFace(d.id, f)}
                   live={live.data}
                   shot={shots[d.id]}
+                  voiceOn={q.data?.voiceOn === true}
                 />
               ))}
             </div>
@@ -306,7 +310,10 @@ function TabletCard({
   onFace,
   live,
   shot,
+  voiceOn,
 }: {
+  /** The host switched voice check-in on: each tablet then chooses whether it listens. */
+  voiceOn: boolean;
   latest: string | null;
   device: KioskDevice;
   property: Property;
@@ -320,6 +327,7 @@ function TabletCard({
   const removeFn = useServerFn(removeKioskDevice);
   const cameraFn = useServerFn(setKioskCamera);
   const modeFn = useServerFn(setKioskMode);
+  const voiceFn = useServerFn(setKioskVoiceListen);
   const [label, setLabel] = useState(d.label ?? "");
   const [askCamera, setAskCamera] = useState(false);
   const [told, setTold] = useState(false);
@@ -345,6 +353,16 @@ function TabletCard({
       const res = await cameraFn({ data: { deviceId: d.id, allowed, guestsTold: told } });
       await pingKiosk(res.code);
       setAskCamera(false);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    }
+  }
+
+  async function voiceListen(listen: boolean) {
+    try {
+      const res = await voiceFn({ data: { deviceId: d.id, listen } });
+      await pingKiosk(res.code);
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -529,6 +547,22 @@ function TabletCard({
         )}
         {/* Lite, enhanced or full: what the tablet detected is marked; what each level means is in the info button, once. */}
         <LevelSlider device={d} onPick={(m) => void level(m)} />
+        {voiceOn && !pending ? (
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+            <span className="min-w-0">
+              <span className="flex items-center gap-2">
+                {d.voiceListen ? <Mic className="size-4" /> : <MicOff className="size-4" />}
+                {copy.voiceListen}
+              </span>
+              {d.voiceListen ? null : (
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {copy.voiceListenOff}
+                </span>
+              )}
+            </span>
+            <Switch checked={d.voiceListen} onCheckedChange={(on) => void voiceListen(on)} />
+          </label>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <Button
             variant="ghost"

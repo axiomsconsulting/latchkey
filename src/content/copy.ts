@@ -1711,6 +1711,9 @@ export const doorTabletsCopy = branded({
   compatReset: "Let the tablet decide",
   cameraUnsupported:
     "This tablet's browser can't share its camera, so there's no camera view. Guests can still take their ID photo with it.",
+  voiceListen: "Voice concierge listens",
+  voiceListenOff:
+    "Guide only: it talks guests through what they tap and never uses the microphone.",
   cardPicker: "Bell on the tablet",
   cardPickerHelp:
     "A bell beside the screensaver button lists today's arriving and leaving guests (first name and initial), so whoever is at the tablet can put their cards up now, with the time each comes on by itself. Switch off if guests shouldn't see who else is arriving or leaving today.",
@@ -2289,6 +2292,7 @@ export const guest = branded({
   voiceStop: "Stop the voice concierge",
   voiceListening: "Listening",
   voiceHold: "Hold while you talk",
+  voiceAgain: "Say that again",
   voiceHolding: "Listening… let go when you've finished",
   voiceHoldHint: "I can't hear you yet: hold the bubble while you talk.",
   voiceNoMic: "I can't hear you: please tap the screen instead.",

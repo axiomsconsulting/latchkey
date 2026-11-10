@@ -1502,6 +1502,8 @@ function Kiosk() {
           : "hidden"
       }
     >
+      {/* The voice concierge's orb and × (VoiceConcierge puts them here), left of the phone QR. */}
+      <div id="kiosk-voice-slot" className="contents" />
       {/* The bell: put today's guest cards up from the tablet itself (the host can switch it off). */}
       {shared && atWelcome && !saver && tablet?.cardPicker ? (
         <KioskCardBell code={p.code} onApplied={showPicked} />
@@ -1563,6 +1565,7 @@ function Kiosk() {
             gender={voice.gender}
             clips={voice.clips}
             cloudEar={voice.cloudEar}
+            listens={tablet?.voiceListen !== false}
             stepKey={stepKey}
             onEnd={() => setVoiceOn(false)}
           />
