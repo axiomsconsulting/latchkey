@@ -1200,7 +1200,7 @@ export const testStayCopy = branded({
   waiting: "Ready for you to check in.",
   checkedIn: "You've checked in.",
   howTo: (letter: string, day: string) =>
-    `On the kiosk, tap to check in and show your ID, or use surname "${letter}" and check-out ${day}.`,
+    `Send it to a door tablet below and tap Check in there. On any other kiosk, use surname "${letter}" and check-out ${day}.`,
   open: "Open the kiosk",
   see: "See it on Bookings",
   save: "Save changes",
@@ -1211,7 +1211,7 @@ export const testStayCopy = branded({
   needsUpdate: "This needs the latest update (migration 0092).",
   samples: "Sample photos (optional)",
   samplesInfo:
-    "Add a photo of your own ID and a selfie in advance, and the kiosk shows them in place of the camera: each one lines up, comes into focus and is taken by itself, just as with a real guest, then read and checked as usual. Use your own ID with the name above so it matches. They're used in three ways: once a check-in finds your test stay (by surname and check-out), on any door tablet; on the door tablets' next check-in within 10 minutes after you start a test check-in, add a sample photo or tap \"Use on the door tablet's next check-in\" (that's how the ID shown first uses your sample too); and on the kiosk opened from this card's link (12 hours). Each time, only for that one check-in. They're kept privately (like guests' ID photos) until you remove them.",
+    "Add a photo of your own ID and a selfie in advance, and the kiosk shows them in place of the camera: each one lines up, comes into focus and is taken by itself, just as with a real guest, then read and checked as usual. Use your own ID with the name above so it matches. They're used for your test stay only: on the tablet you send the test to, once a check-in finds your test stay, and on the kiosk opened from this card's link (12 hours). They're kept privately (like guests' ID photos) until you remove them.",
   sampleId: "ID",
   sampleFace: "Selfie",
   sampleAdd: "Add",
@@ -1220,9 +1220,14 @@ export const testStayCopy = branded({
   samplesRemove: "Remove sample photos",
   samplesRemoved: "Sample photos removed",
   openWithSamples: "Open the kiosk with sample photos",
-  arm: "Use on the door tablet's next check-in",
-  armed: "The door tablet will use your sample photos for the next check-in (within 10 minutes).",
-  armedUntil: (time: string) => `Ready on the door tablet until ${time}`,
+  serviceTitle: "Try it on a door tablet",
+  serviceInfo:
+    "Pick a tablet and it goes into service mode for 10 minutes (or until you tap it again): it only does your test, starting straight away with your sample photos, and doesn't show other guests' cards. With check-in cards on, your test shows as your own welcome card; otherwise the screen is marked \"Service mode\" with a red and white border. Your other tablets carry on as usual.",
+  serviceSent: (tablet: string) => `${tablet} is in service mode for your test.`,
+  serviceEnded: "Service mode ended. The tablet is back to normal.",
+  serviceUntil: (time: string) => `until ${time}`,
+  serviceEndHint: "Tap the tablet again to end service mode.",
+  serviceNoTablets: "Pair a door tablet first (Settings → Door tablets).",
 });
 
 export const kioskRestCopy = branded({
@@ -2287,12 +2292,16 @@ export const guest = branded({
   faceTimer: "Take photo in 3 seconds",
   cameraIsHere: "The camera is here",
   testSamplesBadge: "Test check-in: using your sample photos",
+  serviceMode: "Service mode",
+  serviceWelcome: (name: string) => (name ? `Welcome, ${name}` : "Welcome"),
+  serviceWelcomeBody: "Your test check-in is ready on this tablet.",
   testSamplesFound: "Your test stay: using your sample photos",
   voiceStart: "Check in by voice",
-  voiceStop: "Stop the voice concierge",
   voiceListening: "Listening",
   voiceHold: "Hold while you talk",
   voiceAgain: "Say that again",
+  voiceMute: "Mute the concierge",
+  voiceUnmute: "Unmute the concierge",
   voiceHolding: "Listening… let go when you've finished",
   voiceHoldHint: "I can't hear you yet: hold the bubble while you talk.",
   voiceNoMic: "I can't hear you: please tap the screen instead.",

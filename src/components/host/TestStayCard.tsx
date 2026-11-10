@@ -33,14 +33,18 @@ import { fromFile } from "@/lib/photo-file";
 import { pingKiosk } from "@/lib/kiosk-ping";
 import { surnameLetter } from "@/lib/test-stay";
 import {
-  armTestSamples,
   getTestStay,
   removeTestSamples,
   resetTestStay,
   saveTestSample,
+  startServiceMode,
   startTestStay,
+  stopServiceMode,
   updateTestStay,
 } from "@/lib/test-stay.functions";
+import { useDoorTablets } from "@/components/host/DoorTablets";
+import { tabletName } from "@/lib/kiosk-devices";
+import type { KioskDevice } from "@/lib/kiosk-devices.functions";
 
 const NO_ROOM = "none";
 
@@ -60,7 +64,9 @@ export function TestStayCard({
   const updateFn = useServerFn(updateTestStay);
   const resetFn = useServerFn(resetTestStay);
   const sampleFn = useServerFn(saveTestSample);
-  const armFn = useServerFn(armTestSamples);
+  const serviceFn = useServerFn(startServiceMode);
+  const stopServiceFn = useServerFn(stopServiceMode);
+  const tablets = useDoorTablets(property.id, 60_000);
   const removeSamplesFn = useServerFn(removeTestSamples);
   const qc = useQueryClient();
   const q = useQuery({
@@ -108,12 +114,15 @@ export function TestStayCard({
   const verdict = checkInMark(stay?.id_check_status);
   const samples = q.data?.samples ?? { id: false, face: false };
   const hasSamples = samples.id || samples.face;
-  const armedAt = (samples as { armedUntil?: string | null }).armedUntil ?? null;
-  const armed = armedAt
+  const service = q.data?.service ?? null;
+  const serviceUntil = service
     ? new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(
-        new Date(armedAt),
+        new Date(service.until),
       )
     : null;
+  const confirmed = (tablets.data?.devices ?? []).filter(
+    (d: KioskDevice) => d.status === "confirmed",
+  );
   const kioskHref =
     hasSamples && q.data?.testToken
       ? `/kiosk/${property.short_code}?test=${encodeURIComponent(q.data.testToken)}`
@@ -131,10 +140,7 @@ export function TestStayCard({
           busy={busy}
           onFile={(img) =>
             act(async () => {
-              const res = await sampleFn({
-                data: { propertyId: property.id, kind: "id", image: img },
-              });
-              if (res.armedCode) await pingKiosk(res.armedCode);
+              await sampleFn({ data: { propertyId: property.id, kind: "id", image: img } });
             }, copy.sampleSaved)
           }
         />
@@ -144,29 +150,10 @@ export function TestStayCard({
           busy={busy}
           onFile={(img) =>
             act(async () => {
-              const res = await sampleFn({
-                data: { propertyId: property.id, kind: "face", image: img },
-              });
-              if (res.armedCode) await pingKiosk(res.armedCode);
+              await sampleFn({ data: { propertyId: property.id, kind: "face", image: img } });
             }, copy.sampleSaved)
           }
         />
-        {hasSamples ? (
-          <Button
-            variant={armed ? "default" : "outline"}
-            size="sm"
-            disabled={busy}
-            onClick={() =>
-              void act(async () => {
-                const res = await armFn({ data: { propertyId: property.id } });
-                await pingKiosk(res.code);
-              }, copy.armed)
-            }
-          >
-            <Tablet className="size-4" />
-            {armed ? copy.armedUntil(armed) : copy.arm}
-          </Button>
-        ) : null}
         {hasSamples ? (
           <Button
             variant="ghost"
@@ -223,12 +210,7 @@ export function TestStayCard({
       {!stay ? (
         <Button
           disabled={busy || name.trim().length < 3}
-          onClick={() =>
-            void act(async () => {
-              const res = await startFn({ data });
-              if (res.armedCode) await pingKiosk(res.armedCode);
-            }, copy.started)
-          }
+          onClick={() => void act(() => startFn({ data }), copy.started)}
         >
           {busy ? <Loader2 className="size-4 animate-spin" /> : <UserCheck className="size-4" />}
           {copy.start}
@@ -244,6 +226,49 @@ export function TestStayCard({
               <p className="mt-1">
                 {copy.howTo(surnameLetter(stay.guest_full_name), stay.check_out_date)}
               </p>
+            ) : null}
+          </div>
+          {/* Service mode: the test goes to one door tablet; the others carry on as usual. */}
+          <div className="space-y-2 rounded-xl border border-border p-3">
+            <p className="flex items-center gap-1 text-sm font-medium">
+              <Tablet className="size-4" /> {copy.serviceTitle}
+              <InfoTip label={copy.serviceTitle}>{copy.serviceInfo}</InfoTip>
+            </p>
+            {confirmed.length ? (
+              <div className="flex flex-wrap gap-2">
+                {confirmed.map((d: KioskDevice) => {
+                  const on = service?.deviceId === d.id;
+                  return (
+                    <Button
+                      key={d.id}
+                      size="sm"
+                      variant={on ? "default" : "outline"}
+                      disabled={busy}
+                      onClick={() =>
+                        void act(
+                          async () => {
+                            const res = on
+                              ? await stopServiceFn({ data: { propertyId: property.id } })
+                              : await serviceFn({
+                                  data: { propertyId: property.id, deviceId: d.id },
+                                });
+                            await pingKiosk(res.code);
+                          },
+                          on ? copy.serviceEnded : copy.serviceSent(tabletName(d)),
+                        )
+                      }
+                    >
+                      {d.number}. {tabletName(d)}
+                      {on && serviceUntil ? ` · ${copy.serviceUntil(serviceUntil)}` : ""}
+                    </Button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{copy.serviceNoTablets}</p>
+            )}
+            {service ? (
+              <p className="text-xs text-muted-foreground">{copy.serviceEndHint}</p>
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">

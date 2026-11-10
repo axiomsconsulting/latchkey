@@ -1065,7 +1065,7 @@ function Kiosk() {
   // Check-out day: goodbyes for guests leaving now, unless someone arriving tapped "Checking in?".
   const { goodbyes, reload: reloadGoodbyes } = useKioskGoodbyes(p.code, shared);
   // With guests' cards up, the host's welcome is one of them (it replaces that guest's card or joins them), never over them.
-  const welcomeUp =
+  const welcomeUpRaw =
     shared &&
     !!welcome &&
     asideVersion !== welcome.version &&
@@ -1083,6 +1083,14 @@ function Kiosk() {
   } | null>(null);
   const calibration = useKioskTablet(p.code, shared && !tour);
   const tablet = calibration.tablet;
+  // Service mode: the host sent their test check-in to this tablet (10 minutes, or until they end it).
+  const service = useServiceMode(shared && !tour ? (tablet?.service ?? null) : null);
+  const [serviceAside, setServiceAside] = useState(false);
+  // In service mode nobody else checks in here: real guests' welcomes and cards wait.
+  const welcomeUp = welcomeUpRaw && !service;
+  useEffect(() => {
+    if (!service) setServiceAside(false);
+  }, [service]);
   // The host watching this tablet's camera, live, whatever is on screen.
   const watching = useCameraWatch(shared && !tour ? (tablet?.camChannel ?? null) : null);
   // The host's direct video couldn't connect: a picture every few seconds through Latchkey instead.
@@ -1185,7 +1193,10 @@ function Kiosk() {
     busy: welcomeUp || !atWelcome,
     enabled: shared && !tour,
   });
-  const goodbyeUp = shared && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
+  const goodbyeUp =
+    shared && !service && !welcomeUp && !goodbyeAside && atWelcome && !!goodbyes?.cards.length;
+  // Service mode: the test guest's own welcome card (when check-in cards are on) until tapped.
+  const serviceCardUp = !!service?.card && atWelcome && !serviceAside;
   // What's on screen now, for the host's live view (Settings → Door tablets): which screen only.
   // The sun or moon button: the night look now, whatever the time, until the next touch.
   const [restTapped, setRestTapped] = useState(false);
@@ -1281,6 +1292,7 @@ function Kiosk() {
       // Whoever was checking in walked away: the host's welcome (and today's goodbyes) show again.
       setAsideVersion(null);
       setGoodbyeAside(false);
+      setServiceAside(false);
     },
     // Cards or a welcome put aside by someone who then walked away come back instead of the screensaver.
     onSaver: () => {
@@ -1673,6 +1685,7 @@ function Kiosk() {
                     if (k.startsWith("done:")) reloadWelcome();
                   }}
                   welcomeStart={shared ? welcomeStart : null}
+                  service={!!service}
                   onDone={
                     shared
                       ? () => {
@@ -1714,6 +1727,32 @@ function Kiosk() {
 
         {/* The public tour: the floating demo panel (says it's a demo, switch property, start a trial, leave). */}
         {tour ? <GuestDemoDock code={p.code} /> : null}
+
+        {/* Service mode: the host's test guest as a welcome card, or the screen marked all round. */}
+        {serviceCardUp && service ? (
+          <KioskWelcomeOverlay
+            welcome={{
+              headline: copy.serviceWelcome(service.firstName),
+              body: copy.serviceWelcomeBody,
+              version: 0,
+            }}
+            logo={
+              <LogoMark theme={p.theme} name={p.name} className={tileLogo("size-24 text-4xl")} />
+            }
+            onCheckIn={() => {
+              setServiceAside(true);
+              setSaver(false);
+              setWelcomeStart({ version: null, n: Date.now() });
+              setSession((n) => n + 1);
+              bump();
+            }}
+            onNotMe={() => {
+              setServiceAside(true);
+              bump();
+            }}
+          />
+        ) : null}
+        {service && !service.card ? <ServiceFrame /> : null}
 
         {/* The host's welcome for an arriving guest: over everything, the screensaver too. */}
         {welcomeUp && welcome ? (
@@ -1975,5 +2014,37 @@ function KioskAtRest({
       qrUrl={qrUrl}
       onWake={onWake}
     />
+  );
+}
+
+/** Service mode while it lasts: the tablet's state, cleared by itself when its time is up. */
+function useServiceMode(
+  s: { until: string; firstName: string; card: boolean } | null,
+): { until: string; firstName: string; card: boolean } | null {
+  const [, tick] = useState(0);
+  const left = s ? Date.parse(s.until) - Date.now() : 0;
+  useEffect(() => {
+    if (!s || left <= 0) return;
+    const t = window.setTimeout(() => tick((n) => n + 1), Math.min(left + 200, 2 ** 31 - 1));
+    return () => window.clearTimeout(t);
+  }, [s, left]);
+  return s && left > 0 ? s : null;
+}
+
+/** Service mode without a welcome card: red and white stripes round the screen, named on top. */
+function ServiceFrame() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[90]">
+      <div
+        className="absolute inset-0"
+        style={{
+          border: "14px solid transparent",
+          borderImage: "repeating-linear-gradient(45deg, #dc2626 0 18px, #ffffff 18px 36px) 14",
+        }}
+      />
+      <p className="absolute left-1/2 top-0 -translate-x-1/2 rounded-b-xl bg-[#dc2626] px-6 py-1.5 text-lg font-bold uppercase tracking-wider text-white shadow">
+        {copy.serviceMode}
+      </p>
+    </div>
   );
 }

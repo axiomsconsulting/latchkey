@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { soundFor } from "../src/lib/kiosk-sound";
 import { sampleLook, samplePhase } from "../src/lib/test-sample-motion";
-import { testToken, testTokenValid } from "../src/lib/test-stay";
+import { SERVICE_MINUTES, inService, testToken, testTokenValid } from "../src/lib/test-stay";
 import { normaliseTheme } from "../src/lib/theme";
 
 describe("sample photos play a guest's moment", () => {
@@ -52,5 +52,16 @@ describe("door tablet sounds", () => {
       kioskFlash: false,
       kioskSounds: false,
     });
+  });
+});
+
+describe("service mode on one door tablet", () => {
+  it("lasts until its time, then the tablet is back to normal", () => {
+    const now = Date.parse("2026-11-10T12:00:00Z");
+    const until = new Date(now + SERVICE_MINUTES * 60_000).toISOString();
+    expect(SERVICE_MINUTES).toBe(10);
+    expect(inService(until, now)).toBe(true);
+    expect(inService(until, now + SERVICE_MINUTES * 60_000)).toBe(false);
+    expect(inService(null, now)).toBe(false);
   });
 });

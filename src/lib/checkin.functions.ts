@@ -778,6 +778,58 @@ export const startFromWelcome = createServerFn({ method: "POST" })
   });
 
 /**
+ * Service mode (the host's test check-in sent to this tablet, TestStayCard): Check in opens the
+ * property's test stay at once, with no questions, while the tablet's service mode lasts. Only
+ * the tablet the host chose, only its test stay.
+ */
+export const startServiceCheckIn = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ code, deviceId, device: z.string().min(20).max(120) }).parse(d))
+  .handler(async ({ data }) => {
+    const { admin, deviceHash, loadPropertyByCode, sha256 } = await srv();
+    const p = await loadPropertyByCode(data.code);
+    if (!p) return { status: "find" as const };
+    const db = (await admin()) as any;
+    const { data: dev } = await db
+      .from("kiosk_devices")
+      .select("id, status, service_until, service_booking_id")
+      .eq("token_hash", sha256(data.device))
+      .eq("property_id", p.id)
+      .maybeSingle();
+    if (
+      !dev ||
+      dev.status === "pending" ||
+      !dev.service_booking_id ||
+      !dev.service_until ||
+      Date.parse(dev.service_until) <= Date.now()
+    )
+      return { status: "find" as const };
+    const { data: b } = await db
+      .from("bookings")
+      .select("id, guest_full_name, status, is_test")
+      .eq("id", dev.service_booking_id)
+      .eq("property_id", p.id)
+      .eq("is_test", true)
+      .maybeSingle();
+    if (!b) return { status: "find" as const };
+    await db.from("check_in_attempts").insert({
+      property_id: p.id,
+      booking_id: b.id,
+      surname_attempt: surnameInitial(b.guest_full_name) ?? "-",
+      succeeded: true,
+      device_hash: deviceHash(p.id, data.deviceId),
+    });
+    return {
+      status: "matched" as const,
+      token: await startSession(p.id, b.id),
+      firstName: firstName(b.guest_full_name),
+      needsName: false,
+      returning: b.status === "checked_in",
+      again: false,
+      platform: "direct",
+    };
+  });
+
+/**
  * Pick-your-booking list, only when the host has switched ID checks off.
  * The guest must give their surname initial first, every lookup counts as an
  * attempt (so the device lock applies), and only matching stays are listed.

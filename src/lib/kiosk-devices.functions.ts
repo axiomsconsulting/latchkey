@@ -10,6 +10,8 @@ import { normaliseSpots, type CameraSpots } from "./kiosk-camera-spot";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { inService } from "./test-stay";
+
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normaliseCalibrations, type Calibration } from "@/lib/kiosk-calibration";
 import {
@@ -129,6 +131,11 @@ export type TabletState = {
   cameraSpot: CameraSpots;
   /** Voice check-in also listens on this tablet (false: it only talks the guest through). */
   voiceListen: boolean;
+  /**
+   * Service mode: the host sent their test check-in to this tablet (until `until`). `card`: the
+   * test guest shows as a welcome card (check-in cards are on), else the screen is marked.
+   */
+  service: { until: string; firstName: string; card: boolean } | null;
 };
 
 const notPaired: TabletState = {
@@ -150,6 +157,7 @@ const notPaired: TabletState = {
   cardPicker: false,
   cameraSpot: {},
   voiceListen: true,
+  service: null,
 };
 
 /**
@@ -296,7 +304,33 @@ export const kioskTablet = createServerFn({ method: "POST" })
       cameraSpot: normaliseSpots(r.camera_spot),
       // Migration 0104; before it every tablet listens.
       voiceListen: r.voice_listen !== false,
+      service: null,
     });
+    // Service mode (migration 0105): the test guest's first name, for the welcome card.
+    const serviceFor = async (r: any): Promise<TabletState["service"]> => {
+      if (
+        r.status === "pending" ||
+        !r.service_booking_id ||
+        !inService(r.service_until, Date.now())
+      )
+        return null;
+      const { data: b } = await db
+        .from("bookings")
+        .select("guest_full_name")
+        .eq("id", r.service_booking_id)
+        .eq("is_test", true)
+        .maybeSingle();
+      if (!b) return null;
+      const first =
+        String(b.guest_full_name ?? "")
+          .trim()
+          .split(/\s+/)[0] ?? "";
+      return {
+        until: r.service_until,
+        firstName: first,
+        card: !pickErr && normaliseArrivals(pick?.checkin_welcome).on,
+      };
+    };
 
     if (data.device) {
       const { data: dev, error } = await db
@@ -323,7 +357,7 @@ export const kioskTablet = createServerFn({ method: "POST" })
           .eq("id", dev.id);
         await reportCompat(dev.id);
         if (data.screen) await saveScreen(db, dev.id, data.screen);
-        return state({ ...dev, ...renew }, null);
+        return { ...state({ ...dev, ...renew }, null), service: await serviceFor(dev) };
       }
       if (error) return notPaired;
     }

@@ -11,6 +11,7 @@ import { todayInZone } from "@/lib/dates";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
 import {
+  SERVICE_MINUTES,
   TEST_LINK_HOURS,
   suggestedName,
   testNameProblem,
@@ -29,27 +30,6 @@ const COLS =
 async function admin() {
   const { admin: get } = await import("./checkin.server");
   return (await get()) as any;
-}
-
-/**
- * Gets the door tablets ready with the host's sample photos for the next check-in (10 minutes):
- * done on starting a test and on saving a sample, since the first ID photo comes before the
- * kiosk knows whose check-in it is. Nothing happens without sample photos (or before 0103).
- */
-async function armSamples(db: any, propertyId: string): Promise<string | null> {
-  const { data, error } = await db
-    .from("test_check_in_samples")
-    .update({ armed_until: new Date(Date.now() + 10 * 60_000).toISOString() })
-    .eq("property_id", propertyId)
-    .select("property_id")
-    .maybeSingle();
-  if (error || !data) return null;
-  const { data: p } = await db
-    .from("properties")
-    .select("short_code")
-    .eq("id", propertyId)
-    .single();
-  return (p?.short_code as string | undefined) ?? null;
 }
 
 export const getTestStay = createServerFn({ method: "GET" })
@@ -85,7 +65,20 @@ export const getTestStay = createServerFn({ method: "GET" })
       face_ref: string | null;
       armed_until?: string | null;
     } | null;
+    // The tablet in service mode for this test, if any (migration 0105).
+    const { data: svc } = await db
+      .from("kiosk_devices")
+      .select("id, service_until")
+      .eq("property_id", data.propertyId)
+      .gt("service_until", new Date().toISOString())
+      .maybeSingle()
+      .then(
+        (r: { data: unknown }) => r,
+        () => ({ data: null }),
+      );
+    const service = svc as { id: string; service_until: string } | null;
     return {
+      service: service ? { deviceId: service.id, until: service.service_until } : null,
       samples: {
         id: !!s?.id_ref,
         face: !!s?.face_ref,
@@ -145,7 +138,7 @@ export const startTestStay = createServerFn({ method: "POST" })
             ? "This needs the latest update (migration 0092)."
             : error.message,
       );
-    return { id: made.id as string, armedCode: await armSamples(db, data.propertyId) };
+    return { id: made.id as string };
   });
 
 /** Their name or the room to try, at any point. The stay's real room stays empty. */
@@ -185,6 +178,7 @@ export const resetTestStay = createServerFn({ method: "POST" })
       .eq("is_test", true)
       .maybeSingle();
     if (!stay) return { ok: true };
+    await endService(db, data.propertyId);
     const { wipeTestStay } = await import("./test-stay.server");
     await wipeTestStay(db, stay.id);
     return { ok: true };
@@ -238,7 +232,7 @@ export const saveTestSample = createServerFn({ method: "POST" })
     }
     const old = (before as Record<string, string | null> | null)?.[column];
     if (old) await removePrivate([old]).catch(() => undefined);
-    return { ok: true, armedCode: await armSamples(db, data.propertyId) };
+    return { ok: true };
   });
 
 /** Deletes the sample photos for good. */
@@ -258,29 +252,6 @@ export const removeTestSamples = createServerFn({ method: "POST" })
     await removePrivate([row.id_ref, row.face_ref]);
     await db.from("test_check_in_samples").delete().eq("property_id", data.propertyId);
     return { ok: true };
-  });
-
-/** Arms the sample photos for the next check-in on this property's door tablets (10 minutes). */
-export const armTestSamples = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
-  .handler(async ({ data, context }) => {
-    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
-    const db = await admin();
-    const { data: row, error } = await db
-      .from("test_check_in_samples")
-      .update({ armed_until: new Date(Date.now() + 10 * 60_000).toISOString() })
-      .eq("property_id", data.propertyId)
-      .select("property_id")
-      .maybeSingle();
-    if (error) throw new Error("This needs the latest update (migration 0103).");
-    if (!row) throw new Error("Add your sample photos first.");
-    const { data: p } = await db
-      .from("properties")
-      .select("short_code")
-      .eq("id", data.propertyId)
-      .single();
-    return { code: p?.short_code as string };
   });
 
 /**
@@ -340,4 +311,73 @@ export const getTestSamples = createServerFn({ method: "POST" })
     const { samplesAsUrls } = await import("./test-stay.server");
     const { id, face } = await samplesAsUrls(r);
     return { ok: true as const, id, face };
+  });
+
+/** Ends service mode on every tablet of the property; the short code to ping, when any was on. */
+async function endService(db: any, propertyId: string): Promise<void> {
+  await db
+    .from("kiosk_devices")
+    .update({ service_until: null, service_booking_id: null })
+    .eq("property_id", propertyId)
+    .not("service_until", "is", null)
+    .then(
+      () => {},
+      () => {},
+    );
+}
+
+async function shortCode(db: any, propertyId: string): Promise<string> {
+  const { data: p } = await db
+    .from("properties")
+    .select("short_code")
+    .eq("id", propertyId)
+    .single();
+  return p?.short_code as string;
+}
+
+/**
+ * Sends the test check-in to one door tablet: for SERVICE_MINUTES (or until the host ends it)
+ * that tablet only does the host's test, starting it straight away; every other tablet carries
+ * on as usual. One tablet at a time.
+ */
+export const startServiceMode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, deviceId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const db = await admin();
+    const { data: stay } = await db
+      .from("bookings")
+      .select("id")
+      .eq("property_id", data.propertyId)
+      .eq("is_test", true)
+      .maybeSingle();
+    if (!stay) throw new Error("Start a test check-in first.");
+    const { data: dev } = await db
+      .from("kiosk_devices")
+      .select("id, status")
+      .eq("id", data.deviceId)
+      .eq("property_id", data.propertyId)
+      .maybeSingle();
+    if (!dev || dev.status === "pending") throw new Error("Pair that tablet first.");
+    await endService(db, data.propertyId);
+    const until = new Date(Date.now() + SERVICE_MINUTES * 60_000).toISOString();
+    const { error } = await db
+      .from("kiosk_devices")
+      .update({ service_until: until, service_booking_id: stay.id })
+      .eq("id", dev.id);
+    if (error) throw new Error("This needs the latest update (migration 0105).");
+    return { code: await shortCode(db, data.propertyId), until };
+  });
+
+/** Ends service mode: the tablet goes back to its usual check-in. */
+export const stopServiceMode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireWrite(context.supabase, await hostOfProperty(context.supabase, data.propertyId));
+    const db = await admin();
+    await endService(db, data.propertyId);
+    return { code: await shortCode(db, data.propertyId) };
   });

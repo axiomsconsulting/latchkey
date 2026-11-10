@@ -338,7 +338,7 @@ export class VoiceEngine {
 
   /** Says phrases one after another (or plain text); resolves when finished or cut short. */
   async say(keys: Array<PhraseKey | { text: string }>): Promise<void> {
-    if (this.stopped || !keys.length) return;
+    if (this.stopped || this.muted || !keys.length) return;
     // Studio recordings where there are any; the tablet's own voice for the rest.
     const recorded = keys.every((k) => typeof k === "string" && this.clips[k]);
     if (recorded) {
@@ -416,6 +416,27 @@ export class VoiceEngine {
       this.playing.pause();
       this.playing.dispatchEvent(new Event("ended"));
     }
+  }
+
+  /** Muted: says nothing and doesn't listen until unmuted (the orb stays). */
+  private muted = false;
+  private wantedBefore = false;
+  get isMuted(): boolean {
+    return this.muted;
+  }
+  mute() {
+    if (this.muted) return;
+    this.muted = true;
+    this.wantedBefore = this.want;
+    this.want = false;
+    this.hush();
+    this.pauseListening();
+  }
+  unmute() {
+    if (!this.muted) return;
+    this.muted = false;
+    this.want = this.wantedBefore;
+    this.resumeListening();
   }
 
   listen() {
@@ -531,7 +552,7 @@ export class VoiceEngine {
 
   /** Push to talk (the orb held): records exactly while held, through Latchkey's own listening. */
   async holdStart() {
-    if (this.stopped) return;
+    if (this.stopped || this.muted) return;
     unlockAudio();
     this.hush();
     if (!this.ear && this.ev.transcribe) await this.useCloud("held");
