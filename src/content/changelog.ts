@@ -47,6 +47,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.153.0",
+    date: "2026-11-10",
+    title: "Service mode for your test check-in",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: 'Send your test check-in to one door tablet: it goes into service mode for 10 minutes (or until you end it) and starts your test straight away with your sample photos, as your own welcome card, or with a red and white "Service mode" border when check-in cards are off. Your other tablets carry on as usual.',
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The voice concierge's × is now a mute button: it goes quiet and stops listening, and unmuting carries on from the screen the guest is on.",
+      },
+    ],
+  },
+  {
     version: "0.152.0",
     date: "2026-11-10",
     title: "Voice that guides only",

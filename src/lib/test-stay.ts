@@ -38,6 +38,14 @@ export function surnameLetter(name: string): string {
 /** How long the kiosk link with the host's sample photos works. */
 export const TEST_LINK_HOURS = 12;
 
+/** How long a door tablet stays in service mode for the host's test check-in. */
+export const SERVICE_MINUTES = 10;
+
+/** Whether a tablet is in service mode now (its service_until is still ahead). */
+export function inService(until: string | null | undefined, now: number): boolean {
+  return !!until && Date.parse(until) > now;
+}
+
 const enc = new TextEncoder();
 async function hmac(secret: string, text: string): Promise<string> {
   const key = await crypto.subtle.importKey(

@@ -68,6 +68,7 @@ import {
   setParty,
   skipCompanionId,
   startFromWelcome,
+  startServiceCheckIn,
   takeHandoff,
   verifyLast4,
   verifyPhotoId,
@@ -230,6 +231,7 @@ export function CheckInFlow({
   resumeToken,
   voiceStart = null,
   welcomeStart = null,
+  service = false,
   onDone,
 }: {
   /** Door tablet: "I'm done" at the end goes back to the start for the next guest. */
@@ -240,6 +242,8 @@ export function CheckInFlow({
    * usual questions find it.
    */
   welcomeStart?: { version: number | null; n: number; source?: "device" | "all" } | null;
+  /** Service mode (the host's test sent to this door tablet): Check in opens the test stay. */
+  service?: boolean;
   /** Door tablet welcome: the full phone panel on the right (Latchkey admin setting), else only the icon at the top. */
   qrPanel?: boolean;
   /** Jumbo door tablet: very large words and buttons, no floating preview. */
@@ -320,6 +324,7 @@ export function CheckInFlow({
   const match = useServerFn(matchBooking);
   const options = useServerFn(checkoutOptions);
   const fromWelcome = useServerFn(startFromWelcome);
+  const serviceStartFn = useServerFn(startServiceCheckIn);
   const byPhoto = useServerFn(findByPhotoId);
   // They've stayed with this business before: greeted as someone returning.
   const [stayedBefore, setStayedBefore] = useState(false);
@@ -640,11 +645,30 @@ export function CheckInFlow({
 
   /** Finding the stay: the photo ID first when the journey has it, otherwise the surname initial. */
   function startFind() {
+    // Service mode: this tablet only does the host's test check-in, straight away.
+    if (service && !serviceTried.current) return void startService();
+    serviceTried.current = false;
     setStep(
       flow.idFirst && !pendingPhoto.current
         ? { name: "idFirst", consented: false }
         : { name: "letter" },
     );
+  }
+
+  const serviceTried = useRef(false);
+  async function startService() {
+    const device = deviceToken(property.code);
+    const res = device
+      ? await run(() =>
+          serviceStartFn({ data: { code: property.code, deviceId: deviceId(), device } }),
+        )
+      : null;
+    if (!res || res.status !== "matched") {
+      // Service mode ended (or the test was reset): the usual start.
+      serviceTried.current = true;
+      return startFind();
+    }
+    void found(res.token, res.platform, res.firstName, false, res.returning, false, false);
   }
 
   /** ID first: the name on it finds the stay; otherwise the photo waits to be used once it's found. */

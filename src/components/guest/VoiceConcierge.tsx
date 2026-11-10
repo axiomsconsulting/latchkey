@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
-import { Mic, Volume2 } from "lucide-react";
+import { Mic, Volume2, VolumeX } from "lucide-react";
 
 import { guest as copy } from "@/content/copy";
 import {
@@ -91,6 +91,7 @@ export function VoiceConcierge({
   // The microphone's level, as a ring round the orb (set directly, many times a second).
   const ring = useRef<HTMLSpanElement>(null);
   const [holding, setHolding] = useState(false);
+  const [muted, setMuted] = useState(false);
   // What it just heard, shown by the orb for a moment, so the guest sees it understood them.
   const [heardText, setHeardText] = useState<string | null>(null);
   useEffect(() => {
@@ -271,14 +272,37 @@ export function VoiceConcierge({
 
   const controls = (
     <>
+      {/* Mute: the concierge goes quiet (and stops listening) but stays; unmute carries on from this screen. */}
       <button
         type="button"
-        onClick={() => end.current()}
-        aria-label={copy.voiceStop}
-        title={copy.voiceStop}
-        className="grid size-[1.9em] shrink-0 place-items-center rounded-full bg-black text-[1.1em] font-bold leading-none text-white shadow"
+        data-no-sound
+        onClick={() => {
+          const e = engine.current;
+          if (!e) return;
+          if (e.isMuted) {
+            e.unmute();
+            setMuted(false);
+            void e.say(script.current);
+          } else {
+            e.mute();
+            setMuted(true);
+          }
+        }}
+        aria-pressed={muted}
+        aria-label={muted ? copy.voiceUnmute : copy.voiceMute}
+        title={muted ? copy.voiceUnmute : copy.voiceMute}
+        className={cn(
+          "grid size-[2.25em] shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          muted
+            ? "bg-foreground text-background"
+            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+        )}
       >
-        ×
+        {muted ? (
+          <VolumeX className="size-[1.25em]" aria-hidden />
+        ) : (
+          <Volume2 className="size-[1.25em]" aria-hidden />
+        )}
       </button>
       {listens ? (
         // Hold the orb to talk (it records exactly while held).
@@ -310,7 +334,10 @@ export function VoiceConcierge({
             aria-hidden
             className="absolute inset-0 rounded-full border-[0.2em] border-white transition-transform duration-75"
           />
-          <Orb className="absolute inset-0" beat={holding ? "listening" : beat} />
+          <Orb
+            className={cn("absolute inset-0", muted && "opacity-40 grayscale")}
+            beat={muted ? "idle" : holding ? "listening" : beat}
+          />
           <Mic className="relative size-[1.3em] text-white drop-shadow" aria-hidden />
           <span className="sr-only" aria-live="polite">
             {beat === "listening" || holding ? copy.voiceListening : ""}
@@ -324,13 +351,16 @@ export function VoiceConcierge({
           aria-label={copy.voiceAgain}
           title={copy.voiceAgain}
           onClick={() => {
+            if (muted) return;
             engine.current?.hush();
             void engine.current?.say(script.current);
           }}
           className="relative grid size-[3em] shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
         >
-          <Orb className="absolute inset-0" beat={beat} />
-          <Volume2 className="relative size-[1.3em] text-white drop-shadow" aria-hidden />
+          <Orb
+            className={cn("absolute inset-0", muted && "opacity-40 grayscale")}
+            beat={muted ? "idle" : beat}
+          />
         </button>
       )}
     </>
