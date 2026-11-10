@@ -1211,7 +1211,7 @@ export const testStayCopy = branded({
   needsUpdate: "This needs the latest update (migration 0092).",
   samples: "Sample photos (optional)",
   samplesInfo:
-    "Add a photo of your own ID and a selfie in advance, and the kiosk shows them in place of the camera: each one lines up, comes into focus and is taken by itself, just as with a real guest, then read and checked as usual. Use your own ID with the name above so it matches. They're used in three ways: once a check-in finds your test stay (by surname and check-out), on any door tablet; on the door tablets' next check-in within 10 minutes after you tap \"Use on the door tablet's next check-in\" (for showing the ID first); and on the kiosk opened from this card's link (12 hours). Each time, only for that one check-in. They're kept privately (like guests' ID photos) until you remove them.",
+    "Add a photo of your own ID and a selfie in advance, and the kiosk shows them in place of the camera: each one lines up, comes into focus and is taken by itself, just as with a real guest, then read and checked as usual. Use your own ID with the name above so it matches. They're used in three ways: once a check-in finds your test stay (by surname and check-out), on any door tablet; on the door tablets' next check-in within 10 minutes after you start a test check-in, add a sample photo or tap \"Use on the door tablet's next check-in\" (that's how the ID shown first uses your sample too); and on the kiosk opened from this card's link (12 hours). Each time, only for that one check-in. They're kept privately (like guests' ID photos) until you remove them.",
   sampleId: "ID",
   sampleFace: "Selfie",
   sampleAdd: "Add",

@@ -130,10 +130,12 @@ export function TestStayCard({
           has={samples.id}
           busy={busy}
           onFile={(img) =>
-            act(
-              () => sampleFn({ data: { propertyId: property.id, kind: "id", image: img } }),
-              copy.sampleSaved,
-            )
+            act(async () => {
+              const res = await sampleFn({
+                data: { propertyId: property.id, kind: "id", image: img },
+              });
+              if (res.armedCode) await pingKiosk(res.armedCode);
+            }, copy.sampleSaved)
           }
         />
         <SampleButton
@@ -141,10 +143,12 @@ export function TestStayCard({
           has={samples.face}
           busy={busy}
           onFile={(img) =>
-            act(
-              () => sampleFn({ data: { propertyId: property.id, kind: "face", image: img } }),
-              copy.sampleSaved,
-            )
+            act(async () => {
+              const res = await sampleFn({
+                data: { propertyId: property.id, kind: "face", image: img },
+              });
+              if (res.armedCode) await pingKiosk(res.armedCode);
+            }, copy.sampleSaved)
           }
         />
         {hasSamples ? (
@@ -219,7 +223,12 @@ export function TestStayCard({
       {!stay ? (
         <Button
           disabled={busy || name.trim().length < 3}
-          onClick={() => void act(() => startFn({ data }), copy.started)}
+          onClick={() =>
+            void act(async () => {
+              const res = await startFn({ data });
+              if (res.armedCode) await pingKiosk(res.armedCode);
+            }, copy.started)
+          }
         >
           {busy ? <Loader2 className="size-4 animate-spin" /> : <UserCheck className="size-4" />}
           {copy.start}

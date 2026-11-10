@@ -31,6 +31,27 @@ async function admin() {
   return (await get()) as any;
 }
 
+/**
+ * Gets the door tablets ready with the host's sample photos for the next check-in (10 minutes):
+ * done on starting a test and on saving a sample, since the first ID photo comes before the
+ * kiosk knows whose check-in it is. Nothing happens without sample photos (or before 0103).
+ */
+async function armSamples(db: any, propertyId: string): Promise<string | null> {
+  const { data, error } = await db
+    .from("test_check_in_samples")
+    .update({ armed_until: new Date(Date.now() + 10 * 60_000).toISOString() })
+    .eq("property_id", propertyId)
+    .select("property_id")
+    .maybeSingle();
+  if (error || !data) return null;
+  const { data: p } = await db
+    .from("properties")
+    .select("short_code")
+    .eq("id", propertyId)
+    .single();
+  return (p?.short_code as string | undefined) ?? null;
+}
+
 export const getTestStay = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
@@ -124,7 +145,7 @@ export const startTestStay = createServerFn({ method: "POST" })
             ? "This needs the latest update (migration 0092)."
             : error.message,
       );
-    return { id: made.id as string };
+    return { id: made.id as string, armedCode: await armSamples(db, data.propertyId) };
   });
 
 /** Their name or the room to try, at any point. The stay's real room stays empty. */
@@ -217,7 +238,7 @@ export const saveTestSample = createServerFn({ method: "POST" })
     }
     const old = (before as Record<string, string | null> | null)?.[column];
     if (old) await removePrivate([old]).catch(() => undefined);
-    return { ok: true };
+    return { ok: true, armedCode: await armSamples(db, data.propertyId) };
   });
 
 /** Deletes the sample photos for good. */
