@@ -14,7 +14,7 @@ import {
   type VoiceGender,
 } from "@/lib/voice-concierge";
 import { VoiceEngine, voiceSupported } from "@/lib/voice-engine";
-import { voiceIntent } from "@/lib/voice.functions";
+import { voiceIntent, voiceTranscribe } from "@/lib/voice.functions";
 import { cn } from "@/lib/utils";
 
 /** The colourful, gently waving orb: blue, green, yellow and red turning inside a soft blob. */
@@ -62,9 +62,12 @@ export function VoiceConcierge({
   code,
   gender,
   clips,
+  cloudEar = false,
   stepKey,
   onEnd,
 }: {
+  /** Cloud listening is available, for tablets that can't listen themselves. */
+  cloudEar?: boolean;
   code: string;
   gender: VoiceGender;
   /** Studio recordings by phrase, when Latchkey admin has made them. */
@@ -83,15 +86,20 @@ export function VoiceConcierge({
   const engine = useRef<VoiceEngine | null>(null);
   const listen = useRef<Intent[]>([]);
   const script = useRef<PhraseKey[]>([]);
+  const currentScript = useRef<ReturnType<typeof scriptFor> | null>(null);
   const lastGuide = useRef<{ key: PhraseKey | null; at: number }>({ key: null, at: 0 });
   const intentFn = useServerFn(voiceIntent);
+  const transcribeFn = useServerFn(voiceTranscribe);
   const end = useRef(onEnd);
   end.current = onEnd;
 
+  // Any button on screen for that answer: some sit in the Jumbo bars, outside the step's card.
   const press = (intent: Intent): boolean => {
-    const el = document.querySelector<HTMLButtonElement>(
-      `[data-kiosk-flow] [data-voice="${intent}"]:not([disabled])`,
-    );
+    const el = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        `[data-kiosk-root] [data-voice="${intent}"]:not([disabled])`,
+      ),
+    ].find((b) => b.offsetParent !== null || b.getClientRects().length > 0);
     if (!el) return false;
     el.click();
     return true;
@@ -142,7 +150,11 @@ export function VoiceConcierge({
     }
     if (intent === "repeat") return void e.say(script.current);
     if (intent === "help") return void e.say(["tapInstead", ...script.current]);
-    if (!press(intent)) return void e.say(["tapInstead"]);
+    const s = currentScript.current;
+    const target = s?.alias?.[intent] ?? intent;
+    const first = s?.before?.[intent];
+    if (first) await e.say([first]);
+    if (!press(target)) return void e.say(["tapInstead"]);
     // Going home fills the answer; saying it should also move on.
     if (intent === "home") window.setTimeout(() => press("yes"), 700);
   }
@@ -153,6 +165,7 @@ export function VoiceConcierge({
     const e = engine.current;
     if (!e) return;
     const s = scriptFor(stepKey, { registerPage });
+    currentScript.current = s;
     listen.current = s.listen;
     script.current = s.say;
     const name = stepKey.split(":")[0];

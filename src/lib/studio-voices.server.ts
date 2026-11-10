@@ -189,3 +189,38 @@ export async function clipsFor(gender: VoiceGender): Promise<Partial<Record<Phra
     return {};
   }
 }
+
+/** Whether cloud listening is possible (the ElevenLabs key is saved). */
+export async function hasStudioKey(): Promise<boolean> {
+  try {
+    return !!(await read()).apiKey;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Cloud listening for tablets whose browser can't: one short recording of a guest's reply,
+ * turned into text by ElevenLabs speech-to-text. Nothing is kept.
+ */
+export async function transcribeReply(bytes: Uint8Array, mime: string): Promise<string | null> {
+  const { apiKey } = await read();
+  if (!apiKey) return null;
+  const form = new FormData();
+  form.append("model_id", "scribe_v1");
+  form.append("language_code", "en");
+  form.append("tag_audio_events", "false");
+  form.append(
+    "file",
+    new Blob([bytes as Uint8Array<ArrayBuffer>], { type: mime }),
+    `reply.${mime.includes("mp4") ? "mp4" : "webm"}`,
+  );
+  const res = await fetch(`${API}/speech-to-text`, {
+    method: "POST",
+    headers: { "xi-api-key": apiKey },
+    body: form,
+  });
+  if (!res.ok) return null;
+  const json = (await res.json().catch(() => ({}))) as { text?: string };
+  return typeof json.text === "string" ? json.text.slice(0, 300) : null;
+}

@@ -1559,6 +1559,7 @@ function Kiosk() {
             code={p.code}
             gender={voice.gender}
             clips={voice.clips}
+            cloudEar={voice.cloudEar}
             stepKey={stepKey}
             onEnd={() => setVoiceOn(false)}
           />

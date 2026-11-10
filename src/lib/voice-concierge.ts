@@ -41,8 +41,8 @@ export const PHRASES = {
   registerAddress: "If you know the address there, type it. Otherwise just say yes.",
   registerCheck: "Please check your details on the screen. Say yes when they're right.",
   noMatch: "I couldn't find your booking. Let's try another way.",
-  done: "You're all checked in. Have a wonderful stay! Say 'done' when you're ready.",
-  doneMore: "If someone else is with you, say 'add a guest'.",
+  done: "You're all checked in. Is anyone else staying with you? Say yes to add them, or no if that's everyone.",
+  enjoy: "Wonderful. Have a lovely stay!",
   notUnderstood: "Sorry, I didn't catch that. Could you say it again?",
   tapInstead: "You can also tap the screen at any time.",
   goodbye: "Okay, I'll stop here. You can carry on by touching the screen.",
@@ -184,7 +184,15 @@ export function intentFor(transcript: string, allowed: readonly Intent[]): Inten
   if (has("stop") && /\b(stop|quiet|be quiet|shut up|no voice|turn off)\b/.test(t)) return "stop";
   if (has("repeat") && /\b(repeat|again|say that again|pardon|what)\b/.test(t)) return "repeat";
   if (has("help") && /\b(help|don't know|confused|how)\b/.test(t)) return "help";
-  if (has("add") && /\b(add|another|someone else|one more|second guest)\b/.test(t)) return "add";
+  if (
+    has("add") &&
+    // "No guests", "no, it's just me": a no, never an add.
+    !(has("no") && NO.test(t)) &&
+    /\b(add|another|someone|one more|second|plus one|my (wife|husband|partner|friend|son|daughter|family)|guests?)\b/.test(
+      t,
+    )
+  )
+    return "add";
   if (
     has("done") &&
     /\b(done|finished|that's all|that's it|bye|goodbye|thank you|thanks)\b/.test(t)
@@ -219,6 +227,10 @@ export type Script = {
   say: PhraseKey[];
   /** The answers listened for; each presses the screen's button marked data-voice=<intent>. */
   listen: Intent[];
+  /** An answer that means another button here ("yes" to "anyone else?" is Add a guest). */
+  alias?: Partial<Record<Intent, Intent>>;
+  /** Said before pressing, for that answer. */
+  before?: Partial<Record<Intent, PhraseKey>>;
 };
 
 const ALWAYS: Intent[] = ["repeat", "help", "stop"];
@@ -268,7 +280,12 @@ export function scriptFor(stepKey: string, extra: { registerPage?: string | null
     case "no_match":
       return { say: ["noMatch", "tapInstead"], listen: ALWAYS };
     case "done":
-      return { say: ["done", "doneMore"], listen: ["done", "add", ...ALWAYS] };
+      return {
+        say: ["done"],
+        listen: ["yes", "no", "done", "add", ...ALWAYS],
+        alias: { yes: "add", no: "done" },
+        before: { no: "enjoy", done: "enjoy" },
+      };
     default:
       return { say: ["tapInstead"], listen: ALWAYS };
   }

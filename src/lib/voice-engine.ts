@@ -37,7 +37,144 @@ export type VoiceEvents = {
   onHeard: (text: string) => void;
   /** The microphone was refused or isn't there: carry on speaking, guests tap instead. */
   onNoMic: () => void;
+  /** The tablet's own listening failed (why): the engine switches to cloud listening if it can. */
+  onTrouble?: (reason: string) => void;
+  /**
+   * Cloud listening: turns a short recording into text (voice.functions voiceTranscribe), for
+   * tablets whose browser can't listen itself. Null when it isn't available.
+   */
+  transcribe?: ((audio: Blob) => Promise<string | null>) | null;
 };
+
+/** Errors that mean the tablet's own listening won't work here (as opposed to just silence). */
+const BROKEN = new Set([
+  "network",
+  "service-not-allowed",
+  "language-not-supported",
+  "audio-capture",
+]);
+
+/**
+ * Listening without the browser's speech recognition: watches the microphone's level, records
+ * from when someone starts speaking until a short pause, and has it turned into text.
+ */
+class CloudEar {
+  private stream: MediaStream | null = null;
+  private ctx: AudioContext | null = null;
+  private timer = 0;
+  private rec: MediaRecorder | null = null;
+  private chunks: Blob[] = [];
+  private paused = true;
+  private loudSince = 0;
+  private quietSince = 0;
+  private startedAt = 0;
+  constructor(
+    private transcribe: (audio: Blob) => Promise<string | null>,
+    private heard: (text: string) => void,
+    private trouble: (reason: string) => void,
+  ) {}
+
+  async open(): Promise<boolean> {
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+    } catch {
+      this.trouble("microphone");
+      return false;
+    }
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor || typeof MediaRecorder === "undefined") {
+      this.trouble("recorder");
+      return false;
+    }
+    this.ctx = new Ctor();
+    const analyser = this.ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    this.ctx.createMediaStreamSource(this.stream).connect(analyser);
+    const buf = new Uint8Array(analyser.fftSize);
+    this.timer = window.setInterval(() => {
+      if (this.paused) return;
+      analyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (const v of buf) sum += ((v - 128) / 128) ** 2;
+      const level = Math.sqrt(sum / buf.length);
+      const now = Date.now();
+      const loud = level > 0.045;
+      if (!this.rec) {
+        if (loud) {
+          this.loudSince ||= now;
+          if (now - this.loudSince > 150) this.begin();
+        } else this.loudSince = 0;
+        return;
+      }
+      if (loud) this.quietSince = 0;
+      else this.quietSince ||= now;
+      if ((this.quietSince && now - this.quietSince > 900) || now - this.startedAt > 7000)
+        this.finish();
+    }, 60);
+    return true;
+  }
+
+  private begin() {
+    if (!this.stream) return;
+    this.chunks = [];
+    const type = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find((t) =>
+      MediaRecorder.isTypeSupported?.(t),
+    );
+    try {
+      this.rec = new MediaRecorder(this.stream, type ? { mimeType: type } : undefined);
+    } catch {
+      this.rec = null;
+      return;
+    }
+    this.rec.ondataavailable = (e) => {
+      if (e.data.size) this.chunks.push(e.data);
+    };
+    this.rec.onstop = () => {
+      const blob = new Blob(this.chunks, { type: this.rec?.mimeType || type || "audio/webm" });
+      this.rec = null;
+      this.loudSince = 0;
+      this.quietSince = 0;
+      // Too short to be words: a cough or a door.
+      if (blob.size < 3000 || this.paused) return;
+      void this.transcribe(blob).then((text) => {
+        if (text?.trim() && !this.paused) this.heard(text);
+      });
+    };
+    this.startedAt = Date.now();
+    this.quietSince = 0;
+    this.rec.start();
+  }
+
+  private finish() {
+    try {
+      this.rec?.stop();
+    } catch {
+      this.rec = null;
+    }
+  }
+
+  pause() {
+    this.paused = true;
+    if (this.rec) {
+      this.chunks = [];
+      this.finish();
+    }
+  }
+  resume() {
+    this.paused = false;
+    this.loudSince = 0;
+  }
+  close() {
+    this.pause();
+    window.clearInterval(this.timer);
+    this.stream?.getTracks().forEach((t) => t.stop());
+    void this.ctx?.close().catch(() => undefined);
+  }
+}
 
 export class VoiceEngine {
   private rec: Rec | null = null;
@@ -46,6 +183,11 @@ export class VoiceEngine {
   private gender: VoiceGender;
   private stopped = false;
   private clips: Partial<Record<PhraseKey, HTMLAudioElement>> = {};
+  /** Cloud listening, once the tablet's own has failed here. */
+  private ear: CloudEar | null = null;
+  private earOpening = false;
+  /** Listening that kept ending at once without hearing anything (an Android failure with no error). */
+  private quickEnds = 0;
   private playing: HTMLAudioElement | null = null;
   constructor(
     gender: VoiceGender,
@@ -182,42 +324,89 @@ export class VoiceEngine {
       /* already stopped */
     }
     this.rec = null;
+    this.ear?.pause();
     this.ev.onListening(false);
   }
 
+  /** The tablet's own listening doesn't work here: listen through the cloud instead, if we can. */
+  private async useCloud(reason: string) {
+    this.ev.onTrouble?.(reason);
+    if (this.ear || this.earOpening || !this.ev.transcribe) {
+      if (!this.ev.transcribe) this.ev.onNoMic();
+      return;
+    }
+    this.earOpening = true;
+    const ear = new CloudEar(
+      this.ev.transcribe,
+      (text) => this.ev.onHeard(text),
+      (why) => this.ev.onTrouble?.(why),
+    );
+    if (await ear.open()) this.ear = ear;
+    else this.ev.onNoMic();
+    this.earOpening = false;
+    this.resumeListening();
+  }
+
   private resumeListening() {
-    if (!this.want || this.stopped || this.speaking || this.rec) return;
+    if (!this.want || this.stopped || this.speaking) return;
+    if (this.ear) {
+      this.ear.resume();
+      this.ev.onListening(true);
+      return;
+    }
+    if (this.rec || this.earOpening) return;
     const w = window as unknown as {
       SpeechRecognition?: new () => Rec;
       webkitSpeechRecognition?: new () => Rec;
     };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Ctor) return this.ev.onNoMic();
+    if (!Ctor) return void this.useCloud("unsupported");
     const rec = new Ctor();
     rec.lang = "en-GB";
-    rec.continuous = true;
-    rec.interimResults = false;
+    // One phrase at a time, started again each time: continuous listening is unreliable on
+    // Android tablets (it ends at once or never delivers a result).
+    rec.continuous = false;
+    rec.interimResults = true;
+    let latest = "";
+    let delivered = false;
+    const began = Date.now();
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i]!;
+        const text = r[0]?.transcript ?? "";
         if (r.isFinal) {
-          const text = r[0]?.transcript ?? "";
-          if (text.trim()) this.ev.onHeard(text);
-        }
+          if (text.trim()) {
+            delivered = true;
+            this.ev.onHeard(text);
+          }
+        } else latest = text;
       }
     };
     rec.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      if (e.error === "not-allowed") {
         this.want = false;
         this.ev.onNoMic();
+        return;
+      }
+      if (BROKEN.has(e.error)) {
+        this.rec = null;
+        void this.useCloud(e.error);
       }
     };
-    // Recognition ends by itself after a while: start again while we still want it.
     rec.onend = () => {
       if (this.rec === rec) this.rec = null;
+      // Some tablets end without a final result: what they last heard counts.
+      if (!delivered && latest.trim()) this.ev.onHeard(latest);
+      const heardAnything = delivered || !!latest.trim();
+      this.quickEnds = !heardAnything && Date.now() - began < 1500 ? this.quickEnds + 1 : 0;
+      if (this.quickEnds >= 5) {
+        this.quickEnds = 0;
+        void this.useCloud("ends-at-once");
+        return;
+      }
       this.ev.onListening(false);
-      if (this.want && !this.stopped && !this.speaking)
-        window.setTimeout(() => this.resumeListening(), 250);
+      if (this.want && !this.stopped && !this.speaking && !this.ear)
+        window.setTimeout(() => this.resumeListening(), 200);
     };
     try {
       rec.start();
@@ -225,6 +414,7 @@ export class VoiceEngine {
       this.ev.onListening(true);
     } catch {
       this.rec = null;
+      void this.useCloud("start");
     }
   }
 
@@ -233,6 +423,8 @@ export class VoiceEngine {
     this.want = false;
     this.hush();
     this.pauseListening();
+    this.ear?.close();
+    this.ear = null;
     this.ev.onSpeaking(false);
   }
 }

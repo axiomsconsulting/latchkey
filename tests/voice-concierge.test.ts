@@ -35,6 +35,14 @@ describe("understanding what a guest says", () => {
     expect(intentFor("can you say that again", ["yes", "repeat"])).toBe("repeat");
     expect(intentFor("done thank you", ["done", "add"])).toBe("done");
     expect(intentFor("add another guest", ["done", "add"])).toBe("add");
+    expect(intentFor("my wife", ["yes", "no", "done", "add"])).toBe("add");
+    // A no is never an add, even with "guests" in it.
+    expect(intentFor("no more guests", ["yes", "no", "done", "add"])).toBe("no");
+  });
+  it("at the end, yes adds a guest and no finishes", () => {
+    const s = scriptFor("done:");
+    expect(s.alias).toEqual({ yes: "add", no: "done" });
+    expect(s.listen).toEqual(expect.arrayContaining(["yes", "no", "add", "done"]));
   });
 });
 
