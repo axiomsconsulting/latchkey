@@ -107,3 +107,35 @@ export async function testRoomOf(
     .maybeSingle();
   return { isTest: true, roomId: room?.id ?? null };
 }
+
+/** The sample photos as data URLs, from the private store. */
+export async function samplesAsUrls(
+  row: { id_ref: string | null; face_ref: string | null } | null,
+) {
+  const { readPrivate } = await import("./private-store.server");
+  const asUrl = async (ref: string | null) => {
+    if (!ref) return null;
+    const file = await readPrivate(ref).catch(() => null);
+    if (!file) return null;
+    let bin = "";
+    for (let i = 0; i < file.bytes.length; i += 0x8000)
+      bin += String.fromCharCode(...file.bytes.subarray(i, i + 0x8000));
+    return `data:image/jpeg;base64,${btoa(bin)}`;
+  };
+  const [id, face] = await Promise.all([asUrl(row?.id_ref ?? null), asUrl(row?.face_ref ?? null)]);
+  return { id, face };
+}
+
+/** Once a check-in has found the host's own test stay: its sample photos, for the steps still to come. */
+export async function samplesForTestBooking(
+  db: any,
+  propertyId: string,
+): Promise<{ id: string | null; face: string | null } | null> {
+  const { data: row, error } = await db
+    .from("test_check_in_samples")
+    .select("id_ref, face_ref")
+    .eq("property_id", propertyId)
+    .maybeSingle();
+  if (error || !row) return null;
+  return samplesAsUrls(row);
+}

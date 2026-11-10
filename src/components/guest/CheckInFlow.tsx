@@ -1,6 +1,6 @@
 import { JumboSlot } from "@/components/guest/JumboSlot";
 import { DoorCodeCard, type GuestDoor } from "@/components/guest/DoorCodeCard";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -62,6 +62,7 @@ import {
   resumeSession,
   saveHandoff,
   selfDeclare,
+  sessionTestSamples,
   setGuestName,
   saveRegister,
   setParty,
@@ -89,6 +90,7 @@ import {
 } from "@/lib/hotel-register";
 import { flagEmoji, pageReady, registerPages, type RegisterPage } from "@/lib/kiosk-register";
 import { CountryPicker } from "@/components/guest/CountryPicker";
+import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
 import { cn } from "@/lib/utils";
 import { BrandBlock, ThemeFeatures } from "@/components/theme/ThemeDecor";
 import { welcomeTitle, type ThemeConfig } from "@/lib/theme";
@@ -334,6 +336,10 @@ export function CheckInFlow({
   const handover = useServerFn(askHostToCheckIn);
   const shareFn = useServerFn(shareCheckIn);
   const progressFn = useServerFn(checkInProgress);
+  // The host's own test stay: its sample photos stand in for the camera from here on.
+  const samplesFn = useServerFn(sessionTestSamples);
+  const outerSamples = useContext(TestSamplesContext);
+  const [stayedSamples, setStayedSamples] = useState<TestSamples | null>(null);
   // One check-in on the door tablet and a phone (checkin-handoff.ts): only one has it at a time.
   const handoffSide = kiosk ? ("kiosk" as const) : ("phone" as const);
   const saveHandoffFn = useServerFn(saveHandoff);
@@ -413,6 +419,21 @@ export function CheckInFlow({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, step.name]);
+
+  useEffect(() => {
+    setStayedSamples(null);
+    if (!token) return;
+    let live = true;
+    samplesFn({ data: { token } })
+      .then((r) => {
+        if (live && r.samples && (r.samples.id || r.samples.face)) setStayedSamples(r.samples);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // Scanned square: rejoin the same check-in rather than starting over.
   useEffect(() => {
@@ -1198,606 +1219,713 @@ export function CheckInFlow({
 
   return (
     // data-kx: the parts that stretch to fill a door tablet set to expanded buttons (styles.css).
-    <div
-      data-kiosk-flow
-      data-kx="col"
-      className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}
-    >
-      {canGoBack ? (
-        <JumboSlot on={jumbo} to="jumbo-back">
-          <Button
-            variant="ghost"
-            size="lg"
-            className="mb-4"
-            onClick={() =>
-              setStep(
-                step.name === "letter" || step.name === "idFirst"
-                  ? { name: "welcome" }
-                  : step.name === "checkout" || step.name === "checkout3" || step.name === "pick"
-                    ? { name: "letter" }
-                    : flow.checkout === "three"
-                      ? { name: "letter" }
-                      : { name: "checkout" },
-              )
-            }
-          >
-            <ArrowLeft className="size-5" /> {copy.back}
-          </Button>
-        </JumboSlot>
+    <TestSamplesContext.Provider value={stayedSamples ?? outerSamples}>
+      {stayedSamples && !outerSamples ? (
+        <p
+          role="status"
+          className="pointer-events-none fixed left-1/2 top-2 z-50 -translate-x-1/2 rounded-full bg-amber-300 px-4 py-1 text-sm font-semibold text-black"
+        >
+          {copy.testSamplesFound}
+        </p>
       ) : null}
-
       <div
-        data-kx="grow"
-        className={cn(
-          "grid gap-6",
-          // Upright, the phone square sits under the welcome instead of beside it.
-          kioskWide && step.name === "welcome" && qrPanel
-            ? landscape
-              ? "grid-cols-[minmax(0,1fr)_minmax(13rem,20rem)] items-center"
-              : "items-center"
-            : handoffUrl && !onPhone && !kiosk
-              ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
-              : "",
-        )}
+        data-kiosk-flow
+        data-kx="col"
+        className={cn("mx-auto w-full", kiosk ? "max-w-6xl py-6" : "max-w-6xl py-8")}
       >
-        <main data-kx="col" className="card-soft relative p-6 sm:p-10" aria-live="polite">
-          {away ? (
-            <HandoffAway kiosk={kiosk} busy={busy} onTakeBack={() => void takeBack()} />
-          ) : null}
-          {demoHint ? (
-            <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">
-              {demoHint}
-            </p>
-          ) : null}
-          {step.name === "welcome" ? (
-            <div
-              data-jumbo-welcome={jumbo ? "" : undefined}
-              className={
-                jumbo
-                  ? "grid h-full min-h-0 grid-cols-[3fr_1fr] items-center gap-[4cqmin]"
-                  : "contents"
+        {canGoBack ? (
+          <JumboSlot on={jumbo} to="jumbo-back">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="mb-4"
+              onClick={() =>
+                setStep(
+                  step.name === "letter" || step.name === "idFirst"
+                    ? { name: "welcome" }
+                    : step.name === "checkout" || step.name === "checkout3" || step.name === "pick"
+                      ? { name: "letter" }
+                      : flow.checkout === "three"
+                        ? { name: "letter" }
+                        : { name: "checkout" },
+                )
               }
             >
-              <div data-kx="center" className="py-6 text-center">
-                {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
-                {property.theme?.layout === "centred" ? (
-                  <BrandBlock theme={property.theme} name={property.name} className="mb-6" />
-                ) : null}
-                {property.theme?.eyebrow ? (
-                  <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-                    {property.theme.eyebrow}
-                  </p>
-                ) : null}
-                <h1 className="text-3xl leading-tight sm:text-5xl">
-                  {property.theme
-                    ? welcomeTitle(property.theme, property.name, copy.welcomeTo(property.name))
-                    : copy.welcomeTo(property.name)}
-                </h1>
-                {property.theme?.layout === "centred" ? (
-                  <span
-                    aria-hidden
-                    className="mx-auto mt-4 flex w-48 items-center gap-2 text-accent"
-                  >
-                    <span className="h-px flex-1 bg-current opacity-60" />
-                    <span className="size-2 rotate-45 bg-current" />
-                    <span className="h-px flex-1 bg-current opacity-60" />
-                  </span>
-                ) : null}
-                <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">
-                  {property.theme?.welcomeBody || copy.letsCheckIn}
-                </p>
-                {property.theme?.features.length && !jumbo ? (
-                  <ThemeFeatures theme={property.theme} className="mt-6 justify-center text-left" />
-                ) : null}
-                <Button
-                  size="touch-xl"
-                  className="mt-10 w-full max-w-md text-xl"
-                  onClick={startFind}
-                >
-                  {copy.startCta}
-                </Button>
-                {property.checkInFrom && property.checkOutBy ? (
-                  <p className="mt-6 text-muted-foreground">
-                    {copy.stayWindow(property.checkInFrom, property.checkOutBy)}
-                  </p>
-                ) : null}
-              </div>
-              {jumbo ? <CardQr url={phoneUrl} label={copy.jumboWords.phone} /> : null}
-            </div>
-          ) : null}
+              <ArrowLeft className="size-5" /> {copy.back}
+            </Button>
+          </JumboSlot>
+        ) : null}
 
-          {step.name === "letter" ? (
-            <section data-kx="col">
-              <h1 className="text-2xl sm:text-4xl">{copy.stepLetter}</h1>
-              <p className="mt-2 text-muted-foreground">{copy.stepLetterHint}</p>
+        <div
+          data-kx="grow"
+          className={cn(
+            "grid gap-6",
+            // Upright, the phone square sits under the welcome instead of beside it.
+            kioskWide && step.name === "welcome" && qrPanel
+              ? landscape
+                ? "grid-cols-[minmax(0,1fr)_minmax(13rem,20rem)] items-center"
+                : "items-center"
+              : handoffUrl && !onPhone && !kiosk
+                ? "lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
+                : "",
+          )}
+        >
+          <main data-kx="col" className="card-soft relative p-6 sm:p-10" aria-live="polite">
+            {away ? (
+              <HandoffAway kiosk={kiosk} busy={busy} onTakeBack={() => void takeBack()} />
+            ) : null}
+            {demoHint ? (
+              <p className="mb-6 rounded-2xl bg-secondary px-4 py-3 text-center text-base">
+                {demoHint}
+              </p>
+            ) : null}
+            {step.name === "welcome" ? (
               <div
-                data-kx="grid"
-                className="mt-6 grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-9"
+                data-jumbo-welcome={jumbo ? "" : undefined}
+                className={
+                  jumbo
+                    ? "grid h-full min-h-0 grid-cols-[3fr_1fr] items-center gap-[4cqmin]"
+                    : "contents"
+                }
               >
-                {LETTERS.map((l) => (
-                  <Button
-                    key={l}
-                    variant="outline"
-                    size="touch"
-                    className="text-2xl font-semibold"
-                    disabled={busy}
-                    onClick={() => void onLetter(l)}
-                  >
-                    {l}
-                  </Button>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {step.name === "checkout" ? (
-            <section data-kx="col">
-              <h1 className="text-2xl sm:text-4xl">{copy.stepCheckout}</h1>
-              <div
-                data-kx="grid"
-                data-kx-fit
-                className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-              >
-                {property.checkoutChoices.map((d) => (
-                  <Button
-                    key={d}
-                    variant="outline"
-                    size="touch-xl"
-                    className="h-auto flex-col gap-0 py-3 text-xl"
-                    disabled={busy}
-                    onClick={() => {
-                      setCheckOut(d);
-                      setPicked(false);
-                      void findStay(d, undefined, false);
-                    }}
-                  >
-                    {formatUkDate(d)}
-                    {arrivalDay ? (
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {copy.nights(nightsBetween(arrivalDay, d))}
-                      </span>
-                    ) : null}
-                  </Button>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {step.name === "checkout3" ? (
-            <section data-kx="col">
-              <h1 className="text-2xl sm:text-4xl">{copy.stepCheckoutPick}</h1>
-              <p className="mt-2 text-muted-foreground">{copy.stepCheckoutPickHint}</p>
-              <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-3">
-                {step.days.map((d) => (
-                  <Button
-                    key={d.date}
-                    variant="outline"
-                    size="touch-xl"
-                    className="h-auto flex-col gap-1 py-5 text-2xl"
-                    disabled={busy}
-                    onClick={() => {
-                      setCheckOut(d.date);
-                      setPicked(true);
-                      void findStay(d.date, undefined, true);
-                    }}
-                  >
-                    {formatUkDate(d.date)}
-                    <span className="text-base font-normal text-muted-foreground">
-                      {copy.nights(d.nights)}
+                <div data-kx="center" className="py-6 text-center">
+                  {/* The theme's own words and mark: a centred crest and name, a small heading, its welcome and features. */}
+                  {property.theme?.layout === "centred" ? (
+                    <BrandBlock theme={property.theme} name={property.name} className="mb-6" />
+                  ) : null}
+                  {property.theme?.eyebrow ? (
+                    <p className="mb-2 text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+                      {property.theme.eyebrow}
+                    </p>
+                  ) : null}
+                  <h1 className="text-3xl leading-tight sm:text-5xl">
+                    {property.theme
+                      ? welcomeTitle(property.theme, property.name, copy.welcomeTo(property.name))
+                      : copy.welcomeTo(property.name)}
+                  </h1>
+                  {property.theme?.layout === "centred" ? (
+                    <span
+                      aria-hidden
+                      className="mx-auto mt-4 flex w-48 items-center gap-2 text-accent"
+                    >
+                      <span className="h-px flex-1 bg-current opacity-60" />
+                      <span className="size-2 rotate-45 bg-current" />
+                      <span className="h-px flex-1 bg-current opacity-60" />
                     </span>
-                  </Button>
-                ))}
-              </div>
-              {busy ? (
-                <Loader2 className="mx-auto mt-6 size-8 animate-spin text-muted-foreground" />
-              ) : null}
-            </section>
-          ) : null}
-
-          {step.name === "platform" ? (
-            <section data-kx="col">
-              <h1 className="text-2xl sm:text-4xl">{copy.stepPlatform}</h1>
-              <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
-                {step.only.map(siteOf).map((site) => (
+                  ) : null}
+                  <p className="mt-4 text-xl text-muted-foreground sm:text-2xl">
+                    {property.theme?.welcomeBody || copy.letsCheckIn}
+                  </p>
+                  {property.theme?.features.length && !jumbo ? (
+                    <ThemeFeatures
+                      theme={property.theme}
+                      className="mt-6 justify-center text-left"
+                    />
+                  ) : null}
                   <Button
-                    key={site.key}
-                    variant="outline"
                     size="touch-xl"
-                    className="justify-start gap-4 text-xl"
-                    disabled={busy}
-                    onClick={() => void findStay(checkOut, site.key)}
+                    className="mt-10 w-full max-w-md text-xl"
+                    onClick={startFind}
                   >
-                    <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} />
-                    {site.label}
+                    {copy.startCta}
                   </Button>
-                ))}
+                  {property.checkInFrom && property.checkOutBy ? (
+                    <p className="mt-6 text-muted-foreground">
+                      {copy.stayWindow(property.checkInFrom, property.checkOutBy)}
+                    </p>
+                  ) : null}
+                </div>
+                {jumbo ? <CardQr url={phoneUrl} label={copy.jumboWords.phone} /> : null}
               </div>
-              {busy ? (
-                <Loader2 className="mx-auto mt-6 size-8 animate-spin text-muted-foreground" />
-              ) : null}
-            </section>
-          ) : null}
+            ) : null}
 
-          {step.name === "pick" ? (
-            <section data-kx="col">
-              <h1 className="text-2xl sm:text-4xl">{copy.stepPickBooking}</h1>
-              {step.items.length === 0 ? (
-                <p className="mt-6 text-lg text-muted-foreground">{copy.noArrivals}</p>
-              ) : (
-                <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {step.items.map((i) => (
+            {step.name === "letter" ? (
+              <section data-kx="col">
+                <h1 className="text-2xl sm:text-4xl">{copy.stepLetter}</h1>
+                <p className="mt-2 text-muted-foreground">{copy.stepLetterHint}</p>
+                <div
+                  data-kx="grid"
+                  className="mt-6 grid grid-cols-5 gap-2 sm:grid-cols-7 lg:grid-cols-9"
+                >
+                  {LETTERS.map((l) => (
                     <Button
-                      key={i.id}
+                      key={l}
+                      variant="outline"
+                      size="touch"
+                      className="text-2xl font-semibold"
+                      disabled={busy}
+                      onClick={() => void onLetter(l)}
+                    >
+                      {l}
+                    </Button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {step.name === "checkout" ? (
+              <section data-kx="col">
+                <h1 className="text-2xl sm:text-4xl">{copy.stepCheckout}</h1>
+                <div
+                  data-kx="grid"
+                  data-kx-fit
+                  className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                >
+                  {property.checkoutChoices.map((d) => (
+                    <Button
+                      key={d}
                       variant="outline"
                       size="touch-xl"
-                      className="flex-col gap-0 text-xl"
+                      className="h-auto flex-col gap-0 py-3 text-xl"
                       disabled={busy}
-                      onClick={() => void onPick(i.id)}
+                      onClick={() => {
+                        setCheckOut(d);
+                        setPicked(false);
+                        void findStay(d, undefined, false);
+                      }}
                     >
-                      <span className="flex items-center gap-2">
-                        {i.channel ? (
-                          <ChannelIcon
-                            channel={i.channel}
-                            iconUrl={siteOf(i.channel).iconUrl}
-                            label={siteOf(i.channel).label}
-                            size="1em"
-                          />
-                        ) : null}
-                        {i.label}
-                      </span>
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {copy.stayCheckout} {formatUkDate(i.checkOut)}
+                      {formatUkDate(d)}
+                      {arrivalDay ? (
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {copy.nights(nightsBetween(arrivalDay, d))}
+                        </span>
+                      ) : null}
+                    </Button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {step.name === "checkout3" ? (
+              <section data-kx="col">
+                <h1 className="text-2xl sm:text-4xl">{copy.stepCheckoutPick}</h1>
+                <p className="mt-2 text-muted-foreground">{copy.stepCheckoutPickHint}</p>
+                <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {step.days.map((d) => (
+                    <Button
+                      key={d.date}
+                      variant="outline"
+                      size="touch-xl"
+                      className="h-auto flex-col gap-1 py-5 text-2xl"
+                      disabled={busy}
+                      onClick={() => {
+                        setCheckOut(d.date);
+                        setPicked(true);
+                        void findStay(d.date, undefined, true);
+                      }}
+                    >
+                      {formatUkDate(d.date)}
+                      <span className="text-base font-normal text-muted-foreground">
+                        {copy.nights(d.nights)}
                       </span>
                     </Button>
                   ))}
                 </div>
-              )}
-            </section>
-          ) : null}
+                {busy ? (
+                  <Loader2 className="mx-auto mt-6 size-8 animate-spin text-muted-foreground" />
+                ) : null}
+              </section>
+            ) : null}
 
-          {step.name === "no_match" ? (
-            <section className="py-4 text-center">
-              <h1 className="text-2xl sm:text-4xl">{copy.noMatchTitle}</h1>
-              <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
-                {copy.noMatchBody}
-              </p>
-              <div className="mt-8 flex flex-col items-center gap-3">
-                <Button
-                  size="touch-xl"
-                  className="w-full max-w-md"
-                  onClick={() => {
-                    // Their ID and selfie are taken anyway, and the host is told at once.
-                    forceFind.current = true;
-                    setStep({ name: "idFirst", consented: true });
-                  }}
-                >
-                  {copy.continueWithId}
-                </Button>
-                <JumboSlot on={jumbo} to="jumbo-status">
-                  <Button
-                    size="touch"
-                    variant="outline"
-                    className="w-full max-w-md"
-                    onClick={() => setStep({ name: "letter" })}
-                  >
-                    {copy.startAgain}
-                  </Button>
-                </JumboSlot>
-                <HostCall phone={hostPhone} />
-              </div>
-            </section>
-          ) : null}
-
-          {step.name === "locked" ? (
-            <section className="py-4 text-center">
-              <h1 className="text-2xl sm:text-4xl">{copy.lockedTitle}</h1>
-              <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
-                {copy.lockedBody(lockedTime)}
-              </p>
-              <div className="mt-8 flex justify-center">
-                <HostCall phone={hostPhone} />
-              </div>
-            </section>
-          ) : null}
-
-          {step.name === "guestName" ? (
-            <section className="mx-auto max-w-xl">
-              <h1 className="text-2xl sm:text-4xl">{copy.nameTitle}</h1>
-              <p className="mt-2 text-muted-foreground">{copy.nameHint}</p>
-              <form className="mt-6 space-y-4" onSubmit={(e) => void onGuestName(e)}>
-                <Input
-                  aria-label={copy.nameTitle}
-                  className="h-16 text-2xl"
-                  autoComplete="name"
-                  autoFocus
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-                <Button
-                  type="submit"
-                  size="touch-xl"
-                  className="w-full"
-                  disabled={busy || fullName.trim().split(/\s+/).length < 2}
-                >
-                  {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-                  {copy.nameCta}
-                </Button>
-              </form>
-            </section>
-          ) : null}
-
-          {step.name === "confirm" ? (
-            <section data-kx="col" className="py-4 text-center">
-              <h1 className="text-4xl sm:text-6xl">
-                {step.returning || step.again
-                  ? copy.welcomeBack(step.firstName)
-                  : copy.hi(step.firstName)}
-              </h1>
-              <p className="mt-4 text-xl text-muted-foreground">
-                {step.returning ? (
-                  copy.welcomeBackBody
-                ) : platform &&
-                  !(platform === "other" && siteOf(platform).label === copy.platforms["other"]) ? (
-                  <ConfirmOnSite site={siteOf(platform)} />
-                ) : (
-                  copy.confirmBody
-                )}
-              </p>
-              <div
-                data-kx="grid"
-                className="mx-auto mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2"
-              >
-                <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
-                  {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-                  {copy.confirmYes}
-                </Button>
-                <Button size="touch-xl" variant="outline" onClick={restart} disabled={busy}>
-                  {copy.confirmNo}
-                </Button>
-              </div>
-            </section>
-          ) : null}
-
-          {step.name === "idFirst" ? (
-            <section
-              className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}
-            >
-              <h1 className="text-2xl sm:text-4xl">{copy.idFirstTitle}</h1>
-              {!step.consented ? (
-                <>
-                  <p className="mt-4 text-lg">{copy.idFirstLead}</p>
-                  <WhyAsk>{copy.idConsentDetails(30)}</WhyAsk>
-                  <div className="mt-8 grid gap-3">
-                    <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
-                      {copy.idConsentAgree}
+            {step.name === "platform" ? (
+              <section data-kx="col">
+                <h1 className="text-2xl sm:text-4xl">{copy.stepPlatform}</h1>
+                <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {step.only.map(siteOf).map((site) => (
+                    <Button
+                      key={site.key}
+                      variant="outline"
+                      size="touch-xl"
+                      className="justify-start gap-4 text-xl"
+                      disabled={busy}
+                      onClick={() => void findStay(checkOut, site.key)}
+                    >
+                      <ChannelIcon channel={site.key} iconUrl={site.iconUrl} label={site.label} />
+                      {site.label}
                     </Button>
+                  ))}
+                </div>
+                {busy ? (
+                  <Loader2 className="mx-auto mt-6 size-8 animate-spin text-muted-foreground" />
+                ) : null}
+              </section>
+            ) : null}
+
+            {step.name === "pick" ? (
+              <section data-kx="col">
+                <h1 className="text-2xl sm:text-4xl">{copy.stepPickBooking}</h1>
+                {step.items.length === 0 ? (
+                  <p className="mt-6 text-lg text-muted-foreground">{copy.noArrivals}</p>
+                ) : (
+                  <div data-kx="grid" data-kx-fit className="mt-6 grid gap-3 sm:grid-cols-2">
+                    {step.items.map((i) => (
+                      <Button
+                        key={i.id}
+                        variant="outline"
+                        size="touch-xl"
+                        className="flex-col gap-0 text-xl"
+                        disabled={busy}
+                        onClick={() => void onPick(i.id)}
+                      >
+                        <span className="flex items-center gap-2">
+                          {i.channel ? (
+                            <ChannelIcon
+                              channel={i.channel}
+                              iconUrl={siteOf(i.channel).iconUrl}
+                              label={siteOf(i.channel).label}
+                              size="1em"
+                            />
+                          ) : null}
+                          {i.label}
+                        </span>
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {copy.stayCheckout} {formatUkDate(i.checkOut)}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {step.name === "no_match" ? (
+              <section className="py-4 text-center">
+                <h1 className="text-2xl sm:text-4xl">{copy.noMatchTitle}</h1>
+                <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
+                  {copy.noMatchBody}
+                </p>
+                <div className="mt-8 flex flex-col items-center gap-3">
+                  <Button
+                    size="touch-xl"
+                    className="w-full max-w-md"
+                    onClick={() => {
+                      // Their ID and selfie are taken anyway, and the host is told at once.
+                      forceFind.current = true;
+                      setStep({ name: "idFirst", consented: true });
+                    }}
+                  >
+                    {copy.continueWithId}
+                  </Button>
+                  <JumboSlot on={jumbo} to="jumbo-status">
                     <Button
                       size="touch"
                       variant="outline"
+                      className="w-full max-w-md"
                       onClick={() => setStep({ name: "letter" })}
                     >
-                      {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
+                      {copy.startAgain}
                     </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="mt-6">
-                  <PhotoChoice
-                    kiosk={kiosk}
-                    compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
-                    phone={phone}
-                    kind="id"
-                    task="find"
-                    facing={cameraFor("id", kiosk, flow)}
-                    onUseScreen={() => setScreenStep(stepKey)}
-                    screen={onScreen}
-                    extra={
+                  </JumboSlot>
+                  <HostCall phone={hostPhone} />
+                </div>
+              </section>
+            ) : null}
+
+            {step.name === "locked" ? (
+              <section className="py-4 text-center">
+                <h1 className="text-2xl sm:text-4xl">{copy.lockedTitle}</h1>
+                <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
+                  {copy.lockedBody(lockedTime)}
+                </p>
+                <div className="mt-8 flex justify-center">
+                  <HostCall phone={hostPhone} />
+                </div>
+              </section>
+            ) : null}
+
+            {step.name === "guestName" ? (
+              <section className="mx-auto max-w-xl">
+                <h1 className="text-2xl sm:text-4xl">{copy.nameTitle}</h1>
+                <p className="mt-2 text-muted-foreground">{copy.nameHint}</p>
+                <form className="mt-6 space-y-4" onSubmit={(e) => void onGuestName(e)}>
+                  <Input
+                    aria-label={copy.nameTitle}
+                    className="h-16 text-2xl"
+                    autoComplete="name"
+                    autoFocus
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    size="touch-xl"
+                    className="w-full"
+                    disabled={busy || fullName.trim().split(/\s+/).length < 2}
+                  >
+                    {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                    {copy.nameCta}
+                  </Button>
+                </form>
+              </section>
+            ) : null}
+
+            {step.name === "confirm" ? (
+              <section data-kx="col" className="py-4 text-center">
+                <h1 className="text-4xl sm:text-6xl">
+                  {step.returning || step.again
+                    ? copy.welcomeBack(step.firstName)
+                    : copy.hi(step.firstName)}
+                </h1>
+                <p className="mt-4 text-xl text-muted-foreground">
+                  {step.returning ? (
+                    copy.welcomeBackBody
+                  ) : platform &&
+                    !(
+                      platform === "other" && siteOf(platform).label === copy.platforms["other"]
+                    ) ? (
+                    <ConfirmOnSite site={siteOf(platform)} />
+                  ) : (
+                    copy.confirmBody
+                  )}
+                </p>
+                <div
+                  data-kx="grid"
+                  className="mx-auto mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2"
+                >
+                  <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
+                    {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                    {copy.confirmYes}
+                  </Button>
+                  <Button size="touch-xl" variant="outline" onClick={restart} disabled={busy}>
+                    {copy.confirmNo}
+                  </Button>
+                </div>
+              </section>
+            ) : null}
+
+            {step.name === "idFirst" ? (
+              <section
+                className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}
+              >
+                <h1 className="text-2xl sm:text-4xl">{copy.idFirstTitle}</h1>
+                {!step.consented ? (
+                  <>
+                    <p className="mt-4 text-lg">{copy.idFirstLead}</p>
+                    <WhyAsk>{copy.idConsentDetails(30)}</WhyAsk>
+                    <div className="mt-8 grid gap-3">
+                      <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
+                        {copy.idConsentAgree}
+                      </Button>
                       <Button
-                        variant="ghost"
-                        size="lg"
-                        className="w-full"
+                        size="touch"
+                        variant="outline"
                         onClick={() => setStep({ name: "letter" })}
                       >
                         {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
                       </Button>
-                    }
-                    camera={({ facing, onFail, panel }) => (
-                      <IdCamera
-                        auto={kiosk}
-                        jumbo={jumbo}
-                        aside={panel}
-                        spot={cameraSpot}
-                        busy={busy}
-                        side={cameraSide}
-                        facing={facing}
-                        upload={!kiosk}
-                        onCapture={(full, small) => void onIdFirst(full, small)}
-                        onFail={kiosk ? onFail : () => setStep({ name: "letter" })}
-                        extra={
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="lg"
-                              className="w-full"
-                              onClick={() => setStep({ name: "letter" })}
-                            >
-                              {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
-                            </Button>
-                          </>
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              )}
-            </section>
-          ) : null}
-
-          {step.name === "identity" && step.method === "photo_id" ? (
-            <section
-              className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}
-            >
-              <h1 className="text-2xl sm:text-4xl">{copy.idTitle}</h1>
-              {!step.consented ? (
-                <>
-                  <p className="mt-4 text-lg">{copy.idConsentLead}</p>
-                  <WhyAsk>
-                    {plan?.keepIdPhoto
-                      ? copy.idConsentPhoto(plan.keepDays)
-                      : copy.idConsentDetails(plan?.keepDays ?? 30)}
-                  </WhyAsk>
-                  <div className="mt-8 grid gap-3">
-                    <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
-                      {copy.idConsentAgree}
-                    </Button>
-                    <Button size="touch" variant="outline" onClick={() => fallback("photo_id")}>
-                      {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
-                    </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-6">
+                    <PhotoChoice
+                      kiosk={kiosk}
+                      compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
+                      phone={phone}
+                      kind="id"
+                      task="find"
+                      facing={cameraFor("id", kiosk, flow)}
+                      onUseScreen={() => setScreenStep(stepKey)}
+                      screen={onScreen}
+                      extra={
+                        <Button
+                          variant="ghost"
+                          size="lg"
+                          className="w-full"
+                          onClick={() => setStep({ name: "letter" })}
+                        >
+                          {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
+                        </Button>
+                      }
+                      camera={({ facing, onFail, panel }) => (
+                        <IdCamera
+                          auto={kiosk}
+                          jumbo={jumbo}
+                          aside={panel}
+                          spot={cameraSpot}
+                          busy={busy}
+                          side={cameraSide}
+                          facing={facing}
+                          upload={!kiosk}
+                          onCapture={(full, small) => void onIdFirst(full, small)}
+                          onFail={kiosk ? onFail : () => setStep({ name: "letter" })}
+                          extra={
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="lg"
+                                className="w-full"
+                                onClick={() => setStep({ name: "letter" })}
+                              >
+                                {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
+                              </Button>
+                            </>
+                          }
+                        />
+                      )}
+                    />
                   </div>
-                </>
-              ) : (
-                <div className="mt-6">
-                  <PhotoChoice
-                    kiosk={kiosk}
-                    compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
-                    phone={phone}
-                    kind="id"
-                    task="lead"
-                    facing={cameraFor("id", kiosk, flow)}
-                    onUseScreen={() => setScreenStep(stepKey)}
-                    screen={onScreen}
-                    extra={
-                      <Button
-                        variant="ghost"
-                        size="lg"
-                        className="w-full"
-                        onClick={() => fallback("photo_id")}
-                      >
+                )}
+              </section>
+            ) : null}
+
+            {step.name === "identity" && step.method === "photo_id" ? (
+              <section
+                className={cn("mx-auto", step.consented && cameraSide ? "max-w-5xl" : "max-w-xl")}
+              >
+                <h1 className="text-2xl sm:text-4xl">{copy.idTitle}</h1>
+                {!step.consented ? (
+                  <>
+                    <p className="mt-4 text-lg">{copy.idConsentLead}</p>
+                    <WhyAsk>
+                      {plan?.keepIdPhoto
+                        ? copy.idConsentPhoto(plan.keepDays)
+                        : copy.idConsentDetails(plan?.keepDays ?? 30)}
+                    </WhyAsk>
+                    <div className="mt-8 grid gap-3">
+                      <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
+                        {copy.idConsentAgree}
+                      </Button>
+                      <Button size="touch" variant="outline" onClick={() => fallback("photo_id")}>
                         {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
                       </Button>
-                    }
-                    camera={({ facing, onFail, panel }) => (
-                      <IdCamera
-                        auto={kiosk}
-                        jumbo={jumbo}
-                        aside={panel}
-                        spot={cameraSpot}
-                        busy={busy}
-                        side={cameraSide}
-                        facing={facing}
-                        upload={!kiosk}
-                        onCapture={(full, small) => void onPhoto(full, small)}
-                        onFail={kiosk ? onFail : () => fallback("photo_id", copy.idCameraFailed)}
-                        extra={
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="lg"
-                              className="w-full"
-                              onClick={() => fallback("photo_id")}
-                            >
-                              {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
-                            </Button>
-                          </>
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              )}
-            </section>
-          ) : null}
-
-          {step.name === "identity" && step.method === "last4" ? (
-            <Last4Step
-              kinds={kinds}
-              busy={busy}
-              onSubmit={async (kind, value) => {
-                const res = await run(() =>
-                  last4({ data: { token: tokenRef.current, kind, value } }),
-                );
-                if (!res) return;
-                if (res.status === "retry") return setMessage(copy.last4Retry(res.left));
-                if (res.status === "fallback") return fallback("last4");
-                if (res.prefill) {
-                  const known = res.prefill;
-                  setPrefill((p) => ({ ...p, 0: known }));
-                }
-                afterLead();
-              }}
-              onOther={() => fallback("last4")}
-            />
-          ) : null}
-
-          {step.name === "identity" && step.method === "self_declare" ? (
-            <section className="mx-auto max-w-xl">
-              <h1 className="text-2xl sm:text-4xl">{copy.selfTitle}</h1>
-              <p className="mt-4 text-lg">{copy.selfBody}</p>
-              <p className="mt-4 rounded-2xl bg-secondary p-4 text-secondary-foreground">
-                {copy.selfNote}
-              </p>
-              <Button
-                size="touch-xl"
-                className="mt-8 w-full"
-                disabled={busy}
-                onClick={async () => {
-                  const ok = await run(() => declare({ data: { token: tokenRef.current } }));
-                  if (ok) afterLead();
-                }}
-              >
-                {busy ? <Loader2 className="size-6 animate-spin" /> : null}
-                {copy.selfConfirm}
-              </Button>
-            </section>
-          ) : null}
-
-          {step.name === "party" && plan ? (
-            <PartyStep
-              plan={plan}
-              initialAdults={adults}
-              busy={busy}
-              onSubmit={(a, ages) => void onParty(a, ages)}
-            />
-          ) : null}
-
-          {step.name === "companion" ? (
-            <section className={cn("mx-auto", step.ready && cameraSide ? "max-w-5xl" : "max-w-xl")}>
-              <h1 className="text-2xl sm:text-4xl">
-                {copy.companionTitle(step.position + 1, adults)}
-              </h1>
-              {!step.ready ? (
-                <>
-                  <p className="mt-4 text-lg">{copy.companionBody}</p>
-                  <p className="mt-2 text-muted-foreground">{copy.companionConsentLead}</p>
-                  <WhyAsk>
-                    {plan?.keepIdPhoto
-                      ? copy.idConsentPhoto(plan.keepDays)
-                      : copy.idConsentDetails(plan?.keepDays ?? 30)}
-                  </WhyAsk>
-                  <div className="mt-8 grid gap-3">
-                    <Button size="touch-xl" onClick={() => setStep({ ...step, ready: true })}>
-                      {copy.companionReady}
-                    </Button>
-                    <Button
-                      size="touch"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => void onSkipCompanion(step.position)}
-                    >
-                      {jumbo ? copy.jumboWords.skip : copy.companionSkip}
-                    </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-6">
+                    <PhotoChoice
+                      kiosk={kiosk}
+                      compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
+                      phone={phone}
+                      kind="id"
+                      task="lead"
+                      facing={cameraFor("id", kiosk, flow)}
+                      onUseScreen={() => setScreenStep(stepKey)}
+                      screen={onScreen}
+                      extra={
+                        <Button
+                          variant="ghost"
+                          size="lg"
+                          className="w-full"
+                          onClick={() => fallback("photo_id")}
+                        >
+                          {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
+                        </Button>
+                      }
+                      camera={({ facing, onFail, panel }) => (
+                        <IdCamera
+                          auto={kiosk}
+                          jumbo={jumbo}
+                          aside={panel}
+                          spot={cameraSpot}
+                          busy={busy}
+                          side={cameraSide}
+                          facing={facing}
+                          upload={!kiosk}
+                          onCapture={(full, small) => void onPhoto(full, small)}
+                          onFail={kiosk ? onFail : () => fallback("photo_id", copy.idCameraFailed)}
+                          extra={
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="lg"
+                                className="w-full"
+                                onClick={() => fallback("photo_id")}
+                              >
+                                {jumbo ? copy.jumboWords.otherWay : copy.idUseOther}
+                              </Button>
+                            </>
+                          }
+                        />
+                      )}
+                    />
                   </div>
-                </>
-              ) : (
+                )}
+              </section>
+            ) : null}
+
+            {step.name === "identity" && step.method === "last4" ? (
+              <Last4Step
+                kinds={kinds}
+                busy={busy}
+                onSubmit={async (kind, value) => {
+                  const res = await run(() =>
+                    last4({ data: { token: tokenRef.current, kind, value } }),
+                  );
+                  if (!res) return;
+                  if (res.status === "retry") return setMessage(copy.last4Retry(res.left));
+                  if (res.status === "fallback") return fallback("last4");
+                  if (res.prefill) {
+                    const known = res.prefill;
+                    setPrefill((p) => ({ ...p, 0: known }));
+                  }
+                  afterLead();
+                }}
+                onOther={() => fallback("last4")}
+              />
+            ) : null}
+
+            {step.name === "identity" && step.method === "self_declare" ? (
+              <section className="mx-auto max-w-xl">
+                <h1 className="text-2xl sm:text-4xl">{copy.selfTitle}</h1>
+                <p className="mt-4 text-lg">{copy.selfBody}</p>
+                <p className="mt-4 rounded-2xl bg-secondary p-4 text-secondary-foreground">
+                  {copy.selfNote}
+                </p>
+                <Button
+                  size="touch-xl"
+                  className="mt-8 w-full"
+                  disabled={busy}
+                  onClick={async () => {
+                    const ok = await run(() => declare({ data: { token: tokenRef.current } }));
+                    if (ok) afterLead();
+                  }}
+                >
+                  {busy ? <Loader2 className="size-6 animate-spin" /> : null}
+                  {copy.selfConfirm}
+                </Button>
+              </section>
+            ) : null}
+
+            {step.name === "party" && plan ? (
+              <PartyStep
+                plan={plan}
+                initialAdults={adults}
+                busy={busy}
+                onSubmit={(a, ages) => void onParty(a, ages)}
+              />
+            ) : null}
+
+            {step.name === "companion" ? (
+              <section
+                className={cn("mx-auto", step.ready && cameraSide ? "max-w-5xl" : "max-w-xl")}
+              >
+                <h1 className="text-2xl sm:text-4xl">
+                  {copy.companionTitle(step.position + 1, adults)}
+                </h1>
+                {!step.ready ? (
+                  <>
+                    <p className="mt-4 text-lg">{copy.companionBody}</p>
+                    <p className="mt-2 text-muted-foreground">{copy.companionConsentLead}</p>
+                    <WhyAsk>
+                      {plan?.keepIdPhoto
+                        ? copy.idConsentPhoto(plan.keepDays)
+                        : copy.idConsentDetails(plan?.keepDays ?? 30)}
+                    </WhyAsk>
+                    <div className="mt-8 grid gap-3">
+                      <Button size="touch-xl" onClick={() => setStep({ ...step, ready: true })}>
+                        {copy.companionReady}
+                      </Button>
+                      <Button
+                        size="touch"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => void onSkipCompanion(step.position)}
+                      >
+                        {jumbo ? copy.jumboWords.skip : copy.companionSkip}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-6">
+                    <PhotoChoice
+                      key={`companion-${step.position}`}
+                      kiosk={kiosk}
+                      compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
+                      phone={phone}
+                      kind="id"
+                      task="companion"
+                      facing={cameraFor("id", kiosk, flow)}
+                      onUseScreen={() => setScreenStep(stepKey)}
+                      screen={onScreen}
+                      extra={
+                        <Button
+                          variant="ghost"
+                          size="lg"
+                          className="w-full"
+                          disabled={busy}
+                          onClick={() => void onSkipCompanion(step.position)}
+                        >
+                          {jumbo ? copy.jumboWords.skip : copy.companionSkip}
+                        </Button>
+                      }
+                      camera={({ facing, onFail, panel }) => (
+                        <IdCamera
+                          auto={kiosk}
+                          jumbo={jumbo}
+                          aside={panel}
+                          spot={cameraSpot}
+                          busy={busy}
+                          side={cameraSide}
+                          facing={facing}
+                          upload={!kiosk}
+                          onCapture={(full, small) => void onCompanion(step.position, full, small)}
+                          onFail={kiosk ? onFail : () => void onSkipCompanion(step.position)}
+                          extra={
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="lg"
+                                className="w-full"
+                                disabled={busy}
+                                onClick={() => void onSkipCompanion(step.position)}
+                              >
+                                {jumbo ? copy.jumboWords.skip : copy.companionSkip}
+                              </Button>
+                            </>
+                          }
+                        />
+                      )}
+                    />
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {step.name === "register" ? (
+              <RegisterStep
+                key={`register-${step.position}`}
+                title={
+                  step.only
+                    ? copy.registerAskTitle
+                    : step.child
+                      ? copy.registerTitleChild
+                      : step.position === 0
+                        ? prefill[0]?.fullName
+                          ? copy.registerTitleYou
+                          : copy.registerTitleBlank
+                        : copy.registerTitleAdult(step.position + 1)
+                }
+                lead={
+                  step.only
+                    ? copy.registerAskLead(prefill[step.position]?.fullName ?? "")
+                    : step.position === 0
+                      ? copy.registerLead
+                      : copy.registerLeadOther
+                }
+                only={step.only}
+                prefill={prefill[step.position] ?? null}
+                busy={busy}
+                kiosk={kiosk}
+                jumbo={jumbo}
+                onSubmit={(entry) => void onRegister(step.position, entry)}
+              />
+            ) : null}
+
+            {step.name === "face" ? (
+              <section className={cn("mx-auto", cameraSide ? "max-w-5xl" : "max-w-xl")}>
+                <h1 className="text-2xl sm:text-4xl">
+                  {step.position === 0 ? copy.faceTitle : copy.faceTitleOther(step.position + 1)}
+                </h1>
                 <div className="mt-6">
                   <PhotoChoice
-                    key={`companion-${step.position}`}
+                    key={`face-${step.position}`}
                     kiosk={kiosk}
                     compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
                     phone={phone}
-                    kind="id"
-                    task="companion"
-                    facing={cameraFor("id", kiosk, flow)}
+                    kind="face"
+                    task="face"
+                    facePending={facePendingAt === step.position}
+                    facing={cameraFor("face", kiosk, flow)}
                     onUseScreen={() => setScreenStep(stepKey)}
                     screen={onScreen}
                     extra={
@@ -1806,9 +1934,9 @@ export function CheckInFlow({
                         size="lg"
                         className="w-full"
                         disabled={busy}
-                        onClick={() => void onSkipCompanion(step.position)}
+                        onClick={() => faceDone()}
                       >
-                        {jumbo ? copy.jumboWords.skip : copy.companionSkip}
+                        {jumbo ? copy.jumboWords.skip : copy.faceSkip}
                       </Button>
                     }
                     camera={({ facing, onFail, panel }) => (
@@ -1817,12 +1945,15 @@ export function CheckInFlow({
                         jumbo={jumbo}
                         aside={panel}
                         spot={cameraSpot}
+                        facing={facing}
+                        kind="face"
                         busy={busy}
                         side={cameraSide}
-                        facing={facing}
-                        upload={!kiosk}
-                        onCapture={(full, small) => void onCompanion(step.position, full, small)}
-                        onFail={kiosk ? onFail : () => void onSkipCompanion(step.position)}
+                        help={copy.faceBody}
+                        cta={copy.faceTake}
+                        busyLabel={copy.faceSaving}
+                        onCapture={(_full, small) => void onFace(step.position, small)}
+                        onFail={kiosk ? onFail : () => faceDone()}
                         extra={
                           <>
                             <Button
@@ -1830,9 +1961,9 @@ export function CheckInFlow({
                               size="lg"
                               className="w-full"
                               disabled={busy}
-                              onClick={() => void onSkipCompanion(step.position)}
+                              onClick={() => faceDone()}
                             >
-                              {jumbo ? copy.jumboWords.skip : copy.companionSkip}
+                              {jumbo ? copy.jumboWords.skip : copy.faceSkip}
                             </Button>
                           </>
                         }
@@ -1840,365 +1971,274 @@ export function CheckInFlow({
                     )}
                   />
                 </div>
-              )}
-            </section>
-          ) : null}
+              </section>
+            ) : null}
 
-          {step.name === "register" ? (
-            <RegisterStep
-              key={`register-${step.position}`}
-              title={
-                step.only
-                  ? copy.registerAskTitle
-                  : step.child
-                    ? copy.registerTitleChild
-                    : step.position === 0
-                      ? prefill[0]?.fullName
-                        ? copy.registerTitleYou
-                        : copy.registerTitleBlank
-                      : copy.registerTitleAdult(step.position + 1)
-              }
-              lead={
-                step.only
-                  ? copy.registerAskLead(prefill[step.position]?.fullName ?? "")
-                  : step.position === 0
-                    ? copy.registerLead
-                    : copy.registerLeadOther
-              }
-              only={step.only}
-              prefill={prefill[step.position] ?? null}
-              busy={busy}
-              kiosk={kiosk}
-              jumbo={jumbo}
-              onSubmit={(entry) => void onRegister(step.position, entry)}
-            />
-          ) : null}
-
-          {step.name === "face" ? (
-            <section className={cn("mx-auto", cameraSide ? "max-w-5xl" : "max-w-xl")}>
-              <h1 className="text-2xl sm:text-4xl">
-                {step.position === 0 ? copy.faceTitle : copy.faceTitleOther(step.position + 1)}
-              </h1>
-              <div className="mt-6">
-                <PhotoChoice
-                  key={`face-${step.position}`}
-                  kiosk={kiosk}
-                  compact={jumbo ? "jumbo" : kiosk && !cameraSpot}
-                  phone={phone}
-                  kind="face"
-                  task="face"
-                  facePending={facePendingAt === step.position}
-                  facing={cameraFor("face", kiosk, flow)}
-                  onUseScreen={() => setScreenStep(stepKey)}
-                  screen={onScreen}
-                  extra={
-                    <Button
-                      variant="ghost"
-                      size="lg"
-                      className="w-full"
-                      disabled={busy}
-                      onClick={() => faceDone()}
+            {step.name === "waiting" ? (
+              <section className="mx-auto max-w-xl text-center">
+                <Loader2 className="mx-auto size-10 animate-spin text-primary" />
+                <h1 className="mt-4 text-2xl sm:text-4xl">{copy.waitingTitle}</h1>
+                <p className="mt-3 text-lg text-muted-foreground">{copy.waitingBody}</p>
+                <ul className="mx-auto mt-6 max-w-sm space-y-2 text-left">
+                  {slots.map((x) => (
+                    <li
+                      key={x.position}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
                     >
-                      {jumbo ? copy.jumboWords.skip : copy.faceSkip}
-                    </Button>
-                  }
-                  camera={({ facing, onFail, panel }) => (
-                    <IdCamera
-                      auto={kiosk}
-                      jumbo={jumbo}
-                      aside={panel}
-                      spot={cameraSpot}
-                      facing={facing}
-                      kind="face"
-                      busy={busy}
-                      side={cameraSide}
-                      help={copy.faceBody}
-                      cta={copy.faceTake}
-                      busyLabel={copy.faceSaving}
-                      onCapture={(_full, small) => void onFace(step.position, small)}
-                      onFail={kiosk ? onFail : () => faceDone()}
-                      extra={
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="lg"
-                            className="w-full"
-                            disabled={busy}
-                            onClick={() => faceDone()}
-                          >
-                            {jumbo ? copy.jumboWords.skip : copy.faceSkip}
-                          </Button>
-                        </>
-                      }
-                    />
-                  )}
-                />
-              </div>
-            </section>
-          ) : null}
+                      <span className="font-medium">{copy.guestLabel(x.kind, x.position + 1)}</span>
+                      <span
+                        className={cn(
+                          "flex items-center gap-1.5 text-sm",
+                          x.state === "done" ? "text-success" : "text-muted-foreground",
+                        )}
+                      >
+                        {x.state === "done" ? (
+                          <CheckCircle2 className="size-4" />
+                        ) : x.state === "phone" ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : null}
+                        {x.state === "done"
+                          ? copy.slotDone
+                          : x.state === "phone"
+                            ? copy.slotPhone
+                            : copy.slotOpen}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  size="touch"
+                  variant="ghost"
+                  className="mt-6"
+                  disabled={busy}
+                  onClick={() => void finish()}
+                >
+                  {copy.waitingSkip}
+                </Button>
+              </section>
+            ) : null}
 
-          {step.name === "waiting" ? (
-            <section className="mx-auto max-w-xl text-center">
-              <Loader2 className="mx-auto size-10 animate-spin text-primary" />
-              <h1 className="mt-4 text-2xl sm:text-4xl">{copy.waitingTitle}</h1>
-              <p className="mt-3 text-lg text-muted-foreground">{copy.waitingBody}</p>
-              <ul className="mx-auto mt-6 max-w-sm space-y-2 text-left">
-                {slots.map((x) => (
-                  <li
-                    key={x.position}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
-                  >
-                    <span className="font-medium">{copy.guestLabel(x.kind, x.position + 1)}</span>
-                    <span
-                      className={cn(
-                        "flex items-center gap-1.5 text-sm",
-                        x.state === "done" ? "text-success" : "text-muted-foreground",
-                      )}
-                    >
-                      {x.state === "done" ? (
-                        <CheckCircle2 className="size-4" />
-                      ) : x.state === "phone" ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : null}
-                      {x.state === "done"
-                        ? copy.slotDone
-                        : x.state === "phone"
-                          ? copy.slotPhone
-                          : copy.slotOpen}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                size="touch"
-                variant="ghost"
-                className="mt-6"
-                disabled={busy}
-                onClick={() => void finish()}
-              >
-                {copy.waitingSkip}
-              </Button>
-            </section>
-          ) : null}
-
-          {step.name === "handover" ? (
-            <section className="py-4 text-center">
-              <HandHeart className="mx-auto size-14 text-primary" />
-              <h1 className="mt-4 text-2xl sm:text-4xl">{copy.handoverTitle}</h1>
-              <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
-                {copy.handoverBody}
-              </p>
-              <div className="mt-8 flex flex-col items-center gap-3">
-                <HostCall phone={hostPhone} />
-                <JumboSlot on={jumbo} to="jumbo-status">
-                  <Button
-                    size="touch"
-                    variant="ghost"
-                    className="w-full max-w-md"
-                    onClick={() => setStep(step.back)}
-                  >
-                    {copy.handoverResume}
-                  </Button>
-                </JumboSlot>
-              </div>
-            </section>
-          ) : null}
-
-          {step.name === "done" && jumbo ? (
-            // Jumbo: the door codes (or, without codes, the welcome and the room) on the left, the guide's
-            // QR on the right; "Someone else" and "I'm done" in the bars below.
-            <section
-              data-jumbo-done
-              className="grid h-full min-h-0 grid-cols-[3fr_2fr] items-center gap-[4cqmin]"
-            >
-              <div className="flex min-h-0 flex-col justify-center gap-[2cqmin]">
-                {step.doors?.length ? (
-                  <>
-                    {step.roomName && !step.held ? (
-                      <p className="font-bold">{copy.roomLine(step.roomName, step.roomTitle)}</p>
-                    ) : null}
-                    {step.doors.map((d) => (
-                      <DoorCodeCard key={d.door} door={d} />
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    <h1>
-                      {step.held
-                        ? copy.heldTitle(step.firstName)
-                        : stayedBefore
-                          ? copy.doneTitleAgain(step.firstName)
-                          : copy.doneTitle(step.firstName)}
-                    </h1>
-                    <p>
-                      {step.held
-                        ? copy.heldLine
-                        : step.roomName
-                          ? copy.roomLine(step.roomName, step.roomTitle)
-                          : copy.noRoom}
-                    </p>
-                  </>
-                )}
-              </div>
-              {typeof window !== "undefined" ? (
-                <CardQr
-                  url={
-                    step.shortCode
-                      ? `${window.location.origin}/g/${step.shortCode}`
-                      : `${window.location.origin}/stay/${step.stayToken}`
-                  }
-                  label={copy.jumboWords.guide}
-                />
-              ) : null}
-              {plan && !listFlow ? (
-                <JumboSlot on to="jumbo-back">
-                  <Button
-                    size="touch"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void onAddGuest()}
-                  >
-                    {copy.doneAddGuest}
-                  </Button>
-                </JumboSlot>
-              ) : null}
-              {onDone ? (
-                <JumboSlot on to="jumbo-status">
-                  <Button size="touch" onClick={onDone}>
-                    {copy.doneFinished}
-                  </Button>
-                </JumboSlot>
-              ) : null}
-            </section>
-          ) : null}
-
-          {step.name === "done" && !jumbo ? (
-            <section
-              data-kx={cameraSide ? undefined : "center"}
-              className={cn(
-                "py-4 text-center",
-                cameraSide && "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-10",
-              )}
-            >
-              <div>
-                <CheckCircle2 className="mx-auto size-14 text-success" />
-                <h1 className="mt-4 text-3xl sm:text-5xl">
-                  {step.held
-                    ? copy.heldTitle(step.firstName)
-                    : stayedBefore
-                      ? copy.doneTitleAgain(step.firstName)
-                      : copy.doneTitle(step.firstName)}
-                </h1>
-                <p className="mt-4 text-2xl">
-                  {step.held
-                    ? copy.heldLine
-                    : step.roomName
-                      ? copy.roomLine(step.roomName, step.roomTitle)
-                      : copy.noRoom}
+            {step.name === "handover" ? (
+              <section className="py-4 text-center">
+                <HandHeart className="mx-auto size-14 text-primary" />
+                <h1 className="mt-4 text-2xl sm:text-4xl">{copy.handoverTitle}</h1>
+                <p className="mx-auto mt-4 max-w-prose text-lg text-muted-foreground">
+                  {copy.handoverBody}
                 </p>
-                {step.doors?.map((d) => (
-                  <DoorCodeCard key={d.door} door={d} className="mx-auto mt-6 max-w-md" />
-                ))}
-                {/* A shared tablet never opens the guide: the guest takes the link away instead. */}
-                {!kiosk ? (
-                  <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
-                    <Link to="/stay/$token" params={{ token: step.stayToken }}>
-                      <BookOpen className="size-6" /> {copy.stayGuideCta}
-                    </Link>
-                  </Button>
+                <div className="mt-8 flex flex-col items-center gap-3">
+                  <HostCall phone={hostPhone} />
+                  <JumboSlot on={jumbo} to="jumbo-status">
+                    <Button
+                      size="touch"
+                      variant="ghost"
+                      className="w-full max-w-md"
+                      onClick={() => setStep(step.back)}
+                    >
+                      {copy.handoverResume}
+                    </Button>
+                  </JumboSlot>
+                </div>
+              </section>
+            ) : null}
+
+            {step.name === "done" && jumbo ? (
+              // Jumbo: the door codes (or, without codes, the welcome and the room) on the left, the guide's
+              // QR on the right; "Someone else" and "I'm done" in the bars below.
+              <section
+                data-jumbo-done
+                className="grid h-full min-h-0 grid-cols-[3fr_2fr] items-center gap-[4cqmin]"
+              >
+                <div className="flex min-h-0 flex-col justify-center gap-[2cqmin]">
+                  {step.doors?.length ? (
+                    <>
+                      {step.roomName && !step.held ? (
+                        <p className="font-bold">{copy.roomLine(step.roomName, step.roomTitle)}</p>
+                      ) : null}
+                      {step.doors.map((d) => (
+                        <DoorCodeCard key={d.door} door={d} />
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <h1>
+                        {step.held
+                          ? copy.heldTitle(step.firstName)
+                          : stayedBefore
+                            ? copy.doneTitleAgain(step.firstName)
+                            : copy.doneTitle(step.firstName)}
+                      </h1>
+                      <p>
+                        {step.held
+                          ? copy.heldLine
+                          : step.roomName
+                            ? copy.roomLine(step.roomName, step.roomTitle)
+                            : copy.noRoom}
+                      </p>
+                    </>
+                  )}
+                </div>
+                {typeof window !== "undefined" ? (
+                  <CardQr
+                    url={
+                      step.shortCode
+                        ? `${window.location.origin}/g/${step.shortCode}`
+                        : `${window.location.origin}/stay/${step.stayToken}`
+                    }
+                    label={copy.jumboWords.guide}
+                  />
                 ) : null}
-                <div className={cn("flex flex-col items-center gap-3", kiosk ? "mt-10" : "mt-4")}>
-                  {plan && !listFlow ? (
+                {plan && !listFlow ? (
+                  <JumboSlot on to="jumbo-back">
                     <Button
                       size="touch"
                       variant="outline"
-                      className="w-full max-w-md"
                       disabled={busy}
                       onClick={() => void onAddGuest()}
                     >
                       {copy.doneAddGuest}
                     </Button>
-                  ) : null}
-                  {kiosk && onDone ? (
-                    <Button size="touch-xl" className="w-full max-w-md text-xl" onClick={onDone}>
+                  </JumboSlot>
+                ) : null}
+                {onDone ? (
+                  <JumboSlot on to="jumbo-status">
+                    <Button size="touch" onClick={onDone}>
                       {copy.doneFinished}
                     </Button>
+                  </JumboSlot>
+                ) : null}
+              </section>
+            ) : null}
+
+            {step.name === "done" && !jumbo ? (
+              <section
+                data-kx={cameraSide ? undefined : "center"}
+                className={cn(
+                  "py-4 text-center",
+                  cameraSide && "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-10",
+                )}
+              >
+                <div>
+                  <CheckCircle2 className="mx-auto size-14 text-success" />
+                  <h1 className="mt-4 text-3xl sm:text-5xl">
+                    {step.held
+                      ? copy.heldTitle(step.firstName)
+                      : stayedBefore
+                        ? copy.doneTitleAgain(step.firstName)
+                        : copy.doneTitle(step.firstName)}
+                  </h1>
+                  <p className="mt-4 text-2xl">
+                    {step.held
+                      ? copy.heldLine
+                      : step.roomName
+                        ? copy.roomLine(step.roomName, step.roomTitle)
+                        : copy.noRoom}
+                  </p>
+                  {step.doors?.map((d) => (
+                    <DoorCodeCard key={d.door} door={d} className="mx-auto mt-6 max-w-md" />
+                  ))}
+                  {/* A shared tablet never opens the guide: the guest takes the link away instead. */}
+                  {!kiosk ? (
+                    <Button asChild size="touch-xl" className="mt-10 w-full max-w-md text-xl">
+                      <Link to="/stay/$token" params={{ token: step.stayToken }}>
+                        <BookOpen className="size-6" /> {copy.stayGuideCta}
+                      </Link>
+                    </Button>
                   ) : null}
+                  <div className={cn("flex flex-col items-center gap-3", kiosk ? "mt-10" : "mt-4")}>
+                    {plan && !listFlow ? (
+                      <Button
+                        size="touch"
+                        variant="outline"
+                        className="w-full max-w-md"
+                        disabled={busy}
+                        onClick={() => void onAddGuest()}
+                      >
+                        {copy.doneAddGuest}
+                      </Button>
+                    ) : null}
+                    {kiosk && onDone ? (
+                      <Button size="touch-xl" className="w-full max-w-md text-xl" onClick={onDone}>
+                        {copy.doneFinished}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-              {typeof window !== "undefined" ? (
-                <GuideLink
-                  url={
-                    step.shortCode
-                      ? `${window.location.origin}/g/${step.shortCode}`
-                      : `${window.location.origin}/stay/${step.stayToken}`
-                  }
-                  shortText={step.shortCode ? `${window.location.host}/g/${step.shortCode}` : null}
-                  kiosk={kiosk}
-                  beside={cameraSide}
-                />
-              ) : null}
-            </section>
-          ) : null}
+                {typeof window !== "undefined" ? (
+                  <GuideLink
+                    url={
+                      step.shortCode
+                        ? `${window.location.origin}/g/${step.shortCode}`
+                        : `${window.location.origin}/stay/${step.stayToken}`
+                    }
+                    shortText={
+                      step.shortCode ? `${window.location.host}/g/${step.shortCode}` : null
+                    }
+                    kiosk={kiosk}
+                    beside={cameraSide}
+                  />
+                ) : null}
+              </section>
+            ) : null}
 
-          {message && cameraOn ? (
-            <p
-              role="alert"
-              data-camera-note
-              // rgba, not a Tailwind /opacity colour: older tablet browsers draw those solid.
-              style={{ background: "rgba(0, 0, 0, 0.6)", color: "#ffffff" }}
-              className="pointer-events-none fixed left-1/2 top-1/2 z-[95] w-[min(90vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl px-8 py-6 text-center text-2xl font-semibold"
-            >
-              {message}
-            </p>
-          ) : message ? (
-            <p
-              role="alert"
-              className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground"
-            >
-              {message}
-            </p>
-          ) : null}
+            {message && cameraOn ? (
+              <p
+                role="alert"
+                data-camera-note
+                // rgba, not a Tailwind /opacity colour: older tablet browsers draw those solid.
+                style={{ background: "rgba(0, 0, 0, 0.6)", color: "#ffffff" }}
+                className="pointer-events-none fixed left-1/2 top-1/2 z-[95] w-[min(90vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl px-8 py-6 text-center text-2xl font-semibold"
+              >
+                {message}
+              </p>
+            ) : message ? (
+              <p
+                role="alert"
+                className="mt-6 rounded-xl bg-accent/10 p-4 text-center text-lg text-foreground"
+              >
+                {message}
+              </p>
+            ) : null}
 
-          {canHandOver ? (
-            <JumboSlot on={jumbo} to="jumbo-status">
-              <div className="mt-8 border-t border-border pt-4 text-center">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className="text-muted-foreground"
-                  disabled={busy}
-                  onClick={() => void handOver()}
-                >
-                  <HandHeart className="size-5" />{" "}
-                  {jumbo ? copy.jumboWords.askHost : copy.handoverCta}
-                </Button>
-              </div>
-            </JumboSlot>
-          ) : null}
-        </main>
+            {canHandOver ? (
+              <JumboSlot on={jumbo} to="jumbo-status">
+                <div className="mt-8 border-t border-border pt-4 text-center">
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    className="text-muted-foreground"
+                    disabled={busy}
+                    onClick={() => void handOver()}
+                  >
+                    <HandHeart className="size-5" />{" "}
+                    {jumbo ? copy.jumboWords.askHost : copy.handoverCta}
+                  </Button>
+                </div>
+              </JumboSlot>
+            ) : null}
+          </main>
 
-        {/* Front-door tablet: the phone square sits beside the welcome, then in the corner. */}
-        {kioskWide && step.name !== "done" && !(jumbo && step.name === "welcome") ? (
-          <KioskQr
-            url={othersNow ? joinUrl! : (handoffUrl ?? phoneUrl)}
-            large={step.name === "welcome" && qrPanel}
-            carryOn={!othersNow && !!handoffUrl}
-            others={othersNow}
-            onTakeBack={away ? () => void takeBack() : undefined}
-          />
-        ) : null}
-        {/* On a phone, only while others are filled in: they can use their own phones instead of this one. */}
-        {othersNow && !kiosk ? (
-          <CheckInQr
-            url={joinUrl!}
-            heading={copy.othersHeading}
-            blurb={copy.othersBlurb}
-            compact={onPhone}
-          />
-        ) : null}
+          {/* Front-door tablet: the phone square sits beside the welcome, then in the corner. */}
+          {kioskWide && step.name !== "done" && !(jumbo && step.name === "welcome") ? (
+            <KioskQr
+              url={othersNow ? joinUrl! : (handoffUrl ?? phoneUrl)}
+              large={step.name === "welcome" && qrPanel}
+              carryOn={!othersNow && !!handoffUrl}
+              others={othersNow}
+              onTakeBack={away ? () => void takeBack() : undefined}
+            />
+          ) : null}
+          {/* On a phone, only while others are filled in: they can use their own phones instead of this one. */}
+          {othersNow && !kiosk ? (
+            <CheckInQr
+              url={joinUrl!}
+              heading={copy.othersHeading}
+              blurb={copy.othersBlurb}
+              compact={onPhone}
+            />
+          ) : null}
+        </div>
       </div>
-    </div>
+    </TestSamplesContext.Provider>
   );
 }
 

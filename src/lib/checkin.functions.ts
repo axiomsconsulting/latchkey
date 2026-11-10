@@ -1331,6 +1331,19 @@ async function readHandoff(db: unknown, sessionId: string) {
   };
 }
 
+/**
+ * A check-in that found the host's own test stay: the host's sample photos, so every photo
+ * step from here uses them instead of the camera (test-stay.functions.ts). Nothing otherwise.
+ */
+export const sessionTestSamples = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const { db, booking, property } = await sessionContext(data.token);
+    const { testRoomOf, samplesForTestBooking } = await import("./test-stay.server");
+    if (!(await testRoomOf(db, booking.id)).isTest) return { samples: null };
+    return { samples: await samplesForTestBooking(db, property.id) };
+  });
+
 /** Which device has this check-in now (checkin-handoff.ts), for the other to follow. */
 export const handoffState = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ token }).parse(d))

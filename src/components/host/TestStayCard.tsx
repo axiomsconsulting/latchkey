@@ -10,6 +10,7 @@ import {
   Loader2,
   RotateCcw,
   Smile,
+  Tablet,
   Trash2,
   UserCheck,
 } from "lucide-react";
@@ -29,8 +30,10 @@ import {
 import { common, testStayCopy as copy } from "@/content/copy";
 import { checkInMark } from "@/lib/booking-list";
 import { fromFile } from "@/lib/photo-file";
+import { pingKiosk } from "@/lib/kiosk-ping";
 import { surnameLetter } from "@/lib/test-stay";
 import {
+  armTestSamples,
   getTestStay,
   removeTestSamples,
   resetTestStay,
@@ -57,6 +60,7 @@ export function TestStayCard({
   const updateFn = useServerFn(updateTestStay);
   const resetFn = useServerFn(resetTestStay);
   const sampleFn = useServerFn(saveTestSample);
+  const armFn = useServerFn(armTestSamples);
   const removeSamplesFn = useServerFn(removeTestSamples);
   const qc = useQueryClient();
   const q = useQuery({
@@ -104,6 +108,12 @@ export function TestStayCard({
   const verdict = checkInMark(stay?.id_check_status);
   const samples = q.data?.samples ?? { id: false, face: false };
   const hasSamples = samples.id || samples.face;
+  const armedAt = (samples as { armedUntil?: string | null }).armedUntil ?? null;
+  const armed = armedAt
+    ? new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(
+        new Date(armedAt),
+      )
+    : null;
   const kioskHref =
     hasSamples && q.data?.testToken
       ? `/kiosk/${property.short_code}?test=${encodeURIComponent(q.data.testToken)}`
@@ -137,6 +147,22 @@ export function TestStayCard({
             )
           }
         />
+        {hasSamples ? (
+          <Button
+            variant={armed ? "default" : "outline"}
+            size="sm"
+            disabled={busy}
+            onClick={() =>
+              void act(async () => {
+                const res = await armFn({ data: { propertyId: property.id } });
+                await pingKiosk(res.code);
+              }, copy.armed)
+            }
+          >
+            <Tablet className="size-4" />
+            {armed ? copy.armedUntil(armed) : copy.arm}
+          </Button>
+        ) : null}
         {hasSamples ? (
           <Button
             variant="ghost"

@@ -1176,7 +1176,7 @@ export const testStayCopy = branded({
   needsUpdate: "This needs the latest update (migration 0092).",
   samples: "Sample photos (optional)",
   samplesInfo:
-    "Add a photo of your own ID and a selfie in advance. The kiosk opened from this card shows them in place of the camera: each one lines up, comes into focus and is taken by itself, just as with a real guest, then read and checked as usual. Use your own ID with the name above so it matches. They're kept privately (like guests' ID photos) until you remove them, and only that link uses them; it works for 12 hours and stops after one check-in.",
+    "Add a photo of your own ID and a selfie in advance, and the kiosk shows them in place of the camera: each one lines up, comes into focus and is taken by itself, just as with a real guest, then read and checked as usual. Use your own ID with the name above so it matches. They're used in three ways: once a check-in finds your test stay (by surname and check-out), on any door tablet; on the door tablets' next check-in within 10 minutes after you tap \"Use on the door tablet's next check-in\" (for showing the ID first); and on the kiosk opened from this card's link (12 hours). Each time, only for that one check-in. They're kept privately (like guests' ID photos) until you remove them.",
   sampleId: "ID",
   sampleFace: "Selfie",
   sampleAdd: "Add",
@@ -1185,6 +1185,9 @@ export const testStayCopy = branded({
   samplesRemove: "Remove sample photos",
   samplesRemoved: "Sample photos removed",
   openWithSamples: "Open the kiosk with sample photos",
+  arm: "Use on the door tablet's next check-in",
+  armed: "The door tablet will use your sample photos for the next check-in (within 10 minutes).",
+  armedUntil: (time: string) => `Ready on the door tablet until ${time}`,
 });
 
 export const kioskRestCopy = branded({
@@ -2246,6 +2249,7 @@ export const guest = branded({
   faceTimer: "Take photo in 3 seconds",
   cameraIsHere: "The camera is here",
   testSamplesBadge: "Test check-in: using your sample photos",
+  testSamplesFound: "Your test stay: using your sample photos",
   splashCalibrating: "Auto calibrating…",
   splashReady: "Ready",
   jumboId: "Show your ID",
