@@ -1114,6 +1114,21 @@ export const demoDefaultsCopy = branded({
   needsUpdate: "This needs the latest update (migration 0094).",
 });
 
+export const kioskVoiceCopy = branded({
+  title: "Voice check-in",
+  info: [
+    "A colourful bubble beside Check in starts a concierge that talks guests through checking in. They answer out loud, so nothing needs pressing: it guides their ID into place (left a bit, closer, hold still), takes the photos by itself, asks them to check their details on the screen, and finishes the check-in.",
+    "It speaks with the tablet's own built-in voices, so talking costs nothing; AI is only used when it can't tell what a guest said. Guests can tap the screen at any time, or tap the bubble in the corner to stop it.",
+    "Allow the microphone on the tablet when it first asks. The tablet's browser turns speech into text (on Android through Google, on an iPad through Apple); no recording is kept.",
+  ],
+  proOnly: "Voice check-in comes with the Pro plan.",
+  offer: "Offer voice check-in on the door tablets",
+  voice: "Voice",
+  genders: { female: "Female voice", male: "Male voice" } as Record<"female" | "male", string>,
+  hear: "Hear it",
+  noVoices: "This browser has no voices to play.",
+});
+
 export const reviewRefreshCopy = branded({
   title: "Reviews for door tablets",
   info: "Properties that show reviews on their door tablet have them read again from their listing links once this many days have passed since the last read, during the daily clean-up (up to 10 properties a day). Each read uses up to 8 Firecrawl pages per property, so a longer gap means less Firecrawl use. Fetch now reads the chosen properties straight away, whether or not they show reviews yet.",
@@ -2250,6 +2265,9 @@ export const guest = branded({
   cameraIsHere: "The camera is here",
   testSamplesBadge: "Test check-in: using your sample photos",
   testSamplesFound: "Your test stay: using your sample photos",
+  voiceStart: "Check in by voice",
+  voiceStop: "Stop the voice concierge",
+  voiceListening: "Listening",
   splashCalibrating: "Auto calibrating…",
   splashReady: "Ready",
   jumboId: "Show your ID",
@@ -4985,6 +5003,7 @@ export const settingsMenuCopy = branded({
     goodbye: ["Jumbo goodbye cards", "kiosk"],
     kioskLook: ["Door tablet look", "kiosk"],
     kioskReviews: ["Reviews on the door tablet", "kiosk"],
+    kioskVoice: ["Voice check-in", "kiosk"],
     payments: ["Card payments", "money"],
     money: ["Tax, bank details and away", "money"],
     invoices: ["Invoices", "money"],
@@ -5018,6 +5037,7 @@ export const settingsMenuCopy = branded({
     goodbye: "A card for each guest leaving today.",
     kioskLook: "Look, button size, flash and sounds.",
     kioskReviews: "Your best reviews while an ID is checked.",
+    kioskVoice: "A spoken concierge guests can check in with (Pro).",
     payments: "Connect Stripe to take card payments.",
     money: "Tax details, your bank account and away dates.",
     invoices: "Tax number and invoice numbering for direct stays.",

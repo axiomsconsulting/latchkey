@@ -91,6 +91,7 @@ import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { claimArmedSamples, getTestSamples } from "@/lib/test-stay.functions";
 import { kioskReviews } from "@/lib/kiosk-reviews.functions";
 import { KioskReviewsContext } from "@/components/guest/KioskReviews";
+import { VoiceConcierge } from "@/components/guest/VoiceConcierge";
 import type { KioskReview } from "@/lib/kiosk-reviews";
 import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
 import { listenForKioskSounds, setKioskFlash, setKioskSounds } from "@/lib/kiosk-sound";
@@ -1092,6 +1093,10 @@ function Kiosk() {
   const camPermission = useCameraPermission(shared && !tour);
   const content = useRef<HTMLDivElement | null>(null);
   const [stepKey, setStepKey] = useState("welcome:");
+  // The voice concierge (Pro plan, host's switch): on from the bubble beside Check in until the
+  // check-in ends, the guest says stop, or taps its orb.
+  const [voiceOn, setVoiceOn] = useState(false);
+  const voice = shared && !personal ? (p.voice ?? null) : null;
   useEffect(() => {
     if (samples && !stepKey.startsWith("welcome")) samplesInUse.current = true;
   }, [samples, stepKey]);
@@ -1549,6 +1554,14 @@ function Kiosk() {
         data-kiosk-xl={xl ? "" : undefined}
       >
         {xl ? <style>{xlStyle}</style> : null}
+        {voice && voiceOn ? (
+          <VoiceConcierge
+            code={p.code}
+            gender={voice.gender}
+            stepKey={stepKey}
+            onEnd={() => setVoiceOn(false)}
+          />
+        ) : null}
         {shared ? (
           <KioskSplash
             theme={p.theme}
@@ -1662,6 +1675,7 @@ function Kiosk() {
                       : undefined
                   }
                   qrPanel={!jumbo && saverLook.defaults.qrStyle === "panel"}
+                  voiceStart={voice && !voiceOn ? () => setVoiceOn(true) : null}
                   jumbo={jumbo}
                   {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
                 />

@@ -20,6 +20,7 @@ export const FEATURES = {
   branding: "Your own look and short link",
   api: "API and MCP server (connect AI assistants and other apps)",
   priority_support: "Priority support",
+  voice_checkin: "Voice check-in concierge on door tablets",
 } as const;
 export type FeatureKey = keyof typeof FEATURES;
 

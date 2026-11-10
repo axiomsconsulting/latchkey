@@ -171,6 +171,14 @@ export const JOBS: Job[] = branded([
     startsOff: true,
   },
   {
+    key: "voice_ai",
+    name: "Voice check-in: understanding unclear replies",
+    kind: "on_use",
+    what: "When a guest checking in by voice says something the door tablet's rules don't recognise, AI works out which answer they meant (a short text request; no audio is sent). Off: the concierge just asks them to say it again.",
+    metric: "ai:voice_intent",
+    runnable: false,
+  },
+  {
     key: "review_import",
     name: "Reviews for door tablets with Firecrawl",
     kind: "on_use",

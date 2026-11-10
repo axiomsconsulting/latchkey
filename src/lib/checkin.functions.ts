@@ -190,8 +190,13 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
     const { guestSites } = await import("./checkin.server");
     const theme = await withGroup(normaliseTheme(p.theme_config), p.host_id, p.name ?? "");
     const kioskLook = await kioskLookFor(srvMod, p.id, theme.kioskLook);
+    // Voice check-in: the host's switch, on a plan that includes it (voice.server.ts).
+    const { voiceFor } = await import("./voice.server");
+    const voice = await voiceFor(p.host_id, theme);
     return {
       found: true as const,
+      /** The voice concierge, when the host has it on and their plan includes it. */
+      voice,
       name: p.name,
       code: p.short_code,
       timezone: tz,

@@ -103,6 +103,10 @@ export type ThemeConfig = {
   kioskSounds: boolean;
   /** Door tablets: the property's best reviews scroll by while an ID or selfie is checked (off by default; kiosk-reviews.ts). */
   kioskReviews: boolean;
+  /** Door tablets: voice check-in concierge (Pro plan; voice-concierge.ts), off by default. */
+  kioskVoice: boolean;
+  /** The concierge's voice: one of the tablet's own female or male voices. */
+  kioskVoiceGender: "female" | "male";
   /** The door tablet's look: XL (bold cards, full screen), standard, or Latchkey's default (kiosk-xl.ts). */
   kioskLook: "auto" | "standard" | "xl" | "jumbo";
 };
@@ -146,6 +150,8 @@ const base = {
   kioskFlash: true,
   kioskSounds: true,
   kioskReviews: false,
+  kioskVoice: false,
+  kioskVoiceGender: "female",
   kioskLook: "auto",
 } as const satisfies Partial<ThemeConfig>;
 
@@ -541,6 +547,8 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     kioskFlash: typeof r.kioskFlash === "boolean" ? r.kioskFlash : true,
     kioskSounds: typeof r.kioskSounds === "boolean" ? r.kioskSounds : true,
     kioskReviews: r.kioskReviews === true,
+    kioskVoice: r.kioskVoice === true,
+    kioskVoiceGender: r.kioskVoiceGender === "male" ? "male" : "female",
     kioskLook: pick(r.kioskLook, ["auto", "standard", "xl", "jumbo"] as const, "auto"),
   };
 }

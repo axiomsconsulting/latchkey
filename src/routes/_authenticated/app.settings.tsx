@@ -1,3 +1,4 @@
+import { KioskVoiceSettings } from "@/components/host/KioskVoiceSettings";
 import { KioskReviewsSettings } from "@/components/host/KioskReviewsSettings";
 import { useEffect, useState } from "react";
 import { PageSections, Section } from "@/components/PageSections";
@@ -98,6 +99,7 @@ const FOCUS = [
   "kioskTablets",
   "kioskLook",
   "kioskReviews",
+  "kioskVoice",
   // Old links: redirected to kioskTablets (screen fit is on each tablet's card).
   "kioskScreen",
   "goodbye",
@@ -160,6 +162,7 @@ const OWN_CARD = new Set([
   "kioskLook",
   "kioskLook",
   "kioskReviews",
+  "kioskVoice",
   "goodbye",
   "welcomeCards",
   "money",
@@ -789,6 +792,21 @@ function SettingsPage() {
             <div id="settings-kioskTablets" className="scroll-mt-24 rounded-2xl">
               <DoorTablets
                 property={themedProperty as unknown as { id: string; short_code: string }}
+              />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="kioskVoice">
+          {themedProperty ? (
+            <div id="settings-kioskVoice" className="scroll-mt-24 rounded-2xl">
+              <KioskVoiceSettings
+                property={
+                  themedProperty as unknown as {
+                    id: string;
+                    short_code: string;
+                    theme_config?: unknown;
+                  }
+                }
               />
             </div>
           ) : null}
