@@ -47,6 +47,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.150.0",
+    date: "2026-11-10",
+    title: "Voice check-in concierge",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Voice check-in (Pro): a colourful bubble beside Check in starts a concierge that talks guests through checking in. They answer out loud: it guides their ID into place (left a bit, closer, hold still), takes the photos by itself, asks them to check their details and finishes the check-in. Its orb beats in the corner while it speaks; a tap stops it.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Turn voice check-in on and pick a female or male voice in Settings → Door tablets → Voice check-in. It uses the tablet's own voices, so speaking costs nothing; AI only helps when it can't tell what a guest said.",
+      },
+    ],
+  },
+  {
     version: "0.149.1",
     date: "2026-11-10",
     title: "Sample photos on any door tablet",

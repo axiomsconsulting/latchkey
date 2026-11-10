@@ -90,6 +90,7 @@ import {
 } from "@/lib/hotel-register";
 import { flagEmoji, pageReady, registerPages, type RegisterPage } from "@/lib/kiosk-register";
 import { CountryPicker } from "@/components/guest/CountryPicker";
+import { VoiceStartBubble } from "@/components/guest/VoiceConcierge";
 import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
 import { cn } from "@/lib/utils";
 import { BrandBlock, ThemeFeatures } from "@/components/theme/ThemeDecor";
@@ -227,6 +228,7 @@ export function CheckInFlow({
   jumbo = false,
   cameraSpots = NO_SPOTS,
   resumeToken,
+  voiceStart = null,
   welcomeStart = null,
   onDone,
 }: {
@@ -254,6 +256,8 @@ export function CheckInFlow({
   onActivity?: (() => void) | undefined;
   /** Present when the guest scanned the square on another device. */
   resumeToken?: string | null;
+  /** The voice concierge is offered (Pro plan, host's switch): the bubble beside Check in starts it. */
+  voiceStart?: (() => void) | null;
 }) {
   const [step, setStep] = useState<Step>({ name: "welcome" });
   const [letter, setLetter] = useState("");
@@ -1322,13 +1326,17 @@ export function CheckInFlow({
                       className="mt-6 justify-center text-left"
                     />
                   ) : null}
-                  <Button
-                    size="touch-xl"
-                    className="mt-10 w-full max-w-md text-xl"
-                    onClick={startFind}
-                  >
-                    {copy.startCta}
-                  </Button>
+                  <div className="mt-10 flex w-full items-center justify-center gap-3">
+                    <Button
+                      size="touch-xl"
+                      className="w-full max-w-md text-xl"
+                      onClick={startFind}
+                      data-voice="yes"
+                    >
+                      {copy.startCta}
+                    </Button>
+                    {voiceStart ? <VoiceStartBubble onStart={voiceStart} /> : null}
+                  </div>
                   {property.checkInFrom && property.checkOutBy ? (
                     <p className="mt-6 text-muted-foreground">
                       {copy.stayWindow(property.checkInFrom, property.checkOutBy)}
@@ -1354,6 +1362,7 @@ export function CheckInFlow({
                       size="touch"
                       className="text-2xl font-semibold"
                       disabled={busy}
+                      data-voice={`letter-${l}`}
                       onClick={() => void onLetter(l)}
                     >
                       {l}
@@ -1582,11 +1591,22 @@ export function CheckInFlow({
                   data-kx="grid"
                   className="mx-auto mt-8 grid w-full max-w-xl gap-3 sm:grid-cols-2"
                 >
-                  <Button size="touch-xl" onClick={() => void onConfirm()} disabled={busy}>
+                  <Button
+                    size="touch-xl"
+                    data-voice="yes"
+                    onClick={() => void onConfirm()}
+                    disabled={busy}
+                  >
                     {busy ? <Loader2 className="size-6 animate-spin" /> : null}
                     {copy.confirmYes}
                   </Button>
-                  <Button size="touch-xl" variant="outline" onClick={restart} disabled={busy}>
+                  <Button
+                    size="touch-xl"
+                    variant="outline"
+                    data-voice="no"
+                    onClick={restart}
+                    disabled={busy}
+                  >
                     {copy.confirmNo}
                   </Button>
                 </div>
@@ -1603,12 +1623,17 @@ export function CheckInFlow({
                     <p className="mt-4 text-lg">{copy.idFirstLead}</p>
                     <WhyAsk>{copy.idConsentDetails(30)}</WhyAsk>
                     <div className="mt-8 grid gap-3">
-                      <Button size="touch-xl" onClick={() => setStep({ ...step, consented: true })}>
+                      <Button
+                        size="touch-xl"
+                        data-voice="yes"
+                        onClick={() => setStep({ ...step, consented: true })}
+                      >
                         {copy.idConsentAgree}
                       </Button>
                       <Button
                         size="touch"
                         variant="outline"
+                        data-voice="no"
                         onClick={() => setStep({ name: "letter" })}
                       >
                         {jumbo ? copy.jumboWords.noId : copy.idFirstOther}
@@ -2093,6 +2118,7 @@ export function CheckInFlow({
                       size="touch"
                       variant="outline"
                       disabled={busy}
+                      data-voice="add"
                       onClick={() => void onAddGuest()}
                     >
                       {copy.doneAddGuest}
@@ -2101,7 +2127,7 @@ export function CheckInFlow({
                 ) : null}
                 {onDone ? (
                   <JumboSlot on to="jumbo-status">
-                    <Button size="touch" onClick={onDone}>
+                    <Button size="touch" data-voice="done" onClick={onDone}>
                       {copy.doneFinished}
                     </Button>
                   </JumboSlot>
@@ -2151,13 +2177,19 @@ export function CheckInFlow({
                         variant="outline"
                         className="w-full max-w-md"
                         disabled={busy}
+                        data-voice="add"
                         onClick={() => void onAddGuest()}
                       >
                         {copy.doneAddGuest}
                       </Button>
                     ) : null}
                     {kiosk && onDone ? (
-                      <Button size="touch-xl" className="w-full max-w-md text-xl" onClick={onDone}>
+                      <Button
+                        size="touch-xl"
+                        className="w-full max-w-md text-xl"
+                        data-voice="done"
+                        onClick={onDone}
+                      >
                         {copy.doneFinished}
                       </Button>
                     ) : null}
@@ -2552,6 +2584,7 @@ function PartyStep({
       <Button
         size="touch-xl"
         className="mt-8 w-full"
+        data-voice="yes"
         disabled={busy || missingAge}
         onClick={() =>
           onSubmit(
@@ -2674,6 +2707,7 @@ function RegisterStep({
         size="touch"
         className="h-auto min-h-14 flex-col gap-0.5 whitespace-normal py-2"
         variant={where === "home" ? "default" : "outline"}
+        data-voice="home"
         onClick={goHome}
       >
         <span>{copy.registerGoingHome}</span>
@@ -2685,6 +2719,7 @@ function RegisterStep({
         type="button"
         size="touch"
         variant={where === "elsewhere" ? "default" : "outline"}
+        data-voice="elsewhere"
         onClick={goElsewhere}
       >
         {copy.registerGoingElsewhere}
@@ -2862,7 +2897,13 @@ function RegisterStep({
           </>
         ) : null}
 
-        <Button type="submit" size="touch-xl" className="w-full" disabled={busy || !ready}>
+        <Button
+          type="submit"
+          size="touch-xl"
+          className="w-full"
+          data-voice="yes"
+          disabled={busy || !ready}
+        >
           {busy ? <Loader2 className="size-6 animate-spin" /> : null}
           {copy.registerSave}
         </Button>
@@ -2918,7 +2959,11 @@ function RegisterPager({
   const ok = page ? pageReady(page, missing) : missing.length === 0;
   const forward = () => (last ? onSave() : setAt(i + 1));
   return (
-    <section data-register-pager className="flex h-full min-h-0 flex-col gap-[3cqmin]">
+    <section
+      data-register-pager
+      data-register-page={page ?? ""}
+      className="flex h-full min-h-0 flex-col gap-[3cqmin]"
+    >
       <h1>{title}</h1>
       <form
         className="flex min-h-0 flex-1 flex-col gap-[3cqmin]"
@@ -2954,7 +2999,7 @@ function RegisterPager({
             <span />
           )}
           <div className="flex justify-end">
-            <Button type="submit" disabled={busy || !ok}>
+            <Button type="submit" data-voice="yes" disabled={busy || !ok}>
               {busy ? <Loader2 className="size-[1em] animate-spin" /> : null}
               {last ? copy.registerSave : copy.registerNext2}
               {last ? null : <ArrowRight className="size-[1em]" />}

@@ -1379,3 +1379,69 @@ html[data-kiosk-jumbo] .kiosk-qr-dialog [data-kiosk-qr-title] {
 [data-arranged-body] [data-dup-icon] {
   display: none;
 }
+
+/* The voice concierge's orb (VoiceConcierge): blue, green, yellow and red turning inside a soft,
+   waving blob; it beats while speaking and breathes while listening. Plain colours only, so
+   older tablet browsers draw it the same. */
+.voice-orb {
+  border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
+  animation: voice-wave 5s ease-in-out infinite;
+  box-shadow: 0 6px 24px rgba(66, 133, 244, 0.45);
+}
+.voice-orb-spin {
+  background: conic-gradient(#4285f4, #34a853, #fbbc05, #ea4335, #4285f4);
+  animation: voice-spin 4s linear infinite;
+}
+.voice-orb-shine {
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%);
+}
+[data-voice-orb="speaking"] {
+  animation: voice-wave 5s ease-in-out infinite, voice-beat 0.55s ease-in-out infinite;
+}
+[data-voice-orb="listening"] {
+  animation: voice-wave 5s ease-in-out infinite, voice-breathe 2.4s ease-in-out infinite;
+}
+@keyframes voice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes voice-wave {
+  0%,
+  100% {
+    border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
+  }
+  33% {
+    border-radius: 55% 45% 47% 53% / 46% 55% 45% 54%;
+  }
+  66% {
+    border-radius: 48% 52% 56% 44% / 54% 48% 52% 46%;
+  }
+}
+@keyframes voice-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+@keyframes voice-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.85;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-orb,
+  .voice-orb-spin,
+  [data-voice-orb] {
+    animation: none !important;
+  }
+}

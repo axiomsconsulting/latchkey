@@ -453,6 +453,29 @@ export function IdCamera({
           ? "small"
           : "cut_off"
     : snap.say;
+  // The voice concierge (VoiceConcierge) listens for these: the camera opening, what it sees, the shot.
+  useEffect(() => {
+    if (!auto || !ready) return;
+    window.dispatchEvent(new CustomEvent("lk-camera", { detail: { kind } }));
+  }, [auto, ready, kind]);
+  useEffect(() => {
+    if (!auto || !ready || busy || shot) return;
+    const v = videoRef.current;
+    const shape = sample ? null : snap.shape;
+    window.dispatchEvent(
+      new CustomEvent("lk-snap", {
+        detail: {
+          kind,
+          say: snap.say,
+          points: shape?.points ?? null,
+          good: !!shape?.good,
+          w: v?.videoWidth ?? 0,
+          h: v?.videoHeight ?? 0,
+          front: mirrored,
+        },
+      }),
+    );
+  }, [auto, ready, busy, shot, snap, kind, mirrored, sample]);
   // Beside the camera only for the front one: the back one is on the other side of the tablet.
   const pointing = !!spot && current === "user";
   // The floating preview only where the host placed the front camera; otherwise the standard
@@ -492,6 +515,7 @@ export function IdCamera({
    * white at full strength for a moment first, lighting the face or ID in front of it.
    */
   function take() {
+    window.dispatchEvent(new CustomEvent("lk-shot", { detail: { kind } }));
     const lit = kioskFlash() && (mirrored || !!sample);
     if (!lit) {
       kioskSound("shutter");
