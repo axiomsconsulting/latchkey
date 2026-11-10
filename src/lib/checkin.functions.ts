@@ -1460,6 +1460,9 @@ function prefillFrom(read: IdRead) {
     nationality: suggestedNationality(read),
     documentNumber: read.documentNumber,
     placeOfIssue: read.placeOfIssue ?? read.issuingCountry,
+    // From a driving licence or ID card: one tap for "going home" in the register.
+    homeAddress: read.homeAddress ?? null,
+    homeTown: read.homeTown ?? null,
   };
 }
 
@@ -1605,6 +1608,8 @@ const NO_PREFILL = {
   nationality: null,
   documentNumber: null,
   placeOfIssue: null,
+  homeAddress: null,
+  homeTown: null,
 } as const;
 
 /**

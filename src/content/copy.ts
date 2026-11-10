@@ -2164,7 +2164,7 @@ export const guest = branded({
   registerPlace: "Place of issue",
   registerPlaceHint: "As printed on it, for example the city, country or issuing office",
   registerNext: "Where are you going after this stay?",
-  registerNextHint: "A town and country is fine",
+  registerNextHint: "Town and country",
   registerGoingHome: "Going home",
   registerGoingElsewhere: "Somewhere else",
   registerFromLastStay: "From your last stay with us. Please check it's still right.",

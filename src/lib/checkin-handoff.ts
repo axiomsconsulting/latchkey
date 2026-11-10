@@ -20,6 +20,8 @@ export type HandoffPrefill = {
   nationality: string | null;
   documentNumber: string | null;
   placeOfIssue: string | null;
+  homeAddress?: string | null;
+  homeTown?: string | null;
   fromLastStay?: boolean;
 };
 
@@ -73,6 +75,8 @@ export function normaliseHandoff(raw: unknown): HandoffState | null {
         nationality?: unknown;
         documentNumber?: unknown;
         placeOfIssue?: unknown;
+        homeAddress?: unknown;
+        homeTown?: unknown;
         fromLastStay?: unknown;
       };
       prefill[String(p)] = {
@@ -80,6 +84,8 @@ export function normaliseHandoff(raw: unknown): HandoffState | null {
         nationality: text(x.nationality, 12),
         documentNumber: text(x.documentNumber, 40),
         placeOfIssue: text(x.placeOfIssue),
+        homeAddress: text(x.homeAddress, 300),
+        homeTown: text(x.homeTown),
         ...(x.fromLastStay === true ? { fromLastStay: true } : {}),
       };
     }

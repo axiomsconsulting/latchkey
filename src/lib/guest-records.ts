@@ -147,6 +147,10 @@ export type IdRead = {
   documentNumber: string | null;
   /** Issuing authority or place, as printed. */
   placeOfIssue: string | null;
+  /** The holder's home address, when the document prints one (driving licences, some ID cards). */
+  homeAddress?: string | null;
+  /** That address's town and country ("Lyon, France"): the register's next destination if they're going home. */
+  homeTown?: string | null;
 };
 
 export type IdVerdict =
