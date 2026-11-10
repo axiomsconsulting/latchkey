@@ -1200,7 +1200,9 @@ function Kiosk() {
   // Smart Screensaver by day: this same screen, whatever it is, goes black and white until someone comes.
   const idleLong = useIdleFor(saverMinutes * 60_000, shared && !tour);
   const lowPower = lowPowerNow({
-    shared: shared && !tour,
+    // Never during a voice check-in: the guest is talking, not touching, and the Smart
+    // Screensaver's sound watch would take the microphone from the concierge.
+    shared: shared && !tour && !voiceOn,
     smart: saverLook.rest.smart,
     byClock: restByClock,
     atStart: atWelcome,
@@ -1311,16 +1313,17 @@ function Kiosk() {
   }, [saver, restShowing]);
   // Smart Screensaver: walking up (or a sound) wakes it, on this tablet alone. Nothing is kept or sent.
   useMotionWake(
-    lowPower ||
-      (saverLook.rest.smart &&
-        !tour &&
-        shared &&
-        saver &&
-        !restTapped &&
-        restShowing !== "awake" &&
-        restShowing !== "day" &&
-        !welcomeUp &&
-        !goodbyeUp),
+    !voiceOn &&
+      (lowPower ||
+        (saverLook.rest.smart &&
+          !tour &&
+          shared &&
+          saver &&
+          !restTapped &&
+          restShowing !== "awake" &&
+          restShowing !== "day" &&
+          !welcomeUp &&
+          !goodbyeUp)),
     () => {
       setSaver(false);
       idleLong.wake();

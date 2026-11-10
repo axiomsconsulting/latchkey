@@ -4,6 +4,7 @@
  * Listening pauses while it speaks, so it never hears itself. Nothing is recorded or kept.
  */
 import { PHRASES, pickVoice, type PhraseKey, type VoiceGender } from "./voice-concierge";
+import { isLoud, loudness, nextBaseline } from "./motion-wake";
 
 type Rec = {
   lang: string;
@@ -44,6 +45,13 @@ export type VoiceEvents = {
    * tablets whose browser can't listen itself. Null when it isn't available.
    */
   transcribe?: ((audio: Blob) => Promise<string | null>) | null;
+  /** How loud the microphone is right now (0-1), while Latchkey's own listening is on. */
+  onLevel?: (level: number) => void;
+  /**
+   * Listen with Latchkey's own listening from the start (Android tablets, whose built-in
+   * speech recognition so often hears nothing), when it's available.
+   */
+  preferCloud?: boolean;
 };
 
 /** Errors that mean the tablet's own listening won't work here (as opposed to just silence). */
@@ -72,12 +80,16 @@ class CloudEar {
     private transcribe: (audio: Blob) => Promise<string | null>,
     private heard: (text: string) => void,
     private trouble: (reason: string) => void,
+    private level: (level: number) => void = () => {},
   ) {}
 
   async open(): Promise<boolean> {
     try {
+      // The plain microphone: on Android, echo cancellation picks the "voice call" input, which
+      // many tablets leave silent (a recorder app uses the plain one). It never listens while
+      // speaking, so there's no echo to cancel.
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
       });
     } catch {
       this.trouble("microphone");
@@ -94,15 +106,21 @@ class CloudEar {
     const analyser = this.ctx.createAnalyser();
     analyser.fftSize = 1024;
     this.ctx.createMediaStreamSource(this.stream).connect(analyser);
-    const buf = new Uint8Array(analyser.fftSize);
+    void this.ctx.resume().catch(() => undefined);
+    const buf = new Float32Array(analyser.fftSize);
+    let baseline = 0;
     this.timer = window.setInterval(() => {
-      if (this.paused) return;
-      analyser.getByteTimeDomainData(buf);
-      let sum = 0;
-      for (const v of buf) sum += ((v - 128) / 128) ** 2;
-      const level = Math.sqrt(sum / buf.length);
+      analyser.getFloatTimeDomainData(buf);
+      const level = loudness(buf);
+      this.level(level);
+      if (this.paused) {
+        baseline = nextBaseline(baseline, level);
+        return;
+      }
       const now = Date.now();
-      const loud = level > 0.045;
+      // Louder than the room's own level (a fan, a fridge), however loud the room is.
+      const loud = baseline > 0 && isLoud(level, baseline);
+      if (!this.rec) baseline = nextBaseline(baseline, level);
       if (!this.rec) {
         if (loud) {
           this.loudSince ||= now;
@@ -314,6 +332,10 @@ export class VoiceEngine {
 
   listen() {
     this.want = true;
+    if (this.ev.preferCloud && this.ev.transcribe) {
+      void this.useCloud("android");
+      return;
+    }
     this.resumeListening();
   }
 
@@ -330,7 +352,7 @@ export class VoiceEngine {
 
   /** The tablet's own listening doesn't work here: listen through the cloud instead, if we can. */
   private async useCloud(reason: string) {
-    this.ev.onTrouble?.(reason);
+    if (reason !== "android") this.ev.onTrouble?.(reason);
     if (this.ear || this.earOpening || !this.ev.transcribe) {
       if (!this.ev.transcribe) this.ev.onNoMic();
       return;
@@ -340,6 +362,7 @@ export class VoiceEngine {
       this.ev.transcribe,
       (text) => this.ev.onHeard(text),
       (why) => this.ev.onTrouble?.(why),
+      (level) => this.ev.onLevel?.(level),
     );
     if (await ear.open()) this.ear = ear;
     else this.ev.onNoMic();
