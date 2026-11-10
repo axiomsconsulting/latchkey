@@ -76,6 +76,8 @@ export function VoiceConcierge({
   onEnd: () => void;
 }) {
   const [beat, setBeat] = useState<"idle" | "speaking" | "listening">("idle");
+  // The microphone's level, as a ring round the orb (set directly, many times a second).
+  const ring = useRef<HTMLSpanElement>(null);
   // What it just heard, shown by the orb for a moment, so the guest sees it understood them.
   const [heardText, setHeardText] = useState<string | null>(null);
   useEffect(() => {
