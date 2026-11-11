@@ -53,17 +53,17 @@ export const RELEASES: Release[] = branded([
     items: [
       {
         kind: "improved",
-        area: "Door tablets",
+        area: "Check-in",
         text: "With voice check-in on, the welcome has one Check in button, with a rippling outline in the concierge's colours, and the concierge starts with it. The separate voice bubble is gone.",
       },
       {
         kind: "new",
-        area: "Door tablets",
+        area: "Check-in",
         text: "The concierge's mute button now shows in the top bar before anyone checks in. Mute it there and every check-in on that tablet starts quiet. Unmuting during a check-in only lasts until that check-in ends.",
       },
       {
         kind: "improved",
-        area: "Door tablets",
+        area: "Check-in",
         text: "Jumbo's top bar always shows the property's full name: the clock shrinks to the time when the name needs the room, and a name still too long scrolls along gently, pausing so it can be read.",
       },
     ],
