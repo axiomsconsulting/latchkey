@@ -362,11 +362,13 @@ export class VoiceEngine {
     const recorded = keys.every((k) => typeof k === "string" && this.clips[k]);
     if (recorded) {
       this.hush();
+      // This turn to speak: anything said later (or hush) ends it, so two screens never overlap.
+      const turn = this.turn;
       this.pauseListening();
       this.speaking++;
       this.ev.onSpeaking(true);
       for (const k of keys) {
-        if (this.stopped) break;
+        if (this.stopped || turn !== this.turn) break;
         await this.play(this.clips[k as PhraseKey]!);
       }
       this.speaking = Math.max(0, this.speaking - 1);
@@ -382,7 +384,8 @@ export class VoiceEngine {
   private speakTts(keys: Array<PhraseKey | { text: string }>): Promise<void> {
     if (this.stopped || !voiceSupported().speak || !keys.length) return Promise.resolve();
     const synth = window.speechSynthesis;
-    synth.cancel();
+    // Whatever was being said (recordings included) stops first.
+    this.hush();
     this.pauseListening();
     const voice = pickVoice(synth.getVoices(), this.gender);
     return new Promise((resolve) => {
@@ -428,8 +431,12 @@ export class VoiceEngine {
     });
   }
 
+  /** Bumped by hush(): a run of recordings stops when its turn has passed. */
+  private turn = 0;
+
   /** Stops talking at once (a new screen, or the guest spoke over it). */
   hush() {
+    this.turn++;
     if (voiceSupported().speak) window.speechSynthesis.cancel();
     if (this.playing) {
       this.playing.pause();
