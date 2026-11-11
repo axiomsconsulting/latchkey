@@ -41,7 +41,7 @@ import { DEMO_CODES, isTour } from "./demo-account";
 import {
   ADULT_AGE,
   ageOn,
-  bookedPartySize,
+  partyToAssume,
   checkParty,
   deleteAfter,
   judgeId,
@@ -1318,7 +1318,8 @@ function partyPlan(ctx: Ctx) {
   return {
     ask: (rec.askWhoIsStaying || register) && !returning,
     register,
-    booked: bookedPartySize(ctx.booking),
+    // A calendar's usual 1 counts as one guest: anyone else is added at the end.
+    booked: partyToAssume(ctx.booking),
     capacity: ctx.room?.max_guests ?? null,
     childrenAllowed: ctx.room?.children_allowed ?? true,
     // With ID reading off, every adult's photo is still asked for when the host keeps them (checked by hand).

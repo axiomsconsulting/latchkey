@@ -4,6 +4,7 @@ import {
   DEFAULT_RECORDS,
   ageOn,
   bookedPartySize,
+  partyToAssume,
   checkParty,
   deleteAfter,
   judgeId,
@@ -139,5 +140,15 @@ describe("small helpers", () => {
   });
   it("deletes a set number of days after check-out", () => {
     expect(deleteAfter("2026-10-14", 30)).toBe("2026-11-13");
+  });
+});
+
+describe("partyToAssume", () => {
+  it("starts from one guest when a calendar feed says 1, and asks only with no count at all", () => {
+    expect(partyToAssume({ guest_count: 1, source: "ical" })).toBe(1);
+    expect(partyToAssume({ guest_count: 3, source: "ical" })).toBe(3);
+    expect(partyToAssume({ guest_count: 2, source: "manual" })).toBe(2);
+    expect(partyToAssume({ guest_count: null, source: "ical" })).toBeNull();
+    expect(partyToAssume({ guest_count: 0, source: "manual" })).toBeNull();
   });
 });

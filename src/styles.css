@@ -940,7 +940,8 @@ html[data-kiosk-jumbo] body {
 /* As few words as possible: the help lines, notes and small print go; errors stay. */
 [data-kiosk-jumbo] [data-kiosk-flow] main [data-wordy],
 [data-kiosk-jumbo] [data-kiosk-flow] main p.text-muted-foreground,
-[data-kiosk-jumbo] [data-kiosk-flow] main :is(.text-xs, .text-sm, .text-base):not([role="alert"]):not([data-jumbo-preview] *) {
+/* Never the controls themselves: the usual button, text box and their words carry .text-sm/.text-base too. */
+[data-kiosk-jumbo] [data-kiosk-flow] main :is(.text-xs, .text-sm, .text-base):not([role="alert"]):not([data-jumbo-preview] *):not([data-slot]):not([data-slot] *) {
   display: none;
 }
 /* Buttons: the card's big black button, words in proportion to the button wherever they sit. */

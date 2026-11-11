@@ -89,6 +89,19 @@ export function bookedPartySize(b: {
   return n > 1 ? n : null;
 }
 
+/**
+ * The party check-in starts from, so the guest isn't asked a question that looks settled: the
+ * booked size, or 1 when a calendar feed sent its usual 1 (anyone else is added at the end,
+ * "Someone else with you?"). Null only when the booking has no count at all.
+ */
+export function partyToAssume(b: {
+  guest_count: number | null;
+  source: string | null;
+  manual_fields?: string[] | null;
+}): number | null {
+  return bookedPartySize(b) ?? ((b.guest_count ?? 0) >= 1 ? 1 : null);
+}
+
 export type PartyCheck = {
   total: number;
   /** The room sleeps fewer people than arrived. */

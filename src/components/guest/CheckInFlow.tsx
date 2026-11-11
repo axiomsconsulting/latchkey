@@ -991,6 +991,7 @@ export function CheckInFlow({
       const known = res.idFromEarlier.prefill;
       setPrefill((p) => ({ ...p, 0: known }));
       setTimeout(() => setMessage(copy.idFromEarlier), 0);
+      if (res.party.register) await registerFromLastStay(known, t);
     }
     if (res.party.ask) {
       // The booking (or the host) already says how many: nothing to ask; anyone else can be added at the end.
@@ -1000,6 +1001,35 @@ export function CheckInFlow({
       return setStep({ name: "party" });
     }
     await startIdentity(res.listFlow, seq, 1, res.party);
+  }
+
+  /**
+   * A returning guest's register entry from their last stay, when it's complete: kept again as
+   * it was for a guest who only gives name and nationality; otherwise only the next destination
+   * (it changes every stay) is asked. An incomplete one gets the usual form.
+   */
+  async function registerFromLastStay(known: Prefill, t: string) {
+    const nationality = known.nationality ?? "";
+    const entry = {
+      fullName: known.fullName ?? "",
+      nationality,
+      documentNumber: known.documentNumber ?? null,
+      placeOfIssue: known.placeOfIssue ?? null,
+      nextDestination: null,
+      nextAddress: null,
+    };
+    // Complete apart from where they go next.
+    if (!cleanRegisterEntry({ ...entry, nextDestination: "known" }).ok) return;
+    if (isAlien(nationality)) {
+      registerAsk.current[0] = ["destination"];
+      return;
+    }
+    const saved = await run(() =>
+      register({
+        data: { token: t, position: 0, ...entry, documentNumber: null, placeOfIssue: null },
+      }),
+    );
+    if (saved?.ok) registerFrom.current[0] = "saved";
   }
 
   async function startIdentity(list = listFlow, seq = sequence, people = adults, p = plan) {
@@ -2004,11 +2034,13 @@ export function CheckInFlow({
                         : copy.registerTitleAdult(step.position + 1)
                 }
                 lead={
-                  step.only
-                    ? copy.registerAskLead(prefill[step.position]?.fullName ?? "")
-                    : step.position === 0
-                      ? copy.registerLead
-                      : copy.registerLeadOther
+                  step.only && prefill[step.position]?.fromLastStay
+                    ? copy.registerAskLeadAgain
+                    : step.only
+                      ? copy.registerAskLead(prefill[step.position]?.fullName ?? "")
+                      : step.position === 0
+                        ? copy.registerLead
+                        : copy.registerLeadOther
                 }
                 only={step.only}
                 prefill={prefill[step.position] ?? null}
