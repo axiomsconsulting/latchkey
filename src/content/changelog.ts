@@ -47,6 +47,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.153.1",
+    date: "2026-11-11",
+    title: "Check-in on a guest's phone without a camera",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "When a guest's phone or computer can't open its camera, the ID step now stays put and offers a saved photo of the ID (and a try-again), instead of jumping to the surname and check-out questions.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The selfie no longer skips itself when the camera can't open: the guest can take it with their phone's own camera, try again, or skip.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "The first ID screen now tells guests how long you really keep their ID details, and whether you keep a copy of the photo, instead of always saying 30 days and no copy.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Names read from an ID in capitals are written the usual way (DANIEL HUGHES becomes Daniel Hughes).",
+      },
+    ],
+  },
+  {
     version: "0.153.0",
     date: "2026-11-10",
     title: "Service mode for your test check-in",

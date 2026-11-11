@@ -7,6 +7,8 @@
 
 import { createHash, randomBytes } from "crypto";
 
+import { tidyIdName } from "./name-match";
+
 export async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
@@ -364,7 +366,7 @@ export async function readIdDetails(
       hasHolderPhoto: p["has_holder_photo"] === true,
       looksHomemade: p["looks_homemade"] !== false,
       documentType: types.find((t) => t === p["document_type"]) ?? null,
-      fullName: str(p["full_name"], 120),
+      fullName: tidyIdName(str(p["full_name"], 120)),
       dateOfBirth: date(p["date_of_birth"]),
       expiryDate: date(p["expiry_date"]),
       issuingCountry: str(p["issuing_country"], 60),

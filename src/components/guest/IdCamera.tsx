@@ -300,7 +300,10 @@ export function IdCamera({
   auto?: boolean;
   /** A door tablet: where its front camera is, so the preview floats right by it. */
   spot?: Spot | null;
-  /** A guest's own phone: a saved photo of the ID may be used instead (never for a face, which is live). */
+  /**
+   * A guest's own device: a saved photo of the ID may be used instead, and if the camera can't open
+   * the screen stays and offers a photo (for a face, the phone's own camera app) instead of moving on.
+   */
   upload?: boolean;
   /** A door tablet on its side: the camera on the left, the help and buttons beside it, so nothing has to shrink. */
   side?: boolean;
@@ -325,6 +328,9 @@ export function IdCamera({
   const [sampleSize, setSampleSize] = useState<{ w: number; h: number } | null>(null);
   const [flashing, setFlashing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // A guest's own device whose camera wouldn't open (blocked, in use, or none): stays here with a photo choice.
+  const [camFailed, setCamFailed] = useState(false);
+  const [camTry, setCamTry] = useState(0);
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
   const [current, setCurrent] = useState(facing);
@@ -362,9 +368,12 @@ export function IdCamera({
         const devices = await navigator.mediaDevices.enumerateDevices?.().catch(() => []);
         if (!cancelled) setCameras((devices ?? []).filter((d) => d.kind === "videoinput").length);
       } catch {
-        if (!cancelled) onFail();
+        if (cancelled) return;
+        if (upload && !auto) setCamFailed(true);
+        else onFail();
       }
     }
+    setCamFailed(false);
     void start();
     return () => {
       cancelled = true;
@@ -373,7 +382,7 @@ export function IdCamera({
     };
     // Opens again only when the guest switches camera.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, sample]);
+  }, [current, sample, camTry]);
 
   // The front camera shows like a mirror, so moving feels natural; an ID is always kept the right way round.
   const mirrored = current === "user";
@@ -708,6 +717,73 @@ export function IdCamera({
       {extra}
     </>
   );
+
+  if (camFailed) {
+    const pick = (f: File | undefined) => {
+      if (!f) return;
+      void fromFile(f)
+        .then(({ full, small }) => {
+          setShot(small);
+          onCapture(full, small);
+        })
+        .catch(() => undefined);
+    };
+    return (
+      <div className="space-y-4" data-camera-failed>
+        <div className="rounded-2xl bg-muted p-6 text-center">
+          {shot ? (
+            <img src={shot} alt="" className="mx-auto max-h-64 rounded-xl" />
+          ) : (
+            <Camera className="mx-auto size-10 text-muted-foreground" aria-hidden />
+          )}
+          <p className="mt-3 text-lg">{kind === "face" ? copy.cameraOffFace : copy.cameraOffId}</p>
+        </div>
+        {busy && shot ? <PhotoProgress kind={kind} /> : null}
+        {/* A face is live: `capture` opens the phone's own camera app rather than the photo library. */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          {...(kind === "face" ? { capture: "user" as const } : {})}
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            pick(f);
+          }}
+        />
+        <Button
+          size="touch-xl"
+          className="w-full"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+        >
+          {busy ? (
+            <Loader2 className="size-6 animate-spin" />
+          ) : kind === "face" ? (
+            <Camera className="size-6" aria-hidden />
+          ) : (
+            <ImageUp className="size-6" aria-hidden />
+          )}
+          {busy
+            ? (busyLabel ?? copy.idChecking)
+            : kind === "face"
+              ? copy.cameraOffFaceCta
+              : copy.idUpload}
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full"
+          disabled={busy}
+          onClick={() => setCamTry((n) => n + 1)}
+        >
+          {copy.cameraRetry}
+        </Button>
+        {extra}
+      </div>
+    );
+  }
 
   // Jumbo: the step's heading and a short line on the left half; the preview, its button and the
   // phone's square on the right. No floating, no help paragraphs.
