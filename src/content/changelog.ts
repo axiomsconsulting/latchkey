@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.156.2",
+    date: "2026-11-11",
+    title: "Returning guests' register, and Jumbo screens that hid their buttons",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "On Jumbo door tablets, the guest register's boxes and Next button, and the + and − for how many guests, could be hidden, leaving the guest stuck. They always show now.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "A returning guest's register details come from their last stay: kept again for British and Irish guests, and guests from elsewhere only say where they're going next.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Guests aren't asked how many are staying when the booking says one (booking sites' calendars always send one): anyone else is added at the end with \"Someone else with you?\".",
+      },
+    ],
+  },
+  {
     version: "0.156.1",
     date: "2026-11-11",
     title: "Check in in one tap",

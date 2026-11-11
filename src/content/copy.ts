@@ -2251,6 +2251,8 @@ export const guest = branded({
   companionSkipped: "No problem. Your host will check it when they say hello.",
   companionKept: "Thanks. We kept the photo for your host to check.",
   registerAskTitle: "One more thing",
+  registerAskLeadAgain:
+    "We have your details from your last stay. The law also asks where you're going next:",
   registerAskLead: (name: string) =>
     name
       ? `We read the rest from ${name}'s ID. The law also asks for this:`
