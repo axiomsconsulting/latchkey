@@ -91,7 +91,8 @@ import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { claimArmedSamples, getTestSamples } from "@/lib/test-stay.functions";
 import { kioskReviews } from "@/lib/kiosk-reviews.functions";
 import { KioskReviewsContext } from "@/components/guest/KioskReviews";
-import { VoiceConcierge } from "@/components/guest/VoiceConcierge";
+import { JumboName } from "@/components/guest/JumboName";
+import { VoiceConcierge, VoiceMuteDefault } from "@/components/guest/VoiceConcierge";
 import type { KioskReview } from "@/lib/kiosk-reviews";
 import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
 import { listenForKioskSounds, setKioskFlash, setKioskSounds } from "@/lib/kiosk-sound";
@@ -923,16 +924,23 @@ const LEFT_MID_FLOW_MS = 45_000;
 /** Mirrors KIOSK_COMPAT_SCRIPT's test for a shared screen: no ?guest/?resume/?join, and not a phone. */
 const EXPANDED_FIRST_SCRIPT = `(function(){try{if(/[?&](guest|resume|join)=/.test(location.search))return;if(Math.min(screen.width,screen.height)<600)return;document.documentElement.setAttribute("data-kiosk-touch","expanded")}catch(e){}})();`;
 
-/** Jumbo's top bar: the time and the short date at one size, like the welcome card screen. */
-function JumboClock({ tz }: { tz: string }) {
+/**
+ * Jumbo's top bar: the time and the short date at one size, like the welcome card screen;
+ * `compact` (a long property name needs the room) shows the time alone.
+ */
+function JumboClock({ tz, compact = false }: { tz: string; compact?: boolean }) {
   const now = useNow(15_000);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return <span />;
   const { shortDate, time } = kioskNow(now, tz);
   return (
-    <p className="font-display font-bold tabular-nums" data-jumbo-clock aria-live="off">
-      {time} {shortDate}
+    <p
+      className="shrink-0 whitespace-nowrap font-display font-bold tabular-nums"
+      data-jumbo-clock
+      aria-live="off"
+    >
+      {compact ? time : `${time} ${shortDate}`}
     </p>
   );
 }
@@ -1104,7 +1112,29 @@ function Kiosk() {
   // The voice concierge (Pro plan, host's switch): on from the bubble beside Check in until the
   // check-in ends, the guest says stop, or taps its orb.
   const [voiceOn, setVoiceOn] = useState(false);
+  // Jumbo's top bar: the clock shows the time alone once the property's name needs the room.
+  const [nameCompact, setNameCompact] = useState(false);
   const voice = shared && !personal ? (p.voice ?? null) : null;
+  // Muted before a check-in (the top bar's button on the welcome): every check-in on this tablet
+  // starts muted, and an unmute during one lasts only until it ends. Kept on the tablet.
+  const muteKey = `latchkey.voiceMuted.${p.code}`;
+  const [voiceMuted, setVoiceMuted] = useState(false);
+  useEffect(() => {
+    try {
+      setVoiceMuted(localStorage.getItem(muteKey) === "1");
+    } catch {
+      // Private window: muting still works until the page reloads.
+    }
+  }, [muteKey]);
+  const toggleVoiceMuted = () =>
+    setVoiceMuted((m) => {
+      try {
+        localStorage.setItem(muteKey, m ? "0" : "1");
+      } catch {
+        // As above.
+      }
+      return !m;
+    });
   useEffect(() => {
     if (samples && !stepKey.startsWith("welcome")) samplesInUse.current = true;
   }, [samples, stepKey]);
@@ -1578,9 +1608,13 @@ function Kiosk() {
             clips={voice.clips}
             cloudEar={voice.cloudEar}
             listens={tablet?.voiceListen !== false}
+            startMuted={voiceMuted}
             stepKey={stepKey}
             onEnd={() => setVoiceOn(false)}
           />
+        ) : null}
+        {voice && !voiceOn ? (
+          <VoiceMuteDefault muted={voiceMuted} onToggle={toggleVoiceMuted} />
         ) : null}
         {shared ? (
           <KioskSplash
@@ -1597,12 +1631,11 @@ function Kiosk() {
           {jumbo ? (
             // Jumbo: the property at the left, the time and date in the middle, the tablet's icons
             // on the right. Back goes in the status bar (JumboSlot).
-            <header
-              data-jumbo-bar
-              className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-[2cqmin]"
-            >
+            // The name always shows in full: the clock gives way to it (time only), and a name
+            // still too long scrolls along in its space (JumboName).
+            <header data-jumbo-bar className="flex items-center gap-[2cqmin]">
               <p
-                className="flex min-w-0 items-center gap-[0.4em] font-display font-bold"
+                className="flex min-w-0 flex-1 items-center gap-[0.4em] font-display font-bold"
                 data-jumbo-name
               >
                 <LogoMark
@@ -1610,10 +1643,16 @@ function Kiosk() {
                   name={p.name}
                   className="size-[1.4em] shrink-0 rounded-[0.25em] bg-white p-[0.1em] text-[0.6em]"
                 />
-                <span className="truncate">{p.name}</span>
+                <JumboName
+                  name={p.name}
+                  scroll={nameCompact}
+                  onFits={(fits) => {
+                    if (!fits) setNameCompact(true);
+                  }}
+                />
               </p>
-              <JumboClock tz={p.timezone ?? "Europe/London"} />
-              <div className="flex items-center justify-end gap-[1cqmin]">{actionBox}</div>
+              <JumboClock tz={p.timezone ?? "Europe/London"} compact={nameCompact} />
+              <div className="flex shrink-0 items-center justify-end gap-[1cqmin]">{actionBox}</div>
             </header>
           ) : null}
           <header

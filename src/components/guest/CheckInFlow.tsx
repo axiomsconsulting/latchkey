@@ -91,7 +91,8 @@ import {
 } from "@/lib/hotel-register";
 import { flagEmoji, pageReady, registerPages, type RegisterPage } from "@/lib/kiosk-register";
 import { CountryPicker } from "@/components/guest/CountryPicker";
-import { VoiceStartBubble } from "@/components/guest/VoiceConcierge";
+import { WavyOutline, useCanSpeak } from "@/components/guest/VoiceConcierge";
+import { unlockAudio } from "@/lib/voice-engine";
 import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
 import { cn } from "@/lib/utils";
 import { BrandBlock, ThemeFeatures } from "@/components/theme/ThemeDecor";
@@ -313,6 +314,7 @@ export function CheckInFlow({
   // same tap that set them, so kept in a ref rather than state.
   const childAges = useRef<number[]>([]);
   const onPhone = useIsMobile();
+  const canSpeak = useCanSpeak();
   // Photos on a phone instead of the tablet's camera (photo-handoff.ts): one link for the whole check-in.
   const phone = usePhotoHandoff(property.code, deviceId, kiosk);
   // Answers from the phone already acted on (task number and part), and selfies the phone took.
@@ -1353,15 +1355,33 @@ export function CheckInFlow({
                     />
                   ) : null}
                   <div className="mt-10 flex w-full items-center justify-center gap-3">
-                    <Button
-                      size="touch-xl"
-                      className="w-full max-w-md text-xl"
-                      onClick={startFind}
-                      data-voice="yes"
-                    >
-                      {copy.startCta}
-                    </Button>
-                    {voiceStart ? <VoiceStartBubble onStart={voiceStart} /> : null}
+                    {voiceStart && canSpeak ? (
+                      // One Check in: the concierge starts with it (muted if the tablet was set
+                      // so before), greets the guest and opens the first step.
+                      <WavyOutline>
+                        <Button
+                          size="touch-xl"
+                          className="w-full max-w-md text-xl"
+                          onClick={() => {
+                            // This tap is what lets an Android tablet play and measure sound later.
+                            unlockAudio();
+                            voiceStart();
+                          }}
+                          data-voice="yes"
+                        >
+                          {copy.startCta}
+                        </Button>
+                      </WavyOutline>
+                    ) : (
+                      <Button
+                        size="touch-xl"
+                        className="w-full max-w-md text-xl"
+                        onClick={startFind}
+                        data-voice="yes"
+                      >
+                        {copy.startCta}
+                      </Button>
+                    )}
                   </div>
                   {property.checkInFrom && property.checkOutBy ? (
                     <p className="mt-6 text-muted-foreground">
