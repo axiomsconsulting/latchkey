@@ -59,22 +59,88 @@ export const getCheckInMarks = createServerFn({ method: "GET" })
       id_checked: boolean;
       face_photo_path: string | null;
     }>;
+    // This list's stays and the year before: a stay with no ID check of its own shows the
+    // guest's latest earlier one (any result), and the name gets a "back again" mark.
+    const since = new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const cols =
+      "id, status, room_id, guest_full_name, guest_email, guest_phone, check_in_date, check_out_date, mirror_of, archived_at, id_check_status, is_test";
+    const [now, past] = await Promise.all([
+      context.supabase
+        .from("bookings")
+        .select(cols)
+        .in("property_id", data.propertyIds)
+        .gte("check_out_date", yesterday)
+        .order("check_in_date", { ascending: true })
+        .limit(1000),
+      context.supabase
+        .from("bookings")
+        .select(cols)
+        .in("property_id", data.propertyIds)
+        .gte("check_out_date", since)
+        .lt("check_out_date", yesterday)
+        .order("check_out_date", { ascending: false })
+        .limit(1000),
+    ]);
+    type Stay = import("./repeat-guest").RoomStay & {
+      id_check_status: string | null;
+      is_test?: boolean | null;
+    };
+    const current = ((now.error ? [] : now.data) ?? []) as Stay[];
+    const stays = [...current, ...(((past.error ? [] : past.data) ?? []) as Stay[])];
+    const byId = new Map(stays.map((b) => [b.id, b]));
+    const { earlierCheck, guestAgain } = await import("./repeat-guest");
+    // A host's test stays are never anyone's earlier stay.
+    const tests = new Set(stays.filter((b) => b.is_test).map((b) => b.id));
+    const real = stays.filter((b) => !tests.has(b.id) && b.guest_full_name?.trim());
+    const recorded = new Set(list.map((r) => r.booking_id));
+    const carried = new Map<string, import("./repeat-guest").EarlierCheck>();
+    const again: Record<string, "continued" | "returning"> = {};
+    for (const b of current) {
+      if (tests.has(b.id) || !b.guest_full_name?.trim()) continue;
+      const a = guestAgain(b, real);
+      if (a) again[b.id] = a;
+      if (recorded.has(b.id)) continue;
+      const e = earlierCheck(b, real, recorded);
+      if (e) carried.set(b.id, e);
+    }
     const { signGuestPhotos } = await import("./checkin.server");
     const lead = (id: string) =>
       list
         .filter((r) => r.booking_id === id && r.face_photo_path)
         .sort((a, b) => a.position - b.position)[0]?.face_photo_path ?? null;
-    const ids = [...new Set(list.map((r) => r.booking_id))];
+    const ids = [...recorded];
     const faces = ids.map(lead).filter((x): x is string => !!x);
     const signed = await signGuestPhotos(faces);
-    const marks: Record<string, { faceUrl: string | null; idsChecked: number }> = {};
-    for (const id of ids) {
+    const marks: Record<
+      string,
+      {
+        faceUrl: string | null;
+        idsChecked: number;
+        /** The ID check shown is from an earlier stay: its result and when that stay began. */
+        from?: { status: string | null; date: string; continued: boolean };
+        again?: "continued" | "returning";
+      }
+    > = {};
+    const markFor = (id: string) => {
       const face = lead(id);
-      marks[id] = {
+      return {
         faceUrl: face ? (signed[face] ?? null) : null,
         idsChecked: list.filter((r) => r.booking_id === id && r.id_checked).length,
       };
-    }
+    };
+    for (const id of ids) marks[id] = markFor(id);
+    for (const [id, e] of carried)
+      marks[id] = {
+        ...markFor(e.bookingId),
+        from: {
+          status: byId.get(e.bookingId)?.id_check_status ?? null,
+          date: e.date,
+          continued: e.continued,
+        },
+      };
+    for (const [id, a] of Object.entries(again))
+      marks[id] = { ...(marks[id] ?? { faceUrl: null, idsChecked: 0 }), again: a };
     return { marks };
   });
 

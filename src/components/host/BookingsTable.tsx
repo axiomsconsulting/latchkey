@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
+import { CalendarPlus, History, Shield, ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
 import { getCheckInMarks } from "@/lib/guests.functions";
 import { ArrowDown, ArrowUp, ChevronDown, Search } from "lucide-react";
 
@@ -222,6 +222,35 @@ function StayCodes({ b }: { b: ListBooking }) {
   );
 }
 
+type CheckMark = {
+  faceUrl: string | null;
+  idsChecked: number;
+  from?: { status: string | null; date: string; continued: boolean };
+  again?: "continued" | "returning";
+};
+
+/** A small mark beside the name: the guest is staying on from their last booking, or back again. */
+function AgainBadge({ again }: { again: CheckMark["again"] }) {
+  if (!again) return null;
+  const label = again === "continued" ? copy.againContinued : copy.againReturning;
+  const Icon = again === "continued" ? CalendarPlus : History;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          aria-label={label}
+          className="inline-flex shrink-0 text-primary"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Icon className="size-3.5" aria-hidden />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /**
  * How a stay's check-in went: the guest's face photo in a circle when there is one, with a tick
  * if their ID passed, otherwise a shield. Never the ID photo. Past the host's keep days only the
@@ -232,10 +261,12 @@ function CheckInBadge({
   mark,
 }: {
   status: string | null | undefined;
-  mark: { faceUrl: string | null; idsChecked: number } | undefined;
+  mark: CheckMark | undefined;
 }) {
   const [broken, setBroken] = useState(false);
-  const verdict = checkInMark(status);
+  // No check on this stay: the guest's earlier one (an extension or a return), whatever it found.
+  const from = status ? undefined : mark?.from;
+  const verdict = checkInMark(status ?? from?.status);
   const face = !broken ? (mark?.faceUrl ?? null) : null;
   if (!verdict && !face) return null;
   const tone = verdict?.tone ?? "none";
@@ -253,6 +284,11 @@ function CheckInBadge({
     verdict?.word,
     (mark?.idsChecked ?? 0) > 1 ? copy.idsChecked(mark!.idsChecked) : null,
     face ? copy.facePhotoTaken : null,
+    from
+      ? from.continued
+        ? copy.fromStayBefore(formatUkDate(from.date))
+        : copy.fromEarlierStay(formatUkDate(from.date))
+      : null,
   ]
     .filter(Boolean)
     .join(". ");
@@ -389,6 +425,7 @@ export function BookingsTable({
       >
         {shownText(b)}
       </span>
+      <AgainBadge again={marks.data?.marks[b.id]?.again} />
     </span>
   );
   const grouped = sort.key === "smart";

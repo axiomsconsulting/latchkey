@@ -59,7 +59,7 @@ export async function sendDueGuestMessages(): Promise<{ sent: number }> {
     const { data: stays } = await rows
       .from("bookings")
       .select(
-        "id, status, guest_full_name, guest_email, guest_phone, check_in_date, check_out_date, check_in_time, check_out_time, welcome_message_at, goodbye_message_at, archived_at, mirror_of, rooms(display_name)",
+        "id, status, room_id, guest_full_name, guest_email, guest_phone, check_in_date, check_out_date, check_in_time, check_out_time, welcome_message_at, goodbye_message_at, archived_at, mirror_of, rooms(display_name)",
       )
       .eq("property_id", p.id)
       .or(`check_in_date.eq.${local.date},check_out_date.eq.${local.date}`)
@@ -71,9 +71,13 @@ export async function sendDueGuestMessages(): Promise<{ sent: number }> {
       rows,
       (stays ?? []).map((x: { id: string }) => x.id),
     );
+    // Staying on in the same room on a new booking: no goodbye for the first, no welcome for the next.
+    const { continuingStays } = await import("./repeat-guest");
+    const staying = continuingStays((stays ?? []) as any);
     for (const stay of stays ?? []) {
       if (tests.has(stay.id)) continue;
       for (const kind of dueMessages(s, stay, local)) {
+        if ((kind === "welcome" ? staying.noWelcome : staying.noGoodbye).has(stay.id)) continue;
         const col = kind === "welcome" ? "welcome_message_at" : "goodbye_message_at";
         // Claimed first: a second run at the same moment finds it taken.
         const { data: claimed } = await rows

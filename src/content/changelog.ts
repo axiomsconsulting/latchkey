@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.154.0",
+    date: "2026-11-11",
+    title: "Returning guests and guests staying on",
+    items: [
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "A small mark beside a guest's name on Bookings shows when they've stayed with you before, or are staying on from their previous booking.",
+      },
+      {
+        kind: "improved",
+        area: "Bookings",
+        text: "A returning guest's stay shows their face photo and ID result from their last stay until they check in again, whatever that check found, so you can see who's coming.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "A guest who books another night in the same room (directly or on another site) no longer gets a goodbye and a welcome in between: no cards on the door tablet and no texts or emails. You can still show a card on purpose.",
+      },
+    ],
+  },
+  {
     version: "0.153.1",
     date: "2026-11-11",
     title: "Check-in on a guest's phone without a camera",

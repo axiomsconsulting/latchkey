@@ -164,6 +164,25 @@ async function cardBookings(
   return build(db.from("bookings").select(cols).is("archived_at", null));
 }
 
+/**
+ * A guest staying on in the same room on a new booking (continuingStays) isn't leaving or
+ * arriving: both cards count as taken off, unless the host shows one on purpose.
+ */
+async function withContinuing(rows: any[]): Promise<any[]> {
+  const { continuingStays } = await import("./repeat-guest");
+  const { noGoodbye, noWelcome } = continuingStays(rows as any);
+  if (!noGoodbye.size && !noWelcome.size) return rows;
+  return rows.map((b) => ({
+    ...b,
+    ...(noWelcome.has(b.id) && !b.welcome_now_at
+      ? { welcome_card_dismissed_at: b.welcome_card_dismissed_at ?? "staying on" }
+      : {}),
+    ...(noGoodbye.has(b.id) && !b.goodbye_now_at
+      ? { goodbye_dismissed_at: b.goodbye_dismissed_at ?? "staying on" }
+      : {}),
+  }));
+}
+
 /** Cards changed at this property: tablets that check the stamp often react within seconds. */
 async function bumpCards(db: any, propertyId: string) {
   await db
@@ -250,7 +269,7 @@ async function cardsFor(
   const standardIn = (p.default_check_in_time ?? "15:00").slice(0, 5);
   const { data: rows, error } = await cardBookings(
     db,
-    "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
+    "id, status, room_id, guest_email, guest_phone, archived_at, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
     (q) =>
       q
         .eq("property_id", p.id)
@@ -260,7 +279,7 @@ async function cardsFor(
   if (error) return none;
   const now = Date.now();
   const { onTablet } = await import("./kiosk-picker");
-  const all = (rows ?? []) as any[];
+  const all = await withContinuing((rows ?? []) as any[]);
   const byRoom = (x: any, y: any) =>
     (x.rooms?.sort_order ?? 0) - (y.rooms?.sort_order ?? 0) ||
     String(x.rooms?.display_name ?? "").localeCompare(String(y.rooms?.display_name ?? ""));
@@ -663,7 +682,7 @@ export const todayKioskCards = createServerFn({ method: "GET" })
     const today = todayInZone(tz);
     const { data: rows, error } = await cardBookings(
       sb,
-      "id, guest_full_name, status, check_in_date, check_out_date, check_in_time, check_out_time, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of",
+      "id, guest_full_name, guest_email, guest_phone, room_id, archived_at, status, check_in_date, check_out_date, check_in_time, check_out_time, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of",
       (q) =>
         q
           .eq("property_id", data.propertyId)
@@ -682,7 +701,8 @@ export const todayKioskCards = createServerFn({ method: "GET" })
     const g = normaliseGoodbye(p.checkout_goodbye);
     const a = normaliseArrivals(p.checkin_welcome);
     const states: Record<string, string> = {};
-    for (const b of (rows ?? []) as any[]) {
+    const todayRows = await withContinuing((rows ?? []) as any[]);
+    for (const b of todayRows) {
       if (a.on && b.check_in_date === today)
         states[`in:${b.id}`] =
           b.status === "checked_in"
@@ -710,7 +730,7 @@ export const todayKioskCards = createServerFn({ method: "GET" })
                 : "later";
     }
     const guests: CardGuest[] = [];
-    for (const b of (rows ?? []) as any[])
+    for (const b of todayRows)
       for (const kind of ["in", "out"] as const)
         if (states[`${kind}:${b.id}`])
           guests.push({
@@ -770,7 +790,7 @@ export const kioskCardPicker = createServerFn({ method: "POST" })
     const devId = await pickerTablet(db, p.id, data.device);
     const { data: rows, error } = await cardBookings(
       db,
-      "id, status, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
+      "id, status, room_id, guest_email, guest_phone, archived_at, check_in_date, check_out_date, check_in_time, check_out_time, guest_full_name, goodbye_dismissed_at, goodbye_now_at, welcome_card_dismissed_at, welcome_now_at, mirror_of, rooms(display_name, sort_order)",
       (q) =>
         q
           .eq("property_id", p.id)
@@ -780,7 +800,7 @@ export const kioskCardPicker = createServerFn({ method: "POST" })
     if (error) return { on: true, items: [] };
     const { pickerItems, onTablet } = await import("./kiosk-picker");
     // A card on other tablets only isn't "on screen" here: ticking it brings it to this one too.
-    const here = (rows ?? []).map((b: any) => ({
+    const here = (await withContinuing((rows ?? []) as any[])).map((b: any) => ({
       ...b,
       ...(onTablet(b.welcome_card_devices, devId)
         ? {}
