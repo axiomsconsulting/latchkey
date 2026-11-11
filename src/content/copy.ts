@@ -2301,7 +2301,6 @@ export const guest = branded({
   serviceWelcome: (name: string) => (name ? `Welcome, ${name}` : "Welcome"),
   serviceWelcomeBody: "Your test check-in is ready on this tablet.",
   testSamplesFound: "Your test stay: using your sample photos",
-  voiceStart: "Check in by voice",
   voiceListening: "Listening",
   voiceHold: "Hold while you talk",
   voiceAgain: "Say that again",

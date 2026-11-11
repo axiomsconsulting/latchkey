@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
 import { Mic, Volume2, VolumeX } from "lucide-react";
@@ -15,9 +15,10 @@ import {
   type PhraseKey,
   type VoiceGender,
 } from "@/lib/voice-concierge";
-import { VoiceEngine, unlockAudio, voiceSupported } from "@/lib/voice-engine";
+import { VoiceEngine, voiceSupported } from "@/lib/voice-engine";
 import { voiceIntent, voiceTranscribe } from "@/lib/voice.functions";
 import { cn } from "@/lib/utils";
+import { wavyPath } from "@/lib/wavy-outline";
 
 /** The colourful, gently waving orb: blue, green, yellow and red turning inside a soft blob. */
 function Orb({ className, beat }: { className?: string; beat: "idle" | "speaking" | "listening" }) {
@@ -33,27 +34,136 @@ function Orb({ className, beat }: { className?: string; beat: "idle" | "speaking
   );
 }
 
-/** Beside Check in on the welcome: starts the voice concierge. */
-export function VoiceStartBubble({ onStart }: { onStart: () => void }) {
-  // Known only in the browser: drawn after the first paint, so the very first welcome has it
-  // too (the server's copy of the page can't tell whether the tablet can speak).
+/**
+ * Whether this tablet can speak. Known only in the browser: read after the first paint, so the
+ * very first welcome gets it too (the server's copy of the page can't tell).
+ */
+export function useCanSpeak(): boolean {
   const [can, setCan] = useState(false);
   useEffect(() => setCan(voiceSupported().speak), []);
-  if (!can) return null;
+  return can;
+}
+
+/** The tablet's top bar slot for the concierge's controls (#kiosk-voice-slot), as it's drawn. */
+function useVoiceSlot(): HTMLElement | null {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const find = () => setSlot(document.getElementById("kiosk-voice-slot"));
+    find();
+    // The bar is drawn again when the screen changes way up or look.
+    const mo = new MutationObserver(find);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
+  return slot;
+}
+
+/**
+ * Check in with the concierge: a wavy outline in the orb's colours ripples round the button
+ * (`children`), following its own size and corners.
+ */
+export function WavyOutline({ children }: { children: ReactNode }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const path = useRef<SVGPathElement>(null);
+  const [size, setSize] = useState<{ w: number; h: number; r: number } | null>(null);
+  const PAD = 7;
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const read = () => {
+      const b = el.firstElementChild as HTMLElement | null;
+      if (!b) return;
+      const r = parseFloat(getComputedStyle(b).borderTopLeftRadius) || 0;
+      setSize({ w: b.offsetWidth, h: b.offsetHeight, r });
+    };
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!size) return;
+    const draw = (phase: number) =>
+      path.current?.setAttribute(
+        "d",
+        wavyPath(size.w + PAD * 2, size.h + PAD * 2, size.r + PAD, 2.5, 22, phase),
+      );
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return void draw(0);
+    // About 20 frames a second: smooth enough for a ripple and light on an old tablet.
+    let last = 0;
+    let raf = 0;
+    const tick = (t: number) => {
+      if (t - last > 50) {
+        last = t;
+        draw(t / 260);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [size]);
+  return (
+    <span ref={box} data-voice-cta className="relative inline-flex w-full max-w-md justify-center">
+      {children}
+      {size ? (
+        <svg
+          aria-hidden
+          className="pointer-events-none absolute overflow-visible"
+          style={{
+            left: `calc(50% - ${size.w / 2 + PAD}px)`,
+            top: -PAD,
+            width: size.w + PAD * 2,
+            height: size.h + PAD * 2,
+          }}
+        >
+          <defs>
+            <linearGradient id="voice-cta-ink" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#4285f4" />
+              <stop offset="0.35" stopColor="#34a853" />
+              <stop offset="0.65" stopColor="#fbbc05" />
+              <stop offset="1" stopColor="#ea4335" />
+            </linearGradient>
+          </defs>
+          <path ref={path} fill="none" stroke="url(#voice-cta-ink)" strokeWidth={3} />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Before a check-in: the concierge's mute in the top bar, so the host (or a guest) can choose
+ * quiet before anyone starts. Each check-in starts, and ends, the way this is set.
+ */
+export function VoiceMuteDefault({ muted, onToggle }: { muted: boolean; onToggle: () => void }) {
+  const slot = useVoiceSlot();
+  const can = useCanSpeak();
+  if (!slot || !can) return null;
+  return createPortal(<MuteButton muted={muted} onClick={onToggle} />, slot);
+}
+
+function MuteButton({ muted, onClick }: { muted: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={() => {
-        // This tap is what lets an Android tablet measure and record sound later.
-        unlockAudio();
-        onStart();
-      }}
-      aria-label={copy.voiceStart}
-      title={copy.voiceStart}
-      className="group relative grid size-[4.5rem] shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring"
+      data-no-sound
+      onClick={onClick}
+      aria-pressed={muted}
+      aria-label={muted ? copy.voiceUnmute : copy.voiceMute}
+      title={muted ? copy.voiceUnmute : copy.voiceMute}
+      className={cn(
+        "grid size-[2.25em] shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        muted
+          ? "bg-foreground text-background"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
     >
-      <Orb className="absolute inset-0" beat="idle" />
-      <Mic className="relative size-7 text-white drop-shadow" aria-hidden />
+      {muted ? (
+        <VolumeX className="size-[1.25em]" aria-hidden />
+      ) : (
+        <Volume2 className="size-[1.25em]" aria-hidden />
+      )}
     </button>
   );
 }
@@ -70,9 +180,12 @@ export function VoiceConcierge({
   clips,
   cloudEar = false,
   listens = true,
+  startMuted = false,
   stepKey,
   onEnd,
 }: {
+  /** The tablet's choice before the check-in began: start quiet (VoiceMuteDefault). */
+  startMuted?: boolean;
   /**
    * The host lets this tablet listen (kiosk_devices.voice_listen). Off: guide only. It talks the
    * guest through each screen they tap and never opens the microphone.
@@ -91,7 +204,7 @@ export function VoiceConcierge({
   // The microphone's level, as a ring round the orb (set directly, many times a second).
   const ring = useRef<HTMLSpanElement>(null);
   const [holding, setHolding] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(startMuted);
   // What it just heard, shown by the orb for a moment, so the guest sees it understood them.
   const [heardText, setHeardText] = useState<string | null>(null);
   useEffect(() => {
@@ -159,11 +272,15 @@ export function VoiceConcierge({
     );
     engine.current = e;
     if (listens) e.listen();
-    // The guest pressed the bubble on the welcome: greet them and start (once: the host
-    // switching listening on or off mid check-in only changes how it carries on).
+    // Muted (before the check-in, or by tapping mute since): it stays quiet until unmuted.
+    if (startMuted || muted) e.mute();
+    // The guest pressed Check in on the welcome: greet them and start (once: the host
+    // switching listening on or off mid check-in only changes how it carries on). Muted,
+    // it starts at once.
     if (!greeted.current) {
       greeted.current = true;
-      void e.say([listens ? "hello" : "helloGuide"]).then(() => press("yes"));
+      if (e.isMuted) press("yes");
+      else void e.say([listens ? "hello" : "helloGuide"]).then(() => press("yes"));
     }
     return () => {
       e.stop();
@@ -260,22 +377,13 @@ export function VoiceConcierge({
 
   // The orb and its × sit in the tablet's own top bar (#kiosk-voice-slot, beside the phone
   // QR icon), so they never cover anything on the screen, a QR code included.
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    const find = () => setSlot(document.getElementById("kiosk-voice-slot"));
-    find();
-    // The bar is drawn again when the screen changes way up or look.
-    const mo = new MutationObserver(find);
-    mo.observe(document.body, { childList: true, subtree: true });
-    return () => mo.disconnect();
-  }, []);
+  const slot = useVoiceSlot();
 
   const controls = (
     <>
       {/* Mute: the concierge goes quiet (and stops listening) but stays; unmute carries on from this screen. */}
-      <button
-        type="button"
-        data-no-sound
+      <MuteButton
+        muted={muted}
         onClick={() => {
           const e = engine.current;
           if (!e) return;
@@ -288,22 +396,7 @@ export function VoiceConcierge({
             setMuted(true);
           }
         }}
-        aria-pressed={muted}
-        aria-label={muted ? copy.voiceUnmute : copy.voiceMute}
-        title={muted ? copy.voiceUnmute : copy.voiceMute}
-        className={cn(
-          "grid size-[2.25em] shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          muted
-            ? "bg-foreground text-background"
-            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-        )}
-      >
-        {muted ? (
-          <VolumeX className="size-[1.25em]" aria-hidden />
-        ) : (
-          <Volume2 className="size-[1.25em]" aria-hidden />
-        )}
-      </button>
+      />
       {listens ? (
         // Hold the orb to talk (it records exactly while held).
         <button
