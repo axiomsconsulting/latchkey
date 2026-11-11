@@ -1719,7 +1719,8 @@ function Kiosk() {
                       : undefined
                   }
                   qrPanel={!jumbo && saverLook.defaults.qrStyle === "panel"}
-                  voiceStart={voice && !voiceOn ? () => setVoiceOn(true) : null}
+                  // Always the same while voice is on here, so the button never changes look as the concierge starts.
+                  voiceStart={voice ? startVoice : null}
                   jumbo={jumbo}
                   {...(tablet?.cameraSpot ? { cameraSpots: tablet.cameraSpot } : {})}
                 />

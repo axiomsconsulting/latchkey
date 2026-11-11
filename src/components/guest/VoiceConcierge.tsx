@@ -75,7 +75,6 @@ export function VoiceRing({ children }: { children: ReactNode }) {
       className="voice-ring relative flex w-full max-w-md"
       style={radius === null ? undefined : { borderRadius: radius + 7 }}
     >
-      <span aria-hidden className="voice-orb-spin voice-ring-spin" />
       <span className="relative flex w-full">{children}</span>
     </span>
   );
