@@ -29,7 +29,6 @@ import {
   KioskClock,
   KioskScreensaver,
   headerIconClass,
-  useNow,
   useSaverLook,
 } from "@/components/guest/KioskClocks";
 import { KioskGoodbyeScreen, useKioskGoodbyes } from "@/components/guest/KioskGoodbye";
@@ -86,12 +85,13 @@ import { enterFullscreen, fullscreenWanted } from "@/lib/kiosk-fullscreen";
 import { useAppUpdate } from "@/hooks/use-app-update";
 import { showPairCode, tabletName } from "@/lib/kiosk-devices";
 import { onKioskPing } from "@/lib/kiosk-ping";
-import { dayProgress, kioskNow } from "@/lib/kiosk-clock";
+import { dayProgress } from "@/lib/kiosk-clock";
 import { getCheckinProperty, kioskUnlock } from "@/lib/checkin.functions";
 import { claimArmedSamples, getTestSamples } from "@/lib/test-stay.functions";
 import { kioskReviews } from "@/lib/kiosk-reviews.functions";
 import { KioskReviewsContext } from "@/components/guest/KioskReviews";
-import { JumboName } from "@/components/guest/JumboName";
+import { JumboBar } from "@/components/guest/JumboBar";
+import { unlockAudio, voiceSupported, warmVoice } from "@/lib/voice-engine";
 import { VoiceConcierge, VoiceMuteDefault } from "@/components/guest/VoiceConcierge";
 import type { KioskReview } from "@/lib/kiosk-reviews";
 import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
@@ -924,27 +924,6 @@ const LEFT_MID_FLOW_MS = 45_000;
 /** Mirrors KIOSK_COMPAT_SCRIPT's test for a shared screen: no ?guest/?resume/?join, and not a phone. */
 const EXPANDED_FIRST_SCRIPT = `(function(){try{if(/[?&](guest|resume|join)=/.test(location.search))return;if(Math.min(screen.width,screen.height)<600)return;document.documentElement.setAttribute("data-kiosk-touch","expanded")}catch(e){}})();`;
 
-/**
- * Jumbo's top bar: the time and the short date at one size, like the welcome card screen;
- * `compact` (a long property name needs the room) shows the time alone.
- */
-function JumboClock({ tz, compact = false }: { tz: string; compact?: boolean }) {
-  const now = useNow(15_000);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <span />;
-  const { shortDate, time } = kioskNow(now, tz);
-  return (
-    <p
-      className="shrink-0 whitespace-nowrap font-display font-bold tabular-nums"
-      data-jumbo-clock
-      aria-live="off"
-    >
-      {compact ? time : `${time} ${shortDate}`}
-    </p>
-  );
-}
-
 function Kiosk() {
   const p = Route.useLoaderData();
   const { guest, resume, join, test } = Route.useSearch();
@@ -1113,9 +1092,11 @@ function Kiosk() {
   // The voice concierge (Pro plan, host's switch): on from the bubble beside Check in until the
   // check-in ends, the guest says stop, or taps its orb.
   const [voiceOn, setVoiceOn] = useState(false);
-  // Jumbo's top bar: the clock shows the time alone once the property's name needs the room.
-  const [nameCompact, setNameCompact] = useState(false);
   const voice = shared && !personal ? (p.voice ?? null) : null;
+  // The concierge's recordings load while the welcome is up, so it speaks the moment Check in is tapped.
+  useEffect(() => {
+    if (voice) warmVoice(voice.clips);
+  }, [voice]);
   // Muted before a check-in (the top bar's button on the welcome): every check-in on this tablet
   // starts muted, and an unmute during one lasts only until it ends. Kept on the tablet.
   const muteKey = `latchkey.voiceMuted.${p.code}`;
@@ -1410,8 +1391,19 @@ function Kiosk() {
   }
 
   /** From the welcome: check in as that guest (or find the stay as usual when it isn't for one). */
+  /**
+   * Any Check in on the tablet (a card, the host's welcome, the service card) starts the
+   * concierge too, as the welcome's own button does. Called in the tap, so the tablet may play sound.
+   */
+  function startVoice() {
+    if (!voice || voiceOn || !voiceSupported().speak) return;
+    unlockAudio();
+    setVoiceOn(true);
+  }
+
   function startWelcome() {
     if (!welcome) return;
+    startVoice();
     dismiss();
     setAsideVersion(welcome.version);
     setWelcomeRest(false);
@@ -1632,29 +1624,20 @@ function Kiosk() {
           {jumbo ? (
             // Jumbo: the property at the left, the time and date in the middle, the tablet's icons
             // on the right. Back goes in the status bar (JumboSlot).
-            // The name always shows in full: the clock gives way to it (time only), and a name
-            // still too long scrolls along in its space (JumboName).
-            <header data-jumbo-bar className="flex items-center gap-[2cqmin]">
-              <p
-                className="flex min-w-0 flex-1 items-center gap-[0.4em] font-display font-bold"
-                data-jumbo-name
-              >
+            // The clock stays near the middle and gives way to a longer name, never to the
+            // icons; a name too long scrolls (JumboBar, rules in src/lib/jumbo-bar.ts).
+            <JumboBar
+              logo={
                 <LogoMark
                   theme={p.theme}
                   name={p.name}
                   className="size-[1.4em] shrink-0 rounded-[0.25em] bg-white p-[0.1em] text-[0.6em]"
                 />
-                <JumboName
-                  name={p.name}
-                  scroll={nameCompact}
-                  onFits={(fits) => {
-                    if (!fits) setNameCompact(true);
-                  }}
-                />
-              </p>
-              <JumboClock tz={p.timezone ?? "Europe/London"} compact={nameCompact} />
-              <div className="flex shrink-0 items-center justify-end gap-[1cqmin]">{actionBox}</div>
-            </header>
+              }
+              name={p.name}
+              tz={p.timezone ?? "Europe/London"}
+              icons={actionBox}
+            />
           ) : null}
           <header
             hidden={jumbo}
@@ -1780,6 +1763,7 @@ function Kiosk() {
               <LogoMark theme={p.theme} name={p.name} className={tileLogo("size-24 text-4xl")} />
             }
             onCheckIn={() => {
+              startVoice();
               setServiceAside(true);
               setSaver(false);
               setWelcomeStart({ version: null, n: Date.now() });
@@ -1848,11 +1832,16 @@ function Kiosk() {
               ) : null
             }
             onCheckIn={() => {
+              // "Checking in? Start here" starts the check-in itself: no second button on the welcome.
+              startVoice();
               setGoodbyeAside(true);
+              setWelcomeStart({ version: null, n: Date.now() });
+              setSession((n) => n + 1);
               bump();
             }}
             onArrive={(card) => {
               // The host's welcome opens their stay as it does on its own; any other card starts with the photo ID.
+              startVoice();
               setGoodbyeAside(true);
               // A returning guest whose ID is on file: their own card opens their stay (startFromCard).
               setWelcomeStart(

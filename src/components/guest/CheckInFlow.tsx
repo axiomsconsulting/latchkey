@@ -92,7 +92,7 @@ import {
 } from "@/lib/hotel-register";
 import { flagEmoji, pageReady, registerPages, type RegisterPage } from "@/lib/kiosk-register";
 import { CountryPicker } from "@/components/guest/CountryPicker";
-import { WavyOutline, useCanSpeak } from "@/components/guest/VoiceConcierge";
+import { VoiceRing, useCanSpeak } from "@/components/guest/VoiceConcierge";
 import { unlockAudio } from "@/lib/voice-engine";
 import { TestSamplesContext, type TestSamples } from "@/components/guest/TestSamples";
 import { cn } from "@/lib/utils";
@@ -1387,22 +1387,24 @@ export function CheckInFlow({
                   ) : null}
                   <div className="mt-10 flex w-full items-center justify-center gap-3">
                     {voiceStart && canSpeak ? (
-                      // One Check in: the concierge starts with it (muted if the tablet was set
-                      // so before), greets the guest and opens the first step.
-                      <WavyOutline>
+                      // One Check in: the concierge starts with it (muted if the tablet was set so before).
+                      <VoiceRing>
                         <Button
                           size="touch-xl"
-                          className="w-full max-w-md text-xl"
+                          className="w-full text-xl"
                           onClick={() => {
                             // This tap is what lets an Android tablet play and measure sound later.
                             unlockAudio();
+                            // The concierge and the first step start together: it speaks as the
+                            // next screen appears, and the welcome never shows a second button.
                             voiceStart();
+                            startFind();
                           }}
                           data-voice="yes"
                         >
                           {copy.startCta}
                         </Button>
-                      </WavyOutline>
+                      </VoiceRing>
                     ) : (
                       <Button
                         size="touch-xl"
