@@ -95,3 +95,16 @@ export function compareNames(
   if (real >= 1 && (hits.every(Boolean) || (firstOk && lastOk))) return "matched";
   return real >= 1 ? "partial" : "not_matched";
 }
+
+/**
+ * A name read from an ID in capitals ("DANIEL O'NEILL-MCKAY") written the usual way
+ * ("Daniel O'Neill-McKay"), so it sits beside the booking's name. A name with any small
+ * letters is left exactly as it was.
+ */
+export function tidyIdName(name: string | null): string | null {
+  if (!name || /\p{Ll}/u.test(name) || !/\p{Lu}/u.test(name)) return name;
+  return name
+    .toLocaleLowerCase("en-GB")
+    .replace(/(^|[\s\-'’.])(\p{L})/gu, (_m, sep: string, ch: string) => sep + ch.toUpperCase())
+    .replace(/\bMc(\p{Ll})/gu, (_m, ch: string) => "Mc" + ch.toUpperCase());
+}

@@ -2026,6 +2026,11 @@ export const guest = branded({
     "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
   idTakePhoto: "Take photo",
   idUpload: "Use a saved photo of my ID",
+  cameraOffId: "We couldn't open your camera. You can use a photo of your ID instead.",
+  cameraOffFace:
+    "We couldn't open your camera here. Your phone's own camera can take the selfie instead.",
+  cameraOffFaceCta: "Take a selfie",
+  cameraRetry: "Try the camera again",
   idChecking: "Checking your name…",
   // Photos on a phone, for a check-in at the door tablet (photo-handoff.ts)
   phonePhotos: {

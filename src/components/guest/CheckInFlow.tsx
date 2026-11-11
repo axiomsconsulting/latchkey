@@ -203,6 +203,8 @@ export type CheckinProperty = {
   flow?: GuestFlow;
   /** The first check-out day a guest arriving now can have: nights count from the day before. */
   firstCheckout?: string;
+  /** What the host keeps from an ID check (getCheckinProperty), for consent before the stay is found. */
+  records?: { keepDays: number; keepsPhoto: boolean };
 };
 
 type RegisterAsk = "nationality" | "document" | "place" | "destination";
@@ -1645,7 +1647,11 @@ export function CheckInFlow({
                 {!step.consented ? (
                   <>
                     <p className="mt-4 text-lg">{copy.idFirstLead}</p>
-                    <WhyAsk>{copy.idConsentDetails(30)}</WhyAsk>
+                    <WhyAsk>
+                      {property.records?.keepsPhoto
+                        ? copy.idConsentPhoto(property.records.keepDays)
+                        : copy.idConsentDetails(property.records?.keepDays ?? 30)}
+                    </WhyAsk>
                     <div className="mt-8 grid gap-3">
                       <Button
                         size="touch-xl"
@@ -2001,6 +2007,7 @@ export function CheckInFlow({
                         help={copy.faceBody}
                         cta={copy.faceTake}
                         busyLabel={copy.faceSaving}
+                        upload={!kiosk}
                         onCapture={(_full, small) => void onFace(step.position, small)}
                         onFail={kiosk ? onFail : () => faceDone()}
                         extra={
@@ -3392,6 +3399,7 @@ export function JoinCheckIn({ share }: { share: string }) {
                 facing="user"
                 kind="face"
                 busy={busy}
+                upload
                 help={copy.faceBody}
                 cta={copy.faceTake}
                 busyLabel={copy.faceSaving}

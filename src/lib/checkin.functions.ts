@@ -209,6 +209,11 @@ export const getCheckinProperty = createServerFn({ method: "GET" })
       listFlow: usesListFlow(methods),
       /** The host's check-in journey: what the guest's screen asks and which cameras it opens. */
       flow: guestFlow(p.flow),
+      /** What's kept from an ID check and for how long, so consent screens before a stay is found say it right. */
+      records: (() => {
+        const r = normaliseRecords(p.guest_records);
+        return { keepDays: r.keepDays, keepsPhoto: keepsIdPhoto(r) };
+      })(),
       hostPhone: p.host_contact_phone,
       checkInFrom: (p.default_check_in_time ?? "15:00").slice(0, 5),
       checkOutBy: (p.default_check_out_time ?? "11:00").slice(0, 5),
