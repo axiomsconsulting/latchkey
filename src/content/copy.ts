@@ -4659,6 +4659,10 @@ export const bookingTable = branded({
   testBadge: "Test",
   idsChecked: (n: number) => `${n} IDs checked`,
   facePhotoTaken: "Face photo taken",
+  fromStayBefore: (date: string) => `From their booking just before this one (${date})`,
+  fromEarlierStay: (date: string) => `From their earlier stay (${date})`,
+  againContinued: "Staying on from their previous booking",
+  againReturning: "Stayed with you before",
   cols: {
     guest: "Guest",
     room: "Room",
