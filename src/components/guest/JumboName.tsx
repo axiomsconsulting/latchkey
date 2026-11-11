@@ -14,9 +14,10 @@ export function JumboName({
   onFits,
 }: {
   name: string;
-  /** Allowed to scroll: the clock is already as small as it goes. */
+  /** Allowed to scroll: the clock is already as small as it goes (jumbo-bar.ts). */
   scroll: boolean;
-  onFits: (fits: boolean) => void;
+  /** Told whether the whole name fits in its space. */
+  onFits?: (fits: boolean) => void;
 }) {
   const box = useRef<HTMLSpanElement>(null);
   const text = useRef<HTMLSpanElement>(null);
@@ -31,7 +32,7 @@ export function JumboName({
     const measure = () => {
       const overflow = t.scrollWidth - b.clientWidth;
       setRoom({ overflow, view: b.clientWidth });
-      fitsRef.current(overflow <= 1);
+      fitsRef.current?.(overflow <= 1);
     };
     measure();
     if (typeof ResizeObserver === "undefined") return;

@@ -85,6 +85,28 @@ export function unlockAudio(): AudioContext | null {
   }
 }
 
+/** One audio element per studio recording for the whole page, so a clip loaded once plays at once. */
+const clipCache = new Map<string, HTMLAudioElement>();
+function clipAudio(url: string): HTMLAudioElement {
+  let a = clipCache.get(url);
+  if (!a) {
+    a = new Audio(url);
+    a.preload = "auto";
+    clipCache.set(url, a);
+  }
+  return a;
+}
+
+/**
+ * Gets the concierge ready while the welcome is up: the studio recordings start loading and
+ * the tablet's own voices are listed, so the first words come the moment Check in is tapped.
+ */
+export function warmVoice(clipUrls: Partial<Record<string, string>> = {}) {
+  if (typeof window === "undefined") return;
+  for (const url of Object.values(clipUrls)) if (url) clipAudio(url);
+  if (voiceSupported().speak) window.speechSynthesis.getVoices();
+}
+
 /** The plain microphone (echo cancellation on Android picks the silent "voice call" input). */
 const MIC: MediaStreamConstraints = {
   audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
@@ -303,10 +325,7 @@ export class VoiceEngine {
   ) {
     this.gender = gender;
     for (const [k, url] of Object.entries(clipUrls)) {
-      if (!url) continue;
-      const a = new Audio(url);
-      a.preload = "auto";
-      this.clips[k as PhraseKey] = a;
+      if (url) this.clips[k as PhraseKey] = clipAudio(url);
     }
   }
 

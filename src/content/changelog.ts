@@ -47,6 +47,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.156.1",
+    date: "2026-11-11",
+    title: "Check in in one tap",
+    items: [
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Check in with the voice concierge goes straight to the first step and the concierge speaks at once, instead of showing a second Check in button and waiting a second or two.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: '"Checking in? Start here" on the door tablet\'s guest cards starts the check-in itself, instead of leading to another Check in button. Every Check in on the tablet starts the concierge when voice is on.',
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "The concierge's Check in button has a thick ring in the concierge's colours, turning and glowing, in place of the thin wavy line.",
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "Jumbo's clock stays near the middle of the top bar, moves right only as far as a longer name needs, and never sits under the icons (the mute button included). A name too long even then scrolls.",
+      },
+    ],
+  },
+  {
     version: "0.156.0",
     date: "2026-11-11",
     title: "Returning guests go straight through",

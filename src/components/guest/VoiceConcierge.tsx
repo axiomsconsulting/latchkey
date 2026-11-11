@@ -18,7 +18,6 @@ import {
 import { VoiceEngine, voiceSupported } from "@/lib/voice-engine";
 import { voiceIntent, voiceTranscribe } from "@/lib/voice.functions";
 import { cn } from "@/lib/utils";
-import { wavyPath } from "@/lib/wavy-outline";
 
 /** The colourful, gently waving orb: blue, green, yellow and red turning inside a soft blob. */
 function Orb({ className, beat }: { className?: string; beat: "idle" | "speaking" | "listening" }) {
@@ -59,75 +58,25 @@ function useVoiceSlot(): HTMLElement | null {
 }
 
 /**
- * Check in with the concierge: a wavy outline in the orb's colours ripples round the button
- * (`children`), following its own size and corners.
+ * Check in with the concierge: the orb's colours turning in a thick, glowing ring round the
+ * button (`children`), its corners following the button's own.
  */
-export function WavyOutline({ children }: { children: ReactNode }) {
+export function VoiceRing({ children }: { children: ReactNode }) {
   const box = useRef<HTMLSpanElement>(null);
-  const path = useRef<SVGPathElement>(null);
-  const [size, setSize] = useState<{ w: number; h: number; r: number } | null>(null);
-  const PAD = 7;
+  const [radius, setRadius] = useState<number | null>(null);
   useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const read = () => {
-      const b = el.firstElementChild as HTMLElement | null;
-      if (!b) return;
-      const r = parseFloat(getComputedStyle(b).borderTopLeftRadius) || 0;
-      setSize({ w: b.offsetWidth, h: b.offsetHeight, r });
-    };
-    read();
-    if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    return () => ro.disconnect();
+    const b = box.current?.querySelector<HTMLElement>("[data-slot=button], button");
+    if (b) setRadius(parseFloat(getComputedStyle(b).borderTopLeftRadius) || 0);
   }, []);
-  useEffect(() => {
-    if (!size) return;
-    const draw = (phase: number) =>
-      path.current?.setAttribute(
-        "d",
-        wavyPath(size.w + PAD * 2, size.h + PAD * 2, size.r + PAD, 2.5, 22, phase),
-      );
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return void draw(0);
-    // About 20 frames a second: smooth enough for a ripple and light on an old tablet.
-    let last = 0;
-    let raf = 0;
-    const tick = (t: number) => {
-      if (t - last > 50) {
-        last = t;
-        draw(t / 260);
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [size]);
   return (
-    <span ref={box} data-voice-cta className="relative inline-flex w-full max-w-md justify-center">
-      {children}
-      {size ? (
-        <svg
-          aria-hidden
-          className="pointer-events-none absolute overflow-visible"
-          style={{
-            left: `calc(50% - ${size.w / 2 + PAD}px)`,
-            top: -PAD,
-            width: size.w + PAD * 2,
-            height: size.h + PAD * 2,
-          }}
-        >
-          <defs>
-            <linearGradient id="voice-cta-ink" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#4285f4" />
-              <stop offset="0.35" stopColor="#34a853" />
-              <stop offset="0.65" stopColor="#fbbc05" />
-              <stop offset="1" stopColor="#ea4335" />
-            </linearGradient>
-          </defs>
-          <path ref={path} fill="none" stroke="url(#voice-cta-ink)" strokeWidth={3} />
-        </svg>
-      ) : null}
+    <span
+      ref={box}
+      data-voice-cta
+      className="voice-ring relative flex w-full max-w-md"
+      style={radius === null ? undefined : { borderRadius: radius + 7 }}
+    >
+      <span aria-hidden className="voice-orb-spin voice-ring-spin" />
+      <span className="relative flex w-full">{children}</span>
     </span>
   );
 }
@@ -274,14 +223,8 @@ export function VoiceConcierge({
     if (listens) e.listen();
     // Muted (before the check-in, or by tapping mute since): it stays quiet until unmuted.
     if (startMuted || muted) e.mute();
-    // The guest pressed Check in on the welcome: greet them and start (once: the host
-    // switching listening on or off mid check-in only changes how it carries on). Muted,
-    // it starts at once.
-    if (!greeted.current) {
-      greeted.current = true;
-      if (e.isMuted) press("yes");
-      else void e.say([listens ? "hello" : "helloGuide"]).then(() => press("yes"));
-    }
+    // Check in itself opened the first step (the same tap that started this): the greeting
+    // comes with that step's words, below, so nothing waits for it.
     return () => {
       e.stop();
       engine.current = null;
@@ -331,10 +274,13 @@ export function VoiceConcierge({
     listen.current = s.listen;
     script.current = s.say;
     const name = stepKey.split(":")[0];
-    // The welcome's hello is said on start; the camera screens speak when the camera opens.
     if (name === "welcome") return;
+    // The first screen after Check in: hello, then what to do here, straight away (once: the
+    // host switching listening on or off mid check-in only changes how it carries on).
+    const hello: PhraseKey[] = greeted.current ? [] : [listens ? "hello" : "helloGuide"];
+    greeted.current = true;
     e.hush();
-    void e.say(s.say);
+    void e.say([...hello, ...s.say]);
   }, [stepKey, registerPage, listens]);
 
   // Back at the welcome after a check-in (done, or reset): the concierge's work is over.
