@@ -198,6 +198,7 @@ describe("how a check-in went", () => {
   it("marks each result", () => {
     expect(checkInMark("matched")?.tone).toBe("ok");
     expect(checkInMark("id_read")?.tone).toBe("ok");
+    expect(checkInMark("returning")?.tone).toBe("ok");
     expect(checkInMark("partial")?.tone).toBe("warn");
     expect(checkInMark("photo_only")?.tone).toBe("warn");
     expect(checkInMark("not_matched")?.tone).toBe("bad");

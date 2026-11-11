@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.156.0",
+    date: "2026-11-11",
+    title: "Returning guests go straight through",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Guests who checked in with their ID on an earlier stay aren't asked for it, or a selfie, again. You choose in Settings → Check-in → Returning guests: don't ask again (the start), ask guests from abroad again, or ask every time.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "On the door tablet, a returning guest's own check-in card opens their stay straight away, without the photo ID.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "A guest staying on in the same room on a new booking counts as checked in automatically, with their earlier ID result, and their guide link carries on working until the new check-out.",
+      },
+    ],
+  },
+  {
     version: "0.155.0",
     date: "2026-11-11",
     title: "One Check in button, with the concierge",

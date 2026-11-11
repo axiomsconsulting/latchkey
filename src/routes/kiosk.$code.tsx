@@ -1088,6 +1088,7 @@ function Kiosk() {
     version: number | null;
     n: number;
     source?: "device" | "all";
+    card?: string;
   } | null>(null);
   const calibration = useKioskTablet(p.code, shared && !tour);
   const tablet = calibration.tablet;
@@ -1853,10 +1854,13 @@ function Kiosk() {
             onArrive={(card) => {
               // The host's welcome opens their stay as it does on its own; any other card starts with the photo ID.
               setGoodbyeAside(true);
+              // A returning guest whose ID is on file: their own card opens their stay (startFromCard).
               setWelcomeStart(
                 card.welcome?.checkIn
                   ? { version: card.welcome.version, n: Date.now(), source: card.welcome.source }
-                  : { version: null, n: Date.now() },
+                  : card.known
+                    ? { version: null, n: Date.now(), card: card.known }
+                    : { version: null, n: Date.now() },
               );
               if (card.welcome) dismiss();
               setSession((n) => n + 1);

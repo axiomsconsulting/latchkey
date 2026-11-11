@@ -265,8 +265,11 @@ function CheckInBadge({
 }) {
   const [broken, setBroken] = useState(false);
   // No check on this stay: the guest's earlier one (an extension or a return), whatever it found.
-  const from = status ? undefined : mark?.from;
-  const verdict = checkInMark(status ?? from?.status);
+  // Checked in on an earlier stay's ID ("returning"): that check's own result and photo show.
+  const from = !status || status === "returning" ? mark?.from : undefined;
+  const verdict = checkInMark(
+    (status === "returning" ? from?.status : null) ?? status ?? from?.status,
+  );
   const face = !broken ? (mark?.faceUrl ?? null) : null;
   if (!verdict && !face) return null;
   const tone = verdict?.tone ?? "none";

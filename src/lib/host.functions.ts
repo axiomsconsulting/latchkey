@@ -1721,17 +1721,31 @@ export const getReturningTrust = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ propertyId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as { from: (t: string) => any };
-    const { data: row, error } = await sb
-      .from("properties")
-      .select("returning_trust")
-      .eq("id", data.propertyId)
-      .maybeSingle();
-    return { available: !error, on: !error && row?.returning_trust === true };
+    const { normaliseReturningMode } = await import("./returning-checks");
+    const [trust, mode] = await Promise.all([
+      sb.from("properties").select("returning_trust").eq("id", data.propertyId).maybeSingle(),
+      sb.from("properties").select("returning_checks").eq("id", data.propertyId).maybeSingle(),
+    ]);
+    return {
+      available: !trust.error,
+      on: !trust.error && trust.data?.returning_trust === true,
+      /** Whether returning guests show their ID again (migration 0106; lenient until then). */
+      mode: normaliseReturningMode(mode.error ? null : mode.data?.returning_checks),
+      modeAvailable: !mode.error,
+    };
   });
 
 export const saveReturningTrust = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ propertyId: uuid, on: z.boolean() }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        propertyId: uuid,
+        on: z.boolean(),
+        mode: z.enum(["lenient", "overseas", "always"]).optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as { from: (t: string) => any };
     const { error } = await sb
@@ -1739,6 +1753,13 @@ export const saveReturningTrust = createServerFn({ method: "POST" })
       .update({ returning_trust: data.on })
       .eq("id", data.propertyId);
     if (error) throw new Error(error.message);
+    if (data.mode) {
+      const { error: e2 } = await sb
+        .from("properties")
+        .update({ returning_checks: data.mode })
+        .eq("id", data.propertyId);
+      if (e2) throw new Error(e2.message);
+    }
     return { ok: true };
   });
 

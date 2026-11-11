@@ -1342,19 +1342,31 @@ export const checkinSettings = branded({
   saved: "Check-in settings saved",
   returning: {
     title: "Returning guests",
-    body: "Let someone who has already passed your ID check skip the ID photo and selfie next time. It's your choice: UK law doesn't ask you to check ID, but check your insurer is happy.",
-    ukOnly: "Only for UK properties for now, as rules on ID differ elsewhere.",
-    on: "Skip the ID photo and selfie for returning guests",
+    body: "Whether someone who checked in with you before shows their ID and takes a selfie again. A guest staying on in the same room on a new booking is never asked again: they're checked in already.",
+    modes: {
+      lenient: {
+        label: "Don't ask again",
+        help: "Anyone who checked in with their ID on an earlier stay goes straight through, whatever that check found. You see their earlier photo and result on Bookings.",
+      },
+      overseas: {
+        label: "Ask guests from abroad again",
+        help: "British guests go straight through. Anyone else, or anyone whose nationality we don't know, shows their ID again on a new stay.",
+      },
+      always: {
+        label: "Ask every time",
+        help: "Every new stay starts with the ID check.",
+      },
+    },
+    howKnown:
+      "We recognise a returning guest by the same full name, email or phone as an earlier stay at your business. Names can be shared, so check the earlier photo on Bookings if you're unsure. UK law doesn't ask you to check ID, but check your insurer is happy. In the UK they still confirm their guest register details each stay.",
+    needsModeUpdate:
+      "This choice needs the latest update (migration 0106). Until then it works as Don't ask again.",
+    on: "Ask for a quick proof instead (UK)",
+    onHelp:
+      "When a guest would be asked again: someone who passed a check with the same email or phone types the last digits of their phone or booking instead of showing ID.",
     needsUpdate: "This needs the latest update (migration 0088).",
-    rules: [
-      "Only for ID checks made after you turn this on, and only for 12 months.",
-      "The booking must have the same email or phone, and the same name. Booking sites often hide these, so those guests usually check in as normal.",
-      "Their ID must still be valid on the day they arrive.",
-      "They prove it's them with the last digits of their phone or booking, and confirm their guest register details. Anyone else in the party still shows ID.",
-      "Someone who knows those details could get past this, so leave it off if you want to see an ID every time.",
-    ],
     privacy:
-      "To do this, Latchkey keeps the name and expiry date from the ID and scrambled contact details for 12 months. No photos and no document number. Make sure your privacy notice covers it.",
+      "The quick proof keeps the name and expiry date from the ID and scrambled contact details for 12 months. No photos and no document number. Make sure your privacy notice covers it.",
   },
   records: {
     title: "Who's staying and ID records",
@@ -2026,6 +2038,8 @@ export const guest = branded({
     "Hold your passport, driving licence or ID card flat, with the name clearly visible.",
   idTakePhoto: "Take photo",
   idUpload: "Use a saved photo of my ID",
+  idFromEarlier:
+    "Welcome back: we have your ID from your last stay, so there's no need to show it again.",
   cameraOffId: "We couldn't open your camera. You can use a photo of your ID instead.",
   cameraOffFace:
     "We couldn't open your camera here. Your phone's own camera can take the selfie instead.",
@@ -5075,7 +5089,7 @@ export const settingsMenuCopy = branded({
     doorCodes: "Codes or keys, for the front door and each room.",
     stayAccess: "What room QR codes open, and when guests get the Wi-Fi.",
     records: "Keeping ID photos, and for how long.",
-    returning: "Let returning guests skip the ID photo and selfie.",
+    returning: "Whether guests who've stayed before show their ID again.",
     privacy: "How long guests' details and messages are kept.",
     guestTexts: "Sent by WhatsApp, text or email on arrival and leaving days.",
     reviews: "Asking for a review, and showing them on your booking page.",

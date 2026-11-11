@@ -67,6 +67,7 @@ import {
   saveRegister,
   setParty,
   skipCompanionId,
+  startFromCard,
   startFromWelcome,
   startServiceCheckIn,
   takeHandoff,
@@ -244,7 +245,13 @@ export function CheckInFlow({
    * welcome's stay opens straight away (startFromWelcome); without, the
    * usual questions find it.
    */
-  welcomeStart?: { version: number | null; n: number; source?: "device" | "all" } | null;
+  welcomeStart?: {
+    version: number | null;
+    n: number;
+    source?: "device" | "all";
+    /** A returning guest's own card (startFromCard): their stay opens without the photo ID. */
+    card?: string;
+  } | null;
   /** Service mode (the host's test sent to this door tablet): Check in opens the test stay. */
   service?: boolean;
   /** Door tablet welcome: the full phone panel on the right (Latchkey admin setting), else only the icon at the top. */
@@ -328,6 +335,7 @@ export function CheckInFlow({
   const match = useServerFn(matchBooking);
   const options = useServerFn(checkoutOptions);
   const fromWelcome = useServerFn(startFromWelcome);
+  const fromCard = useServerFn(startFromCard);
   const serviceStartFn = useServerFn(startServiceCheckIn);
   const byPhoto = useServerFn(findByPhotoId);
   // They've stayed with this business before: greeted as someone returning.
@@ -834,8 +842,24 @@ export function CheckInFlow({
   // Tapped Check in on the host's welcome: that guest's stay opens without any questions.
   useEffect(() => {
     if (!welcomeStart) return;
-    if (welcomeStart.version === null) return startFind();
     let live = true;
+    const device = deviceToken(property.code);
+    if (welcomeStart.card && device) {
+      void run(() =>
+        fromCard({
+          data: { code: property.code, deviceId: deviceId(), handle: welcomeStart.card!, device },
+        }),
+      ).then((res) => {
+        if (!live) return;
+        if (!res || res.status !== "matched") return startFind();
+        // Their own card: no "Is this you?", and their ID is already on file.
+        void found(res.token, res.platform, res.firstName, false, false, false, true);
+      });
+      return () => {
+        live = false;
+      };
+    }
+    if (welcomeStart.version === null) return startFind();
     void run(() =>
       fromWelcome({
         data: {
@@ -961,6 +985,13 @@ export function CheckInFlow({
     setPlan(res.party);
     setListFlow(res.listFlow);
     if (res.trusted) trustedLead.current = true;
+    // Their ID was checked on an earlier stay: no ID photo or selfie, their register details to confirm.
+    if (res.idFromEarlier) {
+      leadVerified.current = true;
+      const known = res.idFromEarlier.prefill;
+      setPrefill((p) => ({ ...p, 0: known }));
+      setTimeout(() => setMessage(copy.idFromEarlier), 0);
+    }
     if (res.party.ask) {
       // The booking (or the host) already says how many: nothing to ask; anyone else can be added at the end.
       if (res.party.booked !== null)

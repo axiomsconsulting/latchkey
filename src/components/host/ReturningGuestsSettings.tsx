@@ -4,15 +4,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoTip } from "@/components/host/InfoTip";
 import { SaveButton } from "@/components/host/SaveButton";
 import { Switch } from "@/components/ui/switch";
 import { checkinSettings, common } from "@/content/copy";
 import { registerApplies } from "@/lib/hotel-register";
 import { getReturningTrust, saveReturningTrust } from "@/lib/host.functions";
+import { RETURNING_MODES, type ReturningMode } from "@/lib/returning-checks";
+import { cn } from "@/lib/utils";
 
 const copy = checkinSettings.returning;
 
-/** Settings → Check-in: let a returning guest skip the ID photo and selfie (rules in src/lib/returning-trust.ts). */
+/**
+ * Settings → Check-in: whether guests who've stayed before show their ID again
+ * (src/lib/returning-checks.ts), and in the UK the older quick proof (returning-trust.ts).
+ */
 export function ReturningGuestsSettings({
   property,
 }: {
@@ -24,19 +30,23 @@ export function ReturningGuestsSettings({
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["returning-trust", property.id],
-    enabled: uk,
     queryFn: () => getFn({ data: { propertyId: property.id } }),
   });
   const [on, setOn] = useState(false);
+  const [mode, setMode] = useState<ReturningMode>("lenient");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    if (q.data) setOn(q.data.on);
+    if (!q.data) return;
+    setOn(q.data.on);
+    setMode(q.data.mode);
   }, [q.data]);
 
   async function onSave() {
     setBusy(true);
     try {
-      await saveFn({ data: { propertyId: property.id, on } });
+      await saveFn({
+        data: { propertyId: property.id, on, ...(q.data?.modeAvailable ? { mode } : {}) },
+      });
       await qc.invalidateQueries({ queryKey: ["returning-trust", property.id] });
       toast.success(checkinSettings.saved);
     } catch (err) {
@@ -46,6 +56,7 @@ export function ReturningGuestsSettings({
     }
   }
 
+  const dirty = !!q.data && (on !== q.data.on || mode !== q.data.mode);
   return (
     <section className="card-soft p-5">
       <div className="flex items-start gap-3">
@@ -53,32 +64,49 @@ export function ReturningGuestsSettings({
           <UserCheck className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-xl">{copy.title}</h2>
-          <p className="text-sm text-muted-foreground">{uk ? copy.body : copy.ukOnly}</p>
+          <h2 className="text-xl">
+            {copy.title} <InfoTip label={copy.title}>{copy.howKnown}</InfoTip>
+          </h2>
+          <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
-        {uk ? (
-          <SaveButton
-            dirty={!!q.data && on !== q.data.on}
-            busy={busy}
-            onClick={() => void onSave()}
-          />
-        ) : null}
+        <SaveButton dirty={dirty} busy={busy} onClick={() => void onSave()} />
       </div>
-      {uk ? (
+      <div role="radiogroup" aria-label={copy.title} className="mt-4 grid gap-2">
+        {RETURNING_MODES.map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={mode === m}
+            disabled={!q.data?.modeAvailable}
+            onClick={() => setMode(m)}
+            className={cn(
+              "rounded-xl border p-3 text-left transition-colors disabled:opacity-60",
+              mode === m ? "border-primary bg-primary/5" : "border-border hover:bg-muted",
+            )}
+          >
+            <span className="block font-medium">{copy.modes[m].label}</span>
+            <span className="block text-sm text-muted-foreground">{copy.modes[m].help}</span>
+          </button>
+        ))}
+      </div>
+      {q.data && !q.data.modeAvailable ? (
+        <p className="mt-2 text-sm text-muted-foreground">{copy.needsModeUpdate}</p>
+      ) : null}
+      {uk && mode !== "lenient" ? (
         <>
           <label className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border p-3">
-            <span className="font-medium">{copy.on}</span>
+            <span>
+              <span className="block font-medium">
+                {copy.on} <InfoTip label={copy.on}>{copy.privacy}</InfoTip>
+              </span>
+              <span className="block text-sm text-muted-foreground">{copy.onHelp}</span>
+            </span>
             <Switch checked={on} onCheckedChange={setOn} disabled={!q.data?.available} />
           </label>
           {q.data && !q.data.available ? (
             <p className="mt-2 text-sm text-muted-foreground">{copy.needsUpdate}</p>
           ) : null}
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {copy.rules.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
-          <p className="mt-3 rounded-xl bg-muted p-3 text-sm">{copy.privacy}</p>
         </>
       ) : null}
     </section>

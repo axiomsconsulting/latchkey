@@ -39,29 +39,13 @@ async function admin(): Promise<any> {
   return supabaseAdmin;
 }
 
-/** A stay handed to the tablet as a short-lived signed handle, never its id. */
+/** A stay handed to the tablet as a short-lived signed handle, never its id (card-handle.server.ts). */
 async function handleFor(bookingId: string, propertyId: string): Promise<string> {
-  const { createHmac } = await import("crypto");
-  const exp = Date.now() + 12 * 3_600_000;
-  const body = `${Buffer.from(bookingId).toString("base64url")}.${exp}`;
-  const mac = createHmac("sha256", `goodbye:${process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? ""}`)
-    .update(`${body}.${propertyId}`)
-    .digest("base64url");
-  return `${body}.${mac}`;
+  return (await import("./card-handle.server")).handleFor(bookingId, propertyId);
 }
 
 async function readHandle(handle: string, propertyId: string): Promise<string | null> {
-  const { createHmac, timingSafeEqual } = await import("crypto");
-  const [id64, exp, mac] = handle.split(".");
-  if (!id64 || !exp || !mac || Number(exp) < Date.now()) return null;
-  const want = createHmac("sha256", `goodbye:${process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? ""}`)
-    .update(`${id64}.${exp}.${propertyId}`)
-    .digest("base64url");
-  const a = Buffer.from(mac);
-  const b = Buffer.from(want);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  const id = Buffer.from(id64, "base64url").toString();
-  return /^[0-9a-f-]{36}$/i.test(id) ? id : null;
+  return (await import("./card-handle.server")).readHandle(handle, propertyId);
 }
 
 const goodbyeInput = z.object({
@@ -216,6 +200,11 @@ export type GoodbyeCard = {
   kind: "in" | "out";
   /** Leaving guests only: for Express check-out. */
   handle: string;
+  /**
+   * Arriving guests whose ID is on file from an earlier stay and needn't be shown again
+   * (returning-checks.ts): their card's Check in opens their stay (startFromCard).
+   */
+  known?: string;
   firstName: string;
   room: string | null;
   message: string;
@@ -292,11 +281,15 @@ async function cardsFor(
     )
     .sort(byRoom);
   const { isRepeatStay } = await import("./repeat-guest.server");
+  const { returningSkip } = await import("./returning-checks.server");
   const arriving: Array<GoodbyeCard & { bookingId: string }> = await Promise.all(
     arrivingRows.map(async (b) => ({
       bookingId: b.id,
       kind: "in" as const,
       handle: "",
+      ...(!forPreview && deviceId && (await returningSkip(db, b.id, p.id))
+        ? { known: await handleFor(b.id, p.id) }
+        : {}),
       firstName: firstName(b.guest_full_name),
       room: b.rooms?.display_name ?? null,
       message: arrivalText(a, firstName(b.guest_full_name), await isRepeatStay(db, b.id)),
