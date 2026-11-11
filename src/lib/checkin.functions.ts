@@ -579,7 +579,11 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       autoRegister(ctx, 0, read),
     ]);
     const { rememberPass, trustedPass } = await import("./returning-trust.server");
-    const known = !isTour(p) && !check && (await trustedPass(db, bookingId));
+    const { returningSkip } = await import("./returning-checks.server");
+    const known =
+      !isTour(p) &&
+      !check &&
+      ((await trustedPass(db, bookingId)) || (await returningSkip(db, bookingId, p.id)));
     if (!isTour(p) && !check) await rememberPass(db, bookingId, p.id, nameMatch, read);
     if (check && !isTour(p)) {
       const { raiseAlert } = await srv();
@@ -705,6 +709,65 @@ export const checkoutOptions = createServerFn({ method: "POST" })
  * (or the public tour), only for the welcome showing now, and only for a
  * stay arriving or staying today; the usual identity steps still follow.
  */
+/**
+ * Check in from a guest's own card on a paired door tablet, for a guest whose ID is on file
+ * from an earlier stay and needn't be shown again (returning-checks.ts): their stay opens
+ * at once. Anyone else's card starts with the photo ID as usual.
+ */
+export const startFromCard = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        code,
+        deviceId,
+        handle: z.string().min(10).max(300),
+        device: z.string().min(20).max(120),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { admin, deviceHash, loadPropertyByCode, sha256 } = await srv();
+    const p = await loadPropertyByCode(data.code);
+    if (!p || isTour(p)) return { status: "find" as const };
+    const db = (await admin()) as any;
+    const { data: dev } = await db
+      .from("kiosk_devices")
+      .select("id, status")
+      .eq("token_hash", sha256(data.device))
+      .eq("property_id", p.id)
+      .maybeSingle();
+    if (!dev || dev.status === "pending") return { status: "find" as const };
+    const { readHandle } = await import("./card-handle.server");
+    const id = await readHandle(data.handle, p.id);
+    if (!id) return { status: "find" as const };
+    const today = todayInZone(p.timezone ?? "Europe/London");
+    const { data: rows } = await arrivalsAround(p.id, today, 200);
+    const b = (rows ?? []).find((r) => r.id === id);
+    if (
+      !b ||
+      b.mirror_of ||
+      b.check_in_date !== today ||
+      !["upcoming", "flagged", "needs_details"].includes(b.status)
+    )
+      return { status: "find" as const };
+    const { returningSkip } = await import("./returning-checks.server");
+    if (!(await returningSkip(db, b.id, p.id))) return { status: "find" as const };
+    await db.from("check_in_attempts").insert({
+      property_id: p.id,
+      booking_id: b.id,
+      surname_attempt: surnameInitial(b.guest_full_name) ?? "-",
+      succeeded: true,
+      device_hash: deviceHash(p.id, data.deviceId),
+    });
+    return {
+      status: "matched" as const,
+      token: await startSession(p.id, b.id),
+      firstName: firstName(b.guest_full_name),
+      platform: platformKey(b),
+      again: true,
+    };
+  });
+
 export const startFromWelcome = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
@@ -1226,6 +1289,13 @@ async function knownGuest(ctx: Ctx) {
   return trustedPass(ctx.db, ctx.booking.id);
 }
 
+/** An earlier stay's ID check this stay relies on (returning-checks.ts). Never on the tour. */
+async function returningEarlier(ctx: Ctx) {
+  if (isTour(ctx.property)) return null;
+  const { returningSkip } = await import("./returning-checks.server");
+  return returningSkip(ctx.db, ctx.booking.id, ctx.property.id);
+}
+
 /** A joined phone may only fill in the guest it picked; a photo phone only the task the tablet set. */
 function ownSlot(ctx: Ctx, position: number, kinds?: readonly string[]) {
   if (ctx.join && ctx.join.position !== position) throw new Error("Not available.");
@@ -1331,6 +1401,29 @@ export const confirmBooking = createServerFn({ method: "POST" })
     const sequence: CheckinMethod[] = list
       ? ["self_declare"]
       : await withoutPhotoIfOff(ctx, methodSequence(methods, { last4: kinds.length > 0 }));
+    // Their ID was checked on an earlier stay here (the host's returning-guest choice, or they're
+    // staying on in the same room): not asked again, and no selfie. Their register details from
+    // that stay are offered to confirm (the document number masked).
+    const again = !list && !isTour(property) ? await returningEarlier(ctx) : null;
+    if (again) {
+      await recordResult(ctx, "returning", "returning");
+      const { lastEntry } = await import("./returning-trust.server");
+      return {
+        listFlow: list,
+        sequence,
+        last4Kinds: kinds,
+        party: partyPlan(ctx),
+        trusted: true,
+        idFromEarlier: {
+          prefill: await lastEntry(db, {
+            booking_id: again.bookingId,
+            full_name: booking.guest_full_name ?? "",
+            document_expiry: "",
+            keep_until: "",
+          }),
+        },
+      };
+    }
     // Stayed before with a passed ID check: a quick proof comes first, and the usual ID check if that fails.
     const trusted = !list && kinds.length > 0 && !!(await knownGuest(ctx));
     return {
@@ -1341,6 +1434,7 @@ export const confirmBooking = createServerFn({ method: "POST" })
       last4Kinds: kinds,
       party: partyPlan(ctx),
       trusted,
+      idFromEarlier: null,
     };
   });
 
@@ -1472,7 +1566,14 @@ async function recordResult(
   ctx: Ctx,
   method: string,
   result:
-    "matched" | "partial" | "not_matched" | "photo_only" | "last4" | "self_declared" | "id_read",
+    | "matched"
+    | "partial"
+    | "not_matched"
+    | "photo_only"
+    | "last4"
+    | "self_declared"
+    | "id_read"
+    | "returning",
   /** The caller tells the host itself. */
   quiet = false,
 ) {
@@ -1485,7 +1586,11 @@ async function recordResult(
     db.from("verification_results").insert({
       booking_id: booking.id,
       method,
-      passed: result === "matched" || result === "last4" || result === "id_read",
+      passed:
+        result === "matched" ||
+        result === "last4" ||
+        result === "id_read" ||
+        result === "returning",
       detail: result,
       delete_after: deleteAfter,
     }),
@@ -2113,9 +2218,19 @@ export const saveRegister = createServerFn({ method: "POST" })
     // "Same as last time": the number was never sent to this screen, so it's filled in here.
     let documentNumber = data.documentNumber;
     if (isMaskedDocument(documentNumber)) {
-      const known = data.position === 0 ? await knownGuest(ctx) : null;
+      const known =
+        data.position === 0
+          ? ((await knownGuest(ctx))?.booking_id ?? (await returningEarlier(ctx))?.bookingId)
+          : null;
       const { lastDocumentNumber } = await import("./returning-trust.server");
-      documentNumber = known ? await lastDocumentNumber(ctx.db, known) : null;
+      documentNumber = known
+        ? await lastDocumentNumber(ctx.db, {
+            booking_id: known,
+            full_name: "",
+            document_expiry: "",
+            keep_until: "",
+          })
+        : null;
     }
     const clean = cleanRegisterEntry({ ...data, documentNumber });
     if (!clean.ok) return { ok: false as const, missing: clean.missing };
@@ -2580,13 +2695,28 @@ export const getStay = createServerFn({ method: "GET" })
     // Room QR and Wi-Fi settings (migration 0057): the room's own network, the password after check-in if the host asks.
     const checkedIn = b.status === "checked_in" || b.status === "checked_out";
     // Still to do: check-in itself, or (in the UK) the guest register, even when the host has marked the stay as checked in.
-    const { count: onRegister, error: regError } = registerApplies(
+    const registerUk = registerApplies(
       (p as { country_code?: string | null } | null)?.country_code ?? null,
-    )
+    );
+    // Staying on from an earlier booking in the same room (stay-on.server.ts): that arrival's
+    // register entry covers them (continues_from is from migration 0106).
+    const carriedFrom = registerUk
+      ? await (db as LooseDb)
+          .from("bookings")
+          .select("continues_from")
+          .eq("id", t.booking_id)
+          .maybeSingle()
+          .then(
+            (r: { data: { continues_from?: string | null } | null; error: unknown }) =>
+              (r.error ? null : r.data?.continues_from) ?? null,
+            () => null,
+          )
+      : null;
+    const { count: onRegister, error: regError } = registerUk
       ? await db
           .from("guest_register")
           .select("id", { count: "exact", head: true })
-          .eq("booking_id", t.booking_id)
+          .in("booking_id", carriedFrom ? [t.booking_id, carriedFrom] : [t.booking_id])
       : { count: 1, error: null };
     const registerMissing = !regError && (onRegister ?? 0) === 0;
     // The public tour keeps no register and puts today's arrival back for the next

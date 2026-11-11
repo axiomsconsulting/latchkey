@@ -65,6 +65,13 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
         } catch (e) {
           console.error("Drive queue move failed", e instanceof Error ? e.message : e);
         }
+        // Guests staying on in the same room on a new booking: checked in already (src/lib/stay-on.server.ts).
+        try {
+          const { carryOnStays } = await import("@/lib/stay-on.server");
+          await carryOnStays();
+        } catch (e) {
+          console.error("Stay-on check-ins failed", e instanceof Error ? e.message : e);
+        }
         // Hosts' welcome and goodbye messages to guests, when due (src/lib/guest-messages.ts).
         try {
           if (await jobAllowed("guest_messages")) {

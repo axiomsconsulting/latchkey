@@ -252,6 +252,8 @@ export function checkInMark(status: string | null | undefined): CheckInMark {
       return { tone: "warn", word: "ID photo kept, couldn't be read: please check it" };
     case "not_matched":
       return { tone: "bad", word: "ID doesn't match the booking" };
+    case "returning":
+      return { tone: "ok", word: "ID on file from an earlier stay" };
     case "last4":
       return { tone: "none", word: "Checked in with a code, no new ID photo" };
     case "self_declared":
