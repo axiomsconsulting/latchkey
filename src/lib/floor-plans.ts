@@ -7,8 +7,22 @@
  * Pure; tested in tests/guest-guide-extras.test.ts.
  */
 
-export type Point = { x: number; y: number };
-export type Facing = "up" | "down" | "left" | "right";
+import {
+  hasMap,
+  levelName,
+  mapDirections,
+  normaliseMap,
+  type Area,
+  type Facing,
+  type FloorMap,
+  type Item,
+  type Line,
+  type MapFloor,
+  type Point,
+} from "./floor-map";
+
+export { levelName };
+export type { Facing, Point };
 
 export type Pins = {
   entrance?: Point & { facing: Facing };
@@ -16,6 +30,10 @@ export type Pins = {
   lift?: Point;
   /** Room id → where it is on this floor. */
   rooms: Record<string, Point>;
+  /** The floor map drawn over the plan (floor-map.ts), kept only when there's something in it. */
+  areas?: Area[];
+  lines?: Line[];
+  items?: Item[];
 };
 
 export type FloorPlan = {
@@ -53,28 +71,11 @@ export function normalisePins(raw: unknown): Pins {
   if (s) out.stairs = s;
   const l = pt(o["lift"]);
   if (l) out.lift = l;
+  const m = normaliseMap(o);
+  if (m.areas.length) out.areas = m.areas;
+  if (m.lines.length) out.lines = m.lines;
+  if (m.items.length) out.items = m.items;
   return out;
-}
-
-const ORD = [
-  "ground",
-  "first",
-  "second",
-  "third",
-  "fourth",
-  "fifth",
-  "sixth",
-  "seventh",
-  "eighth",
-  "ninth",
-  "tenth",
-];
-
-/** "ground floor", "second floor", "basement", "lower basement" */
-export function levelName(level: number): string {
-  if (level === -1) return "basement";
-  if (level < -1) return "lower basement";
-  return `${ORD[level] ?? `${level}th`} floor`;
 }
 
 const VEC: Record<Facing, Point> = {
@@ -106,12 +107,33 @@ export function whereFrom(from: Point, to: Point, facing: Facing): { side: strin
 
 const join = (a: string, b: string) => [a, b].filter(Boolean).join(", ");
 
+/** A plan's map, as floor-map.ts reads it. */
+export function mapOf(p: Pins): FloorMap {
+  return { areas: p.areas ?? [], lines: p.lines ?? [], items: p.items ?? [] };
+}
+
+/** Every floor as the map needs it. */
+export function mapFloors(plans: FloorPlan[]): MapFloor[] {
+  return plans.map((p) => ({
+    id: p.id,
+    level: p.level,
+    entrance: p.pins.entrance,
+    lift: p.pins.lift,
+    rooms: p.pins.rooms,
+    map: mapOf(p.pins),
+  }));
+}
+
 export type Directions = {
   steps: string[];
   /** The plan the room is on, and where on it. */
   planId: string;
   level: number;
   at: Point;
+  /** With a floor map: the way drawn on each floor, the room's outline and its heating. */
+  route?: Array<{ planId: string; level: number; points: Point[] }>;
+  area?: Point[];
+  heating?: string[];
 };
 
 /**
@@ -123,7 +145,13 @@ export function directionsTo(
   plans: FloorPlan[],
   roomId: string,
   roomName: string,
+  roomNames: Record<string, string> = {},
 ): Directions | null {
+  // With a floor map, the real way in along doors and stairs; otherwise the marks below.
+  if (plans.some((p) => hasMap(mapOf(p.pins)))) {
+    const d = mapDirections(mapFloors(plans), roomId, roomName, roomNames);
+    if (d) return d;
+  }
   const home = plans.find((p) => p.pins.entrance);
   const plan = plans.find((p) => p.pins.rooms[roomId]);
   if (!home?.pins.entrance || !plan) return null;

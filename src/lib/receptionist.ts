@@ -115,6 +115,8 @@ export type Knowledge = {
   times?: string | null;
   wifi?: { name: string | null; password: string | null } | null;
   directions?: string[] | null;
+  /** Shared spaces, private areas, where the thermostat and such are (floor maps). */
+  house?: string | null;
   rules?: string | null;
   info?: string | null;
   guide?: Array<{ key: string; title: string; text: string }>;
@@ -155,6 +157,10 @@ export function briefFor(k: Knowledge, s: Receptionist, surface: Surface): strin
     );
   if (on.directions && k.directions?.length)
     parts.push(`The way to their room: ${k.directions.join(" ")}`);
+  if (on.info && k.house)
+    parts.push(
+      `Around the house (from the host's floor plans; open key find_room). Never send a guest into a private area:\n${k.house}`,
+    );
   if (on.rules && k.rules) parts.push(`House rules: ${k.rules}`);
   if (on.info && k.info) parts.push(`Property information (open key property_info):\n${k.info}`);
   if (on.guide && k.guide?.length)
@@ -174,7 +180,7 @@ export function openKeys(k: Knowledge): string[] {
     ...(k.guide ?? []).map((g) => g.key),
     ...(k.info ? ["property_info"] : []),
     ...(k.local ? ["local"] : []),
-    ...(k.directions?.length ? ["find_room"] : []),
+    ...(k.directions?.length || k.house ? ["find_room"] : []),
   ];
 }
 

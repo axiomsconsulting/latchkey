@@ -6009,7 +6009,16 @@ export const guideExtrasCopy = branded({
   noPlaces: "Nothing nearby to show yet.",
   osm: "Places from OpenStreetMap.",
   findTitle: "Finding your room",
+  houseTitle: "Around the house",
+  houseLead: "Spaces you can use, what's private, and where things are",
   planAlt: (room: string) => `Floor plan showing ${room}`,
+  floorAlt: (floor: string) => `Floor plan of the ${floor}`,
+  floorName: (floor: string) => floor.charAt(0).toUpperCase() + floor.slice(1),
+  heating: "Heating in your room",
+  shared: "Spaces you can use",
+  private: "Private: please keep out",
+  useful: "Good to know",
+  key: { route: "Your way", yours: "Your room", private: "Private", shared: "Shared" },
 });
 
 export const guideExtrasAdminCopy = branded({
