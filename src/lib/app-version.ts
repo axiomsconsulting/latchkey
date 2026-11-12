@@ -3,4 +3,4 @@
  * can tell what someone is running. Kept equal to the newest release in
  * src/content/changelog.ts (tests/kiosk-devices.test.ts checks it): bump both.
  */
-export const APP_VERSION = "0.158.0";
+export const APP_VERSION = "0.159.0";

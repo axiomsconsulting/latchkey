@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { GuideSections } from "@/components/guest/GuideSections";
+import { useGuideExtraCards } from "@/components/guest/GuideExtras";
 import { getStayWeather } from "@/lib/weather.functions";
 import { describeWeather, type WeatherIcon } from "@/lib/weather";
 import { useServerFn } from "@tanstack/react-start";
@@ -165,6 +166,8 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
   const hasCheckout = s.guide.some((g) => g.key === "checkout");
   // Sections show their top line until tapped (on check-out day, check-out starts open).
   const [open, setOpen] = useState<string[]>(leaving && hasCheckout ? ["checkout"] : []);
+  // Property information, finding your room and around here, loaded after the page.
+  const extraCards = useGuideExtraCards({ token });
   // Quick ways in, in the theme's icon style: the host's chosen tiles, or Wi-Fi, the first guide sections, extras and messages.
   const tiles = shownTiles(
     s.tiles.tiles,
@@ -333,6 +336,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
 
         <GuideSections
           sections={s.guide as never}
+          extras={extraCards}
           open={open}
           onOpenChange={setOpen}
           lockedText={gcopy.doorLocked(

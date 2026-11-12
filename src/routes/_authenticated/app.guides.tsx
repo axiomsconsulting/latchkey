@@ -52,6 +52,9 @@ import { SectionAttachments } from "@/components/host/SectionAttachments";
 import { getGuideAttachments } from "@/lib/attachments.functions";
 import { RoomAmenities } from "@/components/host/RoomAmenities";
 import { GuideTilesEditor } from "@/components/host/GuideTilesEditor";
+import { PropertyInfoEditor } from "@/components/host/PropertyInfoEditor";
+import { LocalGuideEditor } from "@/components/host/LocalGuideEditor";
+import { FloorPlansEditor } from "@/components/host/FloorPlansEditor";
 import { RoomPhoto } from "@/components/host/RoomPhoto";
 import { getGuideTiles } from "@/lib/guide-tiles.functions";
 import { SECTIONS, editorSections, type SectionKey } from "@/lib/guide";
@@ -212,6 +215,11 @@ function GuidesPage() {
       />
 
       <InRoomGuides propertyId={selectedId} />
+
+      {/* Cards guests see besides the sections: property information, around here, finding your room. */}
+      <PropertyInfoEditor propertyId={selectedId} />
+      <LocalGuideEditor propertyId={selectedId} />
+      <FloorPlansEditor propertyId={selectedId} />
 
       {q.isLoading ? null : (
         <GuideTilesEditor

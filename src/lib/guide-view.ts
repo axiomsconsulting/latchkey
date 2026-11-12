@@ -7,8 +7,9 @@
 export type GuideView = "list" | "gallery";
 export const GUIDE_VIEW_KEY = "latchkey.guideView";
 
+/** The gallery of picture cards unless the guest chose the list. */
 export function readGuideView(raw: string | null | undefined): GuideView {
-  return raw === "gallery" ? "gallery" : "list";
+  return raw === "list" ? "list" : "gallery";
 }
 
 /** A sideways swipe big and level enough to mean "next" (1) or "previous" (-1); otherwise 0. */
