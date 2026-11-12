@@ -72,6 +72,15 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
         } catch (e) {
           console.error("Stay-on check-ins failed", e instanceof Error ? e.message : e);
         }
+        // Bank transfers received: connected banks read for money in, matched to direct bookings (src/lib/bank-match.ts).
+        try {
+          if (await jobAllowed("bank_feeds")) {
+            const { readAllFeeds } = await import("@/lib/bank-feed.server");
+            await readAllFeeds();
+          }
+        } catch (e) {
+          console.error("Bank reads failed", e instanceof Error ? e.message : e);
+        }
         // Smart pricing: prices on the booking sites for properties whose schedule says today (src/lib/smart-pricing.ts).
         try {
           const { readDuePrices } = await import("@/lib/smart-pricing.server");

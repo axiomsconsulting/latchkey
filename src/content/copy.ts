@@ -5921,6 +5921,63 @@ export const smartPricingCopy = branded({
   saved: "Smart pricing settings saved.",
 });
 
+export const bankTransfersCopy = branded({
+  title: "Bank transfers received",
+  body: "Latchkey reads the money coming into your bank account and marks a direct booking paid when its reference and amount arrive. Automatic for Starling; for any other bank, drop in a statement downloaded from online banking.",
+  notReady: "Bank transfers appear once the latest database update (migration 0108) is applied.",
+  waiting: (n: number) =>
+    n
+      ? `${n} ${n === 1 ? "booking is" : "bookings are"} waiting for a transfer`
+      : "No bookings waiting for a transfer",
+  yourBank: "Your bank",
+  banksHelp:
+    "Starling lets you read your own account with a free read-only token, so it's automatic. Barclays, HSBC, Lloyds, NatWest, Santander, Nationwide and the rest only allow it through a licensed Open Banking provider, which Latchkey doesn't use yet, so upload a statement from them: it takes a minute and works the same.",
+  ways: {
+    automatic: "Automatic",
+    provider: "Statement upload",
+    statement: "Statement upload",
+  } as Record<string, string>,
+  starlingTitle: "Connect Starling",
+  starlingSteps: [
+    "Sign in at developer.starlingbank.com with your Starling login.",
+    "Open Personal access, link your account and approve it in the Starling app.",
+    "Create a token with account:read, account-list:read and transaction:read only (no payment access).",
+    "Paste it here. Latchkey checks it, keeps it sealed and only ever reads with it.",
+  ],
+  tokenLabel: "Starling personal access token",
+  connect: "Connect",
+  connected: (label: string, when: string | null) =>
+    `Connected: ${label}${when ? `, last read ${when}` : ""}. Read every 30 minutes while a transfer is waiting.`,
+  readNow: "Read now",
+  disconnect: "Disconnect",
+  disconnected: "Bank disconnected. Its token is deleted.",
+  ownerOnly: "Only the owner can connect the business's bank.",
+  uploadTitle: "Upload a statement",
+  uploadHelp:
+    "In online banking, download the account's recent transactions as CSV (the last week or two is plenty) and choose the file here. Only money in is read; the file isn't kept.",
+  upload: "Choose a CSV file",
+  uploaded: (credits: number, paid: number, check: number) =>
+    `${credits} ${credits === 1 ? "payment" : "payments"} in read: ${paid} marked paid${check ? `, ${check} to check` : ""}.`,
+  read: (paid: number, check: number) =>
+    paid || check
+      ? `${paid} marked paid${check ? `, ${check} to check` : ""}.`
+      : "Nothing new matched.",
+  listTitle: "Matched payments (last 60 days)",
+  none: "No payments matched yet.",
+  unmatched: (n: number) =>
+    `${n} other ${n === 1 ? "payment" : "payments"} in didn't match a booking (your other income) and ${n === 1 ? "is" : "are"} left alone.`,
+  paid: "Marked paid",
+  check: "Check this one",
+  ignored: "Not theirs",
+  checkWhy:
+    "The reference or the guest's name and amount suggest this is theirs, but it isn't certain (less than the total, or no reference).",
+  confirm: "Yes, it's theirs",
+  ignore: "Not theirs",
+  forBooking: (name: string, ref: string, total: string) => `${name}, ref ${ref}, total ${total}`,
+  privacy:
+    "Only money in is read. Payments matched to a booking (date, amount, payer's name and reference) are kept 13 months as your record; anything else is deleted after 60 days. Only owners and managers see them.",
+});
+
 export const directCopy = branded({
   bookingsTab: (pending: number) =>
     pending ? `Bookings made here (${pending} waiting)` : "Bookings made here",
@@ -5984,6 +6041,8 @@ export const directCopy = branded({
   setupRatesHint: "Each room's nightly rate, and seasonal offers.",
   setupSmart: "Smart pricing",
   setupSmartHint: "What guests pay on the booking sites, and suggested direct and site prices.",
+  setupBank: "Bank transfers received",
+  setupBankHint: "Mark bank transfer bookings paid when the money arrives.",
   setupPhotos: "Photos guests see",
   setupPhotosHint: "Each room's photos, grouped by space.",
   needsYou: "Needs you",

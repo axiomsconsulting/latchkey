@@ -70,6 +70,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   adminLink: Settings2,
   photos: Camera,
   smart: TrendingUp,
+  bank: Landmark,
   reviewRefresh: Star,
   studioVoices: Mic,
 };

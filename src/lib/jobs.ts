@@ -171,6 +171,14 @@ export const JOBS: Job[] = branded([
     startsOff: true,
   },
   {
+    key: "bank_feeds",
+    name: "Bank transfers received",
+    kind: "on_use",
+    what: "With every calendar sync, reads the bank accounts hosts connected (Starling, free) for money in while a direct booking waits for a transfer, and marks it paid when the reference and amount match. Off: hosts upload a statement or mark payments themselves.",
+    metric: "job:bank_feeds",
+    runnable: false,
+  },
+  {
     key: "rate_watch",
     name: "Smart pricing: reading prices on booking sites with Firecrawl",
     kind: "on_use",

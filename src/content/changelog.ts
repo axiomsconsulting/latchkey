@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.158.0",
+    date: "2026-11-12",
+    title: "Bank transfers marked paid by themselves",
+    items: [
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Bank transfers received, on Direct stays → Set-up: connect Starling with a free read-only token and Latchkey reads the money coming in every 30 minutes while a booking waits for a transfer. When the booking reference and the whole amount arrive, the booking is marked paid and you get an alert.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Any other bank (Barclays, HSBC, Lloyds, Halifax, NatWest, Santander, Nationwide, TSB, Metro, Monzo, Revolut, Wise, Tide and more): download the account's transactions as CSV from online banking and drop the file in. Latchkey reads only the money in and matches it the same way. A list shows how each bank works and where its export is.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Payments that are probably a guest's but not certain (the reference with less than the total, or the exact amount from someone with the guest's surname) wait for you: tap Yes, it's theirs, or Not theirs.",
+      },
+    ],
+  },
+  {
     version: "0.157.0",
     date: "2026-11-12",
     title: "Smart pricing for direct stays, and Pay by Bank",
