@@ -67,9 +67,10 @@ import { DirectBookingSettings } from "@/components/host/DirectBookingSettings";
 import { LoyaltyVouchers } from "@/components/host/LoyaltyVouchers";
 import { RoomGallery } from "@/components/host/RoomGallery";
 import { SmartPricing } from "@/components/host/SmartPricing";
+import { BankTransfers } from "@/components/host/BankTransfers";
 
 const TABS = ["bookings", "enquiries", "guests", "vouchers", "setup"] as const;
-const SETUP = ["rates", "photos", "booking", "smart"] as const;
+const SETUP = ["rates", "photos", "booking", "smart", "bank"] as const;
 
 export const Route = createFileRoute("/_authenticated/app/direct")({
   // ?tab= opens a part of the page; ?focus= opens a section of its set-up.
@@ -297,6 +298,12 @@ function DirectPage() {
                       title: copy.setupRates,
                       hint: copy.setupRatesHint,
                       node: <DirectRates propertyId={selectedId} />,
+                    },
+                    {
+                      id: "bank",
+                      title: copy.setupBank,
+                      hint: copy.setupBankHint,
+                      node: <BankTransfers propertyId={selectedId} />,
                     },
                     {
                       id: "smart",

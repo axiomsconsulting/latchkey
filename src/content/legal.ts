@@ -53,6 +53,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           `Visitors to this website, people trying our demos, and hosts and their team members: ${operator} is the controller of this data.`,
           `Guests of a business that uses ${name}: that business (the "host") is the controller. ${operator} is its processor: we store and process guests' details only to run the service for the host, under the data processing terms in our Terms of service, and never for our own marketing.`,
           "Card payments from guests, and Pay by Bank payments approved in a guest's banking app, are made in the host's own Stripe account. Stripe and the host are responsible for that payment data; we only see whether a payment succeeded.",
+          "If a host connects their bank account or uploads a bank statement, we read the payments into it to mark direct bookings paid by bank transfer. A payment matched to a booking (date, amount, payer's name and reference) is kept for 13 months; any other payment in is deleted after 60 days. Payments out are never read or kept.",
         ],
       },
       {
@@ -114,6 +115,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
           "Lovable Cloud (built on Supabase): hosting, database, file storage, sign-in and the email we send. Private files (ID photos, signatures) only wait here briefly if Google Drive can't be reached, and are removed once they're safely in Google Drive.",
           "Lovable AI Gateway and the AI model provider behind it (currently OpenAI): reading photo ID during guests' check-in (when the host turns ID checks on) and Commission Partners' identity checks. Images are sent for that check only; we ask the service not to keep them, and we don't use them to train any AI model.",
           "Stripe: hosts' subscriptions, and guests' card and Pay by Bank payments in the host's own Stripe account.",
+          "Starling Bank: when a host connects their own Starling account, we read the payments into it with the read-only token they made.",
           "Twilio (text messages, and WhatsApp messages for hosts who turn them on) and Telegram (messages to hosts who link it): alerts to hosts. App notifications go through the browser maker's push service and carry no content.",
           "Twilio, and Meta's WhatsApp through Twilio: messages to guests when the host turns them on, and the check-in photo link a guest asks for at the door tablet. They receive the guest's mobile number and the message. A number typed in for the photo link is used for that one message and isn't kept.",
           "Google: sign-in with Google, and Google Drive, where we store files hosts attach to their guides and, in restricted folders that are never shared, kept copies of guests' ID and face photos and Commission Partners' ID photos, drawn signatures and signed agreements. Apple: sign-in with Apple.",
