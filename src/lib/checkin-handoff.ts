@@ -102,7 +102,9 @@ export function maySave(at: HandoffSide | null, side: HandoffSide): boolean {
 export function handoffView(
   me: HandoffSide,
   now: { at: HandoffSide | null; completed: boolean },
+  /** This device is adding someone after the lead finished: "completed" was already true, so it never means done. */
+  adding = false,
 ): "done" | "mine" | "elsewhere" {
-  if (now.completed) return "done";
+  if (now.completed && !adding) return "done";
   return now.at === null || now.at === me ? "mine" : "elsewhere";
 }

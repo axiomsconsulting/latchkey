@@ -108,5 +108,8 @@ describe("one check-in on the tablet and a phone", () => {
     expect(handoffView("kiosk", { at: "phone", completed: false })).toBe("elsewhere");
     expect(handoffView("phone", { at: "phone", completed: false })).toBe("mine");
     expect(handoffView("kiosk", { at: "phone", completed: true })).toBe("done");
+    // Adding someone after the lead finished: the earlier completion never ends their steps.
+    expect(handoffView("kiosk", { at: "kiosk", completed: true }, true)).toBe("mine");
+    expect(handoffView("kiosk", { at: "phone", completed: true }, true)).toBe("elsewhere");
   });
 });

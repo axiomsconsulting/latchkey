@@ -375,6 +375,8 @@ export function CheckInFlow({
   const handoffLive = useRef(kiosk);
   // The other device has the check-in: this screen waits, offering to carry on here.
   const [away, setAway] = useState(false);
+  // Adding someone from the end screen: until their first screen is saved, "complete" is the lead's.
+  const adding = useRef(false);
   const [fullName, setFullName] = useState("");
   // Other guests filling in on their own phones: the square they scan, and who's where.
   const [share, setShare] = useState<string | null>(null);
@@ -390,6 +392,7 @@ export function CheckInFlow({
     ((step.name === "register" || step.name === "face") && step.position > 0);
 
   useEffect(() => {
+    if (step.name === "welcome") adding.current = false;
     onActivity?.();
     setMessage(null);
     onWelcome?.(step.name === "welcome");
@@ -418,7 +421,12 @@ export function CheckInFlow({
     const kept = Object.fromEntries(Object.entries(prefill).filter(([k]) => wanted.has(Number(k))));
     void saveHandoffFn({
       data: { token, side: handoffSide, state: { steps, prefill: kept } },
-    }).catch(() => undefined);
+    })
+      // Once this screen is saved, the server only says done when the added guest has finished.
+      .then(() => {
+        adding.current = false;
+      })
+      .catch(() => undefined);
     // Saved once per screen; prefill changes alongside the step that uses it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, queue, token, away]);
@@ -431,7 +439,7 @@ export function CheckInFlow({
       if (!handoffLive.current) return;
       const h = await handoffStateFn({ data: { token } }).catch(() => null);
       if (!live || !h) return;
-      const view = handoffView(handoffSide, h);
+      const view = handoffView(handoffSide, h, adding.current);
       if (view === "done") {
         setAway(false);
         const done = await complete({ data: { token } }).catch(() => null);
@@ -971,6 +979,7 @@ export function CheckInFlow({
     );
     if (!res) return;
     setAdults(adults + 1);
+    adding.current = true;
     const steps: After[] = [{ kind: "companion", position }];
     if (plan?.register) steps.push({ kind: "register", position, child: false });
     if (plan?.facePhoto) steps.push({ kind: "face", position });
