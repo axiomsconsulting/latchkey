@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Receptionist } from "@/components/guest/Receptionist";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { DoorCodeCard } from "@/components/guest/DoorCodeCard";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
@@ -192,7 +193,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
       <main
         className={cn(
           "mx-auto max-w-4xl space-y-6 py-6 sm:py-8",
-          s.needsCheckIn && !s.readOnly && "pb-32",
+          s.needsCheckIn && !s.readOnly ? "pb-52" : "pb-28",
         )}
       >
         <div className="flex items-start justify-between gap-4">
@@ -368,6 +369,9 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         {s.review?.direct && reviewDay(s.progress.phase) ? null : <StayReview token={token} />}
         {s.readOnly || leaving ? null : <StayAgain token={token} />}
       </main>
+      {s.readOnly ? null : (
+        <Receptionist where={{ surface: "stay", token }} variant="guide" raised={s.needsCheckIn} />
+      )}
       {s.needsCheckIn && !s.readOnly ? (
         <CheckInNudge token={token} firstName={s.firstName} />
       ) : null}

@@ -5069,6 +5069,7 @@ export const settingsMenuCopy = branded({
     kioskLook: ["Door tablet look", "kiosk"],
     kioskReviews: ["Reviews on the door tablet", "kiosk"],
     kioskVoice: ["Voice check-in", "kiosk"],
+    receptionist: ["AI receptionist", "kiosk"],
     payments: ["Card payments", "money"],
     money: ["Tax, bank details and away", "money"],
     invoices: ["Invoices", "money"],
@@ -5103,6 +5104,8 @@ export const settingsMenuCopy = branded({
     kioskLook: "Look, button size, flash and sounds.",
     kioskReviews: "Your best reviews while an ID is checked.",
     kioskVoice: "A spoken concierge guests can check in with (Pro).",
+    receptionist:
+      "Guests ask anything by voice or text, on tablets you choose and their phones (Pro).",
     payments: "Connect Stripe to take card payments.",
     money: "Tax details, your bank account and away dates.",
     invoices: "Tax number and invoice numbering for direct stays.",
@@ -6091,6 +6094,67 @@ export const guideExtrasAdminCopy = branded({
   preview: "What guests read",
   noDirections: "Mark the entrance and this room to see its directions.",
   plansSaved: "Floor saved.",
+});
+
+export const receptionistCopy = branded({
+  ask: "Ask reception…",
+  askLabel: "Ask the receptionist a question",
+  send: "Send",
+  talk: "Talk to reception",
+  stopTalking: "Stop voice mode",
+  listening: "Listening…",
+  thinking: "One moment…",
+  speaking: "Speaking…",
+  tapToTalk: "Tap the microphone and ask",
+  close: "Close",
+  open: "Ask reception",
+  opened: "I've opened it for you below.",
+  failed: "Sorry, I couldn't answer that just now. Please try again, or message your host.",
+  noVoice: "Voice isn't available on this device: type your question instead.",
+  aiNote: "AI receptionist: answers come from your host's guide and may not cover everything.",
+  directions: "Here's the way to your room:",
+});
+
+export const receptionistAdminCopy = branded({
+  title: "AI receptionist",
+  body: "Guests ask anything about their stay, by voice or text, and get short answers from your guide, property information, around here and floor plans. It can open the right part of the guide for them, and says the way to their room once they've checked in.",
+  notReady: "This appears once the latest database update (migration 0110) is applied.",
+  notAllowed: "The AI receptionist comes with the Pro plan, once Latchkey has switched it on.",
+  on: "Turn on the receptionist",
+  phones: "Also on guests' phones",
+  phonesHelp:
+    "In their guide and when they check in on their own phone. Door tablets are chosen one by one in Door tablets.",
+  name: "Its name (optional)",
+  namePlaceholder: "e.g. Ava",
+  voice: "Voice",
+  voices: { female: "Female", male: "Male" } as Record<string, string>,
+  match: "Match the voice to the guest",
+  matchHelp:
+    "With this on, a female voice greets guests whose ID says male and a male voice greets guests whose ID says female; anyone else, or before the ID is read, hears the voice above. Only the ID's own sex field is used, and it's never kept.",
+  topics: "What it talks about",
+  topicNames: {
+    times: "Check-in and check-out times",
+    wifi: "Wi-Fi",
+    room: "Their room",
+    directions: "The way to their room",
+    rules: "House rules",
+    info: "Property information",
+    guide: "Your guide's sections",
+    local: "Around here",
+    extras: "Extras they can order",
+    checkout: "Check-out steps",
+  } as Record<string, string>,
+  detail: "How much it says",
+  details: { brief: "Brief", normal: "Normal", detailed: "Detailed" } as Record<string, string>,
+  notes: "Your instructions",
+  notesPlaceholder:
+    "e.g. Always mention breakfast is 8 to 10. Don't recommend the pub on the corner.",
+  safety:
+    "It never gives door codes or PINs, never makes things up, and on a shared tablet doesn't read out the Wi-Fi password.",
+  studioOff: "Spoken answers use the device's own voice until Latchkey adds studio voices.",
+  saved: "Receptionist saved.",
+  tablet: "AI receptionist on this tablet",
+  tabletHelp: "Guests can ask it anything; after check-in it says the way to their room.",
 });
 
 export const directCopy = branded({

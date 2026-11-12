@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Receptionist } from "@/components/guest/Receptionist";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { CalendarX, Check, Loader2, MapPin } from "lucide-react";
@@ -259,8 +260,9 @@ function RoomGuide() {
           open={open}
           onOpenChange={setOpen}
         />
-        <p className="text-center text-sm text-muted-foreground">{rcopy.footer}</p>
+        <p className="pb-24 text-center text-sm text-muted-foreground">{rcopy.footer}</p>
       </main>
+      <Receptionist where={{ surface: "room", code }} variant="guide" />
     </GuestFrame>
   );
 }

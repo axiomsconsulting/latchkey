@@ -188,6 +188,15 @@ export const JOBS: Job[] = branded([
     startsOff: true,
   },
   {
+    key: "ai_receptionist",
+    name: "AI receptionist (Pro)",
+    kind: "on_use",
+    what: "Answers guests' questions by text or voice on the door tablets hosts choose and on guests' phones, from the host's guide, property information, around here and floor plans; spoken answers use the studio voice through ElevenLabs. Only for Pro businesses whose host turned it on. Off: it doesn't appear anywhere.",
+    metric: "ai:receptionist",
+    runnable: false,
+    startsOff: true,
+  },
+  {
     key: "voice_ai",
     name: "Voice check-in: understanding unclear replies",
     kind: "on_use",

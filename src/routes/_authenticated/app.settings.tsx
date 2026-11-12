@@ -1,4 +1,5 @@
 import { KioskVoiceSettings } from "@/components/host/KioskVoiceSettings";
+import { ReceptionistSettings } from "@/components/host/ReceptionistSettings";
 import { KioskReviewsSettings } from "@/components/host/KioskReviewsSettings";
 import { useEffect, useState } from "react";
 import { PageSections, Section } from "@/components/PageSections";
@@ -100,6 +101,7 @@ const FOCUS = [
   "kioskLook",
   "kioskReviews",
   "kioskVoice",
+  "receptionist",
   // Old links: redirected to kioskTablets (screen fit is on each tablet's card).
   "kioskScreen",
   "goodbye",
@@ -163,6 +165,7 @@ const OWN_CARD = new Set([
   "kioskLook",
   "kioskReviews",
   "kioskVoice",
+  "receptionist",
   "goodbye",
   "welcomeCards",
   "money",
@@ -793,6 +796,13 @@ function SettingsPage() {
               <DoorTablets
                 property={themedProperty as unknown as { id: string; short_code: string }}
               />
+            </div>
+          ) : null}
+        </Section>
+        <Section id="receptionist">
+          {themedProperty ? (
+            <div id="settings-receptionist" className="scroll-mt-24 rounded-2xl">
+              <ReceptionistSettings propertyId={(themedProperty as { id: string }).id} />
             </div>
           ) : null}
         </Section>

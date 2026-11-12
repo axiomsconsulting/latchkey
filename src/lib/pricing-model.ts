@@ -21,6 +21,7 @@ export const FEATURES = {
   api: "API and MCP server (connect AI assistants and other apps)",
   priority_support: "Priority support",
   voice_checkin: "Voice check-in concierge on door tablets",
+  ai_receptionist: "AI receptionist on door tablets and guests' phones (voice and text)",
 } as const;
 export type FeatureKey = keyof typeof FEATURES;
 

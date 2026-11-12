@@ -224,3 +224,36 @@ export async function transcribeReply(bytes: Uint8Array, mime: string): Promise<
   const json = (await res.json().catch(() => ({}))) as { text?: string };
   return typeof json.text === "string" ? json.text.slice(0, 300) : null;
 }
+
+/**
+ * The receptionist's answer spoken in the chosen studio voice (ElevenLabs, live, not kept), as MP3
+ * bytes; null when there's no key or voice, or ElevenLabs refuses (the device's own voice is used then).
+ */
+export async function speakLive(text: string, gender: VoiceGender): Promise<Uint8Array | null> {
+  const s = await read();
+  const voice = s[gender];
+  if (!s.apiKey || !voice || !text.trim()) return null;
+  try {
+    const res = await fetch(
+      `${API}/text-to-speech/${encodeURIComponent(voice.voiceId)}?output_format=mp3_44100_64`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": s.apiKey,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text: text.slice(0, 900),
+          model_id: "eleven_flash_v2_5",
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        }),
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!res.ok) return null;
+    return new Uint8Array(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}

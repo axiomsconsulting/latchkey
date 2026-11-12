@@ -164,6 +164,8 @@ export type IdRead = {
   homeAddress?: string | null;
   /** That address's town and country ("Lyon, France"): the register's next destination if they're going home. */
   homeTown?: string | null;
+  /** The document's sex field (M, F or X), used only to pick the receptionist's voice. Never stored. */
+  sex?: "M" | "F" | "X" | null;
 };
 
 export type IdVerdict =
