@@ -107,7 +107,9 @@ function FindRoom({ d }: { d: NonNullable<Extras["directions"]> }) {
       {d.floors.map((f) => (
         <figure key={f.id} className="space-y-1">
           {d.floors.length > 1 ? (
-            <figcaption className="text-sm font-medium">{copy.floorName(levelName(f.level))}</figcaption>
+            <figcaption className="text-sm font-medium">
+              {copy.floorName(levelName(f.level))}
+            </figcaption>
           ) : null}
           <FloorMapView
             url={f.url}
@@ -144,7 +146,15 @@ function FindRoom({ d }: { d: NonNullable<Extras["directions"]> }) {
   );
 }
 
-function Key({ colour, dashed, children }: { colour: string; dashed?: boolean; children: React.ReactNode }) {
+function Key({
+  colour,
+  dashed,
+  children,
+}: {
+  colour: string;
+  dashed?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <span

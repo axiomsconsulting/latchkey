@@ -8,6 +8,7 @@
  */
 
 import {
+  entranceName,
   hasMap,
   levelName,
   mapDirections,
@@ -30,6 +31,8 @@ export type Pins = {
   lift?: Point;
   /** Room id → where it is on this floor. */
   rooms: Record<string, Point>;
+  /** "" (left out) for the main house, else the separate building this floor is in ("Annex"). */
+  building?: string;
   /** The floor map drawn over the plan (floor-map.ts), kept only when there's something in it. */
   areas?: Area[];
   lines?: Line[];
@@ -71,6 +74,15 @@ export function normalisePins(raw: unknown): Pins {
   if (s) out.stairs = s;
   const l = pt(o["lift"]);
   if (l) out.lift = l;
+  const b =
+    typeof o["building"] === "string"
+      ? o["building"]
+          // eslint-disable-next-line no-control-regex -- strips control characters
+          .replace(/[<>\u0000-\u001f]/g, "")
+          .trim()
+          .slice(0, 40)
+      : "";
+  if (b) out.building = b;
   const m = normaliseMap(o);
   if (m.areas.length) out.areas = m.areas;
   if (m.lines.length) out.lines = m.lines;
@@ -117,6 +129,7 @@ export function mapFloors(plans: FloorPlan[]): MapFloor[] {
   return plans.map((p) => ({
     id: p.id,
     level: p.level,
+    building: p.pins.building ?? "",
     entrance: p.pins.entrance,
     lift: p.pins.lift,
     rooms: p.pins.rooms,
@@ -152,16 +165,19 @@ export function directionsTo(
     const d = mapDirections(mapFloors(plans), roomId, roomName, roomNames);
     if (d) return d;
   }
-  const home = plans.find((p) => p.pins.entrance);
   const plan = plans.find((p) => p.pins.rooms[roomId]);
+  const same = (p: FloorPlan) => (p.pins.building ?? "") === (plan?.pins.building ?? "");
+  const home = plans.find((p) => p.pins.entrance && same(p));
   if (!home?.pins.entrance || !plan) return null;
+  // Only this building's floors count (an annex has its own stairs and entrance).
+  plans = plans.filter(same);
   const entrance = home.pins.entrance;
   const facing = entrance.facing;
   const at = plan.pins.rooms[roomId]!;
   const steps: string[] = [];
   if (plan.level === home.level) {
     const w = whereFrom(entrance, at, facing);
-    steps.push(`Come in through the main entrance.`);
+    steps.push(`Come in through ${entranceName(home.pins.building)}.`);
     steps.push(`${roomName} is on this floor, ${join(w.depth, w.side)}.`);
     return { steps, planId: plan.id, level: plan.level, at };
   }
@@ -169,7 +185,7 @@ export function directionsTo(
   const up = plan.level > home.level;
   const stairs = home.pins.stairs;
   const lift = home.pins.lift;
-  steps.push(`Come in through the main entrance.`);
+  steps.push(`Come in through ${entranceName(home.pins.building)}.`);
   if (stairs) {
     const w = whereFrom(entrance, stairs, facing);
     steps.push(`The stairs are ${join(w.depth, w.side)}.`);

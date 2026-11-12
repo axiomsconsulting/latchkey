@@ -335,28 +335,32 @@ export const saveFloorPins = createServerFn({ method: "POST" })
     const { normalisePins } = await import("./floor-plans");
     const sb = await (await srv()).db();
     const pins = normalisePins(data.pins);
-    // One entrance for the property: marking it on this floor takes it off the others.
-    if (pins.entrance) {
-      const plans = await (await srv()).plansFor(sb, data.propertyId);
-      for (const p of plans)
-        if (p.id !== data.id && p.pins.entrance) {
-          const { entrance: _e, ...rest } = p.pins;
-          await sb.from("floor_plans").update({ pins: rest }).eq("id", p.id);
-        }
-    }
-    // A room is on one floor only.
+    // One entrance per building (the main house, or an annex): marking it here takes it off the
+    // building's other floors. A room is on one floor only, as a pin or as an area.
     const plans = await (await srv()).plansFor(sb, data.propertyId);
+    const here = pins.building ?? "";
+    const mine = new Set((pins.areas ?? []).map((a) => a.roomId).filter(Boolean));
     for (const p of plans) {
       if (p.id === data.id) continue;
-      const clash = Object.keys(p.pins.rooms).filter((r) => pins.rooms[r]);
-      if (clash.length) {
-        const rooms = { ...p.pins.rooms };
-        for (const r of clash) delete rooms[r];
-        await sb
-          .from("floor_plans")
-          .update({ pins: { ...p.pins, rooms } })
-          .eq("id", p.id);
+      let next = p.pins;
+      if (pins.entrance && next.entrance && (next.building ?? "") === here) {
+        const { entrance: _e, ...rest } = next;
+        next = rest;
       }
+      const clash = Object.keys(next.rooms).filter((r) => pins.rooms[r] || mine.has(r));
+      if (clash.length) {
+        const rooms = { ...next.rooms };
+        for (const r of clash) delete rooms[r];
+        next = { ...next, rooms };
+      }
+      if (next.areas?.some((a) => a.roomId && (mine.has(a.roomId) || pins.rooms[a.roomId])))
+        next = {
+          ...next,
+          areas: next.areas.map((a) =>
+            a.roomId && (mine.has(a.roomId) || pins.rooms[a.roomId]) ? { ...a, roomId: null } : a,
+          ),
+        };
+      if (next !== p.pins) await sb.from("floor_plans").update({ pins: next }).eq("id", p.id);
     }
     const { error } = await sb
       .from("floor_plans")
@@ -383,4 +387,49 @@ export const deleteFloorPlan = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.storage.from("guides").remove([old.image_path]);
     return { ok: true };
+  });
+
+/** Reads the floor's plan picture with AI and proposes marks (areas, doors, stairs, entrance) for the host to check. */
+const planReads = new Map<string, number[]>();
+export const readFloorPlanMap = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ propertyId: uuid, id: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertNotSharedDemo(context.claims);
+    const hostId = await write(context, data.propertyId);
+    const { jobAllowed, bumpUsage } = await import("./usage.server");
+    if (!(await jobAllowed("ai_floor_plans")))
+      throw new Error(
+        "Reading plans automatically is switched off just now: draw the areas yourself.",
+      );
+    // A few reads a property an hour (each costs Latchkey a model call).
+    const now = Date.now();
+    const recent = (planReads.get(data.propertyId) ?? []).filter((t) => now - t < 3_600_000);
+    if (recent.length >= 6)
+      throw new Error("That's enough readings for now: try again in an hour.");
+    planReads.set(data.propertyId, [...recent, now]);
+    const sb = await (await srv()).db();
+    const { data: plan } = await sb
+      .from("floor_plans")
+      .select("id, property_id, level, image_path")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!plan || plan.property_id !== data.propertyId) throw new Error("Floor plan not found.");
+    const { data: rooms } = await sb
+      .from("rooms")
+      .select("id, display_name, public_title")
+      .eq("property_id", data.propertyId)
+      .neq("active", false);
+    const { readPlanPicture } = await import("./floor-map-ai.server");
+    const read = await readPlanPicture(
+      plan.image_path,
+      plan.level,
+      ((rooms ?? []) as any[]).map((r) => ({
+        id: r.id as string,
+        name: (r.public_title || r.display_name) as string,
+      })),
+    );
+    await bumpUsage(hostId, "ai:floor_plan");
+    if (!read) throw new Error("That picture doesn't look like a floor plan Latchkey can read.");
+    return read;
   });

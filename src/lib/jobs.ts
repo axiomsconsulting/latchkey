@@ -188,6 +188,15 @@ export const JOBS: Job[] = branded([
     startsOff: true,
   },
   {
+    key: "ai_floor_plans",
+    name: "AI floor plan reading",
+    kind: "on_use",
+    what: "When a host taps Read the plan for me, reads the floor plan picture and proposes its rooms, hallways, landings, stairs, doors and entrance for the host to check. Off: hosts draw them themselves.",
+    metric: "ai:floor_plan",
+    runnable: false,
+    startsOff: true,
+  },
+  {
     key: "ai_receptionist",
     name: "AI receptionist (Pro)",
     kind: "on_use",

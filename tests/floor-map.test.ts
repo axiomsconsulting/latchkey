@@ -6,6 +6,10 @@ import {
   houseText,
   mapDirections,
   marksFromReading,
+  missingLevels,
+  nextLevels,
+  floorTitle,
+  sortFloors,
   matchRoomLabel,
   normaliseMap,
   sharedEdge,
@@ -68,7 +72,13 @@ const firstMap = normaliseMap({
     { id: "land1", kind: "landing", poly: rect(0.4, 0, 0.6, 0.6) },
     { id: "room2", kind: "bedroom", poly: rect(0, 0, 0.4, 0.3), roomId: R2 },
     { id: "room3", kind: "bedroom", poly: rect(0, 0.3, 0.4, 0.6), roomId: R3 },
-    { id: "owner", kind: "bedroom", name: "Owner's room", access: "private", poly: rect(0.6, 0, 1, 0.6) },
+    {
+      id: "owner",
+      kind: "bedroom",
+      name: "Owner's room",
+      access: "private",
+      poly: rect(0.6, 0, 1, 0.6),
+    },
   ],
   lines: [
     { id: "droom2", kind: "door", pts: v(0.4, 0.1, 0.4, 0.2) },
@@ -89,7 +99,15 @@ describe("floor map", () => {
         { id: "ok01", kind: "kitchen", poly: rect(0, 0, 0.5, 0.5) },
         { id: "ok01", kind: "kitchen", poly: rect(0, 0, 0.5, 0.5) },
         { id: "bad", kind: "kitchen", poly: rect(0, 0, 0.5, 0.5) },
-        { id: "far1", kind: "hallway", poly: [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 1 }] },
+        {
+          id: "far1",
+          kind: "hallway",
+          poly: [
+            { x: 0, y: 0 },
+            { x: 2, y: 0 },
+            { x: 0, y: 1 },
+          ],
+        },
       ],
       lines: [{ id: "st01", kind: "stairs", pts: v(0, 0, 0, 1), toLevel: 99 }],
       items: [{ id: "it01", kind: "spaceship", at: { x: 0.1, y: 0.1 } }],
@@ -107,7 +125,13 @@ describe("floor map", () => {
 
   it("reads the stairs' shape", () => {
     expect(stairShape(v(0, 1, 0, 0)).shape).toBe("straight");
-    expect(stairShape([{ x: 0.5, y: 1 }, { x: 0.5, y: 0.5 }, { x: 0.8, y: 0.5 }])).toMatchObject({
+    expect(
+      stairShape([
+        { x: 0.5, y: 1 },
+        { x: 0.5, y: 0.5 },
+        { x: 0.8, y: 0.5 },
+      ]),
+    ).toMatchObject({
       shape: "turning",
       side: "right",
       corners: 1,
@@ -165,10 +189,17 @@ describe("floor map", () => {
 
   it("falls back to the older marks without a map, and uses the map when there is one", () => {
     const plans: FloorPlan[] = [
-      { id: "g", level: 0, label: null, pins: normalisePins({ entrance: { x: 0.5, y: 0.98, facing: "up" }, ...groundMap }) },
+      {
+        id: "g",
+        level: 0,
+        label: null,
+        pins: normalisePins({ entrance: { x: 0.5, y: 0.98, facing: "up" }, ...groundMap }),
+      },
       { id: "f", level: 1, label: null, pins: normalisePins(firstMap) },
     ];
-    expect(directionsTo(plans, R1, "Room 1")!.steps[1]).toBe("Room 1 is the second door on your right.");
+    expect(directionsTo(plans, R1, "Room 1")!.steps[1]).toBe(
+      "Room 1 is the second door on your right.",
+    );
   });
 
   it("says what guests may use and what's private", () => {
@@ -179,7 +210,9 @@ describe("floor map", () => {
     expect(n.private.map((p) => p.name)).toEqual(["lounge", "Owner's room"]);
     expect(n.barriers[0]).toMatch(/A curtain .* first floor marks a private area/);
     expect(n.useful).toEqual(["The thermostat is in the hallway on the ground floor."]);
-    expect(houseText(n)).toMatch(/^Shared spaces guests may use: kitchenette \(ground floor\) with fridge/);
+    expect(houseText(n)).toMatch(
+      /^Shared spaces guests may use: kitchenette \(ground floor\) with fridge/,
+    );
   });
 });
 
@@ -204,7 +237,15 @@ describe("reading a plan", () => {
           { kind: "lounge", label: "Living", corners: rect(0, 0.5, 1.2, 1) },
         ],
         doors: [{ kind: "door", from: { x: 0.5, y: 0.1 }, to: { x: 0.5, y: 0.2 } }],
-        stairs: [{ goes: "up", path: [{ x: 0.1, y: 0.9 }, { x: 0.1, y: 0.6 }] }],
+        stairs: [
+          {
+            goes: "up",
+            path: [
+              { x: 0.1, y: 0.9 },
+              { x: 0.1, y: 0.6 },
+            ],
+          },
+        ],
         entrance: { x: 0.5, y: 1, facing: "up" },
       },
       0,
@@ -222,5 +263,48 @@ describe("reading a plan", () => {
     ]);
     expect(m.entrance).toEqual({ x: 0.5, y: 1, facing: "up" });
     expect(marksFromReading({ is_floor_plan: false }, 0, rooms)).toBeNull();
+  });
+});
+
+describe("buildings and levels", () => {
+  it("an annex room uses the annex's own entrance and floors", () => {
+    const annex: MapFloor = {
+      id: "a",
+      level: 0,
+      building: "Annex",
+      entrance: { x: 0.5, y: 0.98, facing: "up" },
+      map: normaliseMap({
+        areas: [
+          { id: "ahall", kind: "hallway", poly: rect(0.3, 0.5, 0.7, 1) },
+          { id: "aroom", kind: "bedroom", poly: rect(0.3, 0, 0.7, 0.5), roomId: R2 },
+        ],
+        lines: [{ id: "adoor", kind: "door", pts: v(0.45, 0.5, 0.55, 0.5) }],
+      }),
+    };
+    // The main house's first floor (level 1) also has a Room 2 mark-free landing: never used for the annex.
+    const d = mapDirections([...floors.slice(0, 1), annex], R2, "Garden Room")!;
+    expect(d.steps).toEqual([
+      "Come in through the Annex's entrance into the hallway.",
+      "Garden Room is the door ahead.",
+    ]);
+  });
+  it("orders floors and suggests the next level up or down", () => {
+    const fl = [
+      { level: 1, building: "" },
+      { level: 0, building: "Annex" },
+      { level: -1, building: "" },
+      { level: 0, building: "" },
+    ];
+    expect(sortFloors(fl).map((f) => `${f.building}${f.level}`)).toEqual([
+      "-1",
+      "0",
+      "1",
+      "Annex0",
+    ]);
+    expect(nextLevels([0, 1])).toEqual([2, -1]);
+    expect(nextLevels([])).toEqual([0]);
+    expect(missingLevels([0, 2])).toEqual([1]);
+    expect(floorTitle("Annex", 1)).toBe("Annex · First floor");
+    expect(floorTitle("", -1)).toBe("Basement");
   });
 });

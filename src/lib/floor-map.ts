@@ -110,6 +110,8 @@ export type FloorMap = { areas: Area[]; lines: Line[]; items: Item[] };
 export type MapFloor = {
   id: string;
   level: number;
+  /** "" for the main house, else the building's name ("Annex", "Coach house"): each has its own floors and entrance. */
+  building?: string;
   entrance?: (Point & { facing: Facing }) | undefined;
   lift?: Point | undefined;
   /** Older single-point room marks (room id → point). */
@@ -314,7 +316,10 @@ const mid = (p: Point[]): Point => {
     const d = dist(p[i - 1]!, p[i]!);
     if (d >= left && d > 0) {
       const t = left / d;
-      return { x: p[i - 1]!.x + (p[i]!.x - p[i - 1]!.x) * t, y: p[i - 1]!.y + (p[i]!.y - p[i - 1]!.y) * t };
+      return {
+        x: p[i - 1]!.x + (p[i]!.x - p[i - 1]!.x) * t,
+        y: p[i - 1]!.y + (p[i]!.y - p[i - 1]!.y) * t,
+      };
     }
     left -= d;
   }
@@ -361,7 +366,8 @@ function segDist(p: Point, a: Point, b: Point): number {
 /** How far p is from the area's outline (0 on it). */
 export function edgeDist(p: Point, poly: Point[]): number {
   let d = Infinity;
-  for (let i = 0; i < poly.length; i++) d = Math.min(d, segDist(p, poly[i]!, poly[(i + 1) % poly.length]!));
+  for (let i = 0; i < poly.length; i++)
+    d = Math.min(d, segDist(p, poly[i]!, poly[(i + 1) % poly.length]!));
   return d;
 }
 
@@ -378,7 +384,8 @@ function along(poly: Point[], step = 0.005): Point[] {
     const a = poly[i]!;
     const b = poly[(i + 1) % poly.length]!;
     const n = Math.max(1, Math.ceil(dist(a, b) / step));
-    for (let k = 0; k < n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
+    for (let k = 0; k < n; k++)
+      out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
   }
   return out;
 }
@@ -386,13 +393,19 @@ function along(poly: Point[], step = 0.005): Point[] {
 const TOUCH = 0.012;
 
 /** The wall two areas share: its length and middle, or null when they don't touch. */
-export function sharedEdge(a: Point[], b: Point[]): { length: number; at: Point; pts: Point[] } | null {
+export function sharedEdge(
+  a: Point[],
+  b: Point[],
+): { length: number; at: Point; pts: Point[] } | null {
   const hits = along(a).filter((p) => edgeDist(p, b) <= TOUCH);
   const length = hits.length * 0.005;
   if (length < 0.02) return null;
   return {
     length,
-    at: { x: hits.reduce((s, p) => s + p.x, 0) / hits.length, y: hits.reduce((s, p) => s + p.y, 0) / hits.length },
+    at: {
+      x: hits.reduce((s, p) => s + p.x, 0) / hits.length,
+      y: hits.reduce((s, p) => s + p.y, 0) / hits.length,
+    },
     pts: hits,
   };
 }
@@ -400,8 +413,7 @@ export function sharedEdge(a: Point[], b: Point[]): { length: number; at: Point;
 /** The area a point is in (the smallest that holds it), or the nearest within `near`. */
 export function areaAt(areas: Area[], p: Point, near = 0.05): Area | null {
   const holding = areas.filter((a) => inside(p, a.poly));
-  if (holding.length)
-    return holding.sort((x, y) => polyArea(x.poly) - polyArea(y.poly))[0] ?? null;
+  if (holding.length) return holding.sort((x, y) => polyArea(x.poly) - polyArea(y.poly))[0] ?? null;
   let best: Area | null = null;
   let bd = near;
   for (const a of areas) {
@@ -428,7 +440,10 @@ function polyArea(poly: Point[]): number {
 function between(areas: Area[], line: Point[]): [Area, Area] | null {
   const m = mid(line);
   const near = areas
-    .map((a) => ({ a, d: inside(m, a.poly) ? Math.min(0.0001, edgeDist(m, a.poly)) : edgeDist(m, a.poly) }))
+    .map((a) => ({
+      a,
+      d: inside(m, a.poly) ? Math.min(0.0001, edgeDist(m, a.poly)) : edgeDist(m, a.poly),
+    }))
     .filter((x) => x.d <= 0.04)
     .sort((x, y) => x.d - y.d);
   // Both ends of a line help when its middle is in one area only (a door drawn just inside a room).
@@ -455,7 +470,12 @@ function turns(p: Point[]): number[] {
 }
 
 /** The stairs' shape as drawn: straight, turning (sharp corners) or curved (many small bends). */
-export function stairShape(p: Point[]): { shape: Exclude<StairShape, "auto">; corners: number; side: "left" | "right" | null; total: number } {
+export function stairShape(p: Point[]): {
+  shape: Exclude<StairShape, "auto">;
+  corners: number;
+  side: "left" | "right" | null;
+  total: number;
+} {
   const t = turns(p);
   const total = t.reduce((s, x) => s + x, 0);
   const side = Math.abs(total) < 30 ? null : total > 0 ? "right" : "left";
@@ -529,20 +549,32 @@ export function connections(floors: MapFloor[]): Map<string, Edge[]> {
           e.pts.filter((p) => barriers.some((l) => lineDist(p, l.pts) <= 0.02)).length >=
           e.pts.length * 0.4;
         if (blocked) continue;
-        both(f, a, f, b, { kind: "open", at: e.at, line: null }, { kind: "open", at: e.at, line: null });
+        both(
+          f,
+          a,
+          f,
+          b,
+          { kind: "open", at: e.at, line: null },
+          { kind: "open", at: e.at, line: null },
+        );
       }
     // Stairs, drawn on this floor towards the floor they lead to.
     for (const l of lines.filter((x) => x.kind === "stairs")) {
       const goesUp = l.toLevel == null || l.toLevel > f.level;
       const toLevel = l.toLevel ?? f.level + (goesUp ? 1 : -1);
-      const other = floors.find((x) => x.level === toLevel);
+      const other = floors.find(
+        (x) => x.level === toLevel && (x.building ?? "") === (f.building ?? ""),
+      );
       const start = l.pts[0]!;
       const end = l.pts[l.pts.length - 1]!;
       const here = areaAt(areas, start, 0.08);
       if (!other || !here) continue;
       const landing =
         areaAt(other.map.areas, end, 0.03) ??
-        nearestOf(other.map.areas.filter((a) => CIRCULATION.includes(a.kind)), end) ??
+        nearestOf(
+          other.map.areas.filter((a) => CIRCULATION.includes(a.kind)),
+          end,
+        ) ??
         nearestOf(other.map.areas, end);
       if (!landing) continue;
       const lastDir = unit(sub(end, l.pts[l.pts.length - 2]!));
@@ -559,7 +591,7 @@ export function connections(floors: MapFloor[]): Map<string, Edge[]> {
       );
     }
   }
-  // The lift joins every floor where it's marked.
+  // The lift joins every floor of the same building where it's marked.
   const lifts = floors
     .map((f) => ({ f, a: f.lift ? areaAt(f.map.areas, f.lift, 0.06) : null }))
     .filter((x): x is { f: MapFloor; a: Area } => !!x.a && !!x.f.lift);
@@ -567,6 +599,7 @@ export function connections(floors: MapFloor[]): Map<string, Edge[]> {
     for (let j = i + 1; j < lifts.length; j++) {
       const x = lifts[i]!;
       const y = lifts[j]!;
+      if ((x.f.building ?? "") !== (y.f.building ?? "")) continue;
       both(
         x.f,
         x.a,
@@ -616,9 +649,11 @@ export function findRoute(
   floors: MapFloor[],
   roomId: string,
 ): { start: Node; steps: Array<{ from: Node; to: Node; via: Via }> } | null {
-  const home = floors.find((f) => f.entrance);
   const goal = roomArea(floors, roomId);
-  if (!home?.entrance || !goal) return null;
+  if (!goal) return null;
+  // The entrance of the building the room is in (an annex has its own).
+  const home = floors.find((f) => f.entrance && (f.building ?? "") === (goal.floor.building ?? ""));
+  if (!home?.entrance) return null;
   const startArea = areaAt(home.map.areas, home.entrance, 0.06);
   if (!startArea) return null;
   const start: Node = { floor: home, area: startArea };
@@ -656,7 +691,7 @@ export function findRoute(
   }
   if (!best.has(goalKey)) return null;
   const steps: Array<{ from: Node; to: Node; via: Via }> = [];
-  for (let k = goalKey; prev.has(k); ) {
+  for (let k = goalKey; prev.has(k);) {
     const p = prev.get(k)!;
     steps.unshift({ from: nodes.get(p.from)!, to: nodes.get(k)!, via: p.via });
     k = p.from;
@@ -730,11 +765,12 @@ export function mapDirections(
   const home = r.start.floor;
   let pos: Point = { x: home.entrance!.x, y: home.entrance!.y };
   let heading = VEC[home.entrance!.facing];
-  const steps: string[] = [`Come in through the main entrance ${into(r.start.area, names)}.`];
+  const door = entranceName(home.building);
+  const steps: string[] = [`Come in through ${door} ${into(r.start.area, names)}.`];
   const route: MapDirections["route"] = [{ planId: home.id, level: home.level, points: [pos] }];
   const last = () => route[route.length - 1]!;
   const goal = r.steps.length ? r.steps[r.steps.length - 1]!.to : r.start;
-  if (!r.steps.length) steps[0] = `Come in through the main entrance: ${roomName} is right there.`;
+  if (!r.steps.length) steps[0] = `Come in through ${door}: ${roomName} is right there.`;
 
   for (let i = 0; i < r.steps.length; i++) {
     const s = r.steps[i]!;
@@ -742,7 +778,10 @@ export function mapDirections(
     // A long way across a hallway or landing to one side: turn along it first.
     const turn = turnAlong(s.from.area, pos, heading, v.at);
     if (turn) {
-      steps.push(`Turn ${turn.side} ${turn.along ? `along the ${nameOf(s.from.area, names)}` : ""}`.trim() + ".");
+      steps.push(
+        `Turn ${turn.side} ${turn.along ? `along the ${nameOf(s.from.area, names)}` : ""}`.trim() +
+          ".",
+      );
       heading = turn.heading;
     }
     const rel = relative(pos, heading, v.at);
@@ -760,9 +799,11 @@ export function mapDirections(
       }
       const up = to.floor.level > s.from.floor.level;
       const floorsGone = Math.abs(to.floor.level - s.from.floor.level);
-      const how = floorsGone > 1 ? `${up ? "up" : "down"} ${floorsGone} floors` : up ? "up" : "down";
+      const how =
+        floorsGone > 1 ? `${up ? "up" : "down"} ${floorsGone} floors` : up ? "up" : "down";
       const place = close ? "" : ` ${where(w)}`;
-      if (v.kind === "lift") steps.push(`Take the lift${place} ${how} to the ${levelName(to.floor.level)}.`);
+      if (v.kind === "lift")
+        steps.push(`Take the lift${place} ${how} to the ${levelName(to.floor.level)}.`);
       else {
         const shape = stairWords(v.line, v.reverse);
         const n = v.line.count ? ` (${v.line.count} steps)` : "";
@@ -796,25 +837,25 @@ export function mapDirections(
       ord = ORDINAL[others.length] ?? "";
     }
     const place = close ? "" : ` ${where(w)}`;
-    const door = v.kind === "opening" ? "doorway" : "door";
+    const doorWord = v.kind === "opening" ? "doorway" : "door";
     if (isGoal) {
       if (v.kind === "open") steps.push(`${roomName} is${place || " here"}.`);
       else if (v.kind === "steps")
-        steps.push(
-          `${roomName} is${place || " here"}, ${stepsWords(v.line!, pos)}.`,
-        );
-      else
-        steps.push(
-          `${roomName} is the ${ord ? `${ord} ` : ""}${door}${place || " here"}.`,
-        );
+        steps.push(`${roomName} is${place || " here"}, ${stepsWords(v.line!, pos)}.`);
+      else steps.push(`${roomName} is the ${ord ? `${ord} ` : ""}${doorWord}${place || " here"}.`);
     } else if (v.kind === "open") {
       // Walking into a stairwell just to take the stairs: the stairs' own step says where they are.
       const next = r.steps[i + 1]?.via.kind;
       if (!(s.to.area.kind === "stairwell" && (next === "stairs" || next === "lift")))
-        steps.push(`${w === "ahead" || close ? "Carry on" : `Turn ${w === "behind" ? "round" : w}`} ${into(s.to.area, names)}.`);
+        steps.push(
+          `${w === "ahead" || close ? "Carry on" : `Turn ${w === "behind" ? "round" : w}`} ${into(s.to.area, names)}.`,
+        );
     } else if (v.kind === "steps")
       steps.push(`${capital(stepsWords(v.line!, pos))}${place}, ${into(s.to.area, names)}.`);
-    else steps.push(`Go through the ${ord ? `${ord} ` : ""}${door}${place} ${into(s.to.area, names)}.`);
+    else
+      steps.push(
+        `Go through the ${ord ? `${ord} ` : ""}${doorWord}${place} ${into(s.to.area, names)}.`,
+      );
     // Walking on: through the door, into the next area.
     const next = centroid(s.to.area.poly);
     heading = unit(sub(next, v.at));
@@ -864,6 +905,49 @@ function turnAlong(
   const cross = h.x * axis.y - h.y * axis.x;
   if (Math.abs(cross) < 0.5) return null;
   return { side: cross > 0 ? "right" : "left", heading: axis, along };
+}
+
+/** "the main entrance", or "the annex's entrance" for a separate building. */
+export function entranceName(building: string | undefined): string {
+  return building ? `the ${building.replace(/^the /i, "")}'s entrance` : "the main entrance";
+}
+
+/** How a floor is named in tabs and on guest pages: "Ground floor", "Annex · First floor". */
+export function floorTitle(
+  building: string | undefined,
+  level: number,
+  label?: string | null,
+): string {
+  const l = levelName(level);
+  const base = `${l.charAt(0).toUpperCase()}${l.slice(1)}`;
+  return [building, label || base].filter(Boolean).join(" · ");
+}
+
+/** Floors in order: the main house first, then each building, each from its lowest level up. */
+export function sortFloors<T extends { level: number; building?: string }>(floors: T[]): T[] {
+  return [...floors].sort(
+    (a, b) =>
+      Number(!!a.building) - Number(!!b.building) ||
+      (a.building ?? "").localeCompare(b.building ?? "") ||
+      a.level - b.level,
+  );
+}
+
+/** Levels missing between a building's floors (stairs to them can't be followed), as level numbers. */
+export function missingLevels(levels: number[]): number[] {
+  if (!levels.length) return [];
+  const have = new Set(levels);
+  const out: number[] = [];
+  for (let l = Math.min(...levels); l <= Math.max(...levels); l++) if (!have.has(l)) out.push(l);
+  return out;
+}
+
+/** The levels a new floor can take in a building: the next one up and the next one down (each free). */
+export function nextLevels(levels: number[]): number[] {
+  if (!levels.length) return [0];
+  const up = Math.max(...levels) + 1;
+  const down = Math.min(...levels) - 1;
+  return [up, ...(down >= -3 ? [down] : [])].filter((l) => l <= 30);
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -927,14 +1011,22 @@ export function houseNotes(floors: MapFloor[], roomNames: Record<string, string>
     const { areas, lines, items } = f.map;
     const at = (p: Point) => areaAt(areas, p, 0.02);
     for (const a of areas) {
-      const inHere = items.filter((it) => !SAFETY.includes(it.kind) && it.kind !== "heater" && at(it.at)?.id === a.id);
+      const inHere = items.filter(
+        (it) => !SAFETY.includes(it.kind) && it.kind !== "heater" && at(it.at)?.id === a.id,
+      );
       if (a.access === "shared" && !CIRCULATION.includes(a.kind))
-        notes.shared.push({ name: nameOf(a, roomNames), level: f.level, items: inHere.map(itemText) });
-      if (a.access === "private") notes.private.push({ name: nameOf(a, roomNames), level: f.level });
+        notes.shared.push({
+          name: nameOf(a, roomNames),
+          level: f.level,
+          items: inHere.map(itemText),
+        });
+      if (a.access === "private")
+        notes.private.push({ name: nameOf(a, roomNames), level: f.level });
     }
     for (const l of lines.filter((x) => BARRIERS.includes(x.kind))) {
       const a = at(mid(l.pts));
-      const what = l.kind === "barred" ? "A locked door" : l.kind === "curtain" ? "A curtain" : "A line";
+      const what =
+        l.kind === "barred" ? "A locked door" : l.kind === "curtain" ? "A curtain" : "A line";
       notes.barriers.push(
         `${what}${a ? ` in the ${nameOf(a, roomNames)}` : ""} on the ${levelName(f.level)} marks a private area: please don't go past it.`,
       );
@@ -955,7 +1047,10 @@ export function houseText(n: HouseNotes): string {
   if (n.shared.length)
     lines.push(
       `Shared spaces guests may use: ${n.shared
-        .map((s) => `${s.name} (${levelName(s.level)})${s.items.length ? ` with ${s.items.join(", ")}` : ""}`)
+        .map(
+          (s) =>
+            `${s.name} (${levelName(s.level)})${s.items.length ? ` with ${s.items.join(", ")}` : ""}`,
+        )
         .join("; ")}.`,
     );
   if (n.private.length)
@@ -971,7 +1066,11 @@ export const hasMap = (m: FloorMap | undefined | null) => !!m && m.areas.length 
 
 /* --------------------------- reading a plan (AI) --------------------------- */
 
-const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const squash = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
 /** The bookable room a label printed on a plan names ("Bedroom 2", "Room 2", "The Garden Room"), if any. */
 export function matchRoomLabel(
@@ -1109,11 +1208,12 @@ export function marksFromReading(
       ? { x: Math.min(1, Math.max(0, x)), y: Math.min(1, Math.max(0, y)) }
       : null;
   };
-  const list = (v: unknown) => (Array.isArray(v) ? v : []);
+  type Raw = Record<string, unknown> | null | undefined;
+  const list = (v: unknown) => (Array.isArray(v) ? (v as Raw[]) : []);
   const used = new Set<string>();
-  const areas = list(r["areas"]).map((a: any) => {
-    const kind = pick(a?.kind, AREA_KINDS, "other");
-    const label = words(a?.label, 40);
+  const areas = list(r["areas"]).map((a) => {
+    const kind = pick(a?.["kind"], AREA_KINDS, "other");
+    const label = words(a?.["label"], 40);
     let roomId = kind === "bedroom" ? matchRoomLabel(label, rooms) : null;
     if (roomId && used.has(roomId)) roomId = null;
     if (roomId) used.add(roomId);
@@ -1121,22 +1221,22 @@ export function marksFromReading(
       id: markId(),
       kind,
       name: roomId ? "" : label,
-      poly: list(a?.corners).map(clamp),
+      poly: list(a?.["corners"]).map(clamp),
       access: defaultAccess(kind),
       roomId,
     };
   });
   const lines = [
-    ...list(r["doors"]).map((d: any) => ({
+    ...list(r["doors"]).map((d) => ({
       id: markId(),
-      kind: pick(d?.kind, ["door", "opening", "steps"] as const, "door"),
-      pts: [clamp(d?.from), clamp(d?.to)],
+      kind: pick(d?.["kind"], ["door", "opening", "steps"] as const, "door"),
+      pts: [clamp(d?.["from"]), clamp(d?.["to"])],
     })),
-    ...list(r["stairs"]).map((st: any) => ({
+    ...list(r["stairs"]).map((st) => ({
       id: markId(),
       kind: "stairs",
-      pts: list(st?.path).map(clamp),
-      toLevel: st?.goes === "down" ? level - 1 : level + 1,
+      pts: list(st?.["path"]).map(clamp),
+      toLevel: st?.["goes"] === "down" ? level - 1 : level + 1,
       shape: "auto",
     })),
   ];
@@ -1146,7 +1246,12 @@ export function marksFromReading(
   return {
     map,
     entrance: e
-      ? { ...e, facing: (["up", "down", "left", "right"] as const).includes(facing as Facing) ? (facing as Facing) : "up" }
+      ? {
+          ...e,
+          facing: (["up", "down", "left", "right"] as const).includes(facing as Facing)
+            ? (facing as Facing)
+            : "up",
+        }
       : null,
   };
 }

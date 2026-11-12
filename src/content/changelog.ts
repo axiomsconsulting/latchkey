@@ -47,6 +47,44 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.161.0",
+    date: "2026-11-12",
+    title: "Floor maps",
+    items: [
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Floor plans become floor maps: on each floor draw the rooms, bathrooms, hallways, landings and stairwells, the doors, open doorways and steps, and stairs that go straight, turn or curve. Mark each area as shared, one guest's room, or private, and draw locked doors, curtains and lines guests mustn't cross.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: 'Guests get the way to their room door by door ("Take the stairs on your left up to the first floor. They turn to the right once. Turn right along the landing. Room 3 is the second door on your right."), never through a private area, with the way drawn on each floor\'s plan and where the radiator or heater is in their room.',
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Place the fridge, microwave, kettle, cutlery, crockery, thermostat, boiler, fuse box, first aid kit and more on the plan. Guests see which spaces they may use and what's in them, what's private, and where useful things are; the AI receptionist knows it too.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Floors sit in tabs in order, with Add floor offering the next level up or down. A basement or a separate building such as an annex gets its own floors and entrance.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Read the plan for me: Latchkey reads an uploaded floor plan and proposes its rooms, hallways, stairs, doors and entrance for you to check before saving.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: 'Routine "AI floor plan reading" (off until switched on), counted as ai:floor_plan, at most six reads a property an hour.',
+      },
+    ],
+  },
+  {
     version: "0.160.1",
     date: "2026-11-12",
     title: "Adding a guest after check-in",
