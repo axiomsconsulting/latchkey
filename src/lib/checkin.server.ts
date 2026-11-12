@@ -242,6 +242,7 @@ export async function readIdDetails(
                 "If the document prints the holder's home address (driving licences and some ID cards do), give it as " +
                 "home_address on one line, and home_town as its town or city and country in English (for example Lyon, France); " +
                 "otherwise null for both. " +
+                "Give sex as printed in the document's sex field: M, F or X, or null when it has none. " +
                 "Use null for anything you cannot read clearly. Do not guess and do not return any other details.",
             },
             { type: "input_image", image_url: imageDataUrl },
@@ -283,6 +284,7 @@ export async function readIdDetails(
               place_of_issue: { type: ["string", "null"] },
               home_address: { type: ["string", "null"] },
               home_town: { type: ["string", "null"] },
+              sex: { type: ["string", "null"], enum: ["M", "F", "X", null] },
             },
             required: [
               "is_id_document",
@@ -301,6 +303,7 @@ export async function readIdDetails(
               "place_of_issue",
               "home_address",
               "home_town",
+              "sex",
             ],
           },
         },
@@ -384,6 +387,7 @@ export async function readIdDetails(
       placeOfIssue: str(p["place_of_issue"], 80),
       homeAddress: str(p["home_address"], 300),
       homeTown: str(p["home_town"], 120),
+      sex: p["sex"] === "M" || p["sex"] === "F" || p["sex"] === "X" ? p["sex"] : null,
     };
   } catch {
     return {

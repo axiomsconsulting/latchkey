@@ -1,4 +1,7 @@
 import { CameraSpotPad } from "@/components/host/CameraSpotPad";
+import { ConciergeBell } from "lucide-react";
+import { receptionistAdminCopy } from "@/content/copy";
+import { setKioskReceptionist } from "@/lib/receptionist.functions";
 import { DeviceCalibration } from "@/components/host/KioskCalibration";
 import { InfoTip } from "@/components/host/InfoTip";
 import { useEffect, useState } from "react";
@@ -281,6 +284,7 @@ export function DoorTablets({ property }: { property: Property }) {
                   live={live.data}
                   shot={shots[d.id]}
                   voiceOn={q.data?.voiceOn === true}
+                  receptionistOn={q.data?.receptionistOn === true}
                 />
               ))}
             </div>
@@ -311,9 +315,12 @@ function TabletCard({
   live,
   shot,
   voiceOn,
+  receptionistOn,
 }: {
   /** The host switched voice check-in on: each tablet then chooses whether it listens. */
   voiceOn: boolean;
+  /** The host switched the AI receptionist on: each tablet then chooses whether it runs there. */
+  receptionistOn: boolean;
   latest: string | null;
   device: KioskDevice;
   property: Property;
@@ -328,6 +335,7 @@ function TabletCard({
   const cameraFn = useServerFn(setKioskCamera);
   const modeFn = useServerFn(setKioskMode);
   const voiceFn = useServerFn(setKioskVoiceListen);
+  const receptionistFn = useServerFn(setKioskReceptionist);
   const [label, setLabel] = useState(d.label ?? "");
   const [askCamera, setAskCamera] = useState(false);
   const [told, setTold] = useState(false);
@@ -353,6 +361,16 @@ function TabletCard({
       const res = await cameraFn({ data: { deviceId: d.id, allowed, guestsTold: told } });
       await pingKiosk(res.code);
       setAskCamera(false);
+      onChanged();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : common.errorBody);
+    }
+  }
+
+  async function receptionistHere(on: boolean) {
+    try {
+      const res = await receptionistFn({ data: { deviceId: d.id, on } });
+      await pingKiosk(res.code);
       onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : common.errorBody);
@@ -547,6 +565,20 @@ function TabletCard({
         )}
         {/* Lite, enhanced or full: what the tablet detected is marked; what each level means is in the info button, once. */}
         <LevelSlider device={d} onPick={(m) => void level(m)} />
+        {receptionistOn && !pending ? (
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+            <span className="min-w-0">
+              <span className="flex items-center gap-2">
+                <ConciergeBell className="size-4" />
+                {receptionistAdminCopy.tablet}
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {receptionistAdminCopy.tabletHelp}
+              </span>
+            </span>
+            <Switch checked={d.receptionist} onCheckedChange={(on) => void receptionistHere(on)} />
+          </label>
+        ) : null}
         {voiceOn && !pending ? (
           <label className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
             <span className="min-w-0">

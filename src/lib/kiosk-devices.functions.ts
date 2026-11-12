@@ -546,6 +546,8 @@ export const kioskSnapshotUpload = createServerFn({ method: "POST" })
 
 export type KioskDevice = {
   deviceSig: string | null;
+  /** The AI receptionist runs on this tablet (migration 0110). */
+  receptionist: boolean;
   /** Voice check-in also listens on this tablet (false: it only talks). */
   voiceListen: boolean;
   cameraSpot: CameraSpots;
@@ -595,6 +597,7 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         cardPicker: true,
         compatAvailable: false,
         voiceOn: false,
+        receptionistOn: false,
       };
     const { data: prop } = await sb
       .from("properties")
@@ -635,7 +638,19 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         deviceSig: r.device_sig ?? null,
         cameraSpot: normaliseSpots(r.camera_spot),
         voiceListen: r.voice_listen !== false,
+        receptionist: r.receptionist === true,
       })),
+      // The host's receptionist switch (migration 0110): each tablet then chooses whether it runs there.
+      receptionistOn: await (async () => {
+        const { data: rp, error: rpErr } = await sb
+          .from("properties")
+          .select("receptionist")
+          .eq("id", data.propertyId)
+          .maybeSingle();
+        if (rpErr) return false;
+        const { normaliseReceptionist } = await import("./receptionist");
+        return normaliseReceptionist(rp?.receptionist).on;
+      })(),
     };
   });
 

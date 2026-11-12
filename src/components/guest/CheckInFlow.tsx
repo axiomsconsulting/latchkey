@@ -1,4 +1,5 @@
 import { JumboSlot } from "@/components/guest/JumboSlot";
+import { tellGuestSex } from "@/components/guest/receptionist-events";
 import { DoorCodeCard, type GuestDoor } from "@/components/guest/DoorCodeCard";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -278,6 +279,10 @@ export function CheckInFlow({
   const [checkOut, setCheckOut] = useState("");
   // Read by steps that follow each other within one tap (found → confirm → finish), so kept in a ref too.
   const [token, setTokenState] = useState("");
+  // The receptionist on this screen knows the stay once it's found (Receptionist.tsx).
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("lk-checkin-session", { detail: token || null }));
+  }, [token]);
   const tokenRef = useRef("");
   const setToken = (t: string) => {
     tokenRef.current = t;
@@ -725,6 +730,7 @@ export function CheckInFlow({
       return;
     }
     leadVerified.current = true;
+    tellGuestSex(res.sex);
     setPrefill((p) => ({ ...p, 0: res.prefill }));
     noteRegister(0, res.register);
     setToken(res.token);
@@ -1222,6 +1228,7 @@ export function CheckInFlow({
       );
     }
     if (res.status === "fallback") return fallback("photo_id");
+    if ("sex" in res) tellGuestSex(res.sex);
     setPrefill((x) => ({ ...x, 0: res.prefill }));
     noteRegister(0, res.register);
     afterLead(people, p);

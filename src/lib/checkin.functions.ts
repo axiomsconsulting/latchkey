@@ -608,6 +608,8 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       // The selfie comes straight after the ID, before anything else is asked.
       facePhoto: partyPlan(ctx).facePhoto && !known,
       trusted: !!known,
+      // Only to pick the receptionist's voice on this screen; never kept.
+      sex: read.sex ?? null,
     };
   });
 
@@ -1905,6 +1907,8 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
       result,
       prefill: prefillFrom(read),
       register,
+      // Only to pick the receptionist's voice on this screen; never kept.
+      sex: read.sex ?? null,
     };
   });
 

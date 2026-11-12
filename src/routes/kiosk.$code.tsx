@@ -1,4 +1,5 @@
 import { DEFAULT_ARRIVALS, cardEdge, cardInk } from "@/lib/checkout-goodbye";
+import { Receptionist } from "@/components/guest/Receptionist";
 import { useJumboFit } from "@/hooks/use-kiosk-stage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Mic } from "lucide-react";
@@ -1608,6 +1609,19 @@ function Kiosk() {
         ) : null}
         {voice && !voiceOn ? (
           <VoiceMuteDefault muted={voiceMuted} onToggle={toggleVoiceMuted} />
+        ) : null}
+        {/* The AI receptionist: on tablets the host chose, and on guests' phones when allowed (the server decides). */}
+        {!tour ? (
+          <Receptionist
+            where={{
+              surface: "kiosk",
+              code: p.code,
+              device: shared ? deviceToken(p.code) : null,
+              session: null,
+            }}
+            variant="kiosk"
+            stepKey={stepKey}
+          />
         ) : null}
         {shared ? (
           <KioskSplash

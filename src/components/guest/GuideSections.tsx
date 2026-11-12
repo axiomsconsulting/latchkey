@@ -82,6 +82,25 @@ export function GuideSections({
       // As above.
     }
   };
+  // The receptionist can open a card for the guest (Receptionist.tsx OPEN_GUIDE_EVENT).
+  const openRef = useRef(open);
+  openRef.current = open;
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const key = String((e as CustomEvent).detail ?? "");
+      if (!key) return;
+      if (!openRef.current.includes(key)) onOpenChange([...openRef.current, key]);
+      setTimeout(
+        () =>
+          document
+            .getElementById(`guide-${key}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start", inline: "center" }),
+        80,
+      );
+    };
+    window.addEventListener("lk-open-guide", onOpen);
+    return () => window.removeEventListener("lk-open-guide", onOpen);
+  }, [onOpenChange]);
   // The attachments open in the large viewer: which section, and which one.
   const [viewing, setViewing] = useState<{ key: string; index: number } | null>(null);
   const viewingItems = sections.find((s) => s.key === viewing?.key)?.attachments ?? [];

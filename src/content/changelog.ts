@@ -47,6 +47,34 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.160.0",
+    date: "2026-11-12",
+    title: "The AI receptionist",
+    items: [
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "AI receptionist (Pro): guests ask anything about their stay by typing or talking, in their guide and when they check in on their phone, and get short answers from your guide, property information, Around here and floor plans. It opens the right part of the guide for them, and voice mode listens, answers aloud and listens again.",
+      },
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "On the door tablets you choose, guests can tap Ask reception at any time, and once they've checked in it says the way to their room from your floor plans.",
+      },
+      {
+        kind: "new",
+        area: "Settings",
+        text: "Settings → Door tablets → AI receptionist: turn it on, choose its name and voice, match the voice to the guest (a female voice greets guests whose ID says male and a male voice greets guests whose ID says female), what it talks about, how much it says and your own instructions. Each door tablet has its own switch. It never gives door codes or makes things up, and on a shared tablet it doesn't read out the Wi-Fi password.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: 'Routine "AI receptionist (Pro)" (off until switched on) and the plan feature ai_receptionist; spoken answers use the studio voices\' ElevenLabs key.',
+      },
+    ],
+  },
+  {
     version: "0.159.0",
     date: "2026-11-12",
     title: "A guest guide with pictures, property information, Around here and the way to the room",
