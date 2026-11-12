@@ -1512,7 +1512,8 @@ export const handoffState = createServerFn({ method: "POST" })
     return {
       at: h?.at ?? null,
       rev: h?.rev ?? 0,
-      completed: session.completed_at !== null,
+      // Someone being added after the lead finished (a screen saved since) isn't done yet.
+      completed: session.completed_at !== null && !h?.state,
     };
   });
 
@@ -2566,6 +2567,16 @@ export const completeCheckIn = createServerFn({ method: "POST" })
           () => undefined,
         );
       await tellHostCheckedIn(ctx, room?.display_name ?? null);
+    } else {
+      // A guest added after the lead finished: their screens are done, nothing left to hand over.
+      await (db as LooseDb)
+        .from("checkin_handoffs")
+        .update({ state: null, updated_at: new Date().toISOString() })
+        .eq("session_id", session.id)
+        .then(
+          () => undefined,
+          () => undefined,
+        );
     }
 
     const stay = newToken();
