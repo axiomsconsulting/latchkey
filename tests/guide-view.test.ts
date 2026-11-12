@@ -4,9 +4,10 @@ import { hasMore, readGuideView, swipeStep, wrapIndex } from "../src/lib/guide-v
 
 describe("the guide's two views", () => {
   it("is the list unless the guest picked the gallery", () => {
-    expect(readGuideView(null)).toBe("list");
+    expect(readGuideView(null)).toBe("gallery");
+    expect(readGuideView("list")).toBe("list");
     expect(readGuideView("gallery")).toBe("gallery");
-    expect(readGuideView("nonsense")).toBe("list");
+    expect(readGuideView("nonsense")).toBe("gallery");
   });
 
   it("a level swipe moves one; a short or mostly up-and-down one doesn't", () => {

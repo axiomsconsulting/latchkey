@@ -47,6 +47,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.159.0",
+    date: "2026-11-12",
+    title: "A guest guide with pictures, property information, Around here and the way to the room",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Guides open as a gallery of picture cards (each section's first photo behind its title); guests can still switch to the list.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Property information: add short items (bins, parking, heating, the washing machine…) on Stay guides, each an icon that opens to notes, details and photos. Guests see them as one tidy card of icons.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Around here: places to eat, drink, shop and see near the property (from OpenStreetMap), your own picks and events, and what's on nearby, each with walking and driving directions that open in the guest's maps app from where they are. Hide any place you'd rather not suggest.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Floor plans: upload a plan of each floor and mark the entrance, stairs, lift and rooms. Each guest's guide shows Finding your room: how many flights, which side, and their room on the plan.",
+      },
+    ],
+  },
+  {
     version: "0.158.0",
     date: "2026-11-12",
     title: "Bank transfers marked paid by themselves",

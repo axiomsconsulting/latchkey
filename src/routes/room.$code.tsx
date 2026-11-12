@@ -18,6 +18,7 @@ import { stayProgressCopy as pcopy } from "@/content/copy";
 import { readFix } from "@/lib/kiosk-presence";
 import { openRoomStay, roomEntry } from "@/lib/stay-access.functions";
 import { GuideSections } from "@/components/guest/GuideSections";
+import { useGuideExtraCards } from "@/components/guest/GuideExtras";
 import { rebrand } from "@/lib/brand";
 
 /**
@@ -68,6 +69,8 @@ function RoomGuide() {
   const [stay, setStay] = useState<string | null>(null);
   // Sections show their top line until tapped.
   const [open, setOpen] = useState<string[]>([]);
+  // Property information and around here, loaded after the page.
+  const extraCards = useGuideExtraCards({ code });
   // Opening the guest's own guide from here (when the host allows it): trying, offering the location check, or not here.
   const [own, setOwn] = useState<"idle" | "trying" | "locate" | "locating" | "notHere">("idle");
   const tryOpen = useServerFn(openRoomStay);
@@ -250,7 +253,12 @@ function RoomGuide() {
           </section>
         ) : null}
 
-        <GuideSections sections={g.guide as never} open={open} onOpenChange={setOpen} />
+        <GuideSections
+          sections={g.guide as never}
+          extras={extraCards}
+          open={open}
+          onOpenChange={setOpen}
+        />
         <p className="text-center text-sm text-muted-foreground">{rcopy.footer}</p>
       </main>
     </GuestFrame>
