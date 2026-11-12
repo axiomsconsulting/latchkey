@@ -47,6 +47,44 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.157.0",
+    date: "2026-11-12",
+    title: "Smart pricing for direct stays, and Pay by Bank",
+    items: [
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Smart pricing on Direct stays → Set-up: Latchkey reads what guests pay for your rooms on Booking.com, Airbnb, Vrbo, Expedia, Agoda and Homestay (and for other properties you choose) every day, on weekdays, at weekends, on chosen days, every few days or monthly, and suggests each room's direct rate: under, the same as, over, or what earns you the same. Accept one room or all with a tap.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "It also suggests what to charge on each booking site so a booking there leaves you what a direct one does, after its commission (a slider for each site, starting from its usual rate) and the discounts you run there, combined the way each site combines them (Genius, mobile and country rates, deals, Airbnb's new listing promotion). When you change your price on a site yourself, Latchkey notices on the next read, follows your new price and pauses that site's suggestion.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Each room can have a lowest nightly price: no suggestion, seasonal offer, non-refundable rate or percentage voucher takes a night under it, and you can cap how much a stay's discounts take off together. Vouchers still replace every other discount on their nights, never stacking.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "What you keep: Smart pricing shows what Stripe takes from a direct booking by UK card, premium card, European or other card, Pay by Bank or bank transfer.",
+      },
+      {
+        kind: "new",
+        area: "Bookings",
+        text: "Pay by Bank for direct bookings: guests can approve the payment in their banking app with the amount and reference filled in, on the same Stripe page as the card, and the booking confirms by itself. Turn it on in Booking and payment once it's on in your Stripe account.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: 'Routine "Smart pricing: reading prices on booking sites with Firecrawl" (off until switched on): up to 24 page reads per property per read, two properties per calendar sync.',
+      },
+    ],
+  },
+  {
     version: "0.156.3",
     date: "2026-11-11",
     title: "The concierge never talks over itself",

@@ -5537,6 +5537,10 @@ export const enquiryCopy = branded({
   howToPay: "How would you like to pay?",
   methods: {
     card: { label: "Card", help: "Pay now, securely through Stripe." },
+    cardOrBank: {
+      label: "Card or your bank app",
+      help: "Pay now through Stripe: by card, or approve it in your banking app (UK banks).",
+    },
     bank: {
       label: "Bank transfer",
       help: (days: number) =>
@@ -5745,6 +5749,19 @@ export const directBookingCopy = branded({
   cardHelp:
     "Guests pay on Stripe's secure page; the money goes straight to your Stripe account. Unpaid after 30 minutes, the room is released.",
   connectStripe: "Connect Stripe in Settings → Payments",
+  payByBank: "Also let guests pay from their bank app (Pay by Bank)",
+  payByBankHelp:
+    "On the same Stripe page as the card, guests pick their bank, approve the payment in their banking app with the amount and reference filled in, and the booking confirms by itself. Stripe charges 0.5% + 20p (up to £5) instead of a card's 1.5% + 20p or more. UK banks in pounds, some EU banks in euros.",
+  payByBankStatus: {
+    active: "On in your Stripe account.",
+    inactive:
+      "Not on in your Stripe account yet: in Stripe go to Settings → Payment methods → Pay by Bank and turn it on. Until then guests see the card only.",
+    unknown:
+      "Couldn't ask Stripe just now. Guests see the card only if Pay by Bank isn't on there.",
+    no_stripe: "Connect Stripe first.",
+  } as Record<string, string>,
+  payByBankCurrency:
+    "Pay by Bank takes pounds or euros only, so it isn't offered in this property's currency.",
   bankHelp: (days: number) =>
     `Guests see your bank details (local or international, by their country) and a reference, and pay within ${days} ${days === 1 ? "day" : "days"}. Mark it paid when it arrives.`,
   addBank: "Add your bank details in Settings → Payments",
@@ -5775,6 +5792,133 @@ export const directRatesCopy = branded({
   allRooms: "Every room",
   offerProblem: "Each offer needs a first and last night (in order) and 1 to 90% off.",
   saved: "Rates and offers saved. Your Stay with us page shows them now.",
+});
+
+export const smartPricingCopy = branded({
+  title: "Smart pricing",
+  body: "Latchkey reads what guests pay for your rooms on the booking sites, and for other properties you choose, then suggests your direct rate and what to charge on each site so you earn the same wherever guests book. Nothing changes until you accept it.",
+  notReady: "Smart pricing appears once the latest database update (migration 0107) is applied.",
+  on: "Read prices on a schedule",
+  onHelp: "Off: prices are only read when you tap Check prices now.",
+  readingOff:
+    "Reading prices on the booking sites is switched off at the moment. Suggestions use the prices already read.",
+  checkNow: "Check prices now",
+  checking: "Reading the booking sites… this can take a minute or two.",
+  checked: (found: number, pages: number) =>
+    found
+      ? `Read ${pages} ${pages === 1 ? "page" : "pages"}, ${found} prices found.`
+      : `Read ${pages} ${pages === 1 ? "page" : "pages"}, but no prices were shown for those dates.`,
+  lastRead: (when: string) => `Last read ${when}`,
+  neverRead: "Not read yet",
+  noLinks:
+    "Add your listing links (Properties → a room's or the property's links) or another property's link below, so there's something to read.",
+  suggestions: "Suggestions",
+  room: "Room",
+  now: "Now",
+  suggested: "Suggested direct",
+  noRate: "No rate",
+  noSuggestion: "No prices read for this room yet",
+  keep: (amount: string) => `you keep ${amount}`,
+  basisOwn: "from your own listings",
+  basisMarket: "from other properties",
+  accept: "Accept",
+  acceptAll: (n: number) => `Accept all (${n})`,
+  accepted: "Rates updated. Your booking page shows them now.",
+  same: "No change needed",
+  floored: "held at the room's lowest price",
+  stepped: (pct: number) => `moved ${pct}% at most in one go`,
+  offerWarning: (offer: string, price: string) =>
+    `"${offer}" would take a night to ${price}, under the lowest price: it stops there.`,
+  ignored: (n: number) =>
+    `${n} ${n === 1 ? "price looked" : "prices looked"} wrong and ${n === 1 ? "was" : "were"} left out`,
+  onSite: (site: string) => `On ${site}`,
+  seenThere: (amount: string) => `guests see ${amount}`,
+  setThere: (amount: string) => `set ${amount}`,
+  siteKeep: (pays: string, keep: string) =>
+    `a guest with your discounts pays ${pays}, you keep ${keep}`,
+  paused: (date: string, until: string) =>
+    `You changed your price here on ${date}. Latchkey follows it and won't suggest a new one until ${until}.`,
+  siteHelp:
+    "The site price is what to enter on the site so a booking there leaves you what a direct booking does, after its commission and the deepest discounts you run there (a member on a phone). Change it on the site yourself: Latchkey notices on the next read.",
+  settings: "Settings",
+  schedule: "How often",
+  scheduleKinds: {
+    daily: "Every day",
+    weekdays: "Weekdays",
+    weekends: "Weekends",
+    weekly: "On chosen days",
+    every: "Every few days",
+    monthly: "Once a month",
+  } as Record<string, string>,
+  days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  everyDays: "Every (days)",
+  monthDay: "Day of the month",
+  compareWith: "Compare with",
+  references: {
+    own_then_market: "My own listings, else other properties",
+    own: "My own listings only",
+    market: "Other properties only",
+  } as Record<string, string>,
+  compareTo: "Price on the site",
+  compareTos: {
+    lowest: "The lowest a guest can get (with Genius, mobile rates…)",
+    public: "The price anyone sees",
+  } as Record<string, string>,
+  position: "Your direct price",
+  modes: {
+    below: "Under the site",
+    match: "The same as the site",
+    above: "Over the site",
+    same_earnings: "What earns you the same",
+  } as Record<string, string>,
+  byPercent: "%",
+  byAmount: (currency: string) => currency,
+  floors: "Lowest price a night",
+  floorsHelp:
+    "No suggestion, seasonal offer, non-refundable rate or percentage voucher takes a room under this. A voucher at a set price is your own choice and isn't held to it.",
+  maxDiscount: "Most a stay's discounts may take off together (%)",
+  maxStep: "Most a suggestion moves a rate in one go (%)",
+  payWay: "Direct guests usually pay",
+  payWays: {
+    card_standard: "UK card",
+    card_premium: "Premium or business card",
+    card_eea: "European card",
+    card_intl: "Card from elsewhere",
+    pay_by_bank: "Pay by Bank (their bank app)",
+    bank_transfer: "Bank transfer to you",
+  } as Record<string, string>,
+  feesTitle: (amount: string) => `What you keep from ${amount}`,
+  feeUnknown: "See Stripe's prices for your country",
+  feesHelp:
+    "Stripe's published UK prices: UK cards 1.5% + 20p, premium cards 2.8% + 20p, European cards 2.5% + 20p, other cards 3.15% + 20p (2% more when the currency is converted), Pay by Bank 0.5% + 20p up to £5. A bank transfer to your account costs nothing through Latchkey. Prices can change: Stripe's own page has the latest.",
+  sites: "Your booking sites",
+  sitesHelp:
+    "Start from the usual rates and move each to what your contract says. Booking.com: 15% in the UK, about 18% as a Preferred Partner, more with Visibility Booster. Airbnb: 15.5% host-only fee for most hosts (the older split fee was 3% plus a fee guests pay). Vrbo: 5% plus 3% payment processing. Expedia and Agoda: agreed per property, usually 15 to 25%.",
+  commission: "Commission (%)",
+  guestFee: "Fee the site adds for guests (%)",
+  offersRunning: "Discounts you run there (%)",
+  offersHelp:
+    "How they combine follows each site's rules: on Booking.com one deal at a time, Genius on top for members, the mobile rate on top for phones but never with a country rate; on Airbnb the new listing promotion replaces everything, otherwise one promotion applies. Check your extranet if yours differs.",
+  markup: "Extra on the sites above earning the same (%)",
+  market: "Other properties to watch",
+  marketHelp:
+    "Paste a link to another property's listing near you. Latchkey reads its public price for the same sample dates. Choose the room of yours it's most like.",
+  marketAdd: "Add",
+  marketLabel: "Name (for you)",
+  marketRoom: "Like my",
+  anyRoom: "Any room",
+  marketBad: "Use a listing link from Booking.com, Airbnb, Vrbo, Expedia, Agoda or Homestay.",
+  remove: "Remove",
+  samples: "Sample stays each read",
+  samplesHelp: (n: number) => `Each sample is one page read per listing (up to ${n} a read).`,
+  horizon: "Look ahead (days)",
+  nights: "Nights per sample stay",
+  cooldown: "After you change a site's price, wait (days)",
+  parity:
+    'Some booking sites\' contracts ask you not to show a lower public price on your own website (in the UK this "narrow parity" is still allowed; in the EEA Booking.com dropped it in 2024). A voucher for a named guest is a private price. Check your own contract before you price under a site.',
+  reading:
+    "Latchkey reads public pages as a signed-out visitor, so members' and app prices are worked out from the discounts you enter. Sites can change their pages, so a read can fail now and then.",
+  saved: "Smart pricing settings saved.",
 });
 
 export const directCopy = branded({
@@ -5838,6 +5982,8 @@ export const directCopy = branded({
   setupBookingHint: "Instant booking, how guests pay, cancellation and terms.",
   setupRates: "Rates and offers",
   setupRatesHint: "Each room's nightly rate, and seasonal offers.",
+  setupSmart: "Smart pricing",
+  setupSmartHint: "What guests pay on the booking sites, and suggested direct and site prices.",
   setupPhotos: "Photos guests see",
   setupPhotosHint: "Each room's photos, grouped by space.",
   needsYou: "Needs you",

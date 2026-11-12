@@ -259,7 +259,11 @@ export const reserveDirect = createServerFn({ method: "POST" })
       );
 
     const offers = normaliseOffers(p.direct_offers);
+    // Each room's lowest night (smart pricing): no offer or rate takes a night below it.
+    const { nightFloor } = await import("./smart-pricing");
+    const pricing = await (await import("./smart-pricing.server")).pricingFor(db, p.id);
     const priced = rooms.map((room, i) => {
+      const floor = nightFloor(room.base_rate_pence, room.id, pricing);
       const withVoucher = voucher
         ? quoteWithVoucher(
             room.base_rate_pence,
@@ -270,6 +274,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
             data.checkIn,
             data.checkOut,
             voucher,
+            floor,
           )
         : null;
       const quote = withVoucher
@@ -282,6 +287,7 @@ export const reserveDirect = createServerFn({ method: "POST" })
             room.id,
             data.checkIn,
             data.checkOut,
+            floor,
           );
       if (!quote) throw new Error("That rate isn't offered. Please choose another.");
       return {
@@ -504,10 +510,14 @@ export const reserveDirect = createServerFn({ method: "POST" })
     // Card: a Stripe Checkout in the host's own account, open for 30 minutes, one line per room.
     const { stripeCall } = await import("./stripe.server");
     const { stripeAmount } = await import("./extras");
-    try {
-      const session = await stripeCall<{ id: string; url: string }>(
+    const { offersPayByBank } = await import("./direct-booking");
+    // Pay by Bank beside the card when the host offers it; if their Stripe account refuses it, card alone.
+    const bankToo = offersPayByBank(setup.settings, currency);
+    const openCheckout = (types: string[] | null) =>
+      stripeCall<{ id: string; url: string }>(
         "/checkout/sessions",
         {
+          ...(types ? { payment_method_types: types } : {}),
           mode: "payment",
           customer_email: email,
           success_url: `${data.origin}/reserve/${token}?paid=1`,
@@ -539,6 +549,10 @@ export const reserveDirect = createServerFn({ method: "POST" })
         "POST",
         setup.stripe.account,
       );
+    try {
+      const session = bankToo
+        ? await openCheckout(["card", "pay_by_bank"]).catch(() => openCheckout(null))
+        : await openCheckout(null);
       await db
         .from("direct_reservations")
         .update({ stripe_session_id: session.id, stripe_account_id: setup.stripe.account })
@@ -915,6 +929,19 @@ export const confirmReservationPayment = createServerFn({ method: "POST" })
 
 /* ---------------------------------- host ---------------------------------- */
 
+/** Pay by Bank on the host's Stripe account (or Latchkey's, for businesses on it): active, not yet, or unknown. */
+async function payByBankStatus(account: string | null): Promise<"active" | "inactive" | "unknown"> {
+  try {
+    const { stripeCall } = await import("./stripe.server");
+    const acct = await stripeCall<{ capabilities?: Record<string, string> }>(
+      account ? `/accounts/${encodeURIComponent(account)}` : "/account",
+    );
+    return acct.capabilities?.["pay_by_bank_payments"] === "active" ? "active" : "inactive";
+  } catch {
+    return "unknown";
+  }
+}
+
 export const getDirectBookingSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ propertyId: uuid }).parse(d))
@@ -934,11 +961,19 @@ export const getDirectBookingSettings = createServerFn({ method: "GET" })
       .neq("active", false)
       .order("sort_order");
     const { data: check, error } = await sb.from("direct_reservations").select("id").limit(1);
+    const currency = (p.currency as string | null) || (p.hosts?.currency as string | null) || "GBP";
     return {
       available: !error && check !== undefined,
       settings: setup.settings,
       ready: setup.ready,
-      currency: (p.currency as string | null) || (p.hosts?.currency as string | null) || "GBP",
+      /** Whether Pay by Bank is on in the host's Stripe account (asked each time), and the currency allows it. */
+      payByBank: {
+        currencyOk: (await import("./direct-booking")).PAY_BY_BANK_CURRENCIES.includes(
+          currency.toUpperCase(),
+        ),
+        status: setup.ready.card ? await payByBankStatus(setup.stripe.account) : "no_stripe",
+      },
+      currency,
       country: (p.country_code as string | null) ?? null,
       // Rooms whose Latchkey calendar isn't shared yet: other sites can't see direct bookings for them.
       roomsNotShared: (

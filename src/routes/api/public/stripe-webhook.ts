@@ -103,7 +103,11 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
                 reservationId,
                 typeof session.payment_intent === "string" ? session.payment_intent : null,
               );
-            } else if (event.type === "checkout.session.expired") {
+            } else if (
+              event.type === "checkout.session.expired" ||
+              // Pay by Bank: the bank didn't send the money after all, so the room is released.
+              event.type === "checkout.session.async_payment_failed"
+            ) {
               await expireReservation(db, reservationId);
             }
           }

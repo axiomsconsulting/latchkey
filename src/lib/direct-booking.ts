@@ -20,6 +20,12 @@ export type DirectBooking = {
   /** Guests can book a free room straight away (otherwise they send a request). */
   instant: boolean;
   card: boolean;
+  /**
+   * Stripe's Pay by Bank beside the card on the same secure page (UK and some EU banks, GBP or EUR):
+   * the guest approves in their banking app and the booking confirms by itself. Needs Pay by Bank
+   * turned on in the host's Stripe account.
+   */
+  payByBank: boolean;
   bank: boolean;
   /** Pay at the property: only when the host allows it. */
   atProperty: boolean;
@@ -38,6 +44,7 @@ export type DirectBooking = {
 export const DEFAULT_DIRECT_BOOKING: DirectBooking = {
   instant: false,
   card: true,
+  payByBank: false,
   bank: false,
   atProperty: false,
   freeCancelDays: 7,
@@ -60,6 +67,7 @@ export function normaliseDirectBooking(raw: unknown): DirectBooking {
   return {
     instant: r["instant"] === true,
     card: typeof r["card"] === "boolean" ? r["card"] : DEFAULT_DIRECT_BOOKING.card,
+    payByBank: r["payByBank"] === true,
     bank: r["bank"] === true,
     atProperty: r["atProperty"] === true,
     freeCancelDays: int(r["freeCancelDays"], 0, 60, DEFAULT_DIRECT_BOOKING.freeCancelDays),
@@ -88,7 +96,10 @@ export function planRates(
   return { flex: ratePence, nonref: nonref < ratePence ? nonref : null };
 }
 
-/** The estimated total on a plan, with each night's seasonal offer taken off as well. */
+/**
+ * The estimated total on a plan, with each night's seasonal offer taken off as well. `floor` is the
+ * room's lowest night (smart-pricing.ts nightFloor): the non-refundable rate and offers stop there.
+ */
 export function quotePlan(
   ratePence: number,
   plan: RatePlan,
@@ -97,10 +108,13 @@ export function quotePlan(
   roomId: string,
   checkIn: string,
   checkOut: string,
+  floor = 0,
 ): Quote | null {
   const r = planRates(ratePence, s);
   const nightly = plan === "flex" ? r.flex : r.nonref;
-  return nightly === null ? null : quoteStay(nightly, offers, roomId, checkIn, checkOut);
+  if (nightly === null) return null;
+  const least = Math.min(floor, ratePence);
+  return quoteStay(Math.max(nightly, least), offers, roomId, checkIn, checkOut, least);
 }
 
 /** The last day the refundable rate can be cancelled free, or null when that's already passed. */
@@ -117,6 +131,13 @@ export function payMethods(s: DirectBooking, ready: { card: boolean; bank: boole
   if (s.atProperty) out.push("property");
   return out;
 }
+
+/** Pay by Bank works in these currencies only (Stripe: GBP for UK banks, EUR for some EU banks). */
+export const PAY_BY_BANK_CURRENCIES = ["GBP", "EUR"];
+
+/** Whether the card page also offers Pay by Bank. */
+export const offersPayByBank = (s: DirectBooking, currency: string) =>
+  s.card && s.payByBank && PAY_BY_BANK_CURRENCIES.includes(currency.toUpperCase());
 
 /** Direct booking is on and there's at least one way to pay. */
 export const bookable = (s: DirectBooking, ready: { card: boolean; bank: boolean }) =>

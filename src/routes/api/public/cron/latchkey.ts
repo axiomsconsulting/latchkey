@@ -72,6 +72,13 @@ export const Route = createFileRoute("/api/public/cron/latchkey")({
         } catch (e) {
           console.error("Stay-on check-ins failed", e instanceof Error ? e.message : e);
         }
+        // Smart pricing: prices on the booking sites for properties whose schedule says today (src/lib/smart-pricing.ts).
+        try {
+          const { readDuePrices } = await import("@/lib/smart-pricing.server");
+          await readDuePrices();
+        } catch (e) {
+          console.error("Smart pricing reads failed", e instanceof Error ? e.message : e);
+        }
         // Hosts' welcome and goodbye messages to guests, when due (src/lib/guest-messages.ts).
         try {
           if (await jobAllowed("guest_messages")) {

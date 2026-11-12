@@ -202,7 +202,16 @@ function Booking({ page }: { page: Page }) {
   const bookable = (r: Room) => canBook && r.ratePence !== null && free(r);
   const planQuote = (r: Room, p: RatePlan) =>
     r.ratePence !== null
-      ? quotePlan(r.ratePence, p, settings, page.offers, r.id, stay.checkIn, stay.checkOut)
+      ? quotePlan(
+          r.ratePence,
+          p,
+          settings,
+          page.offers,
+          r.id,
+          stay.checkIn,
+          stay.checkOut,
+          page.floors?.[r.id] ?? 0,
+        )
       : null;
   // Each night's price with the guest's Loyalty voucher (on its rooms), replacing other discounts.
   const voucherQuote = (r: Room, p: RatePlan) =>
@@ -216,6 +225,7 @@ function Booking({ page }: { page: Page }) {
           stay.checkIn,
           stay.checkOut,
           voucher,
+          page.floors?.[r.id] ?? 0,
         )
       : null;
   const quote = (r: Room, p: RatePlan) => {
@@ -226,7 +236,14 @@ function Booking({ page }: { page: Page }) {
   };
   const estimate = (r: Room) =>
     r.ratePence !== null
-      ? quoteStay(r.ratePence, page.offers, r.id, stay.checkIn, stay.checkOut)
+      ? quoteStay(
+          r.ratePence,
+          page.offers,
+          r.id,
+          stay.checkIn,
+          stay.checkOut,
+          page.floors?.[r.id] ?? 0,
+        )
       : null;
   const approx = (pence: number) =>
     fx ? enquiryCopy.approx(money(convert(pence, fx.rate), fx.currency)) : null;
@@ -812,12 +829,16 @@ function Booking({ page }: { page: Page }) {
                             )}
                           >
                             <span className="block font-medium">
-                              {enquiryCopy.methods[m].label}
+                              {m === "card" && page.booking.payByBank
+                                ? enquiryCopy.methods.cardOrBank.label
+                                : enquiryCopy.methods[m].label}
                             </span>
                             <span className="block text-xs text-muted-foreground">
                               {m === "bank"
                                 ? enquiryCopy.methods.bank.help(page.booking.bankPayDays)
-                                : enquiryCopy.methods[m].help}
+                                : m === "card" && page.booking.payByBank
+                                  ? enquiryCopy.methods.cardOrBank.help
+                                  : enquiryCopy.methods[m].help}
                             </span>
                           </button>
                         ))}

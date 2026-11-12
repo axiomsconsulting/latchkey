@@ -52,7 +52,7 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
         points: [
           `Visitors to this website, people trying our demos, and hosts and their team members: ${operator} is the controller of this data.`,
           `Guests of a business that uses ${name}: that business (the "host") is the controller. ${operator} is its processor: we store and process guests' details only to run the service for the host, under the data processing terms in our Terms of service, and never for our own marketing.`,
-          "Card payments from guests are made in the host's own Stripe account. Stripe and the host are responsible for that payment data; we only see whether a payment succeeded.",
+          "Card payments from guests, and Pay by Bank payments approved in a guest's banking app, are made in the host's own Stripe account. Stripe and the host are responsible for that payment data; we only see whether a payment succeeded.",
         ],
       },
       {
@@ -113,12 +113,12 @@ export function privacyPolicy(d: LegalDetails): LegalDoc {
         points: [
           "Lovable Cloud (built on Supabase): hosting, database, file storage, sign-in and the email we send. Private files (ID photos, signatures) only wait here briefly if Google Drive can't be reached, and are removed once they're safely in Google Drive.",
           "Lovable AI Gateway and the AI model provider behind it (currently OpenAI): reading photo ID during guests' check-in (when the host turns ID checks on) and Commission Partners' identity checks. Images are sent for that check only; we ask the service not to keep them, and we don't use them to train any AI model.",
-          "Stripe: hosts' subscriptions, and guests' card payments in the host's own Stripe account.",
+          "Stripe: hosts' subscriptions, and guests' card and Pay by Bank payments in the host's own Stripe account.",
           "Twilio (text messages, and WhatsApp messages for hosts who turn them on) and Telegram (messages to hosts who link it): alerts to hosts. App notifications go through the browser maker's push service and carry no content.",
           "Twilio, and Meta's WhatsApp through Twilio: messages to guests when the host turns them on, and the check-in photo link a guest asks for at the door tablet. They receive the guest's mobile number and the message. A number typed in for the photo link is used for that one message and isn't kept.",
           "Google: sign-in with Google, and Google Drive, where we store files hosts attach to their guides and, in restricted folders that are never shared, kept copies of guests' ID and face photos and Commission Partners' ID photos, drawn signatures and signed agreements. Apple: sign-in with Apple.",
           "ElevenLabs: the voice concierge's recorded phrases (made once from fixed words), and turning a guest's spoken reply into text on door tablets that can't do it themselves.",
-          "Firecrawl: reading a host's public listing pages when they import them, and the reviews on them for the host's door tablet. No guest data is sent.",
+          "Firecrawl: reading a host's public listing pages when they import them, the reviews on them for the host's door tablet, and the prices shown on them (and on other properties' public pages the host chooses) for smart pricing. No guest data is sent.",
           "Voice check-in, if the host offers it and a guest chooses it: the door tablet's own browser turns what the guest says into text (on Android through Google, on an iPad through Apple) and speaks with the tablet's built-in voices. Latchkey keeps no recording or transcript; when a reply isn't understood, just those words (as text) are sent to our AI provider to work out the answer. On a tablet that can't turn speech into text itself, each short reply is sent as a recording to ElevenLabs to be turned into text, and isn't kept.",
           "Reviews on the door tablet, if the host switches it on: public reviews of the property from its own listing pages, kept as a short quote with the reviewer's first name, rating and date, until the host hides them or the property is removed.",
           "Samsung SmartThings or TP-Link (Tapo): when a host links smart lights to a room, switching them for the guest staying there. The service receives the commands (on, off, brightness, colour) from Latchkey's server under the host's own account; no guest's name or contact details are sent. For TP-Link, Latchkey keeps the host's TP-Link email and password, encrypted, only to sign in again when TP-Link asks, and deletes them when the host disconnects.",
@@ -289,7 +289,7 @@ export function termsOfService(d: LegalDetails): LegalDoc {
         id: "guest-payments",
         title: "Payments from your guests",
         points: [
-          `If you take card payments, they are made in your own Stripe account, connected through Stripe Connect. Your use of Stripe is governed by Stripe's own agreements with you. ${operator} takes no fee from guest payments and never holds your money.`,
+          `If you take card or Pay by Bank payments, they are made in your own Stripe account, connected through Stripe Connect. Your use of Stripe is governed by Stripe's own agreements with you. ${operator} takes no fee from guest payments and never holds your money.`,
           "You're responsible for your prices, taxes, refunds, chargebacks and disputes, and for the bank details you show guests for transfers.",
           "Whether guests may pay at the property, by bank transfer or by card is your choice.",
         ],
@@ -343,6 +343,7 @@ export function termsOfService(d: LegalDetails): LegalDoc {
         title: "Other services",
         body: [
           `${name} works with services we don't control, such as booking sites' calendars, Stripe, Google, Apple and Telegram. Their terms apply to your use of them, and we aren't responsible for their availability or changes.`,
+          `Smart pricing suggestions are estimates worked out from prices shown on public pages and the commissions and discounts you enter. They change nothing until you accept them, you decide your own prices, and you're responsible for keeping to your agreements with booking sites, including any rule about the prices you show elsewhere.`,
         ],
       },
       {
