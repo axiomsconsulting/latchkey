@@ -6,7 +6,8 @@
  * Discovery API when Latchkey admin has set TICKETMASTER_API_KEY. Rules in property-info.ts,
  * local-guide.ts and floor-plans.ts.
  */
-import { directionsTo, normalisePins, type FloorPlan } from "./floor-plans";
+import { houseNotes, type HouseNotes, type Point } from "./floor-map";
+import { directionsTo, mapFloors, normalisePins, type FloorPlan } from "./floor-plans";
 import {
   eventsFromTicketmaster,
   guestLocal,
@@ -213,6 +214,19 @@ export async function plansFor(sb: any, propertyId: string) {
   }));
 }
 
+/** One floor as the guest's map draws it: the plan, the way across it, the room, and what's marked. */
+export type GuestFloor = {
+  id: string;
+  level: number;
+  url: string | null;
+  route: Point[] | null;
+  room: Point[] | null;
+  at: Point | null;
+  areas: Array<{ poly: Point[]; access: string; kind: string }>;
+  lines: Array<{ kind: string; pts: Point[] }>;
+  items: Array<{ kind: string; at: Point }>;
+};
+
 export type GuestExtras = {
   info: Array<ReturnType<typeof normalisePropertyInfo>[number] & { imageUrls: string[] }>;
   local: { places: Place[]; events: LocalEvent[] } | null;
@@ -222,8 +236,23 @@ export type GuestExtras = {
     at: { x: number; y: number };
     level: number;
     roomName: string;
+    heating: string[];
+    floors: GuestFloor[];
   } | null;
+  /** Shared spaces, what's private and where useful things are, from the floor maps. */
+  house: HouseNotes | null;
 };
+
+/** The property's room names (for naming bedrooms on the map). */
+async function roomNamesFor(sb: any, propertyId: string): Promise<Record<string, string>> {
+  const { data } = await sb
+    .from("rooms")
+    .select("id, display_name, public_title")
+    .eq("property_id", propertyId);
+  return Object.fromEntries(
+    ((data ?? []) as any[]).map((r) => [r.id, (r.public_title || r.display_name) as string]),
+  );
+}
 
 /** Everything the extra cards need for one property (and, on a stay, its room). */
 export async function extrasFor(
@@ -236,24 +265,60 @@ export async function extrasFor(
     .select("id, timezone, property_info, local_guide")
     .eq("id", propertyId)
     .maybeSingle();
-  if (!p) return { info: [], local: null, directions: null };
+  if (!p) return { info: [], local: null, directions: null, house: null };
   const items = normalisePropertyInfo(p.property_info, propertyId);
   const g = normaliseLocalGuide(p.local_guide);
-  const [links, near, plans] = await Promise.all([
+  const [links, near, plans, names] = await Promise.all([
     signed(
       items.flatMap((i) => i.images),
       60 * 60 * 6,
     ),
     g.on ? placesFor(propertyId).catch(() => null) : Promise.resolve(null),
-    room ? plansFor(sb, propertyId) : Promise.resolve([]),
+    plansFor(sb, propertyId),
+    roomNamesFor(sb, propertyId),
   ]);
+  const notes = houseNotes(mapFloors(plans as FloorPlan[]), names);
+  const house =
+    notes.shared.length || notes.private.length || notes.barriers.length || notes.useful.length
+      ? notes
+      : null;
   let directions: GuestExtras["directions"] = null;
   if (room) {
-    const d = directionsTo(plans as FloorPlan[], room.id, room.name);
+    const d = directionsTo(plans as FloorPlan[], room.id, room.name, names);
     if (d) {
-      const plan = plans.find((x) => x.id === d.planId)!;
-      const url = (await signed([plan.imagePath], 60 * 60 * 6))[plan.imagePath] ?? null;
-      directions = { steps: d.steps, planUrl: url, at: d.at, level: d.level, roomName: room.name };
+      // Each floor the way crosses (or just the room's floor, with the older marks).
+      const ids = d.route?.length ? d.route.map((r) => r.planId) : [d.planId];
+      const shown = ids
+        .map((id) => plans.find((x) => x.id === id))
+        .filter((x): x is (typeof plans)[number] => !!x);
+      const urls = await signed(
+        shown.map((x) => x.imagePath),
+        60 * 60 * 6,
+      );
+      const floors: GuestFloor[] = shown.map((x) => ({
+        id: x.id,
+        level: x.level,
+        url: urls[x.imagePath] ?? null,
+        route: d.route?.find((r) => r.planId === x.id)?.points ?? null,
+        room: x.id === d.planId ? (d.area ?? null) : null,
+        at: x.id === d.planId ? d.at : null,
+        areas: (x.pins.areas ?? []).map((a) => ({
+          poly: a.poly,
+          access: a.roomId === room.id ? "yours" : a.access,
+          kind: a.kind,
+        })),
+        lines: (x.pins.lines ?? []).map((l) => ({ kind: l.kind, pts: l.pts })),
+        items: (x.pins.items ?? []).map((i) => ({ kind: i.kind, at: i.at })),
+      }));
+      directions = {
+        steps: d.steps,
+        planUrl: floors[floors.length - 1]?.url ?? null,
+        at: d.at,
+        level: d.level,
+        roomName: room.name,
+        heating: d.heating ?? [],
+        floors,
+      };
     }
   }
   return {
@@ -263,5 +328,6 @@ export async function extrasFor(
     })),
     local: near ? guestLocal(g, near.places, near.events, near.at, todayIn(p.timezone)) : null,
     directions,
+    house,
   };
 }

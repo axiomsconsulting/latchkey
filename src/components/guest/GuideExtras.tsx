@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Car, CalendarDays, Footprints, Info, MapPin, Navigation, Star } from "lucide-react";
+import { Car, CalendarDays, Footprints, House, Info, MapPin, Navigation, Star } from "lucide-react";
 
+import { FloorMapView } from "@/components/FloorMapView";
 import { AttachmentViewer } from "@/components/guest/GuideAttachments";
 import type { ExtraCard } from "@/components/guest/GuideSections";
 import { INFO_ICON } from "@/components/guest/info-icons";
 import { RichText } from "@/components/RichText";
 import { guideExtrasCopy as copy } from "@/content/copy";
+import { levelName } from "@/lib/floor-map";
 import { getRoomExtras, getStayExtras } from "@/lib/guest-extras.functions";
 import {
   PLACE_CATEGORIES,
@@ -51,7 +53,20 @@ function cardsFor(d: Extras): ExtraCard[] {
       Icon: Navigation,
       image: d.directions.planUrl,
       lead: d.directions.steps[d.directions.steps.length - 1] ?? null,
-      body: <FindRoom d={d.directions} />,
+      body: (
+        <div className="space-y-5">
+          <FindRoom d={d.directions} />
+          {d.house ? <HouseNotes n={d.house} /> : null}
+        </div>
+      ),
+    });
+  else if (d.house)
+    out.push({
+      key: "find_room",
+      title: copy.houseTitle,
+      Icon: House,
+      lead: copy.houseLead,
+      body: <HouseNotes n={d.house} />,
     });
   if (d.info.length)
     out.push({
@@ -89,14 +104,109 @@ function FindRoom({ d }: { d: NonNullable<Extras["directions"]> }) {
           </li>
         ))}
       </ol>
-      {d.planUrl ? (
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-white">
-          <img src={d.planUrl} alt={copy.planAlt(d.roomName)} className="block w-full" />
-          <span
-            aria-hidden
-            className="absolute size-6 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full border-4 border-white bg-primary shadow-lg"
-            style={{ left: `${d.at.x * 100}%`, top: `${d.at.y * 100}%` }}
+      {d.floors.map((f) => (
+        <figure key={f.id} className="space-y-1">
+          {d.floors.length > 1 ? (
+            <figcaption className="text-sm font-medium">
+              {copy.floorName(levelName(f.level))}
+            </figcaption>
+          ) : null}
+          <FloorMapView
+            url={f.url}
+            alt={f.at ? copy.planAlt(d.roomName) : copy.floorAlt(levelName(f.level))}
+            areas={f.areas}
+            lines={f.lines}
+            items={f.items}
+            route={f.route}
+            at={f.at}
           />
+        </figure>
+      ))}
+      {d.floors.some((f) => f.areas.length) ? (
+        <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <Key colour="#16a34a" dashed>
+            {copy.key.route}
+          </Key>
+          <Key colour="rgba(22,163,74,0.45)">{copy.key.yours}</Key>
+          <Key colour="rgba(220,38,38,0.35)">{copy.key.private}</Key>
+          <Key colour="rgba(37,99,235,0.25)">{copy.key.shared}</Key>
+        </p>
+      ) : null}
+      {d.heating.length ? (
+        <div className="space-y-1">
+          <p className="font-medium">{copy.heating}</p>
+          <ul className="list-disc space-y-0.5 pl-5 text-sm">
+            {d.heating.map((h) => (
+              <li key={h}>{h}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Key({
+  colour,
+  dashed,
+  children,
+}: {
+  colour: string;
+  dashed?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        aria-hidden
+        className="inline-block h-3 w-5 rounded-sm"
+        style={dashed ? { borderTop: `3px dashed ${colour}`, height: 0 } : { background: colour }}
+      />
+      {children}
+    </span>
+  );
+}
+
+function HouseNotes({ n }: { n: NonNullable<Extras["house"]> }) {
+  return (
+    <div className="space-y-3 text-sm">
+      {n.shared.length ? (
+        <div>
+          <p className="font-medium">{copy.shared}</p>
+          <ul className="mt-1 space-y-1">
+            {n.shared.map((s, i) => (
+              <li key={i}>
+                <span className="font-medium">{s.name}</span>{" "}
+                <span className="text-muted-foreground">({levelName(s.level)})</span>
+                {s.items.length ? `: ${s.items.join(", ")}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {n.private.length || n.barriers.length ? (
+        <div>
+          <p className="font-medium">{copy.private}</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {n.private.map((s, i) => (
+              <li key={i}>
+                {s.name} ({levelName(s.level)})
+              </li>
+            ))}
+            {n.barriers.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {n.useful.length ? (
+        <div>
+          <p className="font-medium">{copy.useful}</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {n.useful.map((u) => (
+              <li key={u}>{u}</li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </div>

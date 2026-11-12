@@ -133,10 +133,14 @@ export async function knowledgeFor(
   const { localText } = await import("./local-guide");
   const local = lp ? localText((lp.places ?? []) as any[], (lp.events ?? []) as any[]) : "";
   let directions: string[] | null = null;
+  const { plansFor } = await import("./guest-extras.server");
+  const { directionsTo, mapFloors } = await import("./floor-plans");
+  const { houseNotes, houseText } = await import("./floor-map");
+  const plans = await plansFor(sb, propertyId);
+  const house = houseText(houseNotes(mapFloors(plans)));
   if (roomId && roomName) {
-    const { plansFor } = await import("./guest-extras.server");
-    const { directionsTo } = await import("./floor-plans");
-    directions = directionsTo(await plansFor(sb, propertyId), roomId, roomName)?.steps ?? null;
+    const d = directionsTo(plans, roomId, roomName);
+    directions = d ? [...d.steps, ...(d.heating ?? [])] : null;
   }
 
   // Wi-Fi as the stay guide would show it (the password only once checked in when the host says so).
@@ -195,6 +199,7 @@ export async function knowledgeFor(
     times,
     wifi,
     directions,
+    house: house || null,
     rules: guide.find((g) => g.key === "rules")?.text ?? null,
     info: info || null,
     guide,
