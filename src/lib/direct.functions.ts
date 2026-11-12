@@ -59,6 +59,9 @@ async function pageRooms(db: Loose, propertyId: string, today: string) {
   const { withLegacy } = await import("./checkin.server");
   const { addDays } = await import("./dates");
   const { normaliseOffers, upcomingOffers } = await import("./direct-rates");
+  const { floorsForPage } = await import("./smart-pricing");
+  const { pricingFor } = await import("./smart-pricing.server");
+  const pricing = pricingFor(db, propertyId);
   const roomCols =
     "id, display_name, public_title, description, max_guests, has_ensuite, cover_image_url, sort_order";
   const [{ data: rooms }, { data: prop }, { data: stays }, gallery] = await Promise.all([
@@ -116,27 +119,30 @@ async function pageRooms(db: Loose, propertyId: string, today: string) {
     if (!b.room_id) continue;
     (taken[b.room_id] ??= []).push({ from: b.check_in_date, to: b.check_out_date });
   }
+  const roomList = (
+    (rooms ?? []) as Array<{
+      id: string;
+      display_name: string;
+      public_title: string | null;
+      description: string | null;
+      max_guests: number | null;
+      has_ensuite: boolean | null;
+      cover_image_url: string | null;
+      base_rate_pence?: number | null;
+    }>
+  ).map((r) => ({
+    id: r.id,
+    name: r.public_title || r.display_name,
+    description: r.description ?? null,
+    maxGuests: r.max_guests ?? 2,
+    ensuite: r.has_ensuite === true,
+    photo: r.cover_image_url ?? null,
+    ratePence: typeof r.base_rate_pence === "number" ? r.base_rate_pence : null,
+  }));
   return {
-    rooms: (
-      (rooms ?? []) as Array<{
-        id: string;
-        display_name: string;
-        public_title: string | null;
-        description: string | null;
-        max_guests: number | null;
-        has_ensuite: boolean | null;
-        cover_image_url: string | null;
-        base_rate_pence?: number | null;
-      }>
-    ).map((r) => ({
-      id: r.id,
-      name: r.public_title || r.display_name,
-      description: r.description ?? null,
-      maxGuests: r.max_guests ?? 2,
-      ensuite: r.has_ensuite === true,
-      photo: r.cover_image_url ?? null,
-      ratePence: typeof r.base_rate_pence === "number" ? r.base_rate_pence : null,
-    })),
+    rooms: roomList,
+    /** Each room's lowest night (smart pricing): offers never take a night below it. */
+    floors: floorsForPage(roomList, await pricing),
     offers: upcomingOffers(normaliseOffers(prop?.direct_offers), today),
     taken,
     photos,
@@ -214,6 +220,8 @@ export const getEnquiryPage = createServerFn({ method: "GET" })
           freeCancelDays: s.settings.freeCancelDays,
           nonRef: s.settings.nonRef,
           bankPayDays: s.settings.bankPayDays,
+          /** The card page also takes Pay by Bank (the guest's banking app). */
+          payByBank: (await import("./direct-booking")).offersPayByBank(s.settings, currencyOf(p)),
           children: s.settings.children,
           // So the page knows at once whether a stay signs the longer-stay agreement or is too long.
           terms: {
@@ -316,7 +324,14 @@ export const submitEnquiry = createServerFn({ method: "POST" })
         room_id: room.id,
         quoted_pence:
           room.ratePence !== null
-            ? quoteStay(room.ratePence, page.offers, room.id, data.checkIn, data.checkOut).total
+            ? quoteStay(
+                room.ratePence,
+                page.offers,
+                room.id,
+                data.checkIn,
+                data.checkOut,
+                page.floors[room.id] ?? 0,
+              ).total
             : null,
         currency: currencyOf(p),
       };

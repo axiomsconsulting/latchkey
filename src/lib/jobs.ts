@@ -171,6 +171,15 @@ export const JOBS: Job[] = branded([
     startsOff: true,
   },
   {
+    key: "rate_watch",
+    name: "Smart pricing: reading prices on booking sites with Firecrawl",
+    kind: "on_use",
+    what: "Reads the price guests see on hosts' own listings and the other properties they chose, for a few sample stays, on each host's schedule (checked with the calendar sync) or when they tap Check prices now (FIRECRAWL_API_KEY, paid per page, up to 24 pages a read). Off: suggestions use the prices already read.",
+    metric: "firecrawl:prices",
+    runnable: false,
+    startsOff: true,
+  },
+  {
     key: "voice_ai",
     name: "Voice check-in: understanding unclear replies",
     kind: "on_use",

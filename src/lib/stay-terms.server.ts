@@ -392,8 +392,11 @@ export async function directTermsInput(
     .sort((a, b) => i.roomIds.indexOf(a.id) - i.roomIds.indexOf(b.id));
   let total = 0;
   const { quoteWithVoucher } = await import("./vouchers");
+  const { nightFloor } = await import("./smart-pricing");
+  const pricing = await (await import("./smart-pricing.server")).pricingFor(db, p.id);
   for (const r of rooms) {
     if (typeof r.base_rate_pence !== "number") continue;
+    const floor = nightFloor(r.base_rate_pence, r.id, pricing);
     total += i.voucher
       ? (quoteWithVoucher(
           r.base_rate_pence,
@@ -404,8 +407,9 @@ export async function directTermsInput(
           i.checkIn,
           i.checkOut,
           i.voucher,
+          floor,
         )?.total ?? 0)
-      : (quotePlan(r.base_rate_pence, i.plan, settings, offers, r.id, i.checkIn, i.checkOut)
+      : (quotePlan(r.base_rate_pence, i.plan, settings, offers, r.id, i.checkIn, i.checkOut, floor)
           ?.total ?? 0);
   }
   const today = new Intl.DateTimeFormat("en-CA", {

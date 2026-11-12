@@ -236,6 +236,27 @@ export function DirectBookingSettings({ propertyId }: { propertyId: string }) {
           search: { focus: "payments" },
           label: copy.connectStripe,
         })}
+        {form.card && d.ready.card ? (
+          <div className="ml-4 flex items-start justify-between gap-3 rounded-xl border border-border p-3">
+            <div className="min-w-0 text-sm">
+              <Label htmlFor="db-paybybank" className="text-base">
+                {copy.payByBank}
+              </Label>
+              <p className="text-muted-foreground">{copy.payByBankHelp}</p>
+              <p className={d.payByBank.status === "active" ? "mt-1 text-primary" : "mt-1"}>
+                {d.payByBank.currencyOk
+                  ? copy.payByBankStatus[d.payByBank.status]
+                  : copy.payByBankCurrency}
+              </p>
+            </div>
+            <Switch
+              id="db-paybybank"
+              checked={form.payByBank}
+              disabled={!d.payByBank.currencyOk && !form.payByBank}
+              onCheckedChange={(v) => set({ payByBank: v })}
+            />
+          </div>
+        ) : null}
         {methodRow("bank", d.ready.bank, copy.bankHelp(form.bankPayDays), {
           to: "/app/settings",
           search: { focus: "money" },

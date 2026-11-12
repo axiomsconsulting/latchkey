@@ -94,21 +94,28 @@ export type Quote = {
   applied: SeasonalOffer[];
 };
 
-/** The estimated total for a room over a stay, with each night's best offer taken off. */
+/**
+ * The estimated total for a room over a stay, with each night's best offer taken off. `floor` is the
+ * lowest a night may sell for (smart-pricing.ts nightFloor): an offer never takes a night below it.
+ */
 export function quoteStay(
   ratePence: number,
   offers: SeasonalOffer[],
   roomId: string,
   checkIn: string,
   checkOut: string,
+  floor = 0,
 ): Quote {
   const nights = nightsOf(checkIn, checkOut);
+  const least = Math.min(floor, ratePence);
   let discount = 0;
   const applied = new Map<string, SeasonalOffer>();
   for (const n of nights) {
     const o = offerOn(offers, roomId, n);
     if (!o) continue;
-    discount += Math.round((ratePence * o.percent) / 100);
+    const off = Math.min(Math.round((ratePence * o.percent) / 100), ratePence - least);
+    if (off <= 0) continue;
+    discount += off;
     applied.set(o.id, o);
   }
   const base = ratePence * nights.length;

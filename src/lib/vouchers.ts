@@ -103,21 +103,30 @@ export function quoteWithVoucher(
   checkIn: string,
   checkOut: string,
   v: Pick<Voucher, "kind" | "value" | "periods" | "roomIds"> | null,
+  /** The room's lowest night (smart-pricing.ts nightFloor); a set-price voucher isn't held to it. */
+  floor = 0,
 ): VoucherQuote | null {
   const r = planRates(ratePence, s);
+  const least = Math.min(floor, ratePence);
   const usual = plan === "flex" ? r.flex : r.nonref;
   const applies = !!v && v.roomIds.includes(roomId);
   const nights: NightPrice[] = [];
   for (const date of nightsOf(checkIn, checkOut)) {
     if (applies && coversNight(v!, date)) {
-      nights.push({ date, price: voucherNight(v!, ratePence), voucher: true });
+      const price = voucherNight(v!, ratePence);
+      nights.push({
+        date,
+        price: v!.kind === "price" ? price : Math.max(least, price),
+        voucher: true,
+      });
       continue;
     }
     if (usual === null) return null;
     const o = offerOn(offers, roomId, date);
+    const plain = Math.max(usual, least);
     nights.push({
       date,
-      price: o ? usual - Math.round((usual * o.percent) / 100) : usual,
+      price: Math.max(least, o ? plain - Math.round((plain * o.percent) / 100) : plain),
       voucher: false,
     });
   }

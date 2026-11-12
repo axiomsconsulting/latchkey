@@ -3,6 +3,7 @@ import {
   BookUser,
   Building2,
   Camera,
+  TrendingUp,
   CreditCard,
   DoorOpen,
   FileText,
@@ -68,6 +69,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   shortcuts2: Smartphone,
   adminLink: Settings2,
   photos: Camera,
+  smart: TrendingUp,
   reviewRefresh: Star,
   studioVoices: Mic,
 };
