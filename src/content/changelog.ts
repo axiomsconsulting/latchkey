@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.166.0",
+    date: "2026-11-13",
+    title: "Around here: real walking times, pictures and what's on by date",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Walking and driving times are worked out by road and path from the property's postcode (OpenStreetMap routing), instead of a straight-line guess.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Around here opens on Recommended (the best of each kind), then your picks, each kind, and All last. Places show their own photo where OpenStreetMap has one, and UK food places their food hygiene rating.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "What's on is in date order with Today, Tonight, Tomorrow or the day as a badge, and the organiser's picture where they give one. Events are only looked up while guests are staying or arriving within a week, up to their last check-out, and old ones are cleared every day.",
+      },
+    ],
+  },
+  {
     version: "0.165.0",
     date: "2026-11-13",
     title: "Guide cards sized to fit, and the house on its own",

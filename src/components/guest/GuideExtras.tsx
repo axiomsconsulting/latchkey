@@ -26,14 +26,15 @@ import { swipeStep, wrapIndex } from "@/lib/guide-view";
 import { levelName } from "@/lib/floor-map";
 import { getRoomExtras, getStayExtras } from "@/lib/guest-extras.functions";
 import {
-  PLACE_CATEGORIES,
   directionsLink,
   distanceText,
-  driveMinutes,
-  walkMinutes,
+  placeTabs,
+  placesInTab,
+  travelMinutes,
+  whenBadge,
   type LocalEvent,
   type Place,
-  type PlaceCategory,
+  type PlaceTab,
 } from "@/lib/local-guide";
 import { cn } from "@/lib/utils";
 
@@ -94,7 +95,7 @@ function cardsFor(d: Extras): ExtraCard[] {
       title: copy.localTitle,
       Icon: MapPin,
       lead: copy.localLead,
-      body: <AroundHere places={d.local.places} events={d.local.events} />,
+      body: <AroundHere places={d.local.places} events={d.local.events} today={d.local.today} />,
       own: true,
     });
   return out;
@@ -442,11 +443,21 @@ const isApple = () =>
   /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) &&
   "ontouchend" in document;
 
-function AroundHere({ places, events }: { places: Place[]; events: LocalEvent[] }) {
-  const kinds = PLACE_CATEGORIES.filter((c) => places.some((p) => p.category === c));
-  const [kind, setKind] = useState<PlaceCategory | "all">("all");
-  const shown = places.filter((p) => kind === "all" || p.category === kind).slice(0, 30);
+function AroundHere({
+  places,
+  events,
+  today,
+}: {
+  places: Place[];
+  events: LocalEvent[];
+  today: string;
+}) {
+  const tabs = placeTabs(places);
+  const [tab, setTab] = useState<PlaceTab>(tabs[0] ?? "all");
+  const shown = placesInTab(places, tab).slice(0, 30);
+  const [allEvents, setAllEvents] = useState(false);
   const apple = isApple();
+  const anyRough = shown.some((p) => p.walkS == null);
   return (
     <div className="space-y-4">
       {events.length ? (
@@ -455,62 +466,91 @@ function AroundHere({ places, events }: { places: Place[]; events: LocalEvent[] 
             <CalendarDays className="size-4 text-primary" aria-hidden />
             {copy.whatsOn}
           </h4>
-          <ul className="space-y-1.5">
-            {events.slice(0, 8).map((e) => (
-              <li key={e.id} className="rounded-xl border border-border p-2.5 text-sm">
-                <span className="font-medium">{e.name}</span>
-                <span className="block text-muted-foreground">
-                  {new Date(`${e.date}T12:00:00Z`).toLocaleDateString("en-GB", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                  })}
-                  {e.time ? ` · ${e.time}` : ""}
-                  {e.venue ? ` · ${e.venue}` : ""}
-                </span>
-                {e.url ? (
-                  <a
-                    href={e.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary underline"
-                  >
-                    {copy.website}
-                  </a>
-                ) : null}
-              </li>
-            ))}
+          <ul className="space-y-2">
+            {(allEvents ? events : events.slice(0, 8)).map((e) => {
+              const when = whenBadge(e.date, e.time, today);
+              return (
+                <li key={e.id} className="flex gap-3 rounded-xl border border-border p-2.5 text-sm">
+                  <Thumb src={e.image ?? null} />
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        "mr-1.5 inline-block rounded-full px-2 py-0.5 align-middle text-xs font-medium",
+                        when.soon
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-secondary-foreground",
+                      )}
+                    >
+                      {when.label}
+                    </span>
+                    <span className="font-medium">{e.name}</span>
+                    <span className="block text-muted-foreground">
+                      {[e.time, e.venue].filter(Boolean).join(" · ")}
+                    </span>
+                    {e.url ? (
+                      <a
+                        href={e.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline"
+                      >
+                        {copy.website}
+                      </a>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
+          {events.length > 8 ? (
+            <button
+              type="button"
+              onClick={() => setAllEvents((v) => !v)}
+              className="text-sm text-primary underline"
+            >
+              {allEvents ? copy.fewerEvents : copy.moreEvents(events.length)}
+            </button>
+          ) : null}
         </div>
       ) : null}
 
       {places.length ? (
         <>
           <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1" role="tablist">
-            {(["all", ...kinds] as const).map((k) => (
+            {tabs.map((k) => (
               <button
                 key={k}
                 type="button"
                 role="tab"
-                aria-selected={kind === k}
-                onClick={() => setKind(k)}
+                aria-selected={tab === k}
+                onClick={() => setTab(k)}
                 className={cn(
                   "h-10 shrink-0 rounded-full border px-3 text-sm",
-                  kind === k
+                  tab === k
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-card",
                 )}
               >
-                {k === "all" ? copy.all : copy.categories[k]}
+                {k === "all"
+                  ? copy.all
+                  : k === "recommended"
+                    ? copy.recommended
+                    : k === "picks"
+                      ? copy.hostPicks
+                      : copy.categories[k]}
               </button>
             ))}
           </div>
           <ul className="space-y-2">
             {shown.map((p) => {
               const located = Number.isFinite(p.lat) && Number.isFinite(p.lng);
+              const walk = travelMinutes(p, "walk");
+              const drive = travelMinutes(p, "drive");
+              const metres = p.walkM ?? (p.metres >= 0 ? p.metres : null);
               return (
                 <li key={p.id} className="rounded-xl border border-border p-3">
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-3">
+                    <Thumb src={p.image ?? null} />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">
                         {p.name}
@@ -520,28 +560,36 @@ function AroundHere({ places, events }: { places: Place[]; events: LocalEvent[] 
                             {copy.hostPick}
                           </span>
                         ) : null}
+                        {p.hygiene ? (
+                          <span
+                            className="ml-2 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 align-middle text-xs"
+                            title={copy.hygieneHelp}
+                          >
+                            {copy.hygiene(p.hygiene)}
+                          </span>
+                        ) : null}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {[
                           copy.categories[p.category],
-                          p.metres >= 0 ? distanceText(p.metres) : null,
+                          metres !== null ? distanceText(metres) : null,
                           p.address,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
                       {p.note ? <p className="mt-1 text-sm">{p.note}</p> : null}
+                      {p.website ? (
+                        <a
+                          href={p.website}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-primary underline"
+                        >
+                          {copy.website}
+                        </a>
+                      ) : null}
                     </div>
-                    {p.website ? (
-                      <a
-                        href={p.website}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-primary underline"
-                      >
-                        {copy.website}
-                      </a>
-                    ) : null}
                   </div>
                   {located ? (
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -552,7 +600,7 @@ function AroundHere({ places, events }: { places: Place[]; events: LocalEvent[] 
                         className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-sm"
                       >
                         <Footprints className="size-4" aria-hidden />
-                        {p.metres >= 0 ? copy.walk(walkMinutes(p.metres)) : copy.walkPlain}
+                        {walk ? copy.walk(walk.min, walk.exact) : copy.walkPlain}
                       </a>
                       <a
                         href={directionsLink(p, "driving", apple ? "apple" : "google")}
@@ -561,7 +609,7 @@ function AroundHere({ places, events }: { places: Place[]; events: LocalEvent[] 
                         className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-sm"
                       >
                         <Car className="size-4" aria-hidden />
-                        {p.metres >= 0 ? copy.drive(driveMinutes(p.metres)) : copy.drivePlain}
+                        {drive ? copy.drive(drive.min, drive.exact) : copy.drivePlain}
                       </a>
                     </div>
                   ) : null}
@@ -570,12 +618,29 @@ function AroundHere({ places, events }: { places: Place[]; events: LocalEvent[] 
             })}
           </ul>
           <p className="text-xs text-muted-foreground">
-            {copy.approx} {copy.osm}
+            {anyRough ? `${copy.approx} ` : ""}
+            {copy.sources}
           </p>
         </>
       ) : (
         <p className="text-sm text-muted-foreground">{copy.noPlaces}</p>
       )}
     </div>
+  );
+}
+
+/** A picture straight from the place's or organiser's own link (nothing stored); hidden if it doesn't load. */
+function Thumb({ src }: { src: string | null }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+      className="size-16 shrink-0 rounded-lg object-cover"
+    />
   );
 }
