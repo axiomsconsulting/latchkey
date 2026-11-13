@@ -53,6 +53,7 @@ import {
 } from "@/content/copy";
 import { getStay, startCheckInFromStay } from "@/lib/checkin.functions";
 import { rebrand } from "@/lib/brand";
+import { guideArtFor } from "@/lib/guide-art";
 import { ThemeIcon } from "@/components/theme/ThemeDecor";
 import { WifiCard } from "@/components/guest/WifiCard";
 import { RoomLights } from "@/components/guest/RoomLights";
@@ -338,6 +339,7 @@ function StayPage({ s, token, theme }: { s: StayData; token: string; theme: Stay
         <GuideSections
           sections={s.guide as never}
           extras={extraCards}
+          art={(k) => guideArtFor(k, theme)}
           open={open}
           onOpenChange={setOpen}
           lockedText={gcopy.doorLocked(

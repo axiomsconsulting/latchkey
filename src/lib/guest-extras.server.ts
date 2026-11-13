@@ -10,17 +10,30 @@ import { houseNotes, type HouseNotes, type Point } from "./floor-map";
 import { directionsTo, mapFloors, normalisePins, type FloorPlan } from "./floor-plans";
 import {
   eventsFromTicketmaster,
+  PLACE_CATEGORIES,
+  eventsFromCalendar,
+  eventsFromSkiddle,
   guestLocal,
+  nominatimUrl,
   normaliseLocalGuide,
   overpassQuery,
+  placesFromNominatim,
   placesFromOverpass,
+  skiddleUrl,
   type LocalEvent,
   type Place,
 } from "./local-guide";
 import { normalisePropertyInfo } from "./property-info";
 
-const OVERPASS = "https://overpass-api.de/api/interpreter";
-const UA = "Latchkey guest guide (local places for guests)";
+const OVERPASS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+];
+/**
+ * OpenStreetMap's usage policies: a User-Agent naming the app and where to find it, results kept
+ * (a week per property), one Overpass query a read and at most one Nominatim search a second.
+ */
+const UA = `Latchkey/1.0 (guest guide: places near the property; +${(process.env["PUBLIC_SITE_URL"] ?? "https://latchkey.omsestates.uk").replace(/\/$/, "")})`;
 const WEEK = 7 * 86_400_000;
 
 export async function db(): Promise<any> {
@@ -82,7 +95,7 @@ export async function refreshPlaces(
   const sb = await db();
   const { data: p } = await sb
     .from("properties")
-    .select("id, postcode, country_code, address, local_guide")
+    .select("id, postcode, country_code, address, local_guide, timezone")
     .eq("id", propertyId)
     .maybeSingle();
   if (!p) throw new Error("Property not found.");
@@ -100,17 +113,55 @@ export async function refreshPlaces(
   }
   let places: Place[] = [];
   let error: string | null = null;
-  try {
-    const res = await fetch(OVERPASS, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": UA },
-      body: `data=${encodeURIComponent(overpassQuery(at, ["food", "cafe", "pub", "shop", "shopping", "sights", "transport"]))}`,
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!res.ok) throw new Error(`OpenStreetMap answered ${res.status}`);
-    places = placesFromOverpass(await res.json(), at);
-  } catch (e) {
-    error = e instanceof Error ? e.message.slice(0, 200) : "failed";
+  // Overpass first (one request for everything); its public servers are often busy, so then
+  // OpenStreetMap's own search, one kind of place a second (their usage policy).
+  const query = overpassQuery(at, [
+    "food",
+    "cafe",
+    "pub",
+    "shop",
+    "shopping",
+    "sights",
+    "transport",
+  ]);
+  for (const url of OVERPASS) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": UA,
+          Accept: "application/json",
+        },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) throw new Error(`OpenStreetMap answered ${res.status}`);
+      places = placesFromOverpass(await res.json(), at);
+      error = null;
+      break;
+    } catch (e) {
+      error = e instanceof Error ? e.message.slice(0, 200) : "failed";
+    }
+  }
+  if (!places.length) {
+    const found: Place[] = [];
+    for (const c of PLACE_CATEGORIES) {
+      try {
+        const res = await fetch(nominatimUrl(c, at), {
+          headers: { "User-Agent": UA, Accept: "application/json" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (res.ok) found.push(...placesFromNominatim(await res.json(), at, c));
+      } catch {
+        // That kind of place is left out this time.
+      }
+      await new Promise((r) => setTimeout(r, 1100));
+    }
+    if (found.length) {
+      places = found;
+      error = null;
+    }
   }
   let events: LocalEvent[] = [];
   const key = (process.env["TICKETMASTER_API_KEY"] ?? "").trim();
@@ -135,6 +186,54 @@ export async function refreshPlaces(
     } catch {
       // Events are a bonus: places still show.
     }
+  }
+  // Skiddle (free key, UK): gigs, theatre, comedy, festivals, family days, arts, exhibitions.
+  const skiddle = (process.env["SKIDDLE_API_KEY"] ?? "").trim();
+  if (skiddle && g.eventsOn && (p.country_code ?? "GB") === "GB") {
+    try {
+      const res = await fetch(skiddleUrl(skiddle, at, todayIn(p.timezone ?? null)), {
+        headers: { "User-Agent": UA, Accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) events.push(...eventsFromSkiddle(await res.json()));
+    } catch {
+      // Events are a bonus: places still show.
+    }
+  }
+  // The host's own event calendars (iCal links): free, and as local as the host chooses.
+  {
+    const { parseIcs } = await import("./ical");
+    const today = todayIn(p.timezone ?? null);
+    for (const c of g.calendars) {
+      try {
+        const res = await fetch(c.url, {
+          headers: { "User-Agent": UA, Accept: "text/calendar, */*" },
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!res.ok) continue;
+        const ics = (await res.text()).slice(0, 3_000_000);
+        events.push(
+          ...eventsFromCalendar(
+            parseIcs(ics, p.timezone ?? "Europe/London", { noEndOk: true }),
+            today,
+            c.id,
+          ),
+        );
+      } catch {
+        // One calendar not answering never stops the rest.
+      }
+    }
+    // The same event from two sources once, soonest first.
+    const seen = new Set<string>();
+    events = events
+      .filter((e) => {
+        const k = `${e.name.toLowerCase().replace(/[^a-z0-9]/g, "")}|${e.date}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")))
+      .slice(0, 40);
   }
   const row: Record<string, unknown> = {
     property_id: propertyId,

@@ -495,7 +495,9 @@ export const findByPhotoId = createServerFn({ method: "POST" })
       await bumpUsage(p.host_id, "ai:id_read");
       try {
         read = await readIdDetails(data.image);
-      } catch {
+      } catch (e) {
+        // The reader itself is down (not the photo): find the booking another way, never stuck.
+        if ((e as { aiService?: boolean }).aiService) return { status: "find" as const };
         return { status: "retry" as const, reason: "unreadable" as const };
       }
     }
@@ -1861,7 +1863,9 @@ export const verifyPhotoId = createServerFn({ method: "POST" })
     let read: IdRead;
     try {
       read = await readId(ctx, data.image, 0);
-    } catch {
+    } catch (e) {
+      // The reader is down, not the photo: keep it for the host and carry on.
+      if ((e as { aiService?: boolean }).aiService) return unread();
       return again("unreadable");
     }
     const tz = ctx.property.timezone ?? "Europe/London";
@@ -2053,7 +2057,11 @@ export const checkCompanionId = createServerFn({ method: "POST" })
     let read: IdRead;
     try {
       read = await readId(ctx, data.image, data.position);
-    } catch {
+    } catch (e) {
+      if ((e as { aiService?: boolean }).aiService) {
+        const kept = await unread();
+        if (kept) return kept;
+      }
       return (
         (data.again ? await unread() : null) ?? {
           status: "retry" as const,

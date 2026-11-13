@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { guideArtFor } from "@/lib/guide-art";
 import { Receptionist } from "@/components/guest/Receptionist";
 import { GuestDemoDock } from "@/components/DemoDock";
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -257,6 +258,7 @@ function RoomGuide() {
         <GuideSections
           sections={g.guide as never}
           extras={extraCards}
+          art={(k) => guideArtFor(k, g.theme)}
           open={open}
           onOpenChange={setOpen}
         />

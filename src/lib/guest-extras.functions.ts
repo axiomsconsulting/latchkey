@@ -190,7 +190,9 @@ export const getLocalGuideSettings = createServerFn({ method: "GET" })
       events: ((row?.events ?? []) as any[]).slice(0, 30),
       fetchedAt: (row?.fetched_at as string | null) ?? null,
       noLocation: row?.error === "no_location",
-      eventsAvailable: !!(process.env["TICKETMASTER_API_KEY"] ?? "").trim(),
+      eventsAvailable:
+        !!(process.env["TICKETMASTER_API_KEY"] ?? "").trim() ||
+        !!(process.env["SKIDDLE_API_KEY"] ?? "").trim(),
     };
   });
 

@@ -109,6 +109,9 @@ export type ThemeConfig = {
   kioskVoiceGender: "female" | "male";
   /** The door tablet's look: XL (bold cards, full screen), standard, or Latchkey's default (kiosk-xl.ts). */
   kioskLook: "auto" | "standard" | "xl" | "jumbo";
+  /** Guide cards: a light picture behind each card (on by default), and the host's own per section (url, or "none"). */
+  guideArtOn: boolean;
+  guideArt: Record<string, string>;
 };
 
 /** buttonRadius for fully round ("pill") buttons. */
@@ -153,6 +156,8 @@ const base = {
   kioskVoice: false,
   kioskVoiceGender: "female",
   kioskLook: "auto",
+  guideArtOn: true,
+  guideArt: {},
 } as const satisfies Partial<ThemeConfig>;
 
 type Preset = Omit<ThemePreset, keyof typeof base | "buttonRadius" | "sideNotes" | "features"> &
@@ -550,6 +555,19 @@ export function normaliseTheme(raw: unknown): ThemeConfig {
     kioskVoice: r.kioskVoice === true,
     kioskVoiceGender: r.kioskVoiceGender === "male" ? "male" : "female",
     kioskLook: pick(r.kioskLook, ["auto", "standard", "xl", "jumbo"] as const, "auto"),
+    guideArtOn: r.guideArtOn !== false,
+    guideArt: Object.fromEntries(
+      Object.entries(
+        r.guideArt && typeof r.guideArt === "object" ? (r.guideArt as Record<string, unknown>) : {},
+      )
+        .filter(
+          ([k, v]) =>
+            /^[a-z0-9_]{2,40}$/.test(k) &&
+            typeof v === "string" &&
+            (v === "none" || (/^https:\/\//.test(v) && v.length <= 1500)),
+        )
+        .slice(0, 60),
+    ) as Record<string, string>,
   };
 }
 
@@ -744,5 +762,5 @@ export function googleFontLinks(
  * cover photo (they're that business's), keeping everything else, fonts included.
  */
 export function templateConfig(t: ThemeConfig, opts: { shared: boolean }): ThemeConfig {
-  return opts.shared ? { ...t, logoUrl: null, coverImageUrl: null } : t;
+  return opts.shared ? { ...t, logoUrl: null, coverImageUrl: null, guideArt: {} } : t;
 }

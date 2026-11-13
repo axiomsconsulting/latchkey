@@ -58,9 +58,12 @@ export function GuideSections({
   onOpenChange,
   lockedText,
   extras = [],
+  art,
 }: {
   sections: Section[];
   extras?: ExtraCard[];
+  /** The light picture behind each gallery card, by key (guide-art.ts), or none. */
+  art?: (key: string) => string | null;
   open: string[];
   onOpenChange: (next: string[]) => void;
   /** The door details aren't open yet (shown instead of the text). */
@@ -239,6 +242,7 @@ export function GuideSections({
           parts={parts}
           before={before}
           after={later}
+          art={art}
           onClip={(key) => setViewing({ key, index: 0 })}
         />
       )}
@@ -316,8 +320,10 @@ function GuideGallery({
   parts,
   before,
   after,
+  art,
   onClip,
 }: {
+  art?: ((key: string) => string | null) | undefined;
   parts: Array<{
     sec: Section;
     lead: string;
@@ -354,7 +360,7 @@ function GuideGallery({
       body: (
         <>
           {lead ? (
-            <p className="text-lg">
+            <p className="font-medium">
               <RichLine text={lead} />
             </p>
           ) : null}
@@ -376,7 +382,7 @@ function GuideGallery({
   const [at, setAt] = useState(0);
   const go = (i: number) => {
     const el = row.current?.children[i] as HTMLElement | undefined;
-    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
   };
   return (
     <div className="space-y-3">
@@ -387,59 +393,42 @@ function GuideGallery({
           const w = (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? el.clientWidth;
           setAt(Math.round(el.scrollLeft / Math.max(1, w + 12)));
         }}
-        className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2"
+        className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2"
       >
-        {cards.map((c) => (
-          <section
-            key={c.key}
-            id={`guide-${c.key}`}
-            className="card-soft flex max-h-[75dvh] w-[86%] shrink-0 snap-center flex-col overflow-hidden sm:w-[70%] lg:w-[48%]"
-          >
-            {/* The card's picture behind its title (the theme's colour when there's none). */}
-            <header
-              className={cn(
-                "relative flex min-h-36 items-end gap-3 overflow-hidden px-5 pb-4 pt-10",
-                c.image ? "text-white" : "bg-secondary/60",
-              )}
+        {cards.map((c) => {
+          // A faint picture behind the whole card (the host's for this section, else a starting one).
+          const bg = art?.(c.key) ?? null;
+          return (
+            <section
+              key={c.key}
+              id={`guide-${c.key}`}
+              className="card-soft relative isolate flex max-h-[62dvh] w-[calc(50%-0.375rem)] shrink-0 snap-start flex-col overflow-hidden lg:w-[calc(33.333%-0.5rem)]"
             >
-              {c.image ? (
-                <>
-                  <img
-                    src={c.image}
-                    alt=""
-                    aria-hidden
-                    loading="lazy"
-                    className="absolute inset-0 size-full object-cover"
-                  />
-                  <span
-                    aria-hidden
-                    className="absolute inset-0"
-                    style={{
-                      background: "linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.05) 70%)",
-                    }}
-                  />
-                </>
+              {bg ? (
+                <img
+                  src={bg}
+                  alt=""
+                  aria-hidden
+                  loading="lazy"
+                  className="pointer-events-none absolute inset-0 -z-10 size-full object-cover"
+                  style={{ opacity: 0.16 }}
+                />
               ) : null}
-              <span
-                className={cn(
-                  "relative grid size-11 shrink-0 place-items-center rounded-2xl",
-                  c.image ? "bg-black/40 text-white" : "bg-card text-primary",
-                )}
-              >
-                <c.Icon className="size-6" aria-hidden />
-              </span>
-              <h3 className="relative min-w-0 flex-1 self-end font-display text-2xl">{c.title}</h3>
-              {c.clip ? (
-                <span className="relative">
-                  <ClipButton count={c.clip} onOpen={() => onClip(c.key)} />
+              <header className="flex items-center gap-2 px-3 pb-1.5 pt-3">
+                <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-card text-primary shadow-sm">
+                  <c.Icon className="size-4" aria-hidden />
                 </span>
-              ) : null}
-            </header>
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 text-base">
-              {c.body}
-            </div>
-          </section>
-        ))}
+                <h3 className="line-clamp-2 min-w-0 flex-1 font-display text-base leading-tight">
+                  {c.title}
+                </h3>
+                {c.clip ? <ClipButton count={c.clip} onOpen={() => onClip(c.key)} /> : null}
+              </header>
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3 text-sm">
+                {c.body}
+              </div>
+            </section>
+          );
+        })}
       </div>
       {cards.length > 1 ? (
         <div className="flex items-center justify-center gap-3">

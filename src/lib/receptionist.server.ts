@@ -16,8 +16,10 @@ import {
   type Receptionist,
   type Surface,
 } from "./receptionist";
+import { noteAiFailure } from "./ai-health.server";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
+const MODEL = "openai/gpt-6-astra";
 
 async function db(): Promise<any> {
   const { admin } = await import("./checkin.server");
@@ -227,47 +229,99 @@ export async function askModel(
     role: h.role === "guest" ? "user" : "assistant",
     content: [{ type: h.role === "guest" ? "input_text" : "output_text", text: h.text }],
   }));
-  const res = await fetch(GATEWAY, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-      "X-Lovable-AIG-SDK": "fetch",
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-6-astra",
-      stream: true,
-      store: false,
-      reasoning: { effort: "low", summary: "auto" },
-      include: ["reasoning.encrypted_content"],
-      instructions: briefFor(k, s, surface),
-      input: [
-        ...turns,
-        { role: "user", content: [{ type: "input_text", text: question.slice(0, 600) }] },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "answer",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              reply: { type: "string" },
-              open: { type: ["string", "null"], enum: [...allowed, null] },
-            },
-            required: ["reply", "open"],
+  // The full request first; if the AI service turns it down, once more in its plainest form
+  // (instructions as the first message, a free-text open key checked by readAnswer anyway).
+  const full = {
+    model: MODEL,
+    stream: true,
+    store: false,
+    reasoning: { effort: "low", summary: "auto" },
+    include: ["reasoning.encrypted_content"],
+    instructions: briefFor(k, s, surface),
+    input: [
+      ...turns,
+      { role: "user", content: [{ type: "input_text", text: question.slice(0, 600) }] },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "answer",
+        strict: true,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            reply: { type: "string" },
+            open: { type: ["string", "null"], enum: [...allowed, null] },
           },
+          required: ["reply", "open"],
         },
       },
-    }),
-  });
+    },
+  };
+  const plain = {
+    model: MODEL,
+    stream: true,
+    store: false,
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: [
+              briefFor(k, s, surface),
+              ...trimHistory(history).map(
+                (h) => `${h.role === "guest" ? "Guest" : "You"} said: ${h.text}`,
+              ),
+              `The guest now asks: ${question.slice(0, 600)}`,
+              `Reply as JSON: reply (your answer) and open (one of: ${allowed.join(", ") || "none"}; or an empty string).`,
+            ].join("\n\n"),
+          },
+        ],
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "answer",
+        strict: true,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: { reply: { type: "string" }, open: { type: "string" } },
+          required: ["reply", "open"],
+        },
+      },
+    },
+  };
+  const send = (body: unknown) =>
+    fetch(GATEWAY, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "fetch",
+      },
+      body: JSON.stringify(body),
+    });
+  let res = await send(full);
+  if (!res.ok && res.status !== 402 && res.status !== 429) {
+    const why = await res.text().catch(() => "");
+    console.error(`Receptionist: AI service said ${res.status}: ${why.slice(0, 400)}`);
+    noteAiFailure("receptionist", res.status, why);
+    res = await send(plain);
+  }
   if (!res.ok || !res.body) {
+    const why = await res.text().catch(() => "");
+    console.error(`Receptionist: AI service said ${res.status}: ${why.slice(0, 400)}`);
+    noteAiFailure("receptionist", res.status, why);
     throw new Error(
       res.status === 402
         ? "The receptionist is resting just now."
-        : "Sorry, I couldn't answer that just now.",
+        : res.status === 429
+          ? "One moment, please: ask me again in a minute."
+          : "Sorry, I couldn't answer that just now.",
     );
   }
   const { readAiStream } = await import("./ai-stream");

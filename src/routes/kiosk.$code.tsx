@@ -41,6 +41,7 @@ import {
 import { KioskBlank, KioskNightLight, useRestShowing } from "@/components/guest/KioskNightLight";
 import { idleActions } from "@/lib/kiosk-saver";
 import { guest as copy } from "@/content/copy";
+import { ServiceFrame } from "@/components/guest/ServiceFrame";
 import {
   FIT,
   KIOSK_FIT_SCRIPT,
@@ -1694,14 +1695,7 @@ function Kiosk() {
             {/* Always the same box, whichever icon is in it (or none), so nothing beside it shifts. */}
             {jumbo ? null : actionBox}
           </header>
-          {samples ? (
-            <p
-              role="status"
-              className="pointer-events-none fixed left-1/2 top-2 z-50 -translate-x-1/2 rounded-full bg-amber-300 px-4 py-1 text-sm font-semibold text-black"
-            >
-              {copy.testSamplesBadge}
-            </p>
-          ) : null}
+          {samples && !service ? <ServiceFrame /> : null}
           {join ? (
             <JoinCheckIn share={join} />
           ) : (
@@ -1791,7 +1785,7 @@ function Kiosk() {
             }}
           />
         ) : null}
-        {service && !service.card ? <ServiceFrame /> : null}
+        {service ? <ServiceFrame /> : null}
 
         {/* The host's welcome for an arriving guest: over everything, the screensaver too. */}
         {welcomeUp && welcome ? (
@@ -2079,19 +2073,3 @@ function useServiceMode(
 }
 
 /** Service mode without a welcome card: red and white stripes round the screen, named on top. */
-function ServiceFrame() {
-  return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[90]">
-      <div
-        className="absolute inset-0"
-        style={{
-          border: "14px solid transparent",
-          borderImage: "repeating-linear-gradient(45deg, #dc2626 0 18px, #ffffff 18px 36px) 14",
-        }}
-      />
-      <p className="absolute left-1/2 top-0 -translate-x-1/2 rounded-b-xl bg-[#dc2626] px-6 py-1.5 text-lg font-bold uppercase tracking-wider text-white shadow">
-        {copy.serviceMode}
-      </p>
-    </div>
-  );
-}
