@@ -30,6 +30,8 @@ export type Hit = {
   wd?: boolean;
   tz?: string;
   lang?: string;
+  /** The page's host (preview and local builds are the team's). */
+  h?: string;
   /** utm_* (an object; older pages send just the source as a string). */
   utm?: unknown;
 };
@@ -153,13 +155,23 @@ export async function recordHit(hit: Hit, request: Request): Promise<void> {
       country: where.country,
       region: where.region,
     };
+    const host = clip(hit.h, 120)?.toLowerCase() ?? null;
     let made = (
       await d
         .from("analytics_visits")
-        .insert({ ...base, ...utm, ip_hash: where.ip_hash })
+        .insert({ ...base, ...utm, ip_hash: where.ip_hash, page_host: host })
         .select("id")
         .single()
     ).data;
+    // Before migration 0111 (no page_host yet).
+    if (!made)
+      made = (
+        await d
+          .from("analytics_visits")
+          .insert({ ...base, ...utm, ip_hash: where.ip_hash })
+          .select("id")
+          .single()
+      ).data;
     // Before migration 0046 (no utm_medium… or ip_hash yet): the older columns only, still no address.
     if (!made) made = (await d.from("analytics_visits").insert(base).select("id").single()).data;
     visitId = made?.id;

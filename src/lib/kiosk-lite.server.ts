@@ -639,6 +639,17 @@ export async function liteState(
       ...(device ? { device } : {}),
       version: APP_VERSION,
       ...liteSig(userAgent, body.hw),
+      ...(body.hw && userAgent
+        ? {
+            hw: {
+              ua: userAgent.slice(0, 500),
+              w: body.hw.w,
+              h: body.hw.h,
+              dpr: body.hw.dpr ?? null,
+              touch: body.hw.touch ?? null,
+            },
+          }
+        : {}),
       compat: {
         detected: body.detected !== false,
         reason: browserLabel(userAgent),

@@ -70,6 +70,7 @@ import { useIdleFor } from "@/hooks/use-idle-for";
 import { useMotionWake } from "@/hooks/use-motion-wake";
 import { lowPowerNow, restNow, type RestShowing } from "@/lib/kiosk-rest";
 import { deviceSignature } from "@/lib/kiosk-devices";
+import { readHardware } from "@/lib/device-model";
 import { APP_VERSION } from "@/lib/app-version";
 import { AppVersion } from "@/components/AppVersion";
 import { KioskCorner } from "@/components/guest/KioskCorner";
@@ -698,11 +699,13 @@ function useKioskTablet(code: string, enabled: boolean) {
       : undefined;
     void readFix(false)
       .catch(() => null)
-      .then((fix) => {
+      .then(async (fix) => {
         const device = deviceToken(code);
+        const hw = await readHardware().catch(() => null);
         return fn({
           data: {
             code,
+            ...(hw ? { hw } : {}),
             ...(device ? { device } : {}),
             ...(display ? { display } : {}),
             version: APP_VERSION,

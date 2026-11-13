@@ -66,6 +66,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { requestTabletUpdate } from "@/lib/app-updates.functions";
 import { KIOSK_MODES, aboveDetected, type KioskMode } from "@/lib/kiosk-compat";
 import { gridFor, isOnline, tabletName } from "@/lib/kiosk-devices";
+import { deviceLine } from "@/lib/device-model";
 import {
   listKioskDevices,
   pairKioskByCode,
@@ -413,6 +414,18 @@ function TabletCard({
           {pending ? copy.waiting : online ? copy.online : ago(d.lastSeenAt)}
           {d.appVersion ? ` · v${d.appVersion}` : ""}
         </p>
+        {d.deviceInfo ? (
+          <p className="truncate text-xs text-muted-foreground" title={deviceLine(d.deviceInfo)}>
+            {d.label?.trim() ? `${d.deviceInfo.name} · ` : ""}
+            {deviceLine(d.deviceInfo)}
+          </p>
+        ) : null}
+        {!pending ? (
+          <p className="text-xs text-muted-foreground">
+            {copy.activity[d.activity]}
+            {d.activity === "temporary" ? ` ${copy.activityGoes}` : ""}
+          </p>
+        ) : null}
         {d.appVersion && latest && newerVersion(latest, d.appVersion) ? (
           <p className="text-xs text-accent">{updateCopy.outOfDate(latest)}</p>
         ) : null}
@@ -510,7 +523,7 @@ function TabletCard({
               className="h-10"
               value={label}
               maxLength={40}
-              placeholder={copy.namePlaceholder}
+              placeholder={d.autoName ?? copy.namePlaceholder}
               aria-label={copy.name}
               onChange={(e) => setLabel(e.target.value)}
               onBlur={() => {

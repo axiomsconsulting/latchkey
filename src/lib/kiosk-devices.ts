@@ -34,9 +34,71 @@ export function nextNumber(taken: Array<number | null | undefined>): number | nu
   return null;
 }
 
-/** "Front door", or "Tablet 2" until it has a name. */
-export const tabletName = (d: { label?: string | null; number?: number | null }) =>
-  d.label?.trim() || (d.number ? `Tablet ${d.number}` : "Door tablet");
+/** The host's name ("Front door"), else what the tablet is ("Galaxy Tab A8"), else "Tablet 2". */
+export const tabletName = (d: {
+  label?: string | null;
+  number?: number | null;
+  autoName?: string | null;
+}) => d.label?.trim() || d.autoName?.trim() || (d.number ? `Tablet ${d.number}` : "Door tablet");
+
+/* ---------------------- how often a tablet is used ---------------------- */
+
+/** Days a tablet must report on to count as used regularly. */
+export const REGULAR_DAYS = 5;
+/** A tablet seen on this many days or fewer may be temporary (a test, a guest's own phone). */
+export const TEMPORARY_MAX_DAYS = 2;
+/** …and is removed once quiet this long. */
+export const FORGET_AFTER_DAYS = 7;
+/** A tablet that never finished pairing goes sooner. */
+export const FORGET_PENDING_AFTER_DAYS = 3;
+
+export type Activity = "regular" | "occasional" | "new" | "temporary";
+
+export type ActivityRow = {
+  status: string;
+  seenDays: number | null;
+  createdAt: string;
+  lastSeenAt: string | null;
+  label: string | null;
+  /** The host set it up: calibrated the screen, placed the camera, or it's in service mode. */
+  setUp?: boolean;
+};
+
+const DAY = 86_400_000;
+
+/** How the host's tablet list describes it. */
+export function deviceActivity(r: ActivityRow, now: number): Activity {
+  const days = r.seenDays ?? 1;
+  if (days >= REGULAR_DAYS) return "regular";
+  const last = r.lastSeenAt ? Date.parse(r.lastSeenAt) : Date.parse(r.createdAt);
+  if (now - Date.parse(r.createdAt) < 3 * DAY) return "new";
+  if (days <= TEMPORARY_MAX_DAYS && now - last > 2 * DAY) return "temporary";
+  return "occasional";
+}
+
+/**
+ * Should the daily sweep remove it? Only tablets opened once or twice and quiet since,
+ * never one the host named or set up, and never one used on three or more days.
+ */
+export function forgetDevice(r: ActivityRow, now: number): boolean {
+  if (r.label?.trim() || r.setUp) return false;
+  const days = r.seenDays ?? 1;
+  if (days > TEMPORARY_MAX_DAYS) return false;
+  const last = r.lastSeenAt ? Date.parse(r.lastSeenAt) : Date.parse(r.createdAt);
+  const quiet = now - last;
+  return quiet > (r.status === "pending" ? FORGET_PENDING_AFTER_DAYS : FORGET_AFTER_DAYS) * DAY;
+}
+
+/** seen_days and last_day after a report on `today` (UTC date). */
+export function nextSeen(
+  r: { seenDays: number | null; lastDay: string | null },
+  today: string,
+): { seen_days: number; last_day: string } | null {
+  if (r.lastDay === today) return null;
+  // The day it was made counts once: the first report only records the day.
+  const seen = r.seenDays ?? 0;
+  return { seen_days: r.lastDay ? seen + 1 : Math.max(seen, 1), last_day: today };
+}
 
 export type InUse = {
   netHash: string | null;
