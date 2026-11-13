@@ -27,10 +27,13 @@ import { levelName } from "@/lib/floor-map";
 import { getRoomExtras, getStayExtras } from "@/lib/guest-extras.functions";
 import {
   directionsLink,
-  distanceText,
+  distanceIn,
+  hygieneBadge,
+  hygienePage,
+  placeMetres,
   placeTabs,
   placesInTab,
-  travelMinutes,
+  tileOf,
   whenBadge,
   type LocalEvent,
   type Place,
@@ -95,7 +98,14 @@ function cardsFor(d: Extras): ExtraCard[] {
       title: copy.localTitle,
       Icon: MapPin,
       lead: copy.localLead,
-      body: <AroundHere places={d.local.places} events={d.local.events} today={d.local.today} />,
+      body: (
+        <AroundHere
+          places={d.local.places}
+          events={d.local.events}
+          today={d.local.today}
+          miles={d.local.miles}
+        />
+      ),
       own: true,
     });
   return out;
@@ -214,8 +224,15 @@ function AroundTheHouse({ n, plans }: { n: Extras["house"]; plans: Extras["plans
                   lines={f.lines}
                   items={f.items}
                 />
-                {plans.length > 1 ? (
-                  <span className="block text-xs font-medium">{copy.floorName(planName(f))}</span>
+                {plans.length > 1 || f.yours ? (
+                  <span className="flex items-center gap-1.5 text-xs font-medium">
+                    {plans.length > 1 ? copy.floorName(planName(f)) : null}
+                    {f.yours ? (
+                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                        {copy.yourFloor}
+                      </span>
+                    ) : null}
+                  </span>
                 ) : null}
               </button>
             ))}
@@ -258,8 +275,8 @@ function AroundTheHouse({ n, plans }: { n: Extras["house"]; plans: Extras["plans
 function PlanKey() {
   return (
     <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      <Key colour="rgba(22,163,74,0.45)">{copy.key.yours}</Key>
-      <Key colour="rgba(37,99,235,0.25)">{copy.key.shared}</Key>
+      <Key colour="rgba(22,163,74,0.45)">{copy.key.yoursAll}</Key>
+      <Key colour="rgba(37,99,235,0.35)">{copy.key.shared}</Key>
       <Key colour="rgba(100,116,139,0.25)">{copy.key.guestRoom}</Key>
       <Key colour="rgba(220,38,38,0.35)">{copy.key.private}</Key>
     </p>
@@ -288,6 +305,7 @@ function PlanViewer({
             <div className="flex items-center gap-2">
               <DialogTitle className="min-w-0 flex-1 truncate text-base font-medium">
                 {copy.floorName(planName(f))}
+                {f.yours ? ` · ${copy.yourFloor}` : ""}
               </DialogTitle>
               {many ? (
                 <>
@@ -447,44 +465,51 @@ function AroundHere({
   places,
   events,
   today,
+  miles,
 }: {
   places: Place[];
   events: LocalEvent[];
   today: string;
+  miles: boolean;
 }) {
   const tabs = placeTabs(places);
   const [tab, setTab] = useState<PlaceTab>(tabs[0] ?? "all");
-  const shown = placesInTab(places, tab).slice(0, 30);
+  const shown = placesInTab(places, tab).slice(0, 32);
   const [allEvents, setAllEvents] = useState(false);
   const apple = isApple();
-  const anyRough = shown.some((p) => p.walkS == null);
+  const grid = "grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4";
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {events.length ? (
         <div className="space-y-2">
           <h4 className="flex items-center gap-2 font-medium">
             <CalendarDays className="size-4 text-primary" aria-hidden />
             {copy.whatsOn}
           </h4>
-          <ul className="space-y-2">
+          <ul className={grid}>
             {(allEvents ? events : events.slice(0, 8)).map((e) => {
               const when = whenBadge(e.date, e.time, today);
               return (
-                <li key={e.id} className="flex gap-3 rounded-xl border border-border p-2.5 text-sm">
-                  <Thumb src={e.image ?? null} />
-                  <div className="min-w-0 flex-1">
+                <li
+                  key={e.id}
+                  className="flex flex-col overflow-hidden rounded-xl border border-border bg-card text-sm"
+                >
+                  <div className="relative aspect-[4/3] bg-muted">
+                    {e.image ? <Photo src={e.image} /> : <DateBlock date={e.date} />}
                     <span
                       className={cn(
-                        "mr-1.5 inline-block rounded-full px-2 py-0.5 align-middle text-xs font-medium",
+                        "absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold shadow",
                         when.soon
                           ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-secondary-foreground",
+                          : "bg-background text-foreground",
                       )}
                     >
                       {when.label}
                     </span>
-                    <span className="font-medium">{e.name}</span>
-                    <span className="block text-muted-foreground">
+                  </div>
+                  <div className="flex flex-1 flex-col gap-0.5 p-2.5">
+                    <span className="line-clamp-2 font-medium">{e.name}</span>
+                    <span className="line-clamp-2 text-xs text-muted-foreground">
                       {[e.time, e.venue].filter(Boolean).join(" · ")}
                     </span>
                     {e.url ? (
@@ -492,7 +517,7 @@ function AroundHere({
                         href={e.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-primary underline"
+                        className="mt-auto pt-1 text-primary underline"
                       >
                         {copy.website}
                       </a>
@@ -541,86 +566,111 @@ function AroundHere({
               </button>
             ))}
           </div>
-          <ul className="space-y-2">
+          <ul className={grid}>
             {shown.map((p) => {
               const located = Number.isFinite(p.lat) && Number.isFinite(p.lng);
-              const walk = travelMinutes(p, "walk");
-              const drive = travelMinutes(p, "drive");
-              const metres = p.walkM ?? (p.metres >= 0 ? p.metres : null);
+              const metres = placeMetres(p);
+              const badge = hygieneBadge(p.hygiene);
+              const page = hygienePage(p.hygieneId);
               return (
-                <li key={p.id} className="rounded-xl border border-border p-3">
-                  <div className="flex items-start gap-3">
-                    <Thumb src={p.image ?? null} />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">
-                        {p.name}
-                        {p.pick ? (
-                          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 align-middle text-xs text-primary">
-                            <Star className="size-3" aria-hidden />
-                            {copy.hostPick}
-                          </span>
-                        ) : null}
-                        {p.hygiene ? (
-                          <span
-                            className="ml-2 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 align-middle text-xs"
-                            title={copy.hygieneHelp}
-                          >
+                <li
+                  key={p.id}
+                  className="flex flex-col overflow-hidden rounded-xl border border-border bg-card text-sm"
+                >
+                  <div className="relative aspect-[4/3] bg-muted">
+                    {p.image ? (
+                      <Photo
+                        src={p.image}
+                        fallback={located ? <MapThumb lat={p.lat} lng={p.lng} /> : null}
+                      />
+                    ) : located ? (
+                      <MapThumb lat={p.lat} lng={p.lng} />
+                    ) : null}
+                    {p.pick ? (
+                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground shadow">
+                        <Star className="size-3" aria-hidden />
+                        {copy.hostPick}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1 p-2.5">
+                    <p className="line-clamp-2 font-medium">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {[
+                        copy.categories[p.category],
+                        metres !== null ? distanceIn(metres, miles) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                    {p.address ? (
+                      <p className="line-clamp-1 text-xs text-muted-foreground">{p.address}</p>
+                    ) : null}
+                    {p.note ? <p className="text-sm">{p.note}</p> : null}
+                    {p.hygiene ? (
+                      <a
+                        href={page ?? "https://ratings.food.gov.uk/"}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={copy.hygieneHelp}
+                        className="block w-fit"
+                      >
+                        {badge ? (
+                          <img
+                            src={badge}
+                            alt={copy.hygiene(p.hygiene)}
+                            loading="lazy"
+                            className="h-9 w-auto"
+                          />
+                        ) : (
+                          <span className="inline-block rounded border border-border px-2 py-0.5 text-xs">
                             {copy.hygiene(p.hygiene)}
                           </span>
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {[
-                          copy.categories[p.category],
-                          metres !== null ? distanceText(metres) : null,
-                          p.address,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                      {p.note ? <p className="mt-1 text-sm">{p.note}</p> : null}
+                        )}
+                      </a>
+                    ) : null}
+                    <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
+                      {located ? (
+                        <>
+                          <a
+                            href={directionsLink(p, "walking", apple ? "apple" : "google")}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={copy.walkPlain}
+                            className="inline-flex h-9 items-center gap-1 rounded-full border border-border px-2.5 text-xs"
+                          >
+                            <Footprints className="size-4" aria-hidden />
+                            {copy.walkPlain}
+                          </a>
+                          <a
+                            href={directionsLink(p, "driving", apple ? "apple" : "google")}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={copy.drivePlain}
+                            className="inline-flex h-9 items-center gap-1 rounded-full border border-border px-2.5 text-xs"
+                          >
+                            <Car className="size-4" aria-hidden />
+                            {copy.drivePlain}
+                          </a>
+                        </>
+                      ) : null}
                       {p.website ? (
                         <a
                           href={p.website}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-sm text-primary underline"
+                          className="text-xs text-primary underline"
                         >
                           {copy.website}
                         </a>
                       ) : null}
                     </div>
                   </div>
-                  {located ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <a
-                        href={directionsLink(p, "walking", apple ? "apple" : "google")}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-sm"
-                      >
-                        <Footprints className="size-4" aria-hidden />
-                        {walk ? copy.walk(walk.min, walk.exact) : copy.walkPlain}
-                      </a>
-                      <a
-                        href={directionsLink(p, "driving", apple ? "apple" : "google")}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-sm"
-                      >
-                        <Car className="size-4" aria-hidden />
-                        {drive ? copy.drive(drive.min, drive.exact) : copy.drivePlain}
-                      </a>
-                    </div>
-                  ) : null}
                 </li>
               );
             })}
           </ul>
-          <p className="text-xs text-muted-foreground">
-            {anyRough ? `${copy.approx} ` : ""}
-            {copy.sources}
-          </p>
+          <p className="text-xs text-muted-foreground">{copy.sources}</p>
         </>
       ) : (
         <p className="text-sm text-muted-foreground">{copy.noPlaces}</p>
@@ -629,10 +679,10 @@ function AroundHere({
   );
 }
 
-/** A picture straight from the place's or organiser's own link (nothing stored); hidden if it doesn't load. */
-function Thumb({ src }: { src: string | null }) {
+/** A picture straight from the place's or organiser's own link (nothing stored); the fallback if it doesn't load. */
+function Photo({ src, fallback = null }: { src: string; fallback?: React.ReactNode }) {
   const [broken, setBroken] = useState(false);
-  if (!src || broken) return null;
+  if (broken) return <>{fallback}</>;
   return (
     <img
       src={src}
@@ -640,7 +690,56 @@ function Thumb({ src }: { src: string | null }) {
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setBroken(true)}
-      className="size-16 shrink-0 rounded-lg object-cover"
+      className="absolute inset-0 size-full object-cover"
     />
+  );
+}
+
+/** The place on an OpenStreetMap map (tiles straight from openstreetmap.org), centred, with a pin. */
+function MapThumb({ lat, lng }: { lat: number; lng: number }) {
+  const z = 17;
+  const T = 128;
+  const t = tileOf(lat, lng, z);
+  const px = (1 + t.fx) * T;
+  const py = (1 + t.fy) * T;
+  return (
+    <div className="absolute inset-0 overflow-hidden" aria-hidden>
+      <div className="absolute" style={{ left: `calc(50% - ${px}px)`, top: `calc(50% - ${py}px)` }}>
+        {[-1, 0, 1].flatMap((dy) =>
+          [-1, 0, 1].map((dx) => (
+            <img
+              key={`${dx}:${dy}`}
+              src={`https://tile.openstreetmap.org/${z}/${t.x + dx}/${t.y + dy}.png`}
+              alt=""
+              loading="lazy"
+              className="absolute max-w-none"
+              style={{ left: (dx + 1) * T, top: (dy + 1) * T, width: T, height: T }}
+            />
+          )),
+        )}
+      </div>
+      <MapPin
+        className="absolute left-1/2 top-1/2 size-7 -translate-x-1/2 -translate-y-full fill-primary text-primary-foreground drop-shadow"
+        aria-hidden
+      />
+      <span className="absolute bottom-0 right-0 bg-background/80 px-1 text-[9px] text-muted-foreground">
+        © OpenStreetMap
+      </span>
+    </div>
+  );
+}
+
+/** For an event without a picture: its date, large. */
+function DateBlock({ date }: { date: string }) {
+  const d = new Date(`${date}T12:00:00Z`);
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-secondary text-secondary-foreground">
+      <div className="text-center leading-none">
+        <div className="font-display text-4xl">{d.getUTCDate()}</div>
+        <div className="mt-1 text-sm uppercase tracking-wide">
+          {d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -40,6 +40,10 @@ export type Place = {
   driveS?: number | null;
   /** UK food hygiene rating (Food Standards Agency): "0"–"5", or Scotland's "Pass". */
   hygiene?: string | null;
+  /** The FSA's id for the business: its page on ratings.food.gov.uk. */
+  hygieneId?: number | null;
+  /** OpenStreetMap's Wikidata link (Q…), for a photo when the place has none of its own. */
+  wikidata?: string | null;
 };
 
 export type LocalEvent = {
@@ -347,6 +351,7 @@ export function placesFromOverpass(
       address: street || null,
       website: httpsUrl(tags["website"]),
       image: placeImage(tags),
+      wikidata: /^Q\d{1,12}$/.test(tags["wikidata"] ?? "") ? tags["wikidata"]! : null,
     });
   }
   all.sort((a, b) => a.metres - b.metres);
@@ -429,9 +434,8 @@ export function localText(places: Place[], events: LocalEvent[]): string {
     return ps.length
       ? `${c}: ${ps
           .map((p) => {
-            const w = travelMinutes(p, "walk");
-            const m = p.walkM ?? (p.metres >= 0 ? p.metres : null);
-            return `${p.name}${m !== null && w ? ` (${distanceText(m)}, ${w.exact ? "" : "about "}${w.min} min walk)` : ""}${p.hygiene ? `, food hygiene ${p.hygiene}` : ""}${p.note ? ` - ${p.note}` : ""}`;
+            const m = placeMetres(p);
+            return `${p.name}${m !== null ? ` (${distanceIn(m, true)} / ${distanceText(m)})` : ""}${p.hygiene ? `, food hygiene ${p.hygiene}` : ""}${p.note ? ` - ${p.note}` : ""}`;
           })
           .join("; ")}`
       : "";
@@ -783,11 +787,12 @@ export function withHygiene(places: Place[], body: unknown): Place[] {
     const lng = Number(g["longitude"]);
     const value = text(e["RatingValue"], 30);
     const name = squash(text(e["BusinessName"], 120));
+    const id = Number(e["FHRSID"]);
     return Number.isFinite(lat) &&
       Number.isFinite(lng) &&
       name.length >= 3 &&
       /^([0-5]|Pass)$/.test(value)
-      ? [{ name, lat, lng, value }]
+      ? [{ name, lat, lng, value, id: Number.isInteger(id) && id > 0 ? id : null }]
       : [];
   });
   return places.map((p) => {
@@ -799,7 +804,7 @@ export function withHygiene(places: Place[], body: unknown): Place[] {
         (r.name === n || r.name.includes(n) || n.includes(r.name)) &&
         metresBetween({ lat: p.lat, lng: p.lng }, r) <= 150,
     );
-    return hit ? { ...p, hygiene: hit.value } : p;
+    return hit ? { ...p, hygiene: hit.value, hygieneId: hit.id } : p;
   });
 }
 
@@ -841,4 +846,69 @@ export function placesInTab(places: Place[], tab: PlaceTab): Place[] {
   if (tab === "picks") return places.filter((p) => p.pick);
   if (tab === "all") return places;
   return places.filter((p) => p.category === tab);
+}
+
+/** The FSA's official rating badge (0–5, England, Wales and Northern Ireland), shown from their site. */
+export function hygieneBadge(value: string | null | undefined): string | null {
+  return value && /^[0-5]$/.test(value)
+    ? `https://ratings.food.gov.uk/images/badges/fhrs/3/fhrs-badge-${value}.svg`
+    : null;
+}
+
+/** The business's page on the FSA's ratings site. */
+export const hygienePage = (id: number | null | undefined) =>
+  id ? `https://ratings.food.gov.uk/business/${id}` : null;
+
+/** Wikidata's entities for these ids (one request for up to 50). */
+export function wikidataUrl(ids: string[]): string {
+  const q = new URLSearchParams({
+    action: "wbgetentities",
+    ids: ids.slice(0, 50).join("|"),
+    props: "claims",
+    format: "json",
+  });
+  return `https://www.wikidata.org/w/api.php?${q}`;
+}
+
+/** Each entity's main photo (P18) as a small Wikimedia Commons link. */
+export function wikidataImages(body: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [id, ent] of Object.entries(obj(obj(body)["entities"]))) {
+    const p18 = (obj(obj(ent)["claims"])["P18"] as unknown[] | undefined)?.[0];
+    const file = obj(obj(obj(p18)["mainsnak"])["datavalue"])["value"];
+    if (typeof file === "string" && /\.(jpe?g|png|webp)$/i.test(file))
+      out[id] =
+        `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=320`;
+  }
+  return out;
+}
+
+/* ------------------------------- distance, for the guest ------------------------------- */
+
+/** Countries that measure road distances in miles. */
+const MILES = ["GB", "US", "LR", "MM"];
+export const usesMiles = (country: string | null | undefined) =>
+  MILES.includes((country ?? "GB").toUpperCase());
+
+/** How far: on foot by path where known, else by road, else as the crow flies. */
+export function placeMetres(p: Place): number | null {
+  return p.walkM ?? p.driveM ?? (p.metres >= 0 ? p.metres : null);
+}
+
+/** "0.4 mi", "12 mi", "350 m", "1.2 km". */
+export function distanceIn(metres: number, miles: boolean): string {
+  if (!miles) return distanceText(metres);
+  const mi = metres / 1609.344;
+  return mi < 0.1 ? "0.1 mi" : mi < 10 ? `${mi.toFixed(1)} mi` : `${Math.round(mi)} mi`;
+}
+
+/* ------------------------------- a map as the picture ------------------------------- */
+
+/** Which OpenStreetMap tile holds a point at this zoom, and where in it (0–1). */
+export function tileOf(lat: number, lng: number, zoom: number) {
+  const n = 2 ** zoom;
+  const x = ((lng + 180) / 360) * n;
+  const r = (lat * Math.PI) / 180;
+  const y = ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n;
+  return { x: Math.floor(x), y: Math.floor(y), fx: x - Math.floor(x), fy: y - Math.floor(y) };
 }

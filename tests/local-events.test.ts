@@ -298,3 +298,65 @@ describe("places", () => {
     expect(placeTabs([])).toEqual([]);
   });
 });
+
+import {
+  distanceIn,
+  hygieneBadge,
+  hygienePage,
+  placeMetres,
+  tileOf,
+  usesMiles,
+  wikidataImages,
+} from "@/lib/local-guide";
+
+describe("tiles", () => {
+  it("uses the FSA's official badge for 0–5, never for Scotland's Pass", () => {
+    expect(hygieneBadge("5")).toBe(
+      "https://ratings.food.gov.uk/images/badges/fhrs/3/fhrs-badge-5.svg",
+    );
+    expect(hygieneBadge("Pass")).toBeNull();
+    expect(hygienePage(123)).toBe("https://ratings.food.gov.uk/business/123");
+  });
+
+  it("gives distances in miles in the UK, km elsewhere, by path first", () => {
+    expect(usesMiles("GB")).toBe(true);
+    expect(usesMiles("FR")).toBe(false);
+    expect(distanceIn(805, true)).toBe("0.5 mi");
+    expect(distanceIn(40, true)).toBe("0.1 mi");
+    expect(distanceIn(32_000, true)).toBe("20 mi");
+    expect(distanceIn(1200, false)).toBe("1.2 km");
+    const p = {
+      id: "a",
+      name: "a",
+      category: "cafe" as const,
+      lat: 0,
+      lng: 0,
+      metres: 300,
+      address: null,
+      website: null,
+    };
+    expect(placeMetres(p)).toBe(300);
+    expect(placeMetres({ ...p, walkM: 420 })).toBe(420);
+  });
+
+  it("finds the map tile and the spot in it", () => {
+    const t = tileOf(51.4545, -2.5879, 17);
+    expect(t.x).toBe(64593);
+    expect(t.y).toBeGreaterThan(43000);
+    expect(t.fx).toBeGreaterThanOrEqual(0);
+    expect(t.fx).toBeLessThan(1);
+  });
+
+  it("reads Wikidata's main photo", () => {
+    expect(
+      wikidataImages({
+        entities: {
+          Q1: { claims: { P18: [{ mainsnak: { datavalue: { value: "Old Pub.jpg" } } }] } },
+          Q2: { claims: {} },
+        },
+      }),
+    ).toEqual({
+      Q1: "https://commons.wikimedia.org/wiki/Special:FilePath/Old%20Pub.jpg?width=320",
+    });
+  });
+});
