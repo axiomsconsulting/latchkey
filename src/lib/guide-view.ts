@@ -27,3 +27,55 @@ export function wrapIndex(i: number, n: number): number {
 export function hasMore(s: { rest: string; steps: number; attachments: number }): boolean {
   return !!s.rest.trim() || s.steps > 0 || s.attachments > 0;
 }
+
+/* ----------------------- gallery cards sized to their content ----------------------- */
+
+/**
+ * Roughly how much of a gallery column a card fills (1 = a whole column): its text, steps,
+ * photos and attachments. Only used to decide which cards share a column.
+ */
+export function cardSize(c: {
+  text: number;
+  steps?: number;
+  images?: number;
+  attachments?: number;
+}): number {
+  return (
+    0.14 +
+    c.text / 650 +
+    (c.steps ?? 0) * 0.12 +
+    (c.images ?? 0) * 0.45 +
+    ((c.attachments ?? 0) > 0 ? 0.35 : 0)
+  );
+}
+
+/** A card this size or smaller can share a column. */
+export const STACKS_UP_TO = 0.55;
+
+/**
+ * Cards in order, grouped into columns: small cards stacked while they fit in one column,
+ * bigger cards each on their own.
+ */
+export function packColumns(sizes: number[], room = 1): number[][] {
+  const out: number[][] = [];
+  let col: number[] = [];
+  let used = 0;
+  sizes.forEach((size, i) => {
+    if (size > STACKS_UP_TO) {
+      if (col.length) out.push(col);
+      out.push([i]);
+      col = [];
+      used = 0;
+      return;
+    }
+    if (col.length && used + size > room) {
+      out.push(col);
+      col = [];
+      used = 0;
+    }
+    col.push(i);
+    used += size;
+  });
+  if (col.length) out.push(col);
+  return out;
+}

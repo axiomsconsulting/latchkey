@@ -1,14 +1,28 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Car, CalendarDays, Footprints, House, Info, MapPin, Navigation, Star } from "lucide-react";
+import {
+  Car,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Footprints,
+  House,
+  Info,
+  MapPin,
+  Navigation,
+  Star,
+  X,
+} from "lucide-react";
 
 import { FloorMapView } from "@/components/FloorMapView";
 import { AttachmentViewer } from "@/components/guest/GuideAttachments";
 import type { ExtraCard } from "@/components/guest/GuideSections";
 import { INFO_ICON } from "@/components/guest/info-icons";
 import { RichText } from "@/components/RichText";
-import { guideExtrasCopy as copy } from "@/content/copy";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { guest as gcopy, guideExtrasCopy as copy } from "@/content/copy";
+import { swipeStep, wrapIndex } from "@/lib/guide-view";
 import { levelName } from "@/lib/floor-map";
 import { getRoomExtras, getStayExtras } from "@/lib/guest-extras.functions";
 import {
@@ -53,20 +67,7 @@ function cardsFor(d: Extras): ExtraCard[] {
       Icon: Navigation,
       image: d.directions.planUrl,
       lead: d.directions.steps[d.directions.steps.length - 1] ?? null,
-      body: (
-        <div className="space-y-5">
-          <FindRoom d={d.directions} />
-          {d.house ? <HouseNotes n={d.house} /> : null}
-        </div>
-      ),
-    });
-  else if (d.house)
-    out.push({
-      key: "find_room",
-      title: copy.houseTitle,
-      Icon: House,
-      lead: copy.houseLead,
-      body: <HouseNotes n={d.house} />,
+      body: <FindRoom d={d.directions} />,
     });
   if (d.info.length)
     out.push({
@@ -77,6 +78,16 @@ function cardsFor(d: Extras): ExtraCard[] {
       lead: copy.infoLead(d.info.length),
       body: <PropertyInfo items={d.info} />,
     });
+  // Around the house and Around here are sections of their own, after the guide's cards.
+  if (d.house || d.plans.length)
+    out.push({
+      key: "house",
+      title: copy.houseTitle,
+      Icon: House,
+      lead: copy.houseLead,
+      body: <AroundTheHouse n={d.house} plans={d.plans} />,
+      own: true,
+    });
   if (d.local && (d.local.places.length || d.local.events.length))
     out.push({
       key: "local",
@@ -84,7 +95,7 @@ function cardsFor(d: Extras): ExtraCard[] {
       Icon: MapPin,
       lead: copy.localLead,
       body: <AroundHere places={d.local.places} events={d.local.events} />,
-      after: true,
+      own: true,
     });
   return out;
 }
@@ -167,10 +178,51 @@ function Key({
   );
 }
 
-function HouseNotes({ n }: { n: NonNullable<Extras["house"]> }) {
+const planName = (f: Extras["plans"][number]) =>
+  [f.building || null, levelName(f.level)].filter(Boolean).join(", ");
+
+/**
+ * Around the house: the plans (areas the guest can reach named and lit, everything else shaded),
+ * opened large like any other picture; the spaces they can use with what's in them; one line
+ * for the rest being private; and where useful things are.
+ */
+function AroundTheHouse({ n, plans }: { n: Extras["house"]; plans: Extras["plans"] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const privateCount = (n?.private.length ?? 0) + (n?.barriers.length ?? 0);
   return (
-    <div className="space-y-3 text-sm">
-      {n.shared.length ? (
+    <div className="space-y-4 text-sm">
+      {plans.length ? (
+        <div className="space-y-2">
+          <p className="font-medium">{plans.length > 1 ? copy.plansMany : copy.plans}</p>
+          <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
+            {plans.map((f, i) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setOpen(i)}
+                aria-label={copy.openPlan(planName(f))}
+                className={cn(
+                  "shrink-0 space-y-1 text-left",
+                  plans.length > 1 ? "w-[min(18rem,75%)]" : "w-full max-w-xl",
+                )}
+              >
+                <FloorMapView
+                  url={f.url}
+                  alt={copy.floorAlt(planName(f))}
+                  areas={f.areas}
+                  lines={f.lines}
+                  items={f.items}
+                />
+                {plans.length > 1 ? (
+                  <span className="block text-xs font-medium">{copy.floorName(planName(f))}</span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+          <PlanKey />
+        </div>
+      ) : null}
+      {n?.shared.length ? (
         <div>
           <p className="font-medium">{copy.shared}</p>
           <ul className="mt-1 space-y-1">
@@ -184,22 +236,10 @@ function HouseNotes({ n }: { n: NonNullable<Extras["house"]> }) {
           </ul>
         </div>
       ) : null}
-      {n.private.length || n.barriers.length ? (
-        <div>
-          <p className="font-medium">{copy.private}</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {n.private.map((s, i) => (
-              <li key={i}>
-                {s.name} ({levelName(s.level)})
-              </li>
-            ))}
-            {n.barriers.map((b) => (
-              <li key={b}>{b}</li>
-            ))}
-          </ul>
-        </div>
+      {privateCount ? (
+        <p className="text-muted-foreground">{copy.privateSummary(plans.length || 1)}</p>
       ) : null}
-      {n.useful.length ? (
+      {n?.useful.length ? (
         <div>
           <p className="font-medium">{copy.useful}</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
@@ -209,7 +249,107 @@ function HouseNotes({ n }: { n: NonNullable<Extras["house"]> }) {
           </ul>
         </div>
       ) : null}
+      <PlanViewer plans={plans} index={open} onIndex={setOpen} />
     </div>
+  );
+}
+
+function PlanKey() {
+  return (
+    <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      <Key colour="rgba(22,163,74,0.45)">{copy.key.yours}</Key>
+      <Key colour="rgba(37,99,235,0.25)">{copy.key.shared}</Key>
+      <Key colour="rgba(100,116,139,0.25)">{copy.key.guestRoom}</Key>
+      <Key colour="rgba(220,38,38,0.35)">{copy.key.private}</Key>
+    </p>
+  );
+}
+
+/** A plan opened large, with the others a swipe or an arrow away. */
+function PlanViewer({
+  plans,
+  index,
+  onIndex,
+}: {
+  plans: Extras["plans"];
+  index: number | null;
+  onIndex: (i: number | null) => void;
+}) {
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const f = index === null ? null : plans[index];
+  const many = plans.length > 1;
+  const go = (step: number) => onIndex(wrapIndex((index ?? 0) + step, plans.length));
+  return (
+    <Dialog open={!!f} onOpenChange={(o) => !o && onIndex(null)}>
+      <DialogContent className="flex max-h-[92dvh] max-w-4xl flex-col gap-3 p-3 sm:p-4 [&>button]:hidden">
+        {f ? (
+          <>
+            <div className="flex items-center gap-2">
+              <DialogTitle className="min-w-0 flex-1 truncate text-base font-medium">
+                {copy.floorName(planName(f))}
+              </DialogTitle>
+              {many ? (
+                <>
+                  <button
+                    type="button"
+                    className="grid size-10 place-items-center rounded-full hover:bg-muted"
+                    aria-label={gcopy.attachmentPrev}
+                    onClick={() => go(-1)}
+                  >
+                    <ChevronLeft className="size-5" />
+                  </button>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {(index ?? 0) + 1}/{plans.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="grid size-10 place-items-center rounded-full hover:bg-muted"
+                    aria-label={gcopy.attachmentNext}
+                    onClick={() => go(1)}
+                  >
+                    <ChevronRight className="size-5" />
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                className="grid size-10 place-items-center rounded-full hover:bg-muted"
+                aria-label={gcopy.attachmentClose}
+                onClick={() => onIndex(null)}
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div
+              className="min-h-0 flex-1 overflow-auto"
+              onTouchStart={(e) => {
+                const t = e.touches[0];
+                start.current = t ? { x: t.clientX, y: t.clientY } : null;
+              }}
+              onTouchEnd={(e) => {
+                const t = e.changedTouches[0];
+                const s = start.current;
+                start.current = null;
+                if (!many || !t || !s) return;
+                const step = swipeStep(t.clientX - s.x, t.clientY - s.y);
+                if (step) go(step);
+              }}
+            >
+              <FloorMapView
+                key={f.id}
+                url={f.url}
+                alt={copy.floorAlt(planName(f))}
+                areas={f.areas}
+                lines={f.lines}
+                items={f.items}
+                className="mx-auto"
+              />
+            </div>
+            <PlanKey />
+          </>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
 

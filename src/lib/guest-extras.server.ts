@@ -6,7 +6,15 @@
  * Discovery API when Latchkey admin has set TICKETMASTER_API_KEY. Rules in property-info.ts,
  * local-guide.ts and floor-plans.ts.
  */
-import { houseNotes, type HouseNotes, type Point } from "./floor-map";
+import {
+  houseNotes,
+  inside,
+  nameOf,
+  reachableAreas,
+  sortFloors,
+  type HouseNotes,
+  type Point,
+} from "./floor-map";
 import { directionsTo, mapFloors, normalisePins, type FloorPlan } from "./floor-plans";
 import {
   eventsFromTicketmaster,
@@ -323,9 +331,11 @@ export type GuestFloor = {
   route: Point[] | null;
   room: Point[] | null;
   at: Point | null;
-  areas: Array<{ poly: Point[]; access: string; kind: string }>;
+  areas: Array<{ poly: Point[]; access: string; kind: string; label?: string | null }>;
   lines: Array<{ kind: string; pts: Point[] }>;
   items: Array<{ kind: string; at: Point }>;
+  /** "" for the main house, else the annex's name. */
+  building?: string;
 };
 
 export type GuestExtras = {
@@ -342,6 +352,12 @@ export type GuestExtras = {
   } | null;
   /** Shared spaces, what's private and where useful things are, from the floor maps. */
   house: HouseNotes | null;
+  /**
+   * Every floor with a map, for the guest to open: areas they can reach named and lit, their own
+   * room marked, and everything else (private, behind a curtain or barred door, other guests'
+   * rooms) shaded without a name.
+   */
+  plans: GuestFloor[];
 };
 
 /** The property's room names (for naming bedrooms on the map). */
@@ -366,7 +382,7 @@ export async function extrasFor(
     .select("id, timezone, property_info, local_guide")
     .eq("id", propertyId)
     .maybeSingle();
-  if (!p) return { info: [], local: null, directions: null, house: null };
+  if (!p) return { info: [], local: null, directions: null, house: null, plans: [] };
   const items = normalisePropertyInfo(p.property_info, propertyId);
   const g = normaliseLocalGuide(p.local_guide);
   const [links, near, plans, names] = await Promise.all([
@@ -383,6 +399,55 @@ export async function extrasFor(
     notes.shared.length || notes.private.length || notes.barriers.length || notes.useful.length
       ? notes
       : null;
+  const floorsMapped = mapFloors(plans as FloorPlan[]);
+  const reach = reachableAreas(floorsMapped);
+  const mapped = floorsMapped.filter((f) => f.map.areas.length);
+  const planUrls = mapped.length
+    ? await signed(
+        mapped.map((f) => plans.find((x) => x.id === f.id)!.imagePath),
+        60 * 60 * 6,
+      )
+    : {};
+  const planList: GuestFloor[] = sortFloors(mapped).map((f) => {
+    const src = plans.find((x) => x.id === f.id)!;
+    return {
+      id: f.id,
+      level: f.level,
+      building: f.building ?? "",
+      url: planUrls[src.imagePath] ?? null,
+      route: null,
+      room: null,
+      at: null,
+      areas: f.map.areas.map((a) => {
+        const mine = !!room && a.roomId === room.id;
+        const open = a.access === "shared" && (!reach || reach.has(`${f.id}:${a.id}`));
+        return {
+          poly: a.poly,
+          kind: a.kind,
+          access: mine
+            ? "yours"
+            : open
+              ? "shared"
+              : a.access === "guest_room"
+                ? "guest_room"
+                : "private",
+          label: mine || open ? nameOf(a, names) : null,
+        };
+      }),
+      lines: f.map.lines.map((l) => ({ kind: l.kind, pts: l.pts })),
+      // Items in places guests can't go aren't shown.
+      items: f.map.items
+        .filter((it) => {
+          const a = f.map.areas.find((x) => inside(it.at, x.poly));
+          return (
+            !a ||
+            (a.access === "shared" && (!reach || reach.has(`${f.id}:${a.id}`))) ||
+            (!!room && a.roomId === room.id)
+          );
+        })
+        .map((i) => ({ kind: i.kind, at: i.at })),
+    };
+  });
   let directions: GuestExtras["directions"] = null;
   if (room) {
     const d = directionsTo(plans as FloorPlan[], room.id, room.name, names);
@@ -430,5 +495,6 @@ export async function extrasFor(
     local: near ? guestLocal(g, near.places, near.events, near.at, todayIn(p.timezone)) : null,
     directions,
     house,
+    plans: planList,
   };
 }

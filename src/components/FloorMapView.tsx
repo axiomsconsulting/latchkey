@@ -4,9 +4,21 @@ import { AREA_FILL, ITEM_ICON, LINE_LOOK } from "@/components/floor-map-look";
 import type { ItemKind, Point } from "@/lib/floor-map";
 import { cn } from "@/lib/utils";
 
-export type MapViewArea = { id?: string; poly: Point[]; access: string; kind?: string };
+export type MapViewArea = {
+  id?: string;
+  poly: Point[];
+  access: string;
+  kind?: string;
+  /** Shown in the middle of the area (guests' house plans). */
+  label?: string | null;
+};
 export type MapViewLine = { id?: string; kind: string; pts: Point[] };
 export type MapViewItem = { id?: string; kind: string; at: Point };
+
+const centre = (p: Point[]) => ({
+  x: p.reduce((n, q) => n + q.x, 0) / Math.max(1, p.length),
+  y: p.reduce((n, q) => n + q.y, 0) / Math.max(1, p.length),
+});
 
 const poly = (p: Point[]) => p.map((q) => `${q.x},${q.y}`).join(" ");
 
@@ -167,6 +179,17 @@ export function FloorMapView({
           </span>
         );
       })}
+      {areas.map((a, i) =>
+        a.label ? (
+          <span
+            key={`l-${a.id ?? i}`}
+            className="pointer-events-none absolute max-w-[30%] -translate-x-1/2 -translate-y-1/2 rounded bg-white/85 px-1 text-center text-[10px] font-medium leading-tight text-slate-900 shadow-sm"
+            style={{ left: `${centre(a.poly).x * 100}%`, top: `${centre(a.poly).y * 100}%` }}
+          >
+            {a.label}
+          </span>
+        ) : null,
+      )}
       {at ? (
         <span
           aria-hidden
