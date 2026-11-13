@@ -10,6 +10,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
+import { secret } from "@/lib/secrets";
 
 const uuid = z.string().uuid();
 const dataUrl = z
@@ -191,8 +192,8 @@ export const getLocalGuideSettings = createServerFn({ method: "GET" })
       fetchedAt: (row?.fetched_at as string | null) ?? null,
       noLocation: row?.error === "no_location",
       eventsAvailable:
-        !!(process.env["TICKETMASTER_API_KEY"] ?? "").trim() ||
-        !!(process.env["SKIDDLE_API_KEY"] ?? "").trim(),
+        !!(secret("TICKETMASTER_API_KEY") ?? "").trim() ||
+        !!(secret("SKIDDLE_API_KEY") ?? "").trim(),
     };
   });
 

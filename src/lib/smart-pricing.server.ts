@@ -23,9 +23,10 @@ import {
   type PriceSite,
   type SmartPricing,
 } from "./smart-pricing";
+import { secret } from "@/lib/secrets";
 
 const FIRECRAWL = "https://api.firecrawl.dev/v1/scrape";
-const firecrawlKey = () => (process.env["FIRECRAWL_API_KEY"] ?? "").trim() || null;
+const firecrawlKey = () => (secret("FIRECRAWL_API_KEY") ?? "").trim() || null;
 const READ_AT_ONCE = 4;
 /** Readings are kept this long (for the history of prices on the sites). */
 const KEEP_DAYS = 180;

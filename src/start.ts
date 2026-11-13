@@ -26,6 +26,14 @@ const brandMiddleware = createMiddleware().server(async ({ request, next }) => {
   return withSiteBrand(request, async () => next());
 });
 
+// Keys saved in Latchkey admin (Keys and secrets) are refreshed at most every 30 s, so
+// secret(name) anywhere on the server sees a change without publishing again.
+const secretsMiddleware = createMiddleware().server(async ({ next }) => {
+  const { loadSecrets } = await import("./lib/secrets.server");
+  await loadSecrets();
+  return next();
+});
+
 // Start installs this automatically when src/start.ts is absent; defining the
 // file opts out, so re-add it explicitly to keep server functions protected
 // from cross-site requests.
@@ -35,5 +43,5 @@ const csrfMiddleware = createCsrfMiddleware({
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [errorMiddleware, brandMiddleware, csrfMiddleware],
+  requestMiddleware: [errorMiddleware, secretsMiddleware, brandMiddleware, csrfMiddleware],
 }));

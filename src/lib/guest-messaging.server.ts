@@ -8,14 +8,12 @@
  * and, for a message the guest didn't start, a template Meta has approved
  * (site_settings.integrations.whatsapp.templates). Server only.
  */
+import { secret } from "@/lib/secrets";
 import { normaliseWhatsApp, type WhatsAppTemplateKey } from "./guest-messages";
 
 export type SendStatus = "sent" | "demo" | "failed" | "unavailable";
 
-const env = (k: string) => {
-  const v = process.env[k];
-  return v && v.trim() ? v.trim() : null;
-};
+const env = (k: string) => secret(k);
 
 async function loose() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

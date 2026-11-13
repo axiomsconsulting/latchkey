@@ -24,6 +24,7 @@ import {
   type Place,
 } from "./local-guide";
 import { normalisePropertyInfo } from "./property-info";
+import { secret } from "@/lib/secrets";
 
 const OVERPASS = [
   "https://overpass-api.de/api/interpreter",
@@ -33,7 +34,8 @@ const OVERPASS = [
  * OpenStreetMap's usage policies: a User-Agent naming the app and where to find it, results kept
  * (a week per property), one Overpass query a read and at most one Nominatim search a second.
  */
-const UA = `Latchkey/1.0 (guest guide: places near the property; +${(process.env["PUBLIC_SITE_URL"] ?? "https://latchkey.omsestates.uk").replace(/\/$/, "")})`;
+const ua = () =>
+  `Latchkey/1.0 (guest guide: places near the property; +${(secret("PUBLIC_SITE_URL") ?? "https://latchkey.omsestates.uk").replace(/\/$/, "")})`;
 const WEEK = 7 * 86_400_000;
 
 export async function db(): Promise<any> {
@@ -77,7 +79,7 @@ export async function propertySpot(
     if (!q) return null;
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}${p.country_code ? `&countrycodes=${p.country_code.toLowerCase()}` : ""}`,
-      { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6000) },
+      { headers: { "User-Agent": ua() }, signal: AbortSignal.timeout(6000) },
     );
     const body = (await res.json()) as Array<{ lat?: string; lon?: string }>;
     const hit = body[0];
@@ -130,7 +132,7 @@ export async function refreshPlaces(
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": UA,
+          "User-Agent": ua(),
           Accept: "application/json",
         },
         body: `data=${encodeURIComponent(query)}`,
@@ -149,7 +151,7 @@ export async function refreshPlaces(
     for (const c of PLACE_CATEGORIES) {
       try {
         const res = await fetch(nominatimUrl(c, at), {
-          headers: { "User-Agent": UA, Accept: "application/json" },
+          headers: { "User-Agent": ua(), Accept: "application/json" },
           signal: AbortSignal.timeout(8000),
         });
         if (res.ok) found.push(...placesFromNominatim(await res.json(), at, c));
@@ -164,7 +166,7 @@ export async function refreshPlaces(
     }
   }
   let events: LocalEvent[] = [];
-  const key = (process.env["TICKETMASTER_API_KEY"] ?? "").trim();
+  const key = (secret("TICKETMASTER_API_KEY") ?? "").trim();
   if (key && g.eventsOn) {
     try {
       const start = new Date().toISOString().slice(0, 19) + "Z";
@@ -188,11 +190,11 @@ export async function refreshPlaces(
     }
   }
   // Skiddle (free key, UK): gigs, theatre, comedy, festivals, family days, arts, exhibitions.
-  const skiddle = (process.env["SKIDDLE_API_KEY"] ?? "").trim();
+  const skiddle = (secret("SKIDDLE_API_KEY") ?? "").trim();
   if (skiddle && g.eventsOn && (p.country_code ?? "GB") === "GB") {
     try {
       const res = await fetch(skiddleUrl(skiddle, at, todayIn(p.timezone ?? null)), {
-        headers: { "User-Agent": UA, Accept: "application/json" },
+        headers: { "User-Agent": ua(), Accept: "application/json" },
         signal: AbortSignal.timeout(10_000),
       });
       if (res.ok) events.push(...eventsFromSkiddle(await res.json()));
@@ -207,7 +209,7 @@ export async function refreshPlaces(
     for (const c of g.calendars) {
       try {
         const res = await fetch(c.url, {
-          headers: { "User-Agent": UA, Accept: "text/calendar, */*" },
+          headers: { "User-Agent": ua(), Accept: "text/calendar, */*" },
           signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) continue;

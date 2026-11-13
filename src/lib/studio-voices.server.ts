@@ -28,7 +28,7 @@ async function db(): Promise<any> {
   return supabaseAdmin;
 }
 
-async function read(): Promise<Store> {
+async function stored(): Promise<Store> {
   const { data } = await (
     await db()
   )
@@ -39,7 +39,21 @@ async function read(): Promise<Store> {
   return (data?.value as Store | undefined) ?? {};
 }
 
+async function read(): Promise<Store> {
+  const s = await stored();
+  // Keys and secrets: an ElevenLabs key in Lovable Secrets counts when none was pasted here.
+  const env = (process.env["ELEVENLABS_API_KEY"] ?? "").trim();
+  return s.apiKey || !env ? s : { ...s, apiKey: env };
+}
+
 async function write(next: Store): Promise<void> {
+  // A key that only comes from Lovable Secrets is never copied into the saved settings.
+  if (
+    next.apiKey &&
+    !(await stored()).apiKey &&
+    next.apiKey === (process.env["ELEVENLABS_API_KEY"] ?? "").trim()
+  )
+    next = Object.fromEntries(Object.entries(next).filter(([k]) => k !== "apiKey")) as Store;
   const { error } = await (
     await db()
   )

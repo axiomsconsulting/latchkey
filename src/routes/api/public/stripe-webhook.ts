@@ -10,14 +10,15 @@
  * before anything is read from the payload.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { secret } from "@/lib/secrets";
 
 export const Route = createFileRoute("/api/public/stripe-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const secrets = [
-          process.env["STRIPE_WEBHOOK_SECRET"],
-          process.env["STRIPE_CONNECT_WEBHOOK_SECRET"],
+          secret("STRIPE_WEBHOOK_SECRET"),
+          secret("STRIPE_CONNECT_WEBHOOK_SECRET"),
         ].filter((x): x is string => !!x);
         if (secrets.length === 0) return new Response("Not configured", { status: 503 });
 

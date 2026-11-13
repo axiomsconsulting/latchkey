@@ -1117,11 +1117,8 @@ export const demoDefaultsCopy = branded({
 export const studioVoicesCopy = branded({
   title: "Studio voices",
   info: "The voice concierge sounds natural when it plays studio recordings instead of the tablet's own voice. Latchkey records every phrase once with ElevenLabs in the female and male voices you pick here, keeps the recordings, and door tablets play them: nothing is recorded per check-in, so it costs a few ElevenLabs credits once (and again only when the words change). The API key stays on Latchkey's server. Phrases not recorded yet use the tablet's own voice.",
-  key: "ElevenLabs API key",
-  keySaved: "ElevenLabs API key (saved; paste a new one to replace it)",
-  keyPlaceholder: "Paste the key from elevenlabs.io → Developers → API keys",
-  saveKey: "Save key",
-  keyOk: "Key saved",
+  key: "Add the ElevenLabs key in Keys and secrets above first.",
+  keySaved: "ElevenLabs key set (change it in Keys and secrets).",
   genders: { female: "Female voice", male: "Male voice" } as Record<"female" | "male", string>,
   pick: "Pick a voice",
   count: (done: number, total: number) => `${done} of ${total} phrases recorded`,
@@ -7310,6 +7307,46 @@ export const doorCodesCopy = {
   guestLock: "To lock:",
 };
 
+/** Latchkey admin → System → Keys and secrets. */
+export const secretsCopy = branded({
+  title: "Keys and secrets",
+  body: "Every outside key Latchkey uses. A key saved here is used within 30 seconds, with no need to publish, and wins over the same name in Lovable Cloud → Secrets. Clear it here to go back to the Lovable one.",
+  summary: (set: number, missing: number) => `${set} set${missing ? ` · ${missing} not set` : ""}`,
+  status: {
+    app: "Saved here",
+    lovable: "Lovable Secrets",
+    none: "Not set",
+    platform: "Lovable Cloud",
+  },
+  overrides: "Overrides the Lovable Secrets value",
+  previous: "Previous value",
+  savedAt: (when: string, by: string | null) => `Saved ${when}${by ? ` by ${by}` : ""}`,
+  used: "What it's for",
+  how: "How to get it",
+  looks: "What it looks like",
+  example: "Example",
+  after: "After changing it",
+  newValue: "New value",
+  paste: "Paste the key",
+  save: "Save",
+  saveAnyway: "Save anyway",
+  clear: "Clear",
+  clearConfirm: (label: string) =>
+    `Clear ${label}? Latchkey goes back to the Lovable Secrets value, or none.`,
+  saved: "Saved: in use within 30 seconds.",
+  cleared: "Cleared.",
+  show: "Show whole value",
+  hide: "Hide",
+  copy: "Copy",
+  copied: "Copied",
+  neverShown: "Never shown",
+  lovableOnly: "Change this in Lovable Cloud → Secrets, then publish.",
+  platformOnly: "Managed by Lovable Cloud.",
+  looksWrong: "Looks wrong:",
+  backupNote:
+    "Whole values are shown only when you ask, to super admins, and each showing is logged by name. Keep your own copy in a password manager too.",
+});
+
 /** Folding and moving sections, on Settings and Latchkey admin. */
 export const arrangeCopy = branded({
   openAll: "Open all",
@@ -7338,6 +7375,7 @@ export const adminArrangeTitles = branded({
   journey: "Check-in journey for new properties",
   saver: "Screen saver defaults",
   hkWords: "Housekeeping words",
+  apiKeys: "Keys and secrets",
   health: "Test all connections",
   stripe: "Stripe",
   whatsapp: "WhatsApp",

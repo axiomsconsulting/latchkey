@@ -7,6 +7,7 @@
  * are never shared, guests see them only through signed links from this
  * server. Secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (Lovable Cloud).
  */
+import { secret } from "@/lib/secrets";
 import { DOC_CONVERSIONS, storedName } from "./attachments";
 
 type Loose = { from: (t: string) => any };
@@ -15,7 +16,7 @@ async function db(): Promise<Loose> {
   return supabaseAdmin as unknown as Loose;
 }
 
-const env = (k: string) => (process.env[k] ?? "").trim();
+const env = (k: string) => secret(k) ?? "";
 export const DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.file", "openid", "email"];
 const SECRET_KEY = "google_drive";
 

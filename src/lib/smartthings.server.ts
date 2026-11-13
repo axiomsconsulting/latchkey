@@ -10,11 +10,12 @@
  * devices". Access tokens last about 24 hours; refresh tokens are single
  * use, so only one refresh runs at a time per business (refreshing_until).
  */
+import { secret } from "@/lib/secrets";
 import { DEMO_DEVICE, knownCapabilities, stateFromStatus, type Capability } from "./room-devices";
 
 const API = "https://api.smartthings.com/v1";
 export const SMARTTHINGS_SCOPES = ["r:devices:*", "x:devices:*", "r:locations:*"];
-const env = (k: string) => (process.env[k] ?? "").trim();
+const env = (k: string) => secret(k) ?? "";
 
 type Loose = { from: (t: string) => any };
 async function db(): Promise<Loose> {
