@@ -153,6 +153,15 @@ export function VisitorAnalytics() {
               <Bot className="size-4" /> {copy.botsHidden(s.botsHidden)}
             </p>
           ) : null}
+          {s.team.length ? (
+            <p className="text-sm text-muted-foreground">
+              {copy.teamSessions(
+                s.team.reduce((n, t) => n + t.visits, 0),
+                s.team.map((t) => `${t.key} ${t.visits}`).join(" · "),
+                filters.hideTeam,
+              )}
+            </p>
+          ) : null}
           {q.data?.truncated ? (
             <p className="text-sm text-muted-foreground">{copy.truncated}</p>
           ) : null}
@@ -225,7 +234,11 @@ export function VisitorAnalytics() {
                         <span className="mt-1 flex flex-wrap gap-1">
                           <StatusBadge r={r} />
                           {r.isBot ? <Badge variant="destructive">{copy.bot}</Badge> : null}
-                          {r.isTeam ? <Badge variant="outline">{copy.team}</Badge> : null}
+                          {r.isTeam ? (
+                            <Badge variant="outline" title={r.teamReasons.join(", ")}>
+                              {copy.team}
+                            </Badge>
+                          ) : null}
                           {r.browsers > 1 ? (
                             <Badge variant="outline">{copy.browsersN(r.browsers)}</Badge>
                           ) : null}

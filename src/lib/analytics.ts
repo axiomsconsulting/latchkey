@@ -117,6 +117,9 @@ export type VisitIn = {
   region: string | null;
   city: string | null;
   isBot: boolean;
+  /** Migration 0111: the page's host (preview and local builds), and the one-day connection hash. */
+  pageHost?: string | null | undefined;
+  ipHash?: string | null | undefined;
 };
 
 export type VisitorIn = {
@@ -129,6 +132,7 @@ export type VisitorIn = {
   device: string | null;
   isBot: boolean;
   botReason: string | null;
+  userAgent?: string | null | undefined;
 };
 
 export type ProfileIn = {
@@ -178,11 +182,105 @@ export type PersonRow = {
   isBot: boolean;
   botReason: string | null;
   isTeam: boolean;
+  /** Why it counts as the Latchkey team (teamVisits), e.g. "VS Code", "Team account". */
+  teamReasons: string[];
   visitIds: string[];
 };
 
 export type Count = { key: string; visits: number; visitors: number };
 export type PageCount = { path: string; views: number; visitors: number; avgMs: number };
+
+/* ------------------------- the Latchkey team ------------------------- */
+
+/** Tools the team builds and tests with, told apart by what their browsers call themselves. */
+const TOOLS: Array<[RegExp, string]> = [
+  [/\bCode\/[\d.]+.*Electron|VSCode|vscode-webview/i, "VS Code"],
+  [/\bCursor\/[\d.]+/i, "Cursor"],
+  [/Claude/i, "Claude"],
+  [/Grok|xAI/i, "Grok"],
+  [/Lovable/i, "Lovable"],
+  [/ChatGPT|OpenAI/i, "ChatGPT"],
+  [/HeadlessChrome|Playwright|Puppeteer|Cypress|Selenium/i, "Automated test browser"],
+];
+
+/** Hosts that are never the live site: local builds and Lovable's previews. */
+export function isDevHost(host: string | null | undefined): boolean {
+  if (!host) return false;
+  const h = host.toLowerCase().replace(/:\d+$/, "");
+  return (
+    h === "localhost" ||
+    /^127\.|^10\.|^192\.168\.|^\[?::1\]?$/.test(h) ||
+    h.endsWith(".local") ||
+    h.endsWith(".lovableproject.com") ||
+    /^(id-)?preview--/.test(h) ||
+    h.endsWith(".webcontainer.io") ||
+    h.endsWith(".trycloudflare.com") ||
+    h.endsWith(".ngrok-free.app") ||
+    h.endsWith(".ngrok.io")
+  );
+}
+
+/** A long working session across many parts of the app: testing, not a host or guest. */
+export const DEV_SESSION = { pages: 25, minutes: 45, areas: 4 };
+
+/** Which part of the app a path is: "app", "kiosk", "stay", "book", … */
+export const areaOf = (path: string) => path.split(/[/?#]/)[1] || "home";
+
+/**
+ * Visits by the Latchkey team, with why: a super admin's account; a development tool's
+ * browser (VS Code, Cursor, Claude, Grok, Lovable, an automated test browser); a preview or
+ * local build; the same connection as a team account that day; or a long session across
+ * many parts of the app by someone who isn't a host. Tools that only fetch pages (without
+ * running them) never send visits, so they don't appear at all.
+ */
+export function teamVisits(input: {
+  visits: VisitIn[];
+  visitors: VisitorIn[];
+  profiles: ProfileIn[];
+  views: ViewIn[];
+}): Map<string, string> {
+  const visitors = new Map(input.visitors.map((v) => [v.id, v]));
+  const profiles = new Map(input.profiles.map((p) => [p.id, p]));
+  const profileOf = (visitorId: string) => {
+    const pid = visitors.get(visitorId)?.profileId;
+    return pid ? (profiles.get(pid) ?? null) : null;
+  };
+  const areas = new Map<string, Set<string>>();
+  for (const v of input.views) {
+    const a = areas.get(v.visitId) ?? new Set<string>();
+    a.add(areaOf(v.path));
+    areas.set(v.visitId, a);
+  }
+  const out = new Map<string, string>();
+  const teamNets = new Set<string>();
+  for (const x of input.visits) {
+    const p = profileOf(x.visitorId);
+    const ua = visitors.get(x.visitorId)?.userAgent ?? "";
+    const tool = TOOLS.find(([re]) => re.test(ua))?.[1] ?? null;
+    const reason = p?.isTeam
+      ? "Team account"
+      : tool
+        ? tool
+        : isDevHost(x.pageHost)
+          ? "Preview or local build"
+          : !p?.hostId &&
+              x.pages >= DEV_SESSION.pages &&
+              x.durationMs >= DEV_SESSION.minutes * 60_000 &&
+              (areas.get(x.id)?.size ?? 0) >= DEV_SESSION.areas
+            ? "Long testing session"
+            : null;
+    if (reason) {
+      out.set(x.id, reason);
+      if (x.ipHash && (p?.isTeam || tool)) teamNets.add(`${x.ipHash}|${x.startedAt.slice(0, 10)}`);
+    }
+  }
+  // Anyone else on a team connection that day (the hash changes daily), unless they're a host.
+  for (const x of input.visits) {
+    if (out.has(x.id) || !x.ipHash || profileOf(x.visitorId)?.hostId) continue;
+    if (teamNets.has(`${x.ipHash}|${x.startedAt.slice(0, 10)}`)) out.set(x.id, "Team connection");
+  }
+  return out;
+}
 
 export type Summary = {
   visitors: number;
@@ -194,6 +292,9 @@ export type Summary = {
   known: number;
   conversionPct: number;
   botsHidden: number;
+  /** Team visits left out (hideTeam), and every team visit by why, whatever the filter. */
+  teamHidden: number;
+  team: Count[];
   pages: PageCount[];
   sources: Count[];
   places: Count[];
@@ -253,10 +354,14 @@ export function summarise(
     const v = visitors.get(visitorId);
     return v?.profileId && profiles.has(v.profileId) ? `p:${v.profileId}` : `v:${visitorId}`;
   };
-  const isBotVisit = (x: VisitIn) => x.isBot || !!visitors.get(x.visitorId)?.isBot;
+  const team = teamVisits(input);
+  // A team member's automated browser is the team testing, not a bot.
+  const isBotVisit = (x: VisitIn) =>
+    !team.has(x.id) && (x.isBot || !!visitors.get(x.visitorId)?.isBot);
 
   const people = new Map<string, PersonRow>();
   let botsHidden = 0;
+  let teamHidden = 0;
   const search = f.search.trim().toLowerCase();
 
   for (const visit of input.visits) {
@@ -268,7 +373,11 @@ export function summarise(
     const key = personOf(visit.visitorId);
     const v = visitors.get(visit.visitorId);
     const p = key.startsWith("p:") ? profiles.get(key.slice(2)) : undefined;
-    if (f.hideTeam && p?.isTeam) continue;
+    const teamWhy = team.get(visit.id) ?? null;
+    if (f.hideTeam && (p?.isTeam || teamWhy)) {
+      teamHidden++;
+      continue;
+    }
     let row = people.get(key);
     if (!row) {
       const status: PersonRow["status"] = p?.email ? "known" : p ? "trial" : "anonymous";
@@ -293,10 +402,16 @@ export function summarise(
         browsers: 0,
         isBot: bot,
         botReason: v?.botReason ?? null,
-        isTeam: !!p?.isTeam,
+        isTeam: !!p?.isTeam || !!teamWhy,
+        teamReasons: [],
         visitIds: [],
       };
       people.set(key, row);
+    }
+    if (teamWhy) {
+      row.isTeam = true;
+      row.teamReasons = uniq([...row.teamReasons, teamWhy]);
+      if (row.status === "anonymous") row.label = `Latchkey team (${row.teamReasons.join(", ")})`;
     }
     row.visits++;
     row.pages += visit.pages;
@@ -394,6 +509,15 @@ export function summarise(
     known,
     conversionPct: rows.length ? Math.round((converted / rows.length) * 1000) / 10 : 0,
     botsHidden,
+    teamHidden,
+    team: (() => {
+      const by = new Map<string, { visits: number; visitors: Set<string> }>();
+      for (const x of input.visits) {
+        const why = team.get(x.id);
+        if (why) tally(by, why, x.visitorId);
+      }
+      return ranked(by);
+    })(),
     pages,
     sources: ranked(sources),
     places: ranked(places),

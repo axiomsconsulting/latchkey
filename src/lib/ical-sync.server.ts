@@ -352,6 +352,8 @@ export async function runRetentionSweep(): Promise<number> {
   // SmartThings connections stay signed in; guests' light taps go after a week (migration 0098).
   const { keepSmartHomeAlive } = await import("./smartthings.server");
   await keepSmartHomeAlive().catch(() => {});
+  // Door tablets opened once or twice and quiet since (tests, a guest's own phone): removed.
+  await forgetTemporaryTablets(db).catch(() => {});
   // Remembered ID checks for returning guests: 12 months. Before migration 0088 this just does nothing.
   await db.from("guest_id_passes").delete().lt("keep_until", today);
   // Before migration 0041 there is no privacy column: everyone gets the defaults.
@@ -566,4 +568,42 @@ export async function purgeGuestIds(today: string) {
         data.map((r) => r.id),
       );
   }
+}
+
+/**
+ * Migration 0111: door tablets that reported on two days or fewer and have been quiet a
+ * week (three days if never paired) are removed, unless the host named or set them up
+ * (forgetDevice in kiosk-devices.ts). Before the migration seen_days is missing: nothing goes.
+ */
+async function forgetTemporaryTablets(db: { from: (t: string) => any }): Promise<void> {
+  const { forgetDevice, TEMPORARY_MAX_DAYS } = await import("./kiosk-devices");
+  const { data, error } = await db
+    .from("kiosk_devices")
+    .select(
+      "id, property_id, status, seen_days, created_at, last_seen_at, label, calibration, camera_spot, service_until",
+    )
+    .lte("seen_days", TEMPORARY_MAX_DAYS);
+  if (error || !data) return;
+  const now = Date.now();
+  const gone = (data as any[]).filter((r) =>
+    forgetDevice(
+      {
+        status: r.status,
+        seenDays: r.seen_days,
+        createdAt: r.created_at,
+        lastSeenAt: r.last_seen_at,
+        label: r.label,
+        setUp:
+          (r.calibration && Object.keys(r.calibration).length > 0) ||
+          !!r.camera_spot ||
+          (!!r.service_until && Date.parse(r.service_until) > now),
+      },
+      now,
+    ),
+  );
+  for (let i = 0; i < gone.length; i += 100) {
+    const ids = gone.slice(i, i + 100).map((r) => r.id as string);
+    await db.from("kiosk_devices").delete().in("id", ids);
+  }
+  if (gone.length) console.info(`Door tablets: removed ${gone.length} used once or twice`);
 }

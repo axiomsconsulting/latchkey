@@ -24,7 +24,11 @@ import {
   nextNumber,
   readPairCode,
   type CameraBlock,
+  deviceActivity,
+  nextSeen,
+  type Activity,
 } from "@/lib/kiosk-devices";
+import { normaliseDeviceInfo, type DeviceInfo } from "@/lib/device-model";
 import {
   KIOSK_MODES,
   chosenMode,
@@ -190,6 +194,18 @@ export const kioskTablet = createServerFn({ method: "POST" })
         screen: screen.optional(),
         /** What kind of device this is, the same in every browser on it (deviceSignature). */
         sig: z.string().max(60).optional(),
+        /** What the browser says it runs on (device-model.ts): named from it until the host names it. */
+        hw: z
+          .object({
+            ua: z.string().max(500),
+            model: z.string().max(60).nullable().optional(),
+            platformVersion: z.string().max(30).nullable().optional(),
+            w: z.number().min(0).max(10000),
+            h: z.number().min(0).max(10000),
+            dpr: z.number().min(0).max(10).nullable().optional(),
+            touch: z.number().min(0).max(20).nullable().optional(),
+          })
+          .optional(),
       })
       .parse(d),
   )
@@ -246,6 +262,26 @@ export const kioskTablet = createServerFn({ method: "POST" })
     };
     // Also before migration 0072: written on its own so the rest of the report never fails with it.
     const reportCompat = async (id: string) => {
+      // Migration 0111: what it is, and on how many days it has reported. On its own as well.
+      await (async () => {
+        const { data: seen, error: seenErr } = await db
+          .from("kiosk_devices")
+          .select("seen_days, last_day")
+          .eq("id", id)
+          .maybeSingle();
+        if (seenErr || !seen) return;
+        const { describeDevice } = await import("./device-model");
+        const day = nextSeen(
+          { seenDays: seen.seen_days ?? null, lastDay: seen.last_day ?? null },
+          now.toISOString().slice(0, 10),
+        );
+        const info = data.hw ? describeDevice(data.hw) : null;
+        if (!day && !info) return;
+        await db
+          .from("kiosk_devices")
+          .update({ ...(day ?? {}), ...(info ? { device_info: info } : {}) })
+          .eq("id", id);
+      })().catch(() => {});
       // Migration 0089: on its own for the same reason.
       if (data.sig)
         await db
@@ -546,6 +582,12 @@ export const kioskSnapshotUpload = createServerFn({ method: "POST" })
 
 export type KioskDevice = {
   deviceSig: string | null;
+  /** What the tablet is (migration 0111), and its name from that until the host names it. */
+  deviceInfo: DeviceInfo | null;
+  autoName: string | null;
+  /** How often it's used (deviceActivity). */
+  activity: Activity;
+  seenDays: number;
   /** The AI receptionist runs on this tablet (migration 0110). */
   receptionist: boolean;
   /** Voice check-in also listens on this tablet (false: it only talks). */
@@ -636,6 +678,19 @@ export const listKioskDevices = createServerFn({ method: "GET" })
         display: r.display ?? null,
         calibration: normaliseCalibrations(r.calibration),
         deviceSig: r.device_sig ?? null,
+        deviceInfo: normaliseDeviceInfo(r.device_info),
+        autoName: normaliseDeviceInfo(r.device_info)?.name ?? null,
+        activity: deviceActivity(
+          {
+            status: r.status,
+            seenDays: r.seen_days ?? null,
+            createdAt: r.created_at,
+            lastSeenAt: r.last_seen_at,
+            label: r.label ?? null,
+          },
+          Date.now(),
+        ),
+        seenDays: r.seen_days ?? 1,
         cameraSpot: normaliseSpots(r.camera_spot),
         voiceListen: r.voice_listen !== false,
         receptionist: r.receptionist === true,

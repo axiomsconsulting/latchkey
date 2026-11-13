@@ -47,6 +47,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.164.0",
+    date: "2026-11-13",
+    title: "Door tablets that know what they are",
+    items: [
+      {
+        kind: "new",
+        area: "Check-in",
+        text: "Each door tablet is named after what it is (for example Galaxy Tab A8 10.5-inch, or the iPad model from its screen) until you give it a name, and its card shows the maker, Wi-Fi or mobile data, size, system and browser, and how often it's used.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: "Tablets opened on only one or two days and then quiet for a week (three days if never paired) are removed by themselves, unless you named one or lined up its screen or camera.",
+      },
+      {
+        admin: true,
+        kind: "improved",
+        area: "Website",
+        text: "Visitor statistics count the Latchkey team's own sessions apart (super admin accounts, development tools such as VS Code, Claude or Grok, preview and local builds, the team's connection that day, and long testing sessions), with a count by reason.",
+      },
+    ],
+  },
+  {
     version: "0.163.0",
     date: "2026-11-13",
     title: "Every key in one place",

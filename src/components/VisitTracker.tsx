@@ -114,6 +114,7 @@ export function VisitTracker() {
       // Every utm_* (this page's, or the session's first touch), so a campaign is seen in full.
       utm: Object.keys(pickUtm(params)).length ? pickUtm(params) : sessionUtm(),
       wd: navigator.webdriver === true,
+      h: window.location.host,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
       lang: navigator.language,
     });

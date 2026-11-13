@@ -1732,7 +1732,14 @@ export const doorTabletsCopy = branded({
   cardPickerHelp:
     "A bell beside the screensaver button lists today's arriving and leaving guests (first name and initial), so whoever is at the tablet can put their cards up now, with the time each comes on by itself. Switch off if guests shouldn't see who else is arriving or leaving today.",
   lead: "Each tablet at this property, by number.",
-  body: "Every tablet at this property, by number. A tablet joins when it opens the kiosk: by itself on this property's Wi-Fi (if allowed below), or with the six-digit code it shows. Give each a name, line its screen up, and send a welcome to one tablet or all of them.",
+  body: "Every tablet at this property, by number. A tablet joins when it opens the kiosk: by itself on this property's Wi-Fi (if allowed below), or with the six-digit code it shows. Each is named after what it is (its model, or its size for an iPad) until you give it a name. A tablet opened on only one or two days and then quiet for a week (three days if never paired) is removed by itself, unless you named it or lined up its screen or camera.",
+  activity: {
+    regular: "Used regularly",
+    occasional: "Used now and then",
+    new: "New",
+    temporary: "Used once or twice",
+  } as Record<"regular" | "occasional" | "new" | "temporary", string>,
+  activityGoes: "· removed after a week quiet",
   pairTitle: "Code shown on the tablet",
   pair: "Pair tablet",
   pairHelp:
@@ -4555,6 +4562,8 @@ export const visitorsCopy = branded({
   tKnown: "Known",
   tConverted: "Became known",
   botsHidden: (n: number) => `${n} visit${n === 1 ? "" : "s"} by bots and crawlers hidden.`,
+  teamSessions: (n: number, by: string, hidden: boolean) =>
+    `${n} visit${n === 1 ? "" : "s"} by the Latchkey team${hidden ? " hidden" : ""} (${by}). Team means a super admin's account, a development tool's browser, a preview or local build, the same connection as the team that day, or a long session across many parts of the app by someone who isn't a host.`,
   truncated:
     "Showing the latest 20,000 visits in this period; pick a shorter period for everything.",
   pages: "Pages",

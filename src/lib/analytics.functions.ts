@@ -75,11 +75,13 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
         truncated: false,
       };
 
+    // Migration 0111 adds page_host (ip_hash is 0046): read them only once they're there.
+    const newer = !(await db.from("analytics_visits").select("page_host, ip_hash").limit(1)).error;
     const visits = await all<any>((a, b) =>
       db
         .from("analytics_visits")
         .select(
-          "id, visitor_id, started_at, pages, duration_ms, entry_path, referrer, utm_source, ip, country, region, city, is_bot",
+          `id, visitor_id, started_at, pages, duration_ms, entry_path, referrer, utm_source, ip, country, region, city, is_bot${newer ? ", page_host, ip_hash" : ""}`,
         )
         .gte("started_at", since)
         .order("started_at", { ascending: false })
@@ -100,7 +102,9 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
     for (let i = 0; i < visitorIds.length; i += 200) {
       const { data: rows } = await db
         .from("analytics_visitors")
-        .select("id, profile_id, first_seen, last_seen, browser, os, device, is_bot, bot_reason")
+        .select(
+          "id, profile_id, first_seen, last_seen, browser, os, device, is_bot, bot_reason, user_agent",
+        )
         .in("id", visitorIds.slice(i, i + 200));
       visitors.push(...(rows ?? []));
     }
@@ -135,6 +139,8 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
         region: v.region as string | null,
         city: v.city as string | null,
         isBot: !!v.is_bot,
+        pageHost: (v.page_host as string | null) ?? null,
+        ipHash: (v.ip_hash as string | null) ?? null,
       })),
       visitors: visitors.map((v) => ({
         id: v.id as string,
@@ -146,6 +152,7 @@ export const getVisitorAnalytics = createServerFn({ method: "GET" })
         device: v.device as string | null,
         isBot: !!v.is_bot,
         botReason: v.bot_reason as string | null,
+        userAgent: (v.user_agent as string | null) ?? null,
       })),
       profiles: profiles.map((p) => ({
         id: p.id as string,
