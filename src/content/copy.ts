@@ -3259,11 +3259,14 @@ export const wifiCopy = branded({
   join: "Join Wi-Fi",
   inApp:
     "Opened from inside another app? If Join does nothing, open this page in Safari or Chrome (the ⋯ or share menu → Open in browser) and tap Join there.",
-  iosHelp:
-    "Tap Join, then Allow. Open Settings, tap Profile Downloaded and Install: your phone joins straight away and whenever you're here.",
+  iosCopy: "Copy password",
+  iosHelp: (name: string) =>
+    `Then open Settings → Wi-Fi, tap ${name} and paste. iPhones don't let a web page join Wi-Fi for you.`,
+  iosProfile: "Or add it as a Wi-Fi profile",
   androidHelp: "We'll copy the password and open your Wi-Fi: pick the network and paste it.",
   androidOpenHelp: "We'll open your Wi-Fi: pick the network.",
-  qrHelp: "Point your phone's camera at this code and tap the Wi-Fi prompt to join.",
+  qrHelp: "Another phone or a laptop? Point its camera at the code and tap Join.",
+  qrHelpComputer: "Point your phone's camera at the code and tap the Wi-Fi prompt to join.",
   qrAlt: (name: string) => `Code to join ${name}`,
   locked:
     "The Wi-Fi password appears here once you've checked in. It only takes a couple of minutes.",
@@ -6007,13 +6010,14 @@ export const guideExtrasCopy = branded({
   drive: (min: number, exact = true) => `Drive ${exact ? "" : "about "}${min} min`,
   recommended: "Recommended",
   hostPicks: "Host's picks",
-  hygiene: (v: string) => (v === "Pass" ? "Hygiene: pass" : `Hygiene ${v}/5`),
+  hygiene: (v: string) =>
+    v === "Pass" ? "Food Hygiene Information Scheme: Pass" : `Food hygiene rating ${v} out of 5`,
   hygieneHelp:
     "Food hygiene rating from the Food Standards Agency's inspections. It's about cleanliness, not how good the food is.",
   moreEvents: (n: number) => `Show all ${n}`,
   fewerEvents: "Show fewer",
   sources:
-    "Places from OpenStreetMap; walking and driving times by road from the property's postcode (OpenStreetMap routing, without traffic); food hygiene ratings from the Food Standards Agency.",
+    "Places and maps from OpenStreetMap; distances by path or road from the property's postcode; food hygiene ratings from the Food Standards Agency.",
   walkPlain: "Walk",
   drivePlain: "Drive",
   appleMaps: "Apple Maps",
@@ -6040,10 +6044,12 @@ export const guideExtrasCopy = branded({
   key: {
     route: "Your way",
     yours: "Your room",
+    yoursAll: "Your room and bathroom",
     private: "Private",
     shared: "Yours to use",
     guestRoom: "Other guests' rooms",
   },
+  yourFloor: "Your floor",
 });
 
 export const guideExtrasAdminCopy = branded({

@@ -47,6 +47,33 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.167.0",
+    date: "2026-11-13",
+    title: "Around here as tiles, a clearer Wi-Fi card and your part of the house",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "What's on and places show as tiles (one or two across on a phone, three or four on a computer), each with a picture: the place's own photo, its Wikidata photo, or a small map of where it is; events show the organiser's picture or the date.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Food places show the official food hygiene rating badge, linked to their rating page. Distances are by path or road in miles (km outside the UK and US); the walking and driving buttons just open directions.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "The Wi-Fi card has the details on the left and a larger code on the right for other phones and laptops. On an iPhone it copies the password first (iPhones don't let a web page join Wi-Fi), with the Wi-Fi profile as a second way.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "House plans mark the guest's room and its own bathroom, show which floor is theirs, and light up everywhere they can use, including shared bathrooms and toilets.",
+      },
+    ],
+  },
+  {
     version: "0.166.0",
     date: "2026-11-13",
     title: "Around here: real walking times, pictures and what's on by date",

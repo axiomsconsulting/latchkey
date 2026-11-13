@@ -11,6 +11,7 @@ import {
   inside,
   nameOf,
   reachableAreas,
+  sharedEdge,
   sortFloors,
   type HouseNotes,
   type Point,
@@ -24,9 +25,12 @@ import {
   guestLocal,
   hygieneUrl,
   keepEvents,
+  usesMiles,
   nominatimUrl,
   readRouteTable,
   routeTableUrl,
+  wikidataImages,
+  wikidataUrl,
   withHygiene,
   normaliseLocalGuide,
   overpassQuery,
@@ -232,6 +236,26 @@ async function enrichPlaces(
       // The rough estimate stays (marked "about").
     }
     await new Promise((r) => setTimeout(r, 1100));
+  }
+  // A photo from Wikidata for places OpenStreetMap links there but that have none of their own.
+  const ids = [...new Set(out.filter((p) => !p.image && p.wikidata).map((p) => p.wikidata!))];
+  if (ids.length) {
+    try {
+      const res = await fetch(wikidataUrl(ids), {
+        headers: { "User-Agent": ua(), Accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) {
+        const imgs = wikidataImages(await res.json());
+        out = out.map((p) =>
+          !p.image && p.wikidata && imgs[p.wikidata]
+            ? { ...p, image: imgs[p.wikidata] ?? null }
+            : p,
+        );
+      }
+    } catch {
+      // The map picture stands in.
+    }
   }
   if (country === "GB") {
     try {
@@ -468,11 +492,13 @@ export type GuestFloor = {
   items: Array<{ kind: string; at: Point }>;
   /** "" for the main house, else the annex's name. */
   building?: string;
+  /** The guest's room is on this floor. */
+  yours?: boolean;
 };
 
 export type GuestExtras = {
   info: Array<ReturnType<typeof normalisePropertyInfo>[number] & { imageUrls: string[] }>;
-  local: { places: Place[]; events: LocalEvent[]; today: string } | null;
+  local: { places: Place[]; events: LocalEvent[]; today: string; miles: boolean } | null;
   directions: {
     steps: string[];
     planUrl: string | null;
@@ -511,7 +537,7 @@ export async function extrasFor(
   const sb = await db();
   const { data: p } = await sb
     .from("properties")
-    .select("id, timezone, property_info, local_guide")
+    .select("id, timezone, country_code, property_info, local_guide")
     .eq("id", propertyId)
     .maybeSingle();
   if (!p) return { info: [], local: null, directions: null, house: null, plans: [] };
@@ -542,6 +568,22 @@ export async function extrasFor(
     : {};
   const planList: GuestFloor[] = sortFloors(mapped).map((f) => {
     const src = plans.find((x) => x.id === f.id)!;
+    // The guest's room, and its own bathroom or toilet: linked to the room, or a room-only
+    // bathroom/WC sharing a wall with it that the host didn't link.
+    const mine = new Set(
+      room ? f.map.areas.filter((a) => a.roomId === room.id).map((a) => a.id) : [],
+    );
+    for (const a of f.map.areas)
+      if (
+        mine.size &&
+        !a.roomId &&
+        a.access === "guest_room" &&
+        ["ensuite", "bathroom", "wc"].includes(a.kind) &&
+        f.map.areas.some((b) => mine.has(b.id) && sharedEdge(a.poly, b.poly))
+      )
+        mine.add(a.id);
+    const canUse = (a: (typeof f.map.areas)[number]) =>
+      mine.has(a.id) || (a.access === "shared" && (!reach || reach.has(`${f.id}:${a.id}`)));
     return {
       id: f.id,
       level: f.level,
@@ -550,20 +592,27 @@ export async function extrasFor(
       route: null,
       room: null,
       at: null,
+      yours: mine.size > 0,
       areas: f.map.areas.map((a) => {
-        const mine = !!room && a.roomId === room.id;
-        const open = a.access === "shared" && (!reach || reach.has(`${f.id}:${a.id}`));
+        const own = mine.has(a.id);
+        const open = !own && canUse(a);
         return {
           poly: a.poly,
           kind: a.kind,
-          access: mine
+          access: own
             ? "yours"
             : open
-              ? "shared"
+              ? "open"
               : a.access === "guest_room"
                 ? "guest_room"
                 : "private",
-          label: mine || open ? nameOf(a, names) : null,
+          label: own
+            ? ["ensuite", "bathroom", "wc"].includes(a.kind)
+              ? "Your bathroom"
+              : `Your room${room?.name ? ` (${room.name})` : ""}`
+            : open
+              ? nameOf(a, names)
+              : null,
         };
       }),
       lines: f.map.lines.map((l) => ({ kind: l.kind, pts: l.pts })),
@@ -571,11 +620,7 @@ export async function extrasFor(
       items: f.map.items
         .filter((it) => {
           const a = f.map.areas.find((x) => inside(it.at, x.poly));
-          return (
-            !a ||
-            (a.access === "shared" && (!reach || reach.has(`${f.id}:${a.id}`))) ||
-            (!!room && a.roomId === room.id)
-          );
+          return !a || canUse(a);
         })
         .map((i) => ({ kind: i.kind, at: i.at })),
     };
@@ -628,6 +673,7 @@ export async function extrasFor(
       ? {
           ...guestLocal(g, near.places, near.events, near.at, todayIn(p.timezone)),
           today: todayIn(p.timezone),
+          miles: usesMiles(p.country_code),
         }
       : null,
     directions,

@@ -69,6 +69,8 @@ export const LINE_LOOK: Record<string, { stroke: string; width: number; dash?: s
 /** Area fills (rgba only: older tablet browsers draw /opacity colours solid). */
 export const AREA_FILL: Record<string, string> = {
   shared: "rgba(37,99,235,0.10)",
+  /** On a guest's house plan: everywhere they can go, clearly lit. */
+  open: "rgba(37,99,235,0.24)",
   guest_room: "rgba(100,116,139,0.10)",
   private: "url(#lk-private)",
   yours: "rgba(22,163,74,0.30)",
