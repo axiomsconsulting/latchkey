@@ -20,7 +20,6 @@ import {
   pickStudioVoice,
   recordStudioVoice,
   removeStudioVoices,
-  saveStudioVoiceKey,
 } from "@/lib/voice.functions";
 
 /**
@@ -30,12 +29,10 @@ import {
  */
 export function StudioVoicesAdmin() {
   const getFn = useServerFn(getStudioVoices);
-  const keyFn = useServerFn(saveStudioVoiceKey);
   const pickFn = useServerFn(pickStudioVoice);
   const recordFn = useServerFn(recordStudioVoice);
   const removeFn = useServerFn(removeStudioVoices);
   const q = useQuery({ queryKey: ["studio-voices"], queryFn: () => getFn() });
-  const [apiKey, setApiKey] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const d = q.data;
@@ -74,35 +71,10 @@ export function StudioVoicesAdmin() {
       </h2>
       {d?.error ? <p className="text-sm text-destructive">{d.error}</p> : null}
 
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-0 flex-1 space-y-1 text-sm">
-          <span className="font-medium">{d?.hasKey ? copy.keySaved : copy.key}</span>
-          <Input
-            type="password"
-            autoComplete="off"
-            value={apiKey}
-            placeholder={d?.hasKey ? "••••••••" : copy.keyPlaceholder}
-            onChange={(e) => setApiKey(e.target.value)}
-          />
-        </label>
-        <Button
-          disabled={busy !== null || apiKey.trim().length < 10}
-          onClick={() =>
-            void act("key", async () => {
-              await keyFn({ data: { apiKey: apiKey.trim() } });
-              setApiKey("");
-              toast.success(copy.keyOk);
-            })
-          }
-        >
-          {busy === "key" ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <KeyRound className="size-4" />
-          )}
-          {copy.saveKey}
-        </Button>
-      </div>
+      <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <KeyRound className="size-4 shrink-0" aria-hidden />
+        {d?.hasKey ? copy.keySaved : copy.key}
+      </p>
 
       {d?.hasKey && d.voices.length ? (
         <div className="grid gap-3 sm:grid-cols-2">

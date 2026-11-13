@@ -7,9 +7,10 @@
  * the "review_import" routine; 7 days unless changed).
  */
 import { reviewsDue } from "./kiosk-reviews";
+import { secret } from "@/lib/secrets";
 
 const FIRECRAWL = "https://api.firecrawl.dev/v1/scrape";
-const firecrawlKey = () => (process.env["FIRECRAWL_API_KEY"] ?? "").trim() || null;
+const firecrawlKey = () => (secret("FIRECRAWL_API_KEY") ?? "").trim() || null;
 /** At most this many pages per property, so one read can't run up the bill. */
 const MAX_PAGES = 8;
 export const DEFAULT_REVIEW_DAYS = 7;

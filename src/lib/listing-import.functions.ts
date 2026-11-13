@@ -12,12 +12,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotSharedDemo } from "@/lib/demo-account";
 import { hostOfProperty, requireWrite } from "@/lib/roles";
+import { secret } from "@/lib/secrets";
 
 type Loose = { from: (t: string) => any };
 const uuid = z.string().uuid();
 const FIRECRAWL = "https://api.firecrawl.dev/v1/scrape";
 
-const firecrawlKey = () => (process.env["FIRECRAWL_API_KEY"] ?? "").trim() || null;
+const firecrawlKey = () => (secret("FIRECRAWL_API_KEY") ?? "").trim() || null;
 
 async function allowed(): Promise<boolean> {
   const { jobAllowed } = await import("./usage.server");

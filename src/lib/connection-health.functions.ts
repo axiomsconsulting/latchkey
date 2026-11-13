@@ -3,13 +3,14 @@
  * call to each outside service (nothing is sent to anyone) and the exact
  * fix for anything not working. Never returns a key.
  */
+import { secret } from "@/lib/secrets";
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { line, sortLines, type HealthLine } from "./connection-health";
 import { requireSuperAdmin } from "./roles";
 
-const env = (k: string) => !!(process.env[k] ?? "").trim();
+const env = (k: string) => !!secret(k);
 
 async function timed<T>(fn: () => Promise<T>): Promise<T> {
   return Promise.race([

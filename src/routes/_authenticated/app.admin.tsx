@@ -30,6 +30,7 @@ import { LaunchFunnel } from "@/components/host/LaunchFunnel";
 import { IntegrationsAdmin } from "@/components/host/IntegrationsAdmin";
 import { PlatformStripeAdmin } from "@/components/host/PlatformStripeAdmin";
 import { ConnectionHealth } from "@/components/host/ConnectionHealth";
+import { SecretsAdmin } from "@/components/host/SecretsAdmin";
 import { WhatsAppAdmin } from "@/components/host/WhatsAppAdmin";
 import { SmartThingsAdmin } from "@/components/host/SmartThingsAdmin";
 import { LegalAdmin } from "@/components/host/LegalAdmin";
@@ -275,6 +276,12 @@ function AdminPage() {
             storageKey="latchkey.adminLayout.system"
             focus={backFromDrive ? "drive" : null}
             items={[
+              {
+                id: "apiKeys",
+                title: titles.apiKeys,
+                hint: "Every outside key in one place, where to get it, and what it should look like.",
+                node: <SecretsAdmin />,
+              },
               { id: "health", title: titles.health, node: <ConnectionHealth /> },
               { id: "stripe", title: titles.stripe, node: <PlatformStripeAdmin /> },
               { id: "whatsapp", title: titles.whatsapp, node: <WhatsAppAdmin /> },

@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { DEMO_CODE, DEMO_EMAIL, DEMO_INTEGRATION_MODES } from "./demo-account";
 import { seedDemo } from "./host.functions";
+import { secret } from "@/lib/secrets";
 
 export { DEMO_CODE };
 
@@ -238,7 +239,7 @@ export const seedRecordingAccount = createServerFn({ method: "POST" })
     const { requireSuperAdmin } = await import("./roles");
     await requireSuperAdmin(context.supabase);
     // Tolerate quotes pasted into the secret along with the address.
-    const email = (process.env["RECORDING_HOST_EMAIL"] ?? "")
+    const email = (secret("RECORDING_HOST_EMAIL") ?? "")
       .trim()
       .replace(/^["'<\s]+|["'>\s]+$/g, "")
       .toLowerCase();
@@ -267,7 +268,7 @@ export const seedRecordingAccount = createServerFn({ method: "POST" })
     }
 
     // Its own business (made once), kept on demo integrations and never billed.
-    const name = (process.env["RECORDING_BUSINESS_NAME"] ?? "").trim() || "The Hill Suites";
+    const name = (secret("RECORDING_BUSINESS_NAME") ?? "").trim() || "The Hill Suites";
     const { data: member } = await admin
       .from("host_members")
       .select("host_id")

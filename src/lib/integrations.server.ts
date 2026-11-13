@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
+import { secret } from "@/lib/secrets";
 /**
  * Latchkey-wide integrations, set by the super admin. Secrets live in the
  * server's environment (Lovable Cloud → Secrets); everything else in
  * site_settings.integrations. Server only.
  */
 
-const env = (k: string) => {
-  const v = process.env[k];
-  return v && v.trim() ? v.trim() : null;
-};
+// Keys saved in Latchkey admin win over Lovable Secrets (src/lib/secrets.ts).
+const env = (k: string) => secret(k);
 
 export type IntegrationSettings = {
   /** The forwarding address hosts send booking-site emails to, with {code} for each business. */

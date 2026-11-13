@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- reads tables and payloads the generated Supabase types don't cover */
+import { secret } from "@/lib/secrets";
 /**
  * Minimal Stripe REST client. Server only.
  *
- * Keys are project secrets, never stored in the database and never sent to the
- * browser. Standard (sk_…) and restricted (rk_…) keys both work; the test key
+ * Keys come from Lovable Secrets or Latchkey admin → Keys and secrets (super admins only). Standard (sk_…) and restricted (rk_…) keys both work; the test key
  * is used unless a live key is present, so demo mode is the safe default.
  */
 
@@ -13,8 +13,9 @@ export class StripeSetupError extends Error {}
 
 /** Live key wins only when it exists; otherwise we stay in Stripe's test mode. */
 function resolveKey(): string | undefined {
-  const live = process.env["STRIPE_LIVE_API_KEY"] ?? process.env["STRIPE_SECRET_KEY"];
-  const test = process.env["STRIPE_TEST_API_KEY"];
+  // Keys saved in Latchkey admin (Keys and secrets) win over Lovable Secrets.
+  const live = secret("STRIPE_LIVE_API_KEY") ?? secret("STRIPE_SECRET_KEY") ?? undefined;
+  const test = secret("STRIPE_TEST_API_KEY") ?? undefined;
   const isLive = (live ?? "").includes("_live_");
   return isLive ? live : (test ?? live);
 }

@@ -23,6 +23,7 @@ import {
   type StripeAccountRaw,
   type StripeIdentity,
 } from "@/lib/stripe-identity";
+import { secret } from "@/lib/secrets";
 
 const uuid = z.string().uuid();
 const token = z.string().min(20).max(80);
@@ -134,7 +135,7 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
     const base = {
       platformReady: stripeReady(),
       live: stripeLiveMode(),
-      webhookReady: Boolean(process.env["STRIPE_WEBHOOK_SECRET"]),
+      webhookReady: Boolean(secret("STRIPE_WEBHOOK_SECRET")),
       syncedCount: count ?? 0,
       currency: await propertyCurrency(
         context.supabase,
@@ -178,8 +179,8 @@ export const getPlatformStripe = createServerFn({ method: "GET" })
       live: stripeLiveMode(),
       keyKind: stripeKeyKind(),
       identity: await platformIdentity(true),
-      webhook: Boolean(process.env["STRIPE_WEBHOOK_SECRET"]),
-      connectWebhook: Boolean(process.env["STRIPE_CONNECT_WEBHOOK_SECRET"]),
+      webhook: Boolean(secret("STRIPE_WEBHOOK_SECRET")),
+      connectWebhook: Boolean(secret("STRIPE_CONNECT_WEBHOOK_SECRET")),
     };
   });
 

@@ -47,6 +47,19 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.163.0",
+    date: "2026-11-13",
+    title: "Every key in one place",
+    items: [
+      {
+        admin: true,
+        kind: "new",
+        area: "Security",
+        text: "Latchkey admin → System → Keys and secrets lists every outside key Latchkey uses, which ones are set and where, with how to get each one and what a right value looks like. Keys saved there are used within 30 seconds without publishing, and win over Lovable Secrets; values are masked, with the whole value shown or copied on request for your own backup.",
+      },
+    ],
+  },
+  {
     version: "0.162.0",
     date: "2026-11-13",
     title: "Compact guide cards, local events and a clearer test mode",

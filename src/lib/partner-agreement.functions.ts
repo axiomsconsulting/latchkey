@@ -22,6 +22,7 @@ import {
   sha256Hex,
   signingTicks,
 } from "./partner-agreement";
+import { secret } from "@/lib/secrets";
 
 type Ctx = { userId: string; supabase: unknown; claims?: { email?: string } };
 
@@ -30,7 +31,7 @@ async function data() {
 }
 
 function siteOrigin(): string {
-  const env = process.env["PUBLIC_SITE_URL"];
+  const env = secret("PUBLIC_SITE_URL");
   if (env) return env.replace(/\/+$/, "");
   try {
     return new URL(getRequest().url).origin;

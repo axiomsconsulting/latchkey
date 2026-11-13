@@ -11,6 +11,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireOwner } from "@/lib/roles";
 import { rebrand } from "@/lib/brand";
+import { secret as readSecret } from "@/lib/secrets";
 
 const uuid = z.string().uuid();
 
@@ -1039,7 +1040,7 @@ export const getIntegrationStatus = createServerFn({ method: "GET" })
     return {
       origin,
       firecrawl: {
-        keySet: !!(process.env["FIRECRAWL_API_KEY"] ?? "").trim(),
+        keySet: !!readSecret("FIRECRAWL_API_KEY"),
         enabled: listingRow?.enabled === true,
       },
       push: { ready: !!i.pushKeys() },

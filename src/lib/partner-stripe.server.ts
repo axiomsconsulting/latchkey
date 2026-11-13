@@ -13,6 +13,7 @@
  * passes an Idempotency-Key, so a retry can't pay twice.
  */
 import { form } from "./stripe.server";
+import { secret } from "@/lib/secrets";
 
 const V1 = "https://api.stripe.com/v1";
 const V2 = "https://api.stripe.com/v2";
@@ -55,10 +56,11 @@ export function liveAllowed(): boolean {
 /** Which partner keys are set (yes/no only, never the keys), for the admin's mode line. */
 export function partnerKeysPresent(): { hasTestKey: boolean; hasLiveKey: boolean } {
   return {
-    hasTestKey: isTestKey(process.env["STRIPE_TEST_API_KEY"]),
-    hasLiveKey: [process.env["STRIPE_LIVE_API_KEY"], process.env["STRIPE_SECRET_KEY"]].some(
-      isLiveKey,
-    ),
+    hasTestKey: isTestKey(secret("STRIPE_TEST_API_KEY") ?? undefined),
+    hasLiveKey: [
+      secret("STRIPE_LIVE_API_KEY") ?? undefined,
+      secret("STRIPE_SECRET_KEY") ?? undefined,
+    ].some(isLiveKey),
   };
 }
 
@@ -68,10 +70,11 @@ export function partnerKeysPresent(): { hasTestKey: boolean; hasLiveKey: boolean
  * flag is the deliberate switch to real money).
  */
 export function partnerStripeKey(): string {
-  const test = process.env["STRIPE_TEST_API_KEY"];
-  const live = [process.env["STRIPE_LIVE_API_KEY"], process.env["STRIPE_SECRET_KEY"]].find(
-    isLiveKey,
-  );
+  const test = secret("STRIPE_TEST_API_KEY") ?? undefined;
+  const live = [
+    secret("STRIPE_LIVE_API_KEY") ?? undefined,
+    secret("STRIPE_SECRET_KEY") ?? undefined,
+  ].find(isLiveKey);
   if (liveAllowed() && live) return live;
   if (isTestKey(test)) return test;
   if (live || test) throw new PartnerStripeLiveBlocked();

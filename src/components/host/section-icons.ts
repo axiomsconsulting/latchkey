@@ -75,6 +75,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   bank: Landmark,
   reviewRefresh: Star,
   studioVoices: Mic,
+  apiKeys: KeyRound,
 };
 
 export const DEFAULT_SECTION_ICON: LucideIcon = Settings2;
