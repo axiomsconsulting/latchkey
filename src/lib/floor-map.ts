@@ -527,6 +527,8 @@ export function connections(floors: MapFloor[]): Map<string, Edge[]> {
     const doors = lines.filter((l) => DOORLIKE.includes(l.kind));
     const linked = new Set<string>();
     for (const l of doors) {
+      // A door with a curtain, barred line or private line drawn over it isn't a way through.
+      if (barriers.some((b) => l.pts.every((p) => lineDist(p, b.pts) <= 0.03))) continue;
       const pair = between(areas, l.pts);
       if (!pair) continue;
       const at = mid(l.pts);
@@ -643,6 +645,36 @@ export function roomArea(floors: MapFloor[], roomId: string): Node | null {
 /** Who may walk through an area on the way to `roomId`: shared areas, and the room itself. */
 const passable = (a: Area, roomId: string) =>
   a.access === "shared" || (a.access === "guest_room" && a.roomId === roomId);
+
+/**
+ * Shared areas a guest can actually reach: from each building's entrance through doors, open
+ * hallways, steps, stairs and the lift, never through a private area, another guest's room, or
+ * past a barred door, curtain or private line. Keys are "<floor id>:<area id>". Null when no
+ * entrance is marked anywhere (then every shared area counts).
+ */
+export function reachableAreas(floors: MapFloor[]): Set<string> | null {
+  const starts = floors
+    .filter((f) => f.entrance)
+    .map((f) => ({ f, a: areaAt(f.map.areas, f.entrance!, 0.06) }))
+    .filter((x): x is { f: MapFloor; a: Area } => !!x.a);
+  if (!starts.length) return null;
+  const nodes = new Map<string, Area>();
+  for (const f of floors) for (const a of f.map.areas) nodes.set(key(f, a), a);
+  const g = connections(floors);
+  const seen = new Set<string>();
+  const todo = starts.map(({ f, a }) => key(f, a));
+  for (const k of todo) seen.add(k);
+  while (todo.length) {
+    const cur = todo.pop()!;
+    for (const e of g.get(cur) ?? []) {
+      const a = nodes.get(e.to);
+      if (!a || seen.has(e.to) || a.access !== "shared") continue;
+      seen.add(e.to);
+      todo.push(e.to);
+    }
+  }
+  return seen;
+}
 
 /** The shortest way from the entrance to the room through areas the guest may use, or null. */
 export function findRoute(
@@ -1007,6 +1039,7 @@ const itemText = (it: Item) => `${ITEM_WORDS[it.kind]}${it.note ? ` (${it.note})
 /** The spaces guests may use, what's private and where useful things are, from every floor's map. */
 export function houseNotes(floors: MapFloor[], roomNames: Record<string, string> = {}): HouseNotes {
   const notes: HouseNotes = { shared: [], private: [], barriers: [], useful: [] };
+  const reach = reachableAreas(floors);
   for (const f of [...floors].sort((a, b) => a.level - b.level)) {
     const { areas, lines, items } = f.map;
     const at = (p: Point) => areaAt(areas, p, 0.02);
@@ -1014,13 +1047,15 @@ export function houseNotes(floors: MapFloor[], roomNames: Record<string, string>
       const inHere = items.filter(
         (it) => !SAFETY.includes(it.kind) && it.kind !== "heater" && at(it.at)?.id === a.id,
       );
-      if (a.access === "shared" && !CIRCULATION.includes(a.kind))
+      // A shared area behind a curtain, barred door or private line is out of bounds too.
+      const open = a.access === "shared" && (!reach || reach.has(key(f, a)));
+      if (open && !CIRCULATION.includes(a.kind))
         notes.shared.push({
           name: nameOf(a, roomNames),
           level: f.level,
           items: inHere.map(itemText),
         });
-      if (a.access === "private")
+      if (a.access === "private" || (a.access === "shared" && !open))
         notes.private.push({ name: nameOf(a, roomNames), level: f.level });
     }
     for (const l of lines.filter((x) => BARRIERS.includes(x.kind))) {

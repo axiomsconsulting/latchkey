@@ -159,7 +159,7 @@ export function briefFor(k: Knowledge, s: Receptionist, surface: Surface): strin
     parts.push(`The way to their room: ${k.directions.join(" ")}`);
   if (on.info && k.house)
     parts.push(
-      `Around the house (from the host's floor plans; open key find_room). Never send a guest into a private area:\n${k.house}`,
+      `Around the house (from the host's floor plans; open key house). Never send a guest into a private area:\n${k.house}`,
     );
   if (on.rules && k.rules) parts.push(`House rules: ${k.rules}`);
   if (on.info && k.info) parts.push(`Property information (open key property_info):\n${k.info}`);
@@ -180,7 +180,8 @@ export function openKeys(k: Knowledge): string[] {
     ...(k.guide ?? []).map((g) => g.key),
     ...(k.info ? ["property_info"] : []),
     ...(k.local ? ["local"] : []),
-    ...(k.directions?.length || k.house ? ["find_room"] : []),
+    ...(k.directions?.length ? ["find_room"] : []),
+    ...(k.house ? ["house"] : []),
   ];
 }
 

@@ -11,7 +11,14 @@ import {
 import { sectionIcon } from "@/components/guest/guide-icons";
 import { guideCopy as gcopy } from "@/content/copy";
 import { splitLeadRich } from "@/lib/guide-lead";
-import { GUIDE_VIEW_KEY, hasMore, readGuideView, type GuideView } from "@/lib/guide-view";
+import {
+  GUIDE_VIEW_KEY,
+  cardSize,
+  hasMore,
+  packColumns,
+  readGuideView,
+  type GuideView,
+} from "@/lib/guide-view";
 import { cn } from "@/lib/utils";
 
 type Section = {
@@ -35,6 +42,8 @@ export type ExtraCard = {
   body: ReactNode;
   /** Before the guide's sections (default) or after them. */
   after?: boolean;
+  /** A section of its own after the guide (Around the house, Around here), never in the cards. */
+  own?: boolean;
 };
 
 /** A section's picture for the gallery: its first step photo, else its first photo attachment. */
@@ -115,8 +124,9 @@ export function GuideSections({
       : splitLeadRich(sec.summary);
     return { sec, lead, rest, Icon: sectionIcon(sec.key), cover: coverOf(sec) };
   });
-  const before = extras.filter((x) => !x.after);
-  const later = extras.filter((x) => x.after);
+  const before = extras.filter((x) => !x.after && !x.own);
+  const later = extras.filter((x) => x.after && !x.own);
+  const own = extras.filter((x) => x.own);
   const extraList = (list: ExtraCard[]) =>
     list.map((x) => {
       const isOpen = open.includes(x.key);
@@ -247,6 +257,16 @@ export function GuideSections({
         />
       )}
 
+      {own.map((x) => (
+        <section key={x.key} id={`guide-${x.key}`} className="card-soft scroll-mt-6 space-y-3 p-5">
+          <h2 className="flex items-center gap-3 font-display text-xl">
+            <x.Icon className="size-6 shrink-0 text-primary" aria-hidden />
+            {x.title}
+          </h2>
+          <div className="space-y-3 text-base">{x.body}</div>
+        </section>
+      ))}
+
       <AttachmentViewer
         items={viewingItems}
         index={viewing && viewingItems.length ? viewing.index : null}
@@ -341,6 +361,7 @@ function GuideGallery({
     Icon: React.ComponentType<{ className?: string }>;
     image: string | null;
     clip: number;
+    size: number;
     body: ReactNode;
   }> = [
     ...before.map((x) => ({
@@ -349,6 +370,7 @@ function GuideGallery({
       Icon: x.Icon,
       image: x.image ?? null,
       clip: 0,
+      size: 1,
       body: x.body,
     })),
     ...parts.map(({ sec, lead, rest, Icon, cover }) => ({
@@ -357,6 +379,15 @@ function GuideGallery({
       Icon,
       image: cover,
       clip: sec.attachments?.length ?? 0,
+      size: cardSize({
+        text:
+          lead.length +
+          rest.length +
+          sec.steps.reduce((n, st) => n + (st.heading?.length ?? 0) + (st.body?.length ?? 0), 0),
+        steps: sec.steps.length,
+        images: sec.steps.filter((st) => st.imageUrl).length,
+        attachments: sec.attachments?.length ?? 0,
+      }),
       body: (
         <>
           {lead ? (
@@ -375,9 +406,12 @@ function GuideGallery({
       Icon: x.Icon,
       image: x.image ?? null,
       clip: 0,
+      size: 1,
       body: x.body,
     })),
   ];
+  // Small cards share a column; bigger ones have one each.
+  const columns = packColumns(cards.map((c) => c.size));
   const row = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(0);
   const go = (i: number) => {
@@ -393,44 +427,52 @@ function GuideGallery({
           const w = (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? el.clientWidth;
           setAt(Math.round(el.scrollLeft / Math.max(1, w + 12)));
         }}
-        className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2"
+        className="no-scrollbar flex snap-x snap-mandatory items-start gap-3 overflow-x-auto pb-2"
       >
-        {cards.map((c) => {
-          // A faint picture behind the whole card (the host's for this section, else a starting one).
-          const bg = art?.(c.key) ?? null;
-          return (
-            <section
-              key={c.key}
-              id={`guide-${c.key}`}
-              className="card-soft relative isolate flex max-h-[62dvh] w-[calc(50%-0.375rem)] shrink-0 snap-start flex-col overflow-hidden lg:w-[calc(33.333%-0.5rem)]"
-            >
-              {bg ? (
-                <img
-                  src={bg}
-                  alt=""
-                  aria-hidden
-                  loading="lazy"
-                  className="pointer-events-none absolute inset-0 -z-10 size-full object-cover"
-                  style={{ opacity: 0.16 }}
-                />
-              ) : null}
-              <header className="flex items-center gap-2 px-3 pb-1.5 pt-3">
-                <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-card text-primary shadow-sm">
-                  <c.Icon className="size-4" aria-hidden />
-                </span>
-                <h3 className="line-clamp-2 min-w-0 flex-1 font-display text-base leading-tight">
-                  {c.title}
-                </h3>
-                {c.clip ? <ClipButton count={c.clip} onOpen={() => onClip(c.key)} /> : null}
-              </header>
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3 text-sm">
-                {c.body}
-              </div>
-            </section>
-          );
-        })}
+        {columns.map((col) => (
+          <div
+            key={cards[col[0]!]!.key}
+            className="flex max-h-[70dvh] w-[calc(50%-0.375rem)] shrink-0 snap-start flex-col gap-3 lg:w-[calc(33.333%-0.5rem)]"
+          >
+            {col.map((i) => {
+              const c = cards[i]!;
+              // A faint picture behind the whole card (the host's for this section, else a starting one).
+              const bg = art?.(c.key) ?? null;
+              return (
+                <section
+                  key={c.key}
+                  id={`guide-${c.key}`}
+                  className="card-soft relative isolate flex min-h-0 flex-col overflow-hidden"
+                >
+                  {bg ? (
+                    <img
+                      src={bg}
+                      alt=""
+                      aria-hidden
+                      loading="lazy"
+                      className="pointer-events-none absolute inset-0 -z-10 size-full object-cover"
+                      style={{ opacity: 0.16 }}
+                    />
+                  ) : null}
+                  <header className="flex items-center gap-2 px-3 pb-1.5 pt-3">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-card text-primary shadow-sm">
+                      <c.Icon className="size-4" aria-hidden />
+                    </span>
+                    <h3 className="line-clamp-2 min-w-0 flex-1 font-display text-base leading-tight">
+                      {c.title}
+                    </h3>
+                    {c.clip ? <ClipButton count={c.clip} onOpen={() => onClip(c.key)} /> : null}
+                  </header>
+                  <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3 text-sm">
+                    {c.body}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        ))}
       </div>
-      {cards.length > 1 ? (
+      {columns.length > 1 ? (
         <div className="flex items-center justify-center gap-3">
           <button
             type="button"
@@ -442,9 +484,9 @@ function GuideGallery({
             <ChevronLeft className="size-5" />
           </button>
           <div className="flex flex-wrap justify-center gap-1.5" aria-hidden>
-            {cards.map((c, i) => (
+            {columns.map((col, i) => (
               <span
-                key={c.key}
+                key={cards[col[0]!]!.key}
                 className={cn(
                   "size-2 rounded-full transition-colors",
                   i === at ? "bg-primary" : "bg-border",
@@ -455,8 +497,8 @@ function GuideGallery({
           <button
             type="button"
             aria-label={gcopy.galleryNext}
-            disabled={at >= cards.length - 1}
-            onClick={() => go(Math.min(cards.length - 1, at + 1))}
+            disabled={at >= columns.length - 1}
+            onClick={() => go(Math.min(columns.length - 1, at + 1))}
             className="grid size-11 place-items-center rounded-full border border-border bg-card disabled:opacity-40"
           >
             <ChevronRight className="size-5" />

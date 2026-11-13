@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.165.0",
+    date: "2026-11-13",
+    title: "Guide cards sized to fit, and the house on its own",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Guide cards are as tall as what's in them: short ones stack two or three to a column and longer ones have a column of their own, so the row scrolls together.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Around the house and Around here are sections of their own below the cards. Around the house shows each floor plan (tap to open it large) with the spaces guests can use named and lit, lists those spaces and what's in them, and sums up the rest as private in one line.",
+      },
+      {
+        kind: "fixed",
+        area: "Guest guide",
+        text: "A shared room behind a curtain, barred door or private line no longer counts as somewhere guests can go, and directions never pass through a door with one of those drawn over it.",
+      },
+    ],
+  },
+  {
     version: "0.164.0",
     date: "2026-11-13",
     title: "Door tablets that know what they are",

@@ -6020,9 +6020,21 @@ export const guideExtrasCopy = branded({
   floorName: (floor: string) => floor.charAt(0).toUpperCase() + floor.slice(1),
   heating: "Heating in your room",
   shared: "Spaces you can use",
-  private: "Private: please keep out",
+  privateSummary: (n: number) =>
+    n
+      ? `The rest of the house is private, shaded on the plan${n > 1 ? "s" : ""}. Please don't go past a closed door, curtain or line marked private.`
+      : "",
+  plans: "The plan",
+  plansMany: "The plans",
+  openPlan: (floor: string) => `Open the plan of the ${floor}`,
   useful: "Good to know",
-  key: { route: "Your way", yours: "Your room", private: "Private", shared: "Shared" },
+  key: {
+    route: "Your way",
+    yours: "Your room",
+    private: "Private",
+    shared: "Yours to use",
+    guestRoom: "Other guests' rooms",
+  },
 });
 
 export const guideExtrasAdminCopy = branded({
