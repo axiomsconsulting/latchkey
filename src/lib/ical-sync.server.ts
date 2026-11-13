@@ -352,6 +352,11 @@ export async function runRetentionSweep(): Promise<number> {
   // SmartThings connections stay signed in; guests' light taps go after a week (migration 0098).
   const { keepSmartHomeAlive } = await import("./smartthings.server");
   await keepSmartHomeAlive().catch(() => {});
+  // Around here: past events dropped, and events read again only where guests are due.
+  {
+    const { sweepLocalEvents } = await import("./guest-extras.server");
+    await sweepLocalEvents().catch(() => {});
+  }
   // Door tablets opened once or twice and quiet since (tests, a guest's own phone): removed.
   await forgetTemporaryTablets(db).catch(() => {});
   // Remembered ID checks for returning guests: 12 months. Before migration 0088 this just does nothing.

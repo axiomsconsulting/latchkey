@@ -22,7 +22,12 @@ import {
   eventsFromCalendar,
   eventsFromSkiddle,
   guestLocal,
+  hygieneUrl,
+  keepEvents,
   nominatimUrl,
+  readRouteTable,
+  routeTableUrl,
+  withHygiene,
   normaliseLocalGuide,
   overpassQuery,
   placesFromNominatim,
@@ -54,7 +59,7 @@ export async function db(): Promise<any> {
 const todayIn = (tz: string | null) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: tz ?? "Europe/London" }).format(new Date());
 
-/** Where the property is: a paired door tablet's position, else its UK postcode, else OpenStreetMap's search of its address. */
+/** Where the property is: its UK postcode (postcodes.io), else OpenStreetMap's search of its address, else a paired door tablet's position. */
 export async function propertySpot(
   sb: any,
   p: {
@@ -64,14 +69,6 @@ export async function propertySpot(
     address?: string | null;
   },
 ): Promise<{ lat: number; lng: number } | null> {
-  const { data: dev } = await sb
-    .from("kiosk_devices")
-    .select("lat, lng")
-    .eq("property_id", p.id)
-    .not("lat", "is", null)
-    .limit(1)
-    .maybeSingle();
-  if (dev?.lat != null && dev?.lng != null) return { lat: dev.lat, lng: dev.lng };
   const { ukPostcode } = await import("./weather");
   const pc = (p.country_code ?? "GB") === "GB" ? ukPostcode(p.postcode ?? null) : null;
   try {
@@ -93,14 +90,170 @@ export async function propertySpot(
     const hit = body[0];
     if (hit?.lat && hit.lon) return { lat: Number(hit.lat), lng: Number(hit.lon) };
   } catch {
-    // No position: no local card.
+    // Not found by postcode or address: a paired door tablet's position, if any.
   }
+  const { data: dev } = await sb
+    .from("kiosk_devices")
+    .select("lat, lng")
+    .eq("property_id", p.id)
+    .not("lat", "is", null)
+    .limit(1)
+    .maybeSingle();
+  if (dev?.lat != null && dev?.lng != null) return { lat: dev.lat, lng: dev.lng };
   return null;
 }
 
-/** Reads places (and events) near a property now and keeps them. */
+/** Up to which date events are worth reading for this property (guests staying or arriving soon), or null. */
+export async function eventsUntil(
+  sb: any,
+  propertyId: string,
+  today: string,
+): Promise<string | null> {
+  const { eventWindow, EVENTS_LOOKAHEAD_DAYS } = await import("./local-guide");
+  const soon = new Date(Date.parse(`${today}T00:00:00Z`) + EVENTS_LOOKAHEAD_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const { data } = await sb
+    .from("bookings")
+    .select("check_in_date, check_out_date, status")
+    .eq("property_id", propertyId)
+    .is("archived_at", null)
+    .is("mirror_of", null)
+    .gt("check_out_date", today)
+    .lte("check_in_date", soon)
+    .limit(200);
+  return eventWindow((data ?? []) as any[], today);
+}
+
+/** Events near the property up to `until`: Ticketmaster, Skiddle (UK) and the host's calendars, each once. */
+async function readEvents(
+  p: { country_code?: string | null; timezone?: string | null },
+  g: ReturnType<typeof normaliseLocalGuide>,
+  at: { lat: number; lng: number },
+  today: string,
+  until: string,
+): Promise<LocalEvent[]> {
+  if (!g.eventsOn) return [];
+  let events: LocalEvent[] = [];
+  const key = (secret("TICKETMASTER_API_KEY") ?? "").trim();
+  if (key) {
+    try {
+      const q = new URLSearchParams({
+        apikey: key,
+        latlong: `${at.lat.toFixed(4)},${at.lng.toFixed(4)}`,
+        radius: "15",
+        unit: "km",
+        size: "40",
+        sort: "date,asc",
+        startDateTime: new Date().toISOString().slice(0, 19) + "Z",
+        endDateTime: `${until}T23:59:59Z`,
+      });
+      const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${q}`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) events = eventsFromTicketmaster(await res.json(), 30);
+    } catch {
+      // Events are a bonus: places still show.
+    }
+  }
+  // Skiddle (free key, UK): gigs, theatre, comedy, festivals, family days, arts, exhibitions.
+  const skiddle = (secret("SKIDDLE_API_KEY") ?? "").trim();
+  if (skiddle && (p.country_code ?? "GB") === "GB") {
+    try {
+      const res = await fetch(skiddleUrl(skiddle, at, today, 14, until), {
+        headers: { "User-Agent": ua(), Accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) events.push(...eventsFromSkiddle(await res.json(), 40));
+    } catch {
+      // Events are a bonus: places still show.
+    }
+  }
+  // The host's own event calendars (iCal links): free, and as local as the host chooses.
+  const { parseIcs } = await import("./ical");
+  for (const c of g.calendars) {
+    try {
+      const res = await fetch(c.url, {
+        headers: { "User-Agent": ua(), Accept: "text/calendar, */*" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) continue;
+      const ics = (await res.text()).slice(0, 3_000_000);
+      events.push(
+        ...eventsFromCalendar(
+          parseIcs(ics, p.timezone ?? "Europe/London", { noEndOk: true }),
+          today,
+          c.id,
+        ),
+      );
+    } catch {
+      // One calendar not answering never stops the rest.
+    }
+  }
+  // The same event from two sources once, soonest first, only while guests are here.
+  const seen = new Set<string>();
+  return keepEvents(events, today, until)
+    .filter((e) => {
+      const k = `${e.name.toLowerCase().replace(/[^a-z0-9]/g, "")}|${e.date}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")))
+    .slice(0, 60);
+}
+
+/** Places by road and path from the property (two table requests, a second apart), and UK food hygiene ratings. */
+async function enrichPlaces(
+  places: Place[],
+  at: { lat: number; lng: number },
+  country: string,
+): Promise<Place[]> {
+  let out = places;
+  const located = out.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  for (const mode of ["foot", "car"] as const) {
+    try {
+      const res = await fetch(routeTableUrl(mode, at, located), {
+        headers: { "User-Agent": ua(), Accept: "application/json" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (res.ok) {
+        const rows = readRouteTable(await res.json(), located.length);
+        const by = new Map(located.map((p, i) => [p.id, rows[i] ?? null]));
+        out = out.map((p) => {
+          const r = by.get(p.id);
+          if (!r) return p;
+          return mode === "foot"
+            ? { ...p, walkM: Math.round(r[0]), walkS: Math.round(r[1]) }
+            : { ...p, driveM: Math.round(r[0]), driveS: Math.round(r[1]) };
+        });
+      }
+    } catch {
+      // The rough estimate stays (marked "about").
+    }
+    await new Promise((r) => setTimeout(r, 1100));
+  }
+  if (country === "GB") {
+    try {
+      const res = await fetch(hygieneUrl(at, 1), {
+        headers: { "x-api-version": "2", Accept: "application/json", "User-Agent": ua() },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (res.ok) out = withHygiene(out, await res.json());
+    } catch {
+      // No ratings this time.
+    }
+  }
+  return out;
+}
+
+/**
+ * Reads places (weekly) and/or events (daily, only while guests are staying or arriving within a
+ * week, up to their last check-out) near a property, and keeps them.
+ */
 export async function refreshPlaces(
   propertyId: string,
+  what: { places?: boolean; events?: boolean } = { places: true, events: true },
 ): Promise<{ places: number; events: number }> {
   const sb = await db();
   const { data: p } = await sb
@@ -110,7 +263,17 @@ export async function refreshPlaces(
     .maybeSingle();
   if (!p) throw new Error("Property not found.");
   const g = normaliseLocalGuide(p.local_guide);
-  const at = await propertySpot(sb, p);
+  const today = todayIn(p.timezone ?? null);
+  const { data: before } = await sb
+    .from("local_places")
+    .select("lat, lng, places")
+    .eq("property_id", propertyId)
+    .maybeSingle();
+  const known =
+    !what.places && before?.lat != null && before?.lng != null
+      ? { lat: before.lat as number, lng: before.lng as number }
+      : null;
+  const at = known ?? (await propertySpot(sb, p));
   if (!at) {
     await sb.from("local_places").upsert({
       property_id: propertyId,
@@ -121,141 +284,73 @@ export async function refreshPlaces(
       "Latchkey couldn't find where the property is. Check its postcode and address.",
     );
   }
-  let places: Place[] = [];
+  const row: Record<string, unknown> = { property_id: propertyId, lat: at.lat, lng: at.lng };
+  let places: Place[] = Array.isArray(before?.places) ? before.places : [];
   let error: string | null = null;
-  // Overpass first (one request for everything); its public servers are often busy, so then
-  // OpenStreetMap's own search, one kind of place a second (their usage policy).
-  const query = overpassQuery(at, [
-    "food",
-    "cafe",
-    "pub",
-    "shop",
-    "shopping",
-    "sights",
-    "transport",
-  ]);
-  for (const url of OVERPASS) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": ua(),
-          Accept: "application/json",
-        },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (!res.ok) throw new Error(`OpenStreetMap answered ${res.status}`);
-      places = placesFromOverpass(await res.json(), at);
-      error = null;
-      break;
-    } catch (e) {
-      error = e instanceof Error ? e.message.slice(0, 200) : "failed";
-    }
-  }
-  if (!places.length) {
-    const found: Place[] = [];
-    for (const c of PLACE_CATEGORIES) {
+  if (what.places) {
+    places = [];
+    // Overpass first (one request for everything); its public servers are often busy, so then
+    // OpenStreetMap's own search, one kind of place a second (their usage policy).
+    const query = overpassQuery(at, PLACE_CATEGORIES);
+    for (const url of OVERPASS) {
       try {
-        const res = await fetch(nominatimUrl(c, at), {
-          headers: { "User-Agent": ua(), Accept: "application/json" },
-          signal: AbortSignal.timeout(8000),
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": ua(),
+            Accept: "application/json",
+          },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: AbortSignal.timeout(15_000),
         });
-        if (res.ok) found.push(...placesFromNominatim(await res.json(), at, c));
-      } catch {
-        // That kind of place is left out this time.
+        if (!res.ok) throw new Error(`OpenStreetMap answered ${res.status}`);
+        places = placesFromOverpass(await res.json(), at);
+        error = null;
+        break;
+      } catch (e) {
+        error = e instanceof Error ? e.message.slice(0, 200) : "failed";
       }
-      await new Promise((r) => setTimeout(r, 1100));
     }
-    if (found.length) {
-      places = found;
-      error = null;
+    if (!places.length) {
+      const found: Place[] = [];
+      for (const c of PLACE_CATEGORIES) {
+        try {
+          const res = await fetch(nominatimUrl(c, at), {
+            headers: { "User-Agent": ua(), Accept: "application/json" },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (res.ok) found.push(...placesFromNominatim(await res.json(), at, c));
+        } catch {
+          // That kind of place is left out this time.
+        }
+        await new Promise((r) => setTimeout(r, 1100));
+      }
+      if (found.length) {
+        places = found;
+        error = null;
+      }
     }
+    if (places.length) places = await enrichPlaces(places, at, (p.country_code ?? "GB") as string);
+    row["fetched_at"] = new Date().toISOString();
+    row["error"] = error;
+    // A failed read keeps the places read before.
+    if (!error) row["places"] = places;
   }
   let events: LocalEvent[] = [];
-  const key = (secret("TICKETMASTER_API_KEY") ?? "").trim();
-  if (key && g.eventsOn) {
-    try {
-      const start = new Date().toISOString().slice(0, 19) + "Z";
-      const end = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 19) + "Z";
-      const q = new URLSearchParams({
-        apikey: key,
-        latlong: `${at.lat.toFixed(4)},${at.lng.toFixed(4)}`,
-        radius: "15",
-        unit: "km",
-        size: "30",
-        sort: "date,asc",
-        startDateTime: start,
-        endDateTime: end,
-      });
-      const res = await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${q}`, {
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (res.ok) events = eventsFromTicketmaster(await res.json());
-    } catch {
-      // Events are a bonus: places still show.
-    }
+  if (what.events) {
+    const until = await eventsUntil(sb, propertyId, today);
+    // Nobody staying or arriving soon: nothing is fetched, and nothing kept.
+    events = until ? await readEvents(p, g, at, today, until) : [];
+    row["events"] = events;
+    row["events_at"] = new Date().toISOString();
   }
-  // Skiddle (free key, UK): gigs, theatre, comedy, festivals, family days, arts, exhibitions.
-  const skiddle = (secret("SKIDDLE_API_KEY") ?? "").trim();
-  if (skiddle && g.eventsOn && (p.country_code ?? "GB") === "GB") {
-    try {
-      const res = await fetch(skiddleUrl(skiddle, at, todayIn(p.timezone ?? null)), {
-        headers: { "User-Agent": ua(), Accept: "application/json" },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (res.ok) events.push(...eventsFromSkiddle(await res.json()));
-    } catch {
-      // Events are a bonus: places still show.
-    }
+  let { error: e } = await sb.from("local_places").upsert(row);
+  // Before migration 0112 there's no events_at column.
+  if (e && /events_at/.test(e.message)) {
+    delete row["events_at"];
+    ({ error: e } = await sb.from("local_places").upsert(row));
   }
-  // The host's own event calendars (iCal links): free, and as local as the host chooses.
-  {
-    const { parseIcs } = await import("./ical");
-    const today = todayIn(p.timezone ?? null);
-    for (const c of g.calendars) {
-      try {
-        const res = await fetch(c.url, {
-          headers: { "User-Agent": ua(), Accept: "text/calendar, */*" },
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (!res.ok) continue;
-        const ics = (await res.text()).slice(0, 3_000_000);
-        events.push(
-          ...eventsFromCalendar(
-            parseIcs(ics, p.timezone ?? "Europe/London", { noEndOk: true }),
-            today,
-            c.id,
-          ),
-        );
-      } catch {
-        // One calendar not answering never stops the rest.
-      }
-    }
-    // The same event from two sources once, soonest first.
-    const seen = new Set<string>();
-    events = events
-      .filter((e) => {
-        const k = `${e.name.toLowerCase().replace(/[^a-z0-9]/g, "")}|${e.date}`;
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      })
-      .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")))
-      .slice(0, 40);
-  }
-  const row: Record<string, unknown> = {
-    property_id: propertyId,
-    lat: at.lat,
-    lng: at.lng,
-    events,
-    fetched_at: new Date().toISOString(),
-    error,
-  };
-  // A failed read keeps the places read before.
-  if (!error) row["places"] = places;
-  const { error: e } = await sb.from("local_places").upsert(row);
   if (e)
     throw new Error(
       /local_places/.test(e.message) ? "This needs the latest update (migration 0109)." : e.message,
@@ -265,7 +360,9 @@ export async function refreshPlaces(
   return { places: places.length, events: events.length };
 }
 
-/** Places and events for a property, read again when older than a week (the guest waits at most a few seconds). */
+const DAY = 86_400_000;
+
+/** Places and events for a property: places read again weekly, events daily while guests are due (the guest waits at most a few seconds). */
 export async function placesFor(propertyId: string): Promise<{
   at: { lat: number; lng: number } | null;
   places: Place[];
@@ -282,9 +379,13 @@ export async function placesFor(propertyId: string): Promise<{
     return data;
   };
   let row = await read();
-  if (!row || Date.now() - Date.parse(row.fetched_at) > WEEK) {
+  const placesStale = !row || Date.now() - Date.parse(row.fetched_at) > WEEK;
+  const eventsStale = !row?.events_at || Date.now() - Date.parse(row.events_at) > DAY;
+  if (placesStale || eventsStale) {
     await Promise.race([
-      refreshPlaces(propertyId).catch(() => undefined),
+      refreshPlaces(propertyId, { places: placesStale, events: eventsStale }).catch(
+        () => undefined,
+      ),
       new Promise((r) => setTimeout(r, row ? 1500 : 12_000)),
     ]);
     row = (await read()) ?? row;
@@ -295,6 +396,37 @@ export async function placesFor(propertyId: string): Promise<{
     events: (Array.isArray(row?.events) ? row.events : []) as LocalEvent[],
     fetchedAt: row?.fetched_at ?? null,
   };
+}
+
+/**
+ * Daily house-keeping: events already past (or past every guest's check-out) are dropped, and
+ * events are read again for properties with guests due (at most `max` a day, oldest first).
+ */
+export async function sweepLocalEvents(max = 15): Promise<void> {
+  const sb = await db();
+  const { data: rows, error } = await sb
+    .from("local_places")
+    .select("property_id, events, events_at, properties(timezone, local_guide)");
+  if (error || !rows) return;
+  const due: Array<{ id: string; at: number }> = [];
+  for (const r of rows as any[]) {
+    const today = todayIn(r.properties?.timezone ?? null);
+    const until = await eventsUntil(sb, r.property_id, today);
+    const list = (Array.isArray(r.events) ? r.events : []) as LocalEvent[];
+    const kept = keepEvents(list, today, until ?? today);
+    const keepNone = !until;
+    if (keepNone ? list.length : kept.length !== list.length)
+      await sb
+        .from("local_places")
+        .update({ events: keepNone ? [] : kept })
+        .eq("property_id", r.property_id);
+    const g = normaliseLocalGuide(r.properties?.local_guide);
+    if (until && g.on && g.eventsOn)
+      due.push({ id: r.property_id, at: r.events_at ? Date.parse(r.events_at) : 0 });
+  }
+  due.sort((a, b) => a.at - b.at);
+  for (const d of due.filter((x) => Date.now() - x.at > DAY * 0.8).slice(0, max))
+    await refreshPlaces(d.id, { events: true }).catch(() => {});
 }
 
 /** Signed links to private "guides" bucket files, for this long. */
@@ -340,7 +472,7 @@ export type GuestFloor = {
 
 export type GuestExtras = {
   info: Array<ReturnType<typeof normalisePropertyInfo>[number] & { imageUrls: string[] }>;
-  local: { places: Place[]; events: LocalEvent[] } | null;
+  local: { places: Place[]; events: LocalEvent[]; today: string } | null;
   directions: {
     steps: string[];
     planUrl: string | null;
@@ -492,7 +624,12 @@ export async function extrasFor(
       ...i,
       imageUrls: i.images.map((x) => links[x]).filter(Boolean) as string[],
     })),
-    local: near ? guestLocal(g, near.places, near.events, near.at, todayIn(p.timezone)) : null,
+    local: near
+      ? {
+          ...guestLocal(g, near.places, near.events, near.at, todayIn(p.timezone)),
+          today: todayIn(p.timezone),
+        }
+      : null,
     directions,
     house,
     plans: planList,

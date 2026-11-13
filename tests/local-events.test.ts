@@ -104,6 +104,7 @@ describe("Skiddle", () => {
         url: "https://www.skiddle.com/e/123",
         lat: 51.45,
         lng: -2.59,
+        image: null,
       },
     ]);
   });
@@ -144,5 +145,156 @@ describe("AI service health", () => {
       "out of AI credits: Payment required",
     );
     expect(aiMessage(400, "bad schema")).toBe("answered 400: bad schema");
+  });
+});
+
+import {
+  eventWindow,
+  keepEvents,
+  placeImage,
+  placeTabs,
+  placesInTab,
+  readRouteTable,
+  recommended,
+  routeTableUrl,
+  ticketmasterImage,
+  travelMinutes,
+  whenBadge,
+  withHygiene,
+  type LocalEvent,
+  type Place,
+} from "@/lib/local-guide";
+
+describe("what's on, by date", () => {
+  const today = "2026-11-13"; // a Friday
+  it("badges today, tonight, tomorrow and this week", () => {
+    expect(whenBadge(today, "14:00", today)).toEqual({ label: "Today", soon: true });
+    expect(whenBadge(today, "19:30", today).label).toBe("Tonight");
+    expect(whenBadge("2026-11-14", null, today).label).toBe("Tomorrow");
+    expect(whenBadge("2026-11-14", "20:00", today).label).toBe("Tomorrow night");
+    expect(whenBadge("2026-11-17", null, today).label).toBe("Tuesday");
+    expect(whenBadge("2026-11-25", null, today).label).toBe("Wed 25 Nov");
+  });
+
+  it("reads events only while guests are staying or arriving within a week", () => {
+    const stay = (i: string, o: string, status = "upcoming") => ({
+      check_in_date: i,
+      check_out_date: o,
+      status,
+    });
+    expect(eventWindow([], today)).toBeNull();
+    expect(eventWindow([stay("2026-11-25", "2026-11-28")], today)).toBeNull();
+    expect(eventWindow([stay("2026-11-10", "2026-11-13")], today)).toBeNull();
+    expect(eventWindow([stay("2026-11-18", "2026-11-22", "cancelled")], today)).toBeNull();
+    expect(
+      eventWindow([stay("2026-11-12", "2026-11-15"), stay("2026-11-18", "2026-11-22")], today),
+    ).toBe("2026-11-22");
+    expect(eventWindow([stay("2026-11-12", "2027-02-01")], today)).toBe("2026-12-13");
+  });
+
+  it("drops past events and those after the last check-out", () => {
+    const e = (date: string) =>
+      ({
+        id: date,
+        name: date,
+        date,
+        time: null,
+        venue: null,
+        url: null,
+        lat: null,
+        lng: null,
+      }) as LocalEvent;
+    expect(
+      keepEvents([e("2026-11-12"), e(today), e("2026-11-20")], today, "2026-11-15").map(
+        (x) => x.date,
+      ),
+    ).toEqual([today]);
+  });
+});
+
+describe("pictures straight from the source", () => {
+  it("uses a place's own Commons or image link", () => {
+    expect(placeImage({ wikimedia_commons: "File:Old Pub.jpg" })).toBe(
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Old%20Pub.jpg?width=320",
+    );
+    expect(placeImage({ image: "https://example.com/front.jpg" })).toBe(
+      "https://example.com/front.jpg",
+    );
+    expect(placeImage({ image: "http://example.com/front.jpg" })).toBeNull();
+    expect(placeImage({ image: "https://example.com/page" })).toBeNull();
+  });
+
+  it("picks Ticketmaster's wide picture about 640 across", () => {
+    expect(
+      ticketmasterImage([
+        { url: "https://s1.ticketm.net/a.jpg", ratio: "3_2", width: 640 },
+        { url: "https://s1.ticketm.net/b.jpg", ratio: "16_9", width: 2048 },
+        { url: "https://s1.ticketm.net/c.jpg", ratio: "16_9", width: 640 },
+      ]),
+    ).toBe("https://s1.ticketm.net/c.jpg");
+  });
+});
+
+describe("places", () => {
+  const place = (o: Partial<Place> & { id: string }): Place => ({
+    name: o.id,
+    category: "cafe",
+    lat: 51.45,
+    lng: -2.6,
+    metres: 400,
+    address: null,
+    website: null,
+    ...o,
+  });
+
+  it("reads walking and driving times by road", () => {
+    const url = routeTableUrl("foot", { lat: 51.45, lng: -2.6 }, [{ lat: 51.46, lng: -2.59 }]);
+    expect(url).toContain(
+      "routing.openstreetmap.de/routed-foot/table/v1/driving/-2.60000,51.45000;-2.59000,51.46000",
+    );
+    expect(
+      readRouteTable({ distances: [[0, 993.9, null]], durations: [[0, 700, null]] }, 2),
+    ).toEqual([[993.9, 700], null]);
+    expect(travelMinutes(place({ id: "a", walkS: 700 }), "walk")).toEqual({ min: 12, exact: true });
+    expect(travelMinutes(place({ id: "a" }), "walk")?.exact).toBe(false);
+  });
+
+  it("matches food hygiene ratings by name nearby", () => {
+    const body = {
+      establishments: [
+        {
+          BusinessName: "The Cash Hall Ltd",
+          RatingValue: "5",
+          geocode: { latitude: "51.4501", longitude: "-2.6001" },
+        },
+        {
+          BusinessName: "Far Cafe",
+          RatingValue: "2",
+          geocode: { latitude: "51.47", longitude: "-2.6" },
+        },
+      ],
+    };
+    const out = withHygiene(
+      [
+        place({ id: "a", name: "Cash Hall", category: "food" }),
+        place({ id: "b", name: "Far Cafe" }),
+        place({ id: "c", name: "Cash Hall", category: "shop" }),
+      ],
+      body,
+    );
+    expect(out.map((p) => p.hygiene ?? null)).toEqual(["5", null, null]);
+  });
+
+  it("puts Recommended first, then host picks, kinds, and All last", () => {
+    const ps = [
+      place({ id: "c1", category: "cafe", metres: 900 }),
+      place({ id: "c2", category: "cafe", metres: 300, hygiene: "5", image: "https://x/y.jpg" }),
+      place({ id: "f1", category: "food", pick: true }),
+      place({ id: "f2", category: "food", hygiene: "5" }),
+    ];
+    expect(placeTabs(ps)).toEqual(["recommended", "picks", "food", "cafe", "all"]);
+    expect(recommended(ps).map((p) => p.id)).toEqual(["f1", "c2"]);
+    expect(placesInTab(ps, "picks").map((p) => p.id)).toEqual(["f1"]);
+    expect(placeTabs([])).toEqual([]);
   });
 });

@@ -31,6 +31,15 @@ export type Place = {
   /** The host's own words, for their picks. */
   note?: string | null;
   pick?: boolean;
+  /** A photo the place itself publishes on OpenStreetMap (image or Wikimedia Commons), shown straight from there. */
+  image?: string | null;
+  /** By road and path from the property's postcode (OpenStreetMap routing): metres and seconds. */
+  walkM?: number | null;
+  walkS?: number | null;
+  driveM?: number | null;
+  driveS?: number | null;
+  /** UK food hygiene rating (Food Standards Agency): "0"–"5", or Scotland's "Pass". */
+  hygiene?: string | null;
 };
 
 export type LocalEvent = {
@@ -43,6 +52,8 @@ export type LocalEvent = {
   url: string | null;
   lat: number | null;
   lng: number | null;
+  /** The organiser's own picture, shown straight from their site (never stored or passed through Latchkey). */
+  image?: string | null;
 };
 
 export type Pick = {
@@ -335,6 +346,7 @@ export function placesFromOverpass(
       metres: metresBetween(at, { lat, lng }),
       address: street || null,
       website: httpsUrl(tags["website"]),
+      image: placeImage(tags),
     });
   }
   all.sort((a, b) => a.metres - b.metres);
@@ -370,6 +382,7 @@ export function eventsFromTicketmaster(body: unknown, max = 12): LocalEvent[] {
       url: httpsUrl(e["url"]),
       lat: loc["latitude"] ? coord(Number(loc["latitude"]), 90) : null,
       lng: loc["longitude"] ? coord(Number(loc["longitude"]), 180) : null,
+      image: ticketmasterImage(e["images"]),
     });
     if (out.length >= max) break;
   }
@@ -405,7 +418,7 @@ export function guestLocal(
     events: [...own, ...(g.eventsOn ? events : [])]
       .filter((e) => e.date >= today)
       .sort((a, b) => `${a.date}${a.time ?? ""}`.localeCompare(`${b.date}${b.time ?? ""}`))
-      .slice(0, 20),
+      .slice(0, 40),
   };
 }
 
@@ -414,7 +427,13 @@ export function localText(places: Place[], events: LocalEvent[]): string {
   const lines = PLACE_CATEGORIES.map((c) => {
     const ps = places.filter((p) => p.category === c).slice(0, 5);
     return ps.length
-      ? `${c}: ${ps.map((p) => `${p.name}${p.metres >= 0 ? ` (${distanceText(p.metres)}, ${walkMinutes(p.metres)} min walk)` : ""}${p.note ? ` - ${p.note}` : ""}`).join("; ")}`
+      ? `${c}: ${ps
+          .map((p) => {
+            const w = travelMinutes(p, "walk");
+            const m = p.walkM ?? (p.metres >= 0 ? p.metres : null);
+            return `${p.name}${m !== null && w ? ` (${distanceText(m)}, ${w.exact ? "" : "about "}${w.min} min walk)` : ""}${p.hygiene ? `, food hygiene ${p.hygiene}` : ""}${p.note ? ` - ${p.note}` : ""}`;
+          })
+          .join("; ")}`
       : "";
   }).filter(Boolean);
   if (events.length)
@@ -507,6 +526,7 @@ export function placesFromNominatim(
       metres: metresBetween(at, { lat, lng }),
       address: street || null,
       website: httpsUrl((obj(e["extratags"]) as Record<string, string>)["website"]),
+      image: placeImage(obj(e["extratags"]) as Record<string, string>),
     });
   }
   return out.sort((a, b) => a.metres - b.metres).slice(0, per);
@@ -532,10 +552,11 @@ export function skiddleUrl(
   at: { lat: number; lng: number },
   today: string,
   days = 14,
+  untilDate: string | null = null,
 ) {
-  const until = new Date(Date.parse(`${today}T00:00:00Z`) + days * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
+  const until =
+    untilDate ??
+    new Date(Date.parse(`${today}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
   const q = new URLSearchParams({
     api_key: key,
     latitude: at.lat.toFixed(4),
@@ -579,9 +600,245 @@ export function eventsFromSkiddle(body: unknown, max = 20): LocalEvent[] {
       url: httpsUrl(e["link"]),
       lat: coord(Number(v["latitude"]), 90),
       lng: coord(Number(v["longitude"]), 180),
+      image: imageUrl(e["largeimageurl"]) ?? imageUrl(e["imageurl"]),
     });
   }
   return out
     .sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")))
     .slice(0, max);
+}
+
+/* ---------------------------- pictures, straight from the source ---------------------------- */
+
+/** An https picture link as given (never fetched, stored or passed through Latchkey). */
+export function imageUrl(v: unknown): string | null {
+  const u = httpsUrl(v);
+  return u && !/\s/.test(u) ? u : null;
+}
+
+/** A place's own photo on OpenStreetMap: image=https://…, or wikimedia_commons=File:… (a small copy from Wikimedia). */
+export function placeImage(tags: Record<string, string>): string | null {
+  const commons = (tags["wikimedia_commons"] ?? "").trim();
+  if (/^File:.+\.(jpe?g|png|webp)$/i.test(commons))
+    return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(commons.slice(5))}?width=320`;
+  const img = (tags["image"] ?? "").trim();
+  const commonsImg = /^https:\/\/commons\.wikimedia\.org\/wiki\/(File:.+)$/.exec(img);
+  if (commonsImg)
+    return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(decodeURIComponent(commonsImg[1]!).slice(5))}?width=320`;
+  return /\.(jpe?g|png|webp)(\?.*)?$/i.test(img) ? imageUrl(img) : null;
+}
+
+/** Ticketmaster's pictures: a wide one about 640 px across. */
+export function ticketmasterImage(v: unknown): string | null {
+  if (!Array.isArray(v)) return null;
+  const imgs = v
+    .map(obj)
+    .filter((i) => imageUrl(i["url"]))
+    .map((i) => ({
+      url: i["url"] as string,
+      w: Number(i["width"]) || 0,
+      wide: i["ratio"] === "16_9",
+    }));
+  imgs.sort((a, b) => Number(b.wide) - Number(a.wide) || Math.abs(a.w - 640) - Math.abs(b.w - 640));
+  return imgs[0]?.url ?? null;
+}
+
+/* --------------------------------- when an event is --------------------------------- */
+
+const DAY_MS = 86_400_000;
+const addDays = (iso: string, n: number) =>
+  new Date(Date.parse(`${iso}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+
+/** The badge on an event: Today, Tonight (from 5pm), Tomorrow, Tomorrow night, a weekday this week, else the date. */
+export function whenBadge(
+  date: string,
+  time: string | null,
+  today: string,
+): { label: string; soon: boolean } {
+  const evening = !!time && time >= "17:00";
+  if (date === today) return { label: evening ? "Tonight" : "Today", soon: true };
+  if (date === addDays(today, 1))
+    return { label: evening ? "Tomorrow night" : "Tomorrow", soon: true };
+  const d = new Date(`${date}T12:00:00Z`);
+  if (date > today && date <= addDays(today, 6))
+    return {
+      label: d.toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" }),
+      soon: false,
+    };
+  return {
+    label: d.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    }),
+    soon: false,
+  };
+}
+
+/** Days ahead a stay counts as arriving, for fetching events. */
+export const EVENTS_LOOKAHEAD_DAYS = 7;
+/** Events are never read further ahead than this. */
+export const EVENTS_MAX_DAYS = 30;
+
+/**
+ * Up to which date events are worth reading: the last check-out of guests staying now or
+ * arriving in the next week (real stays only). Null when nobody is: then nothing is fetched.
+ */
+export function eventWindow(
+  stays: Array<{ check_in_date: string; check_out_date: string; status: string | null }>,
+  today: string,
+): string | null {
+  const soon = addDays(today, EVENTS_LOOKAHEAD_DAYS);
+  let until: string | null = null;
+  for (const b of stays) {
+    if (["cancelled", "blocked", "checked_out"].includes(b.status ?? "")) continue;
+    if (b.check_out_date <= today || b.check_in_date > soon) continue;
+    if (!until || b.check_out_date > until) until = b.check_out_date;
+  }
+  if (!until) return null;
+  const cap = addDays(today, EVENTS_MAX_DAYS);
+  return until > cap ? cap : until;
+}
+
+/** Events still worth keeping: from today, and up to the window's end when there is one. */
+export function keepEvents(
+  events: LocalEvent[],
+  today: string,
+  until: string | null,
+): LocalEvent[] {
+  return events.filter((e) => e.date >= today && (!until || e.date <= until));
+}
+
+/* ------------------------- real walking and driving distances ------------------------- */
+
+/**
+ * OpenStreetMap routing (FOSSGIS's free OSRM servers, fair use with a named User-Agent): one
+ * table request per way of travelling, from the property to every place.
+ */
+export function routeTableUrl(
+  mode: "foot" | "car",
+  from: { lat: number; lng: number },
+  to: Array<{ lat: number; lng: number }>,
+): string {
+  const pts = [from, ...to].map((p) => `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
+  return `https://routing.openstreetmap.de/routed-${mode}/table/v1/driving/${pts}?sources=0&annotations=duration,distance`;
+}
+
+/** The table's first row as [metres, seconds] for each place (null where there's no route). */
+export function readRouteTable(body: unknown, n: number): Array<[number, number] | null> {
+  const b = obj(body);
+  const d = (b["distances"] as unknown[][] | undefined)?.[0] ?? [];
+  const t = (b["durations"] as unknown[][] | undefined)?.[0] ?? [];
+  const out: Array<[number, number] | null> = [];
+  for (let i = 1; i <= n; i++) {
+    const m = Number(d[i]);
+    const s = Number(t[i]);
+    out.push(
+      Number.isFinite(m) && Number.isFinite(s) && d[i] !== null && t[i] !== null ? [m, s] : null,
+    );
+  }
+  return out;
+}
+
+/** Minutes for the guest: by road where known, else the rough estimate (marked "about"). */
+export function travelMinutes(
+  p: Place,
+  mode: "walk" | "drive",
+): { min: number; exact: boolean } | null {
+  const s = mode === "walk" ? p.walkS : p.driveS;
+  if (typeof s === "number" && s >= 0)
+    return { min: Math.max(1, Math.round(s / 60) + (mode === "drive" ? 2 : 0)), exact: true };
+  if (p.metres < 0) return null;
+  return { min: mode === "walk" ? walkMinutes(p.metres) : driveMinutes(p.metres), exact: false };
+}
+
+/* -------------------------------- food hygiene (UK) -------------------------------- */
+
+/** The Food Standards Agency's open ratings near a point (free, no key; England, Wales, NI and Scotland). */
+export function hygieneUrl(at: { lat: number; lng: number }, miles = 1): string {
+  const q = new URLSearchParams({
+    latitude: at.lat.toFixed(5),
+    longitude: at.lng.toFixed(5),
+    maxDistanceLimit: String(miles),
+    pageSize: "1500",
+    sortOptionKey: "distance",
+  });
+  return `https://api.ratings.food.gov.uk/Establishments?${q}`;
+}
+
+const squash = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\b(the|ltd|limited|restaurant|cafe|café|bar|pub)\b/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+/** Each food place's hygiene rating: the same name (or one inside the other) within 150 m. */
+export function withHygiene(places: Place[], body: unknown): Place[] {
+  const list = (obj(body)["establishments"] as unknown[] | undefined) ?? [];
+  const rated = list.map(obj).flatMap((e) => {
+    const g = obj(e["geocode"]);
+    const lat = Number(g["latitude"]);
+    const lng = Number(g["longitude"]);
+    const value = text(e["RatingValue"], 30);
+    const name = squash(text(e["BusinessName"], 120));
+    return Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      name.length >= 3 &&
+      /^([0-5]|Pass)$/.test(value)
+      ? [{ name, lat, lng, value }]
+      : [];
+  });
+  return places.map((p) => {
+    if (!["food", "cafe", "pub"].includes(p.category)) return p;
+    const n = squash(p.name);
+    if (n.length < 3) return p;
+    const hit = rated.find(
+      (r) =>
+        (r.name === n || r.name.includes(n) || n.includes(r.name)) &&
+        metresBetween({ lat: p.lat, lng: p.lng }, r) <= 150,
+    );
+    return hit ? { ...p, hygiene: hit.value } : p;
+  });
+}
+
+/* ------------------------------- what the guest sees first ------------------------------- */
+
+export type PlaceTab = "recommended" | "picks" | PlaceCategory | "all";
+
+/** A place's standing for "Recommended": hygiene 5 best, then a photo, a website, nearer. */
+function score(p: Place): number {
+  const h =
+    p.hygiene === "5" || p.hygiene === "Pass" ? 3 : p.hygiene === "4" ? 1.5 : p.hygiene ? -3 : 0;
+  const m = travelMinutes(p, "walk")?.min ?? 30;
+  return h + (p.image ? 1 : 0) + (p.website ? 0.7 : 0) - m / 10;
+}
+
+/** The best of each kind (the host's picks count first), one each, in the usual order of kinds. */
+export function recommended(places: Place[]): Place[] {
+  return PLACE_CATEGORIES.flatMap((c) => {
+    const of = places.filter((p) => p.category === c);
+    const pick = of.find((p) => p.pick);
+    const best = pick ?? [...of].sort((a, b) => score(b) - score(a))[0];
+    return best ? [best] : [];
+  });
+}
+
+/** The tabs in order: Recommended, Host picks (when there are any), each kind, All last. */
+export function placeTabs(places: Place[]): PlaceTab[] {
+  const kinds = PLACE_CATEGORIES.filter((c) => places.some((p) => p.category === c));
+  return [
+    ...(places.length ? (["recommended"] as const) : []),
+    ...(places.some((p) => p.pick) ? (["picks"] as const) : []),
+    ...kinds,
+    ...(places.length ? (["all"] as const) : []),
+  ];
+}
+
+export function placesInTab(places: Place[], tab: PlaceTab): Place[] {
+  if (tab === "recommended") return recommended(places);
+  if (tab === "picks") return places.filter((p) => p.pick);
+  if (tab === "all") return places;
+  return places.filter((p) => p.category === tab);
 }
