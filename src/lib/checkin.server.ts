@@ -314,7 +314,13 @@ export async function readIdDetails(
   if (!res.ok || !res.body) {
     const body = await res.text().catch(() => "");
     console.error(`ID read failed [${res.status}]: ${body.slice(0, 500)}`);
-    throw new Error(res.status === 402 ? "ID reading is paused." : "We could not read the photo.");
+    const { noteAiFailure } = await import("./ai-health.server");
+    noteAiFailure("id_reading", res.status, body);
+    // Marked so check-in can tell the service failing from a photo it couldn't read.
+    throw Object.assign(
+      new Error(res.status === 402 ? "ID reading is paused." : "We could not read the photo."),
+      { aiService: true },
+    );
   }
 
   const reader = res.body.getReader();

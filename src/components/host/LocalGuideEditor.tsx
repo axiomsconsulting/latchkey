@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Eye, EyeOff, MapPin, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoTip } from "@/components/host/InfoTip";
 import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +83,9 @@ export function LocalGuideEditor({ propertyId }: { propertyId: string }) {
           onClick={() =>
             void act("save", async () => {
               await saveFn({ data: { propertyId, settings: g as never } });
+              // New or changed calendars: read them now, so the host sees their events straight away.
+              if (JSON.stringify(g.calendars) !== JSON.stringify(d.settings.calendars))
+                await refreshFn({ data: { propertyId } }).catch(() => null);
               return copy.saved;
             })
           }
@@ -129,6 +133,70 @@ export function LocalGuideEditor({ propertyId }: { propertyId: string }) {
               ) : null}
             </span>
           </label>
+
+          {/* Local event calendars (iCal links). */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              {copy.calendars}
+              <InfoTip label={copy.calendars}>{copy.calendarsHelp}</InfoTip>
+            </Label>
+            {g.calendars.map((c, n) => (
+              <div
+                key={c.id}
+                className="grid gap-2 rounded-xl border border-border p-2 sm:grid-cols-[14rem_1fr_auto]"
+              >
+                <Input
+                  value={c.name}
+                  maxLength={60}
+                  placeholder={copy.calendarName}
+                  onChange={(e) =>
+                    set({
+                      calendars: g.calendars.map((x, i) =>
+                        i === n ? { ...x, name: e.target.value } : x,
+                      ),
+                    })
+                  }
+                />
+                <Input
+                  value={c.url}
+                  maxLength={500}
+                  inputMode="url"
+                  placeholder={copy.calendarUrl}
+                  onChange={(e) =>
+                    set({
+                      calendars: g.calendars.map((x, i) =>
+                        i === n ? { ...x, url: e.target.value } : x,
+                      ),
+                    })
+                  }
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={copy.remove}
+                  onClick={() => set({ calendars: g.calendars.filter((_, i) => i !== n) })}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            ))}
+            {g.calendars.length < 5 ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  set({
+                    calendars: [
+                      ...g.calendars,
+                      { id: `cal-${Date.now().toString(36)}`, name: "", url: "" },
+                    ],
+                  })
+                }
+              >
+                <Plus className="size-4" /> {copy.addCalendar}
+              </Button>
+            ) : null}
+          </div>
 
           {/* The host's picks. */}
           <div className="space-y-2">

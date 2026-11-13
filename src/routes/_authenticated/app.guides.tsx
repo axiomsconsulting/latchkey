@@ -55,6 +55,7 @@ import { GuideTilesEditor } from "@/components/host/GuideTilesEditor";
 import { PropertyInfoEditor } from "@/components/host/PropertyInfoEditor";
 import { LocalGuideEditor } from "@/components/host/LocalGuideEditor";
 import { FloorPlansEditor } from "@/components/host/FloorPlansEditor";
+import { GuideArtEditor } from "@/components/host/GuideArtEditor";
 import { RoomPhoto } from "@/components/host/RoomPhoto";
 import { getGuideTiles } from "@/lib/guide-tiles.functions";
 import { SECTIONS, editorSections, type SectionKey } from "@/lib/guide";
@@ -221,6 +222,14 @@ function GuidesPage() {
       <LocalGuideEditor propertyId={selectedId} />
       <FloorPlansEditor propertyId={selectedId} />
 
+      {q.isLoading ? null : (
+        <GuideArtEditor
+          key={selectedId}
+          propertyId={selectedId}
+          sections={shown.map((x) => ({ key: x.key, title: x.title }))}
+          themeConfig={properties.find((x) => x.id === selectedId)?.theme_config}
+        />
+      )}
       {q.isLoading ? null : (
         <GuideTilesEditor
           propertyId={selectedId}

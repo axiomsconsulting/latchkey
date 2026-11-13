@@ -19,6 +19,8 @@ export type IcsEvent = {
   url: string | null;
   /** RFC 5545 STATUS: CONFIRMED, TENTATIVE or CANCELLED. */
   status: string | null;
+  /** LOCATION, when given (local event calendars). */
+  location?: string | null;
 };
 
 export type ParsedBooking = {
@@ -100,7 +102,12 @@ function parseDateValue(
 }
 
 /** Parses an .ics document into events. */
-export function parseIcs(text: string, timeZone = "Europe/London"): IcsEvent[] {
+export function parseIcs(
+  text: string,
+  timeZone = "Europe/London",
+  /** Event calendars: an event with no end (one moment or one day) still counts. Bookings never do. */
+  opts: { noEndOk?: boolean } = {},
+): IcsEvent[] {
   const events: IcsEvent[] = [];
   let current: Partial<IcsEvent> | null = null;
 
@@ -111,6 +118,8 @@ export function parseIcs(text: string, timeZone = "Europe/London"): IcsEvent[] {
       continue;
     }
     if (trimmed === "END:VEVENT") {
+      if (current && opts.noEndOk && current.startDate && !current.endDate)
+        current.endDate = current.startDate;
       if (current && current.uid && current.startDate && current.endDate) {
         events.push({
           uid: current.uid,
@@ -123,6 +132,7 @@ export function parseIcs(text: string, timeZone = "Europe/London"): IcsEvent[] {
           allDay: current.allDay ?? true,
           url: current.url ?? null,
           status: current.status ?? null,
+          ...(current.location ? { location: current.location } : {}),
         });
       }
       current = null;
@@ -142,6 +152,9 @@ export function parseIcs(text: string, timeZone = "Europe/London"): IcsEvent[] {
         break;
       case "URL":
         current.url = prop.value.trim() || null;
+        break;
+      case "LOCATION":
+        current.location = unescapeText(prop.value).trim() || null;
         break;
       case "STATUS":
         current.status = prop.value.trim().toUpperCase() || null;

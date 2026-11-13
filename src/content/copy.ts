@@ -2312,11 +2312,9 @@ export const guest = branded({
   faceTake: "Take photo",
   faceTimer: "Take photo in 3 seconds",
   cameraIsHere: "The camera is here",
-  testSamplesBadge: "Test check-in: using your sample photos",
   serviceMode: "Service mode",
   serviceWelcome: (name: string) => (name ? `Welcome, ${name}` : "Welcome"),
   serviceWelcomeBody: "Your test check-in is ready on this tablet.",
-  testSamplesFound: "Your test stay: using your sample photos",
   voiceListening: "Listening",
   voiceHold: "Hold while you talk",
   voiceAgain: "Say that again",
@@ -6053,8 +6051,15 @@ export const guideExtrasAdminCopy = branded({
     "Places haven't been read yet: they're read the first time a guest opens the guide, or now.",
   noLocation:
     "Latchkey couldn't find where the property is. Check its postcode and address in Properties.",
-  eventsOn: "Show what's on (events within 15 km)",
-  eventsOff: "Events need a Ticketmaster key in Latchkey admin; your own events always show.",
+  eventsOn: "Show what's on nearby (Skiddle and Ticketmaster listings)",
+  eventsOff:
+    "Listings need Latchkey's Skiddle or Ticketmaster key. Your calendars below and your own events always show.",
+  calendars: "Event calendars you follow",
+  calendarsHelp:
+    "Paste iCal links (they start with https:// or webcal://) from your council's or tourist board's what's on, a theatre or cinema, a Meetup group (its events page → Add to calendar), a walking or running group, or a Google calendar made public. Their next three weeks show in the guide.",
+  calendarName: "Name, e.g. Town council what's on",
+  calendarUrl: "iCal link",
+  addCalendar: "Add a calendar",
   picks: "Your picks",
   pickName: "Name",
   pickNote: "Why you recommend it",
@@ -6179,6 +6184,24 @@ export const guideExtrasAdminCopy = branded({
     "Draw the entrance, the rooms and hallways between, and the doors, to see the way to this room.",
   house: "About the house",
   plansSaved: "Floor saved.",
+});
+
+export const guideArtCopy = branded({
+  title: "Card pictures",
+  body: "A light picture sits behind each card in the guide. Latchkey starts each section with one that suits it; change any to your own photo, or remove it.",
+  on: "Show pictures behind the cards",
+  change: "Change",
+  reset: "Use the starting picture",
+  none: "No picture",
+  own: "Your photo",
+  starting: "Starting picture",
+  noPicture: "No picture",
+  extras: {
+    find_room: "Finding your room",
+    property_info: "Property information",
+    local: "Around here",
+  } as Record<string, string>,
+  saved: "Saved.",
 });
 
 export const receptionistCopy = branded({

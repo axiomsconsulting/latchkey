@@ -47,6 +47,49 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.162.0",
+    date: "2026-11-13",
+    title: "Compact guide cards, local events and a clearer test mode",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Guide cards are smaller, with two side by side on a phone, a slim title row and a light picture behind each one. Each section starts with a picture that suits it; change any to your own or remove it in Stay guides → Card pictures.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Around here can follow event calendars: paste iCal links from your council's or tourist board's what's on, a theatre or cinema, a Meetup group, or a walking group, and their next three weeks show in the guide. Skiddle's listings (gigs, theatre, comedy, festivals, family days, exhibitions) show too once Latchkey has its free key.",
+      },
+      {
+        kind: "fixed",
+        area: "Guest guide",
+        text: "Places nearby now load when OpenStreetMap's main place finder is busy, using OpenStreetMap's own search instead.",
+      },
+      {
+        kind: "improved",
+        area: "Check-in",
+        text: 'A door tablet in service mode or a test check-in now has a red border with "Service mode" in small print at the top, instead of a yellow label.',
+      },
+      {
+        kind: "fixed",
+        area: "Check-in",
+        text: "If the ID reader itself isn't answering, guests are no longer told their photo was unclear: the check-in carries on, the photo is kept for you, and you get an alert to check it.",
+      },
+      {
+        kind: "fixed",
+        area: "Guest guide",
+        text: "The AI receptionist tries again in a simpler way when the AI service turns down a question.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Test all connections now checks the AI service and says what it answered (out of credits, too many requests, or its own error), with the last failure each feature met. SKIDDLE_API_KEY (free, from skiddle.com/api/join.php) adds Skiddle's UK listings.",
+      },
+    ],
+  },
+  {
     version: "0.161.0",
     date: "2026-11-12",
     title: "Floor maps",

@@ -27,6 +27,31 @@ export const testConnections = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<HealthLine[]> => {
     await requireSuperAdmin(context.supabase);
     const checks: Array<Promise<HealthLine>> = [
+      // The AI service: ID reading, the receptionist, voice, photo sorting and plan reading all use it.
+      (async () => {
+        const { probeAi } = await import("./ai-health.server");
+        try {
+          const r = await probeAi();
+          if (!r.configured)
+            return line("ai", "AI service (ID reading, receptionist)", {
+              configured: false,
+              fix: "LOVABLE_API_KEY is provided by Lovable Cloud: check Connectors → AI is enabled.",
+            });
+          return line("ai", "AI service (ID reading, receptionist)", {
+            configured: true,
+            ok: r.ok,
+            detail: r.detail,
+            fix: "Out of credits: add credits or auto top-up in Lovable → Workspace settings → Plans & credit usage. Too many requests: wait a minute. Anything else: send this line to Latchkey support.",
+          });
+        } catch (e) {
+          return line("ai", "AI service (ID reading, receptionist)", {
+            configured: true,
+            ok: false,
+            detail: why(e),
+            fix: "The AI service didn't answer in time: try again in a minute.",
+          });
+        }
+      })(),
       // Stripe: who the key belongs to, and the webhook secrets.
       (async () => {
         const { stripeReady, stripeCall, stripeLiveMode } = await import("./stripe.server");

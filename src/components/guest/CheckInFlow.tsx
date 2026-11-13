@@ -24,6 +24,7 @@ import { ChannelIcon } from "@/components/ChannelIcon";
 import { CardQr, CheckInQr, KioskQr, GuideLink } from "@/components/guest/CheckInQr";
 import { IdCamera } from "@/components/guest/IdCamera";
 import { PhotoChoice } from "@/components/guest/PhonePhotos";
+import { ServiceFrame } from "@/components/guest/ServiceFrame";
 import { usePhotoHandoff } from "@/hooks/use-photo-handoff";
 import { faceNext, type PhotoKind } from "@/lib/photo-handoff";
 import { PinPad } from "@/components/guest/PinPad";
@@ -1329,14 +1330,7 @@ export function CheckInFlow({
   return (
     // data-kx: the parts that stretch to fill a door tablet set to expanded buttons (styles.css).
     <TestSamplesContext.Provider value={stayedSamples ?? outerSamples}>
-      {stayedSamples && !outerSamples ? (
-        <p
-          role="status"
-          className="pointer-events-none fixed left-1/2 top-2 z-50 -translate-x-1/2 rounded-full bg-amber-300 px-4 py-1 text-sm font-semibold text-black"
-        >
-          {copy.testSamplesFound}
-        </p>
-      ) : null}
+      {stayedSamples && !outerSamples && kiosk ? <ServiceFrame /> : null}
       <div
         data-kiosk-flow
         data-kx="col"
