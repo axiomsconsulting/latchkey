@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Thermometer } from "lucide-react";
 
 import { AREA_FILL, AREA_STROKE, ITEM_ICON, LINE_LOOK } from "@/components/floor-map-look";
@@ -41,7 +42,10 @@ export function FloorMapView({
   className,
   children,
   svgProps,
+  fitHeight,
 }: {
+  /** Never taller than this (a CSS length, e.g. "70dvh"): the plan narrows to keep its shape. */
+  fitHeight?: string;
   url: string | null;
   alt: string;
   areas?: MapViewArea[];
@@ -58,15 +62,29 @@ export function FloorMapView({
   children?: React.ReactNode;
   svgProps?: React.SVGProps<SVGSVGElement>;
 }) {
+  const [ratio, setRatio] = useState<number | null>(null);
   return (
     <div
       className={cn(
         "relative overflow-hidden rounded-2xl border border-border bg-white",
+        fitHeight && "mx-auto",
         className,
       )}
+      style={
+        fitHeight && ratio ? { maxWidth: `calc(${fitHeight} * ${ratio.toFixed(4)})` } : undefined
+      }
     >
       {url ? (
-        <img src={url} alt={alt} className="block w-full select-none" draggable={false} />
+        <img
+          src={url}
+          alt={alt}
+          className="block w-full select-none"
+          draggable={false}
+          onLoad={(e) => {
+            const i = e.currentTarget;
+            if (i.naturalHeight) setRatio(i.naturalWidth / i.naturalHeight);
+          }}
+        />
       ) : (
         <div className="aspect-[4/3] w-full" />
       )}

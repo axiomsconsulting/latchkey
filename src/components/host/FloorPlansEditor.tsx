@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  ArrowLeftRight,
+  MoveDiagonal2,
   Check,
   DoorClosed,
   DoorOpen,
@@ -379,7 +381,36 @@ const GROUPS: Array<[keyof typeof copy.groups, Tool[]]> = [
 /** Lines finished after two taps; the rest (stairs, curtains, private lines, shapes) need Finish. */
 const TWO_TAP: Tool[] = ["door", "opening", "steps", "barred", "radiator"];
 
-type Selected = { type: "area" | "line" | "item"; id: string } | null;
+/** The host's chosen plan width in the editor, on this device. */
+const PLAN_WIDTH_KEY = "latchkey.planWidth";
+
+type MarkType = "area" | "line" | "item" | "entrance" | "lift" | "pin";
+/** What's selected: an area, line or item by id; the entrance or lift; a room's pin by room id. */
+type Selected = { type: MarkType; id: string } | null;
+type Grab = {
+  kind: MarkType;
+  id: string;
+  /** A corner point, or -1 to move the whole mark. */
+  index: number;
+  from?: Point;
+  orig?: Pins;
+};
+
+/** Moves every point of a mark by d, kept on the plan. */
+const shift = (pts: Point[], d: Point): Point[] => {
+  const dx = Math.min(
+    1 - Math.max(...pts.map((p) => p.x)),
+    Math.max(-Math.min(...pts.map((p) => p.x)), d.x),
+  );
+  const dy = Math.min(
+    1 - Math.max(...pts.map((p) => p.y)),
+    Math.max(-Math.min(...pts.map((p) => p.y)), d.y),
+  );
+  return pts.map((p) => ({
+    x: Math.round((p.x + dx) * 1000) / 1000,
+    y: Math.round((p.y + dy) * 1000) / 1000,
+  }));
+};
 
 function FloorMapEditor({
   propertyId,
@@ -420,7 +451,34 @@ function FloorMapEditor({
   const [reading, setReading] = useState(false);
   const [previewRoom, setPreviewRoom] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
-  const handle = useRef<{ kind: "area" | "line" | "item"; id: string; index: number } | null>(null);
+  const handle = useRef<Grab | null>(null);
+  // The plan's size: by default as wide as fits the screen's height; the host can resize it from
+  // its corner (kept on this device).
+  const frame = useRef<HTMLDivElement>(null);
+  const resizing = useRef<{ x: number; w: number } | null>(null);
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [planWidth, setPlanWidth] = useState<number | null>(null);
+  const fitWidth = () => {
+    const room = frame.current?.getBoundingClientRect().width ?? 800;
+    const tall = Math.max(260, window.innerHeight - 220);
+    return Math.round(Math.min(room, ratio ? tall * ratio : room));
+  };
+  useEffect(() => {
+    if (!plan.url) return;
+    const img = new Image();
+    img.onload = () => img.naturalHeight && setRatio(img.naturalWidth / img.naturalHeight);
+    img.src = plan.url;
+  }, [plan.url]);
+  useEffect(() => {
+    let kept: number | null = null;
+    try {
+      kept = Number(localStorage.getItem(PLAN_WIDTH_KEY)) || null;
+    } catch {
+      kept = null;
+    }
+    setPlanWidth(kept ?? fitWidth());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ratio]);
 
   const saved = plan.pins;
   const dirty =
@@ -483,8 +541,13 @@ function FloorMapEditor({
     setDraft([]);
   }
 
-  /** What's under a tap: items first, then lines, then the smallest area holding it. */
+  /** What's under a tap: the entrance, lift and room pins, items, then lines, then the smallest area holding it. */
   function pick(p: Point): Selected {
+    const near = (q: Point | undefined | null) => !!q && Math.hypot(q.x - p.x, q.y - p.y) < 0.025;
+    if (near(pins.entrance)) return { type: "entrance", id: "entrance" };
+    if (near(pins.lift)) return { type: "lift", id: "lift" };
+    const pin = Object.entries(pins.rooms ?? {}).find(([, q]) => near(q));
+    if (pin) return { type: "pin", id: pin[0] };
     const it = items.find((i) => Math.hypot(i.at.x - p.x, i.at.y - p.y) < 0.025);
     if (it) return { type: "item", id: it.id };
     const ln = lines.find(
@@ -499,7 +562,15 @@ function FloorMapEditor({
     if (!box.current) return;
     const p = at(e);
     if (tool === "select") {
-      setSel(pick(p));
+      const hit = pick(p);
+      // Pressing on the mark already selected and dragging moves the whole of it.
+      if (hit && sel && hit.type === sel.type && hit.id === sel.id) {
+        (e.target as Element).setPointerCapture?.(e.pointerId);
+        history.current = [...history.current.slice(-40), pins];
+        handle.current = { kind: hit.type, id: hit.id, index: -1, from: p, orig: pins };
+        return;
+      }
+      setSel(hit);
       return;
     }
     if (tool === "rect") {
@@ -536,7 +607,18 @@ function FloorMapEditor({
     const p = at(e);
     if (handle.current) {
       const h = handle.current;
-      if (h.kind === "item") patch<Item>("items", h.id, { at: p });
+      if (h.index === -1 && h.from && h.orig) {
+        const d = { x: p.x - h.from.x, y: p.y - h.from.y };
+        const o = h.orig;
+        setPinsRaw((x) => moved(x, o, h.kind, h.id, d));
+        return;
+      }
+      if (h.kind === "entrance")
+        setPinsRaw((x) => (x.entrance ? { ...x, entrance: { ...x.entrance, ...p } } : x));
+      else if (h.kind === "lift") setPinsRaw((x) => ({ ...x, lift: p }));
+      else if (h.kind === "pin")
+        setPinsRaw((x) => ({ ...x, rooms: { ...(x.rooms ?? {}), [h.id]: p } }));
+      else if (h.kind === "item") patch<Item>("items", h.id, { at: p });
       else if (h.kind === "area")
         setPinsRaw((x) => ({
           ...x,
@@ -624,26 +706,162 @@ function FloorMapEditor({
   const preview = shownRoom ? directionsTo(now, shownRoom.id, shownRoom.name, roomNames) : null;
   const house = houseText(houseNotes(mapFloors(now), roomNames));
 
+  /** The pins with one mark moved by d from where it was in `o`. */
+  function moved(x: Pins, o: Pins, kind: MarkType, id: string, d: Point): Pins {
+    const pt = (q: Point) => shift([q], d)[0]!;
+    if (kind === "entrance" && o.entrance)
+      return { ...x, entrance: { ...o.entrance, ...pt(o.entrance) } };
+    if (kind === "lift" && o.lift) return { ...x, lift: pt(o.lift) };
+    if (kind === "pin" && o.rooms?.[id])
+      return { ...x, rooms: { ...(x.rooms ?? {}), [id]: pt(o.rooms[id]!) } };
+    if (kind === "item") {
+      const it = (o.items ?? []).find((i) => i.id === id);
+      return it
+        ? { ...x, items: (x.items ?? []).map((i) => (i.id === id ? { ...i, at: pt(it.at) } : i)) }
+        : x;
+    }
+    if (kind === "area") {
+      const a = (o.areas ?? []).find((i) => i.id === id);
+      return a
+        ? {
+            ...x,
+            areas: (x.areas ?? []).map((i) => (i.id === id ? { ...i, poly: shift(a.poly, d) } : i)),
+          }
+        : x;
+    }
+    const l = (o.lines ?? []).find((i) => i.id === id);
+    return l
+      ? {
+          ...x,
+          lines: (x.lines ?? []).map((i) => (i.id === id ? { ...i, pts: shift(l.pts, d) } : i)),
+        }
+      : x;
+  }
+
+  /** A new corner point between two (areas and lines), dragged from where it's added. */
+  function insertPoint(kind: "area" | "line", id: string, after: number, p: Point) {
+    setPins((x) =>
+      kind === "area"
+        ? {
+            ...x,
+            areas: (x.areas ?? []).map((a) =>
+              a.id === id
+                ? { ...a, poly: [...a.poly.slice(0, after + 1), p, ...a.poly.slice(after + 1)] }
+                : a,
+            ),
+          }
+        : {
+            ...x,
+            lines: (x.lines ?? []).map((l) =>
+              l.id === id
+                ? { ...l, pts: [...l.pts.slice(0, after + 1), p, ...l.pts.slice(after + 1)] }
+                : l,
+            ),
+          },
+    );
+    handle.current = { kind, id, index: after + 1 };
+  }
+
+  /** Takes a corner point out (an area keeps at least 3, a line 2). */
+  function dropPoint(kind: "area" | "line", id: string, index: number) {
+    setPins((x) =>
+      kind === "area"
+        ? {
+            ...x,
+            areas: (x.areas ?? []).map((a) =>
+              a.id === id && a.poly.length > 3
+                ? { ...a, poly: a.poly.filter((_, i) => i !== index) }
+                : a,
+            ),
+          }
+        : {
+            ...x,
+            lines: (x.lines ?? []).map((l) =>
+              l.id === id && l.pts.length > 2
+                ? { ...l, pts: l.pts.filter((_, i) => i !== index) }
+                : l,
+            ),
+          },
+    );
+  }
+
   const selArea = sel?.type === "area" ? areas.find((a) => a.id === sel.id) : undefined;
   const selLine = sel?.type === "line" ? lines.find((l) => l.id === sel.id) : undefined;
   const selItem = sel?.type === "item" ? items.find((i) => i.id === sel.id) : undefined;
-  const handles: Array<{ kind: "area" | "line" | "item"; id: string; index: number; p: Point }> =
-    selArea
-      ? selArea.poly.map((p, i) => ({ kind: "area", id: selArea.id, index: i, p }))
-      : selLine
-        ? selLine.pts.map((p, i) => ({ kind: "line", id: selLine.id, index: i, p }))
-        : selItem
-          ? [{ kind: "item", id: selItem.id, index: 0, p: selItem.at }]
+  const selPoint: Point | null =
+    sel?.type === "entrance"
+      ? (pins.entrance ?? null)
+      : sel?.type === "lift"
+        ? (pins.lift ?? null)
+        : sel?.type === "pin"
+          ? (pins.rooms?.[sel.id] ?? null)
+          : null;
+  const handles: Array<{ kind: MarkType; id: string; index: number; p: Point }> = selArea
+    ? selArea.poly.map((p, i) => ({ kind: "area", id: selArea.id, index: i, p }))
+    : selLine
+      ? selLine.pts.map((p, i) => ({ kind: "line", id: selLine.id, index: i, p }))
+      : selItem
+        ? [{ kind: "item", id: selItem.id, index: 0, p: selItem.at }]
+        : selPoint && sel
+          ? [{ kind: sel.type, id: sel.id, index: 0, p: selPoint }]
           : [];
+  // Between corner points: tap to add one there.
+  const mids: Array<{ kind: "area" | "line"; id: string; after: number; p: Point }> = selArea
+    ? selArea.poly.map((p, i) => {
+        const q = selArea.poly[(i + 1) % selArea.poly.length]!;
+        return {
+          kind: "area" as const,
+          id: selArea.id,
+          after: i,
+          p: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 },
+        };
+      })
+    : selLine
+      ? selLine.pts.slice(0, -1).map((p, i) => {
+          const q = selLine.pts[i + 1]!;
+          return {
+            kind: "line" as const,
+            id: selLine.id,
+            after: i,
+            p: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 },
+          };
+        })
+      : [];
   const remove = () => {
     if (!sel) return;
-    const list = sel.type === "area" ? "areas" : sel.type === "line" ? "lines" : "items";
-    setPins((p) => ({
-      ...p,
-      [list]: ((p[list] ?? []) as Array<{ id: string }>).filter((x) => x.id !== sel.id),
-    }));
+    if (sel.type === "entrance") setPins(({ entrance: _e, ...p }) => p);
+    else if (sel.type === "lift") setPins(({ lift: _l, ...p }) => p);
+    else if (sel.type === "pin")
+      setPins((p) => {
+        const rooms = { ...(p.rooms ?? {}) };
+        delete rooms[sel.id];
+        return { ...p, rooms };
+      });
+    else {
+      const list = sel.type === "area" ? "areas" : sel.type === "line" ? "lines" : "items";
+      setPins((p) => ({
+        ...p,
+        [list]: ((p[list] ?? []) as Array<{ id: string }>).filter((x) => x.id !== sel.id),
+      }));
+    }
     setSel(null);
   };
+  // Delete or Backspace removes the selected mark; Escape lets go of it.
+  const removeRef = useRef(remove);
+  removeRef.current = remove;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (e.key === "Escape") setSel(null);
+      if ((e.key === "Delete" || e.key === "Backspace") && sel) {
+        e.preventDefault();
+        removeRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sel]);
   const levelsHere = plans.filter((p) => p.building === building).map((p) => p.level);
 
   return (
@@ -812,107 +1030,190 @@ function FloorMapEditor({
         </div>
       </div>
 
-      {/* The plan with its map */}
-      <div
-        ref={box}
-        className={cn("relative select-none", tool !== "select" && "touch-none cursor-crosshair")}
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={up}
-        onPointerLeave={() => setHover(null)}
-        onDoubleClick={() => (tool === "poly" || tool === "stairs" ? finish() : undefined)}
-      >
-        <FloorMapView
-          url={plan.url}
-          alt={floorTitle(building, level)}
-          areas={areas.map((a) => ({
-            id: a.id,
-            poly: a.poly,
-            access: a.access,
-            kind: a.kind,
-          }))}
-          lines={lines}
-          items={items}
-          selected={sel?.id ?? null}
+      {/* The plan with its map: fits the screen to start, resized from its corner */}
+      <div ref={frame} className="w-full">
+        <div
+          className="relative mx-auto"
+          style={{ width: planWidth ?? undefined, maxWidth: "100%" }}
         >
-          <svg
-            viewBox="0 0 1 1"
-            preserveAspectRatio="none"
-            className="pointer-events-none absolute inset-0 size-full"
-            aria-hidden
+          <div
+            ref={box}
+            className={cn(
+              "relative select-none",
+              tool !== "select" && "touch-none cursor-crosshair",
+              tool === "select" && sel && "touch-none cursor-move",
+            )}
+            onPointerDown={down}
+            onPointerMove={move}
+            onPointerUp={up}
+            onPointerLeave={() => setHover(null)}
+            onDoubleClick={() => (tool === "poly" || tool === "stairs" ? finish() : undefined)}
           >
-            {drag ? (
-              <rect
-                x={Math.min(drag.from.x, drag.to.x)}
-                y={Math.min(drag.from.y, drag.to.y)}
-                width={Math.abs(drag.to.x - drag.from.x)}
-                height={Math.abs(drag.to.y - drag.from.y)}
-                fill="rgba(37,99,235,0.15)"
-                stroke="#2563eb"
-                strokeWidth={2}
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null}
-            {draft.length ? (
-              <polyline
-                points={[...draft, ...(hover ? [hover] : [])].map((q) => `${q.x},${q.y}`).join(" ")}
-                fill="none"
-                stroke="#0f172a"
-                strokeWidth={2}
-                strokeDasharray="4 3"
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null}
-          </svg>
-          {/* Labels on areas */}
-          {areas.map((a) => {
-            const xs = a.poly.map((p) => p.x);
-            const ys = a.poly.map((p) => p.y);
-            const c = {
-              x: (Math.min(...xs) + Math.max(...xs)) / 2,
-              y: (Math.min(...ys) + Math.max(...ys)) / 2,
-            };
-            const name =
-              (a.roomId ? roomNames[a.roomId] : null) || a.name || cap(AREA_WORDS[a.kind]);
-            return (
-              <span
-                key={a.id}
-                className={cn(
-                  "pointer-events-none absolute max-w-[30%] -translate-x-1/2 -translate-y-1/2 truncate rounded px-1 text-[10px] leading-4 font-medium sm:text-xs",
-                  a.access === "private"
-                    ? "bg-red-50 text-red-800"
-                    : a.access === "guest_room"
-                      ? "bg-slate-100 text-slate-800"
-                      : "bg-blue-50 text-blue-800",
-                )}
-                style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
+            <FloorMapView
+              url={plan.url}
+              alt={floorTitle(building, level)}
+              areas={areas.map((a) => ({
+                id: a.id,
+                poly: a.poly,
+                access: a.access,
+                kind: a.kind,
+              }))}
+              lines={lines}
+              items={items}
+              selected={sel?.id ?? null}
+            >
+              <svg
+                viewBox="0 0 1 1"
+                preserveAspectRatio="none"
+                className="pointer-events-none absolute inset-0 size-full"
+                aria-hidden
               >
-                {name}
-              </span>
-            );
-          })}
-          {pins.entrance ? (
-            <Dot p={pins.entrance} cls="bg-emerald-600" title={copy.entrance} />
-          ) : null}
-          {pins.lift ? <Dot p={pins.lift} cls="bg-sky-600" title={copy.lift} /> : null}
-          {tool === "select"
-            ? handles.map((h) => (
+                {drag ? (
+                  <rect
+                    x={Math.min(drag.from.x, drag.to.x)}
+                    y={Math.min(drag.from.y, drag.to.y)}
+                    width={Math.abs(drag.to.x - drag.from.x)}
+                    height={Math.abs(drag.to.y - drag.from.y)}
+                    fill="rgba(37,99,235,0.15)"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+                {draft.length ? (
+                  <polyline
+                    points={[...draft, ...(hover ? [hover] : [])]
+                      .map((q) => `${q.x},${q.y}`)
+                      .join(" ")}
+                    fill="none"
+                    stroke="#0f172a"
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+              </svg>
+              {/* Labels on areas */}
+              {areas.map((a) => {
+                const xs = a.poly.map((p) => p.x);
+                const ys = a.poly.map((p) => p.y);
+                const c = {
+                  x: (Math.min(...xs) + Math.max(...xs)) / 2,
+                  y: (Math.min(...ys) + Math.max(...ys)) / 2,
+                };
+                const name =
+                  (a.roomId ? roomNames[a.roomId] : null) || a.name || cap(AREA_WORDS[a.kind]);
+                return (
+                  <span
+                    key={a.id}
+                    className={cn(
+                      "pointer-events-none absolute max-w-[30%] -translate-x-1/2 -translate-y-1/2 truncate rounded px-1 text-[10px] leading-4 font-medium sm:text-xs",
+                      a.access === "private"
+                        ? "bg-red-50 text-red-800"
+                        : a.access === "guest_room"
+                          ? "bg-slate-100 text-slate-800"
+                          : "bg-blue-50 text-blue-800",
+                    )}
+                    style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
+                  >
+                    {name}
+                  </span>
+                );
+              })}
+              {pins.entrance ? (
+                <Dot p={pins.entrance} cls="bg-emerald-600" title={copy.entrance} />
+              ) : null}
+              {pins.lift ? <Dot p={pins.lift} cls="bg-sky-600" title={copy.lift} /> : null}
+              {Object.entries(pins.rooms ?? {}).map(([id, q]) => (
                 <span
-                  key={`${h.id}-${h.index}`}
-                  className="absolute size-5 -translate-x-1/2 -translate-y-1/2 cursor-move touch-none rounded-full border-2 border-slate-900 bg-white shadow"
-                  style={{ left: `${h.p.x * 100}%`, top: `${h.p.y * 100}%` }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    history.current = [...history.current.slice(-40), pins];
-                    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-                    handle.current = { kind: h.kind, id: h.id, index: h.index };
-                  }}
-                  onPointerMove={move}
-                  onPointerUp={up}
-                />
-              ))
-            : null}
-        </FloorMapView>
+                  key={`pin-${id}`}
+                  className="pointer-events-none absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow"
+                  style={{ left: `${q.x * 100}%`, top: `${q.y * 100}%` }}
+                >
+                  {roomNames[id] ?? copy.roomPin}
+                </span>
+              ))}
+              {tool === "select"
+                ? handles.map((h) => (
+                    <span
+                      key={`${h.id}-${h.index}`}
+                      className="absolute size-5 -translate-x-1/2 -translate-y-1/2 cursor-move touch-none rounded-full border-2 border-slate-900 bg-white shadow"
+                      style={{ left: `${h.p.x * 100}%`, top: `${h.p.y * 100}%` }}
+                      title={h.kind === "area" || h.kind === "line" ? copy.pointHelp : undefined}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        history.current = [...history.current.slice(-40), pins];
+                        (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                        handle.current = { kind: h.kind, id: h.id, index: h.index };
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        if (h.kind === "area" || h.kind === "line")
+                          dropPoint(h.kind, h.id, h.index);
+                      }}
+                      onPointerMove={move}
+                      onPointerUp={up}
+                    />
+                  ))
+                : null}
+              {tool === "select"
+                ? mids.map((m) => (
+                    <span
+                      key={`mid-${m.id}-${m.after}`}
+                      title={copy.addPoint}
+                      className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-copy touch-none rounded-full border-2 border-slate-900 bg-slate-300 opacity-80"
+                      style={{ left: `${m.p.x * 100}%`, top: `${m.p.y * 100}%` }}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                        insertPoint(m.kind, m.id, m.after, m.p);
+                      }}
+                      onPointerMove={move}
+                      onPointerUp={up}
+                    />
+                  ))
+                : null}
+            </FloorMapView>
+          </div>
+          <span
+            role="separator"
+            aria-label={copy.resize}
+            title={copy.resize}
+            className="absolute -bottom-2 -right-2 z-10 grid size-7 cursor-nwse-resize touch-none place-items-center rounded-full border-2 border-white bg-slate-900 text-white shadow"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+              resizing.current = {
+                x: e.clientX,
+                w: box.current?.getBoundingClientRect().width ?? 0,
+              };
+            }}
+            onPointerMove={(e) => {
+              const r = resizing.current;
+              if (!r) return;
+              const max = frame.current?.getBoundingClientRect().width ?? Infinity;
+              setPlanWidth(Math.round(Math.min(max, Math.max(240, r.w + (e.clientX - r.x)))));
+            }}
+            onPointerUp={() => {
+              resizing.current = null;
+              try {
+                if (planWidth) localStorage.setItem(PLAN_WIDTH_KEY, String(planWidth));
+              } catch {
+                // Not kept: it fits the screen next time.
+              }
+            }}
+            onDoubleClick={() => {
+              try {
+                localStorage.removeItem(PLAN_WIDTH_KEY);
+              } catch {
+                // Nothing kept anyway.
+              }
+              setPlanWidth(fitWidth());
+            }}
+          >
+            <MoveDiagonal2 className="size-3.5" aria-hidden />
+          </span>
+        </div>
       </div>
 
       {/* The selected mark's details */}
@@ -948,7 +1249,7 @@ function FloorMapEditor({
             onChange={(v) => patch<Area>("areas", selArea.id, { access: v as Access })}
             block
           />
-          {selArea.kind === "bedroom" || selArea.kind === "ensuite" ? (
+          {selArea.access === "guest_room" || selArea.kind === "bedroom" || selArea.roomId ? (
             <KindSelect
               label={copy.room}
               value={selArea.roomId ?? "none"}
@@ -1029,6 +1330,63 @@ function FloorMapEditor({
               />
             </div>
           ) : null}
+          <Button
+            variant="outline"
+            size="sm"
+            className="justify-self-start"
+            onClick={() => patch<Line>("lines", selLine.id, { pts: [...selLine.pts].reverse() })}
+          >
+            <ArrowLeftRight className="size-4" /> {copy.reverse}
+          </Button>
+          <Button variant="ghost" size="sm" className="justify-self-start" onClick={remove}>
+            <Trash2 className="size-4" /> {copy.remove}
+          </Button>
+        </div>
+      ) : null}
+      {selPoint && sel && (sel.type === "entrance" || sel.type === "lift" || sel.type === "pin") ? (
+        <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
+          <p className="font-medium sm:col-span-2">
+            {sel.type === "entrance"
+              ? copy.entrance
+              : sel.type === "lift"
+                ? copy.lift
+                : copy.roomPin}
+          </p>
+          {sel.type === "entrance" && pins.entrance ? (
+            <KindSelect
+              label={copy.facing}
+              value={pins.entrance.facing}
+              options={(["up", "down", "left", "right"] as Facing[]).map((f) => [
+                f,
+                copy.facings[f] ?? f,
+              ])}
+              onChange={(v) =>
+                setPins((p) =>
+                  p.entrance ? { ...p, entrance: { ...p.entrance, facing: v as Facing } } : p,
+                )
+              }
+              block
+            />
+          ) : null}
+          {sel.type === "pin" ? (
+            <KindSelect
+              label={copy.room}
+              value={sel.id}
+              options={rooms.map((r) => [r.id, r.name] as [string, string])}
+              onChange={(v) => {
+                if (v === sel.id) return;
+                setPins((p) => {
+                  const r = { ...(p.rooms ?? {}) };
+                  const q = r[sel.id]!;
+                  delete r[sel.id];
+                  return { ...p, rooms: { ...r, [v]: q } };
+                });
+                setSel({ type: "pin", id: v });
+              }}
+              block
+            />
+          ) : null}
+          <p className="text-sm text-muted-foreground sm:col-span-2">{copy.dragHelp}</p>
           <Button variant="ghost" size="sm" className="justify-self-start" onClick={remove}>
             <Trash2 className="size-4" /> {copy.remove}
           </Button>
