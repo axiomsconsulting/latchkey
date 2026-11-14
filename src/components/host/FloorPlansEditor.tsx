@@ -1078,13 +1078,14 @@ function FloorMapEditor({
                   if (t !== "select") setSel(null);
                 }}
                 className={cn(
-                  "grid size-11 shrink-0 place-items-center rounded-xl transition-colors sm:size-10",
+                  "flex min-h-12 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 transition-colors",
                   tool === t
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-muted",
                 )}
               >
                 <Icon className="size-5" aria-hidden />
+                <ToolLabel>{copy.short[t] ?? copy.tools[t]}</ToolLabel>
               </button>
             );
           })}
@@ -1108,9 +1109,10 @@ function FloorMapEditor({
             if (last) setPinsRaw(last);
             setSel(null);
           }}
-          className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-muted disabled:opacity-40 sm:size-10"
+          className="flex min-h-12 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 hover:bg-muted disabled:opacity-40"
         >
           <Undo2 className="size-5" aria-hidden />
+          <ToolLabel>{copy.short["undo"]}</ToolLabel>
         </button>
         <button
           type="button"
@@ -1119,11 +1121,12 @@ function FloorMapEditor({
           title={copy.seeThrough}
           onClick={() => setSeeThrough((v) => !v)}
           className={cn(
-            "grid size-11 shrink-0 place-items-center rounded-xl sm:size-10",
+            "flex min-h-12 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1",
             seeThrough ? "bg-primary text-primary-foreground" : "hover:bg-muted",
           )}
         >
           <Eye className="size-5" aria-hidden />
+          <ToolLabel>{copy.short["seeThrough"]}</ToolLabel>
         </button>
         <Popover>
           <PopoverTrigger asChild>
@@ -1131,9 +1134,10 @@ function FloorMapEditor({
               type="button"
               aria-label={copy.placeTools}
               title={copy.placeTools}
-              className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-muted sm:size-10"
+              className="flex min-h-12 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 hover:bg-muted"
             >
               <PanelLeft className="size-5" aria-hidden />
+              <ToolLabel>{copy.short["placeTools"]}</ToolLabel>
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2" side="right" align="start">
@@ -1915,18 +1919,19 @@ function ThingGrid({
               title={g.label}
               onClick={() => setCat(g.id)}
               className={cn(
-                "grid size-11 place-items-center rounded-xl sm:size-10",
+                "flex min-h-12 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1",
                 cat === g.id ? "bg-secondary text-primary ring-1 ring-primary" : "hover:bg-muted",
               )}
             >
               <Icon className="size-5" aria-hidden />
+              <ToolLabel>{CATEGORY_SHORT[g.id] ?? g.label}</ToolLabel>
             </button>
           );
         })}
       </div>
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-xs font-medium text-muted-foreground">{shown.label}</p>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-1">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(3.5rem,1fr))] gap-1">
           {shown.kinds.map((k) => {
             const Icon = thingIcon(k);
             return (
@@ -1938,11 +1943,12 @@ function ThingGrid({
                 title={thingWord(k)}
                 onClick={() => onPick(k)}
                 className={cn(
-                  "grid size-11 place-items-center rounded-xl sm:size-10",
+                  "flex min-h-12 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 w-full",
                   value === k ? "bg-primary text-primary-foreground" : "hover:bg-muted",
                 )}
               >
                 <Icon className="size-5" aria-hidden />
+                <ToolLabel>{thingShort(k)}</ToolLabel>
               </button>
             );
           })}
@@ -1975,12 +1981,13 @@ function ThingPicker({
           aria-label={`${copy.groups.things}: ${thingWord(value)}`}
           title={`${copy.groups.things}: ${thingWord(value)}`}
           className={cn(
-            "relative grid size-11 shrink-0 place-items-center rounded-xl sm:size-10",
+            "relative flex min-h-12 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1",
             active ? "bg-primary text-primary-foreground" : "hover:bg-muted",
           )}
         >
           <Icon className="size-5" aria-hidden />
-          <Package className="absolute bottom-0.5 right-0.5 size-2.5 opacity-70" aria-hidden />
+          <ToolLabel>{thingShort(value)}</ToolLabel>
+          <Package className="absolute right-1 top-1 size-2.5 opacity-70" aria-hidden />
         </button>
       </PopoverTrigger>
       <PopoverContent side={side} align="start" className="w-[min(20rem,90vw)] p-2">
@@ -1996,3 +2003,45 @@ function ThingPicker({
     </Popover>
   );
 }
+
+/** A toolbar button's name, small under its icon (cut short with an ellipsis if it must). */
+function ToolLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="block w-full truncate text-center text-[10px] font-medium leading-tight">
+      {children}
+    </span>
+  );
+}
+
+/** Short names for the categories under their icons. */
+const CATEGORY_SHORT: Record<string, string> = {
+  kitchen: "Kitchen",
+  laundry: "Laundry",
+  room: "Room",
+  safety: "Safety",
+  utilities: "Heating",
+  furniture: "Furniture",
+};
+
+/** Short names for things under their icons. */
+const THING_SHORT: Partial<Record<Thing, string>> = {
+  washing_machine: "Washer",
+  fire_extinguisher: "Extinguisher",
+  fire_blanket: "Fire blanket",
+  first_aid: "First aid",
+  smoke_alarm: "Smoke alarm",
+  co_alarm: "CO alarm",
+  air_con: "Air con",
+  coffee_machine: "Coffee",
+  luggage_rack: "Luggage",
+  wifi_router: "Wi-Fi",
+  fuse_box: "Fuses",
+  stopcock: "Stopcock",
+  drawers: "Drawers",
+  side_table: "Side table",
+  dining_table: "Dining table",
+  coffee_table: "Coffee table",
+  dishwasher: "Dishwasher",
+  thermostat: "Thermostat",
+};
+const thingShort = (k: Thing) => THING_SHORT[k] ?? thingWord(k);

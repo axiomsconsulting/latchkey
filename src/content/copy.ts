@@ -6192,6 +6192,18 @@ export const guideExtrasAdminCopy = branded({
     radiator: "Radiator",
     item: "Item",
   } as Record<string, string>,
+  /** Under the toolbar's icons: short enough to fit. */
+  short: {
+    rect: "Box",
+    poly: "Shape",
+    opening: "Doorway",
+    entrance: "Entry",
+    barred: "Locked",
+    private: "Private",
+    undo: "Undo",
+    seeThrough: "See plan",
+    placeTools: "Move bar",
+  } as Record<string, string>,
   help: {
     select: "Tap anything drawn to change it, or drag its corners.",
     rect: "Drag across a room, hallway or landing.",
