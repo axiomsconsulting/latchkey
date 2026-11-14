@@ -47,6 +47,18 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.175.0",
+    date: "2026-11-14",
+    title: "Print your floor plans",
+    items: [
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Print floor plans in your property's look: one floor, the floors you tick, or all of them, one to a page. Each page has your logo and name, the floor's name, the plan with every space named, stairs labelled and furniture drawn, the key, and what's in each space. Print from the floor plan editor.",
+      },
+    ],
+  },
+  {
     version: "0.174.0",
     date: "2026-11-14",
     title: "Things by icon",

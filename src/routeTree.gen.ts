@@ -65,6 +65,7 @@ import { Route as ApiPublicTrackRouteImport } from './routes/api/public/track'
 import { Route as ApiPublicVersionRouteImport } from './routes/api/public/version'
 import { Route as DemoHostRegionRouteImport } from './routes/demo.host_.$region'
 import { Route as StayAgainWithdrawTokenRouteImport } from './routes/stay-again.withdraw.$token'
+import { Route as AuthenticatedAppFloorPlansPrintPropertyIdRouteImport } from './routes/_authenticated/app.floor-plans-print.$propertyId'
 import { Route as AuthenticatedAppPrintPropertyIdRouteImport } from './routes/_authenticated/app.print.$propertyId'
 import { Route as AuthenticatedAppRoomQrPropertyIdRouteImport } from './routes/_authenticated/app.room-qr.$propertyId'
 import { Route as ApiPublicAttachmentIdRouteImport } from './routes/api/public/attachment.$id'
@@ -379,6 +380,12 @@ const StayAgainWithdrawTokenRoute = StayAgainWithdrawTokenRouteImport.update({
   path: '/stay-again/withdraw/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAppFloorPlansPrintPropertyIdRoute =
+  AuthenticatedAppFloorPlansPrintPropertyIdRouteImport.update({
+    id: '/floor-plans-print/$propertyId',
+    path: '/floor-plans-print/$propertyId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppPrintPropertyIdRoute =
   AuthenticatedAppPrintPropertyIdRouteImport.update({
     id: '/print/$propertyId',
@@ -552,6 +559,7 @@ export interface FileRoutesByFullPath {
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/partners/': typeof AuthenticatedPartnersIndexRoute
+  '/app/floor-plans-print/$propertyId': typeof AuthenticatedAppFloorPlansPrintPropertyIdRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
@@ -630,6 +638,7 @@ export interface FileRoutesByTo {
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/partners': typeof AuthenticatedPartnersIndexRoute
+  '/app/floor-plans-print/$propertyId': typeof AuthenticatedAppFloorPlansPrintPropertyIdRoute
   '/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
@@ -711,6 +720,7 @@ export interface FileRoutesById {
   '/stay-again/withdraw/$token': typeof StayAgainWithdrawTokenRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/partners/': typeof AuthenticatedPartnersIndexRoute
+  '/_authenticated/app/floor-plans-print/$propertyId': typeof AuthenticatedAppFloorPlansPrintPropertyIdRoute
   '/_authenticated/app/print/$propertyId': typeof AuthenticatedAppPrintPropertyIdRoute
   '/_authenticated/app/room-qr/$propertyId': typeof AuthenticatedAppRoomQrPropertyIdRoute
   '/api/public/attachment/$id': typeof ApiPublicAttachmentIdRoute
@@ -792,6 +802,7 @@ export interface FileRouteTypes {
     | '/stay-again/withdraw/$token'
     | '/app/'
     | '/partners/'
+    | '/app/floor-plans-print/$propertyId'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
@@ -870,6 +881,7 @@ export interface FileRouteTypes {
     | '/stay-again/withdraw/$token'
     | '/app'
     | '/partners'
+    | '/app/floor-plans-print/$propertyId'
     | '/app/print/$propertyId'
     | '/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
@@ -950,6 +962,7 @@ export interface FileRouteTypes {
     | '/stay-again/withdraw/$token'
     | '/_authenticated/app/'
     | '/_authenticated/partners/'
+    | '/_authenticated/app/floor-plans-print/$propertyId'
     | '/_authenticated/app/print/$propertyId'
     | '/_authenticated/app/room-qr/$propertyId'
     | '/api/public/attachment/$id'
@@ -1426,6 +1439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StayAgainWithdrawTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app/floor-plans-print/$propertyId': {
+      id: '/_authenticated/app/floor-plans-print/$propertyId'
+      path: '/floor-plans-print/$propertyId'
+      fullPath: '/app/floor-plans-print/$propertyId'
+      preLoaderRoute: typeof AuthenticatedAppFloorPlansPrintPropertyIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/print/$propertyId': {
       id: '/_authenticated/app/print/$propertyId'
       path: '/print/$propertyId'
@@ -1601,6 +1621,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppTodayRoute: typeof AuthenticatedAppTodayRoute
   AuthenticatedAppWhatsNewRoute: typeof AuthenticatedAppWhatsNewRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppFloorPlansPrintPropertyIdRoute: typeof AuthenticatedAppFloorPlansPrintPropertyIdRoute
   AuthenticatedAppPrintPropertyIdRoute: typeof AuthenticatedAppPrintPropertyIdRoute
   AuthenticatedAppRoomQrPropertyIdRoute: typeof AuthenticatedAppRoomQrPropertyIdRoute
 }
@@ -1623,6 +1644,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppTodayRoute: AuthenticatedAppTodayRoute,
   AuthenticatedAppWhatsNewRoute: AuthenticatedAppWhatsNewRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppFloorPlansPrintPropertyIdRoute:
+    AuthenticatedAppFloorPlansPrintPropertyIdRoute,
   AuthenticatedAppPrintPropertyIdRoute: AuthenticatedAppPrintPropertyIdRoute,
   AuthenticatedAppRoomQrPropertyIdRoute: AuthenticatedAppRoomQrPropertyIdRoute,
 }

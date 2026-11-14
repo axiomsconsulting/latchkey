@@ -250,6 +250,11 @@ export const getFloorPlans = createServerFn({ method: "GET" })
       .neq("active", false)
       .order("sort_order");
     const { error } = await sb.from("floor_plans").select("id").limit(1);
+    const { data: prop } = await sb
+      .from("properties")
+      .select("name, theme_config")
+      .eq("id", data.propertyId)
+      .maybeSingle();
     const plans = await (await srv()).plansFor(sb, data.propertyId);
     const urls = await (
       await srv()
@@ -259,6 +264,11 @@ export const getFloorPlans = createServerFn({ method: "GET" })
     );
     return {
       available: !error,
+      /** For printing the plans in the property's look. */
+      property: {
+        name: (prop?.name as string | undefined) ?? "",
+        theme: prop?.theme_config ?? null,
+      },
       rooms: ((rooms ?? []) as any[]).map((r) => ({
         id: r.id as string,
         name: r.display_name as string,
