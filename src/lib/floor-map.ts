@@ -444,13 +444,13 @@ function between(areas: Area[], line: Point[]): [Area, Area] | null {
       a,
       d: inside(m, a.poly) ? Math.min(0.0001, edgeDist(m, a.poly)) : edgeDist(m, a.poly),
     }))
-    .filter((x) => x.d <= 0.04)
+    .filter((x) => x.d <= 0.05)
     .sort((x, y) => x.d - y.d);
   // Both ends of a line help when its middle is in one area only (a door drawn just inside a room).
   if (near.length < 2) {
     for (const end of [line[0]!, line[line.length - 1]!]) {
-      const a = areaAt(areas, end, 0.03);
-      if (a && !near.some((x) => x.a.id === a.id)) near.push({ a, d: 0.04 });
+      const a = areaAt(areas, end, 0.05);
+      if (a && !near.some((x) => x.a.id === a.id)) near.push({ a, d: 0.05 });
     }
   }
   return near.length >= 2 ? [near[0]!.a, near[1]!.a] : null;
@@ -1198,6 +1198,43 @@ export const PLAN_SCHEMA = {
         required: ["goes", "path"],
       },
     },
+    features: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          kind: { type: "string", enum: ["radiator", "barred", "curtain"] },
+          from: {
+            type: "object",
+            additionalProperties: false,
+            properties: { x: { type: "number" }, y: { type: "number" } },
+            required: ["x", "y"],
+          },
+          to: {
+            type: "object",
+            additionalProperties: false,
+            properties: { x: { type: "number" }, y: { type: "number" } },
+            required: ["x", "y"],
+          },
+        },
+        required: ["kind", "from", "to"],
+      },
+    },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          kind: { type: "string", enum: [...ITEM_KINDS] },
+          x: { type: "number" },
+          y: { type: "number" },
+          seen: { type: "boolean" },
+        },
+        required: ["kind", "x", "y", "seen"],
+      },
+    },
     entrance: {
       type: ["object", "null"],
       additionalProperties: false,
@@ -1209,20 +1246,29 @@ export const PLAN_SCHEMA = {
       required: ["x", "y", "facing"],
     },
   },
-  required: ["is_floor_plan", "areas", "doors", "stairs", "entrance"],
+  required: ["is_floor_plan", "areas", "doors", "stairs", "features", "items", "entrance"],
 } as const;
 
 export const PLAN_PROMPT =
   "This picture should be an architectural floor plan of one floor of a house or guest house. " +
   "Give every position as fractions of the picture: x from 0 (left edge) to 1 (right edge), y from 0 (top) to 1 (bottom). " +
   "List each enclosed space as an area with its kind and the label printed on the plan (empty if none), " +
-  "and its corners in order around it (four for a rectangle; more for L-shapes). Hallways, landings and " +
+  "and its corners in order around it, following the walls whatever the shape (four for a rectangle; as many as " +
+  "needed for L-shapes, angled or curved walls). Neighbouring spaces share their walls: give the shared wall the " +
+  "same corner positions on both sides, with no gap between them. Hallways, landings and " +
   "stairwells are areas too. A room labelled bedroom or with a bed is a bedroom; one with a bath or shower " +
   "next to a bedroom and only reached from it is an ensuite; a separate toilet is wc. " +
   "List each door (the gap in the wall, from one side of the gap to the other), each open doorway or arch as " +
   "opening, and each short flight of a few steps as steps (drawn from the lower side to the higher side). " +
   "List each staircase as stairs with its path along the middle of the treads, in order from this floor towards " +
   "the floor it leads to, following any turns or curves, and whether it goes up or down from this floor. " +
+  "List radiators drawn on the plan (usually a thin rectangle on a wall) as radiator features from one end to " +
+  "the other. List every fixture or appliance you can see drawn or labelled as items at its position, with " +
+  "seen true: sink, hob, oven, fridge, freezer, washing machine, dryer, dishwasher, boiler and so on. Then " +
+  "suggest, with seen false, what a hotel or serviced apartment should have for guests where it obviously " +
+  "belongs if it isn't drawn: a fire extinguisher by the stairs or main hallway on this floor, a fire blanket " +
+  "in each kitchen or kitchenette, a first aid kit in the kitchen, bins in each kitchen or kitchenette, a " +
+  "fridge, microwave and kettle in each kitchenette. " +
   "Give the main front entrance (if it's on this floor) as the point at the door and which way a person faces " +
   "walking in (up, down, left or right on the picture), else null. Do not guess anything you can't see; " +
   "set is_floor_plan to false if this isn't a floor plan.";
@@ -1275,7 +1321,23 @@ export function marksFromReading(
       shape: "auto",
     })),
   ];
-  const map = normaliseMap({ areas, lines, items: [] });
+  for (const f of list(r["features"]))
+    lines.push({
+      id: markId(),
+      kind: pick(f?.["kind"], ["radiator", "barred", "curtain"] as const, "radiator"),
+      pts: [clamp(f?.["from"]), clamp(f?.["to"])],
+    } as (typeof lines)[number]);
+  const items = list(r["items"])
+    .map((it) => ({
+      id: markId(),
+      kind: pick(it?.["kind"], ITEM_KINDS, "fridge"),
+      at: clamp(it),
+      note: it?.["seen"] === false ? SUGGESTED : "",
+    }))
+    .filter((it) => it.at);
+  const map = normaliseMap({ areas, lines, items });
+  // Walls the reading left a little apart are joined, so neighbouring rooms meet.
+  map.areas = snapAreas(map.areas);
   const e = r["entrance"] ? clamp(r["entrance"]) : null;
   const facing = (r["entrance"] as Record<string, unknown> | null)?.["facing"];
   return {
@@ -1468,3 +1530,64 @@ export function stairMarks(
   }
   return out;
 }
+
+/* ------------------------------ snapping ------------------------------ */
+
+/** How close a corner must be to another area's corner or wall to join it. */
+export const SNAP = 0.015;
+
+/** The point on segment a–b nearest p. */
+function nearestOnSegment(p: Point, a: Point, b: Point): Point {
+  const d = sub(b, a);
+  const l2 = d.x * d.x + d.y * d.y;
+  const t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * d.x + (p.y - a.y) * d.y) / l2)) : 0;
+  return { x: a.x + d.x * t, y: a.y + d.y * t };
+}
+
+const r3 = (p: Point): Point => ({
+  x: Math.round(p.x * 1000) / 1000,
+  y: Math.round(p.y * 1000) / 1000,
+});
+
+/**
+ * A point drawn near other areas joins them: to a corner within SNAP, else onto a wall within
+ * SNAP; otherwise it stays where it is. `skip` leaves out the area being drawn or moved.
+ */
+export function snapPoint(p: Point, areas: Area[], skip: string | null = null, tol = SNAP): Point {
+  let best: Point | null = null;
+  let bd = tol;
+  for (const a of areas) {
+    if (a.id === skip) continue;
+    for (const c of a.poly) {
+      const d = dist(p, c);
+      if (d <= bd) {
+        bd = d;
+        best = c;
+      }
+    }
+  }
+  if (best) return r3(best);
+  bd = tol;
+  for (const a of areas) {
+    if (a.id === skip) continue;
+    for (let i = 0; i < a.poly.length; i++) {
+      const q = nearestOnSegment(p, a.poly[i]!, a.poly[(i + 1) % a.poly.length]!);
+      const d = dist(p, q);
+      if (d <= bd) {
+        bd = d;
+        best = q;
+      }
+    }
+  }
+  return best ? r3(best) : p;
+}
+
+/** Every area's corners joined to its neighbours' (in order, so earlier areas hold still). */
+export function snapAreas(areas: Area[], tol = SNAP): Area[] {
+  const out: Area[] = [];
+  for (const a of areas) out.push({ ...a, poly: a.poly.map((p) => snapPoint(p, out, a.id, tol)) });
+  return out;
+}
+
+/** The note on items the plan reader suggested rather than saw. */
+export const SUGGESTED = "Suggested: check it's there, then move or remove it";

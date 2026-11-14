@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeftRight,
+  Eye,
   MoveDiagonal2,
   Check,
   DoorClosed,
@@ -50,6 +51,7 @@ import {
   AREA_WORDS,
   ITEM_KINDS,
   ITEM_WORDS,
+  snapPoint,
   itemPlace,
   areaAt,
   defaultAccess,
@@ -450,6 +452,8 @@ function FloorMapEditor({
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [previewRoom, setPreviewRoom] = useState<string | null>(null);
+  // Drawn areas cover the plan picture; the host can see through them while tracing.
+  const [seeThrough, setSeeThrough] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const handle = useRef<Grab | null>(null);
   // The plan's size: by default as wide as fits the screen's height; the host can resize it from
@@ -595,7 +599,7 @@ function FloorMapEditor({
     // A double tap (to finish) shouldn't add the same point twice.
     const last = draft[draft.length - 1];
     if (last && Math.hypot(last.x - p.x, last.y - p.y) < 0.006) return;
-    const next = [...draft, p];
+    const next = [...draft, tool === "poly" ? snapPoint(p, areas) : p];
     if (TWO_TAP.includes(tool) && next.length === 2) {
       addLine(tool as LineKind, next);
       setDraft([]);
@@ -623,7 +627,12 @@ function FloorMapEditor({
         setPinsRaw((x) => ({
           ...x,
           areas: (x.areas ?? []).map((a) =>
-            a.id === h.id ? { ...a, poly: a.poly.map((q, i) => (i === h.index ? p : q)) } : a,
+            a.id === h.id
+              ? {
+                  ...a,
+                  poly: a.poly.map((q, i) => (i === h.index ? snapPoint(p, areas, h.id) : q)),
+                }
+              : a,
           ),
         }));
       else
@@ -641,19 +650,34 @@ function FloorMapEditor({
 
   function up() {
     if (handle.current) {
+      const h = handle.current;
       handle.current = null;
+      // A moved room lines up with its neighbours when it's let go close to them.
+      if (h.kind === "area" && h.index === -1)
+        setPinsRaw((x) => {
+          const others = (x.areas ?? []).filter((a) => a.id !== h.id);
+          return {
+            ...x,
+            areas: (x.areas ?? []).map((a) =>
+              a.id === h.id ? { ...a, poly: a.poly.map((q) => snapPoint(q, others)) } : a,
+            ),
+          };
+        });
       return;
     }
     if (drag) {
       const { from, to } = drag;
       setDrag(null);
       if (Math.abs(to.x - from.x) > 0.015 && Math.abs(to.y - from.y) > 0.015)
-        addArea([
-          { x: Math.min(from.x, to.x), y: Math.min(from.y, to.y) },
-          { x: Math.max(from.x, to.x), y: Math.min(from.y, to.y) },
-          { x: Math.max(from.x, to.x), y: Math.max(from.y, to.y) },
-          { x: Math.min(from.x, to.x), y: Math.max(from.y, to.y) },
-        ]);
+        // Corners near another room join its walls, so there's no gap between them.
+        addArea(
+          [
+            { x: Math.min(from.x, to.x), y: Math.min(from.y, to.y) },
+            { x: Math.max(from.x, to.x), y: Math.min(from.y, to.y) },
+            { x: Math.max(from.x, to.x), y: Math.max(from.y, to.y) },
+            { x: Math.min(from.x, to.x), y: Math.max(from.y, to.y) },
+          ].map((q) => snapPoint(q, areas)),
+        );
     }
   }
 
@@ -684,11 +708,20 @@ function FloorMapEditor({
         ...p,
         areas: r.map.areas,
         lines: r.map.lines,
-        items: p.items ?? [],
+        // The host's own items stay; what the reader saw or suggests is added (suggested ones say so).
+        items: [
+          ...(p.items ?? []),
+          ...r.map.items.filter(
+            (n) =>
+              !(p.items ?? []).some(
+                (o) => o.kind === n.kind && Math.hypot(o.at.x - n.at.x, o.at.y - n.at.y) < 0.05,
+              ),
+          ),
+        ],
         ...(r.entrance ? { entrance: r.entrance } : {}),
       }));
       setTool("select");
-      toast.success(copy.aiDone(r.map.areas.length));
+      toast.success(copy.aiDone(r.map.areas.length, r.map.items.length));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : common.errorBody);
     } finally {
@@ -1027,6 +1060,14 @@ function FloorMapEditor({
           >
             <Undo2 className="size-4" /> {copy.undo}
           </Button>
+          <Button
+            size="sm"
+            variant={seeThrough ? "default" : "outline"}
+            aria-pressed={seeThrough}
+            onClick={() => setSeeThrough((v) => !v)}
+          >
+            <Eye className="size-4" /> {copy.seeThrough}
+          </Button>
         </div>
       </div>
 
@@ -1061,6 +1102,7 @@ function FloorMapEditor({
               lines={lines}
               items={items}
               selected={sel?.id ?? null}
+              mask={!seeThrough}
             >
               <svg
                 viewBox="0 0 1 1"
