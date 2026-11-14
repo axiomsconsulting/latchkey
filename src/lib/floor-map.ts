@@ -99,10 +99,127 @@ export const ITEM_KINDS = [
   "fire_extinguisher",
   "fire_blanket",
   "bins",
+  // Amenities
+  "smoke_alarm",
+  "co_alarm",
+  "fan",
+  "air_con",
+  "lamp",
+  "hairdryer",
+  "toiletries",
+  "towels",
+  "tv",
+  "safe",
+  "coffee_machine",
+  "mirror",
+  "luggage_rack",
+  "wifi_router",
+  // Furnishings (drawn to size)
+  "bed",
+  "sofa",
+  "armchair",
+  "chair",
+  "wardrobe",
+  "drawers",
+  "side_table",
+  "desk",
+  "dining_table",
+  "coffee_table",
+  "bookcase",
 ] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
-export type Item = { id: string; kind: ItemKind; at: Point; note: string };
+/**
+ * An item on the plan. Furnishings also have a size (fractions of the picture, centred on `at`)
+ * so they're drawn as their footprint and can be resized.
+ */
+export type Item = { id: string; kind: ItemKind; at: Point; note: string; w?: number; h?: number };
+
+/** Items drawn to size (furniture), with a starting footprint. */
+export const FURNITURE: Partial<Record<ItemKind, { w: number; h: number }>> = {
+  bed: { w: 0.09, h: 0.12 },
+  sofa: { w: 0.1, h: 0.04 },
+  armchair: { w: 0.04, h: 0.04 },
+  chair: { w: 0.025, h: 0.025 },
+  wardrobe: { w: 0.08, h: 0.03 },
+  drawers: { w: 0.05, h: 0.025 },
+  side_table: { w: 0.025, h: 0.025 },
+  desk: { w: 0.07, h: 0.035 },
+  dining_table: { w: 0.08, h: 0.05 },
+  coffee_table: { w: 0.05, h: 0.03 },
+  bookcase: { w: 0.06, h: 0.02 },
+};
+export const isFurniture = (k: ItemKind) => k in FURNITURE;
+
+/** The item kinds grouped for choosing (the editor's list). */
+export const ITEM_CATEGORIES: Array<{ id: string; label: string; kinds: ItemKind[] }> = [
+  {
+    id: "kitchen",
+    label: "Kitchen",
+    kinds: [
+      "fridge",
+      "freezer",
+      "microwave",
+      "kettle",
+      "toaster",
+      "coffee_machine",
+      "hob",
+      "oven",
+      "sink",
+      "dishwasher",
+      "cutlery",
+      "crockery",
+      "glasses",
+      "pans",
+      "bins",
+    ],
+  },
+  { id: "laundry", label: "Laundry", kinds: ["washing_machine", "dryer", "iron"] },
+  {
+    id: "room",
+    label: "Room amenities",
+    kinds: [
+      "tv",
+      "lamp",
+      "fan",
+      "air_con",
+      "hairdryer",
+      "toiletries",
+      "towels",
+      "safe",
+      "mirror",
+      "luggage_rack",
+      "wifi_router",
+    ],
+  },
+  {
+    id: "safety",
+    label: "Safety",
+    kinds: ["smoke_alarm", "co_alarm", "fire_extinguisher", "fire_blanket", "first_aid"],
+  },
+  {
+    id: "utilities",
+    label: "Heating and utilities",
+    kinds: ["thermostat", "heater", "boiler", "fuse_box", "stopcock"],
+  },
+  {
+    id: "furniture",
+    label: "Furnishings",
+    kinds: [
+      "bed",
+      "sofa",
+      "armchair",
+      "chair",
+      "wardrobe",
+      "drawers",
+      "side_table",
+      "desk",
+      "dining_table",
+      "coffee_table",
+      "bookcase",
+    ],
+  },
+];
 
 export type FloorMap = { areas: Area[]; lines: Line[]; items: Item[] };
 
@@ -187,6 +304,31 @@ export const ITEM_WORDS: Record<ItemKind, string> = {
   fire_extinguisher: "fire extinguisher",
   fire_blanket: "fire blanket",
   bins: "bins",
+  smoke_alarm: "smoke alarm",
+  co_alarm: "carbon monoxide alarm",
+  fan: "fan",
+  air_con: "air conditioning",
+  lamp: "lamp",
+  hairdryer: "hairdryer",
+  toiletries: "toiletries",
+  towels: "towels",
+  tv: "TV",
+  safe: "safe",
+  coffee_machine: "coffee machine",
+  mirror: "mirror",
+  luggage_rack: "luggage rack",
+  wifi_router: "Wi-Fi router",
+  bed: "bed",
+  sofa: "sofa",
+  armchair: "armchair",
+  chair: "chair",
+  wardrobe: "wardrobe",
+  drawers: "chest of drawers",
+  side_table: "side table",
+  desk: "writing desk",
+  dining_table: "dining table",
+  coffee_table: "coffee table",
+  bookcase: "bookcase",
 };
 
 /** Who may use an area of this kind until the host says otherwise. */
@@ -288,7 +430,19 @@ export function normaliseMap(raw: unknown): FloorMap {
     const id = fresh(r["id"]);
     const at = pt(r["at"]);
     if (!id || !at || !ITEM_KINDS.includes(r["kind"] as ItemKind)) continue;
-    items.push({ id, kind: r["kind"] as ItemKind, at, note: words(r["note"], 120) });
+    const kind = r["kind"] as ItemKind;
+    const size = (v: unknown, d: number) =>
+      typeof v === "number" && Number.isFinite(v) && v >= 0.005 && v <= 1
+        ? Math.round(v * 1000) / 1000
+        : d;
+    const f = FURNITURE[kind];
+    items.push({
+      id,
+      kind,
+      at,
+      note: words(r["note"], 120),
+      ...(f ? { w: size(r["w"], f.w), h: size(r["h"], f.h) } : {}),
+    });
   }
   return { areas, lines, items };
 }
@@ -1024,6 +1178,8 @@ export type HouseNotes = {
 };
 
 const SAFETY: ItemKind[] = [
+  "smoke_alarm",
+  "co_alarm",
   "thermostat",
   "boiler",
   "fuse_box",
@@ -1045,7 +1201,11 @@ export function houseNotes(floors: MapFloor[], roomNames: Record<string, string>
     const at = (p: Point) => areaAt(areas, p, 0.02);
     for (const a of areas) {
       const inHere = items.filter(
-        (it) => !SAFETY.includes(it.kind) && it.kind !== "heater" && at(it.at)?.id === a.id,
+        (it) =>
+          !SAFETY.includes(it.kind) &&
+          it.kind !== "heater" &&
+          !isFurniture(it.kind) &&
+          at(it.at)?.id === a.id,
       );
       // A shared area behind a curtain, barred door or private line is out of bounds too.
       const open = a.access === "shared" && (!reach || reach.has(key(f, a)));
@@ -1230,9 +1390,11 @@ export const PLAN_SCHEMA = {
           kind: { type: "string", enum: [...ITEM_KINDS] },
           x: { type: "number" },
           y: { type: "number" },
+          w: { type: "number" },
+          h: { type: "number" },
           seen: { type: "boolean" },
         },
-        required: ["kind", "x", "y", "seen"],
+        required: ["kind", "x", "y", "w", "h", "seen"],
       },
     },
     entrance: {
@@ -1264,7 +1426,10 @@ export const PLAN_PROMPT =
   "the floor it leads to, following any turns or curves, and whether it goes up or down from this floor. " +
   "List radiators drawn on the plan (usually a thin rectangle on a wall) as radiator features from one end to " +
   "the other. List every fixture or appliance you can see drawn or labelled as items at its position, with " +
-  "seen true: sink, hob, oven, fridge, freezer, washing machine, dryer, dishwasher, boiler and so on. Then " +
+  "seen true: sink, hob, oven, fridge, freezer, washing machine, dryer, dishwasher, boiler and so on, and " +
+  "furniture drawn on the plan (beds, sofas, armchairs, chairs, wardrobes, chests of drawers, side tables, " +
+  "desks, dining and coffee tables, bookcases) with x, y at its centre and w, h its width and height as " +
+  "fractions of the picture (w and h 0 for anything that isn't furniture). Then " +
   "suggest, with seen false, what a hotel or serviced apartment should have for guests where it obviously " +
   "belongs if it isn't drawn: a fire extinguisher by the stairs or main hallway on this floor, a fire blanket " +
   "in each kitchen or kitchenette, a first aid kit in the kitchen, bins in each kitchen or kitchenette, a " +
@@ -1333,6 +1498,8 @@ export function marksFromReading(
       kind: pick(it?.["kind"], ITEM_KINDS, "fridge"),
       at: clamp(it),
       note: it?.["seen"] === false ? SUGGESTED : "",
+      w: Number(it?.["w"]) || undefined,
+      h: Number(it?.["h"]) || undefined,
     }))
     .filter((it) => it.at);
   const map = normaliseMap({ areas, lines, items });
@@ -1430,6 +1597,12 @@ export const AMENITIES: ItemKind[] = [
   "washing_machine",
   "dryer",
   "iron",
+  "coffee_machine",
+  "hairdryer",
+  "toiletries",
+  "towels",
+  "fan",
+  "safe",
   "bins",
   "first_aid",
   "fire_extinguisher",

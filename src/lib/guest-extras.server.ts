@@ -523,7 +523,7 @@ export type GuestFloor = {
   at: Point | null;
   areas: Array<{ poly: Point[]; access: string; kind: string; label?: string | null }>;
   lines: Array<{ kind: string; pts: Point[] }>;
-  items: Array<{ kind: string; at: Point }>;
+  items: Array<{ kind: string; at: Point; w?: number; h?: number }>;
   /** "" for the main house, else the annex's name. */
   building?: string;
   /** The guest's room is on this floor. */
@@ -662,7 +662,7 @@ export async function extrasFor(
           const a = f.map.areas.find((x) => inside(it.at, x.poly));
           return !a || canUse(a);
         })
-        .map((i) => ({ kind: i.kind, at: i.at })),
+        .map((i) => ({ kind: i.kind, at: i.at, ...(i.w && i.h ? { w: i.w, h: i.h } : {}) })),
     };
   });
   let directions: GuestExtras["directions"] = null;
@@ -691,7 +691,11 @@ export async function extrasFor(
           kind: a.kind,
         })),
         lines: (x.pins.lines ?? []).map((l) => ({ kind: l.kind, pts: l.pts })),
-        items: (x.pins.items ?? []).map((i) => ({ kind: i.kind, at: i.at })),
+        items: (x.pins.items ?? []).map((i) => ({
+          kind: i.kind,
+          at: i.at,
+          ...(i.w && i.h ? { w: i.w, h: i.h } : {}),
+        })),
         marks: stairMarks(floorsMapped, x.id),
       }));
       directions = {

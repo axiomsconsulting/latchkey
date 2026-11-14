@@ -14,7 +14,7 @@ export type MapViewArea = {
   label?: string | null;
 };
 export type MapViewLine = { id?: string; kind: string; pts: Point[] };
-export type MapViewItem = { id?: string; kind: string; at: Point };
+export type MapViewItem = { id?: string; kind: string; at: Point; w?: number; h?: number };
 
 const centre = (p: Point[]) => ({
   x: p.reduce((n, q) => n + q.x, 0) / Math.max(1, p.length),
@@ -192,6 +192,28 @@ export function FloorMapView({
       </svg>
       {items.map((it, i) => {
         const Icon = ITEM_ICON[it.kind as ItemKind] ?? Thermometer;
+        // Furniture: its footprint, to size, with its icon in the middle.
+        if (it.w && it.h)
+          return (
+            <span
+              key={it.id ?? i}
+              data-item={it.id}
+              title={it.kind.replace(/_/g, " ")}
+              className={cn(
+                "pointer-events-none absolute grid place-items-center rounded-[3px] border border-slate-500 text-slate-600",
+                it.id && it.id === selected && "ring-2 ring-sky-500",
+              )}
+              style={{
+                left: `${(it.at.x - it.w / 2) * 100}%`,
+                top: `${(it.at.y - it.h / 2) * 100}%`,
+                width: `${it.w * 100}%`,
+                height: `${it.h * 100}%`,
+                background: "rgba(241,245,249,0.85)",
+              }}
+            >
+              <Icon className="size-3 max-h-full max-w-full" aria-hidden />
+            </span>
+          );
         return (
           <span
             key={it.id ?? i}

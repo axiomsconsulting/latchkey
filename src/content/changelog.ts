@@ -47,6 +47,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.172.0",
+    date: "2026-11-14",
+    title: "Amenities and furniture on floor plans",
+    items: [
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Floor plan items now include room amenities (smoke and carbon monoxide alarms, fan, air conditioning, lamp, hairdryer, toiletries, towels, TV, safe, coffee machine, mirror, luggage rack, Wi-Fi router) and furnishings (bed, sofa, armchair, chair, wardrobe, chest of drawers, side table, writing desk, dining and coffee tables, bookcase), chosen from a list grouped by kind.",
+      },
+      {
+        kind: "new",
+        area: "Guest guide",
+        text: "Furnishings are drawn to size: drag the corner handle to resize one, Turn to swap its width and length, and move it like any other mark. Read the plan for me adds furniture it can see, to size.",
+      },
+    ],
+  },
+  {
     version: "0.171.0",
     date: "2026-11-14",
     title: "Floor plans that join up",
@@ -54,7 +71,7 @@ export const RELEASES: Release[] = branded([
       {
         kind: "improved",
         area: "Guest guide",
-        text: "Areas drawn on a floor plan now cover the picture under them, so the map reads clearly; \"See the plan through areas\" shows it again while you trace.",
+        text: 'Areas drawn on a floor plan now cover the picture under them, so the map reads clearly; "See the plan through areas" shows it again while you trace.',
       },
       {
         kind: "improved",
@@ -64,7 +81,7 @@ export const RELEASES: Release[] = branded([
       {
         kind: "improved",
         area: "Guest guide",
-        text: "Read the plan for me now follows walls of any shape, joins neighbouring rooms, and adds radiators and the fixtures it can see (sink, hob, fridge…). It also suggests what guests expect (fire extinguisher by the stairs, fire blanket, first aid, bins, fridge, microwave and kettle in kitchenettes), marked \"Suggested\" for you to keep, move or remove.",
+        text: 'Read the plan for me now follows walls of any shape, joins neighbouring rooms, and adds radiators and the fixtures it can see (sink, hob, fridge…). It also suggests what guests expect (fire extinguisher by the stairs, fire blanket, first aid, bins, fridge, microwave and kettle in kitchenettes), marked "Suggested" for you to keep, move or remove.',
       },
     ],
   },
