@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeftRight,
+  Printer,
   Sofa,
   Thermometer,
   FireExtinguisher,
@@ -1218,6 +1220,15 @@ function FloorMapEditor({
             }}
           />
         </label>
+        <Button size="sm" variant="outline" asChild>
+          <Link
+            to="/app/floor-plans-print/$propertyId"
+            params={{ propertyId }}
+            search={{ floors: plan.id }}
+          >
+            <Printer className="size-4" /> {copy.printPlans}
+          </Link>
+        </Button>
         <Button
           size="sm"
           variant="ghost"

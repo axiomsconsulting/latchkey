@@ -6259,6 +6259,7 @@ export const guideExtrasAdminCopy = branded({
     bottom: "Below the plan",
     float: "Floating over the plan",
   } as Record<"left" | "right" | "top" | "bottom" | "float", string>,
+  printPlans: "Print",
   plansSaved: "Floor saved.",
 });
 
@@ -7415,6 +7416,18 @@ export const aiModesCopy = branded({
       full: "AI answers in its own words from the guide and opens the right part.",
     },
   } as Record<"concierge" | "receptionist", Record<"assisted" | "full", string>>,
+});
+
+/** Printing the property's floor plans (/app/floor-plans-print). */
+export const floorPrintCopy = branded({
+  back: "Back to stay guides",
+  print: (n: number) => (n === 1 ? "Print 1 floor" : `Print ${n} floors`),
+  which: "Floors to print",
+  all: "All floors",
+  none: "None",
+  empty: "No floor plans yet. Add them on Stay guides.",
+  private: "Private",
+  key: { shared: "Guests can use", guestRoom: "Guest rooms", private: "Private" },
 });
 
 /** Latchkey admin → System → Keys and secrets. */
