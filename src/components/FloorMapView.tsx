@@ -1,6 +1,6 @@
 import { Thermometer } from "lucide-react";
 
-import { AREA_FILL, ITEM_ICON, LINE_LOOK } from "@/components/floor-map-look";
+import { AREA_FILL, AREA_STROKE, ITEM_ICON, LINE_LOOK } from "@/components/floor-map-look";
 import type { ItemKind, Point } from "@/lib/floor-map";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,8 @@ export function FloorMapView({
   lines = [],
   items = [],
   route = null,
+  routeLabel = null,
+  marks = [],
   at = null,
   selected = null,
   className,
@@ -46,6 +48,10 @@ export function FloorMapView({
   lines?: MapViewLine[];
   items?: MapViewItem[];
   route?: Point[] | null;
+  /** Said at the end of the way ("Your room"). */
+  routeLabel?: string | null;
+  /** Small labels on the plan: stairs up or down, where stairs arrive. */
+  marks?: Array<{ at: Point; text: string }>;
   at?: Point | null;
   selected?: string | null;
   className?: string;
@@ -79,15 +85,8 @@ export function FloorMapView({
             patternUnits="userSpaceOnUse"
             patternTransform="rotate(45)"
           >
-            <rect width="0.02" height="0.02" fill="rgba(220,38,38,0.08)" />
-            <line
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="0.02"
-              stroke="rgba(220,38,38,0.45)"
-              strokeWidth="0.004"
-            />
+            <rect width="0.02" height="0.02" fill="rgba(220,38,38,0.18)" />
+            <line x1="0" y1="0" x2="0" y2="0.02" stroke="rgba(185,28,28,0.7)" strokeWidth="0.005" />
           </pattern>
           <marker
             id="lk-arrow"
@@ -121,11 +120,9 @@ export function FloorMapView({
             stroke={
               a.id && a.id === selected
                 ? "#0f172a"
-                : a.access === "yours"
-                  ? "#16a34a"
-                  : "rgba(15,23,42,0.35)"
+                : (AREA_STROKE[a.access]?.colour ?? "rgba(15,23,42,0.35)")
             }
-            strokeWidth={a.id && a.id === selected ? 3 : a.access === "yours" ? 3 : 1}
+            strokeWidth={a.id && a.id === selected ? 3 : (AREA_STROKE[a.access]?.width ?? 1)}
             strokeDasharray={a.id && a.id === selected ? "6 3" : undefined}
             vectorEffect="non-scaling-stroke"
           />
@@ -190,6 +187,26 @@ export function FloorMapView({
           </span>
         ) : null,
       )}
+      {marks.map((m, i) => (
+        <span
+          key={`m-${i}`}
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow"
+          style={{ left: `${m.at.x * 100}%`, top: `${m.at.y * 100}%` }}
+        >
+          {m.text}
+        </span>
+      ))}
+      {route && route.length > 1 && routeLabel ? (
+        <span
+          className="pointer-events-none absolute -translate-x-1/2 translate-y-2 whitespace-nowrap rounded-full bg-emerald-700 px-2 py-0.5 text-[11px] font-semibold text-white shadow"
+          style={{
+            left: `${route[route.length - 1]!.x * 100}%`,
+            top: `${route[route.length - 1]!.y * 100}%`,
+          }}
+        >
+          {routeLabel}
+        </span>
+      ) : null}
       {at ? (
         <span
           aria-hidden

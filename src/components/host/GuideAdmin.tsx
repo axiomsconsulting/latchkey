@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { common, driveAdminCopy, starterAdminCopy } from "@/content/copy";
 import {
@@ -16,7 +17,7 @@ import {
   syncPrivateQueue,
 } from "@/lib/attachments.functions";
 import { SECTIONS } from "@/lib/guide";
-import { getStarterSettings, setStarterSection } from "@/lib/site.functions";
+import { getStarterSettings, setStarterName, setStarterSection } from "@/lib/site.functions";
 
 /** Super admin: which starter sections new hosts begin their stay guide with. */
 export function StarterSectionsAdmin() {
@@ -41,12 +42,13 @@ export function StarterSectionsAdmin() {
           const offered = !removed[s.key];
           return (
             <li key={s.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 font-medium">
-                  {s.title} <Badge variant="secondary">{starterAdminCopy.badge}</Badge>
-                </span>
-                <span className="block text-xs text-muted-foreground">{s.hint}</span>
-              </span>
+              <StarterName
+                sectionKey={s.key}
+                title={q.data?.names?.[s.key]?.at(-1)?.title ?? s.title}
+                hint={q.data?.names?.[s.key]?.at(-1)?.hint || s.hint}
+                disabled={!q.data?.available}
+                onSaved={() => void qc.invalidateQueries({ queryKey: ["starter-sections"] })}
+              />
               <label className="flex items-center gap-2 text-sm">
                 {starterAdminCopy.offered}
                 <Switch
@@ -71,6 +73,73 @@ export function StarterSectionsAdmin() {
 }
 
 /** Super admin: the Google Drive guide attachments are kept in. */
+/** One starter's name and description, saved for hosts who sign up from now on. */
+function StarterName({
+  sectionKey,
+  title,
+  hint,
+  disabled,
+  onSaved,
+}: {
+  sectionKey: string;
+  title: string;
+  hint: string;
+  disabled: boolean;
+  onSaved: () => void;
+}) {
+  const saveFn = useServerFn(setStarterName);
+  const [t, setT] = useState(title);
+  const [h, setH] = useState(hint);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setT(title);
+    setH(hint);
+  }, [title, hint]);
+  const changed = t.trim() !== title || h.trim() !== hint;
+  return (
+    <span className="min-w-0 flex-1 space-y-1.5">
+      <span className="flex items-center gap-2">
+        <Input
+          value={t}
+          maxLength={60}
+          disabled={disabled}
+          aria-label={starterAdminCopy.name}
+          onChange={(e) => setT(e.target.value)}
+          className="h-9 font-medium"
+        />
+        <Badge variant="secondary">{starterAdminCopy.badge}</Badge>
+      </span>
+      <Input
+        value={h}
+        maxLength={200}
+        disabled={disabled}
+        aria-label={starterAdminCopy.description}
+        onChange={(e) => setH(e.target.value)}
+        className="h-9 text-xs"
+      />
+      {changed ? (
+        <Button
+          size="sm"
+          disabled={busy || !t.trim()}
+          onClick={() => {
+            setBusy(true);
+            void saveFn({ data: { key: sectionKey, title: t.trim(), hint: h.trim() } })
+              .then(() => {
+                toast.success(starterAdminCopy.renamed);
+                onSaved();
+              })
+              .catch((e: unknown) => toast.error(e instanceof Error ? e.message : common.errorBody))
+              .finally(() => setBusy(false));
+          }}
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+          {starterAdminCopy.saveName}
+        </Button>
+      ) : null}
+    </span>
+  );
+}
+
 export function DriveAdmin() {
   const statusFn = useServerFn(driveStatus);
   const connectFn = useServerFn(driveConnectUrl);

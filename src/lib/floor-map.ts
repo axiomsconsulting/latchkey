@@ -1290,3 +1290,181 @@ export function marksFromReading(
       : null,
   };
 }
+
+/* ------------------- rooms linked from their pins, and what's whose ------------------- */
+
+const OWN_EXTRAS: AreaKind[] = ["ensuite", "bathroom", "wc", "kitchenette"];
+
+/**
+ * Hosts often mark a room with its pin and never link the area: the guest-room area holding a
+ * room's pin becomes that room's, and a room-only en-suite, bathroom, toilet or kitchenette
+ * that touches it (or sits inside it) and isn't linked to another room becomes that room's too.
+ * Areas the host linked themselves never change.
+ */
+export function linkRoomsByPins(f: MapFloor): MapFloor {
+  const areas = f.map.areas.map((a) => ({ ...a }));
+  for (const [roomId, pin] of Object.entries(f.rooms ?? {})) {
+    if (areas.some((a) => a.roomId === roomId)) continue;
+    const holding = areas
+      .filter((a) => !a.roomId && a.access !== "private" && inside(pin, a.poly))
+      .sort((x, y) => polyArea(x.poly) - polyArea(y.poly))[0];
+    if (holding) holding.roomId = roomId;
+  }
+  for (const a of areas) {
+    if (a.roomId || a.access !== "guest_room" || !OWN_EXTRAS.includes(a.kind)) continue;
+    const owner = areas.find(
+      (b) =>
+        b.roomId &&
+        b.kind !== "ensuite" &&
+        (sharedEdge(a.poly, b.poly) || inside(centroid(a.poly), b.poly)),
+    );
+    if (owner) a.roomId = owner.roomId!;
+  }
+  return { ...f, map: { ...f.map, areas } };
+}
+
+/** Where a point sits in its area, in plan terms: "top-left corner", "right side", "middle". */
+export function spotIn(poly: Point[], p: Point): string {
+  const xs = poly.map((q) => q.x);
+  const ys = poly.map((q) => q.y);
+  const fx = (p.x - Math.min(...xs)) / Math.max(1e-6, Math.max(...xs) - Math.min(...xs));
+  const fy = (p.y - Math.min(...ys)) / Math.max(1e-6, Math.max(...ys) - Math.min(...ys));
+  const h = fx < 0.33 ? "left" : fx > 0.67 ? "right" : "";
+  const v = fy < 0.33 ? "top" : fy > 0.67 ? "bottom" : "";
+  if (h && v) return `${v}-${h} corner`;
+  if (h || v) return `${h || v} side`;
+  return "middle";
+}
+
+/** An item's place: the area it's in (and whose), and where in it. */
+export function itemPlace(
+  f: MapFloor,
+  it: Item,
+  roomNames: Record<string, string> = {},
+): { area: Area | null; words: string } {
+  const a = areaAt(f.map.areas, it.at, 0.02);
+  if (!a) return { area: null, words: `on the ${levelName(f.level)}` };
+  return {
+    area: a,
+    words: `in the ${nameOf(a, roomNames)} (${spotIn(a.poly, it.at)}, ${levelName(f.level)})`,
+  };
+}
+
+/** Things a guest goes looking for, nearest first for them. */
+export const AMENITIES: ItemKind[] = [
+  "fridge",
+  "freezer",
+  "microwave",
+  "kettle",
+  "toaster",
+  "hob",
+  "oven",
+  "sink",
+  "dishwasher",
+  "cutlery",
+  "crockery",
+  "glasses",
+  "pans",
+  "washing_machine",
+  "dryer",
+  "iron",
+  "bins",
+  "first_aid",
+  "fire_extinguisher",
+  "fire_blanket",
+  "thermostat",
+];
+
+export type Amenity = {
+  kind: ItemKind;
+  what: string;
+  where: string;
+  yours: boolean;
+  level: number;
+};
+
+/**
+ * The nearest of each thing for the guest in `roomId`: their own room first (its en-suite and
+ * kitchenette too), then shared places they can reach on their floor (nearest to their room),
+ * then the floor nearest the entrance. Things in other guests' rooms or private areas never count.
+ */
+export function amenitiesFor(
+  floorsIn: MapFloor[],
+  roomId: string | null,
+  roomNames: Record<string, string> = {},
+): Amenity[] {
+  const floors = floorsIn.map(linkRoomsByPins);
+  const reach = reachableAreas(floors);
+  const home = roomId ? roomArea(floors, roomId) : null;
+  const entranceLevel = floors.find((f) => f.entrance && !f.building)?.level ?? 0;
+  const out: Amenity[] = [];
+  for (const kind of AMENITIES) {
+    let best: { a: Amenity; score: number } | null = null;
+    for (const f of floors)
+      for (const it of f.map.items) {
+        if (it.kind !== kind) continue;
+        const { area, words } = itemPlace(f, it, roomNames);
+        if (!area) continue;
+        const yours = !!roomId && area.roomId === roomId;
+        const open = area.access === "shared" && (!reach || reach.has(`${f.id}:${area.id}`));
+        if (!yours && !open) continue;
+        const sameFloor = home && home.floor.id === f.id;
+        const score = yours
+          ? 0
+          : sameFloor
+            ? 1 + dist(centroid(home.area.poly), it.at)
+            : 10 +
+              Math.abs(f.level - (home?.floor.level ?? entranceLevel)) * 3 +
+              Math.abs(f.level - entranceLevel);
+        if (!best || score < best.score)
+          best = {
+            score,
+            a: {
+              kind,
+              what: `${ITEM_WORDS[kind]}${it.note ? ` (${it.note})` : ""}`,
+              where: yours
+                ? `in your ${area.kind === "bedroom" ? "room" : AREA_WORDS[area.kind]} (${spotIn(area.poly, it.at)})`
+                : words,
+              yours,
+              level: f.level,
+            },
+          };
+      }
+    if (best) out.push(best.a);
+  }
+  return out;
+}
+
+/** Stair labels for one floor: where stairs go up or down from here, and where stairs from another floor arrive. */
+export function stairMarks(
+  floors: MapFloor[],
+  floorId: string,
+): Array<{ at: Point; text: string }> {
+  const here = floors.find((f) => f.id === floorId);
+  if (!here) return [];
+  const out: Array<{ at: Point; text: string }> = [];
+  for (const l of here.map.lines.filter((x) => x.kind === "stairs")) {
+    const to = l.toLevel ?? here.level + 1;
+    out.push({
+      at: l.pts[0]!,
+      text: `${to > here.level ? "Up" : "Down"} to the ${levelName(to)}`,
+    });
+  }
+  for (const f of floors) {
+    if (f.id === here.id || (f.building ?? "") !== (here.building ?? "")) continue;
+    for (const l of f.map.lines.filter((x) => x.kind === "stairs")) {
+      const to = l.toLevel ?? f.level + 1;
+      if (to !== here.level) continue;
+      // Already drawn on this floor going back the other way: no second label.
+      if (
+        here.map.lines.some((x) => x.kind === "stairs" && (x.toLevel ?? here.level + 1) === f.level)
+      )
+        continue;
+      out.push({
+        at: l.pts[l.pts.length - 1]!,
+        text: `Stairs ${f.level < here.level ? "down" : "up"} to the ${levelName(f.level)}`,
+      });
+    }
+  }
+  return out;
+}

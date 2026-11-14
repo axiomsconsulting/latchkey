@@ -87,7 +87,7 @@ import {
 import { platformKey } from "@/lib/booking-sites";
 import { formatUkDate, formatUkTime, nightsBetween } from "@/lib/dates";
 import { decideExtrasRequest, listExtrasRequests } from "@/lib/extras.functions";
-import { editorSections, type SectionKey, type StoredSection } from "@/lib/guide";
+import { editorSections, withStarterNames, type SectionKey, type StoredSection } from "@/lib/guide";
 import { getGuideEditor, getRoomGuideCodes } from "@/lib/guide.functions";
 import {
   emailBookingInvoice,
@@ -1387,7 +1387,11 @@ function GuideCard({
   });
   const stored = (q.data?.sections ?? []) as unknown as StoredSection[];
   // The sections in this guide: the host's own included, removed ones left out.
-  const listed = editorSections(stored, q.data?.startersOff ?? []).shown;
+  const listed = withStarterNames(
+    editorSections(stored, q.data?.startersOff ?? []).shown,
+    (q.data as { starterNames?: Record<string, { title: string; hint: string }> } | undefined)
+      ?.starterNames ?? {},
+  );
   const keys = listed.map((s) => s.key);
   const written = stored.filter((x) => x.summary?.trim() || x.steps?.length) as Array<{
     roomId: string | null;

@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, GalleryHorizontal, List, Paperclip } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  GalleryHorizontal,
+  List,
+  Paperclip,
+} from "lucide-react";
 
 import { ExpandableText } from "@/components/guest/ExpandableText";
 import { RichLine } from "@/components/RichText";
@@ -253,7 +260,7 @@ export function GuideSections({
           before={before}
           after={later}
           art={art}
-          onClip={(key) => setViewing({ key, index: 0 })}
+          onClip={(key, index = 0) => setViewing({ key, index })}
         />
       )}
 
@@ -272,6 +279,58 @@ export function GuideSections({
         index={viewing && viewingItems.length ? viewing.index : null}
         onIndex={(i) => setViewing(i === null || !viewing ? null : { key: viewing.key, index: i })}
       />
+    </div>
+  );
+}
+
+/**
+ * A card's attachments as at most two small still thumbnails (pictures, or a document tile)
+ * and "+n" for the rest; a tap opens the large viewer. Nothing inside scrolls or plays, so a
+ * swipe across them moves the cards.
+ */
+function AttachmentThumbs({
+  items,
+  onOpen,
+}: {
+  items: Array<{ id: string; kind: string; url: string; name: string }>;
+  onOpen: (index: number) => void;
+}) {
+  if (!items.length) return null;
+  const shown = items.slice(0, 2);
+  const more = items.length - shown.length;
+  return (
+    <div className="flex gap-1.5 pt-1">
+      {shown.map((a, i) => (
+        <button
+          key={a.id}
+          type="button"
+          onClick={() => onOpen(i)}
+          aria-label={a.name}
+          className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-border bg-muted"
+        >
+          {a.kind === "image" ? (
+            <img
+              src={a.url}
+              alt=""
+              loading="lazy"
+              draggable={false}
+              className="size-full object-cover"
+            />
+          ) : (
+            <span className="grid size-full place-items-center text-muted-foreground">
+              <FileText className="size-6" aria-hidden />
+            </span>
+          )}
+          {more > 0 && i === shown.length - 1 ? (
+            <span
+              className="absolute inset-0 grid place-items-center text-sm font-semibold text-white"
+              style={{ background: "rgba(0,0,0,0.55)" }}
+            >
+              +{more}
+            </span>
+          ) : null}
+        </button>
+      ))}
     </div>
   );
 }
@@ -353,7 +412,7 @@ function GuideGallery({
   }>;
   before: ExtraCard[];
   after: ExtraCard[];
-  onClip: (key: string) => void;
+  onClip: (key: string, index?: number) => void;
 }) {
   const cards: Array<{
     key: string;
@@ -396,7 +455,7 @@ function GuideGallery({
             </p>
           ) : null}
           <SectionBody sec={sec} rest={rest} />
-          <GuideAttachments items={sec.attachments} large />
+          <AttachmentThumbs items={sec.attachments ?? []} onOpen={(i) => onClip(sec.key, i)} />
         </>
       ),
     })),
@@ -411,7 +470,11 @@ function GuideGallery({
     })),
   ];
   // Small cards share a column; bigger ones have one each.
-  const columns = packColumns(cards.map((c) => c.size));
+  const columns = packColumns(
+    cards.map((c) => c.size),
+    1,
+    2,
+  );
   const row = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(0);
   const go = (i: number) => {
@@ -432,7 +495,7 @@ function GuideGallery({
         {columns.map((col) => (
           <div
             key={cards[col[0]!]!.key}
-            className="flex max-h-[70dvh] w-[calc(50%-0.375rem)] shrink-0 snap-start flex-col gap-3 lg:w-[calc(33.333%-0.5rem)]"
+            className="flex h-[clamp(18rem,50dvh,30rem)] w-[calc(50%-0.375rem)] shrink-0 snap-start flex-col gap-3 lg:w-[calc(33.333%-0.5rem)]"
           >
             {col.map((i) => {
               const c = cards[i]!;
@@ -442,7 +505,7 @@ function GuideGallery({
                 <section
                   key={c.key}
                   id={`guide-${c.key}`}
-                  className="card-soft relative isolate flex min-h-0 flex-col overflow-hidden"
+                  className="card-soft relative isolate flex min-h-0 flex-1 basis-0 flex-col overflow-hidden"
                 >
                   {bg ? (
                     <img
@@ -463,7 +526,7 @@ function GuideGallery({
                     </h3>
                     {c.clip ? <ClipButton count={c.clip} onOpen={() => onClip(c.key)} /> : null}
                   </header>
-                  <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3 text-sm">
+                  <div className="min-h-0 flex-1 touch-pan-y space-y-2 overflow-y-auto overscroll-contain px-3 pb-3 text-sm">
                     {c.body}
                   </div>
                 </section>

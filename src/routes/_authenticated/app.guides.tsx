@@ -58,7 +58,7 @@ import { FloorPlansEditor } from "@/components/host/FloorPlansEditor";
 import { GuideArtEditor } from "@/components/host/GuideArtEditor";
 import { RoomPhoto } from "@/components/host/RoomPhoto";
 import { getGuideTiles } from "@/lib/guide-tiles.functions";
-import { SECTIONS, editorSections, type SectionKey } from "@/lib/guide";
+import { SECTIONS, editorSections, withStarterNames, type SectionKey } from "@/lib/guide";
 import { getRoomGuideCodes, renameGuideSection } from "@/lib/guide.functions";
 import {
   addStarterGuide,
@@ -159,10 +159,15 @@ function GuidesPage() {
   const roomId = scope === "house" ? null : scope;
   const room = rooms.find((r) => r.id === roomId);
   const houseCount = sections.filter((s) => s.roomId === null).length;
-  const { shown, removed } = editorSections(
+  const starterNames =
+    (q.data as { starterNames?: Record<string, { title: string; hint: string }> } | undefined)
+      ?.starterNames ?? {};
+  const listedAll = editorSections(
     sections,
     (q.data as { startersOff?: string[] } | undefined)?.startersOff ?? [],
   );
+  const shown = withStarterNames(listedAll.shown, starterNames);
+  const removed = withStarterNames(listedAll.removed, starterNames);
   const pinned = new Set(
     sections.filter((s) => s.roomId === null && s.pinned).map((s) => s.sectionKey),
   );

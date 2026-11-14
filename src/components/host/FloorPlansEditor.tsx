@@ -48,6 +48,7 @@ import {
   AREA_WORDS,
   ITEM_KINDS,
   ITEM_WORDS,
+  itemPlace,
   areaAt,
   defaultAccess,
   edgeDist,
@@ -1050,6 +1051,22 @@ function FloorMapEditor({
               onChange={(e) => patch<Item>("items", selItem.id, { note: e.target.value })}
             />
           </div>
+          <p className="text-sm text-muted-foreground sm:col-span-2">
+            {(() => {
+              const f = mapFloors(now).find((x) => x.id === plan.id);
+              const it = f?.map.items.find((x) => x.id === selItem.id);
+              if (!f || !it) return null;
+              const placed = itemPlace(f, it, roomNames);
+              const whose = placed.area?.roomId
+                ? copy.itemRoomOnly(roomNames[placed.area.roomId] ?? "")
+                : placed.area?.access === "shared"
+                  ? copy.itemShared
+                  : placed.area
+                    ? copy.itemPrivate
+                    : null;
+              return `${cap(placed.words)}${whose ? `. ${whose}` : ""}`;
+            })()}
+          </p>
           <Button variant="ghost" size="sm" className="justify-self-start" onClick={remove}>
             <Trash2 className="size-4" /> {copy.remove}
           </Button>

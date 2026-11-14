@@ -66,12 +66,21 @@ export const LINE_LOOK: Record<string, { stroke: string; width: number; dash?: s
   radiator: { stroke: "#ea580c", width: 6 },
 };
 
-/** Area fills (rgba only: older tablet browsers draw /opacity colours solid). */
+/** Area fills (rgba only: older tablet browsers draw /opacity colours solid). Four clearly different looks: green yours, blue open, grey other guests', red-hatched private. */
 export const AREA_FILL: Record<string, string> = {
-  shared: "rgba(37,99,235,0.10)",
-  /** On a guest's house plan: everywhere they can go, clearly lit. */
-  open: "rgba(37,99,235,0.24)",
-  guest_room: "rgba(100,116,139,0.10)",
+  shared: "rgba(37,99,235,0.12)",
+  /** On a guest's plan: everywhere they can go. */
+  open: "rgba(37,99,235,0.30)",
+  guest_room: "rgba(71,85,105,0.42)",
   private: "url(#lk-private)",
-  yours: "rgba(22,163,74,0.30)",
+  yours: "rgba(22,163,74,0.55)",
+};
+
+/** Each look's outline, so the kinds stay apart where fills overlap the plan's own colours. */
+export const AREA_STROKE: Record<string, { colour: string; width: number }> = {
+  shared: { colour: "rgba(15,23,42,0.35)", width: 1 },
+  open: { colour: "#1d4ed8", width: 2 },
+  guest_room: { colour: "#475569", width: 1.5 },
+  private: { colour: "#b91c1c", width: 1.5 },
+  yours: { colour: "#15803d", width: 3 },
 };

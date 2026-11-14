@@ -4,7 +4,13 @@
  * with (the super admin took them out for new hosts before this host signed
  * up). Rules in guide.ts (startersOffFor, normaliseStarters).
  */
-import { normaliseStarters, startersOffFor, type BuiltInKey } from "./guide";
+import {
+  normaliseStarters,
+  starterNamesFor,
+  startersOffFor,
+  type BuiltInKey,
+  type StarterName,
+} from "./guide";
 
 type Loose = { from: (t: string) => any };
 async function db(): Promise<Loose> {
@@ -12,11 +18,12 @@ async function db(): Promise<Loose> {
   return supabaseAdmin as unknown as Loose;
 }
 
-let cache: { at: number; removed: Record<string, string> } | null = null;
+type Settings = { removed: Record<string, string>; names: Record<string, StarterName[]> };
+let cache: { at: number; settings: Settings } | null = null;
 
-export async function starterSettings(): Promise<{ removed: Record<string, string> }> {
-  if (cache && Date.now() - cache.at < 60_000) return { removed: cache.removed };
-  let removed: Record<string, string> = {};
+export async function starterSettings(): Promise<Settings> {
+  if (cache && Date.now() - cache.at < 60_000) return cache.settings;
+  let settings: Settings = { removed: {}, names: {} };
   try {
     const { data, error } = await (
       await db()
@@ -25,21 +32,24 @@ export async function starterSettings(): Promise<{ removed: Record<string, strin
       .select("guide_starters")
       .eq("id", 1)
       .maybeSingle();
-    if (!error) removed = normaliseStarters(data?.guide_starters).removed;
+    if (!error) settings = normaliseStarters(data?.guide_starters);
   } catch {
-    removed = {};
+    // Defaults.
   }
-  cache = { at: Date.now(), removed };
-  return { removed };
+  cache = { at: Date.now(), settings };
+  return settings;
 }
 
 export function forgetStarters() {
   cache = null;
 }
 
-export async function startersOffForProperty(propertyId: string): Promise<BuiltInKey[]> {
-  const { removed } = await starterSettings();
-  if (!Object.keys(removed).length) return [];
+/** For one property: starters its host didn't start with, and the names its host's starters have. */
+export async function startersForProperty(
+  propertyId: string,
+): Promise<{ off: BuiltInKey[]; names: Record<string, { title: string; hint: string }> }> {
+  const { removed, names } = await starterSettings();
+  if (!Object.keys(removed).length && !Object.keys(names).length) return { off: [], names: {} };
   const { data } = await (
     await db()
   )
@@ -47,8 +57,10 @@ export async function startersOffForProperty(propertyId: string): Promise<BuiltI
     .select("hosts(created_at)")
     .eq("id", propertyId)
     .maybeSingle();
-  return startersOffFor(
-    removed,
-    (data?.hosts as { created_at?: string } | null)?.created_at ?? null,
-  );
+  const created = (data?.hosts as { created_at?: string } | null)?.created_at ?? null;
+  return { off: startersOffFor(removed, created), names: starterNamesFor(names, created) };
+}
+
+export async function startersOffForProperty(propertyId: string): Promise<BuiltInKey[]> {
+  return (await startersForProperty(propertyId)).off;
 }

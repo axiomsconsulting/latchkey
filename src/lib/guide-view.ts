@@ -56,7 +56,7 @@ export const STACKS_UP_TO = 0.55;
  * Cards in order, grouped into columns: small cards stacked while they fit in one column,
  * bigger cards each on their own.
  */
-export function packColumns(sizes: number[], room = 1): number[][] {
+export function packColumns(sizes: number[], room = 1, most = Infinity): number[][] {
   const out: number[][] = [];
   let col: number[] = [];
   let used = 0;
@@ -68,7 +68,7 @@ export function packColumns(sizes: number[], room = 1): number[][] {
       used = 0;
       return;
     }
-    if (col.length && used + size > room) {
+    if (col.length && (used + size > room || col.length >= most)) {
       out.push(col);
       col = [];
       used = 0;
