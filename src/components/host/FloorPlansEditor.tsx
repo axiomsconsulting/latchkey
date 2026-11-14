@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeftRight,
+  RotateCw,
   Eye,
   MoveDiagonal2,
   Check,
@@ -40,7 +41,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -51,6 +54,8 @@ import {
   AREA_WORDS,
   ITEM_KINDS,
   ITEM_WORDS,
+  ITEM_CATEGORIES,
+  FURNITURE,
   snapPoint,
   itemPlace,
   areaAt,
@@ -383,6 +388,9 @@ const GROUPS: Array<[keyof typeof copy.groups, Tool[]]> = [
 /** Lines finished after two taps; the rest (stairs, curtains, private lines, shapes) need Finish. */
 const TWO_TAP: Tool[] = ["door", "opening", "steps", "barred", "radiator"];
 
+/** Items by category in the pickers. */
+const ITEM_GROUPS = ITEM_CATEGORIES.map((c) => ({ label: c.label, values: c.kinds as string[] }));
+
 /** The host's chosen plan width in the editor, on this device. */
 const PLAN_WIDTH_KEY = "latchkey.planWidth";
 
@@ -552,7 +560,11 @@ function FloorMapEditor({
     if (near(pins.lift)) return { type: "lift", id: "lift" };
     const pin = Object.entries(pins.rooms ?? {}).find(([, q]) => near(q));
     if (pin) return { type: "pin", id: pin[0] };
-    const it = items.find((i) => Math.hypot(i.at.x - p.x, i.at.y - p.y) < 0.025);
+    const it =
+      items.find((i) => Math.hypot(i.at.x - p.x, i.at.y - p.y) < 0.025) ??
+      items.find(
+        (i) => i.w && i.h && Math.abs(p.x - i.at.x) <= i.w / 2 && Math.abs(p.y - i.at.y) <= i.h / 2,
+      );
     if (it) return { type: "item", id: it.id };
     const ln = lines.find(
       (l) => edgeDist(p, [...l.pts, ...[...l.pts].reverse().slice(1, -1)]) < 0.015,
@@ -591,7 +603,14 @@ function FloorMapEditor({
       return;
     }
     if (tool === "item") {
-      const it: Item = { id: markId(), kind: itemKind, at: p, note: "" };
+      const f = FURNITURE[itemKind];
+      const it: Item = {
+        id: markId(),
+        kind: itemKind,
+        at: p,
+        note: "",
+        ...(f ? { w: f.w, h: f.h } : {}),
+      };
       setPins((x) => ({ ...x, items: [...(x.items ?? []), it] }));
       setSel({ type: "item", id: it.id });
       return;
@@ -622,6 +641,19 @@ function FloorMapEditor({
       else if (h.kind === "lift") setPinsRaw((x) => ({ ...x, lift: p }));
       else if (h.kind === "pin")
         setPinsRaw((x) => ({ ...x, rooms: { ...(x.rooms ?? {}), [h.id]: p } }));
+      else if (h.kind === "item" && h.index === 1)
+        setPinsRaw((x) => ({
+          ...x,
+          items: (x.items ?? []).map((i) =>
+            i.id === h.id
+              ? {
+                  ...i,
+                  w: Math.round(Math.max(0.01, Math.abs(p.x - i.at.x) * 2) * 1000) / 1000,
+                  h: Math.round(Math.max(0.01, Math.abs(p.y - i.at.y) * 2) * 1000) / 1000,
+                }
+              : i,
+          ),
+        }));
       else if (h.kind === "item") patch<Item>("items", h.id, { at: p });
       else if (h.kind === "area")
         setPinsRaw((x) => ({
@@ -834,7 +866,20 @@ function FloorMapEditor({
     : selLine
       ? selLine.pts.map((p, i) => ({ kind: "line", id: selLine.id, index: i, p }))
       : selItem
-        ? [{ kind: "item", id: selItem.id, index: 0, p: selItem.at }]
+        ? [
+            { kind: "item", id: selItem.id, index: 0, p: selItem.at },
+            // Furniture: the bottom-right corner resizes it (from its centre).
+            ...(selItem.w && selItem.h
+              ? [
+                  {
+                    kind: "item" as const,
+                    id: selItem.id,
+                    index: 1,
+                    p: { x: selItem.at.x + selItem.w / 2, y: selItem.at.y + selItem.h / 2 },
+                  },
+                ]
+              : []),
+          ]
         : selPoint && sel
           ? [{ kind: sel.type, id: sel.id, index: 0, p: selPoint }]
           : [];
@@ -1020,6 +1065,7 @@ function FloorMapEditor({
               label={copy.itemToPlace}
               value={itemKind}
               options={ITEM_KINDS.map((k) => [k, cap(ITEM_WORDS[k])])}
+              groups={ITEM_GROUPS}
               onChange={(v) => setItemKind(v as ItemKind)}
             />
           ) : null}
@@ -1440,9 +1486,37 @@ function FloorMapEditor({
             label={copy.itemKind}
             value={selItem.kind}
             options={ITEM_KINDS.map((k) => [k, cap(ITEM_WORDS[k])])}
-            onChange={(v) => patch<Item>("items", selItem.id, { kind: v as ItemKind })}
+            groups={ITEM_GROUPS}
+            onChange={(v) => {
+              const k = v as ItemKind;
+              const f = FURNITURE[k];
+              setPins((p) => ({
+                ...p,
+                items: (p.items ?? []).map((i) => {
+                  if (i.id !== selItem.id) return i;
+                  const { w: _w, h: _h, ...rest } = i;
+                  return f
+                    ? { ...rest, kind: k, w: i.w ?? f.w, h: i.h ?? f.h }
+                    : { ...rest, kind: k };
+                }),
+              }));
+            }}
             block
           />
+          {selItem.w && selItem.h ? (
+            <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
+              <p className="text-sm text-muted-foreground">{copy.furnitureHelp}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  patch<Item>("items", selItem.id, { w: selItem.h ?? 0.05, h: selItem.w ?? 0.05 })
+                }
+              >
+                <RotateCw className="size-4" /> {copy.turn}
+              </Button>
+            </div>
+          ) : null}
           <div className="space-y-1">
             <Label>{copy.itemNote}</Label>
             <Input
@@ -1545,12 +1619,15 @@ function KindSelect({
   options,
   onChange,
   block,
+  groups,
 }: {
   label: string;
   value: string;
   options: Array<[string, string]>;
   onChange: (v: string) => void;
   block?: boolean;
+  /** Shown in groups with headings (the item list by category). */
+  groups?: Array<{ label: string; values: string[] }>;
 }) {
   return (
     <div className={cn(block ? "space-y-1" : "flex items-center gap-2")}>
@@ -1560,11 +1637,22 @@ function KindSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {options.map(([v, l]) => (
-            <SelectItem key={v} value={v}>
-              {l}
-            </SelectItem>
-          ))}
+          {groups
+            ? groups.map((g) => (
+                <SelectGroup key={g.label}>
+                  <SelectLabel>{g.label}</SelectLabel>
+                  {g.values.map((v) => (
+                    <SelectItem key={v} value={v}>
+                      {options.find((o) => o[0] === v)?.[1] ?? v}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))
+            : options.map(([v, l]) => (
+                <SelectItem key={v} value={v}>
+                  {l}
+                </SelectItem>
+              ))}
         </SelectContent>
       </Select>
     </div>

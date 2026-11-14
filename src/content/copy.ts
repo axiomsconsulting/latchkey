@@ -6247,6 +6247,8 @@ export const guideExtrasAdminCopy = branded({
   dragHelp: "Drag the selected mark to move it, or use the handle.",
   resize: "Drag to make the plan bigger or smaller; double-tap to fit the screen again",
   seeThrough: "See the plan through areas",
+  furnitureHelp: "Drag the corner handle to resize it.",
+  turn: "Turn",
   plansSaved: "Floor saved.",
 });
 
