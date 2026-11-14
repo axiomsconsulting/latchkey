@@ -1168,7 +1168,7 @@ export function heatingWords(floor: MapFloor, area: Area, door: Point, heading: 
 
 export type HouseNotes = {
   /** Shared spaces guests may use, with what's in them. */
-  shared: Array<{ name: string; level: number; items: string[] }>;
+  shared: Array<{ name: string; level: number; items: string[]; kind?: AreaKind }>;
   /** Areas guests may not go into. */
   private: Array<{ name: string; level: number }>;
   /** Barred doors, curtains and private lines, where they are. */
@@ -1213,6 +1213,7 @@ export function houseNotes(floors: MapFloor[], roomNames: Record<string, string>
         notes.shared.push({
           name: nameOf(a, roomNames),
           level: f.level,
+          kind: a.kind,
           items: inHere.map(itemText),
         });
       if (a.access === "private" || (a.access === "shared" && !open))
@@ -1764,3 +1765,31 @@ export function snapAreas(areas: Area[], tol = SNAP): Area[] {
 
 /** The note on items the plan reader suggested rather than saw. */
 export const SUGGESTED = "Suggested: check it's there, then move or remove it";
+
+/**
+ * Private parts of the house in a sentence per floor (guests don't need each name): "A private
+ * area on the ground floor", "Several private areas on the first floor". Barriers count too.
+ */
+export function privateLines(n: HouseNotes | null | undefined): string[] {
+  if (!n) return [];
+  const by = new Map<number, number>();
+  for (const p of n.private) by.set(p.level, (by.get(p.level) ?? 0) + 1);
+  return [...by.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([level, count]) =>
+      count === 1
+        ? `A private area on the ${levelName(level)}`
+        : `Several private areas on the ${levelName(level)}`,
+    );
+}
+
+/** Which card a thing belongs to for the guest: in their room, comfort, or safety. */
+export function amenityGroup(a: {
+  kind: ItemKind;
+  yours: boolean;
+}): "yours" | "comfort" | "safety" {
+  if (a.yours) return "yours";
+  return ITEM_CATEGORIES.find((c) => c.kinds.includes(a.kind))?.id === "safety"
+    ? "safety"
+    : "comfort";
+}

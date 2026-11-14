@@ -6071,6 +6071,15 @@ export const guideExtrasCopy = branded({
     guestRoom: "Other guests' rooms",
   },
   yourFloor: "Your floor",
+  cards: {
+    getThere: "Getting to your room",
+    inRoom: "In your room",
+    comfort: "Comfort and convenience",
+    safety: "Safety",
+    spaces: "Spaces you can use",
+    private: "Private areas",
+    privateNote: "Please don't go past a closed door, curtain or line marked private.",
+  },
 });
 
 export const guideExtrasAdminCopy = branded({

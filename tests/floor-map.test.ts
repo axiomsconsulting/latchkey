@@ -205,7 +205,12 @@ describe("floor map", () => {
   it("says what guests may use and what's private", () => {
     const n = houseNotes(floors);
     expect(n.shared).toEqual([
-      { name: "kitchenette", level: 0, items: ["fridge", "cutlery (drawer by the sink)"] },
+      {
+        name: "kitchenette",
+        level: 0,
+        kind: "kitchenette",
+        items: ["fridge", "cutlery (drawer by the sink)"],
+      },
     ]);
     expect(n.private.map((p) => p.name)).toEqual(["lounge", "Owner's room"]);
     expect(n.barriers[0]).toMatch(/A curtain .* first floor marks a private area/);
