@@ -43,7 +43,10 @@ export function FloorMapView({
   children,
   svgProps,
   fitHeight,
+  mask = true,
 }: {
+  /** Areas cover the plan picture under them (false: see the plan through them). */
+  mask?: boolean;
   /** Never taller than this (a CSS length, e.g. "70dvh"): the plan narrows to keep its shape. */
   fitHeight?: string;
   url: string | null;
@@ -129,6 +132,16 @@ export function FloorMapView({
             <path d="M0,0 L10,5 L0,10 z" fill="#16a34a" />
           </marker>
         </defs>
+        {mask
+          ? areas.map((a, i) => (
+              <polygon
+                key={`mask-${a.id ?? i}`}
+                points={poly(a.poly)}
+                fill="rgba(255,255,255,0.94)"
+                stroke="none"
+              />
+            ))
+          : null}
         {areas.map((a, i) => (
           <polygon
             key={a.id ?? i}

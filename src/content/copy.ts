@@ -6233,8 +6233,8 @@ export const guideExtrasAdminCopy = branded({
   readAi: "Read the plan for me",
   reading: "Reading the plan…",
   aiReplace: "Replace what's drawn on this floor with what Latchkey reads from the plan?",
-  aiDone: (n: number) =>
-    `${n} ${n === 1 ? "area" : "areas"} found. Check each one (and who may use it), then Save.`,
+  aiDone: (n: number, items = 0) =>
+    `${n} ${n === 1 ? "area" : "areas"}${items ? ` and ${items} ${items === 1 ? "item" : "items"}` : ""} found. Items marked "Suggested" weren't on the plan: keep, move or remove them. Check each area (and who may use it), then Save.`,
   preview: "What guests read",
   previewRoom: "Directions to",
   noDirections:
@@ -6246,6 +6246,7 @@ export const guideExtrasAdminCopy = branded({
   reverse: "Reverse direction",
   dragHelp: "Drag the selected mark to move it, or use the handle.",
   resize: "Drag to make the plan bigger or smaller; double-tap to fit the screen again",
+  seeThrough: "See the plan through areas",
   plansSaved: "Floor saved.",
 });
 

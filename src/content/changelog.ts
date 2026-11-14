@@ -47,6 +47,28 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.171.0",
+    date: "2026-11-14",
+    title: "Floor plans that join up",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Areas drawn on a floor plan now cover the picture under them, so the map reads clearly; \"See the plan through areas\" shows it again while you trace.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Rooms snap together: a corner drawn or dragged near another room joins its corner or wall, so there's no gap between them, and a door drawn between two rooms (even across a small gap) always joins them.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Read the plan for me now follows walls of any shape, joins neighbouring rooms, and adds radiators and the fixtures it can see (sink, hob, fridge…). It also suggests what guests expect (fire extinguisher by the stairs, fire blanket, first aid, bins, fridge, microwave and kettle in kitchenettes), marked \"Suggested\" for you to keep, move or remove.",
+      },
+    ],
+  },
+  {
     version: "0.170.0",
     date: "2026-11-14",
     title: "Edit everything on a floor plan",
