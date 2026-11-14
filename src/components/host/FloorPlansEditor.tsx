@@ -3,6 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeftRight,
+  Sofa,
+  Thermometer,
+  FireExtinguisher,
+  Lamp,
+  WashingMachine,
+  Utensils,
   GripHorizontal,
   PanelLeft,
   RotateCw,
@@ -385,14 +391,11 @@ const GROUPS: Array<[keyof typeof copy.groups, Tool[]]> = [
   ["areas", ["select", "rect", "poly"]],
   ["ways", ["entrance", "door", "opening", "steps", "stairs", "lift"]],
   ["private", ["barred", "curtain", "private"]],
-  ["things", ["radiator", "item"]],
+  ["things", ["item"]],
 ];
 
 /** Lines finished after two taps; the rest (stairs, curtains, private lines, shapes) need Finish. */
 const TWO_TAP: Tool[] = ["door", "opening", "steps", "barred", "radiator"];
-
-/** Items by category in the pickers. */
-const ITEM_GROUPS = ITEM_CATEGORIES.map((c) => ({ label: c.label, values: c.kinds as string[] }));
 
 /** Where the editor's tools sit: beside the plan, or floating over it (wide screens). */
 type BarSide = "left" | "right" | "top" | "bottom" | "float";
@@ -1033,6 +1036,32 @@ function FloorMapEditor({
           )}
         >
           {tools.map((t) => {
+            if (t === "item")
+              return (
+                <ThingPicker
+                  key={t}
+                  value={tool === "radiator" ? "radiator" : itemKind}
+                  active={tool === "item" || tool === "radiator"}
+                  side={
+                    barSide === "right"
+                      ? "left"
+                      : barSide === "top"
+                        ? "bottom"
+                        : barSide === "bottom"
+                          ? "top"
+                          : "right"
+                  }
+                  onPick={(k) => {
+                    setDraft([]);
+                    setSel(null);
+                    if (k === "radiator") setTool("radiator");
+                    else {
+                      setItemKind(k);
+                      setTool("item");
+                    }
+                  }}
+                />
+              );
             const Icon = TOOL_ICON[t];
             return (
               <button
@@ -1218,14 +1247,14 @@ function FloorMapEditor({
               onChange={(v) => setAreaKind(v as AreaKind)}
             />
           ) : null}
-          {tool === "item" ? (
-            <KindSelect
-              label={copy.itemToPlace}
-              value={itemKind}
-              options={ITEM_KINDS.map((k) => [k, cap(ITEM_WORDS[k])])}
-              groups={ITEM_GROUPS}
-              onChange={(v) => setItemKind(v as ItemKind)}
-            />
+          {tool === "item" || tool === "radiator" ? (
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              {(() => {
+                const Icon = tool === "radiator" ? Heater : ITEM_ICON[itemKind];
+                return <Icon className="size-4 text-primary" aria-hidden />;
+              })()}
+              {cap(tool === "radiator" ? "radiator" : ITEM_WORDS[itemKind])}
+            </span>
           ) : null}
           {tool === "entrance" && pins.entrance ? (
             <KindSelect
@@ -1636,27 +1665,27 @@ function FloorMapEditor({
       ) : null}
       {selItem ? (
         <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
-          <KindSelect
-            label={copy.itemKind}
-            value={selItem.kind}
-            options={ITEM_KINDS.map((k) => [k, cap(ITEM_WORDS[k])])}
-            groups={ITEM_GROUPS}
-            onChange={(v) => {
-              const k = v as ItemKind;
-              const f = FURNITURE[k];
-              setPins((p) => ({
-                ...p,
-                items: (p.items ?? []).map((i) => {
-                  if (i.id !== selItem.id) return i;
-                  const { w: _w, h: _h, ...rest } = i;
-                  return f
-                    ? { ...rest, kind: k, w: i.w ?? f.w, h: i.h ?? f.h }
-                    : { ...rest, kind: k };
-                }),
-              }));
-            }}
-            block
-          />
+          <div className="space-y-1 sm:col-span-2">
+            <Label>{copy.itemKind}</Label>
+            <ThingGrid
+              value={selItem.kind}
+              onPick={(v) => {
+                if (v === "radiator") return;
+                const k = v as ItemKind;
+                const f = FURNITURE[k];
+                setPins((p) => ({
+                  ...p,
+                  items: (p.items ?? []).map((i) => {
+                    if (i.id !== selItem.id) return i;
+                    const { w: _w, h: _h, ...rest } = i;
+                    return f
+                      ? { ...rest, kind: k, w: i.w ?? f.w, h: i.h ?? f.h }
+                      : { ...rest, kind: k };
+                  }),
+                }));
+              }}
+            />
+          </div>
           {selItem.w && selItem.h ? (
             <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
               <p className="text-sm text-muted-foreground">{copy.furnitureHelp}</p>
@@ -1810,5 +1839,149 @@ function KindSelect({
         </SelectContent>
       </Select>
     </div>
+  );
+}
+
+/** Each category's icon in the things picker. */
+const CATEGORY_ICON: Record<string, LucideIcon> = {
+  kitchen: Utensils,
+  laundry: WashingMachine,
+  room: Lamp,
+  safety: FireExtinguisher,
+  utilities: Thermometer,
+  furniture: Sofa,
+};
+
+type Thing = ItemKind | "radiator";
+
+/** The categories with their things; radiators (drawn as a line) sit with heating. */
+const THING_GROUPS: Array<{ id: string; label: string; kinds: Thing[] }> = ITEM_CATEGORIES.map(
+  (c) => ({
+    ...c,
+    kinds: c.id === "utilities" ? (["radiator", ...c.kinds] as Thing[]) : c.kinds,
+  }),
+);
+
+const thingIcon = (k: Thing): LucideIcon => (k === "radiator" ? Heater : ITEM_ICON[k]);
+const thingWord = (k: Thing) => cap(k === "radiator" ? "radiator" : ITEM_WORDS[k]);
+
+/**
+ * Things by category, as icons: categories down the left, that category's things on the right.
+ * Names show on hover and to screen readers.
+ */
+function ThingGrid({
+  value,
+  onPick,
+  withRadiator = false,
+}: {
+  value: Thing;
+  onPick: (k: Thing) => void;
+  withRadiator?: boolean;
+}) {
+  const groups = withRadiator
+    ? THING_GROUPS
+    : THING_GROUPS.map((g) => ({ ...g, kinds: g.kinds.filter((k) => k !== "radiator") }));
+  const [cat, setCat] = useState(
+    () => groups.find((g) => g.kinds.includes(value))?.id ?? groups[0]!.id,
+  );
+  const shown = groups.find((g) => g.id === cat) ?? groups[0]!;
+  return (
+    <div className="flex gap-2">
+      <div
+        role="tablist"
+        aria-orientation="vertical"
+        className="flex flex-col gap-1 border-r border-border pr-2"
+      >
+        {groups.map((g) => {
+          const Icon = CATEGORY_ICON[g.id] ?? Package;
+          return (
+            <button
+              key={g.id}
+              type="button"
+              role="tab"
+              aria-selected={cat === g.id}
+              aria-label={g.label}
+              title={g.label}
+              onClick={() => setCat(g.id)}
+              className={cn(
+                "grid size-11 place-items-center rounded-xl sm:size-10",
+                cat === g.id ? "bg-secondary text-primary ring-1 ring-primary" : "hover:bg-muted",
+              )}
+            >
+              <Icon className="size-5" aria-hidden />
+            </button>
+          );
+        })}
+      </div>
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-xs font-medium text-muted-foreground">{shown.label}</p>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-1">
+          {shown.kinds.map((k) => {
+            const Icon = thingIcon(k);
+            return (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={value === k}
+                aria-label={thingWord(k)}
+                title={thingWord(k)}
+                onClick={() => onPick(k)}
+                className={cn(
+                  "grid size-11 place-items-center rounded-xl sm:size-10",
+                  value === k ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+                )}
+              >
+                <Icon className="size-5" aria-hidden />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The toolbar's Things button: shows the thing being placed; opens the picker. */
+function ThingPicker({
+  value,
+  active,
+  side,
+  onPick,
+}: {
+  value: Thing;
+  active: boolean;
+  side: "left" | "right" | "top" | "bottom";
+  onPick: (k: Thing) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const Icon = thingIcon(value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-pressed={active}
+          aria-label={`${copy.groups.things}: ${thingWord(value)}`}
+          title={`${copy.groups.things}: ${thingWord(value)}`}
+          className={cn(
+            "relative grid size-11 shrink-0 place-items-center rounded-xl sm:size-10",
+            active ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+          )}
+        >
+          <Icon className="size-5" aria-hidden />
+          <Package className="absolute bottom-0.5 right-0.5 size-2.5 opacity-70" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side={side} align="start" className="w-[min(20rem,90vw)] p-2">
+        <ThingGrid
+          value={value}
+          withRadiator
+          onPick={(k) => {
+            onPick(k);
+            setOpen(false);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
