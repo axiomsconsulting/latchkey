@@ -6240,6 +6240,12 @@ export const guideExtrasAdminCopy = branded({
   noDirections:
     "Draw the entrance, the rooms and hallways between, and the doors, to see the way to this room.",
   house: "About the house",
+  roomPin: "Room pin",
+  pointHelp: "Drag to move this corner; double-tap to take it out",
+  addPoint: "Add a corner here",
+  reverse: "Reverse direction",
+  dragHelp: "Drag the selected mark to move it, or use the handle.",
+  resize: "Drag to make the plan bigger or smaller; double-tap to fit the screen again",
   plansSaved: "Floor saved.",
 });
 

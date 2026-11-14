@@ -142,6 +142,7 @@ function FindRoom({ d }: { d: NonNullable<Extras["directions"]> }) {
             items={f.items}
             route={f.route}
             routeLabel={f.at ? copy.key.yours : null}
+            fitHeight="65dvh"
             marks={f.marks ?? []}
             at={f.at}
           />
@@ -387,7 +388,7 @@ function PlanViewer({
                 lines={f.lines}
                 items={f.items}
                 marks={f.marks ?? []}
-                className="mx-auto"
+                fitHeight="calc(92dvh - 9rem)"
               />
             </div>
             <PlanKey />

@@ -47,6 +47,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.170.0",
+    date: "2026-11-14",
+    title: "Edit everything on a floor plan",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "On floor plans you can now select, move, change and remove every mark: areas, lines, stairs, items, the entrance, the lift and room pins. Press a selected mark again and drag to move all of it; drag a corner to reshape, tap between corners to add one, double-tap a corner to take it out; reverse a line's direction; Delete removes the selected mark. Save as before.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Floor plans fit the screen to start with. Drag the round handle at the plan's bottom-right corner to make it bigger or smaller (double-tap it to fit again); guests' plans never run taller than their screen.",
+      },
+    ],
+  },
+  {
     version: "0.169.0",
     date: "2026-11-14",
     title: "A clearer receptionist, and AI only where it's needed",
