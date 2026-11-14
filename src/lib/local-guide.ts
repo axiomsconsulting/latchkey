@@ -44,6 +44,8 @@ export type Place = {
   hygieneId?: number | null;
   /** OpenStreetMap's Wikidata link (Q…), for a photo when the place has none of its own. */
   wikidata?: string | null;
+  /** The venue's logo from its own website (shown whole, not cropped), when there's no photo. */
+  logo?: string | null;
 };
 
 export type LocalEvent = {
@@ -911,4 +913,66 @@ export function tileOf(lat: number, lng: number, zoom: number) {
   const r = (lat * Math.PI) / 180;
   const y = ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n;
   return { x: Math.floor(x), y: Math.floor(y), fx: x - Math.floor(x), fy: y - Math.floor(y) };
+}
+
+/** Places saved before road distances, ratings and pictures were read are read again once. */
+export const PLACES_FORMAT_FROM = "2026-11-14";
+export const placesNeedNewFormat = (places: Place[], fetchedAt: string | null) =>
+  places.length > 0 &&
+  !places.some((p) => "walkS" in p || "hygiene" in p || "logo" in p) &&
+  (!fetchedAt || fetchedAt < PLACES_FORMAT_FROM);
+
+const attr = (tag: string, name: string) =>
+  new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i")
+    .exec(tag)
+    ?.slice(1)
+    .find((x) => x !== undefined) ?? null;
+
+const absolute = (u: string | null, base: string): string | null => {
+  if (!u) return null;
+  try {
+    const url = new URL(u.replace(/&amp;/g, "&").trim(), base);
+    return url.protocol === "https:" ? url.toString().slice(0, 400) : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * A venue's own preview picture and logo from its home page: the picture it sets for link
+ * previews (og:image, twitter:image), and its touch icon or largest icon as the logo. Only the
+ * links are kept; the guest's browser loads them from the venue's site.
+ */
+export function previewFromHtml(
+  html: string,
+  base: string,
+): { image: string | null; logo: string | null } {
+  const head = html.slice(0, 200_000);
+  let image: string | null = null;
+  for (const m of head.matchAll(/<meta\b[^>]*>/gi)) {
+    const tag = m[0];
+    const key = (attr(tag, "property") ?? attr(tag, "name") ?? "").toLowerCase();
+    if (["og:image", "og:image:secure_url", "twitter:image", "twitter:image:src"].includes(key)) {
+      image = absolute(attr(tag, "content"), base);
+      if (image) break;
+    }
+  }
+  let logo: string | null = null;
+  let best = -1;
+  for (const m of head.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = m[0];
+    const rel = (attr(tag, "rel") ?? "").toLowerCase();
+    if (!/\b(apple-touch-icon|icon)\b/.test(rel)) continue;
+    const href = absolute(attr(tag, "href"), base);
+    if (!href || /\.ico(\?|$)/i.test(href)) continue;
+    const size = Number(
+      /(\d+)x\d+/.exec(attr(tag, "sizes") ?? "")?.[1] ??
+        (rel.includes("apple") ? 180 : /\.svg/i.test(href) ? 256 : 32),
+    );
+    if (size > best) {
+      best = size;
+      logo = href;
+    }
+  }
+  return { image, logo: best >= 64 ? logo : null };
 }

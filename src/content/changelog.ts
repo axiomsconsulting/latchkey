@@ -47,6 +47,44 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.168.0",
+    date: "2026-11-14",
+    title: "Steadier guide cards, a simpler Wi-Fi card and clearer house plans",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Guide cards are all the same height: two short ones share a column, and longer text scrolls inside its card. Attachments show as up to two small thumbnails (+n for more) that open the viewer, so a swipe always moves the cards.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "The Wi-Fi card is back to one Connect button. On an iPhone it first shows the few steps to expect (download the profile, Allow, Install), then Connect Wi-Fi carries on; on Android it says it copies the password and opens the Wi-Fi list.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "House plans recognise a room from its pin (with its own en-suite and things in it), point each guest to their nearest fridge, microwave, fire blanket and so on (their room first, then shared places on their floor), never to another guest's, label stairs up and down on each floor, end the way with Your room, and use four clearly different colours.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "Places without a photo show their website's own preview picture or logo before falling back to a map. Places saved before ratings and distances were added are read again automatically, so food hygiene ratings appear.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "The starter section about closed times is now called House timings.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin can rename starter guide sections and their descriptions for hosts who sign up from then on; hosts already here keep what they started with.",
+      },
+    ],
+  },
+  {
     version: "0.167.0",
     date: "2026-11-13",
     title: "Around here as tiles, a clearer Wi-Fi card and your part of the house",

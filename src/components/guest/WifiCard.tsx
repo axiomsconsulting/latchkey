@@ -4,16 +4,17 @@ import { Copy, KeyRound, Lock, Wifi } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { wifiCopy as copy } from "@/content/copy";
 import { inAppBrowser, joinKind, wifiQrText, type JoinKind } from "@/lib/stay-access";
 
 /**
  * The guest page's one Wi-Fi card, in two columns: the network, password and the way to join
  * on the left, the Wi-Fi code on the right (for anyone else's phone or laptop: the camera offers
- * Join in one tap). A web page can't join a network itself on any phone, so on this device:
- * iPhone and iPad copy the password (Settings → Wi-Fi → paste), with the Apple profile as a
- * second way; Android copies it and opens the Wi-Fi panel. When the host keeps the password
- * until check-in, it says so and offers check-in instead.
+ * Join in one tap). On a phone, Connect opens a short list of what will happen first (iPhone:
+ * the Wi-Fi profile, Allow, Settings → Install; Android: the password is copied and the Wi-Fi
+ * list opens), so nothing surprises the guest, then Connect Wi-Fi carries on. When the host keeps
+ * the password until check-in, it says so and offers check-in instead.
  */
 export function WifiCard({
   wifi,
@@ -29,6 +30,7 @@ export function WifiCard({
 }) {
   const [kind, setKind] = useState<JoinKind>("other");
   const [inApp, setInApp] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     setKind(joinKind(navigator.userAgent));
     setInApp(inAppBrowser(navigator.userAgent));
@@ -95,29 +97,10 @@ export function WifiCard({
                 </a>
               </Button>
             </div>
-          ) : kind === "ios" ? (
-            <div className="space-y-1.5">
-              {wifi.password ? (
-                <Button size="lg" onClick={() => void copyPassword()}>
-                  <Copy /> {copy.iosCopy}
-                </Button>
-              ) : null}
-              <p className="text-sm text-muted-foreground">{copy.iosHelp(wifi.name)}</p>
-              <a href={profileUrl} className="inline-block text-sm text-primary underline">
-                {copy.iosProfile}
-              </a>
-              {inApp ? <p className="text-sm font-medium">{copy.inApp}</p> : null}
-            </div>
-          ) : kind === "android" ? (
-            <div className="space-y-1.5">
-              <Button size="lg" onClick={() => void android()}>
-                <Wifi /> {copy.join}
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                {wifi.password ? copy.androidHelp : copy.androidOpenHelp}
-              </p>
-              {inApp ? <p className="text-sm font-medium">{copy.inApp}</p> : null}
-            </div>
+          ) : kind !== "other" ? (
+            <Button size="lg" onClick={() => setOpen(true)}>
+              <Wifi /> {copy.connect}
+            </Button>
           ) : (
             <p className="text-sm text-muted-foreground">{copy.qrHelpComputer}</p>
           )}
@@ -129,14 +112,42 @@ export function WifiCard({
               label={copy.qrAlt(wifi.name)}
               className="size-32 min-[400px]:size-40 sm:size-48"
             />
-            {kind !== "other" ? (
-              <figcaption className="max-w-[10rem] text-xs text-muted-foreground sm:max-w-[12rem]">
-                {copy.qrHelp}
-              </figcaption>
-            ) : null}
           </figure>
         ) : null}
       </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md space-y-3">
+          <DialogTitle>{copy.connectTitle(wifi.name)}</DialogTitle>
+          <ol className="list-decimal space-y-1.5 pl-5 text-base">
+            {(kind === "ios"
+              ? copy.iosSteps(wifi.name)
+              : copy.androidSteps(wifi.name, !!wifi.password)
+            ).map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          {kind === "ios" ? <p className="text-sm text-muted-foreground">{copy.iosSafe}</p> : null}
+          {inApp ? <p className="text-sm font-medium">{copy.inApp}</p> : null}
+          {kind === "ios" ? (
+            <Button asChild size="lg" className="w-full">
+              <a href={profileUrl} onClick={() => setOpen(false)}>
+                <Wifi /> {copy.connectWifi}
+              </a>
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                setOpen(false);
+                void android();
+              }}
+            >
+              <Wifi /> {copy.connectWifi}
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

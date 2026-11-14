@@ -61,7 +61,7 @@ export const SECTIONS: { key: BuiltInKey; title: string; hint: string }[] = [
   { key: "quiet", title: "Quiet hours", hint: "Anything to add to your quiet hours." },
   {
     key: "unavailable",
-    title: "Times the house is unavailable",
+    title: "House timings",
     hint: "Cleaning windows when rooms or shared spaces are closed.",
   },
   {
@@ -462,8 +462,75 @@ export function startersOffFor(
   });
 }
 
+/** A starter's name and description as Latchkey admin set it, from `at` on. */
+export type StarterName = { title: string; hint: string; at: string };
+
+/** Each starter's names over time, oldest first (at most 10 kept per section). */
+function normaliseNames(raw: unknown): Record<string, StarterName[]> {
+  const out: Record<string, StarterName[]> = {};
+  const keys = new Set<string>(SECTIONS.map((s) => s.key));
+  for (const [k, v] of Object.entries(
+    (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>,
+  )) {
+    if (!keys.has(k) || !Array.isArray(v)) continue;
+    const list = v
+      .map((x) => (x && typeof x === "object" ? (x as Record<string, unknown>) : {}))
+      .filter((x) => typeof x["at"] === "string" && Number.isFinite(Date.parse(x["at"] as string)))
+      .map((x) => ({
+        title: typeof x["title"] === "string" ? (x["title"] as string).trim().slice(0, 60) : "",
+        hint: typeof x["hint"] === "string" ? (x["hint"] as string).trim().slice(0, 200) : "",
+        at: x["at"] as string,
+      }))
+      .filter((x) => x.title)
+      .sort((a, b) => a.at.localeCompare(b.at))
+      .slice(-10);
+    if (list.length) out[k] = list;
+  }
+  return out;
+}
+
+/**
+ * The starter names a host sees: the newest name Latchkey admin set before the host signed up
+ * (hosts already here keep what they started with), else the built-in one.
+ */
+export function starterNamesFor(
+  names: Record<string, StarterName[]> | null | undefined,
+  hostCreatedAt: string | null | undefined,
+): Record<string, { title: string; hint: string }> {
+  const out: Record<string, { title: string; hint: string }> = {};
+  const since = hostCreatedAt ? Date.parse(hostCreatedAt) : NaN;
+  if (!Number.isFinite(since)) return out;
+  for (const s of SECTIONS) {
+    const pick = [...(names?.[s.key] ?? [])].reverse().find((n) => Date.parse(n.at) <= since);
+    if (pick) out[s.key] = { title: pick.title, hint: pick.hint || s.hint };
+  }
+  return out;
+}
+
+/** Built-in sections renamed for this host (custom ones keep the host's words). */
+export function withStarterNames<T extends { key: string; title: string; hint?: string }>(
+  list: T[],
+  names: Record<string, { title: string; hint: string }>,
+): T[] {
+  return list.map((x) =>
+    !isCustom(x.key) && names[x.key]
+      ? {
+          ...x,
+          title: names[x.key]!.title,
+          ...(x.hint !== undefined ? { hint: names[x.key]!.hint } : {}),
+        }
+      : x,
+  );
+}
+
 /** The super admin's starter settings, safe against anything stored; at least one starter always stays. */
-export function normaliseStarters(raw: unknown): { removed: Record<string, string> } {
+export function normaliseStarters(raw: unknown): {
+  removed: Record<string, string>;
+  names: Record<string, StarterName[]>;
+} {
+  const names = normaliseNames(
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>)["names"] : null,
+  );
   const r = (
     raw && typeof raw === "object" ? (raw as Record<string, unknown>)["removed"] : null
   ) as Record<string, unknown> | null;
@@ -473,5 +540,5 @@ export function normaliseStarters(raw: unknown): { removed: Record<string, strin
     if (keys.has(k) && typeof v === "string" && Number.isFinite(Date.parse(v))) removed[k] = v;
   // Never every starter: the first one still offered stays.
   if (Object.keys(removed).length >= SECTIONS.length) delete removed[SECTIONS[0]!.key];
-  return { removed };
+  return { removed, names };
 }

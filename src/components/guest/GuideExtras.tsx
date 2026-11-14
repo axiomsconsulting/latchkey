@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { FloorMapView } from "@/components/FloorMapView";
+import { AREA_FILL } from "@/components/floor-map-look";
 import { AttachmentViewer } from "@/components/guest/GuideAttachments";
 import type { ExtraCard } from "@/components/guest/GuideSections";
 import { INFO_ICON } from "@/components/guest/info-icons";
@@ -83,13 +84,13 @@ function cardsFor(d: Extras): ExtraCard[] {
       body: <PropertyInfo items={d.info} />,
     });
   // Around the house and Around here are sections of their own, after the guide's cards.
-  if (d.house || d.plans.length)
+  if (d.house || d.plans.length || d.amenities.length)
     out.push({
       key: "house",
       title: copy.houseTitle,
       Icon: House,
       lead: copy.houseLead,
-      body: <AroundTheHouse n={d.house} plans={d.plans} />,
+      body: <AroundTheHouse n={d.house} plans={d.plans} amenities={d.amenities} />,
       own: true,
     });
   if (d.local && (d.local.places.length || d.local.events.length))
@@ -140,6 +141,8 @@ function FindRoom({ d }: { d: NonNullable<Extras["directions"]> }) {
             lines={f.lines}
             items={f.items}
             route={f.route}
+            routeLabel={f.at ? copy.key.yours : null}
+            marks={f.marks ?? []}
             at={f.at}
           />
         </figure>
@@ -149,9 +152,10 @@ function FindRoom({ d }: { d: NonNullable<Extras["directions"]> }) {
           <Key colour="#16a34a" dashed>
             {copy.key.route}
           </Key>
-          <Key colour="rgba(22,163,74,0.45)">{copy.key.yours}</Key>
-          <Key colour="rgba(220,38,38,0.35)">{copy.key.private}</Key>
-          <Key colour="rgba(37,99,235,0.25)">{copy.key.shared}</Key>
+          <Key colour={AREA_FILL["yours"]!}>{copy.key.yours}</Key>
+          <Key colour={AREA_FILL["open"]!}>{copy.key.shared}</Key>
+          <Key colour={AREA_FILL["guest_room"]!}>{copy.key.guestRoom}</Key>
+          <Key colour="rgba(185,28,28,0.45)">{copy.key.private}</Key>
         </p>
       ) : null}
       {d.heating.length ? (
@@ -197,7 +201,15 @@ const planName = (f: Extras["plans"][number]) =>
  * opened large like any other picture; the spaces they can use with what's in them; one line
  * for the rest being private; and where useful things are.
  */
-function AroundTheHouse({ n, plans }: { n: Extras["house"]; plans: Extras["plans"] }) {
+function AroundTheHouse({
+  n,
+  plans,
+  amenities,
+}: {
+  n: Extras["house"];
+  plans: Extras["plans"];
+  amenities: Extras["amenities"];
+}) {
   const [open, setOpen] = useState<number | null>(null);
   const privateCount = (n?.private.length ?? 0) + (n?.barriers.length ?? 0);
   return (
@@ -223,6 +235,7 @@ function AroundTheHouse({ n, plans }: { n: Extras["house"]; plans: Extras["plans
                   areas={f.areas}
                   lines={f.lines}
                   items={f.items}
+                  marks={f.marks ?? []}
                 />
                 {plans.length > 1 || f.yours ? (
                   <span className="flex items-center gap-1.5 text-xs font-medium">
@@ -257,7 +270,19 @@ function AroundTheHouse({ n, plans }: { n: Extras["house"]; plans: Extras["plans
       {privateCount ? (
         <p className="text-muted-foreground">{copy.privateSummary(plans.length || 1)}</p>
       ) : null}
-      {n?.useful.length ? (
+      {amenities.length ? (
+        <div>
+          <p className="font-medium">{copy.nearest}</p>
+          <ul className="mt-1 space-y-0.5">
+            {amenities.map((a) => (
+              <li key={a.kind}>
+                <span className="font-medium capitalize">{a.what}</span>{" "}
+                <span className="text-muted-foreground">{a.where}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : n?.useful.length ? (
         <div>
           <p className="font-medium">{copy.useful}</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
@@ -275,10 +300,10 @@ function AroundTheHouse({ n, plans }: { n: Extras["house"]; plans: Extras["plans
 function PlanKey() {
   return (
     <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      <Key colour="rgba(22,163,74,0.45)">{copy.key.yoursAll}</Key>
-      <Key colour="rgba(37,99,235,0.35)">{copy.key.shared}</Key>
-      <Key colour="rgba(100,116,139,0.25)">{copy.key.guestRoom}</Key>
-      <Key colour="rgba(220,38,38,0.35)">{copy.key.private}</Key>
+      <Key colour={AREA_FILL["yours"]!}>{copy.key.yoursAll}</Key>
+      <Key colour={AREA_FILL["open"]!}>{copy.key.shared}</Key>
+      <Key colour={AREA_FILL["guest_room"]!}>{copy.key.guestRoom}</Key>
+      <Key colour="rgba(185,28,28,0.45)">{copy.key.private}</Key>
     </p>
   );
 }
@@ -361,6 +386,7 @@ function PlanViewer({
                 areas={f.areas}
                 lines={f.lines}
                 items={f.items}
+                marks={f.marks ?? []}
                 className="mx-auto"
               />
             </div>
@@ -578,14 +604,11 @@ function AroundHere({
                   className="flex flex-col overflow-hidden rounded-xl border border-border bg-card text-sm"
                 >
                   <div className="relative aspect-[4/3] bg-muted">
-                    {p.image ? (
-                      <Photo
-                        src={p.image}
-                        fallback={located ? <MapThumb lat={p.lat} lng={p.lng} /> : null}
-                      />
-                    ) : located ? (
-                      <MapThumb lat={p.lat} lng={p.lng} />
-                    ) : null}
+                    {(() => {
+                      const map = located ? <MapThumb lat={p.lat} lng={p.lng} /> : null;
+                      const logo = p.logo ? <Logo src={p.logo} fallback={map} /> : map;
+                      return p.image ? <Photo src={p.image} fallback={logo} /> : logo;
+                    })()}
                     {p.pick ? (
                       <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground shadow">
                         <Star className="size-3" aria-hidden />
@@ -692,6 +715,24 @@ function Photo({ src, fallback = null }: { src: string; fallback?: React.ReactNo
       onError={() => setBroken(true)}
       className="absolute inset-0 size-full object-cover"
     />
+  );
+}
+
+/** A venue's logo from its website, whole on a light background; the fallback if it doesn't load. */
+function Logo({ src, fallback = null }: { src: string; fallback?: React.ReactNode }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <>{fallback}</>;
+  return (
+    <div className="absolute inset-0 grid place-items-center bg-white p-6">
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+        className="max-h-full max-w-full object-contain"
+      />
+    </div>
   );
 }
 

@@ -10,8 +10,11 @@ import {
   houseNotes,
   inside,
   nameOf,
+  amenitiesFor,
   reachableAreas,
   sharedEdge,
+  stairMarks,
+  type Amenity,
   sortFloors,
   type HouseNotes,
   type Point,
@@ -25,6 +28,8 @@ import {
   guestLocal,
   hygieneUrl,
   keepEvents,
+  placesNeedNewFormat,
+  previewFromHtml,
   usesMiles,
   nominatimUrl,
   readRouteTable,
@@ -257,9 +262,35 @@ async function enrichPlaces(
       // The map picture stands in.
     }
   }
+  // The venue's own website: its link-preview picture, else its logo (only the links are kept).
+  {
+    const todo = out.filter((p) => !p.image && p.website).slice(0, 40);
+    const found = new Map<string, { image: string | null; logo: string | null }>();
+    for (let i = 0; i < todo.length; i += 4)
+      await Promise.all(
+        todo.slice(i, i + 4).map(async (p) => {
+          try {
+            const res = await fetch(p.website!, {
+              headers: { "User-Agent": ua(), Accept: "text/html" },
+              redirect: "follow",
+              signal: AbortSignal.timeout(5000),
+            });
+            if (!res.ok || !/html/i.test(res.headers.get("content-type") ?? "")) return;
+            const html = (await res.text()).slice(0, 200_000);
+            found.set(p.id, previewFromHtml(html, res.url || p.website!));
+          } catch {
+            // No preview: the map stands in.
+          }
+        }),
+      );
+    out = out.map((p) => {
+      const f = found.get(p.id);
+      return f ? { ...p, image: p.image ?? f.image, logo: f.logo } : p;
+    });
+  }
   if (country === "GB") {
     try {
-      const res = await fetch(hygieneUrl(at, 1), {
+      const res = await fetch(hygieneUrl(at, 2), {
         headers: { "x-api-version": "2", Accept: "application/json", "User-Agent": ua() },
         signal: AbortSignal.timeout(15_000),
       });
@@ -403,7 +434,10 @@ export async function placesFor(propertyId: string): Promise<{
     return data;
   };
   let row = await read();
-  const placesStale = !row || Date.now() - Date.parse(row.fetched_at) > WEEK;
+  const placesStale =
+    !row ||
+    Date.now() - Date.parse(row.fetched_at) > WEEK ||
+    placesNeedNewFormat(Array.isArray(row.places) ? row.places : [], row.fetched_at);
   const eventsStale = !row?.events_at || Date.now() - Date.parse(row.events_at) > DAY;
   if (placesStale || eventsStale) {
     await Promise.race([
@@ -494,6 +528,8 @@ export type GuestFloor = {
   building?: string;
   /** The guest's room is on this floor. */
   yours?: boolean;
+  /** Stairs up or down from here, and where stairs from other floors arrive. */
+  marks?: Array<{ at: Point; text: string }>;
 };
 
 export type GuestExtras = {
@@ -516,6 +552,8 @@ export type GuestExtras = {
    * rooms) shaded without a name.
    */
   plans: GuestFloor[];
+  /** The nearest fridge, microwave, fire blanket… for this guest (their room first, then shared). */
+  amenities: Amenity[];
 };
 
 /** The property's room names (for naming bedrooms on the map). */
@@ -533,6 +571,7 @@ async function roomNamesFor(sb: any, propertyId: string): Promise<Record<string,
 export async function extrasFor(
   propertyId: string,
   room: { id: string; name: string } | null,
+  opts: { directions?: boolean } = {},
 ): Promise<GuestExtras> {
   const sb = await db();
   const { data: p } = await sb
@@ -540,7 +579,7 @@ export async function extrasFor(
     .select("id, timezone, country_code, property_info, local_guide")
     .eq("id", propertyId)
     .maybeSingle();
-  if (!p) return { info: [], local: null, directions: null, house: null, plans: [] };
+  if (!p) return { info: [], local: null, directions: null, house: null, plans: [], amenities: [] };
   const items = normalisePropertyInfo(p.property_info, propertyId);
   const g = normaliseLocalGuide(p.local_guide);
   const [links, near, plans, names] = await Promise.all([
@@ -593,6 +632,7 @@ export async function extrasFor(
       room: null,
       at: null,
       yours: mine.size > 0,
+      marks: stairMarks(floorsMapped, f.id),
       areas: f.map.areas.map((a) => {
         const own = mine.has(a.id);
         const open = !own && canUse(a);
@@ -626,7 +666,7 @@ export async function extrasFor(
     };
   });
   let directions: GuestExtras["directions"] = null;
-  if (room) {
+  if (room && opts.directions !== false) {
     const d = directionsTo(plans as FloorPlan[], room.id, room.name, names);
     if (d) {
       // Each floor the way crosses (or just the room's floor, with the older marks).
@@ -645,13 +685,14 @@ export async function extrasFor(
         route: d.route?.find((r) => r.planId === x.id)?.points ?? null,
         room: x.id === d.planId ? (d.area ?? null) : null,
         at: x.id === d.planId ? d.at : null,
-        areas: (x.pins.areas ?? []).map((a) => ({
+        areas: (floorsMapped.find((m) => m.id === x.id)?.map.areas ?? []).map((a) => ({
           poly: a.poly,
-          access: a.roomId === room.id ? "yours" : a.access,
+          access: a.roomId === room.id ? "yours" : a.access === "shared" ? "open" : a.access,
           kind: a.kind,
         })),
         lines: (x.pins.lines ?? []).map((l) => ({ kind: l.kind, pts: l.pts })),
         items: (x.pins.items ?? []).map((i) => ({ kind: i.kind, at: i.at })),
+        marks: stairMarks(floorsMapped, x.id),
       }));
       directions = {
         steps: d.steps,
@@ -679,5 +720,6 @@ export async function extrasFor(
     directions,
     house,
     plans: planList,
+    amenities: amenitiesFor(floorsMapped, room?.id ?? null, names),
   };
 }

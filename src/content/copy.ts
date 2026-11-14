@@ -3259,10 +3259,26 @@ export const wifiCopy = branded({
   join: "Join Wi-Fi",
   inApp:
     "Opened from inside another app? If Join does nothing, open this page in Safari or Chrome (the ⋯ or share menu → Open in browser) and tap Join there.",
-  iosCopy: "Copy password",
-  iosHelp: (name: string) =>
-    `Then open Settings → Wi-Fi, tap ${name} and paste. iPhones don't let a web page join Wi-Fi for you.`,
-  iosProfile: "Or add it as a Wi-Fi profile",
+  connect: "Connect",
+  connectWifi: "Connect Wi-Fi",
+  connectTitle: (name: string) => `Connect to ${name}`,
+  iosSteps: (name: string) => [
+    "Tap Connect Wi-Fi below.",
+    "Your iPhone asks to download a configuration profile: tap Allow.",
+    "Open Settings and tap Profile Downloaded near the top.",
+    "Tap Install, enter your iPhone passcode, then tap Install again.",
+    `You're connected to ${name}, now and whenever you're here.`,
+  ],
+  iosSafe:
+    "It's safe: it only adds this Wi-Fi network. You can remove it any time in Settings → General → VPN & Device Management.",
+  androidSteps: (name: string, password: boolean) =>
+    password
+      ? [
+          "Tap Connect Wi-Fi below: we copy the password and open your Wi-Fi list.",
+          `Tap ${name}.`,
+          "Paste the password and tap Connect.",
+        ]
+      : ["Tap Connect Wi-Fi below: your Wi-Fi list opens.", `Tap ${name}.`],
   androidHelp: "We'll copy the password and open your Wi-Fi: pick the network and paste it.",
   androidOpenHelp: "We'll open your Wi-Fi: pick the network.",
   qrHelp: "Another phone or a laptop? Point its camera at the code and tap Join.",
@@ -4873,7 +4889,11 @@ export const menuAdminCopy = branded({
 
 export const starterAdminCopy = branded({
   title: "Starter guide sections",
-  help: "Every new host starts their stay guide with these sections. Turning one off only affects hosts who sign up from now on: hosts already here keep theirs, and can still add it themselves. At least one starter always stays.",
+  help: "Every new host starts their stay guide with these sections. Changing a name or description, or turning one off, only affects hosts who sign up from now on: hosts already here keep what they started with, and can still add a section themselves. At least one starter always stays.",
+  name: "Section name",
+  description: "What the host is told it's for",
+  saveName: "Save for new hosts",
+  renamed: "Saved: hosts who sign up from now on see this name",
   badge: "Starter",
   offered: "Offered to new hosts",
   saved: "Saved for new hosts",
@@ -6041,6 +6061,7 @@ export const guideExtrasCopy = branded({
   plansMany: "The plans",
   openPlan: (floor: string) => `Open the plan of the ${floor}`,
   useful: "Good to know",
+  nearest: "Nearest to you",
   key: {
     route: "Your way",
     yours: "Your room",
@@ -6205,6 +6226,9 @@ export const guideExtrasAdminCopy = branded({
   } as Record<string, string>,
   count: "Number of steps (optional)",
   itemKind: "What it is",
+  itemRoomOnly: (room: string) => `Only for the guest in ${room || "that room"}`,
+  itemShared: "Any guest may use it",
+  itemPrivate: "Private: guests aren't shown it",
   itemNote: "Where exactly (optional), e.g. top drawer left of the sink",
   readAi: "Read the plan for me",
   reading: "Reading the plan…",

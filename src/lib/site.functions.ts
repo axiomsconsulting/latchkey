@@ -221,13 +221,47 @@ export const setStarterSection = createServerFn({ method: "POST" })
     await requireSuperAdmin(context.supabase);
     const { normaliseStarters } = await import("./guide");
     const { starterSettings, forgetStarters } = await import("./guide-starters.server");
-    const { removed } = await starterSettings();
+    const { removed, names } = await starterSettings();
     const next = { ...removed };
     if (data.offered) delete next[data.key];
     else next[data.key] = new Date().toISOString();
-    const clean = normaliseStarters({ removed: next });
+    const clean = normaliseStarters({ removed: next, names });
     if (!data.offered && !clean.removed[data.key])
       throw new Error("Keep at least one starter section for new hosts.");
+    const { error } = await (context.supabase as unknown as Loose)
+      .from("site_settings")
+      .update({ guide_starters: clean, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) throw new Error(error.message);
+    forgetStarters();
+    return { ok: true, ...clean };
+  });
+
+/** Renames a starter section (and its description) for hosts who sign up from now on. Hosts already here keep theirs. */
+export const setStarterName = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        key: z.string().max(40),
+        title: z.string().trim().min(1).max(60),
+        hint: z.string().trim().max(200),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { normaliseStarters, SECTIONS } = await import("./guide");
+    if (!SECTIONS.some((x) => x.key === data.key)) throw new Error("Not a starter section.");
+    const { starterSettings, forgetStarters } = await import("./guide-starters.server");
+    forgetStarters();
+    const cur = await starterSettings();
+    const names = { ...cur.names };
+    names[data.key] = [
+      ...(names[data.key] ?? []),
+      { title: data.title, hint: data.hint, at: new Date().toISOString() },
+    ];
+    const clean = normaliseStarters({ removed: cur.removed, names });
     const { error } = await (context.supabase as unknown as Loose)
       .from("site_settings")
       .update({ guide_starters: clean, updated_at: new Date().toISOString() })

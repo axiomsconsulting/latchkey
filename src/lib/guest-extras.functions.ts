@@ -67,10 +67,19 @@ export const getRoomExtras = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { roomByCode } = await import("./room-code.server");
     const sb = await (await srv()).db();
-    const room = await roomByCode<{ property_id: string }>(sb, data.code, "id, property_id");
+    const room = await roomByCode<{
+      id: string;
+      property_id: string;
+      display_name: string | null;
+      public_title: string | null;
+    }>(sb, data.code, "id, property_id, display_name, public_title");
     if (!room) return null;
-    // In the room already: no way to it, just the information and the area.
-    return (await srv()).extrasFor(room.property_id, null);
+    // In the room already: no way to it, but their room, floor and nearest things on the plans.
+    return (await srv()).extrasFor(
+      room.property_id,
+      { id: room.id, name: room.public_title || room.display_name || "" },
+      { directions: false },
+    );
   });
 
 /* ------------------------------ host: information ------------------------------ */

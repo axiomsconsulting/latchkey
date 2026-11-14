@@ -2814,28 +2814,31 @@ export const getStay = createServerFn({ method: "GET" })
         })),
     }));
 
-    const { startersOffForProperty } = await import("./guide-starters.server");
+    const { startersForProperty } = await import("./guide-starters.server");
     const { attachmentsFor } = await import("./attachments.server");
     const { tilesForGuest, roomPhoto } = await import("./guide-tiles.server");
     const { roomHasDevices } = await import("./room-devices.server");
-    const [off, files, tiles, photo, lights] = await Promise.all([
-      startersOffForProperty(b.property_id),
+    const { withStarterNames } = await import("./guide");
+    const [{ off, names: starterNames }, files, tiles, photo, lights] = await Promise.all([
+      startersForProperty(b.property_id),
       attachmentsFor(b.property_id).catch(() => ({}) as Record<string, never>),
       tilesForGuest(b.property_id),
       roomPhoto(b.room_id),
       roomHasDevices(b.room_id).catch(() => false),
     ]);
-    const sections = buildGuide(stored, b.room_id, mode, facts, off, Object.keys(files)).map(
-      (sec) =>
-        doorLocked && DOOR_SECTIONS.includes(sec.key)
-          ? { ...sec, summary: "DOOR_LOCKED", steps: [], attachments: [] }
-          : {
-              ...sec,
-              attachments:
-                (files as Record<string, import("./attachments.server").GuestAttachment[]>)[
-                  sec.key
-                ] ?? [],
-            },
+    const sections = withStarterNames(
+      buildGuide(stored, b.room_id, mode, facts, off, Object.keys(files)),
+      starterNames,
+    ).map((sec) =>
+      doorLocked && DOOR_SECTIONS.includes(sec.key)
+        ? { ...sec, summary: "DOOR_LOCKED", steps: [], attachments: [] }
+        : {
+            ...sec,
+            attachments:
+              (files as Record<string, import("./attachments.server").GuestAttachment[]>)[
+                sec.key
+              ] ?? [],
+          },
     );
     const forget = forgetCard(sections, windowsOn(windows ?? [], b.room_id, today, tz));
     // Anything on the reminder card is left out of the list below, so guests

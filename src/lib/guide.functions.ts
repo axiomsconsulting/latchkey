@@ -53,10 +53,13 @@ export const getGuideEditor = createServerFn({ method: "GET" })
       (g.guide_steps ?? []).map((s) => s.image_url).filter((p): p is string => !!p),
     );
     const signed = await signPaths(paths);
-    const { startersOffForProperty } = await import("./guide-starters.server");
+    const { startersForProperty } = await import("./guide-starters.server");
+    const starters = await startersForProperty(data.propertyId);
     return {
       /** Starter sections this host didn't start with (they can still add them). */
-      startersOff: await startersOffForProperty(data.propertyId),
+      startersOff: starters.off,
+      /** The starters' names for this host (Latchkey admin's, as when they signed up). */
+      starterNames: starters.names,
       rooms: rooms ?? [],
       sections: (guides ?? []).map((g) => ({
         roomId: g.room_id,
@@ -645,11 +648,12 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       roomName: room.display_name ?? null,
       unavailableLines: weeklyLines(windows ?? [], room.id),
     };
-    const { startersOffForProperty } = await import("./guide-starters.server");
+    const { startersForProperty } = await import("./guide-starters.server");
     const { attachmentsFor } = await import("./attachments.server");
     const { tilesForGuest, roomPhoto } = await import("./guide-tiles.server");
-    const [off, files, { count: here }, tiles, photo] = await Promise.all([
-      startersOffForProperty(p.id),
+    const { withStarterNames } = await import("./guide");
+    const [{ off, names: starterNames }, files, { count: here }, tiles, photo] = await Promise.all([
+      startersForProperty(p.id),
       attachmentsFor(p.id).catch(() => ({}) as Record<string, never>),
       // Someone has already checked in to this room today: no check-in invite (no guest details leave).
       db
@@ -663,7 +667,10 @@ export const getRoomGuide = createServerFn({ method: "GET" })
       tilesForGuest(p.id),
       roomPhoto(room.id),
     ]);
-    const sections = buildGuide(stored, room.id, mode, facts, off, Object.keys(files))
+    const sections = withStarterNames(
+      buildGuide(stored, room.id, mode, facts, off, Object.keys(files)),
+      starterNames,
+    )
       .filter((sec) => !DOOR_SECTIONS.includes(sec.key))
       .map((sec) => ({
         ...sec,

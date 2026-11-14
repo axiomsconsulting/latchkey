@@ -20,6 +20,7 @@ import {
   type Line,
   type MapFloor,
   type Point,
+  linkRoomsByPins,
 } from "./floor-map";
 
 export { levelName };
@@ -126,15 +127,18 @@ export function mapOf(p: Pins): FloorMap {
 
 /** Every floor as the map needs it. */
 export function mapFloors(plans: FloorPlan[]): MapFloor[] {
-  return plans.map((p) => ({
-    id: p.id,
-    level: p.level,
-    building: p.pins.building ?? "",
-    entrance: p.pins.entrance,
-    lift: p.pins.lift,
-    rooms: p.pins.rooms,
-    map: mapOf(p.pins),
-  }));
+  // Rooms marked only by their pin get their area (and en-suite) linked (linkRoomsByPins).
+  return plans.map((p) =>
+    linkRoomsByPins({
+      id: p.id,
+      level: p.level,
+      building: p.pins.building ?? "",
+      entrance: p.pins.entrance,
+      lift: p.pins.lift,
+      rooms: p.pins.rooms,
+      map: mapOf(p.pins),
+    }),
+  );
 }
 
 export type Directions = {
