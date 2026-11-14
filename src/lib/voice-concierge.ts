@@ -74,6 +74,10 @@ export const PHRASES = {
   noMatchGuide: "I couldn't find your booking. Let's try another way on the screen.",
   doneGuide:
     "You're all checked in. If someone else is staying with you, tap to add them. Otherwise, tap I'm done.",
+  // The receptionist's recorded answers (assisted mode: no AI, assistant-modes.ts).
+  rcHello: "Hello! Ask me about your stay, and I'll show you the right part of your guide.",
+  rcHere: "Here it is. I've opened that part of your guide for you.",
+  rcNotFound: "Sorry, I couldn't find that in your guide. Try other words, or message your host.",
 } as const;
 
 export type PhraseKey = keyof typeof PHRASES;

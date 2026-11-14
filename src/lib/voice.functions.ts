@@ -74,6 +74,9 @@ export const voiceIntent = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!p || (p.theme_config as { kioskVoice?: unknown } | null)?.kioskVoice !== true)
       return { intent: null };
+    // Assisted mode (Latchkey admin): the concierge keeps to its own rules, no AI.
+    const { aiModes } = await import("./integrations.server");
+    if ((await aiModes()).concierge === "assisted") return { intent: null };
     const { aiIntent } = await import("./voice.server");
     return { intent: await aiIntent(data.transcript, data.expected, p.host_id) };
   });

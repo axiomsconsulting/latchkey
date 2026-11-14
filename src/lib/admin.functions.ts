@@ -1059,6 +1059,47 @@ export const getIntegrationStatus = createServerFn({ method: "GET" })
     };
   });
 
+/** Latchkey admin: each assistant's mode (assistant-modes.ts). */
+export const getAiModes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireSuperAdmin(context.supabase);
+    const { aiModes, forgetAiModes } = await import("./integrations.server");
+    forgetAiModes();
+    return aiModes();
+  });
+
+export const saveAiModes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        concierge: z.enum(["assisted", "full"]),
+        receptionist: z.enum(["assisted", "full"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireSuperAdmin(context.supabase);
+    const db = await admin();
+    const { data: cur } = await loose(db)
+      .from("site_settings")
+      .select("integrations")
+      .eq("id", 1)
+      .maybeSingle();
+    const { error } = await loose(db)
+      .from("site_settings")
+      .update({
+        integrations: { ...(cur?.integrations ?? {}), aiModes: data },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
+    if (error) throw new Error(error.message);
+    const { forgetAiModes } = await import("./integrations.server");
+    forgetAiModes();
+    return { ok: true };
+  });
+
 export const saveIntegrationSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

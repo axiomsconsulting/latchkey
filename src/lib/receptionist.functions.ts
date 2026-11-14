@@ -150,8 +150,18 @@ export const receptionistHere = createServerFn({ method: "POST" })
           )?.steps ?? null;
       }
     }
-    const { hasStudioKey } = await import("./studio-voices.server");
+    const { hasStudioKey, clipsFor } = await import("./studio-voices.server");
+    const { aiModes } = await import("./integrations.server");
+    const { voiceForGuest } = await import("./receptionist");
+    const all = await clipsFor(voiceForGuest(r.settings, null));
     return {
+      /** "assisted": recorded phrases and the guide only, no AI. */
+      mode: (await aiModes()).receptionist,
+      /** The receptionist's recorded phrases in its voice (rc*), for assisted answers. */
+      clips: Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith("rc"))) as Record<
+        string,
+        string
+      >,
       name: r.settings.name,
       voice: r.settings.voice,
       voiceMatch: r.settings.voiceMatch,
@@ -190,6 +200,14 @@ export const receptionistAsk = createServerFn({ method: "POST" })
         voice: r.settings.voice,
       };
     const k = await srv.knowledgeFor(r.propertyId, r.bookingId ? { bookingId: r.bookingId } : null);
+    // Assisted mode (Latchkey admin): no AI. The question's words pick a part of the guide to
+    // open, and the answer is one of the recorded phrases.
+    const { aiModes } = await import("./integrations.server");
+    if ((await aiModes()).receptionist === "assisted") {
+      const { assistedAnswer, voiceForGuest } = await import("./receptionist");
+      const a = assistedAnswer(k, data.question, data.where.surface === "stay");
+      return { ...a, audio: null, voice: voiceForGuest(r.settings, data.sex) };
+    }
     const answer = await srv.askModel(
       k,
       r.settings,

@@ -1482,3 +1482,21 @@ html[data-kiosk-touch="expanded"] [data-kiosk-flow] [data-voice-cta] {
     animation: none !important;
   }
 }
+
+/* A card the receptionist opened for the guest (showCard in GuideSections.tsx): outlined and
+   gently pulsing for a few seconds. */
+[data-lk-highlight] {
+  outline: 4px solid var(--primary);
+  outline-offset: 3px;
+  animation: lk-highlight 1.1s ease-in-out 3;
+}
+@keyframes lk-highlight {
+  50% {
+    outline-offset: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-lk-highlight] {
+    animation: none;
+  }
+}

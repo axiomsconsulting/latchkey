@@ -110,10 +110,7 @@ export function GuideSections({
       if (!key) return;
       if (!openRef.current.includes(key)) onOpenChange([...openRef.current, key]);
       setTimeout(
-        () =>
-          document
-            .getElementById(`guide-${key}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "start", inline: "center" }),
+        () => showCard(document.getElementById(`guide-${key}`) ?? document.getElementById(key)),
         80,
       );
     };
@@ -333,6 +330,20 @@ function AttachmentThumbs({
       ))}
     </div>
   );
+}
+
+/**
+ * Brings a card into view for the guest: sideways into the gallery row, then the page scrolled so
+ * the card sits near the top (well above the receptionist's chat at the bottom), and lit with an
+ * outline for a few seconds.
+ */
+export function showCard(el: HTMLElement | null) {
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  const top = el.getBoundingClientRect().top + window.scrollY - 16;
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  el.setAttribute("data-lk-highlight", "");
+  window.setTimeout(() => el.removeAttribute("data-lk-highlight"), 4500);
 }
 
 /** A clip with how many attachments the section has; opens the large viewer at the first. */

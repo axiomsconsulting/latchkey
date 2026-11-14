@@ -6278,6 +6278,13 @@ export const receptionistCopy = branded({
   noVoice: "Voice isn't available on this device: type your question instead.",
   aiNote: "AI receptionist: answers come from your host's guide and may not cover everything.",
   directions: "Here's the way to your room:",
+  orb: {
+    muted: "Voice is off: tap the microphone to talk",
+    ready: "Voice is on: tap the microphone to turn it off",
+    listening: "Listening…",
+    thinking: "One moment…",
+    speaking: "Speaking…",
+  } as Record<"muted" | "ready" | "listening" | "thinking" | "speaking", string>,
 });
 
 export const receptionistAdminCopy = branded({
@@ -7367,6 +7374,30 @@ export const doorCodesCopy = {
   guestLock: "To lock:",
 };
 
+/** Latchkey admin → System → Assistants: AI or recorded phrases. */
+export const aiModesCopy = branded({
+  title: "Assistants: AI or recorded phrases",
+  body: "Choose how each assistant works for every host. Recorded phrases use no AI credits: they keep to fixed rules and the studio voices' recordings (record them on Studio voices). Listening still uses the device, or the studio voices service when the device can't listen.",
+  saved: "Saved: used from the next question",
+  who: {
+    concierge: "Door tablet voice concierge",
+    receptionist: "Receptionist (guide and door tablets)",
+  } as Record<"concierge" | "receptionist", string>,
+  mode: { assisted: "Recorded phrases", full: "Full AI" } as Record<"assisted" | "full", string>,
+  modeHelp: {
+    concierge: {
+      assisted:
+        "Understands yes, no, letters and the usual answers by itself; anything else, the guest taps.",
+      full: "As recorded phrases, and asks AI when it can't tell what the guest said.",
+    },
+    receptionist: {
+      assisted:
+        "Matches the question's words to a part of the guide, opens it and says a recorded phrase.",
+      full: "AI answers in its own words from the guide and opens the right part.",
+    },
+  } as Record<"concierge" | "receptionist", Record<"assisted" | "full", string>>,
+});
+
 /** Latchkey admin → System → Keys and secrets. */
 export const secretsCopy = branded({
   title: "Keys and secrets",
@@ -7436,6 +7467,7 @@ export const adminArrangeTitles = branded({
   saver: "Screen saver defaults",
   hkWords: "Housekeeping words",
   apiKeys: "Keys and secrets",
+  aiModes: "Assistants: AI or recorded phrases",
   health: "Test all connections",
   stripe: "Stripe",
   whatsapp: "WhatsApp",

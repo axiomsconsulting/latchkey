@@ -76,6 +76,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   reviewRefresh: Star,
   studioVoices: Mic,
   apiKeys: KeyRound,
+  aiModes: Sparkles,
 };
 
 export const DEFAULT_SECTION_ICON: LucideIcon = Settings2;
