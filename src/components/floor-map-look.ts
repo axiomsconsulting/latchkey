@@ -1,5 +1,10 @@
 /** How floor maps are drawn: item icons, line looks and area fills (FloorMapView, the editor). */
 import {
+  Bath,
+  Briefcase,
+  DoorOpen,
+  Toilet,
+  Trees,
   AirVent,
   AlarmSmoke,
   Archive,
@@ -43,7 +48,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { ItemKind } from "@/lib/floor-map";
+import type { AreaKind, ItemKind } from "@/lib/floor-map";
 
 /** An icon for each kind of item on a floor map (floor-map.ts ITEM_KINDS). */
 export const ITEM_ICON: Record<ItemKind, LucideIcon> = {
@@ -128,4 +133,24 @@ export const AREA_STROKE: Record<string, { colour: string; width: number }> = {
   guest_room: { colour: "#475569", width: 1.5 },
   private: { colour: "#b91c1c", width: 1.5 },
   yours: { colour: "#15803d", width: 3 },
+};
+
+/** An icon for each kind of space (the guest's list of spaces they can use). */
+export const AREA_ICON: Record<AreaKind, LucideIcon> = {
+  entrance: DoorOpen,
+  hallway: DoorOpen,
+  landing: DoorOpen,
+  stairwell: DoorOpen,
+  bedroom: BedDouble,
+  bathroom: Bath,
+  ensuite: Bath,
+  wc: Toilet,
+  kitchen: CookingPot,
+  kitchenette: Microwave,
+  lounge: Sofa,
+  dining: Utensils,
+  utility: WashingMachine,
+  office: Briefcase,
+  garden: Trees,
+  other: Square,
 };

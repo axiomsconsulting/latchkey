@@ -2,8 +2,13 @@ import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  BedDouble,
   Car,
   CalendarDays,
+  DoorOpen,
+  Lock,
+  ShieldCheck,
+  Sparkles,
   ChevronLeft,
   ChevronRight,
   Footprints,
@@ -16,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { FloorMapView } from "@/components/FloorMapView";
-import { AREA_FILL } from "@/components/floor-map-look";
+import { AREA_FILL, AREA_ICON, ITEM_ICON } from "@/components/floor-map-look";
 import { AttachmentViewer } from "@/components/guest/GuideAttachments";
 import type { ExtraCard } from "@/components/guest/GuideSections";
 import { INFO_ICON } from "@/components/guest/info-icons";
@@ -24,7 +29,7 @@ import { RichText } from "@/components/RichText";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { guest as gcopy, guideExtrasCopy as copy } from "@/content/copy";
 import { swipeStep, wrapIndex } from "@/lib/guide-view";
-import { levelName } from "@/lib/floor-map";
+import { amenityGroup, levelName, privateLines } from "@/lib/floor-map";
 import { getRoomExtras, getStayExtras } from "@/lib/guest-extras.functions";
 import {
   directionsLink,
@@ -65,15 +70,6 @@ export function useGuideExtraCards(from: { token: string } | { code: string }): 
 
 function cardsFor(d: Extras): ExtraCard[] {
   const out: ExtraCard[] = [];
-  if (d.directions)
-    out.push({
-      key: "find_room",
-      title: copy.findTitle,
-      Icon: Navigation,
-      image: d.directions.planUrl,
-      lead: d.directions.steps[d.directions.steps.length - 1] ?? null,
-      body: <FindRoom d={d.directions} />,
-    });
   if (d.info.length)
     out.push({
       key: "property_info",
@@ -84,13 +80,20 @@ function cardsFor(d: Extras): ExtraCard[] {
       body: <PropertyInfo items={d.info} />,
     });
   // Around the house and Around here are sections of their own, after the guide's cards.
-  if (d.house || d.plans.length || d.amenities.length)
+  if (d.house || d.plans.length || d.amenities.length || d.directions)
     out.push({
       key: "house",
       title: copy.houseTitle,
       Icon: House,
       lead: copy.houseLead,
-      body: <AroundTheHouse n={d.house} plans={d.plans} amenities={d.amenities} />,
+      body: (
+        <AroundTheHouse
+          n={d.house}
+          plans={d.plans}
+          amenities={d.amenities}
+          directions={d.directions}
+        />
+      ),
       own: true,
     });
   if (d.local && (d.local.places.length || d.local.events.length))
@@ -206,13 +209,18 @@ function AroundTheHouse({
   n,
   plans,
   amenities,
+  directions,
 }: {
   n: Extras["house"];
   plans: Extras["plans"];
   amenities: Extras["amenities"];
+  directions: Extras["directions"];
 }) {
   const [open, setOpen] = useState<number | null>(null);
-  const privateCount = (n?.private.length ?? 0) + (n?.barriers.length ?? 0);
+  const mine = amenities.filter((a) => amenityGroup(a) === "yours");
+  const comfort = amenities.filter((a) => amenityGroup(a) === "comfort");
+  const safety = amenities.filter((a) => amenityGroup(a) === "safety");
+  const privates = privateLines(n);
   return (
     <div className="space-y-4 text-sm">
       {plans.length ? (
@@ -254,47 +262,112 @@ function AroundTheHouse({
           <PlanKey />
         </div>
       ) : null}
-      {n?.shared.length ? (
-        <div>
-          <p className="font-medium">{copy.shared}</p>
-          <ul className="mt-1 space-y-1">
-            {n.shared.map((s, i) => (
-              <li key={i}>
-                <span className="font-medium">{s.name}</span>{" "}
-                <span className="text-muted-foreground">({levelName(s.level)})</span>
-                {s.items.length ? `: ${s.items.join(", ")}` : ""}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {privateCount ? (
-        <p className="text-muted-foreground">{copy.privateSummary(plans.length || 1)}</p>
-      ) : null}
-      {amenities.length ? (
-        <div>
-          <p className="font-medium">{copy.nearest}</p>
-          <ul className="mt-1 space-y-0.5">
-            {amenities.map((a) => (
-              <li key={a.kind}>
-                <span className="font-medium capitalize">{a.what}</span>{" "}
-                <span className="text-muted-foreground">{a.where}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : n?.useful.length ? (
-        <div>
-          <p className="font-medium">{copy.useful}</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {n.useful.map((u) => (
-              <li key={u}>{u}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {directions ? (
+          <HouseCard id="guide-find_room" Icon={Navigation} title={copy.cards.getThere} wide>
+            <FindRoom d={directions} />
+          </HouseCard>
+        ) : null}
+        {mine.length ? (
+          <HouseCard Icon={BedDouble} title={copy.cards.inRoom}>
+            <ThingList list={mine} />
+          </HouseCard>
+        ) : null}
+        {comfort.length ? (
+          <HouseCard Icon={Sparkles} title={copy.cards.comfort}>
+            <ThingList list={comfort} />
+          </HouseCard>
+        ) : null}
+        {safety.length ? (
+          <HouseCard Icon={ShieldCheck} title={copy.cards.safety}>
+            <ThingList list={safety} />
+          </HouseCard>
+        ) : null}
+        {n?.shared.length ? (
+          <HouseCard Icon={DoorOpen} title={copy.cards.spaces}>
+            <ul className="flex flex-wrap gap-2">
+              {n.shared.map((sp, i) => {
+                const Icon = AREA_ICON[sp.kind ?? "other"] ?? DoorOpen;
+                return (
+                  <li
+                    key={i}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1"
+                  >
+                    <Icon className="size-4 text-primary" aria-hidden />
+                    <span className="font-medium">{sp.name}</span>
+                    <span className="text-xs text-muted-foreground">{levelName(sp.level)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </HouseCard>
+        ) : null}
+        {privates.length ? (
+          <HouseCard Icon={Lock} title={copy.cards.private}>
+            <ul className="space-y-1">
+              {privates.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">{copy.cards.privateNote}</p>
+          </HouseCard>
+        ) : null}
+      </div>
       <PlanViewer plans={plans} index={open} onIndex={setOpen} />
     </div>
+  );
+}
+
+/** One box in Around the house: an icon, a heading and what's in it. */
+function HouseCard({
+  Icon,
+  title,
+  children,
+  wide = false,
+  id,
+}: {
+  Icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  children: React.ReactNode;
+  wide?: boolean;
+  id?: string;
+}) {
+  return (
+    <section
+      id={id}
+      className={cn(
+        "scroll-mt-6 space-y-2 rounded-2xl border border-border bg-background p-3",
+        wide && "sm:col-span-2",
+      )}
+    >
+      <h4 className="flex items-center gap-2 font-medium">
+        <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="size-4" aria-hidden />
+        </span>
+        {title}
+      </h4>
+      {children}
+    </section>
+  );
+}
+
+/** Things with their icons, and where each is. */
+function ThingList({ list }: { list: Extras["amenities"] }) {
+  return (
+    <ul className="space-y-1.5">
+      {list.map((a) => {
+        const Icon = ITEM_ICON[a.kind];
+        return (
+          <li key={a.kind} className="flex items-start gap-2">
+            <Icon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+            <span>
+              <span className="font-medium capitalize">{a.what}</span>{" "}
+              <span className="text-muted-foreground">{a.where.replace(/^in your room /, "")}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
