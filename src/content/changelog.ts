@@ -47,6 +47,29 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.169.0",
+    date: "2026-11-14",
+    title: "A clearer receptionist, and AI only where it's needed",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "When the receptionist points to part of the guide, the chat folds away and the card is brought to the top of the screen and outlined for a few seconds.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "The receptionist's microphone is the same colourful orb as the door tablet's concierge, on the left of the text box, with a line saying whether it's off, listening or speaking. Voice starts off until the guest taps it.",
+      },
+      {
+        admin: true,
+        kind: "new",
+        area: "Settings",
+        text: "Latchkey admin → System → Assistants chooses, for the door tablet concierge and the receptionist, between Full AI and Recorded phrases. With recorded phrases the receptionist matches the question to a part of the guide, opens it and says a recorded phrase, and the concierge never asks AI: no AI credits are used.",
+      },
+    ],
+  },
+  {
     version: "0.168.0",
     date: "2026-11-14",
     title: "Steadier guide cards, a simpler Wi-Fi card and clearer house plans",

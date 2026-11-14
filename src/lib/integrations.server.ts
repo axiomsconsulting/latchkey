@@ -33,6 +33,32 @@ export async function integrationSettings(): Promise<IntegrationSettings> {
   }
 }
 
+let modesCache: { at: number; modes: import("./assistant-modes").AiModes } | null = null;
+
+/** Latchkey admin's choice for each assistant: AI answers ("full") or recorded phrases only ("assisted"). */
+export async function aiModes(): Promise<import("./assistant-modes").AiModes> {
+  const { normaliseAiModes } = await import("./assistant-modes");
+  if (modesCache && Date.now() - modesCache.at < 30_000) return modesCache.modes;
+  let modes = normaliseAiModes(null);
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await (supabaseAdmin as unknown as { from: (t: string) => any })
+      .from("site_settings")
+      .select("integrations")
+      .eq("id", 1)
+      .maybeSingle();
+    modes = normaliseAiModes((data?.integrations as Record<string, unknown> | null)?.["aiModes"]);
+  } catch {
+    // Defaults.
+  }
+  modesCache = { at: Date.now(), modes };
+  return modes;
+}
+
+export function forgetAiModes() {
+  modesCache = null;
+}
+
 export function pushKeys() {
   const publicKey = env("VAPID_PUBLIC_KEY");
   const privateKey = env("VAPID_PRIVATE_KEY");

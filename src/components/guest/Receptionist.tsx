@@ -11,7 +11,8 @@ import {
   receptionistListen,
 } from "@/lib/receptionist.functions";
 import { voiceForGuest } from "@/lib/receptionist";
-import { pickVoice } from "@/lib/voice-concierge";
+import { PHRASES, pickVoice } from "@/lib/voice-concierge";
+import { Orb } from "@/components/guest/VoiceConcierge";
 import { cn } from "@/lib/utils";
 
 export type ReceptionistWhere =
@@ -124,7 +125,7 @@ export function Receptionist({
   useEffect(() => stopAll, [stopAll]);
 
   const say = useCallback(
-    (reply: string, mp3: string | null, voice: "female" | "male") =>
+    (reply: string, mp3: string | null, voice: "female" | "male", clipUrl: string | null = null) =>
       new Promise<void>((done) => {
         stopAll();
         setMode("speaking");
@@ -132,8 +133,8 @@ export function Receptionist({
           setMode("idle");
           done();
         };
-        if (mp3) {
-          const a = new Audio(`data:audio/mpeg;base64,${mp3}`);
+        if (mp3 || clipUrl) {
+          const a = new Audio(clipUrl ?? `data:audio/mpeg;base64,${mp3}`);
           audio.current = a;
           a.onended = finish;
           a.onerror = finish;
@@ -232,12 +233,21 @@ export function Receptionist({
       const r = await askFn({ data: { where: place, question: q, history, speak: spoken, sex } });
       setTurns((t) => [...t, { role: "receptionist", text: r.reply }]);
       if (r.open) {
+        // The card itself matters more than the chat: fold the chat away so the card shows,
+        // then the guide brings it into view and lights it up (showCard).
+        if (variant === "guide") setOpen(false);
         window.dispatchEvent(new CustomEvent(OPEN_GUIDE_EVENT, { detail: r.open }));
-        if (variant === "guide")
-          setTurns((t) => [...t, { role: "receptionist", text: copy.opened }]);
       }
-      if (spoken) {
-        await say(r.reply, r.audio, r.voice);
+      // Recorded phrases (assisted mode) are played as recorded; the tablet's voice says the rest.
+      const phrase = (r as { phrase?: string }).phrase ?? null;
+      const clip = phrase ? (here.data?.clips?.[phrase] ?? null) : null;
+      if (spoken || voiceRef.current) {
+        await say(
+          phrase && !clip ? ((PHRASES as Record<string, string>)[phrase] ?? r.reply) : r.reply,
+          r.audio,
+          r.voice,
+          clip,
+        );
         if (voiceRef.current) listen();
       } else setMode("idle");
     } catch {
@@ -361,45 +371,71 @@ export function Receptionist({
     </div>
   );
 
+  // The microphone, as on the door tablet's concierge: the orb, grey while muted (it starts
+  // muted), breathing while it listens, beating while it speaks.
+  const orbState: "muted" | "listening" | "speaking" | "thinking" | "ready" = !voiceMode
+    ? "muted"
+    : mode === "listening"
+      ? "listening"
+      : mode === "speaking"
+        ? "speaking"
+        : mode === "thinking"
+          ? "thinking"
+          : "ready";
   const bar = (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        start();
-        void ask(text);
-      }}
-      className="flex items-center gap-2 rounded-full border border-border bg-card p-1.5 shadow-lg"
-    >
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onFocus={start}
-        placeholder={copy.ask}
-        aria-label={copy.askLabel}
-        maxLength={600}
-        className="h-11 min-w-0 flex-1 bg-transparent px-3 text-base outline-none"
-      />
-      <button
-        type="button"
-        onClick={toggleVoice}
-        aria-pressed={voiceMode}
-        aria-label={voiceMode ? copy.stopTalking : copy.talk}
-        className={cn(
-          "grid size-11 shrink-0 place-items-center rounded-full",
-          voiceMode ? "bg-primary text-primary-foreground" : "bg-secondary text-primary",
-        )}
+    <div className="space-y-1">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          start();
+          void ask(text);
+        }}
+        className="flex items-center gap-2 rounded-full border border-border bg-card p-1.5 shadow-lg"
       >
-        {voiceMode ? <MicOff className="size-5" /> : <Mic className="size-5" />}
-      </button>
-      <button
-        type="submit"
-        disabled={!text.trim() || mode === "thinking"}
-        aria-label={copy.send}
-        className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
-      >
-        <Send className="size-5" />
-      </button>
-    </form>
+        <button
+          type="button"
+          onClick={toggleVoice}
+          aria-pressed={voiceMode}
+          aria-label={voiceMode ? copy.stopTalking : copy.talk}
+          title={voiceMode ? copy.stopTalking : copy.talk}
+          className="relative grid size-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Orb
+            className={cn("absolute inset-0", !voiceMode && "opacity-40 grayscale")}
+            beat={
+              orbState === "speaking" ? "speaking" : orbState === "listening" ? "listening" : "idle"
+            }
+          />
+          {orbState === "thinking" ? (
+            <Loader2 className="relative size-5 animate-spin text-white drop-shadow" aria-hidden />
+          ) : voiceMode ? (
+            <Mic className="relative size-5 text-white drop-shadow" aria-hidden />
+          ) : (
+            <MicOff className="relative size-5 text-white drop-shadow" aria-hidden />
+          )}
+        </button>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onFocus={start}
+          placeholder={copy.ask}
+          aria-label={copy.askLabel}
+          maxLength={600}
+          className="h-11 min-w-0 flex-1 bg-transparent px-2 text-base outline-none"
+        />
+        <button
+          type="submit"
+          disabled={!text.trim() || mode === "thinking"}
+          aria-label={copy.send}
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+        >
+          <Send className="size-5" />
+        </button>
+      </form>
+      <p className="px-4 text-xs text-muted-foreground" aria-live="polite">
+        {copy.orb[orbState]}
+      </p>
+    </div>
   );
 
   if (variant === "guide")

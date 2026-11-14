@@ -8,6 +8,8 @@
  * codes, never makes things up, and on a shared tablet never reads out the Wi-Fi password. Pure;
  * tested in tests/receptionist.test.ts.
  */
+import { matchTopic } from "./assistant-modes";
+import { PHRASES } from "./voice-concierge";
 
 export type Topic =
   | "times"
@@ -105,6 +107,7 @@ export function voiceForGuest(
 }
 
 /** Where the receptionist is talking. */
+
 export type Surface = "tablet" | "phone";
 
 /** What it knows about the property and (when known) the guest's stay, as labelled parts. */
@@ -219,3 +222,36 @@ export function greeting(s: Receptionist, property: string, firstName?: string |
 
 /** A guest may ask this many questions a minute (per stay or tablet). */
 export const ASKS_PER_MINUTE = 12;
+
+/** The titles of the parts of the guide the receptionist can open, for assisted answers. */
+export function openTopics(k: Knowledge, wifi: boolean): Array<{ key: string; title: string }> {
+  const extra: Record<string, string> = {
+    property_info: "Property information",
+    local: "Around here",
+    find_room: "Finding your room",
+    house: "Around the house",
+  };
+  return [
+    ...(wifi && k.wifi?.name ? [{ key: "stay-wifi", title: "Wi-Fi" }] : []),
+    ...openKeys(k).map((key) => ({
+      key,
+      title: k.guide?.find((g) => g.key === key)?.title ?? extra[key] ?? key,
+    })),
+  ];
+}
+
+/**
+ * Assisted mode: no AI. The question's words pick the part of the guide (matchTopic); the reply
+ * is a recorded phrase (rcHere / rcNotFound), with the part's name shown.
+ */
+export function assistedAnswer(
+  k: Knowledge,
+  question: string,
+  wifi: boolean,
+): { reply: string; open: string | null; phrase: "rcHere" | "rcNotFound" } {
+  const topics = openTopics(k, wifi);
+  const key = matchTopic(question, topics);
+  if (!key) return { reply: PHRASES.rcNotFound, open: null, phrase: "rcNotFound" };
+  const title = topics.find((t) => t.key === key)?.title ?? "";
+  return { reply: `${PHRASES.rcHere} (${title})`, open: key, phrase: "rcHere" };
+}

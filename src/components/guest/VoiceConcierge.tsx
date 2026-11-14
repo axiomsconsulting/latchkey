@@ -20,7 +20,13 @@ import { voiceIntent, voiceTranscribe } from "@/lib/voice.functions";
 import { cn } from "@/lib/utils";
 
 /** The colourful, gently waving orb: blue, green, yellow and red turning inside a soft blob. */
-function Orb({ className, beat }: { className?: string; beat: "idle" | "speaking" | "listening" }) {
+export function Orb({
+  className,
+  beat,
+}: {
+  className?: string;
+  beat: "idle" | "speaking" | "listening";
+}) {
   return (
     <span
       aria-hidden
