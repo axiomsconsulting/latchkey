@@ -6249,6 +6249,16 @@ export const guideExtrasAdminCopy = branded({
   seeThrough: "See the plan through areas",
   furnitureHelp: "Drag the corner handle to resize it.",
   turn: "Turn",
+  toolsLabel: "Drawing tools",
+  moveTools: "Drag to move the tools",
+  placeTools: "Where the tools sit",
+  barSides: {
+    left: "Left of the plan",
+    right: "Right of the plan",
+    top: "Above the plan",
+    bottom: "Below the plan",
+    float: "Floating over the plan",
+  } as Record<"left" | "right" | "top" | "bottom" | "float", string>,
   plansSaved: "Floor saved.",
 });
 

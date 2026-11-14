@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeftRight,
+  GripHorizontal,
+  PanelLeft,
   RotateCw,
   Eye,
   MoveDiagonal2,
@@ -38,6 +40,7 @@ import { SaveButton, changed } from "@/components/host/SaveButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -391,6 +394,11 @@ const TWO_TAP: Tool[] = ["door", "opening", "steps", "barred", "radiator"];
 /** Items by category in the pickers. */
 const ITEM_GROUPS = ITEM_CATEGORIES.map((c) => ({ label: c.label, values: c.kinds as string[] }));
 
+/** Where the editor's tools sit: beside the plan, or floating over it (wide screens). */
+type BarSide = "left" | "right" | "top" | "bottom" | "float";
+const BAR_SIDES: BarSide[] = ["left", "right", "top", "bottom", "float"];
+const BAR_KEY = "latchkey.planTools";
+
 /** The host's chosen plan width in the editor, on this device. */
 const PLAN_WIDTH_KEY = "latchkey.planWidth";
 
@@ -612,6 +620,8 @@ function FloorMapEditor({
         ...(f ? { w: f.w, h: f.h } : {}),
       };
       setPins((x) => ({ ...x, items: [...(x.items ?? []), it] }));
+      // Placed: back to Select with it chosen, ready to move, resize or describe.
+      setTool("select");
       setSel({ type: "item", id: it.id });
       return;
     }
@@ -942,6 +952,181 @@ function FloorMapEditor({
   }, [sel]);
   const levelsHere = plans.filter((p) => p.building === building).map((p) => p.level);
 
+  // The tools' place: beside the plan on any side, or floating over it (wide screens), kept per device.
+  const [barSide, setBarSideRaw] = useState<BarSide>("left");
+  const [floatAt, setFloatAt] = useState({ x: 8, y: 8 });
+  const floatGrab = useRef<{ x: number; y: number; at: { x: number; y: number } } | null>(null);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(BAR_KEY) as BarSide | null;
+      const wide = window.matchMedia("(min-width: 768px)").matches;
+      if (v && BAR_SIDES.includes(v) && (v !== "float" || wide)) setBarSideRaw(v);
+      const f = JSON.parse(localStorage.getItem(`${BAR_KEY}.at`) ?? "null");
+      if (f && typeof f.x === "number" && typeof f.y === "number") setFloatAt(f);
+    } catch {
+      // Defaults.
+    }
+  }, []);
+  const setBarSide = (v: BarSide) => {
+    setBarSideRaw(v);
+    try {
+      localStorage.setItem(BAR_KEY, v);
+    } catch {
+      // Not kept.
+    }
+  };
+  const vertical = barSide === "left" || barSide === "right" || barSide === "float";
+  const toolbar = (
+    <div
+      role="toolbar"
+      aria-label={copy.toolsLabel}
+      aria-orientation={vertical ? "vertical" : "horizontal"}
+      data-keep-size
+      className={cn(
+        "no-scrollbar flex shrink-0 gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm",
+        vertical
+          ? "max-h-[min(80dvh,46rem)] flex-col overflow-y-auto"
+          : "w-full flex-row overflow-x-auto",
+        barSide === "float" && "shadow-xl",
+      )}
+    >
+      {barSide === "float" ? (
+        <button
+          type="button"
+          aria-label={copy.moveTools}
+          title={copy.moveTools}
+          className="grid h-6 w-full cursor-grab touch-none place-items-center rounded-lg text-muted-foreground hover:bg-muted"
+          onPointerDown={(e) => {
+            (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+            floatGrab.current = { x: e.clientX, y: e.clientY, at: floatAt };
+          }}
+          onPointerMove={(e) => {
+            const g = floatGrab.current;
+            if (!g) return;
+            const r = frame.current?.getBoundingClientRect();
+            setFloatAt({
+              x: Math.max(0, Math.min((r?.width ?? 600) - 56, g.at.x + e.clientX - g.x)),
+              y: Math.max(0, Math.min((r?.height ?? 600) - 56, g.at.y + e.clientY - g.y)),
+            });
+          }}
+          onPointerUp={() => {
+            floatGrab.current = null;
+            try {
+              localStorage.setItem(`${BAR_KEY}.at`, JSON.stringify(floatAt));
+            } catch {
+              // Not kept.
+            }
+          }}
+        >
+          <GripHorizontal className="size-4" aria-hidden />
+        </button>
+      ) : null}
+      {GROUPS.map(([g, tools], gi) => (
+        <div
+          key={g}
+          role="group"
+          aria-label={copy.groups[g]}
+          className={cn(
+            "flex gap-1",
+            vertical ? "flex-col" : "flex-row",
+            gi > 0 && (vertical ? "border-t border-border pt-1" : "border-l border-border pl-1"),
+          )}
+        >
+          {tools.map((t) => {
+            const Icon = TOOL_ICON[t];
+            return (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={tool === t}
+                aria-label={`${copy.groups[g]}: ${copy.tools[t]}`}
+                title={copy.tools[t]}
+                onClick={() => {
+                  setTool(t);
+                  setDraft([]);
+                  if (t !== "select") setSel(null);
+                }}
+                className={cn(
+                  "grid size-11 shrink-0 place-items-center rounded-xl transition-colors sm:size-10",
+                  tool === t
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted",
+                )}
+              >
+                <Icon className="size-5" aria-hidden />
+              </button>
+            );
+          })}
+        </div>
+      ))}
+      <div
+        className={cn(
+          "flex gap-1",
+          vertical
+            ? "flex-col border-t border-border pt-1"
+            : "flex-row border-l border-border pl-1",
+        )}
+      >
+        <button
+          type="button"
+          aria-label={copy.undo}
+          title={copy.undo}
+          disabled={!history.current.length}
+          onClick={() => {
+            const last = history.current.pop();
+            if (last) setPinsRaw(last);
+            setSel(null);
+          }}
+          className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-muted disabled:opacity-40 sm:size-10"
+        >
+          <Undo2 className="size-5" aria-hidden />
+        </button>
+        <button
+          type="button"
+          aria-pressed={seeThrough}
+          aria-label={copy.seeThrough}
+          title={copy.seeThrough}
+          onClick={() => setSeeThrough((v) => !v)}
+          className={cn(
+            "grid size-11 shrink-0 place-items-center rounded-xl sm:size-10",
+            seeThrough ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+          )}
+        >
+          <Eye className="size-5" aria-hidden />
+        </button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={copy.placeTools}
+              title={copy.placeTools}
+              className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-muted sm:size-10"
+            >
+              <PanelLeft className="size-5" aria-hidden />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" side="right" align="start">
+            <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">{copy.placeTools}</p>
+            {BAR_SIDES.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setBarSide(v)}
+                className={cn(
+                  "flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left text-sm hover:bg-muted sm:min-h-9",
+                  v === "float" && "hidden md:flex",
+                  barSide === v && "font-semibold text-primary",
+                )}
+              >
+                {copy.barSides[v]}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-2">
@@ -1021,35 +1206,8 @@ function FloorMapEditor({
         </Button>
       </div>
 
-      {/* Tools */}
+      {/* What the chosen tool does, and its choices */}
       <div className="space-y-2" data-keep-size>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          {GROUPS.map(([g, tools]) => (
-            <div key={g} className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">{copy.groups[g]}</p>
-              <div className="flex flex-wrap gap-1">
-                {tools.map((t) => {
-                  const Icon = TOOL_ICON[t];
-                  return (
-                    <Button
-                      key={t}
-                      size="sm"
-                      variant={tool === t ? "default" : "outline"}
-                      data-keep-label
-                      onClick={() => {
-                        setTool(t);
-                        setDraft([]);
-                        if (t !== "select") setSel(null);
-                      }}
-                    >
-                      <Icon className="size-4" aria-hidden /> {copy.tools[t]}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
         <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/60 p-2 text-sm">
           <span>{copy.help[tool]}</span>
           {tool === "rect" || tool === "poly" ? (
@@ -1093,214 +1251,210 @@ function FloorMapEditor({
               </Button>
             </span>
           ) : null}
-          <Button
-            size="sm"
-            variant="ghost"
-            className={cn(!draft.length && "ml-auto")}
-            disabled={!history.current.length}
-            onClick={() => {
-              const last = history.current.pop();
-              if (last) setPinsRaw(last);
-              setSel(null);
-            }}
-          >
-            <Undo2 className="size-4" /> {copy.undo}
-          </Button>
-          <Button
-            size="sm"
-            variant={seeThrough ? "default" : "outline"}
-            aria-pressed={seeThrough}
-            onClick={() => setSeeThrough((v) => !v)}
-          >
-            <Eye className="size-4" /> {copy.seeThrough}
-          </Button>
         </div>
       </div>
 
-      {/* The plan with its map: fits the screen to start, resized from its corner */}
-      <div ref={frame} className="w-full">
-        <div
-          className="relative mx-auto"
-          style={{ width: planWidth ?? undefined, maxWidth: "100%" }}
-        >
+      {/* The plan with its map: fits the screen to start, resized from its corner; the tools
+          beside it (or floating over it on a wide screen) */}
+      <div
+        className={cn(
+          "flex gap-2",
+          barSide === "left" && "flex-row",
+          barSide === "right" && "flex-row-reverse",
+          barSide === "top" && "flex-col",
+          barSide === "bottom" && "flex-col-reverse",
+        )}
+      >
+        {barSide !== "float" ? toolbar : null}
+        <div ref={frame} className="relative min-w-0 flex-1">
+          {barSide === "float" ? (
+            <div className="absolute z-20" style={{ left: floatAt.x, top: floatAt.y }}>
+              {toolbar}
+            </div>
+          ) : null}
           <div
-            ref={box}
-            className={cn(
-              "relative select-none",
-              tool !== "select" && "touch-none cursor-crosshair",
-              tool === "select" && sel && "touch-none cursor-move",
-            )}
-            onPointerDown={down}
-            onPointerMove={move}
-            onPointerUp={up}
-            onPointerLeave={() => setHover(null)}
-            onDoubleClick={() => (tool === "poly" || tool === "stairs" ? finish() : undefined)}
+            className="relative mx-auto"
+            style={{ width: planWidth ?? undefined, maxWidth: "100%" }}
           >
-            <FloorMapView
-              url={plan.url}
-              alt={floorTitle(building, level)}
-              areas={areas.map((a) => ({
-                id: a.id,
-                poly: a.poly,
-                access: a.access,
-                kind: a.kind,
-              }))}
-              lines={lines}
-              items={items}
-              selected={sel?.id ?? null}
-              mask={!seeThrough}
+            <div
+              ref={box}
+              className={cn(
+                "relative select-none",
+                tool !== "select" && "touch-none cursor-crosshair",
+                tool === "select" && sel && "touch-none cursor-move",
+              )}
+              onPointerDown={down}
+              onPointerMove={move}
+              onPointerUp={up}
+              onPointerLeave={() => setHover(null)}
+              onDoubleClick={() => (tool === "poly" || tool === "stairs" ? finish() : undefined)}
             >
-              <svg
-                viewBox="0 0 1 1"
-                preserveAspectRatio="none"
-                className="pointer-events-none absolute inset-0 size-full"
-                aria-hidden
+              <FloorMapView
+                url={plan.url}
+                alt={floorTitle(building, level)}
+                areas={areas.map((a) => ({
+                  id: a.id,
+                  poly: a.poly,
+                  access: a.access,
+                  kind: a.kind,
+                }))}
+                lines={lines}
+                items={items}
+                selected={sel?.id ?? null}
+                mask={!seeThrough}
               >
-                {drag ? (
-                  <rect
-                    x={Math.min(drag.from.x, drag.to.x)}
-                    y={Math.min(drag.from.y, drag.to.y)}
-                    width={Math.abs(drag.to.x - drag.from.x)}
-                    height={Math.abs(drag.to.y - drag.from.y)}
-                    fill="rgba(37,99,235,0.15)"
-                    stroke="#2563eb"
-                    strokeWidth={2}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ) : null}
-                {draft.length ? (
-                  <polyline
-                    points={[...draft, ...(hover ? [hover] : [])]
-                      .map((q) => `${q.x},${q.y}`)
-                      .join(" ")}
-                    fill="none"
-                    stroke="#0f172a"
-                    strokeWidth={2}
-                    strokeDasharray="4 3"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ) : null}
-              </svg>
-              {/* Labels on areas */}
-              {areas.map((a) => {
-                const xs = a.poly.map((p) => p.x);
-                const ys = a.poly.map((p) => p.y);
-                const c = {
-                  x: (Math.min(...xs) + Math.max(...xs)) / 2,
-                  y: (Math.min(...ys) + Math.max(...ys)) / 2,
-                };
-                const name =
-                  (a.roomId ? roomNames[a.roomId] : null) || a.name || cap(AREA_WORDS[a.kind]);
-                return (
-                  <span
-                    key={a.id}
-                    className={cn(
-                      "pointer-events-none absolute max-w-[30%] -translate-x-1/2 -translate-y-1/2 truncate rounded px-1 text-[10px] leading-4 font-medium sm:text-xs",
-                      a.access === "private"
-                        ? "bg-red-50 text-red-800"
-                        : a.access === "guest_room"
-                          ? "bg-slate-100 text-slate-800"
-                          : "bg-blue-50 text-blue-800",
-                    )}
-                    style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
-                  >
-                    {name}
-                  </span>
-                );
-              })}
-              {pins.entrance ? (
-                <Dot p={pins.entrance} cls="bg-emerald-600" title={copy.entrance} />
-              ) : null}
-              {pins.lift ? <Dot p={pins.lift} cls="bg-sky-600" title={copy.lift} /> : null}
-              {Object.entries(pins.rooms ?? {}).map(([id, q]) => (
-                <span
-                  key={`pin-${id}`}
-                  className="pointer-events-none absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow"
-                  style={{ left: `${q.x * 100}%`, top: `${q.y * 100}%` }}
+                <svg
+                  viewBox="0 0 1 1"
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 size-full"
+                  aria-hidden
                 >
-                  {roomNames[id] ?? copy.roomPin}
-                </span>
-              ))}
-              {tool === "select"
-                ? handles.map((h) => (
-                    <span
-                      key={`${h.id}-${h.index}`}
-                      className="absolute size-5 -translate-x-1/2 -translate-y-1/2 cursor-move touch-none rounded-full border-2 border-slate-900 bg-white shadow"
-                      style={{ left: `${h.p.x * 100}%`, top: `${h.p.y * 100}%` }}
-                      title={h.kind === "area" || h.kind === "line" ? copy.pointHelp : undefined}
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        history.current = [...history.current.slice(-40), pins];
-                        (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-                        handle.current = { kind: h.kind, id: h.id, index: h.index };
-                      }}
-                      onDoubleClick={(e) => {
-                        e.stopPropagation();
-                        if (h.kind === "area" || h.kind === "line")
-                          dropPoint(h.kind, h.id, h.index);
-                      }}
-                      onPointerMove={move}
-                      onPointerUp={up}
+                  {drag ? (
+                    <rect
+                      x={Math.min(drag.from.x, drag.to.x)}
+                      y={Math.min(drag.from.y, drag.to.y)}
+                      width={Math.abs(drag.to.x - drag.from.x)}
+                      height={Math.abs(drag.to.y - drag.from.y)}
+                      fill="rgba(37,99,235,0.15)"
+                      stroke="#2563eb"
+                      strokeWidth={2}
+                      vectorEffect="non-scaling-stroke"
                     />
-                  ))
-                : null}
-              {tool === "select"
-                ? mids.map((m) => (
-                    <span
-                      key={`mid-${m.id}-${m.after}`}
-                      title={copy.addPoint}
-                      className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-copy touch-none rounded-full border-2 border-slate-900 bg-slate-300 opacity-80"
-                      style={{ left: `${m.p.x * 100}%`, top: `${m.p.y * 100}%` }}
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-                        insertPoint(m.kind, m.id, m.after, m.p);
-                      }}
-                      onPointerMove={move}
-                      onPointerUp={up}
+                  ) : null}
+                  {draft.length ? (
+                    <polyline
+                      points={[...draft, ...(hover ? [hover] : [])]
+                        .map((q) => `${q.x},${q.y}`)
+                        .join(" ")}
+                      fill="none"
+                      stroke="#0f172a"
+                      strokeWidth={2}
+                      strokeDasharray="4 3"
+                      vectorEffect="non-scaling-stroke"
                     />
-                  ))
-                : null}
-            </FloorMapView>
+                  ) : null}
+                </svg>
+                {/* Labels on areas */}
+                {areas.map((a) => {
+                  const xs = a.poly.map((p) => p.x);
+                  const ys = a.poly.map((p) => p.y);
+                  const c = {
+                    x: (Math.min(...xs) + Math.max(...xs)) / 2,
+                    y: (Math.min(...ys) + Math.max(...ys)) / 2,
+                  };
+                  const name =
+                    (a.roomId ? roomNames[a.roomId] : null) || a.name || cap(AREA_WORDS[a.kind]);
+                  return (
+                    <span
+                      key={a.id}
+                      className={cn(
+                        "pointer-events-none absolute max-w-[30%] -translate-x-1/2 -translate-y-1/2 truncate rounded px-1 text-[10px] leading-4 font-medium sm:text-xs",
+                        a.access === "private"
+                          ? "bg-red-50 text-red-800"
+                          : a.access === "guest_room"
+                            ? "bg-slate-100 text-slate-800"
+                            : "bg-blue-50 text-blue-800",
+                      )}
+                      style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%` }}
+                    >
+                      {name}
+                    </span>
+                  );
+                })}
+                {pins.entrance ? (
+                  <Dot p={pins.entrance} cls="bg-emerald-600" title={copy.entrance} />
+                ) : null}
+                {pins.lift ? <Dot p={pins.lift} cls="bg-sky-600" title={copy.lift} /> : null}
+                {Object.entries(pins.rooms ?? {}).map(([id, q]) => (
+                  <span
+                    key={`pin-${id}`}
+                    className="pointer-events-none absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow"
+                    style={{ left: `${q.x * 100}%`, top: `${q.y * 100}%` }}
+                  >
+                    {roomNames[id] ?? copy.roomPin}
+                  </span>
+                ))}
+                {tool === "select"
+                  ? handles.map((h) => (
+                      <span
+                        key={`${h.id}-${h.index}`}
+                        className="absolute size-5 -translate-x-1/2 -translate-y-1/2 cursor-move touch-none rounded-full border-2 border-slate-900 bg-white shadow"
+                        style={{ left: `${h.p.x * 100}%`, top: `${h.p.y * 100}%` }}
+                        title={h.kind === "area" || h.kind === "line" ? copy.pointHelp : undefined}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          history.current = [...history.current.slice(-40), pins];
+                          (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                          handle.current = { kind: h.kind, id: h.id, index: h.index };
+                        }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          if (h.kind === "area" || h.kind === "line")
+                            dropPoint(h.kind, h.id, h.index);
+                        }}
+                        onPointerMove={move}
+                        onPointerUp={up}
+                      />
+                    ))
+                  : null}
+                {tool === "select"
+                  ? mids.map((m) => (
+                      <span
+                        key={`mid-${m.id}-${m.after}`}
+                        title={copy.addPoint}
+                        className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-copy touch-none rounded-full border-2 border-slate-900 bg-slate-300 opacity-80"
+                        style={{ left: `${m.p.x * 100}%`, top: `${m.p.y * 100}%` }}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                          insertPoint(m.kind, m.id, m.after, m.p);
+                        }}
+                        onPointerMove={move}
+                        onPointerUp={up}
+                      />
+                    ))
+                  : null}
+              </FloorMapView>
+            </div>
+            <span
+              role="separator"
+              aria-label={copy.resize}
+              title={copy.resize}
+              className="absolute -bottom-2 -right-2 z-10 grid size-7 cursor-nwse-resize touch-none place-items-center rounded-full border-2 border-white bg-slate-900 text-white shadow"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+                resizing.current = {
+                  x: e.clientX,
+                  w: box.current?.getBoundingClientRect().width ?? 0,
+                };
+              }}
+              onPointerMove={(e) => {
+                const r = resizing.current;
+                if (!r) return;
+                const max = frame.current?.getBoundingClientRect().width ?? Infinity;
+                setPlanWidth(Math.round(Math.min(max, Math.max(240, r.w + (e.clientX - r.x)))));
+              }}
+              onPointerUp={() => {
+                resizing.current = null;
+                try {
+                  if (planWidth) localStorage.setItem(PLAN_WIDTH_KEY, String(planWidth));
+                } catch {
+                  // Not kept: it fits the screen next time.
+                }
+              }}
+              onDoubleClick={() => {
+                try {
+                  localStorage.removeItem(PLAN_WIDTH_KEY);
+                } catch {
+                  // Nothing kept anyway.
+                }
+                setPlanWidth(fitWidth());
+              }}
+            >
+              <MoveDiagonal2 className="size-3.5" aria-hidden />
+            </span>
           </div>
-          <span
-            role="separator"
-            aria-label={copy.resize}
-            title={copy.resize}
-            className="absolute -bottom-2 -right-2 z-10 grid size-7 cursor-nwse-resize touch-none place-items-center rounded-full border-2 border-white bg-slate-900 text-white shadow"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-              resizing.current = {
-                x: e.clientX,
-                w: box.current?.getBoundingClientRect().width ?? 0,
-              };
-            }}
-            onPointerMove={(e) => {
-              const r = resizing.current;
-              if (!r) return;
-              const max = frame.current?.getBoundingClientRect().width ?? Infinity;
-              setPlanWidth(Math.round(Math.min(max, Math.max(240, r.w + (e.clientX - r.x)))));
-            }}
-            onPointerUp={() => {
-              resizing.current = null;
-              try {
-                if (planWidth) localStorage.setItem(PLAN_WIDTH_KEY, String(planWidth));
-              } catch {
-                // Not kept: it fits the screen next time.
-              }
-            }}
-            onDoubleClick={() => {
-              try {
-                localStorage.removeItem(PLAN_WIDTH_KEY);
-              } catch {
-                // Nothing kept anyway.
-              }
-              setPlanWidth(fitWidth());
-            }}
-          >
-            <MoveDiagonal2 className="size-3.5" aria-hidden />
-          </span>
         </div>
       </div>
 

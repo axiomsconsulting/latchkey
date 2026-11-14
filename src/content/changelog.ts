@@ -47,6 +47,23 @@ export type Release = {
 // Read through the white label (src/lib/brand.ts), so release notes carry the product's own name.
 export const RELEASES: Release[] = branded([
   {
+    version: "0.173.0",
+    date: "2026-11-14",
+    title: "A toolbar beside the floor plan",
+    items: [
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "The floor plan's tools (areas, doors and stairs, private, things, plus undo and see-through) are now a compact toolbar attached to the plan, on the left to start. Move it to any side, or let it float over the plan on a computer and drag it where you like. Buttons are finger-sized on phones.",
+      },
+      {
+        kind: "improved",
+        area: "Guest guide",
+        text: "After placing an item the editor goes back to Select with the item chosen, ready to move, resize or describe.",
+      },
+    ],
+  },
+  {
     version: "0.172.0",
     date: "2026-11-14",
     title: "Amenities and furniture on floor plans",
